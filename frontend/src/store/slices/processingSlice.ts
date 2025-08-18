@@ -1,6 +1,10 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { processingApi } from '../../services/api';
-import type { ProcessingStatus, AnalyzeRequest, AnalyzeResponse as _AnalyzeResponse } from '../../services/api/types';
+import type {
+  ProcessingStatus,
+  AnalyzeRequest,
+  AnalyzeResponse as _AnalyzeResponse,
+} from '../../services/api/types';
 
 // Async thunks
 export const startAnalysis = createAsyncThunk(
@@ -89,12 +93,13 @@ const calculateTimeRemaining = (
   currentTime: string
 ): number | null => {
   if (progress === 0 || !startTime) return null;
-  
-  const elapsed = new Date(currentTime).getTime() - new Date(startTime).getTime();
+
+  const elapsed =
+    new Date(currentTime).getTime() - new Date(startTime).getTime();
   const progressRatio = progress / total;
   const totalEstimated = elapsed / progressRatio;
   const remaining = totalEstimated - elapsed;
-  
+
   return Math.max(0, Math.round(remaining / 1000)); // Return in seconds
 };
 
@@ -105,10 +110,11 @@ const calculateProcessingSpeed = (
   currentTime: string
 ): number | null => {
   if (progress === 0 || !startTime) return null;
-  
-  const elapsed = new Date(currentTime).getTime() - new Date(startTime).getTime();
+
+  const elapsed =
+    new Date(currentTime).getTime() - new Date(startTime).getTime();
   const elapsedMinutes = elapsed / (1000 * 60);
-  
+
   return progress / elapsedMinutes; // documents per minute
 };
 
@@ -123,12 +129,15 @@ const processingSlice = createSlice({
     },
 
     // Real-time processing updates (from WebSocket)
-    updateProcessingStatus: (state, action: PayloadAction<ProcessingStatus>) => {
+    updateProcessingStatus: (
+      state,
+      action: PayloadAction<ProcessingStatus>
+    ) => {
       const newStatus = action.payload;
       const currentTime = new Date().toISOString();
-      
+
       state.status = newStatus;
-      
+
       // Calculate estimated time remaining and processing speed
       if (newStatus.is_processing && newStatus.started_at) {
         state.estimatedTimeRemaining = calculateTimeRemaining(
@@ -137,7 +146,7 @@ const processingSlice = createSlice({
           newStatus.started_at,
           currentTime
         );
-        
+
         state.processingSpeed = calculateProcessingSpeed(
           newStatus.progress,
           newStatus.started_at,
@@ -163,7 +172,10 @@ const processingSlice = createSlice({
     },
 
     // Add to processing history
-    addToHistory: (state, action: PayloadAction<ProcessingState['history'][0]>) => {
+    addToHistory: (
+      state,
+      action: PayloadAction<ProcessingState['history'][0]>
+    ) => {
       state.history.unshift(action.payload);
       // Keep only last 10 entries
       if (state.history.length > 10) {
@@ -195,7 +207,7 @@ const processingSlice = createSlice({
       .addCase(fetchProcessingStatus.fulfilled, (state, action) => {
         state.loading.fetchStatus = false;
         state.status = action.payload;
-        
+
         // Calculate estimates if processing
         if (action.payload.is_processing && action.payload.started_at) {
           const currentTime = new Date().toISOString();
@@ -205,7 +217,7 @@ const processingSlice = createSlice({
             action.payload.started_at,
             currentTime
           );
-          
+
           state.processingSpeed = calculateProcessingSpeed(
             action.payload.progress,
             action.payload.started_at,
@@ -215,7 +227,8 @@ const processingSlice = createSlice({
       })
       .addCase(fetchProcessingStatus.rejected, (state, action) => {
         state.loading.fetchStatus = false;
-        state.error = action.error.message || 'Failed to fetch processing status';
+        state.error =
+          action.error.message || 'Failed to fetch processing status';
       })
 
       // Cancel processing

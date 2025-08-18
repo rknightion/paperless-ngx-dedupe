@@ -1,8 +1,8 @@
-import type { ApiError, ApiResponse } from './types';
+import type { ApiError } from './types';
 
 // API Configuration
 // Use relative URL to work with nginx proxy
-const API_BASE_URL = '';  // Empty string means use same origin
+const API_BASE_URL = ''; // Empty string means use same origin
 const API_VERSION = 'v1';
 
 class ApiClient {
@@ -21,7 +21,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}/api/${API_VERSION}${endpoint}`;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -32,13 +32,15 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         const errorData: ApiError = await response.json().catch(() => ({
           detail: `HTTP ${response.status}: ${response.statusText}`,
           status_code: response.status,
         }));
-        throw new Error(errorData.detail || `Request failed with status ${response.status}`);
+        throw new Error(
+          errorData.detail || `Request failed with status ${response.status}`
+        );
       }
 
       // Handle empty responses (like DELETE requests)
@@ -57,8 +59,13 @@ class ApiClient {
   }
 
   // HTTP Methods
-  async get<T = any>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    const searchParams = params ? `?${new URLSearchParams(params).toString()}` : '';
+  async get<T = any>(
+    endpoint: string,
+    params?: Record<string, any>
+  ): Promise<T> {
+    const searchParams = params
+      ? `?${new URLSearchParams(params).toString()}`
+      : '';
     return this.request<T>(`${endpoint}${searchParams}`);
   }
 
@@ -95,7 +102,8 @@ class ApiClient {
   }
 
   removeAuthHeader(): void {
-    const { Authorization: _Authorization, ...rest } = this.defaultHeaders as any;
+    const { Authorization: _Authorization, ...rest } = this
+      .defaultHeaders as any;
     this.defaultHeaders = rest;
   }
 }

@@ -1,6 +1,9 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { configApi } from '../../services/api';
-import type { Configuration, TestConnectionResponse } from '../../services/api/types';
+import type {
+  Configuration,
+  TestConnectionResponse,
+} from '../../services/api/types';
 
 // Async thunks
 export const fetchConfiguration = createAsyncThunk(
@@ -109,7 +112,10 @@ const configSlice = createSlice({
     },
 
     // Validation
-    setValidationErrors: (state, action: PayloadAction<Record<string, string[]>>) => {
+    setValidationErrors: (
+      state,
+      action: PayloadAction<Record<string, string[]>>
+    ) => {
       state.validationErrors = action.payload;
     },
 
@@ -165,9 +171,10 @@ const configSlice = createSlice({
       })
       .addCase(updateConfiguration.rejected, (state, action) => {
         state.loading.update = false;
-        
+
         // Try to parse validation errors from error message
-        const errorMessage = action.error.message || 'Failed to update configuration';
+        const errorMessage =
+          action.error.message || 'Failed to update configuration';
         try {
           const errorData = JSON.parse(errorMessage);
           if (errorData.errors) {

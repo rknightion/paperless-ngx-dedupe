@@ -1,8 +1,5 @@
 import { apiClient } from './client';
-import type {
-  Configuration,
-  TestConnectionResponse,
-} from './types';
+import type { Configuration, TestConnectionResponse } from './types';
 
 export const configApi = {
   // Get current configuration
@@ -11,7 +8,9 @@ export const configApi = {
   },
 
   // Update configuration
-  async updateConfiguration(config: Partial<Configuration>): Promise<Configuration> {
+  async updateConfiguration(
+    config: Partial<Configuration>
+  ): Promise<Configuration> {
     return apiClient.put<Configuration>('/config/', config);
   },
 
@@ -22,7 +21,10 @@ export const configApi = {
     paperless_username?: string;
     paperless_password?: string;
   }): Promise<TestConnectionResponse> {
-    return apiClient.post<TestConnectionResponse>('/config/test-connection', config);
+    return apiClient.post<TestConnectionResponse>(
+      '/config/test-connection',
+      config
+    );
   },
 
   // Reset configuration to defaults

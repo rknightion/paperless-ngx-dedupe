@@ -1,6 +1,10 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { documentsApi } from '../../services/api';
-import type { Document, DocumentListResponse as _DocumentListResponse, DocumentQueryParams } from '../../services/api/types';
+import type {
+  Document,
+  DocumentListResponse as _DocumentListResponse,
+  DocumentQueryParams,
+} from '../../services/api/types';
 
 // Async thunks
 export const fetchDocuments = createAsyncThunk(
@@ -112,11 +116,11 @@ const documentsSlice = createSlice({
     },
     deselectDocument: (state, action: PayloadAction<number>) => {
       state.selectedDocuments = state.selectedDocuments.filter(
-        id => id !== action.payload
+        (id) => id !== action.payload
       );
     },
     selectAllDocuments: (state) => {
-      state.selectedDocuments = state.documents.map(doc => doc.id);
+      state.selectedDocuments = state.documents.map((doc) => doc.id);
     },
     clearSelection: (state) => {
       state.selectedDocuments = [];
@@ -128,16 +132,22 @@ const documentsSlice = createSlice({
     },
 
     // Update document status (for real-time updates)
-    updateDocumentStatus: (state, action: PayloadAction<{
-      id: number;
-      processing_status: Document['processing_status'];
-    }>) => {
-      const document = state.documents.find(doc => doc.id === action.payload.id);
+    updateDocumentStatus: (
+      state,
+      action: PayloadAction<{
+        id: number;
+        processing_status: Document['processing_status'];
+      }>
+    ) => {
+      const document = state.documents.find(
+        (doc) => doc.id === action.payload.id
+      );
       if (document) {
         document.processing_status = action.payload.processing_status;
       }
       if (state.currentDocument?.id === action.payload.id) {
-        state.currentDocument.processing_status = action.payload.processing_status;
+        state.currentDocument.processing_status =
+          action.payload.processing_status;
       }
     },
   },

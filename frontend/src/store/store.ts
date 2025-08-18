@@ -1,6 +1,14 @@
 import { configureStore, Middleware } from '@reduxjs/toolkit';
-import { documentsSlice, duplicatesSlice, processingSlice, configSlice } from './slices';
-import { updateProcessingStatus, setWebSocketConnected } from './slices/processingSlice';
+import {
+  documentsSlice,
+  duplicatesSlice,
+  processingSlice,
+  configSlice,
+} from './slices';
+import {
+  updateProcessingStatus,
+  setWebSocketConnected,
+} from './slices/processingSlice';
 import { updateDocumentStatus as _updateDocumentStatus } from './slices/documentsSlice';
 import { wsClient } from '../services/websocket';
 
@@ -10,10 +18,11 @@ const webSocketMiddleware: Middleware = (store) => (next) => (action: any) => {
 
   // Initialize WebSocket connection when store is ready
   if (action.type === 'store/init') {
-    wsClient.connect()
+    wsClient
+      .connect()
       .then(() => {
         store.dispatch(setWebSocketConnected(true));
-        
+
         // Set up WebSocket event listeners
         wsClient.on('processing_update', (status) => {
           store.dispatch(updateProcessingStatus(status));

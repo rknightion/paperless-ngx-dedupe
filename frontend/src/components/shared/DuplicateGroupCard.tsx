@@ -16,7 +16,6 @@ import {
   Trash2,
   FileText,
   Calendar,
-  TrendingUp,
   BarChart3,
   Copy,
   CheckCircle,
@@ -140,7 +139,9 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
 
   // Handle group deletion
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this duplicate group?')) {
+    if (
+      !window.confirm('Are you sure you want to delete this duplicate group?')
+    ) {
       return;
     }
 
@@ -186,7 +187,10 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                 {Math.round(group.confidence * 100)}% match
               </Badge>
               {group.reviewed && (
-                <Badge variant="outline" className="text-green-700 border-green-300">
+                <Badge
+                  variant="outline"
+                  className="text-green-700 border-green-300"
+                >
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Reviewed
                 </Badge>
@@ -225,38 +229,44 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Documents in this group:</h4>
           <div className="space-y-2">
-            {group.documents.slice(0, isExpanded ? undefined : 2).map((doc, index) => {
-              const preview = getDocumentPreview(doc);
-              return (
-                <div
-                  key={doc.id}
-                  className={`flex items-center justify-between p-3 rounded-md border cursor-pointer hover:bg-muted/50 ${
-                    index === 0 ? 'bg-blue-50 border-blue-200' : 'bg-background'
-                  }`}
-                  onClick={() => onDocumentSelect?.(doc.id)}
-                >
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{preview.title}</p>
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                        <span>ID: {doc.id}</span>
-                        {preview.fileType && (
-                          <span>{preview.fileType.toUpperCase()}</span>
-                        )}
-                        <span>{formatDate(preview.created)}</span>
+            {group.documents
+              .slice(0, isExpanded ? undefined : 2)
+              .map((doc, index) => {
+                const preview = getDocumentPreview(doc);
+                return (
+                  <div
+                    key={doc.id}
+                    className={`flex items-center justify-between p-3 rounded-md border cursor-pointer hover:bg-muted/50 ${
+                      index === 0
+                        ? 'bg-blue-50 border-blue-200'
+                        : 'bg-background'
+                    }`}
+                    onClick={() => onDocumentSelect?.(doc.id)}
+                  >
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {preview.title}
+                        </p>
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                          <span>ID: {doc.id}</span>
+                          {preview.fileType && (
+                            <span>{preview.fileType.toUpperCase()}</span>
+                          )}
+                          <span>{formatDate(preview.created)}</span>
+                        </div>
                       </div>
                     </div>
+                    {index === 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        Primary
+                      </Badge>
+                    )}
                   </div>
-                  {index === 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      Primary
-                    </Badge>
-                  )}
-                </div>
-              );
-            })}
-            
+                );
+              })}
+
             {!isExpanded && group.documents.length > 2 && (
               <div className="text-center">
                 <Button
@@ -313,10 +323,12 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
             {!group.reviewed && group.confidence < 0.8 && (
               <div className="flex items-center space-x-1 text-amber-600">
                 <AlertCircle className="h-4 w-4" />
-                <span className="text-xs">Low confidence - review carefully</span>
+                <span className="text-xs">
+                  Low confidence - review carefully
+                </span>
               </div>
             )}
-            
+
             <Button
               onClick={handleDelete}
               disabled={loading}

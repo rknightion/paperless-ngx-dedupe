@@ -35,15 +35,15 @@ class WebSocketClient {
 
       try {
         this.socket = new WebSocket(this.url);
-        
+
         this.socket.onopen = () => {
           console.log('WebSocket connected');
           this.isConnected = true;
           this.reconnectAttempts = 0;
-          
+
           // Start ping interval to keep connection alive
           this.startPingInterval();
-          
+
           resolve();
         };
 
@@ -51,7 +51,7 @@ class WebSocketClient {
           console.log('WebSocket disconnected:', event.code, event.reason);
           this.isConnected = false;
           this.stopPingInterval();
-          
+
           // Auto-reconnect unless it was a normal closure
           if (event.code !== 1000) {
             this.handleReconnection();
@@ -61,7 +61,7 @@ class WebSocketClient {
         this.socket.onerror = (error) => {
           console.error('WebSocket error:', error);
           this.isConnected = false;
-          
+
           if (this.reconnectAttempts === 0) {
             reject(new Error('Failed to connect to WebSocket'));
           }
@@ -87,23 +87,23 @@ class WebSocketClient {
       case 'connection_established':
         console.log('Connection established:', message.data);
         break;
-      
+
       case 'processing_update':
         this.emit('processing_update', message.data);
         break;
-      
+
       case 'error':
         this.emit('error', message.data);
         break;
-      
+
       case 'processing_completed':
         this.emit('processing_completed', message.data);
         break;
-      
+
       case 'pong':
         // Pong received, connection is alive
         break;
-      
+
       default:
         console.log('Unknown message type:', message.type);
     }
@@ -111,7 +111,7 @@ class WebSocketClient {
 
   private startPingInterval(): void {
     this.stopPingInterval();
-    
+
     // Send ping every 30 seconds to keep connection alive
     this.pingInterval = setInterval(() => {
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
@@ -135,12 +135,12 @@ class WebSocketClient {
 
   disconnect(): void {
     this.stopPingInterval();
-    
+
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
-    
+
     if (this.socket) {
       this.socket.close(1000, 'Client disconnect');
       this.socket = null;
@@ -152,9 +152,11 @@ class WebSocketClient {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
-      
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`);
-      
+
+      console.log(
+        `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`
+      );
+
       this.reconnectTimeout = setTimeout(() => {
         this.connect().catch((error) => {
           console.error('Reconnection failed:', error);
@@ -191,11 +193,14 @@ class WebSocketClient {
   private emit(event: string, data: any): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in WebSocket event handler for ${event}:`, error);
+          console.error(
+            `Error in WebSocket event handler for ${event}:`,
+            error
+          );
         }
       });
     }
@@ -208,7 +213,7 @@ class WebSocketClient {
 
   getConnectionState(): 'connected' | 'disconnected' | 'connecting' {
     if (!this.socket) return 'disconnected';
-    
+
     switch (this.socket.readyState) {
       case WebSocket.CONNECTING:
         return 'connecting';

@@ -48,8 +48,8 @@ docker compose up -d
 ```
 
 3. **Access the application**:
-   - **Web UI**: http://localhost:3000
-   - **API Documentation**: http://localhost:8000/docs
+   - **Web UI**: http://localhost:30002
+   - **API Documentation**: http://localhost:30001/docs
    
 4. **Configure paperless-ngx connection**:
    - Navigate to Settings in the web UI

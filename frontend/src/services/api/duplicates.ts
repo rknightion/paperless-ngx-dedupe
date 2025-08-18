@@ -9,7 +9,9 @@ import type {
 
 export const duplicatesApi = {
   // Get duplicate groups
-  async getDuplicateGroups(params?: DuplicateGroupQueryParams): Promise<DuplicateGroupsResponse> {
+  async getDuplicateGroups(
+    params?: DuplicateGroupQueryParams
+  ): Promise<DuplicateGroupsResponse> {
     return apiClient.get<DuplicateGroupsResponse>('/duplicates/groups', params);
   },
 
@@ -19,8 +21,13 @@ export const duplicatesApi = {
   },
 
   // Mark duplicate group as reviewed
-  async reviewDuplicateGroup(id: string, reviewed: boolean = true): Promise<ApiResponse> {
-    return apiClient.post<ApiResponse>(`/duplicates/groups/${id}/review`, { reviewed });
+  async reviewDuplicateGroup(
+    id: string,
+    reviewed: boolean = true
+  ): Promise<ApiResponse> {
+    return apiClient.post<ApiResponse>(`/duplicates/groups/${id}/review`, {
+      reviewed,
+    });
   },
 
   // Delete duplicate group
@@ -34,7 +41,10 @@ export const duplicatesApi = {
   },
 
   // Bulk operations
-  async bulkReviewGroups(groupIds: string[], reviewed: boolean = true): Promise<ApiResponse> {
+  async bulkReviewGroups(
+    groupIds: string[],
+    reviewed: boolean = true
+  ): Promise<ApiResponse> {
     return apiClient.post<ApiResponse>('/duplicates/groups/bulk-review', {
       group_ids: groupIds,
       reviewed,

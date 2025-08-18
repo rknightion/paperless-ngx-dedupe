@@ -10,7 +10,9 @@ import type {
 
 export const documentsApi = {
   // Get list of documents
-  async getDocuments(params?: DocumentQueryParams): Promise<DocumentListResponse> {
+  async getDocuments(
+    params?: DocumentQueryParams
+  ): Promise<DocumentListResponse> {
     return apiClient.get<DocumentListResponse>('/documents/', params);
   },
 

@@ -6,9 +6,6 @@ import {
   syncDocuments,
   setSearchFilter,
   setProcessingStatusFilter,
-  setOrdering,
-  setCurrentPage,
-  setPageSize,
   selectDocument,
   deselectDocument,
   selectAllDocuments,
@@ -23,9 +20,6 @@ import {
   Search,
   RefreshCw,
   Download,
-  Filter,
-  ChevronDown,
-  ChevronUp,
   FileText,
   Calendar,
   HardDrive,
@@ -97,13 +91,6 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return '-';
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
   if (compact) {
@@ -368,7 +355,11 @@ export const DocumentList: React.FC<DocumentListProps> = ({
               <Button onClick={handleSelectAll} variant="outline" size="sm">
                 Select All
               </Button>
-              <Button onClick={handleClearSelection} variant="outline" size="sm">
+              <Button
+                onClick={handleClearSelection}
+                variant="outline"
+                size="sm"
+              >
                 Clear Selection
               </Button>
             </div>

@@ -70,7 +70,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         documents_processed: status.progress,
       });
     }
-  }, [status.current_step, status.completed_at, onComplete]);
+  }, [status.current_step, status.completed_at, status.progress, onComplete]);
 
   // Start analysis
   const handleStart = async () => {
@@ -99,10 +99,11 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   // Format time remaining
   const formatTimeRemaining = (seconds: number | null) => {
     if (!seconds) return 'Calculating...';
-    
+
     if (seconds < 60) return `${seconds}s remaining`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s remaining`;
-    
+    if (seconds < 3600)
+      return `${Math.floor(seconds / 60)}m ${seconds % 60}s remaining`;
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m remaining`;
@@ -182,7 +183,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
               </span>
             </div>
           </div>
-          
+
           <div
             className={`px-3 py-1 rounded-full text-sm font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border`}
           >
@@ -201,7 +202,8 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
             <div className="text-sm text-muted-foreground">
               {status.total > 0 && (
                 <span>
-                  {status.progress.toLocaleString()} / {status.total.toLocaleString()}
+                  {status.progress.toLocaleString()} /{' '}
+                  {status.total.toLocaleString()}
                 </span>
               )}
             </div>
@@ -272,10 +274,12 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         {showControls && !status.is_processing && (
           <div className="pt-4 border-t space-y-4">
             <h4 className="font-medium">Analysis Settings</h4>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Similarity Threshold</label>
+                <label className="text-sm font-medium">
+                  Similarity Threshold
+                </label>
                 <input
                   type="number"
                   min="0.1"
@@ -286,7 +290,9 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   onChange={(e) =>
                     setAnalysisSettings({
                       ...analysisSettings,
-                      threshold: e.target.value ? parseFloat(e.target.value) : undefined,
+                      threshold: e.target.value
+                        ? parseFloat(e.target.value)
+                        : undefined,
                     })
                   }
                   className="w-full px-3 py-2 border border-input rounded-md"
@@ -303,7 +309,9 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   onChange={(e) =>
                     setAnalysisSettings({
                       ...analysisSettings,
-                      limit: e.target.value ? parseInt(e.target.value) : undefined,
+                      limit: e.target.value
+                        ? parseInt(e.target.value)
+                        : undefined,
                     })
                   }
                   className="w-full px-3 py-2 border border-input rounded-md"

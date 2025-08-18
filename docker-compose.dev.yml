@@ -7,7 +7,7 @@ services:
       target: backend
     container_name: paperless-dedupe
     ports:
-      - "8000:8000"
+      - "30001:8000"
     environment:
       - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@postgres/paperless_dedupe
       - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
@@ -36,7 +36,7 @@ services:
       target: frontend
     container_name: paperless-dedupe-frontend
     ports:
-      - "3000:3000"
+      - "30002:3000"
     depends_on:
       - paperless-dedupe
     restart: unless-stopped
@@ -52,11 +52,11 @@ services:
       - POSTGRES_PASSWORD=paperless
       - POSTGRES_DB=paperless_dedupe
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - paperless-dedupe-postgres:/var/lib/postgresql/data
     networks:
       - paperless-dedupe-net
     ports:
-      - 5432:5432
+      - 35432:5432
     restart: unless-stopped
 
   # Redis cache
@@ -65,14 +65,14 @@ services:
     container_name: paperless-dedupe-redis
     command: redis-server --appendonly yes
     volumes:
-      - redis_data:/data
+      - paperless-dedupe-redis:/data
     networks:
       - paperless-dedupe-net
     restart: unless-stopped
 
 volumes:
-  postgres_data:
-  redis_data:
+  paperless-dedupe-postgres:
+  paperless-dedupe-redis:
 
 networks:
   paperless-dedupe-net:

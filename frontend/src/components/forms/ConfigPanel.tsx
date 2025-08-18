@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useConfig, useConnectionStatus } from '../../hooks/redux';
+import {
+  useAppDispatch,
+  useConfig,
+  useConnectionStatus,
+} from '../../hooks/redux';
 import {
   fetchConfiguration,
   updateConfiguration,
@@ -13,8 +17,20 @@ import {
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
-import { CheckCircle, XCircle, Loader2, Settings, TestTube } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../ui/Card';
+import {
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Settings,
+  TestTube,
+} from 'lucide-react';
 import type { Configuration } from '../../services/api/types';
 
 interface ConfigPanelProps {
@@ -23,15 +39,9 @@ interface ConfigPanelProps {
 
 export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   const dispatch = useAppDispatch();
-  const {
-    configuration,
-    formData,
-    hasUnsavedChanges,
-    loading,
-    error,
-    validationErrors,
-  } = useConfig();
-  const { isConnected, testResult, lastTested } = useConnectionStatus();
+  const { formData, hasUnsavedChanges, loading, error, validationErrors } =
+    useConfig();
+  const { testResult, lastTested } = useConnectionStatus();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -41,14 +51,17 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   }, [dispatch]);
 
   // Handle form field changes
-  const handleFieldChange = (field: keyof Configuration, value: string | number) => {
+  const handleFieldChange = (
+    field: keyof Configuration,
+    value: string | number
+  ) => {
     dispatch(updateFormData({ [field]: value }));
   };
 
   // Handle form submission
   const handleSave = async () => {
     if (!hasUnsavedChanges) return;
-    
+
     try {
       await dispatch(updateConfiguration(formData)).unwrap();
     } catch (error) {
@@ -167,14 +180,16 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
         {/* Connection Settings */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Paperless Connection</h3>
-          
+
           <div className="space-y-2">
             <Label htmlFor="paperless_url">Paperless URL *</Label>
             <Input
               id="paperless_url"
               type="url"
               value={formData.paperless_url || ''}
-              onChange={(e) => handleFieldChange('paperless_url', e.target.value)}
+              onChange={(e) =>
+                handleFieldChange('paperless_url', e.target.value)
+              }
               placeholder="http://localhost:8000"
               className={validationErrors.paperless_url ? 'border-red-500' : ''}
             />
@@ -191,9 +206,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               id="paperless_api_token"
               type="password"
               value={formData.paperless_api_token || ''}
-              onChange={(e) => handleFieldChange('paperless_api_token', e.target.value)}
+              onChange={(e) =>
+                handleFieldChange('paperless_api_token', e.target.value)
+              }
               placeholder="Your paperless API token"
-              className={validationErrors.paperless_api_token ? 'border-red-500' : ''}
+              className={
+                validationErrors.paperless_api_token ? 'border-red-500' : ''
+              }
             />
             <p className="text-xs text-muted-foreground">
               Recommended: Use API token for authentication
@@ -208,18 +227,23 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
           {/* Alternative: Username/Password */}
           <div className="pt-2 border-t">
             <p className="text-sm text-muted-foreground mb-3">
-              Alternative: Use username and password if API token is not available
+              Alternative: Use username and password if API token is not
+              available
             </p>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="paperless_username">Username</Label>
                 <Input
                   id="paperless_username"
                   value={formData.paperless_username || ''}
-                  onChange={(e) => handleFieldChange('paperless_username', e.target.value)}
+                  onChange={(e) =>
+                    handleFieldChange('paperless_username', e.target.value)
+                  }
                   placeholder="Username"
-                  className={validationErrors.paperless_username ? 'border-red-500' : ''}
+                  className={
+                    validationErrors.paperless_username ? 'border-red-500' : ''
+                  }
                 />
                 {validationErrors.paperless_username && (
                   <p className="text-sm text-red-600">
@@ -234,9 +258,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   id="paperless_password"
                   type="password"
                   value={formData.paperless_password || ''}
-                  onChange={(e) => handleFieldChange('paperless_password', e.target.value)}
+                  onChange={(e) =>
+                    handleFieldChange('paperless_password', e.target.value)
+                  }
                   placeholder="Password"
-                  className={validationErrors.paperless_password ? 'border-red-500' : ''}
+                  className={
+                    validationErrors.paperless_password ? 'border-red-500' : ''
+                  }
                 />
                 {validationErrors.paperless_password && (
                   <p className="text-sm text-red-600">
@@ -296,11 +324,17 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 min="50"
                 max="100"
                 value={formData.fuzzy_match_threshold || 80}
-                onChange={(e) => handleFieldChange('fuzzy_match_threshold', parseInt(e.target.value))}
+                onChange={(e) =>
+                  handleFieldChange(
+                    'fuzzy_match_threshold',
+                    parseInt(e.target.value)
+                  )
+                }
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                Higher values = fewer false positives, might miss some duplicates
+                Higher values = fewer false positives, might miss some
+                duplicates
               </p>
             </div>
 
@@ -310,7 +344,9 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 id="max_ocr_length"
                 type="number"
                 value={formData.max_ocr_length || 10000}
-                onChange={(e) => handleFieldChange('max_ocr_length', parseInt(e.target.value))}
+                onChange={(e) =>
+                  handleFieldChange('max_ocr_length', parseInt(e.target.value))
+                }
                 min="1000"
                 max="50000"
                 step="1000"
@@ -332,7 +368,12 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   min="0.1"
                   max="1.0"
                   value={formData.lsh_threshold || 0.7}
-                  onChange={(e) => handleFieldChange('lsh_threshold', parseFloat(e.target.value))}
+                  onChange={(e) =>
+                    handleFieldChange(
+                      'lsh_threshold',
+                      parseFloat(e.target.value)
+                    )
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Locality-sensitive hashing threshold (0.1-1.0)
@@ -348,7 +389,12 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   max="256"
                   step="64"
                   value={formData.minhash_num_perm || 128}
-                  onChange={(e) => handleFieldChange('minhash_num_perm', parseInt(e.target.value))}
+                  onChange={(e) =>
+                    handleFieldChange(
+                      'minhash_num_perm',
+                      parseInt(e.target.value)
+                    )
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Number of hash functions (higher = more accurate, slower)

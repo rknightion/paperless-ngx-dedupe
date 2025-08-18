@@ -137,11 +137,11 @@ const duplicatesSlice = createSlice({
     },
     deselectGroup: (state, action: PayloadAction<string>) => {
       state.selectedGroups = state.selectedGroups.filter(
-        id => id !== action.payload
+        (id) => id !== action.payload
       );
     },
     selectAllGroups: (state) => {
-      state.selectedGroups = state.groups.map(group => group.id);
+      state.selectedGroups = state.groups.map((group) => group.id);
     },
     clearSelection: (state) => {
       state.selectedGroups = [];
@@ -153,11 +153,14 @@ const duplicatesSlice = createSlice({
     },
 
     // Local updates (for optimistic updates)
-    updateGroupReviewStatus: (state, action: PayloadAction<{
-      id: string;
-      reviewed: boolean;
-    }>) => {
-      const group = state.groups.find(g => g.id === action.payload.id);
+    updateGroupReviewStatus: (
+      state,
+      action: PayloadAction<{
+        id: string;
+        reviewed: boolean;
+      }>
+    ) => {
+      const group = state.groups.find((g) => g.id === action.payload.id);
       if (group) {
         group.reviewed = action.payload.reviewed;
       }
@@ -167,8 +170,12 @@ const duplicatesSlice = createSlice({
     },
 
     removeGroup: (state, action: PayloadAction<string>) => {
-      state.groups = state.groups.filter(group => group.id !== action.payload);
-      state.selectedGroups = state.selectedGroups.filter(id => id !== action.payload);
+      state.groups = state.groups.filter(
+        (group) => group.id !== action.payload
+      );
+      state.selectedGroups = state.selectedGroups.filter(
+        (id) => id !== action.payload
+      );
       if (state.currentGroup?.id === action.payload) {
         state.currentGroup = null;
       }
@@ -188,7 +195,8 @@ const duplicatesSlice = createSlice({
       })
       .addCase(fetchDuplicateGroups.rejected, (state, action) => {
         state.loading.groups = false;
-        state.error = action.error.message || 'Failed to fetch duplicate groups';
+        state.error =
+          action.error.message || 'Failed to fetch duplicate groups';
       })
 
       // Fetch single group
@@ -212,7 +220,7 @@ const duplicatesSlice = createSlice({
       .addCase(reviewDuplicateGroup.fulfilled, (state, action) => {
         state.loading.review = false;
         const { id, reviewed } = action.payload;
-        const group = state.groups.find(g => g.id === id);
+        const group = state.groups.find((g) => g.id === id);
         if (group) {
           group.reviewed = reviewed;
         }
@@ -231,8 +239,12 @@ const duplicatesSlice = createSlice({
       })
       .addCase(deleteDuplicateGroup.fulfilled, (state, action) => {
         state.loading.delete = false;
-        state.groups = state.groups.filter(group => group.id !== action.payload);
-        state.selectedGroups = state.selectedGroups.filter(id => id !== action.payload);
+        state.groups = state.groups.filter(
+          (group) => group.id !== action.payload
+        );
+        state.selectedGroups = state.selectedGroups.filter(
+          (id) => id !== action.payload
+        );
         if (state.currentGroup?.id === action.payload) {
           state.currentGroup = null;
         }
@@ -262,8 +274,8 @@ const duplicatesSlice = createSlice({
       .addCase(bulkReviewGroups.fulfilled, (state, action) => {
         state.loading.bulkActions = false;
         const { groupIds, reviewed } = action.payload;
-        groupIds.forEach(id => {
-          const group = state.groups.find(g => g.id === id);
+        groupIds.forEach((id) => {
+          const group = state.groups.find((g) => g.id === id);
           if (group) {
             group.reviewed = reviewed;
           }
@@ -272,7 +284,8 @@ const duplicatesSlice = createSlice({
       })
       .addCase(bulkReviewGroups.rejected, (state, action) => {
         state.loading.bulkActions = false;
-        state.error = action.error.message || 'Failed to perform bulk operation';
+        state.error =
+          action.error.message || 'Failed to perform bulk operation';
       });
   },
 });

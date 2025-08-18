@@ -4,7 +4,7 @@ services:
     image: ghcr.io/rknightion/paperless-ngx-dedupe:latest
     container_name: paperless-dedupe
     ports:
-      - "8000:8000"
+      - "30001:8000"
     environment:
       # Database configuration
       - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@postgres/paperless_dedupe
@@ -37,7 +37,7 @@ services:
     image: ghcr.io/rknightion/paperless-ngx-dedupe-frontend:latest
     container_name: paperless-dedupe-frontend
     ports:
-      - "3000:3000"
+      - "30002:3000"
     depends_on:
       - paperless-dedupe
     restart: unless-stopped
@@ -59,7 +59,7 @@ services:
       - POSTGRES_PASSWORD=paperless
       - POSTGRES_DB=paperless_dedupe
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - paperless-dedupe-postgres:/var/lib/postgresql/data
     networks:
       - paperless-dedupe-net
     restart: unless-stopped
@@ -75,7 +75,7 @@ services:
     container_name: paperless-dedupe-redis
     command: redis-server --appendonly yes
     volumes:
-      - redis_data:/data
+      - paperless-dedupe-redis:/data
     networks:
       - paperless-dedupe-net
     restart: unless-stopped
@@ -86,9 +86,9 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
+  paperless-dedupe-postgres:
     driver: local
-  redis_data:
+  paperless-dedupe-redis:
     driver: local
   paperless-dedupe-data:
     driver: local

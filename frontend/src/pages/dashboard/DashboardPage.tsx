@@ -1,9 +1,19 @@
 import React, { useEffect } from 'react';
-import { useAppDispatch, useDocuments, useDuplicates, useProcessingStatus } from '../../hooks/redux';
+import {
+  useAppDispatch,
+  useDocuments,
+  useDuplicates,
+  useProcessingStatus,
+} from '../../hooks/redux';
 import { fetchDuplicateStatistics } from '../../store/slices/duplicatesSlice';
 import { fetchDocuments } from '../../store/slices/documentsSlice';
 import { ProgressTracker } from '../../components/shared';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import {
   FileText,
@@ -17,7 +27,7 @@ import {
 
 export const DashboardPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { documents, pagination, loading } = useDocuments();
+  const { documents, pagination } = useDocuments();
   const { statistics } = useDuplicates();
   const { status } = useProcessingStatus();
 
@@ -29,9 +39,13 @@ export const DashboardPage: React.FC = () => {
 
   // Calculate processing statistics
   const processingStats = {
-    pending: (documents || []).filter(d => d.processing_status === 'pending').length,
-    completed: (documents || []).filter(d => d.processing_status === 'completed').length,
-    errors: (documents || []).filter(d => d.processing_status === 'error').length,
+    pending: (documents || []).filter((d) => d.processing_status === 'pending')
+      .length,
+    completed: (documents || []).filter(
+      (d) => d.processing_status === 'completed'
+    ).length,
+    errors: (documents || []).filter((d) => d.processing_status === 'error')
+      .length,
   };
 
   const StatCard: React.FC<{
@@ -41,7 +55,14 @@ export const DashboardPage: React.FC = () => {
     icon: React.ComponentType<{ className?: string }>;
     trend?: number;
     color?: string;
-  }> = ({ title, value, description, icon: Icon, trend, color = 'text-primary' }) => (
+  }> = ({
+    title,
+    value,
+    description,
+    icon: Icon,
+    trend,
+    color = 'text-primary',
+  }) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -55,7 +76,8 @@ export const DashboardPage: React.FC = () => {
         {trend !== undefined && (
           <div className="flex items-center text-xs text-green-600 mt-1">
             <TrendingUp className="h-3 w-3 mr-1" />
-            {trend > 0 ? '+' : ''}{trend}% from last scan
+            {trend > 0 ? '+' : ''}
+            {trend}% from last scan
           </div>
         )}
       </CardContent>
@@ -80,7 +102,7 @@ export const DashboardPage: React.FC = () => {
           icon={FileText}
           color="text-blue-600"
         />
-        
+
         <StatCard
           title="Duplicate Groups"
           value={statistics?.total_groups || 0}
@@ -88,7 +110,7 @@ export const DashboardPage: React.FC = () => {
           icon={Copy}
           color="text-orange-600"
         />
-        
+
         <StatCard
           title="Reviewed Groups"
           value={statistics?.reviewed_groups || 0}
@@ -96,7 +118,7 @@ export const DashboardPage: React.FC = () => {
           icon={CheckCircle}
           color="text-green-600"
         />
-        
+
         <StatCard
           title="Pending Review"
           value={statistics?.unreviewed_groups || 0}
@@ -110,9 +132,9 @@ export const DashboardPage: React.FC = () => {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Progress Tracker */}
         <div className="space-y-4">
-          <ProgressTracker 
+          <ProgressTracker
             showControls={true}
-            onComplete={(results) => {
+            onComplete={(_results) => {
               // Refresh statistics when processing completes
               dispatch(fetchDuplicateStatistics());
             }}
@@ -177,17 +199,19 @@ export const DashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600 mb-2">
-              {(statistics.potential_space_savings / (1024 * 1024 * 1024)).toFixed(2)} GB
+              {(
+                statistics.potential_space_savings /
+                (1024 * 1024 * 1024)
+              ).toFixed(2)}{' '}
+              GB
             </div>
             <p className="text-sm text-muted-foreground">
-              Estimated space that could be saved by removing duplicate documents.
-              This is based on {statistics.total_duplicates} duplicate documents across{' '}
-              {statistics.total_groups} groups.
+              Estimated space that could be saved by removing duplicate
+              documents. This is based on {statistics.total_duplicates}{' '}
+              duplicate documents across {statistics.total_groups} groups.
             </p>
             <div className="mt-4">
-              <Button size="sm">
-                View Duplicate Groups
-              </Button>
+              <Button size="sm">View Duplicate Groups</Button>
             </div>
           </CardContent>
         </Card>

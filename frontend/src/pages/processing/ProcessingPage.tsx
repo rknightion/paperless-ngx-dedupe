@@ -1,6 +1,11 @@
 import React from 'react';
 import { ProgressTracker } from '../../components/shared';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/Card';
 import { Activity, Info } from 'lucide-react';
 
 export const ProcessingPage: React.FC = () => {
@@ -12,14 +17,16 @@ export const ProcessingPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Processing Control</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Processing Control
+        </h1>
         <p className="text-muted-foreground">
           Monitor and control document deduplication analysis
         </p>
       </div>
 
       {/* Main Progress Tracker */}
-      <ProgressTracker 
+      <ProgressTracker
         showControls={true}
         onComplete={handleProcessingComplete}
       />
@@ -35,45 +42,59 @@ export const ProcessingPage: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="prose text-sm text-muted-foreground max-w-none">
             <p>
-              The deduplication analysis uses advanced algorithms to identify potentially 
-              duplicate documents in your paperless-ngx library. The process involves 
-              several steps:
+              The deduplication analysis uses advanced algorithms to identify
+              potentially duplicate documents in your paperless-ngx library. The
+              process involves several steps:
             </p>
-            
+
             <ol className="list-decimal list-inside space-y-2 mt-4">
               <li>
-                <strong>Document Loading:</strong> Retrieval of document metadata 
-                and OCR content from your paperless-ngx instance
+                <strong>Document Loading:</strong> Retrieval of document
+                metadata and OCR content from your paperless-ngx instance
               </li>
               <li>
-                <strong>Content Processing:</strong> Generation of MinHash fingerprints 
-                for efficient similarity detection
+                <strong>Content Processing:</strong> Generation of MinHash
+                fingerprints for efficient similarity detection
               </li>
               <li>
-                <strong>Similarity Analysis:</strong> Comparison of documents using 
-                Locality-Sensitive Hashing (LSH) for fast candidate identification
+                <strong>Similarity Analysis:</strong> Comparison of documents
+                using Locality-Sensitive Hashing (LSH) for fast candidate
+                identification
               </li>
               <li>
-                <strong>Fuzzy Matching:</strong> Detailed comparison of candidate pairs 
-                using fuzzy text matching algorithms
+                <strong>Fuzzy Matching:</strong> Detailed comparison of
+                candidate pairs using fuzzy text matching algorithms
               </li>
               <li>
-                <strong>Confidence Scoring:</strong> Calculation of confidence scores 
-                based on multiple similarity factors
+                <strong>Confidence Scoring:</strong> Calculation of confidence
+                scores based on multiple similarity factors
               </li>
               <li>
-                <strong>Group Formation:</strong> Organization of similar documents 
-                into duplicate groups for review
+                <strong>Group Formation:</strong> Organization of similar
+                documents into duplicate groups for review
               </li>
             </ol>
 
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-medium text-blue-900 mb-2">Processing Tips:</h4>
+              <h4 className="font-medium text-blue-900 mb-2">
+                Processing Tips:
+              </h4>
               <ul className="text-blue-800 text-sm space-y-1">
-                <li>• Higher similarity thresholds reduce false positives but may miss some duplicates</li>
-                <li>• Force rebuild will reprocess all documents, useful after configuration changes</li>
-                <li>• Document limits are helpful for testing with large libraries</li>
-                <li>• Processing speed depends on document count and OCR text length</li>
+                <li>
+                  • Higher similarity thresholds reduce false positives but may
+                  miss some duplicates
+                </li>
+                <li>
+                  • Force rebuild will reprocess all documents, useful after
+                  configuration changes
+                </li>
+                <li>
+                  • Document limits are helpful for testing with large libraries
+                </li>
+                <li>
+                  • Processing speed depends on document count and OCR text
+                  length
+                </li>
               </ul>
             </div>
           </div>
@@ -101,11 +122,15 @@ export const ProcessingPage: React.FC = () => {
               </div>
               <div>
                 <div className="font-medium">Similarity Threshold</div>
-                <div className="text-muted-foreground">Configurable (80% default)</div>
+                <div className="text-muted-foreground">
+                  Configurable (80% default)
+                </div>
               </div>
               <div>
                 <div className="font-medium">Confidence Weights</div>
-                <div className="text-muted-foreground">Jaccard + Fuzzy + Metadata</div>
+                <div className="text-muted-foreground">
+                  Jaccard + Fuzzy + Metadata
+                </div>
               </div>
             </div>
           </CardContent>
@@ -135,8 +160,8 @@ export const ProcessingPage: React.FC = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              * Times are estimates and may vary based on document size, 
-              OCR content length, and system performance.
+              * Times are estimates and may vary based on document size, OCR
+              content length, and system performance.
             </p>
           </CardContent>
         </Card>

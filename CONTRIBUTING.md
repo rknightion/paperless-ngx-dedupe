@@ -54,7 +54,7 @@ By participating in this project, you agree to abide by our Code of Conduct:
    docker-compose -f docker-compose.dev.yml up -d postgres redis
    
    # Run the backend
-   uv run uvicorn paperless_dedupe.main:app --reload --port 8000
+   uv run uvicorn paperless_dedupe.main:app --reload --port 30001
    ```
 
    **Frontend (React/TypeScript):**

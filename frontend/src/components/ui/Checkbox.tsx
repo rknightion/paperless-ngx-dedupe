@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-export type CheckboxProps = React.InputHTMLAttributes<HTMLInputElement>
+export type CheckboxProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
   ({ className, ...props }, ref) => (

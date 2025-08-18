@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useDuplicateGroups } from '../../hooks/redux';
-import { fetchDuplicateGroups, fetchDuplicateStatistics } from '../../store/slices/duplicatesSlice';
+import {
+  fetchDuplicateGroups,
+  fetchDuplicateStatistics,
+} from '../../store/slices/duplicatesSlice';
 import { DuplicateGroupCard } from '../../components/shared';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/Card';
 import {
   Copy,
   Search,
   Filter,
-  BarChart3,
   CheckCircle,
   Clock,
   RefreshCw,
@@ -41,15 +48,16 @@ export const DuplicatesPage: React.FC = () => {
   };
 
   // Filter groups based on search and filters
-  const filteredGroups = (groups || []).filter(group => {
-    const matchesSearch = searchQuery === '' || 
-      group.documents.some(doc => 
+  const filteredGroups = (groups || []).filter((group) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      group.documents.some((doc) =>
         doc.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
-    
-    const matchesReviewed = reviewedFilter === null || 
-      group.reviewed === reviewedFilter;
-    
+
+    const matchesReviewed =
+      reviewedFilter === null || group.reviewed === reviewedFilter;
+
     const matchesConfidence = group.confidence >= confidenceFilter;
 
     return matchesSearch && matchesReviewed && matchesConfidence;
@@ -78,7 +86,9 @@ export const DuplicatesPage: React.FC = () => {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Duplicate Groups</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Duplicate Groups
+          </h1>
           <p className="text-muted-foreground">
             Review and manage potential duplicate documents
           </p>
@@ -95,13 +105,17 @@ export const DuplicatesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Duplicate Groups</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Duplicate Groups
+          </h1>
           <p className="text-muted-foreground">
             Review and manage potential duplicate documents
           </p>
         </div>
         <Button onClick={handleRefresh} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+          />
           Refresh
         </Button>
       </div>
@@ -165,12 +179,12 @@ export const DuplicatesPage: React.FC = () => {
               <label className="text-sm font-medium">Review Status</label>
               <select
                 className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                value={reviewedFilter === null ? 'all' : reviewedFilter.toString()}
+                value={
+                  reviewedFilter === null ? 'all' : reviewedFilter.toString()
+                }
                 onChange={(e) => {
                   const value = e.target.value;
-                  setReviewedFilter(
-                    value === 'all' ? null : value === 'true'
-                  );
+                  setReviewedFilter(value === 'all' ? null : value === 'true');
                 }}
               >
                 <option value="all">All Groups</option>
@@ -190,7 +204,9 @@ export const DuplicatesPage: React.FC = () => {
                 max="1.0"
                 step="0.05"
                 value={confidenceFilter}
-                onChange={(e) => setConfidenceFilter(parseFloat(e.target.value))}
+                onChange={(e) =>
+                  setConfidenceFilter(parseFloat(e.target.value))
+                }
                 className="w-full"
               />
             </div>
@@ -198,7 +214,9 @@ export const DuplicatesPage: React.FC = () => {
 
           {/* Active Filters Display */}
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Active filters:</span>
+            <span className="text-sm text-muted-foreground">
+              Active filters:
+            </span>
             {searchQuery && (
               <Badge variant="outline">Search: "{searchQuery}"</Badge>
             )}
@@ -234,7 +252,8 @@ export const DuplicatesPage: React.FC = () => {
         </span>
         {statistics && (
           <span>
-            Potential savings: {(statistics.potential_space_savings / (1024 * 1024)).toFixed(1)} MB
+            Potential savings:{' '}
+            {(statistics.potential_space_savings / (1024 * 1024)).toFixed(1)} MB
           </span>
         )}
       </div>
@@ -245,13 +264,14 @@ export const DuplicatesPage: React.FC = () => {
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <Copy className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="font-medium mb-2">
-              {groups.length === 0 ? 'No duplicate groups found' : 'No groups match your filters'}
+              {groups.length === 0
+                ? 'No duplicate groups found'
+                : 'No groups match your filters'}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               {groups.length === 0
                 ? 'Run the deduplication analysis to find duplicate documents'
-                : 'Try adjusting your search criteria or filters'
-              }
+                : 'Try adjusting your search criteria or filters'}
             </p>
             {groups.length === 0 && (
               <Button asChild>
