@@ -39,8 +39,8 @@ WORKDIR /app
 # Copy project files
 COPY pyproject.toml .
 COPY src/ ./src/
-# Copy README if it exists (optional for builds)
-COPY README.md* .
+# Create empty README for build if it doesn't exist
+RUN touch README.md
 
 # Install dependencies using uv
 RUN uv pip install --system -e .
@@ -71,8 +71,6 @@ COPY --from=backend-builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY --chown=paperless:paperless src/ ./src/
 COPY --chown=paperless:paperless pyproject.toml .
-# Copy README if it exists (optional for builds)
-COPY --chown=paperless:paperless README.md* .
 
 # Switch to non-root user
 USER paperless
