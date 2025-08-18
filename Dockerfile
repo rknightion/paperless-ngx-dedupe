@@ -21,7 +21,7 @@ RUN npm run build
 # =============================================================================
 # Backend Build Stage
 # =============================================================================
-FROM python:3.13-slim AS backend-builder
+FROM python:3.13.7-slim AS backend-builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -47,7 +47,7 @@ RUN uv pip install --system -e .
 # =============================================================================
 # Backend Production Stage
 # =============================================================================
-FROM python:3.13-slim AS backend
+FROM python:3.13.7-slim AS backend
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
