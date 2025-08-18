@@ -1,0 +1,77 @@
+[project]
+name = "paperless-dedupe"
+version = "1.0.0"
+description = "Advanced document deduplication tool for paperless-ngx with fuzzy matching and web UI"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    { name = "Rob Knight", email = "12484127+rknightion@users.noreply.github.com" }
+]
+maintainers = [
+    { name = "Rob Knight", email = "12484127+rknightion@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+keywords = [
+    "paperless-ngx",
+    "document-management",
+    "deduplication",
+    "fuzzy-matching",
+    "minhash",
+    "lsh",
+    "fastapi",
+    "react"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+    "Topic :: Text Processing :: Indexing",
+    "Framework :: FastAPI",
+]
+
+[project.urls]
+Homepage = "https://github.com/rknightion/paperless-ngx-dedupe"
+Documentation = "https://github.com/rknightion/paperless-ngx-dedupe#readme"
+Repository = "https://github.com/rknightion/paperless-ngx-dedupe"
+Issues = "https://github.com/rknightion/paperless-ngx-dedupe/issues"
+Changelog = "https://github.com/rknightion/paperless-ngx-dedupe/blob/main/CHANGELOG.md"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.31.0",
+    "websockets>=12.0",
+    "httpx>=0.27.2",
+    "redis>=5.2.1",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14.0",
+    "pydantic>=2.10.4",
+    "pydantic-settings>=2.7.0",
+    "rapidfuzz>=3.10.1",
+    "datasketch>=1.6.5",
+    "psycopg2-binary>=2.9.10",
+    "python-multipart>=0.0.12",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "aiofiles>=24.1.0",
+    "asyncpg>=0.30.0",
+    "aioredis>=2.0.1",
+]
+
+[project.scripts]
+paperless-dedupe = "paperless_dedupe:main"
+
+[build-system]
+requires = ["uv_build>=0.8.4,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "psutil>=7.0.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+]

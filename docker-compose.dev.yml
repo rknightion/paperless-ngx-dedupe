@@ -1,0 +1,79 @@
+services:
+  # Backend API service
+  paperless-dedupe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    container_name: paperless-dedupe
+    ports:
+      - "8000:8000"
+    environment:
+      - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@postgres/paperless_dedupe
+      - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
+      - PAPERLESS_DEDUPE_PAPERLESS_URL=http://paperless:8000  # Update with your paperless URL
+      - PAPERLESS_DEDUPE_SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      # Optional: Set these if using token auth
+      # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=${PAPERLESS_API_TOKEN}
+      # Or username/password auth
+      # - PAPERLESS_DEDUPE_PAPERLESS_USERNAME=${PAPERLESS_USERNAME}
+      # - PAPERLESS_DEDUPE_PAPERLESS_PASSWORD=${PAPERLESS_PASSWORD}
+    volumes:
+      - ./data:/app/data
+      - ./cache:/app/cache
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - paperless-dedupe-net
+
+  # Frontend web UI service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+    container_name: paperless-dedupe-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - paperless-dedupe
+    restart: unless-stopped
+    networks:
+      - paperless-dedupe-net
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: paperless-dedupe-postgres
+    environment:
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=paperless
+      - POSTGRES_DB=paperless_dedupe
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - paperless-dedupe-net
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: paperless-dedupe-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - paperless-dedupe-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  paperless-dedupe-net:
+    driver: bridge

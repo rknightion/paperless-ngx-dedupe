@@ -1,0 +1,493 @@
+# Paperless-NGX Deduplication Tool - Detailed Implementation Plan
+
+## Status: Testing Phase Complete ✅
+- ✅ Comprehensive unit tests (99% coverage on deduplication service)
+- ✅ Integration test framework with API mocking
+- ✅ Performance benchmarks and test fixtures
+- ✅ Database migrations with Alembic
+- ✅ Development and testing scripts
+
+---
+
+# Phase 1: Web UI Implementation - COMPLETE ✅
+
+## 1.1 Frontend Setup with React + Vite ✅
+**Goal**: Create a modern, responsive web interface for the deduplication system
+
+### Tasks:
+- ✅ Initialize React TypeScript project with Vite
+  - ✅ Set up project structure: `frontend/src/{components,pages,services,store,hooks,utils}`
+  - ✅ Configure Tailwind CSS and shadcn/ui component library
+  - ✅ Set up ESLint, Prettier, and TypeScript strict mode
+  - ✅ Add hot module replacement and development server config
+
+- ✅ Install and configure core dependencies
+  - ✅ Redux Toolkit for state management
+  - ✅ React Router v6 for navigation
+  - ✅ TanStack Query for API state management
+  - ✅ Socket.io-client for WebSocket connections
+  - ✅ react-window for virtual scrolling
+  - ✅ recharts for data visualization
+
+### Implementation Completed:
+```bash
+# Commands executed:
+cd frontend
+npm create vite@latest . -- --template react-ts
+npm install @reduxjs/toolkit react-redux react-router-dom
+npm install @tanstack/react-query socket.io-client
+npm install tailwindcss @tailwindcss/forms @tailwindcss/postcss
+npm install react-window lucide-react clsx tailwind-merge class-variance-authority
+```
+
+## 1.2 Core UI Components ✅
+
+### Configuration Panel Component ✅
+- ✅ Created `ConfigPanel.tsx` with connection testing
+  - ✅ Form fields: Paperless URL, API token, thresholds
+  - ✅ Real-time connection status indicator
+  - ✅ Test connection button with loading states
+  - ✅ Settings validation and error handling
+  - ✅ Save/reset configuration actions
+
+### Document List with Virtual Scrolling ✅
+- ✅ Created `DocumentList.tsx` with performance optimization
+  - ✅ Virtual scrolling for 10,000+ documents
+  - ✅ Columns: Title, Fingerprint, Size, Status, Duplicate Count
+  - ✅ Server-side filtering and sorting
+  - ✅ Bulk selection with checkbox column
+  - ✅ Context menu for document actions
+
+### Duplicate Groups Visualization ✅
+- ✅ Created `DuplicateGroupCard.tsx` components
+  - ✅ Expandable cards showing confidence scores
+  - ✅ Side-by-side document comparison view
+  - ✅ Confidence breakdown chart (Jaccard, fuzzy, metadata, filename)
+  - ✅ Action buttons: Mark reviewed, ignore, delete
+  - ✅ Document preview thumbnails
+
+### Real-time Progress Component ✅
+- ✅ Created `ProgressTracker.tsx` with WebSocket integration
+  - ✅ Real-time progress bar with current step
+  - ✅ Estimated time remaining calculation
+  - ✅ Cancel operation functionality
+  - ✅ Error display with retry options
+  - ✅ Connection status and reconnection logic
+
+## 1.3 Backend WebSocket Implementation ✅
+
+### WebSocket Manager Service ✅
+- ✅ Created `src/paperless_dedupe/api/v1/websocket.py`
+  - ✅ ConnectionManager class for client management
+  - ✅ Progress broadcasting to connected clients
+  - ✅ Authentication middleware for WebSocket connections
+  - ✅ Error handling and reconnection support
+
+### Integration with Processing Service ✅
+- ✅ Modified `processing.py` to emit WebSocket events
+  - ✅ Progress updates during document loading
+  - ✅ Real-time MinHash generation progress
+  - ✅ LSH indexing status updates
+  - ✅ Duplicate detection progress
+  - ✅ Completion and error notifications
+
+### Implementation Completed:
+```python
+# Added to main.py:
+from paperless_dedupe.api.v1.websocket import websocket_endpoint
+app.websocket("/ws")(websocket_endpoint)
+```
+
+## 1.4 Additional Components Implemented ✅
+
+### TypeScript API Client ✅
+- ✅ Created comprehensive API client with type definitions
+  - ✅ Documents API with full CRUD operations
+  - ✅ Duplicates API with group management
+  - ✅ Processing API with real-time status
+  - ✅ Configuration API with validation
+  - ✅ WebSocket client with reconnection logic
+
+### Redux State Management ✅
+- ✅ Configured Redux Toolkit store with slices
+  - ✅ Documents slice with pagination and filtering
+  - ✅ Duplicates slice with group operations
+  - ✅ Processing slice with real-time updates
+  - ✅ Configuration slice with form management
+  - ✅ WebSocket middleware integration
+
+### Application Structure ✅
+- ✅ Created responsive layout with navigation
+- ✅ Implemented 5 main pages:
+  - ✅ Dashboard with overview and statistics
+  - ✅ Documents page with virtual scrolling list
+  - ✅ Duplicates page with group management
+  - ✅ Processing page with control interface
+  - ✅ Settings page with configuration panel
+
+### Production Integration ✅
+- ✅ Built production-ready React application
+- ✅ Configured backend to serve frontend
+- ✅ Updated CORS settings for API access
+- ✅ Added static file serving for assets
+- ✅ Implemented SPA routing support
+
+---
+
+# Phase 2: Enhanced Deduplication Features (MEDIUM PRIORITY)
+
+## 2.1 Image-based Similarity (Perceptual Hashing)
+
+### Image Processing Service
+- [ ] Create `src/paperless_dedupe/services/image_deduplication.py`
+  - [ ] Install and configure imagehash library
+  - [ ] Implement average hash for general similarity
+  - [ ] Add pHash for robust matching
+  - [ ] Implement difference hash for modifications
+  - [ ] Batch processing for multiple images
+
+### Database Schema Updates
+- [ ] Add `image_hash` column to documents table
+- [ ] Create migration for new column
+- [ ] Update document models to include image hash
+- [ ] Add index on image_hash for fast lookups
+
+### Integration with Paperless API
+- [ ] Fetch document thumbnails from paperless API
+- [ ] Process images during document sync
+- [ ] Cache processed hashes in Redis
+- [ ] Weight image similarity in confidence scoring (15-20%)
+
+### Reference Implementation:
+```bash
+# Add to pyproject.toml:
+dependencies = [
+    "imagehash>=4.3.1",
+    "Pillow>=10.0.0"
+]
+```
+
+## 2.2 Custom Field Matching
+
+### Configuration Schema
+- [ ] Design custom field configuration structure
+- [ ] Add field extraction patterns (regex, exact, fuzzy)
+- [ ] Implement field weight configuration
+- [ ] Create validation for field patterns
+
+### Field Extraction Service
+- [ ] Create `src/paperless_dedupe/services/field_extraction.py`
+  - [ ] Regex-based field extraction
+  - [ ] Named entity recognition for dates, numbers
+  - [ ] Custom field value normalization
+  - [ ] Caching of extracted field values
+
+### Integration with Deduplication
+- [ ] Modify similarity scoring to include custom fields
+- [ ] Add field matching weights to configuration
+- [ ] Update confidence calculation algorithm
+- [ ] Add field comparison visualization in UI
+
+## 2.3 ML-based Detection with Sentence Transformers
+
+### ML Service Implementation
+- [ ] Create `src/paperless_dedupe/services/ml_deduplication.py`
+  - [ ] Install sentence-transformers library
+  - [ ] Load pre-trained model (all-MiniLM-L6-v2)
+  - [ ] Generate 384-dimensional embeddings
+  - [ ] Implement cosine similarity calculation
+
+### Vector Storage
+- [ ] Choose between pgvector or FAISS for storage
+- [ ] Create embedding table in database
+- [ ] Implement efficient similarity search
+- [ ] Add embedding caching strategy
+
+### Performance Optimization
+- [ ] Batch embedding generation
+- [ ] GPU acceleration if available
+- [ ] Model caching and memory management
+- [ ] Async processing for large datasets
+
+---
+
+# Phase 3: Performance Optimizations (MEDIUM PRIORITY)
+
+## 3.1 Parallel Processing Implementation
+
+### Async Processing Framework
+- [ ] Create `src/paperless_dedupe/services/parallel_processor.py`
+  - [ ] ProcessPoolExecutor for CPU-intensive tasks
+  - [ ] Asyncio for I/O-bound operations
+  - [ ] Batch processing with configurable batch sizes
+  - [ ] Memory-efficient document streaming
+
+### Document Processing Pipeline
+- [ ] Implement parallel MinHash generation
+- [ ] Concurrent OCR content processing
+- [ ] Parallel similarity calculations
+- [ ] Progress tracking across processes
+
+### Reference Implementation:
+```python
+# Example structure:
+async def process_documents_parallel(documents, batch_size=100):
+    executor = ProcessPoolExecutor(max_workers=4)
+    batches = create_batches(documents, batch_size)
+    tasks = [process_batch_async(executor, batch) for batch in batches]
+    results = await asyncio.gather(*tasks)
+    return combine_results(results)
+```
+
+## 3.2 Database Query Optimization
+
+### Index Strategy
+- [ ] Add performance-critical indexes
+  - [ ] `idx_documents_processing_status` for pending documents
+  - [ ] `idx_duplicate_groups_confidence` for sorting
+  - [ ] `idx_document_content_document_id` for joins
+  - [ ] Partial indexes for frequently filtered columns
+
+### Query Optimization
+- [ ] Implement prepared statements for frequent queries
+- [ ] Add connection pooling with asyncpg
+- [ ] Use materialized views for complex aggregations
+- [ ] Implement query result caching
+
+### Database Partitioning
+- [ ] Partition large tables by date
+- [ ] Implement table maintenance procedures
+- [ ] Add automated statistics updates
+- [ ] Monitor query performance
+
+## 3.3 Incremental Processing & State Management
+
+### Checkpoint System
+- [ ] Create `src/paperless_dedupe/services/checkpoint.py`
+  - [ ] Save processing state to database
+  - [ ] Resume from interruption points
+  - [ ] Skip already processed documents
+  - [ ] Validate checkpoint integrity
+
+### State Persistence
+- [ ] Document processing status tracking
+- [ ] Progress persistence across restarts
+- [ ] Error recovery mechanisms
+- [ ] Cleanup of stale processing states
+
+---
+
+# Phase 4: Paperless Integration Improvements (MEDIUM PRIORITY)
+
+## 4.1 Webhook Support for Real-time Updates
+
+### Webhook Receiver
+- [ ] Create `src/paperless_dedupe/api/v1/webhooks.py`
+  - [ ] Endpoint for paperless document events
+  - [ ] Signature verification for security
+  - [ ] Event type handling (created, updated, deleted)
+  - [ ] Background task queuing
+
+### Event Processing
+- [ ] Process new document events automatically
+- [ ] Update existing documents on changes
+- [ ] Handle document deletion events
+- [ ] Trigger reprocessing when needed
+
+### Configuration
+- [ ] Add webhook URL to paperless configuration
+- [ ] Document webhook setup process
+- [ ] Add webhook testing endpoint
+- [ ] Implement webhook retry logic
+
+## 4.2 Batch Document Operations
+
+### Bulk Actions API
+- [ ] Create endpoints for batch operations
+  - [ ] Mark multiple documents for deletion
+  - [ ] Bulk tagging operations
+  - [ ] Document merging functionality
+  - [ ] Batch metadata updates
+
+### Paperless API Integration
+- [ ] Implement bulk operations in paperless client
+- [ ] Add transaction rollback support
+- [ ] Progress tracking for long operations
+- [ ] Error handling and partial success
+
+### UI Components
+- [ ] Bulk selection interface
+- [ ] Action confirmation dialogs
+- [ ] Progress tracking for bulk operations
+- [ ] Results summary and error reporting
+
+## 4.3 Document Preview and Merge
+
+### Preview Service
+- [ ] Fetch document thumbnails from paperless
+- [ ] Generate document previews
+- [ ] Cache preview images
+- [ ] Implement zoom and navigation
+
+### Merge Functionality
+- [ ] Document content comparison
+- [ ] Metadata merging strategies
+- [ ] User confirmation interface
+- [ ] Undo merge operations
+
+---
+
+# Phase 5: Infrastructure & DevOps (LOW PRIORITY)
+
+## 5.1 CI/CD Pipeline
+
+### GitHub Actions Workflow
+- [ ] Create `.github/workflows/ci.yml`
+  - [ ] Python testing with multiple versions
+  - [ ] Frontend testing with Jest/Vitest
+  - [ ] Docker image building
+  - [ ] Security scanning with CodeQL
+
+### Testing Pipeline
+- [ ] Automated test execution
+- [ ] Code coverage reporting
+- [ ] Performance regression testing
+- [ ] Integration test execution
+
+### Deployment Pipeline
+- [ ] Docker image publishing
+- [ ] Staging environment deployment
+- [ ] Production deployment automation
+- [ ] Rollback procedures
+
+## 5.2 Monitoring & Observability
+
+### Metrics Collection
+- [ ] Add Prometheus metrics endpoints
+  - [ ] Document processing counters
+  - [ ] Duplicate detection metrics
+  - [ ] Performance histograms
+  - [ ] Error rate tracking
+
+### Logging Enhancement
+- [ ] Structured logging with structlog
+- [ ] Log aggregation configuration
+- [ ] Error tracking integration
+- [ ] Performance monitoring
+
+### Health Checks
+- [ ] Comprehensive health check endpoints
+- [ ] Database connection monitoring
+- [ ] Redis connection status
+- [ ] External API availability
+
+## 5.3 Authentication & Multi-tenancy
+
+### User Management
+- [ ] JWT-based authentication system
+- [ ] User registration and login
+- [ ] Role-based access control
+- [ ] API key management
+
+### Multi-tenant Architecture
+- [ ] Tenant isolation at database level
+- [ ] Row-level security implementation
+- [ ] Tenant-specific configurations
+- [ ] Resource quota management
+
+### Security Enhancements
+- [ ] API rate limiting implementation
+- [ ] Request validation and sanitization
+- [ ] SQL injection prevention
+- [ ] XSS protection headers
+
+---
+
+
+# Technical Debt to Address During Implementation
+
+## Code Quality
+- [ ] Add comprehensive error handling
+- [ ] Implement proper logging throughout
+- [ ] Add request validation middleware
+- [ ] Improve error messages and user feedback
+
+## Security
+- [ ] Implement proper secret management
+- [ ] Add API rate limiting
+- [ ] SQL injection prevention
+- [ ] XSS protection headers
+
+## Performance
+- [ ] Database connection pooling
+- [ ] Memory optimization for large OCR texts
+- [ ] Connection retry logic
+- [ ] Query optimization
+
+## Testing
+- [ ] Integration tests for new features
+- [ ] End-to-end testing setup
+- [ ] Performance testing framework
+- [ ] Security testing automation
+
+---
+
+# Success Metrics
+
+## User Experience
+- Page load times < 2 seconds
+- Real-time updates with < 500ms latency
+- Support for 10,000+ documents
+- 99.9% uptime
+
+## Performance
+- Process 1,000 documents in < 5 minutes
+- Memory usage < 1GB for 10,000 documents
+- Database queries < 100ms
+- API response times < 200ms
+
+## Quality
+- Test coverage > 90%
+- Zero critical security vulnerabilities
+- Documentation coverage complete
+- User satisfaction > 4.5/5
+
+---
+
+# Development Environment Setup
+
+## Prerequisites
+- Python 3.13+ with uv package manager
+- Node.js 18+ with npm/yarn
+- Docker and Docker Compose
+- PostgreSQL 15+ and Redis 7+
+
+## Quick Start Commands
+```bash
+# Backend setup
+uv sync
+./scripts/setup-dev.sh
+
+# Frontend setup (after Phase 1.1)
+cd frontend
+npm install
+npm run dev
+
+# Full stack
+docker-compose up -d
+uv run paperless-dedupe
+```
+
+## Testing
+```bash
+# Run all tests
+./scripts/test.sh
+
+# Backend tests only
+uv run pytest
+
+# Frontend tests (after setup)
+cd frontend && npm test
+```
+
+This comprehensive plan provides a roadmap for systematic implementation of all major features while maintaining code quality, performance, and user experience standards.

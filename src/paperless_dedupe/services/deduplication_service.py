@@ -1,0 +1,230 @@
+import hashlib
+import re
+from typing import List, Tuple, Dict, Optional
+from datasketch import MinHash, MinHashLSH
+from rapidfuzz import fuzz
+import logging
+from paperless_dedupe.core.config import settings
+from paperless_dedupe.models.database import Document, DocumentContent, DuplicateGroup, DuplicateMember
+from sqlalchemy.orm import Session
+import pickle
+
+logger = logging.getLogger(__name__)
+
+class DeduplicationService:
+    def __init__(self):
+        self.lsh_index = MinHashLSH(
+            threshold=settings.lsh_threshold,
+            num_perm=settings.minhash_num_perm
+        )
+        self.minhashes = {}
+        
+    def preprocess_text(self, text: str) -> str:
+        """Preprocess text for deduplication"""
+        if not text:
+            return ""
+            
+        # Convert to lowercase
+        text = text.lower()
+        
+        # Remove excessive whitespace
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Remove special characters but keep alphanumeric and spaces
+        text = re.sub(r'[^\w\s]', '', text)
+        
+        # Trim
+        text = text.strip()
+        
+        return text
+    
+    def create_minhash(self, text: str) -> MinHash:
+        """Create MinHash signature for text"""
+        preprocessed = self.preprocess_text(text)
+        
+        if not preprocessed:
+            return None
+            
+        # Create MinHash object
+        minhash = MinHash(num_perm=settings.minhash_num_perm)
+        
+        # Create shingles (3-gram word shingles)
+        words = preprocessed.split()
+        for i in range(len(words) - 2):
+            shingle = ' '.join(words[i:i+3])
+            minhash.update(shingle.encode('utf-8'))
+        
+        return minhash
+    
+    def calculate_similarity_score(
+        self,
+        doc1: Document,
+        doc2: Document,
+        text1: str,
+        text2: str
+    ) -> float:
+        """Calculate comprehensive similarity score between two documents"""
+        
+        scores = []
+        weights = []
+        
+        # MinHash Jaccard similarity
+        if doc1.id in self.minhashes and doc2.id in self.minhashes:
+            jaccard_sim = self.minhashes[doc1.id].jaccard(self.minhashes[doc2.id])
+            scores.append(jaccard_sim)
+            weights.append(0.4)
+        
+        # Fuzzy text similarity
+        if text1 and text2:
+            # Token sort ratio handles word order differences
+            fuzzy_score = fuzz.token_sort_ratio(text1[:5000], text2[:5000]) / 100.0
+            scores.append(fuzzy_score)
+            weights.append(0.3)
+            
+            # Partial ratio for substring matching
+            partial_score = fuzz.partial_ratio(text1[:5000], text2[:5000]) / 100.0
+            scores.append(partial_score)
+            weights.append(0.2)
+        
+        # File size similarity (if sizes are very different, probably not duplicates)
+        if doc1.file_size and doc2.file_size:
+            size_ratio = min(doc1.file_size, doc2.file_size) / max(doc1.file_size, doc2.file_size)
+            scores.append(size_ratio)
+            weights.append(0.1)
+        
+        # Calculate weighted average
+        if scores:
+            total_weight = sum(weights[:len(scores)])
+            weighted_score = sum(s * w for s, w in zip(scores, weights)) / total_weight
+            return weighted_score
+        
+        return 0.0
+    
+    def build_lsh_index(self, documents: List[Document], contents: Dict[int, str]):
+        """Build LSH index for all documents"""
+        logger.info(f"Building LSH index for {len(documents)} documents")
+        
+        self.lsh_index = MinHashLSH(
+            threshold=settings.lsh_threshold,
+            num_perm=settings.minhash_num_perm
+        )
+        self.minhashes = {}
+        
+        for doc in documents:
+            if doc.id not in contents or not contents[doc.id]:
+                continue
+                
+            minhash = self.create_minhash(contents[doc.id])
+            if minhash:
+                self.minhashes[doc.id] = minhash
+                self.lsh_index.insert(f"doc_{doc.id}", minhash)
+        
+        logger.info(f"LSH index built with {len(self.minhashes)} documents")
+    
+    def find_duplicates(
+        self,
+        documents: List[Document],
+        contents: Dict[int, str],
+        threshold: float = None
+    ) -> List[Dict]:
+        """Find duplicate document groups"""
+        
+        threshold = threshold or (settings.fuzzy_match_threshold / 100.0)
+        
+        # Build LSH index
+        self.build_lsh_index(documents, contents)
+        
+        # Find duplicate groups
+        duplicate_groups = []
+        processed = set()
+        
+        for doc in documents:
+            if doc.id in processed or doc.id not in self.minhashes:
+                continue
+                
+            # Query LSH for similar documents
+            candidates = self.lsh_index.query(self.minhashes[doc.id])
+            
+            if len(candidates) > 1:  # Found potential duplicates
+                group_docs = []
+                group_scores = {}
+                
+                for candidate_key in candidates:
+                    candidate_id = int(candidate_key.replace("doc_", ""))
+                    
+                    if candidate_id != doc.id:
+                        candidate_doc = next((d for d in documents if d.id == candidate_id), None)
+                        
+                        if candidate_doc:
+                            score = self.calculate_similarity_score(
+                                doc,
+                                candidate_doc,
+                                contents.get(doc.id, ""),
+                                contents.get(candidate_id, "")
+                            )
+                            
+                            if score >= threshold:
+                                group_docs.append(candidate_doc)
+                                group_scores[candidate_id] = score
+                                processed.add(candidate_id)
+                
+                if group_docs:
+                    # Add the primary document
+                    group_docs.insert(0, doc)
+                    processed.add(doc.id)
+                    
+                    # Calculate average confidence
+                    avg_confidence = sum(group_scores.values()) / len(group_scores) if group_scores else 0
+                    
+                    duplicate_groups.append({
+                        "documents": group_docs,
+                        "confidence": avg_confidence,
+                        "scores": group_scores
+                    })
+        
+        logger.info(f"Found {len(duplicate_groups)} duplicate groups")
+        return duplicate_groups
+    
+    def save_duplicate_groups(self, db: Session, duplicate_groups: List[Dict]):
+        """Save duplicate groups to database"""
+        
+        for group_data in duplicate_groups:
+            # Create duplicate group
+            group = DuplicateGroup(
+                confidence_score=group_data["confidence"],
+                algorithm_version="1.0"
+            )
+            db.add(group)
+            db.flush()
+            
+            # Add members
+            for idx, doc in enumerate(group_data["documents"]):
+                member = DuplicateMember(
+                    group_id=group.id,
+                    document_id=doc.id,
+                    is_primary=(idx == 0)
+                )
+                db.add(member)
+            
+        db.commit()
+        logger.info(f"Saved {len(duplicate_groups)} duplicate groups to database")
+    
+    def get_document_hash(self, text: str) -> str:
+        """Generate hash of document content"""
+        if not text:
+            return None
+            
+        preprocessed = self.preprocess_text(text)
+        return hashlib.sha256(preprocessed.encode()).hexdigest()
+    
+    def serialize_minhash(self, minhash: MinHash) -> bytes:
+        """Serialize MinHash for storage"""
+        if not minhash:
+            return None
+        return pickle.dumps(minhash)
+    
+    def deserialize_minhash(self, data: bytes) -> MinHash:
+        """Deserialize MinHash from storage"""
+        if not data:
+            return None
+        return pickle.loads(data)

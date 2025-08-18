@@ -1,0 +1,247 @@
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session
+from paperless_dedupe.models.database import get_db, Document, DocumentContent
+from paperless_dedupe.services.deduplication_service import DeduplicationService
+from paperless_dedupe.services.cache_service import cache_service
+from paperless_dedupe.core.config import settings
+from pydantic import BaseModel
+from typing import Optional
+import logging
+import asyncio
+from datetime import datetime
+from .websocket import broadcast_processing_update, broadcast_error, broadcast_completion
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+# Global processing status
+processing_status = {
+    "is_processing": False,
+    "current_step": "",
+    "progress": 0,
+    "total": 0,
+    "started_at": None,
+    "completed_at": None,
+    "error": None
+}
+
+async def safe_broadcast_update():
+    """Safely broadcast processing status update via WebSocket"""
+    try:
+        await broadcast_processing_update(processing_status.copy())
+    except Exception as e:
+        logger.error(f"Error broadcasting WebSocket update: {e}")
+
+def update_status_and_broadcast(step: str, progress: Optional[int] = None):
+    """Update processing status and broadcast via WebSocket"""
+    global processing_status
+    processing_status["current_step"] = step
+    if progress is not None:
+        processing_status["progress"] = progress
+    
+    # Schedule WebSocket broadcast in background
+    try:
+        loop = asyncio.get_event_loop()
+        loop.create_task(safe_broadcast_update())
+    except RuntimeError:
+        # Event loop not running, skip WebSocket broadcast
+        pass
+
+class AnalyzeRequest(BaseModel):
+    threshold: Optional[float] = None
+    force_rebuild: bool = False
+    limit: Optional[int] = None
+
+async def run_deduplication_analysis(
+    db: Session,
+    threshold: float,
+    force_rebuild: bool,
+    limit: Optional[int] = None
+):
+    """Background task to run deduplication analysis"""
+    global processing_status
+    
+    try:
+        processing_status["is_processing"] = True
+        processing_status["current_step"] = "Loading documents"
+        processing_status["started_at"] = datetime.utcnow()
+        processing_status["error"] = None
+        
+        # Broadcast initial status
+        await safe_broadcast_update()
+        
+        # Get documents to process
+        query = db.query(Document)
+        if not force_rebuild:
+            query = query.filter(Document.processing_status == "pending")
+        if limit:
+            query = query.limit(limit)
+        
+        documents = query.all()
+        processing_status["total"] = len(documents)
+        
+        # Broadcast document count
+        await safe_broadcast_update()
+        
+        if not documents:
+            processing_status["current_step"] = "No documents to process"
+            await safe_broadcast_update()
+            return
+        
+        logger.info(f"Processing {len(documents)} documents for deduplication")
+        
+        # Load OCR content
+        processing_status["current_step"] = "Loading OCR content"
+        contents = {}
+        await safe_broadcast_update()
+        
+        for idx, doc in enumerate(documents):
+            processing_status["progress"] = idx + 1
+            
+            # Broadcast progress every 10 documents or on last document
+            if (idx + 1) % 10 == 0 or idx == len(documents) - 1:
+                await safe_broadcast_update()
+            
+            # Try cache first
+            cached_content = await cache_service.get_document_ocr(doc.id)
+            if cached_content:
+                contents[doc.id] = cached_content
+            else:
+                # Get from database
+                content = db.query(DocumentContent).filter(
+                    DocumentContent.document_id == doc.id
+                ).first()
+                
+                if content and content.full_text:
+                    contents[doc.id] = content.full_text
+                    # Cache for next time
+                    await cache_service.set_document_ocr(doc.id, content.full_text)
+        
+        # Run deduplication
+        processing_status["current_step"] = "Finding duplicates"
+        processing_status["progress"] = 0  # Reset progress for deduplication phase
+        await safe_broadcast_update()
+        
+        dedup_service = DeduplicationService()
+        
+        duplicate_groups = dedup_service.find_duplicates(
+            documents,
+            contents,
+            threshold
+        )
+        
+        # Save results
+        processing_status["current_step"] = "Saving results"
+        await safe_broadcast_update()
+        
+        if duplicate_groups:
+            dedup_service.save_duplicate_groups(db, duplicate_groups)
+        
+        # Update document processing status
+        for doc in documents:
+            doc.processing_status = "completed"
+            doc.last_processed = datetime.utcnow()
+        
+        db.commit()
+        
+        # Cache the results
+        await cache_service.set_duplicate_groups([
+            {
+                "id": g["documents"][0].id,
+                "confidence": g["confidence"],
+                "document_count": len(g["documents"])
+            }
+            for g in duplicate_groups
+        ])
+        
+        processing_status["current_step"] = "Completed"
+        processing_status["completed_at"] = datetime.utcnow()
+        processing_status["progress"] = processing_status["total"]
+        
+        # Broadcast completion
+        await safe_broadcast_update()
+        
+        # Send completion event with results
+        try:
+            await broadcast_completion({
+                "groups_found": len(duplicate_groups),
+                "documents_processed": len(documents),
+                "completed_at": processing_status["completed_at"].isoformat()
+            })
+        except Exception as e:
+            logger.error(f"Error broadcasting completion: {e}")
+            
+        logger.info(f"Deduplication analysis completed. Found {len(duplicate_groups)} duplicate groups")
+        
+    except Exception as e:
+        logger.error(f"Error during deduplication analysis: {e}")
+        processing_status["error"] = str(e)
+        processing_status["current_step"] = "Error"
+        
+        # Broadcast error
+        try:
+            await safe_broadcast_update()
+            await broadcast_error(f"Processing failed: {str(e)}")
+        except Exception as broadcast_error:
+            logger.error(f"Error broadcasting error status: {broadcast_error}")
+    finally:
+        processing_status["is_processing"] = False
+        processing_status["progress"] = processing_status["total"]
+
+@router.post("/analyze")
+async def start_analysis(
+    request: AnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """Start deduplication analysis"""
+    global processing_status
+    
+    if processing_status["is_processing"]:
+        raise HTTPException(status_code=409, detail="Analysis already in progress")
+    
+    # Check if there are documents to process
+    document_count = db.query(Document).count()
+    if document_count == 0:
+        raise HTTPException(status_code=400, detail="No documents available. Please sync documents first.")
+    
+    threshold = request.threshold or (settings.fuzzy_match_threshold / 100.0)
+    
+    # Start background task
+    background_tasks.add_task(
+        run_deduplication_analysis,
+        db,
+        threshold,
+        request.force_rebuild,
+        request.limit
+    )
+    
+    return {
+        "status": "started",
+        "message": "Deduplication analysis started",
+        "document_count": document_count
+    }
+
+@router.get("/status")
+async def get_processing_status():
+    """Get current processing status"""
+    return processing_status
+
+@router.post("/cancel")
+async def cancel_processing():
+    """Cancel current processing"""
+    global processing_status
+    
+    if not processing_status["is_processing"]:
+        raise HTTPException(status_code=400, detail="No processing in progress")
+    
+    processing_status["is_processing"] = False
+    processing_status["current_step"] = "Cancelled"
+    
+    return {"status": "cancelled"}
+
+@router.post("/clear-cache")
+async def clear_cache():
+    """Clear all cached data"""
+    await cache_service.clear_all()
+    return {"status": "success", "message": "Cache cleared"}
