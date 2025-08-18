@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { processingApi } from '../../services/api';
-import type { ProcessingStatus, AnalyzeRequest, AnalyzeResponse } from '../../services/api/types';
+import type { ProcessingStatus, AnalyzeRequest, AnalyzeResponse as _AnalyzeResponse } from '../../services/api/types';
 
 // Async thunks
 export const startAnalysis = createAsyncThunk(
@@ -179,7 +179,7 @@ const processingSlice = createSlice({
         state.error = null;
         state.lastAnalysisRequest = action.meta.arg;
       })
-      .addCase(startAnalysis.fulfilled, (state, action) => {
+      .addCase(startAnalysis.fulfilled, (state, _action) => {
         state.loading.start = false;
         // The actual status will come from WebSocket updates
       })

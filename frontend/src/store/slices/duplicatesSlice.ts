@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { duplicatesApi } from '../../services/api';
 import type {
   DuplicateGroup,
-  DuplicateGroupsResponse,
+  DuplicateGroupsResponse as _DuplicateGroupsResponse,
   DuplicateGroupQueryParams,
   DuplicateStatistics,
 } from '../../services/api/types';

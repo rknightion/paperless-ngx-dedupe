@@ -95,7 +95,7 @@ class ApiClient {
   }
 
   removeAuthHeader(): void {
-    const { Authorization, ...rest } = this.defaultHeaders as any;
+    const { Authorization: _Authorization, ...rest } = this.defaultHeaders as any;
     this.defaultHeaders = rest;
   }
 }

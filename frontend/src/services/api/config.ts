@@ -2,7 +2,6 @@ import { apiClient } from './client';
 import type {
   Configuration,
   TestConnectionResponse,
-  ApiResponse,
 } from './types';
 
 export const configApi = {

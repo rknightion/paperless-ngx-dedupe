@@ -1,7 +1,7 @@
 import { configureStore, Middleware } from '@reduxjs/toolkit';
 import { documentsSlice, duplicatesSlice, processingSlice, configSlice } from './slices';
 import { updateProcessingStatus, setWebSocketConnected } from './slices/processingSlice';
-import { updateDocumentStatus } from './slices/documentsSlice';
+import { updateDocumentStatus as _updateDocumentStatus } from './slices/documentsSlice';
 import { wsClient } from '../services/websocket';
 
 // WebSocket middleware for real-time updates

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { documentsApi } from '../../services/api';
-import type { Document, DocumentListResponse, DocumentQueryParams } from '../../services/api/types';
+import type { Document, DocumentListResponse as _DocumentListResponse, DocumentQueryParams } from '../../services/api/types';
 
 // Async thunks
 export const fetchDocuments = createAsyncThunk(
