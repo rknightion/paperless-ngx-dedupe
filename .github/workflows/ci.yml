@@ -63,7 +63,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --all-extras
     
     - name: Run tests with coverage
       env:
@@ -148,6 +148,8 @@ jobs:
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
     
     steps:
     - uses: actions/checkout@v4
@@ -163,6 +165,7 @@ jobs:
     
     - name: Upload Trivy results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      # Only upload SARIF for non-fork PRs and pushes (has permissions)
+      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
       with:
         sarif_file: 'trivy-results.sarif'

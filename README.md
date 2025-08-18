@@ -1,5 +1,11 @@
 # Paperless-NGX Deduplication Tool
 
+[![CI](https://github.com/rknightion/paperless-ngx-dedupe/actions/workflows/ci.yml/badge.svg)](https://github.com/rknightion/paperless-ngx-dedupe/actions/workflows/ci.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/rknightion/paperless-ngx-dedupe)](https://github.com/rknightion/paperless-ngx-dedupe/pkgs/container/paperless-ngx-dedupe)
+[![License](https://img.shields.io/github/license/rknightion/paperless-ngx-dedupe)](https://github.com/rknightion/paperless-ngx-dedupe/blob/main/LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/rknightion/paperless-ngx-dedupe)](https://github.com/rknightion/paperless-ngx-dedupe/releases)
+[![Python](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org)
+
 A powerful document deduplication tool for [paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) that identifies duplicate documents using advanced fuzzy matching and MinHash/LSH algorithms, designed to handle large document collections efficiently.
 
 ## Features
@@ -13,133 +19,72 @@ A powerful document deduplication tool for [paperless-ngx](https://github.com/pa
 - 🔄 **Real-time Updates**: WebSocket integration for live progress tracking
 - 🐳 **Container Ready**: Full Docker support with docker-compose
 
+## Why Use This?
+
+If you're using paperless-ngx to manage your documents, you might have:
+- **Duplicate scans** from re-scanning documents
+- **Multiple versions** of the same document with slight OCR differences
+- **Similar documents** that are hard to identify manually
+- **Large collections** where manual duplicate checking is impractical
+
+This tool helps you:
+- **Save storage space** by identifying redundant documents
+- **Clean up your archive** with confidence scores for each duplicate
+- **Process large collections** efficiently (tested with 13,000+ documents)
+- **Maintain data integrity** - only identifies duplicates, doesn't delete automatically
+
 ## Quick Start
 
 ### Using Docker (Recommended)
 
-1. Clone the repository:
+1. **Download docker-compose.yml**:
 ```bash
-git clone https://github.com/yourusername/paperless-ngx-dedupe.git
-cd paperless-ngx-dedupe
+curl -O https://raw.githubusercontent.com/rknightion/paperless-ngx-dedupe/main/docker-compose.yml
 ```
 
-2. Configure environment (optional):
+2. **Start the services**:
 ```bash
-cp .env.example .env
-# Edit .env with your paperless-ngx connection details
-```
-
-3. Build and start the services:
-```bash
-# First time setup or after code changes
-docker compose build
-docker compose up -d
-
-# Or force rebuild without cache
-docker compose build --no-cache
 docker compose up -d
 ```
 
-4. **Access the application**:
-   - **Web UI**: http://localhost:3000 (React frontend served by nginx)
-   - **API Backend**: http://localhost:8000 (FastAPI backend)
-   - **API Documentation**: http://localhost:8000/docs (interactive API docs)
-   - **API Status**: http://localhost:8000/api (API health check)
-
-#### Rebuilding After Changes
-
-**Frontend Changes:**
-```bash
-# After modifying frontend code (React/TypeScript)
-cd frontend
-npm run build
-cd ..
-docker compose build frontend
-docker compose up -d frontend
-```
-
-**Backend Changes:**
-```bash
-# After modifying backend code (Python/FastAPI)
-docker compose build paperless-dedupe
-docker compose up -d paperless-dedupe
-```
-
-**Full Rebuild:**
-```bash
-# Rebuild everything from scratch
-docker compose down
-docker compose build --no-cache
-docker compose up -d
-```
-
-### Local Development
-
-#### Prerequisites
-- Python 3.13+ with [uv](https://docs.astral.sh/uv/) package manager
-- Node.js 18+ with npm
-- Docker and Docker Compose (for databases)
-
-#### Backend Setup
-
-1. Install Python dependencies:
-```bash
-uv sync
-```
-
-2. Start Redis and PostgreSQL services:
-```bash
-docker-compose up -d redis postgres
-```
-
-3. Run database migrations (if using Alembic):
-```bash
-uv run alembic upgrade head
-```
-
-4. Start the backend server:
-```bash
-# Option 1: Using the entry point (recommended)
-uv run uvicorn paperless_dedupe.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Option 2: Using the script (simpler but with warning)
-uv run paperless-dedupe
-```
-
-#### Frontend Setup
-
-5. Install frontend dependencies:
-```bash
-cd frontend
-npm install
-```
-
-6. Build the frontend for production:
-```bash
-npm run build
-```
-
-7. **Access the application**:
-   - **Web UI**: http://localhost:3000 (if using split containers)
-   - **API Backend**: http://localhost:8000 
+3. **Access the application**:
+   - **Web UI**: http://localhost:3000
    - **API Documentation**: http://localhost:8000/docs
+   
+4. **Configure paperless-ngx connection**:
+   - Navigate to Settings in the web UI
+   - Enter your paperless-ngx URL and API token
+   - Click "Test Connection" to verify
 
-#### Frontend Development Mode (Optional)
+That's it! The application will automatically pull the latest images from GitHub Container Registry.
 
-For frontend development with hot reload:
+### Alternative: Using Specific Version
 
+To use a specific version instead of latest:
 ```bash
-# In one terminal - backend
-uv run uvicorn paperless_dedupe.main:app --host 0.0.0.0 --port 8001 --reload
-
-# In another terminal - frontend dev server
-cd frontend
-npm run dev
+# Edit docker-compose.yml and replace :latest with :v1.0.0
+sed -i 's/:latest/:v1.0.0/g' docker-compose.yml
+docker compose up -d
 ```
 
-Then access:
-- **Frontend Dev Server**: http://localhost:5173 (with hot reload)
-- **Backend API**: http://localhost:8001
+## Development
+
+For development setup and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Quick Development Start
+
+```bash
+# Clone the repository
+git clone https://github.com/rknightion/paperless-ngx-dedupe.git
+cd paperless-ngx-dedupe
+
+# Use the development docker-compose
+docker compose -f docker-compose.dev.yml up -d
+
+# Or for local development with hot reload
+uv sync --dev
+cd frontend && npm install
+```
 
 ## Web Interface
 
@@ -288,20 +233,36 @@ uv run pytest --cov=paperless_dedupe
   - [ ] Batch resolution operations
   - [ ] Document preview and merge functionality
 - [ ] **Infrastructure & DevOps** (Phase 5)
-  - [ ] CI/CD pipeline with GitHub Actions
+  - [x] CI/CD pipeline with GitHub Actions
   - [ ] Monitoring and observability
   - [ ] Authentication and multi-tenancy
 
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/rknightion/paperless-ngx-dedupe/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/rknightion/paperless-ngx-dedupe/discussions)
+- **Security**: See [SECURITY.md](SECURITY.md) for reporting vulnerabilities
+
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup instructions
+- Code style guidelines
+- How to submit pull requests
+- Testing requirements
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
 - [paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) team for the excellent document management system
 - [datasketch](https://github.com/ekzhu/datasketch) for MinHash implementation
 - [rapidfuzz](https://github.com/maxbachmann/RapidFuzz) for fast fuzzy string matching
+
+## Star History
+
+If you find this project useful, please consider giving it a ⭐ on GitHub!
+
+[![Star History Chart](https://api.star-history.com/svg?repos=rknightion/paperless-ngx-dedupe&type=Date)](https://star-history.com/#rknightion/paperless-ngx-dedupe&Date)
