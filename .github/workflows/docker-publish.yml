@@ -8,12 +8,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'Dockerfile'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - 'frontend/package*.json'
-      - '.github/workflows/docker-publish.yml'
 
 env:
   REGISTRY: ghcr.io
