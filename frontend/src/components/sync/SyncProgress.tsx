@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Progress } from '../ui/progress';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Alert, AlertDescription } from '../ui/alert';
+import { Progress } from '../ui/Progress';
+import { Button } from '../ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Alert, AlertDescription } from '../ui/Alert';
 import { Loader2, CheckCircle, AlertCircle, RefreshCw, FileText } from 'lucide-react';
 import { documentsApi } from '../../services/api/documents';
 import { wsClient } from '../../services/websocket/client';
-import { useAppDispatch } from '../../store/hooks';
+import { useAppDispatch } from '../../hooks/redux';
 import { fetchDocuments } from '../../store/slices/documentsSlice';
 
 interface SyncStatus {
