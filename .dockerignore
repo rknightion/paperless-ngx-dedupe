@@ -58,6 +58,10 @@ frontend/.env.*
 frontend/coverage/
 frontend/*.log
 frontend/.DS_Store
+frontend/src/**/*.test.js
+frontend/src/**/*.test.ts
+frontend/src/**/*.spec.js
+frontend/src/**/*.spec.ts
 
 # IDE
 .vscode/

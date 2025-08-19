@@ -5,14 +5,13 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Copy package files
-COPY frontend/package.json ./
-COPY frontend/package-lock.json ./
+# Copy package files first for better layer caching
+COPY frontend/package.json frontend/package-lock.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (this layer will be cached if package files don't change)
+RUN npm ci --only=production --silent
 
-# Copy frontend source
+# Copy frontend source (separate layer for code changes)
 COPY frontend/ ./
 
 # Build frontend
@@ -23,40 +22,43 @@ RUN npm run build
 # =============================================================================
 FROM python:3.13-slim AS backend-builder
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
+# Install build dependencies in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Install uv
-RUN pip install uv
+# Install uv (pinned version for reproducibility)
+RUN pip install --no-cache-dir uv==0.5.1
 
 # Set working directory
 WORKDIR /app
 
-# Copy project files
+# Copy dependency files first for better caching
 COPY pyproject.toml .
-COPY src/ ./src/
-# Create empty README for build if it doesn't exist
 RUN touch README.md
 
-# Install dependencies using uv
-RUN uv pip install --system -e .
+# Install dependencies first (this layer will be cached if pyproject.toml doesn't change)
+RUN uv pip install --system --no-cache .
+
+# Copy source code (separate layer so code changes don't invalidate dependency cache)
+COPY src/ ./src/
 
 # =============================================================================
 # Backend Production Stage
 # =============================================================================
 FROM python:3.13-slim AS backend
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies in a single optimized layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Create non-root user
+# Create non-root user and directories in one layer
 RUN useradd -m -u 1000 paperless && \
     mkdir -p /app/data /app/cache && \
     chown -R paperless:paperless /app
@@ -64,7 +66,7 @@ RUN useradd -m -u 1000 paperless && \
 # Set working directory
 WORKDIR /app
 
-# Copy installed packages from backend builder
+# Copy installed packages from backend builder (single layer)
 COPY --from=backend-builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
 
