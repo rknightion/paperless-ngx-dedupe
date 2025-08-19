@@ -13,6 +13,7 @@ from paperless_dedupe.models.database import Document
 
 
 @pytest.mark.benchmark
+@pytest.mark.skip(reason="Performance tests are resource intensive - run manually with pytest -m benchmark")
 class TestDeduplicationPerformance:
     """Performance benchmarks for deduplication algorithms"""
     
@@ -248,6 +249,7 @@ class TestDeduplicationPerformance:
 
 
 @pytest.mark.benchmark
+@pytest.mark.skip(reason="Performance tests are resource intensive - run manually with pytest -m benchmark")
 class TestDatabasePerformance:
     """Performance benchmarks for database operations"""
     
@@ -341,6 +343,7 @@ class TestDatabasePerformance:
 
 
 @pytest.mark.benchmark
+@pytest.mark.skip(reason="Performance tests are resource intensive - run manually with pytest -m benchmark")
 class TestCachePerformance:
     """Performance benchmarks for caching operations"""
     

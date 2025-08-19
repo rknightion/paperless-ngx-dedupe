@@ -8,6 +8,7 @@ import {
 import { Button } from '../ui/Button';
 import { Progress } from '../ui/Progress';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Alert, AlertDescription } from '../ui/Alert';
 import {
   Play,
   Square,
@@ -82,8 +83,9 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
 
     try {
       await dispatch(startAnalysis(request)).unwrap();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to start analysis:', error);
+      // Error will be shown via the status.error from Redux state
     }
   };
 
@@ -235,17 +237,17 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
 
         {/* Error Display */}
         {status.error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Processing Error
-                </h3>
-                <div className="mt-2 text-sm text-red-700">{status.error}</div>
-              </div>
-            </div>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {status.error}
+              {status.error.includes('No documents available') && (
+                <div className="mt-2">
+                  <p className="font-semibold">Please sync documents first using the Document Sync panel above.</p>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Timing Information */}

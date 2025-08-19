@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 import time
+import asyncio
 from sqlalchemy import text
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.api.v1 import documents, duplicates, config, processing, websocket
@@ -63,6 +64,34 @@ async def lifespan(app: FastAPI):
     
     # Connect to cache
     await cache_service.connect()
+    
+    # Start automatic document sync if configured
+    try:
+        from paperless_dedupe.models.database import Document
+        from paperless_dedupe.api.v1.documents import run_document_sync, sync_status
+        
+        # Check if this is the first run or we have no documents
+        db = next(get_db())
+        document_count = db.query(Document).count()
+        
+        # Check if Paperless is configured
+        from paperless_dedupe.core.config_utils import get_current_paperless_config
+        client_settings = get_current_paperless_config(db)
+        
+        if client_settings.get('paperless_url') and not sync_status["is_syncing"]:
+            if document_count == 0:
+                logger.info("No documents found. Starting initial sync from Paperless...")
+                # Run sync in background
+                asyncio.create_task(run_document_sync(db, force_refresh=False, limit=None))
+            else:
+                logger.info(f"Found {document_count} existing documents. Skipping automatic sync.")
+        else:
+            if not client_settings.get('paperless_url'):
+                logger.info("Paperless URL not configured. Skipping automatic sync.")
+        
+        db.close()
+    except Exception as e:
+        logger.error(f"Error during startup sync check: {e}")
     
     yield
     

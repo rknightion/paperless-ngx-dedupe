@@ -95,6 +95,22 @@ class ConnectionManager:
         }
         await self.broadcast(message)
     
+    async def send_sync_update(self, sync_status: dict):
+        """Send document sync status update to all clients"""
+        message = {
+            "type": "sync_update",
+            "data": sync_status
+        }
+        await self.broadcast(message)
+    
+    async def send_sync_completion(self, completion_data: dict):
+        """Send sync completion message"""
+        message = {
+            "type": "sync_completed",
+            "data": completion_data
+        }
+        await self.broadcast(message)
+    
     def get_connection_count(self) -> int:
         """Get number of active connections"""
         return len(self.active_connections)
@@ -175,6 +191,14 @@ async def handle_client_message(message: dict, connection_id: str):
             "data": processing_status
         }, connection_id)
     
+    elif message_type == "get_sync_status":
+        # Send current sync status
+        from .documents import sync_status
+        await manager.send_personal_message({
+            "type": "sync_update",
+            "data": sync_status
+        }, connection_id)
+    
     else:
         logger.warning(f"Unknown message type from {connection_id}: {message_type}")
         await manager.send_error(f"Unknown message type: {message_type}", connection_id)
@@ -195,3 +219,12 @@ async def broadcast_completion(completion_data: dict):
 def get_connection_count() -> int:
     """Get current number of WebSocket connections"""
     return manager.get_connection_count()
+
+# Sync-specific broadcast functions
+async def broadcast_sync_update(sync_status: dict):
+    """Utility function to broadcast sync updates"""
+    await manager.send_sync_update(sync_status)
+
+async def broadcast_sync_completion(completion_data: dict):
+    """Utility function to broadcast sync completion"""
+    await manager.send_sync_completion(completion_data)

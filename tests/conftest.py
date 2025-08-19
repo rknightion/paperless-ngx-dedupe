@@ -15,11 +15,16 @@ from paperless_dedupe.core.config import settings
 from paperless_dedupe.services.cache_service import cache_service
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    """Create an instance of the default event loop for each test."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
+    try:
+        loop.run_until_complete(asyncio.sleep(0))
+    except:
+        pass
     loop.close()
 
 
@@ -60,10 +65,10 @@ def client(temp_db):
         lifespan=test_lifespan
     )
     
-    # Add all the routers
+    # Add all the routers - match the same prefixes as main.py
     from paperless_dedupe.api.v1 import documents, duplicates, config, processing
-    test_app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
-    test_app.include_router(duplicates.router, prefix="/api/v1", tags=["duplicates"])
+    test_app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
+    test_app.include_router(duplicates.router, prefix="/api/v1/duplicates", tags=["duplicates"])
     test_app.include_router(config.router, prefix="/api/v1/config", tags=["config"])
     test_app.include_router(processing.router, prefix="/api/v1/processing", tags=["processing"])
     

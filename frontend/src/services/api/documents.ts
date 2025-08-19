@@ -32,8 +32,26 @@ export const documentsApi = {
   },
 
   // Sync documents from paperless-ngx
-  async syncDocuments(): Promise<ApiResponse> {
-    return apiClient.post<ApiResponse>('/documents/sync');
+  async syncDocuments(params?: {
+    force_refresh?: boolean;
+    limit?: number;
+  }): Promise<ApiResponse> {
+    return apiClient.post<ApiResponse>('/documents/sync', params || {});
+  },
+
+  // Get sync status
+  async getSyncStatus(): Promise<{
+    is_syncing: boolean;
+    current_step: string;
+    progress: number;
+    total: number;
+    started_at: string | null;
+    completed_at: string | null;
+    error: string | null;
+    documents_synced: number;
+    documents_updated: number;
+  }> {
+    return apiClient.get('/documents/sync/status');
   },
 
   // Get document statistics

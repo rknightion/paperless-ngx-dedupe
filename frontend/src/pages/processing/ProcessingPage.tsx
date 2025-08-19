@@ -1,5 +1,6 @@
 import React from 'react';
 import { ProgressTracker } from '../../components/shared';
+import { SyncProgress } from '../../components/sync/SyncProgress';
 import {
   Card,
   CardContent,
@@ -24,6 +25,9 @@ export const ProcessingPage: React.FC = () => {
           Monitor and control document deduplication analysis
         </p>
       </div>
+
+      {/* Document Sync */}
+      <SyncProgress />
 
       {/* Main Progress Tracker */}
       <ProgressTracker

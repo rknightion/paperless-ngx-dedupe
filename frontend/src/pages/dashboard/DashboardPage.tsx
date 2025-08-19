@@ -8,6 +8,7 @@ import {
 import { fetchDuplicateStatistics } from '../../store/slices/duplicatesSlice';
 import { fetchDocuments } from '../../store/slices/documentsSlice';
 import { ProgressTracker } from '../../components/shared';
+import { SyncProgress } from '../../components/sync/SyncProgress';
 import {
   Card,
   CardContent,
@@ -187,6 +188,9 @@ export const DashboardPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Document Sync Status */}
+      <SyncProgress />
 
       {/* Storage Savings Estimate */}
       {statistics && statistics.potential_space_savings > 0 && (

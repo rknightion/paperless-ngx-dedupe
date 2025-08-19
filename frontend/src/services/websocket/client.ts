@@ -2,6 +2,7 @@ import type { ProcessingStatus } from '../api/types';
 
 type WebSocketEventCallback = (data: any) => void;
 type ProcessingUpdateCallback = (status: ProcessingStatus) => void;
+type SyncUpdateCallback = (status: any) => void;
 type ErrorCallback = (error: string) => void;
 
 interface WebSocketMessage {
@@ -100,6 +101,14 @@ class WebSocketClient {
         this.emit('processing_completed', message.data);
         break;
 
+      case 'sync_update':
+        this.emit('sync_update', message.data);
+        break;
+
+      case 'sync_completed':
+        this.emit('sync_completed', message.data);
+        break;
+
       case 'pong':
         // Pong received, connection is alive
         break;
@@ -170,6 +179,8 @@ class WebSocketClient {
 
   // Event listener methods
   on(event: 'processing_update', callback: ProcessingUpdateCallback): void;
+  on(event: 'sync_update', callback: SyncUpdateCallback): void;
+  on(event: 'sync_completed', callback: (data: any) => void): void;
   on(event: 'error', callback: ErrorCallback): void;
   on(event: 'processing_completed', callback: (data: any) => void): void;
   on(event: 'max_reconnect_attempts_reached', callback: () => void): void;
