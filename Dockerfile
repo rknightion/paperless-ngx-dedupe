@@ -9,7 +9,7 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 
 # Install dependencies (this layer will be cached if package files don't change)
-RUN npm ci --only=production --silent
+RUN npm ci --silent
 
 # Copy frontend source (separate layer for code changes)
 COPY frontend/ ./
