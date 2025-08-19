@@ -132,13 +132,18 @@ async def test_paperless_connection(
             success = await client.test_connection()
             
             if success:
-                # Try to get API info
+                # Try to get document count as a test
                 try:
-                    response = await client._request_with_retry("GET", f"{client.base_url}/api/")
-                    api_info = response.json()
-                    version = api_info.get("version", "Unknown")
+                    response = await client._request_with_retry(
+                        "GET", 
+                        f"{client.base_url}/api/documents/",
+                        params={"page_size": 1}
+                    )
+                    data = response.json()
+                    doc_count = data.get("count", 0)
+                    version = f"Connected (found {doc_count} documents)"
                 except:
-                    version = None
+                    version = "Connected"
                 
                 return ConnectionTestResponse(
                     success=True,

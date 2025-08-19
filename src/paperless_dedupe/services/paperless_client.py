@@ -174,9 +174,12 @@ class PaperlessClient:
     async def test_connection(self) -> bool:
         """Test connection to paperless API"""
         try:
+            # Use /api/documents/ endpoint with limit=1 to test connection
+            # This is a proper endpoint that doesn't redirect
             response = await self._request_with_retry(
                 "GET",
-                f"{self.base_url}/api/"
+                f"{self.base_url}/api/documents/",
+                params={"page_size": 1}
             )
             return response.status_code == 200
         except Exception as e:
