@@ -20,8 +20,10 @@ services:
       - paperless-dedupe-data:/app/data
       - paperless-dedupe-cache:/app/cache
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - paperless-dedupe-net
@@ -39,7 +41,8 @@ services:
     ports:
       - "30002:3000"
     depends_on:
-      - paperless-dedupe
+      paperless-dedupe:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - paperless-dedupe-net
@@ -64,7 +67,7 @@ services:
       - paperless-dedupe-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U paperless"]
+      test: ["CMD-SHELL", "pg_isready -U paperless -d paperless_dedupe"]
       interval: 10s
       timeout: 5s
       retries: 5

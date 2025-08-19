@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+import time
+from sqlalchemy import text
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.api.v1 import documents, duplicates, config, processing, websocket
 from paperless_dedupe.models.database import init_db
@@ -19,6 +21,24 @@ async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     # Startup
     logger.info("Starting Paperless Dedupe application")
+    
+    # Wait for database to be ready
+    from paperless_dedupe.models.database import engine
+    max_retries = 30
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("Database connection established")
+            break
+        except Exception as e:
+            retry_count += 1
+            if retry_count >= max_retries:
+                logger.error(f"Failed to connect to database after {max_retries} attempts")
+                raise
+            logger.info(f"Waiting for database... attempt {retry_count}/{max_retries}")
+            time.sleep(2)
     
     # Initialize database
     init_db()
@@ -70,6 +90,11 @@ async def api_root():
     }
 
 @app.get("/api/health")
+async def api_health():
+    """API Health check endpoint"""
+    return {"status": "healthy"}
+
+@app.get("/health")
 async def health():
-    """Health check endpoint"""
+    """Health check endpoint for Docker"""
     return {"status": "healthy"}
