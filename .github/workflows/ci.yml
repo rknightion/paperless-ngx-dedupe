@@ -63,7 +63,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --all-extras
+        uv sync --group dev
     
     - name: Run tests with coverage
       env:
@@ -71,7 +71,7 @@ jobs:
         PAPERLESS_DEDUPE_REDIS_URL: redis://localhost:6379/0
         PAPERLESS_DEDUPE_SECRET_KEY: test-secret-key-for-ci
       run: |
-        uv run pytest --cov=paperless_dedupe --cov-report=xml --cov-report=term
+        uv run pytest --cov=paperless_dedupe --cov-report=xml --cov-report=term -m "not benchmark" --durations=10
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -80,6 +80,63 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
+
+  benchmark-tests:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    # Only run on main branch or when explicitly requested
+    if: github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[benchmark]')
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: paperless
+          POSTGRES_PASSWORD: paperless
+          POSTGRES_DB: paperless_dedupe_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+    
+    - name: Install dependencies
+      run: |
+        uv sync --group dev
+    
+    - name: Run benchmark tests
+      env:
+        PAPERLESS_DEDUPE_DATABASE_URL: postgresql://paperless:paperless@localhost:5432/paperless_dedupe_test
+        PAPERLESS_DEDUPE_REDIS_URL: redis://localhost:6379/0
+        PAPERLESS_DEDUPE_SECRET_KEY: test-secret-key-for-ci
+      run: |
+        uv run pytest tests/benchmarks/ -v --durations=0
 
   frontend-checks:
     name: Frontend Checks

@@ -56,7 +56,7 @@ class TestDeduplicationPerformance:
         """Get current memory usage in MB"""
         return self.process.memory_info().rss / 1024 / 1024
     
-    @pytest.mark.parametrize("doc_count", [100, 500, 1000, 2000])
+    @pytest.mark.parametrize("doc_count", [100, 500, 1000])
     def test_minhash_generation_performance(self, doc_count):
         """Benchmark MinHash generation performance"""
         documents, contents = self._create_test_documents(doc_count)
@@ -219,7 +219,7 @@ class TestDeduplicationPerformance:
     @pytest.mark.slow
     def test_large_scale_performance(self):
         """Test performance with large document sets (marked as slow)"""
-        doc_count = 5000
+        doc_count = 2000  # Reduced from 5000 for CI performance
         documents, contents = self._create_test_documents(doc_count)
         
         print(f"\nLarge Scale Performance Test ({doc_count} documents):")
