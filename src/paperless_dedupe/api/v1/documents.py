@@ -113,18 +113,9 @@ async def sync_documents(
 ):
     """Sync documents from paperless-ngx"""
     # Get current config from database
-    from paperless_dedupe.models.database import AppConfig
-    from paperless_dedupe.core.config import settings
+    from paperless_dedupe.core.config_utils import get_current_paperless_config
     
-    config_items = {item.key: item.value for item in db.query(AppConfig).all()}
-    
-    # Get settings from database or defaults
-    client_settings = {
-        "paperless_url": config_items.get("paperless_url", settings.paperless_url),
-        "paperless_api_token": config_items.get("paperless_api_token", settings.paperless_api_token),
-        "paperless_username": config_items.get("paperless_username", settings.paperless_username),
-        "paperless_password": config_items.get("paperless_password", settings.paperless_password)
-    }
+    client_settings = get_current_paperless_config(db)
     
     try:
         async with PaperlessClient(**client_settings) as client:

@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from paperless_dedupe.models.database import get_db, AppConfig
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.services.paperless_client import PaperlessClient
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional
 import json
 import logging
@@ -19,6 +19,16 @@ class ConfigUpdate(BaseModel):
     fuzzy_match_threshold: Optional[int] = Field(None, ge=0, le=100, description="Fuzzy matching threshold (0-100)")
     max_ocr_length: Optional[int] = Field(None, ge=1000, description="Maximum OCR text length to store")
     lsh_threshold: Optional[float] = Field(None, ge=0.0, le=1.0, description="LSH similarity threshold")
+    
+    @validator('paperless_url')
+    def validate_url(cls, v):
+        if v is None:
+            return v
+        # Basic URL validation
+        if not v.startswith(('http://', 'https://')):
+            raise ValueError('URL must start with http:// or https://')
+        # Remove trailing slashes for consistency
+        return v.rstrip('/')
 
 class ConnectionTestResponse(BaseModel):
     success: bool
@@ -86,18 +96,32 @@ async def update_config(
     }
 
 @router.post("/test-connection")
-async def test_paperless_connection(db: Session = Depends(get_db)):
-    """Test connection to paperless-ngx API"""
-    # Get current config from database
-    config_items = {item.key: item.value for item in db.query(AppConfig).all()}
+async def test_paperless_connection(
+    test_config: Optional[ConfigUpdate] = None,
+    db: Session = Depends(get_db)
+):
+    """Test connection to paperless-ngx API
     
-    # Get settings from database or defaults
-    test_settings = {
-        "paperless_url": config_items.get("paperless_url", settings.paperless_url),
-        "paperless_api_token": config_items.get("paperless_api_token", settings.paperless_api_token),
-        "paperless_username": config_items.get("paperless_username", settings.paperless_username),
-        "paperless_password": config_items.get("paperless_password", settings.paperless_password)
-    }
+    Can test either:
+    1. Provided configuration (without saving)
+    2. Saved configuration from database
+    3. Default configuration from settings
+    """
+    
+    if test_config and test_config.paperless_url:
+        # Use provided test configuration (not saved yet)
+        test_settings = {
+            "paperless_url": test_config.paperless_url,
+            "paperless_api_token": test_config.paperless_api_token,
+            "paperless_username": test_config.paperless_username,
+            "paperless_password": test_config.paperless_password
+        }
+        logger.info(f"Testing with provided config: paperless_url={test_settings['paperless_url']}")
+    else:
+        # Get current config from database
+        from paperless_dedupe.core.config_utils import get_current_paperless_config
+        test_settings = get_current_paperless_config(db)
+        logger.info(f"Testing with saved config: paperless_url={test_settings['paperless_url']}")
     
     try:
         # Create client with explicit configuration

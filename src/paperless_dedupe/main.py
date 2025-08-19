@@ -44,6 +44,23 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialized")
     
+    # Load saved configuration from database
+    from paperless_dedupe.models.database import get_db, AppConfig
+    db = next(get_db())
+    try:
+        config_items = db.query(AppConfig).all()
+        for item in config_items:
+            if hasattr(settings, item.key):
+                setattr(settings, item.key, item.value)
+                # Handle logging for different value types
+                value_str = str(item.value)
+                display_value = value_str[:50] + "..." if len(value_str) > 50 else value_str
+                logger.info(f"Loaded config from database: {item.key}={display_value}")
+    except Exception as e:
+        logger.warning(f"Could not load config from database: {e}")
+    finally:
+        db.close()
+    
     # Connect to cache
     await cache_service.connect()
     
