@@ -36,15 +36,14 @@ RUN pip install --no-cache-dir uv==0.5.1
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files first for better caching
+# Copy project files
 COPY pyproject.toml .
+COPY src/ ./src/
+# Create empty README for build if it doesn't exist
 RUN touch README.md
 
-# Install dependencies first (this layer will be cached if pyproject.toml doesn't change)
-RUN uv pip install --system --no-cache .
-
-# Copy source code (separate layer so code changes don't invalidate dependency cache)
-COPY src/ ./src/
+# Install dependencies using uv
+RUN uv pip install --system --no-cache -e .
 
 # =============================================================================
 # Backend Production Stage
