@@ -88,10 +88,10 @@ async def update_config(
 @router.post("/test-connection")
 async def test_paperless_connection(db: Session = Depends(get_db)):
     """Test connection to paperless-ngx API"""
-    # Get current config
+    # Get current config from database
     config_items = {item.key: item.value for item in db.query(AppConfig).all()}
     
-    # Override settings with database config
+    # Get settings from database or defaults
     test_settings = {
         "paperless_url": config_items.get("paperless_url", settings.paperless_url),
         "paperless_api_token": config_items.get("paperless_api_token", settings.paperless_api_token),
@@ -99,14 +99,12 @@ async def test_paperless_connection(db: Session = Depends(get_db)):
         "paperless_password": config_items.get("paperless_password", settings.paperless_password)
     }
     
-    # Temporarily update settings
-    original_values = {}
-    for key, value in test_settings.items():
-        original_values[key] = getattr(settings, key)
-        setattr(settings, key, value)
-    
     try:
-        async with PaperlessClient() as client:
+        # Create client with explicit configuration
+        async with PaperlessClient(**test_settings) as client:
+            # Log the URL being tested
+            logger.info(f"Testing connection to: {client.base_url}")
+            
             success = await client.test_connection()
             
             if success:
@@ -134,10 +132,6 @@ async def test_paperless_connection(db: Session = Depends(get_db)):
             success=False,
             message=f"Connection failed: {str(e)}"
         )
-    finally:
-        # Restore original settings
-        for key, value in original_values.items():
-            setattr(settings, key, value)
 
 @router.post("/reset")
 async def reset_config(db: Session = Depends(get_db)):

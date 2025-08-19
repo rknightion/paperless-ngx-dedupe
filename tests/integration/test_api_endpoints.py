@@ -14,8 +14,7 @@ class TestDocumentsAPI:
         response = client.get("/api/v1/documents/")
         assert response.status_code == 200
         data = response.json()
-        assert data["documents"] == []
-        assert data["total"] == 0
+        assert data == []  # API returns a list directly
     
     def test_list_documents_with_data(self, client, db_session):
         """Test listing documents with data in database"""
@@ -30,11 +29,10 @@ class TestDocumentsAPI:
         response = client.get("/api/v1/documents/")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["documents"]) == 2
-        assert data["total"] == 2
+        assert len(data) == 2  # API returns a list directly
         
         # Check document structure
-        doc = data["documents"][0]
+        doc = data[0]
         assert "id" in doc
         assert "paperless_id" in doc
         assert "title" in doc
@@ -49,18 +47,16 @@ class TestDocumentsAPI:
         db_session.commit()
         
         # Test first page
-        response = client.get("/api/v1/documents/?limit=10&offset=0")
+        response = client.get("/api/v1/documents/?limit=10&skip=0")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["documents"]) == 10
-        assert data["total"] == 15
+        assert len(data) == 10  # API returns a list directly
         
         # Test second page
-        response = client.get("/api/v1/documents/?limit=10&offset=10")
+        response = client.get("/api/v1/documents/?limit=10&skip=10")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["documents"]) == 5
-        assert data["total"] == 15
+        assert len(data) == 5  # API returns a list directly
     
     def test_get_document_by_id(self, client, db_session):
         """Test getting a specific document by ID"""

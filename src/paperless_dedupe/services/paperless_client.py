@@ -8,11 +8,14 @@ from paperless_dedupe.core.config import settings
 logger = logging.getLogger(__name__)
 
 class PaperlessClient:
-    def __init__(self):
-        self.base_url = settings.paperless_url.rstrip('/')
-        self.token = settings.paperless_api_token
-        self.username = settings.paperless_username
-        self.password = settings.paperless_password
+    def __init__(self, paperless_url: Optional[str] = None, 
+                 paperless_api_token: Optional[str] = None,
+                 paperless_username: Optional[str] = None,
+                 paperless_password: Optional[str] = None):
+        self.base_url = (paperless_url or settings.paperless_url).rstrip('/')
+        self.token = paperless_api_token if paperless_api_token is not None else settings.paperless_api_token
+        self.username = paperless_username if paperless_username is not None else settings.paperless_username
+        self.password = paperless_password if paperless_password is not None else settings.paperless_password
         self.client = None
         self._token_cache = None
         self._token_expiry = None

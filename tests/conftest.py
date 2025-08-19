@@ -6,9 +6,10 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
 import redis
 
-from paperless_dedupe.main import app
 from paperless_dedupe.models.database import Base, get_db
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.services.cache_service import cache_service
@@ -45,6 +46,37 @@ def temp_db():
 @pytest.fixture(scope="function") 
 def client(temp_db):
     """Create a test client"""
+    # Create a custom lifespan that skips database checks
+    @asynccontextmanager
+    async def test_lifespan(app):
+        # Skip database connection check and initialization
+        # Just yield without doing anything
+        yield
+    
+    # Create a new app instance with test lifespan
+    test_app = FastAPI(
+        title=settings.app_name,
+        version=settings.version,
+        lifespan=test_lifespan
+    )
+    
+    # Add all the routers
+    from paperless_dedupe.api.v1 import documents, duplicates, config, processing
+    test_app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
+    test_app.include_router(duplicates.router, prefix="/api/v1", tags=["duplicates"])
+    test_app.include_router(config.router, prefix="/api/v1/config", tags=["config"])
+    test_app.include_router(processing.router, prefix="/api/v1/processing", tags=["processing"])
+    
+    # Add CORS middleware
+    from fastapi.middleware.cors import CORSMiddleware
+    test_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all origins in tests
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
     def override_get_db():
         try:
             db = temp_db()
@@ -52,14 +84,13 @@ def client(temp_db):
         finally:
             db.close()
     
-    # Override the database dependency before creating the client
-    app.dependency_overrides[get_db] = override_get_db
+    test_app.dependency_overrides[get_db] = override_get_db
     
-    with TestClient(app) as test_client:
+    with TestClient(test_app) as test_client:
         yield test_client
     
     # Clean up
-    app.dependency_overrides.clear()
+    test_app.dependency_overrides.clear()
 
 
 @pytest.fixture(scope="function")
@@ -107,59 +138,23 @@ async def mock_cache():
             self._cache.clear()
     
     mock_cache = MockCacheService()
+    return mock_cache
+
+
+@pytest.fixture(autouse=True)
+def reset_singletons():
+    """Reset singleton instances between tests"""
+    # Import here to avoid circular imports
+    from paperless_dedupe.services.deduplication_service import DeduplicationService
     
-    # Replace the global cache service
-    original_cache = cache_service
-    cache_service.__dict__.update(mock_cache.__dict__)
+    # Reset the singleton instance
+    DeduplicationService._instance = None
     
-    yield mock_cache
+    yield
     
-    # Restore original cache service
-    cache_service.__dict__.update(original_cache.__dict__)
+    # Cleanup after test
+    DeduplicationService._instance = None
 
 
-@pytest.fixture
-def sample_documents():
-    """Sample document data for testing"""
-    return [
-        {
-            "paperless_id": 1,
-            "title": "Invoice 2024-001",
-            "fingerprint": "abc123def456",
-            "file_size": 1024,
-            "content": "This is an invoice for services rendered in January 2024. Total amount: $500.00"
-        },
-        {
-            "paperless_id": 2,
-            "title": "Invoice 2024-001 (Copy)",
-            "fingerprint": "def456ghi789",
-            "file_size": 1028,
-            "content": "This is an invoice for services rendered in January 2024. Total amount: $500.00"
-        },
-        {
-            "paperless_id": 3,
-            "title": "Receipt for Coffee",
-            "fingerprint": "ghi789jkl012",
-            "file_size": 512,
-            "content": "Coffee purchase receipt. Date: 2024-01-15. Amount: $4.50"
-        }
-    ]
-
-
-@pytest.fixture
-def sample_ocr_texts():
-    """Sample OCR text data for testing deduplication"""
-    return {
-        "identical": [
-            "This is the exact same document content",
-            "This is the exact same document content"
-        ],
-        "similar": [
-            "Invoice number 12345 dated January 1, 2024 for services rendered",
-            "Invoice number 12345 dated January 1st, 2024 for services rendered"
-        ],
-        "different": [
-            "This is a completely different document about cats",
-            "This document discusses dogs and their behavior"
-        ]
-    }
+# Pytest configuration for asyncio
+pytest_plugins = ('pytest_asyncio',)
