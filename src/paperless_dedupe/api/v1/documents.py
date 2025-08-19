@@ -41,31 +41,59 @@ class DocumentResponse(BaseModel):
     file_size: Optional[int]
     processing_status: str
     has_duplicates: bool = False
+    created_date: Optional[datetime] = None
+    last_processed: Optional[datetime] = None
     
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
+
+class DocumentListResponse(BaseModel):
+    results: List[DocumentResponse]
+    count: int
+    next: Optional[str] = None
+    previous: Optional[str] = None
 
 class DocumentSync(BaseModel):
     force_refresh: bool = False
     limit: Optional[int] = None
 
-@router.get("/", response_model=List[DocumentResponse])
+@router.get("/", response_model=DocumentListResponse)
 async def get_documents(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
     """Get list of documents"""
+    # Get total count
+    total_count = db.query(Document).count()
+    
+    # Get paginated documents
     documents = db.query(Document).offset(skip).limit(limit).all()
     
     # Check if documents have duplicates
-    result = []
+    results = []
     for doc in documents:
         doc_response = DocumentResponse.from_orm(doc)
         doc_response.has_duplicates = len(doc.duplicate_memberships) > 0
-        result.append(doc_response)
+        results.append(doc_response)
     
-    return result
+    # Create pagination URLs (simplified for now)
+    next_url = None
+    previous_url = None
+    if skip + limit < total_count:
+        next_url = f"?skip={skip + limit}&limit={limit}"
+    if skip > 0:
+        previous_url = f"?skip={max(0, skip - limit)}&limit={limit}"
+    
+    return DocumentListResponse(
+        results=results,
+        count=total_count,
+        next=next_url,
+        previous=previous_url
+    )
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
@@ -268,8 +296,8 @@ async def run_document_sync(
         try:
             await safe_broadcast_sync_update()
             await broadcast_error(f"Sync failed: {str(e)}")
-        except Exception as broadcast_error:
-            logger.error(f"Error broadcasting sync error: {broadcast_error}")
+        except Exception as broadcast_exc:
+            logger.error(f"Error broadcasting sync error: {broadcast_exc}")
     finally:
         sync_status["is_syncing"] = False
 
@@ -301,4 +329,10 @@ async def sync_documents(
 @router.get("/sync/status")
 async def get_sync_status():
     """Get current sync status"""
-    return sync_status
+    # Convert datetime objects to ISO strings for JSON serialization
+    status_copy = sync_status.copy()
+    if status_copy.get("started_at") and isinstance(status_copy["started_at"], datetime):
+        status_copy["started_at"] = status_copy["started_at"].isoformat()
+    if status_copy.get("completed_at") and isinstance(status_copy["completed_at"], datetime):
+        status_copy["completed_at"] = status_copy["completed_at"].isoformat()
+    return status_copy

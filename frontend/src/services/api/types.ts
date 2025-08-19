@@ -8,19 +8,20 @@ export interface ApiResponse<T = any> {
 // Document Types
 export interface Document {
   id: number;
+  paperless_id: number;
   title: string;
   content?: string;
-  created?: string;
-  modified?: string;
-  added?: string;
+  created_date?: string;
+  last_processed?: string;
+  file_size?: number;
   file_type?: string;
   mime_type?: string;
   checksum?: string;
   archive_serial_number?: number;
   filename?: string;
   processing_status: 'pending' | 'processing' | 'completed' | 'error';
-  last_processed?: string;
   fingerprint?: string;
+  has_duplicates?: boolean;
 }
 
 export interface DocumentContent {

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from datetime import datetime
 from typing import Dict, Set, Any, Optional
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException
 from contextlib import asynccontextmanager
@@ -41,7 +42,13 @@ class ConnectionManager:
         websocket = self.active_connections.get(connection_id)
         if websocket:
             try:
-                await websocket.send_text(json.dumps(message))
+                # Convert datetime objects to ISO format strings
+                def serialize_datetime(obj):
+                    if isinstance(obj, datetime):
+                        return obj.isoformat()
+                    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+                    
+                await websocket.send_text(json.dumps(message, default=serialize_datetime))
             except Exception as e:
                 logger.error(f"Error sending message to {connection_id}: {e}")
                 self.disconnect(connection_id)
@@ -51,7 +58,13 @@ class ConnectionManager:
         if not self.active_connections:
             return
             
-        message_str = json.dumps(message)
+        # Convert datetime objects to ISO format strings
+        def serialize_datetime(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+            
+        message_str = json.dumps(message, default=serialize_datetime)
         
         # Send to all connections and handle disconnections
         disconnected_connections = []

@@ -1,6 +1,6 @@
 import hashlib
 import re
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Callable
 from datasketch import MinHash, MinHashLSH
 from rapidfuzz import fuzz
 import logging
@@ -8,6 +8,7 @@ from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import Document, DocumentContent, DuplicateGroup, DuplicateMember
 from sqlalchemy.orm import Session
 import pickle
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,12 @@ class DeduplicationService:
         
         return 0.0
     
-    def build_lsh_index(self, documents: List[Document], contents: Dict[int, str]):
+    async def build_lsh_index(
+        self, 
+        documents: List[Document], 
+        contents: Dict[int, str],
+        progress_callback: Optional[Callable] = None
+    ):
         """Build LSH index for all documents"""
         logger.info(f"Building LSH index for {len(documents)} documents")
         
@@ -110,7 +116,10 @@ class DeduplicationService:
         )
         self.minhashes = {}
         
-        for doc in documents:
+        total_docs = len(documents)
+        processed = 0
+        
+        for idx, doc in enumerate(documents):
             if doc.id not in contents or not contents[doc.id]:
                 continue
                 
@@ -118,27 +127,46 @@ class DeduplicationService:
             if minhash:
                 self.minhashes[doc.id] = minhash
                 self.lsh_index.insert(f"doc_{doc.id}", minhash)
+            
+            processed += 1
+            
+            # Report progress every 100 documents or on last
+            if progress_callback and (processed % 100 == 0 or idx == total_docs - 1):
+                await progress_callback(
+                    "Building LSH index",
+                    processed,
+                    total_docs
+                )
+            
+            # Yield control periodically to prevent blocking
+            if processed % 50 == 0:
+                await asyncio.sleep(0)
         
         logger.info(f"LSH index built with {len(self.minhashes)} documents")
     
-    def find_duplicates(
+    async def find_duplicates(
         self,
         documents: List[Document],
         contents: Dict[int, str],
-        threshold: float = None
+        threshold: float = None,
+        progress_callback: Optional[Callable] = None
     ) -> List[Dict]:
         """Find duplicate document groups"""
         
         threshold = threshold or (settings.fuzzy_match_threshold / 100.0)
         
-        # Build LSH index
-        self.build_lsh_index(documents, contents)
+        # Build LSH index with progress tracking
+        await self.build_lsh_index(documents, contents, progress_callback)
         
         # Find duplicate groups
         duplicate_groups = []
         processed = set()
+        total_docs = len(documents)
         
-        for doc in documents:
+        # Create document lookup dict for O(1) access
+        doc_lookup = {doc.id: doc for doc in documents}
+        
+        for idx, doc in enumerate(documents):
             if doc.id in processed or doc.id not in self.minhashes:
                 continue
                 
@@ -152,8 +180,8 @@ class DeduplicationService:
                 for candidate_key in candidates:
                     candidate_id = int(candidate_key.replace("doc_", ""))
                     
-                    if candidate_id != doc.id:
-                        candidate_doc = next((d for d in documents if d.id == candidate_id), None)
+                    if candidate_id != doc.id and candidate_id not in processed:
+                        candidate_doc = doc_lookup.get(candidate_id)
                         
                         if candidate_doc:
                             score = self.calculate_similarity_score(
@@ -181,6 +209,18 @@ class DeduplicationService:
                         "confidence": avg_confidence,
                         "scores": group_scores
                     })
+            
+            # Report progress
+            if progress_callback and ((idx + 1) % 100 == 0 or idx == total_docs - 1):
+                await progress_callback(
+                    "Finding duplicates",
+                    idx + 1,
+                    total_docs
+                )
+            
+            # Yield control periodically
+            if (idx + 1) % 50 == 0:
+                await asyncio.sleep(0)
         
         logger.info(f"Found {len(duplicate_groups)} duplicate groups")
         return duplicate_groups

@@ -117,17 +117,25 @@ async def run_deduplication_analysis(
                     # Cache for next time
                     await cache_service.set_document_ocr(doc.id, content.full_text)
         
+        # Create progress callback for deduplication service
+        async def dedup_progress_callback(step: str, current: int, total: int):
+            processing_status["current_step"] = step
+            processing_status["progress"] = current
+            processing_status["total"] = total
+            await safe_broadcast_update()
+        
         # Run deduplication
-        processing_status["current_step"] = "Finding duplicates"
-        processing_status["progress"] = 0  # Reset progress for deduplication phase
+        processing_status["current_step"] = "Initializing deduplication"
+        processing_status["progress"] = 0
         await safe_broadcast_update()
         
         dedup_service = DeduplicationService()
         
-        duplicate_groups = dedup_service.find_duplicates(
+        duplicate_groups = await dedup_service.find_duplicates(
             documents,
             contents,
-            threshold
+            threshold,
+            dedup_progress_callback
         )
         
         # Save results
@@ -166,7 +174,7 @@ async def run_deduplication_analysis(
             await broadcast_completion({
                 "groups_found": len(duplicate_groups),
                 "documents_processed": len(documents),
-                "completed_at": processing_status["completed_at"].isoformat()
+                "completed_at": processing_status["completed_at"].isoformat() if processing_status["completed_at"] else None
             })
         except Exception as e:
             logger.error(f"Error broadcasting completion: {e}")
@@ -225,7 +233,13 @@ async def start_analysis(
 @router.get("/status")
 async def get_processing_status():
     """Get current processing status"""
-    return processing_status
+    # Convert datetime objects to ISO strings for JSON serialization
+    status_copy = processing_status.copy()
+    if status_copy.get("started_at") and isinstance(status_copy["started_at"], datetime):
+        status_copy["started_at"] = status_copy["started_at"].isoformat()
+    if status_copy.get("completed_at") and isinstance(status_copy["completed_at"], datetime):
+        status_copy["completed_at"] = status_copy["completed_at"].isoformat()
+    return status_copy
 
 @router.post("/cancel")
 async def cancel_processing():

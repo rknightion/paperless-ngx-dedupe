@@ -121,8 +121,8 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
         </div>
 
         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-          <span>{formatDate(document.created)}</span>
-          {document.fingerprint && <Copy className="h-4 w-4" />}
+          <span>{formatDate(document.created_date)}</span>
+          {document.has_duplicates && <Copy className="h-4 w-4" />}
         </div>
       </div>
     );
@@ -151,7 +151,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
           <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
           <h3 className="font-medium truncate">{document.title}</h3>
           {getStatusBadge(document.processing_status)}
-          {document.fingerprint && (
+          {document.has_duplicates && (
             <Badge variant="outline" className="text-xs">
               <Copy className="h-3 w-3 mr-1" />
               Has duplicates
@@ -162,11 +162,11 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
           <div className="flex items-center space-x-1">
             <Calendar className="h-4 w-4" />
-            <span>Created: {formatDate(document.created)}</span>
+            <span>Created: {formatDate(document.created_date)}</span>
           </div>
-          {document.modified && (
+          {document.last_processed && (
             <div className="flex items-center space-x-1">
-              <span>Modified: {formatDate(document.modified)}</span>
+              <span>Processed: {formatDate(document.last_processed)}</span>
             </div>
           )}
           {document.file_type && (
@@ -179,10 +179,10 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
       </div>
 
       <div className="flex flex-col items-end space-y-1 text-sm">
-        <span className="font-mono text-muted-foreground">#{document.id}</span>
-        {document.last_processed && (
+        <span className="font-mono text-muted-foreground">#{document.paperless_id}</span>
+        {document.file_size && (
           <span className="text-xs text-muted-foreground">
-            Processed: {formatDate(document.last_processed)}
+            {(document.file_size / 1024 / 1024).toFixed(2)} MB
           </span>
         )}
       </div>
