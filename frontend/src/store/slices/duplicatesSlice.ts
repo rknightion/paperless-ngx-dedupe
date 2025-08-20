@@ -198,8 +198,9 @@ const duplicatesSlice = createSlice({
       })
       .addCase(fetchDuplicateGroups.fulfilled, (state, action) => {
         state.loading.groups = false;
-        state.groups = action.payload.groups;
-        state.pagination.count = action.payload.count;
+        // The API returns an array directly
+        state.groups = Array.isArray(action.payload) ? action.payload : action.payload.groups || [];
+        state.pagination.count = Array.isArray(action.payload) ? action.payload.length : action.payload.count || 0;
       })
       .addCase(fetchDuplicateGroups.rejected, (state, action) => {
         state.loading.groups = false;
