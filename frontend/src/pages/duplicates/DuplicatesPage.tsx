@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useDuplicateGroups } from '../../hooks/redux';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 import {
   fetchDuplicateGroups,
   fetchDuplicateStatistics,
+  toggleGroupSelection,
+  selectAllGroups,
+  clearSelection,
 } from '../../store/slices/duplicatesSlice';
 import { DuplicateGroupCard } from '../../components/shared';
+import { BulkActions } from '../../components/batch/BulkActions';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
+import { Checkbox } from '../../components/ui/Checkbox';
 import {
   Card,
   CardContent,
@@ -26,9 +33,11 @@ import {
 export const DuplicatesPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { groups, loading, statistics } = useDuplicateGroups();
+  const selectedGroups = useSelector((state: RootState) => state.duplicates.selectedGroups);
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewedFilter, setReviewedFilter] = useState<boolean | null>(null);
   const [confidenceFilter, setConfidenceFilter] = useState(0.7);
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
 
   // Load duplicate groups and statistics
   useEffect(() => {
@@ -258,6 +267,59 @@ export const DuplicatesPage: React.FC = () => {
         )}
       </div>
 
+      {/* Bulk Actions Bar */}
+      {bulkSelectMode && (
+        <BulkActions
+          selectedItems={selectedGroups}
+          itemType="duplicates"
+          onClearSelection={() => dispatch(clearSelection())}
+          onOperationComplete={() => {
+            setBulkSelectMode(false);
+            dispatch(fetchDuplicateGroups());
+            dispatch(fetchDuplicateStatistics());
+          }}
+        />
+      )}
+
+      {/* Bulk Selection Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Button
+            variant={bulkSelectMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setBulkSelectMode(!bulkSelectMode);
+              if (!bulkSelectMode) {
+                dispatch(clearSelection());
+              }
+            }}
+          >
+            {bulkSelectMode ? 'Exit Bulk Mode' : 'Bulk Select'}
+          </Button>
+          {bulkSelectMode && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => dispatch(selectAllGroups())}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => dispatch(clearSelection())}
+              >
+                Clear Selection
+              </Button>
+              <span className="text-sm text-muted-foreground ml-2">
+                {selectedGroups.length} selected
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Duplicate Groups List */}
       {filteredGroups.length === 0 ? (
         <Card>
@@ -283,11 +345,21 @@ export const DuplicatesPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {filteredGroups.map((group) => (
-            <DuplicateGroupCard
-              key={group.id}
-              group={group}
-              onDocumentSelect={handleDocumentSelect}
-            />
+            <div key={group.id} className="flex items-start space-x-2">
+              {bulkSelectMode && (
+                <Checkbox
+                  checked={selectedGroups.includes(group.id)}
+                  onChange={() => dispatch(toggleGroupSelection(group.id))}
+                  className="mt-6"
+                />
+              )}
+              <div className="flex-1">
+                <DuplicateGroupCard
+                  group={group}
+                  onDocumentSelect={handleDocumentSelect}
+                />
+              </div>
+            </div>
           ))}
         </div>
       )}

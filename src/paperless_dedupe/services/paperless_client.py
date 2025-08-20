@@ -185,3 +185,97 @@ class PaperlessClient:
         except Exception as e:
             logger.error(f"Failed to connect to paperless API: {e}")
             return False
+    
+    # Batch operations
+    async def delete_document(self, document_id: int) -> bool:
+        """Delete a document from paperless"""
+        try:
+            response = await self._request_with_retry(
+                "DELETE",
+                f"{self.base_url}/api/documents/{document_id}/"
+            )
+            return response.status_code in [200, 204]
+        except Exception as e:
+            logger.error(f"Failed to delete document {document_id}: {e}")
+            return False
+    
+    async def add_tags_to_document(self, document_id: int, tag_ids: List[int]) -> bool:
+        """Add tags to a document"""
+        try:
+            # First get current document to preserve existing data
+            doc = await self.get_document(document_id)
+            current_tags = doc.get("tags", [])
+            
+            # Add new tags
+            updated_tags = list(set(current_tags + tag_ids))
+            
+            response = await self._request_with_retry(
+                "PATCH",
+                f"{self.base_url}/api/documents/{document_id}/",
+                json={"tags": updated_tags}
+            )
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to add tags to document {document_id}: {e}")
+            return False
+    
+    async def remove_tags_from_document(self, document_id: int, tag_ids: List[int]) -> bool:
+        """Remove tags from a document"""
+        try:
+            # First get current document
+            doc = await self.get_document(document_id)
+            current_tags = doc.get("tags", [])
+            
+            # Remove specified tags
+            updated_tags = [tag for tag in current_tags if tag not in tag_ids]
+            
+            response = await self._request_with_retry(
+                "PATCH",
+                f"{self.base_url}/api/documents/{document_id}/",
+                json={"tags": updated_tags}
+            )
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to remove tags from document {document_id}: {e}")
+            return False
+    
+    async def update_document_metadata(self, document_id: int, metadata: Dict[str, Any]) -> bool:
+        """Update document metadata"""
+        try:
+            response = await self._request_with_retry(
+                "PATCH",
+                f"{self.base_url}/api/documents/{document_id}/",
+                json=metadata
+            )
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to update metadata for document {document_id}: {e}")
+            return False
+    
+    async def get_tags(self) -> List[Dict[str, Any]]:
+        """Get all available tags"""
+        try:
+            response = await self._request_with_retry(
+                "GET",
+                f"{self.base_url}/api/tags/"
+            )
+            data = response.json()
+            return data.get("results", [])
+        except Exception as e:
+            logger.error(f"Failed to get tags: {e}")
+            return []
+    
+    async def create_tag(self, name: str, color: str = "#000000") -> Optional[int]:
+        """Create a new tag"""
+        try:
+            response = await self._request_with_retry(
+                "POST",
+                f"{self.base_url}/api/tags/",
+                json={"name": name, "color": color}
+            )
+            if response.status_code == 201:
+                return response.json().get("id")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to create tag {name}: {e}")
+            return None

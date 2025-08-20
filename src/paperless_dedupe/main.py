@@ -6,7 +6,7 @@ import time
 import asyncio
 from sqlalchemy import text
 from paperless_dedupe.core.config import settings
-from paperless_dedupe.api.v1 import documents, duplicates, config, processing, websocket
+from paperless_dedupe.api.v1 import documents, duplicates, config, processing, websocket, batch_operations
 from paperless_dedupe.models.database import init_db
 from paperless_dedupe.services.cache_service import cache_service
 
@@ -120,6 +120,7 @@ app.include_router(documents.router, prefix="/api/v1/documents", tags=["document
 app.include_router(duplicates.router, prefix="/api/v1/duplicates", tags=["duplicates"])
 app.include_router(processing.router, prefix="/api/v1/processing", tags=["processing"])
 app.include_router(config.router, prefix="/api/v1/config", tags=["config"])
+app.include_router(batch_operations.router, prefix="/api/v1/batch", tags=["batch"])
 
 # WebSocket endpoint
 app.websocket("/ws")(websocket.websocket_endpoint)

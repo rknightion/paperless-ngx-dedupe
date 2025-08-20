@@ -20,6 +20,7 @@ class Document(Base):
     created_date = Column(DateTime)
     last_processed = Column(DateTime, default=datetime.utcnow)
     processing_status = Column(String(20), default="pending")
+    marked_for_deletion = Column(Boolean, default=False)
     
     # Relationships
     content = relationship("DocumentContent", back_populates="document", uselist=False, cascade="all, delete-orphan")

@@ -186,7 +186,7 @@ export const DocumentSummaryPage: React.FC = () => {
               {statistics.total_documents.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              {statistics.documents_synced} synced
+              {statistics.processed_count} processed
             </p>
           </CardContent>
         </Card>

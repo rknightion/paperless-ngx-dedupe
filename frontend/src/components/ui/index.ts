@@ -5,3 +5,4 @@ export * from './Card';
 export * from './Badge';
 export * from './Checkbox';
 export * from './Progress';
+export * from './Dialog';

@@ -143,6 +143,14 @@ const duplicatesSlice = createSlice({
     selectAllGroups: (state) => {
       state.selectedGroups = state.groups.map((group) => group.id);
     },
+    toggleGroupSelection: (state, action: PayloadAction<string>) => {
+      const index = state.selectedGroups.indexOf(action.payload);
+      if (index > -1) {
+        state.selectedGroups.splice(index, 1);
+      } else {
+        state.selectedGroups.push(action.payload);
+      }
+    },
     clearSelection: (state) => {
       state.selectedGroups = [];
     },
@@ -298,6 +306,7 @@ export const {
   selectGroup,
   deselectGroup,
   selectAllGroups,
+  toggleGroupSelection,
   clearSelection,
   clearError,
   updateGroupReviewStatus,
