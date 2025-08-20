@@ -122,6 +122,13 @@ async def run_deduplication_analysis(
             processing_status["current_step"] = step
             processing_status["progress"] = current
             processing_status["total"] = total
+            # Add estimated time remaining based on progress
+            if current > 0 and processing_status.get("started_at"):
+                elapsed = (datetime.utcnow() - processing_status["started_at"]).total_seconds()
+                if elapsed > 0:
+                    rate = current / elapsed
+                    remaining = (total - current) / rate if rate > 0 else 0
+                    processing_status["estimated_remaining"] = int(remaining)
             await safe_broadcast_update()
         
         # Run deduplication

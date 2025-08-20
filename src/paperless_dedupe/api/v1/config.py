@@ -19,6 +19,8 @@ class ConfigUpdate(BaseModel):
     fuzzy_match_threshold: Optional[int] = Field(None, ge=0, le=100, description="Fuzzy matching threshold (0-100)")
     max_ocr_length: Optional[int] = Field(None, ge=1000, description="Maximum OCR text length to store")
     lsh_threshold: Optional[float] = Field(None, ge=0.0, le=1.0, description="LSH similarity threshold")
+    enable_fuzzy_matching: Optional[bool] = Field(None, description="Enable expensive fuzzy text matching")
+    fuzzy_match_sample_size: Optional[int] = Field(None, ge=100, le=10000, description="Characters to sample for fuzzy matching")
     
     @validator('paperless_url')
     def validate_url(cls, v):
@@ -55,6 +57,8 @@ async def get_config(db: Session = Depends(get_db)):
         "fuzzy_match_threshold": db_config.get("fuzzy_match_threshold", settings.fuzzy_match_threshold),
         "max_ocr_length": db_config.get("max_ocr_length", settings.max_ocr_length),
         "lsh_threshold": db_config.get("lsh_threshold", settings.lsh_threshold),
+        "enable_fuzzy_matching": db_config.get("enable_fuzzy_matching", settings.enable_fuzzy_matching),
+        "fuzzy_match_sample_size": db_config.get("fuzzy_match_sample_size", settings.fuzzy_match_sample_size),
         "minhash_num_perm": settings.minhash_num_perm,
         "lsh_num_bands": settings.lsh_num_bands,
         "api_rate_limit": settings.api_rate_limit,
