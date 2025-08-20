@@ -413,8 +413,13 @@ export const DocumentList: React.FC<DocumentListProps> = ({
               documents
             </p>
             {pagination.count > documents.length && (
-              <Button variant="outline" size="sm">
-                Load More
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => dispatch(fetchDocuments({ page: pagination.currentPage + 1 }))}
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Load More'}
               </Button>
             )}
           </div>

@@ -6,7 +6,6 @@ import { Layout } from './components/layout';
 import { DashboardPage } from './pages/dashboard';
 import { DocumentsPage } from './pages/documents';
 import { DuplicatesPage } from './pages/duplicates';
-import { ProcessingPage } from './pages/processing';
 import { SettingsPage } from './pages/settings';
 
 function App() {
@@ -18,7 +17,6 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/duplicates" element={<DuplicatesPage />} />
-            <Route path="/processing" element={<ProcessingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </Layout>

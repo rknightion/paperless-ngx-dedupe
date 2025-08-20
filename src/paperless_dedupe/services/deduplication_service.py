@@ -132,6 +132,12 @@ class DeduplicationService:
         for idx, doc in enumerate(documents):
             if doc.id not in contents or not contents[doc.id]:
                 continue
+            
+            # Skip documents with too few words
+            word_count = len(contents[doc.id].split())
+            if word_count < settings.min_ocr_word_count:
+                logger.debug(f"Skipping document {doc.id} with only {word_count} words (min: {settings.min_ocr_word_count})")
+                continue
                 
             minhash = self.create_minhash(contents[doc.id])
             if minhash:

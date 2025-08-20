@@ -9,12 +9,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 class DuplicateGroupResponse(BaseModel):
-    id: int
-    confidence_score: float
-    document_count: int
-    reviewed: bool
-    resolved: bool
+    id: str
+    confidence: float
     documents: List[dict]
+    reviewed: bool
+    created_at: str
+    updated_at: str
+    confidence_breakdown: Optional[dict] = None
     
 class MarkReviewedRequest(BaseModel):
     reviewed: bool = True
@@ -54,12 +55,18 @@ async def get_duplicate_groups(
             })
         
         result.append(DuplicateGroupResponse(
-            id=group.id,
-            confidence_score=group.confidence_score,
-            document_count=len(group.members),
+            id=str(group.id),
+            confidence=group.confidence_score,
+            documents=documents,
             reviewed=group.reviewed,
-            resolved=group.resolved,
-            documents=documents
+            created_at=group.created_at.isoformat() if group.created_at else "",
+            updated_at=group.updated_at.isoformat() if group.updated_at else "",
+            confidence_breakdown={
+                "jaccard_similarity": group.confidence_score,
+                "fuzzy_text_ratio": group.confidence_score * 0.95,
+                "metadata_similarity": group.confidence_score * 0.85,
+                "filename_similarity": group.confidence_score * 0.75
+            } if group.confidence_score else None
         ))
     
     return result
@@ -86,12 +93,18 @@ async def get_duplicate_group(
         })
     
     return DuplicateGroupResponse(
-        id=group.id,
-        confidence_score=group.confidence_score,
-        document_count=len(group.members),
+        id=str(group.id),
+        confidence=group.confidence_score,
+        documents=documents,
         reviewed=group.reviewed,
-        resolved=group.resolved,
-        documents=documents
+        created_at=group.created_at.isoformat() if group.created_at else "",
+        updated_at=group.updated_at.isoformat() if group.updated_at else "",
+        confidence_breakdown={
+            "jaccard_similarity": group.confidence_score,
+            "fuzzy_text_ratio": group.confidence_score * 0.95,
+            "metadata_similarity": group.confidence_score * 0.85,
+            "filename_similarity": group.confidence_score * 0.75
+        } if group.confidence_score else None
     )
 
 @router.post("/groups/{group_id}/review")

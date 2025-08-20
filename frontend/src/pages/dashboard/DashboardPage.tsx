@@ -38,15 +38,11 @@ export const DashboardPage: React.FC = () => {
     dispatch(fetchDuplicateStatistics());
   }, [dispatch]);
 
-  // Calculate processing statistics
+  // Calculate processing statistics based on duplicates
   const processingStats = {
-    pending: (documents || []).filter((d) => d.processing_status === 'pending')
-      .length,
-    completed: (documents || []).filter(
-      (d) => d.processing_status === 'completed'
-    ).length,
-    errors: (documents || []).filter((d) => d.processing_status === 'error')
-      .length,
+    pending: statistics?.unreviewed_groups || 0,
+    completed: statistics?.reviewed_groups || 0,
+    errors: 0, // No error tracking in current API
   };
 
   const StatCard: React.FC<{
@@ -151,24 +147,18 @@ export const DashboardPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-2 gap-4 text-center">
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-yellow-600">
                   {processingStats.pending}
                 </div>
-                <div className="text-xs text-muted-foreground">Pending</div>
+                <div className="text-xs text-muted-foreground">Pending Review</div>
               </div>
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-green-600">
                   {processingStats.completed}
                 </div>
-                <div className="text-xs text-muted-foreground">Completed</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-2xl font-bold text-red-600">
-                  {processingStats.errors}
-                </div>
-                <div className="text-xs text-muted-foreground">Errors</div>
+                <div className="text-xs text-muted-foreground">Reviewed</div>
               </div>
             </div>
 

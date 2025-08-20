@@ -1,6 +1,15 @@
 # Paperless-NGX Deduplication Tool - Detailed Implementation Plan
 
-## Status: Testing Phase Complete ✅
+## Status: Bug Fixes and UI Improvements Complete ✅
+- ✅ Fixed WebSocket connection errors during sync/analyze
+- ✅ Fixed processing status showing incorrect data
+- ✅ Fixed TypeError in duplicates tab
+- ✅ Fixed "Load more" button functionality
+- ✅ Redesigned Documents tab with comprehensive statistics view
+- ✅ Removed redundant Processing tab
+- ✅ Added minimum OCR word count configuration (default: 20 words)
+
+## Previous Phases Complete ✅
 - ✅ Comprehensive unit tests (99% coverage on deduplication service)
 - ✅ Integration test framework with API mocking
 - ✅ Performance benchmarks and test fixtures
@@ -29,16 +38,6 @@
   - ✅ react-window for virtual scrolling
   - ✅ recharts for data visualization
 
-### Implementation Completed:
-```bash
-# Commands executed:
-cd frontend
-npm create vite@latest . -- --template react-ts
-npm install @reduxjs/toolkit react-redux react-router-dom
-npm install @tanstack/react-query socket.io-client
-npm install tailwindcss @tailwindcss/forms @tailwindcss/postcss
-npm install react-window lucide-react clsx tailwind-merge class-variance-authority
-```
 
 ## 1.2 Core UI Components ✅
 
@@ -91,13 +90,6 @@ npm install react-window lucide-react clsx tailwind-merge class-variance-authori
   - ✅ Duplicate detection progress
   - ✅ Completion and error notifications
 
-### Implementation Completed:
-```python
-# Added to main.py:
-from paperless_dedupe.api.v1.websocket import websocket_endpoint
-app.websocket("/ws")(websocket_endpoint)
-```
-
 ## 1.4 Additional Components Implemented ✅
 
 ### TypeScript API Client ✅
@@ -134,6 +126,42 @@ app.websocket("/ws")(websocket_endpoint)
 
 ---
 
+## Phase 1 - Batch Document Operations (HIGH PRIORITY)
+
+### Bulk Actions API
+- [ ] Create endpoints for batch operations
+  - [ ] Mark multiple documents for deletion
+  - [ ] Bulk tagging operations
+  - [ ] Document merging functionality
+  - [ ] Batch metadata updates
+
+### Paperless API Integration
+- [ ] Implement bulk operations in paperless client
+- [ ] Add transaction rollback support
+- [ ] Progress tracking for long operations
+- [ ] Error handling and partial success
+
+### UI Components
+- [ ] Bulk selection interface
+- [ ] Action confirmation dialogs
+- [ ] Progress tracking for bulk operations
+- [ ] Results summary and error reporting
+
+## 4.3 Document Preview and Merge
+
+### Preview Service
+- [ ] Fetch document thumbnails from paperless
+- [ ] Generate document previews
+- [ ] Cache preview images
+- [ ] Implement zoom and navigation
+
+### Merge Functionality
+- [ ] Document content comparison
+- [ ] Metadata merging strategies
+- [ ] User confirmation interface
+- [ ] Undo merge operations
+
+
 # Phase 2: Enhanced Deduplication Features (MEDIUM PRIORITY)
 
 ## 2.1 Image-based Similarity (Perceptual Hashing)
@@ -166,48 +194,6 @@ dependencies = [
     "Pillow>=10.0.0"
 ]
 ```
-
-## 2.2 Custom Field Matching
-
-### Configuration Schema
-- [ ] Design custom field configuration structure
-- [ ] Add field extraction patterns (regex, exact, fuzzy)
-- [ ] Implement field weight configuration
-- [ ] Create validation for field patterns
-
-### Field Extraction Service
-- [ ] Create `src/paperless_dedupe/services/field_extraction.py`
-  - [ ] Regex-based field extraction
-  - [ ] Named entity recognition for dates, numbers
-  - [ ] Custom field value normalization
-  - [ ] Caching of extracted field values
-
-### Integration with Deduplication
-- [ ] Modify similarity scoring to include custom fields
-- [ ] Add field matching weights to configuration
-- [ ] Update confidence calculation algorithm
-- [ ] Add field comparison visualization in UI
-
-## 2.3 ML-based Detection with Sentence Transformers
-
-### ML Service Implementation
-- [ ] Create `src/paperless_dedupe/services/ml_deduplication.py`
-  - [ ] Install sentence-transformers library
-  - [ ] Load pre-trained model (all-MiniLM-L6-v2)
-  - [ ] Generate 384-dimensional embeddings
-  - [ ] Implement cosine similarity calculation
-
-### Vector Storage
-- [ ] Choose between pgvector or FAISS for storage
-- [ ] Create embedding table in database
-- [ ] Implement efficient similarity search
-- [ ] Add embedding caching strategy
-
-### Performance Optimization
-- [ ] Batch embedding generation
-- [ ] GPU acceleration if available
-- [ ] Model caching and memory management
-- [ ] Async processing for large datasets
 
 ---
 
@@ -242,7 +228,7 @@ async def process_documents_parallel(documents, batch_size=100):
 ## 3.2 Database Query Optimization
 
 ### Index Strategy
-- [ ] Add performance-critical indexes
+- [ ] Add performance-critical indexes (ONLY if needed)
   - [ ] `idx_documents_processing_status` for pending documents
   - [ ] `idx_duplicate_groups_confidence` for sorting
   - [ ] `idx_document_content_document_id` for joins
@@ -254,11 +240,6 @@ async def process_documents_parallel(documents, batch_size=100):
 - [ ] Use materialized views for complex aggregations
 - [ ] Implement query result caching
 
-### Database Partitioning
-- [ ] Partition large tables by date
-- [ ] Implement table maintenance procedures
-- [ ] Add automated statistics updates
-- [ ] Monitor query performance
 
 ## 3.3 Incremental Processing & State Management
 
@@ -277,7 +258,7 @@ async def process_documents_parallel(documents, batch_size=100):
 
 ---
 
-# Phase 4: Paperless Integration Improvements (MEDIUM PRIORITY)
+# Phase 4: Paperless Integration Improvements (LOW PRIORITY)
 
 ## 4.1 Webhook Support for Real-time Updates
 
@@ -300,40 +281,6 @@ async def process_documents_parallel(documents, batch_size=100):
 - [ ] Add webhook testing endpoint
 - [ ] Implement webhook retry logic
 
-## 4.2 Batch Document Operations
-
-### Bulk Actions API
-- [ ] Create endpoints for batch operations
-  - [ ] Mark multiple documents for deletion
-  - [ ] Bulk tagging operations
-  - [ ] Document merging functionality
-  - [ ] Batch metadata updates
-
-### Paperless API Integration
-- [ ] Implement bulk operations in paperless client
-- [ ] Add transaction rollback support
-- [ ] Progress tracking for long operations
-- [ ] Error handling and partial success
-
-### UI Components
-- [ ] Bulk selection interface
-- [ ] Action confirmation dialogs
-- [ ] Progress tracking for bulk operations
-- [ ] Results summary and error reporting
-
-## 4.3 Document Preview and Merge
-
-### Preview Service
-- [ ] Fetch document thumbnails from paperless
-- [ ] Generate document previews
-- [ ] Cache preview images
-- [ ] Implement zoom and navigation
-
-### Merge Functionality
-- [ ] Document content comparison
-- [ ] Metadata merging strategies
-- [ ] User confirmation interface
-- [ ] Undo merge operations
 
 ---
 
@@ -381,7 +328,7 @@ async def process_documents_parallel(documents, batch_size=100):
 - [ ] Redis connection status
 - [ ] External API availability
 
-## 5.3 Authentication & Multi-tenancy
+## 5.3 Authentication & Multi-tenancy (VERY LOW PRIORITY)
 
 ### User Management
 - [ ] JWT-based authentication system
@@ -402,7 +349,6 @@ async def process_documents_parallel(documents, batch_size=100):
 - [ ] XSS protection headers
 
 ---
-
 
 # Technical Debt to Address During Implementation
 
@@ -431,63 +377,3 @@ async def process_documents_parallel(documents, batch_size=100):
 - [ ] Security testing automation
 
 ---
-
-# Success Metrics
-
-## User Experience
-- Page load times < 2 seconds
-- Real-time updates with < 500ms latency
-- Support for 10,000+ documents
-- 99.9% uptime
-
-## Performance
-- Process 1,000 documents in < 5 minutes
-- Memory usage < 1GB for 10,000 documents
-- Database queries < 100ms
-- API response times < 200ms
-
-## Quality
-- Test coverage > 90%
-- Zero critical security vulnerabilities
-- Documentation coverage complete
-- User satisfaction > 4.5/5
-
----
-
-# Development Environment Setup
-
-## Prerequisites
-- Python 3.13+ with uv package manager
-- Node.js 18+ with npm/yarn
-- Docker and Docker Compose
-- PostgreSQL 15+ and Redis 7+
-
-## Quick Start Commands
-```bash
-# Backend setup
-uv sync
-./scripts/setup-dev.sh
-
-# Frontend setup (after Phase 1.1)
-cd frontend
-npm install
-npm run dev
-
-# Full stack
-docker-compose up -d
-uv run paperless-dedupe
-```
-
-## Testing
-```bash
-# Run all tests
-./scripts/test.sh
-
-# Backend tests only
-uv run pytest
-
-# Frontend tests (after setup)
-cd frontend && npm test
-```
-
-This comprehensive plan provides a roadmap for systematic implementation of all major features while maintaining code quality, performance, and user experience standards.

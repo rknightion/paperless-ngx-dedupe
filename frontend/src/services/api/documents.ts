@@ -54,7 +54,7 @@ export const documentsApi = {
     return apiClient.get('/documents/sync/status');
   },
 
-  // Get document statistics
+  // Get document statistics (old endpoint - kept for compatibility)
   async getDocumentStats(): Promise<{
     total: number;
     pending: number;
@@ -63,6 +63,11 @@ export const documentsApi = {
     errors: number;
   }> {
     return apiClient.get('/documents/stats');
+  },
+
+  // Get comprehensive document statistics
+  async getStatistics(): Promise<any> {
+    return apiClient.get('/documents/statistics');
   },
 };
 

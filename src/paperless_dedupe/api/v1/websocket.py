@@ -69,9 +69,13 @@ class ConnectionManager:
         # Send to all connections and handle disconnections
         disconnected_connections = []
         
-        for connection_id, websocket in self.active_connections.items():
+        for connection_id, websocket in list(self.active_connections.items()):
             try:
-                await websocket.send_text(message_str)
+                # Check if websocket is still open before sending
+                if websocket.client_state.value == 1:  # 1 = CONNECTED
+                    await websocket.send_text(message_str)
+                else:
+                    disconnected_connections.append(connection_id)
             except Exception as e:
                 logger.error(f"Error broadcasting to {connection_id}: {e}")
                 disconnected_connections.append(connection_id)
@@ -165,7 +169,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 break
             except Exception as e:
                 logger.error(f"Error handling WebSocket message: {e}")
-                await manager.send_error(f"Server error: {str(e)}", connection_id)
+                # Only send error if WebSocket is still connected
+                if connection_id in manager.active_connections:
+                    try:
+                        await manager.send_error(f"Server error: {str(e)}", connection_id)
+                    except:
+                        pass  # Connection might be closed, ignore error
                 
     except WebSocketException as e:
         logger.error(f"WebSocket exception: {e}")
