@@ -235,51 +235,6 @@ export const DocumentSummaryPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Processing Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <BarChart3 className="h-5 w-5" />
-            <span>Deduplication Processing Status</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Overall Progress</span>
-              <span className="font-medium">{processingProgress.toFixed(1)}%</span>
-            </div>
-            <Progress value={processingProgress} className="h-3" />
-          </div>
-
-          <div className="grid grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-yellow-600">
-                {statistics.processing_status.pending.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">Pending</p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-600">
-                {statistics.processing_status.processing.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">Processing</p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-green-600">
-                {statistics.processing_status.completed.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">Completed</p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-red-600">
-                {statistics.processing_status.error.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">Errors</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Document Size Distribution */}
       <div className="grid gap-6 md:grid-cols-2">
