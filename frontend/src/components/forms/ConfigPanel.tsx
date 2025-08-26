@@ -45,6 +45,12 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   const { testResult, lastTested } = useConnectionStatus();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [confidenceWeights, setConfidenceWeights] = useState({
+    useJaccard: true,
+    useFuzzy: true,
+    useMetadata: true,
+    useFilename: true,
+  });
 
   // Load configuration on mount
   useEffect(() => {
@@ -403,6 +409,80 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               </div>
             </div>
           )}
+
+          {/* Confidence Weights Configuration */}
+          <div className="pt-4 border-t">
+            <h4 className="text-sm font-medium mb-3">Confidence Score Factors</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={confidenceWeights.useJaccard}
+                    onChange={(e) => 
+                      setConfidenceWeights(prev => ({ ...prev, useJaccard: e.target.checked }))
+                    }
+                  />
+                  <span className="text-sm">
+                    <strong>Jaccard Similarity (40%)</strong>
+                    <span className="block text-xs text-muted-foreground">
+                      Overlapping unique words between documents
+                    </span>
+                  </span>
+                </label>
+              </div>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={confidenceWeights.useFuzzy}
+                    onChange={(e) => 
+                      setConfidenceWeights(prev => ({ ...prev, useFuzzy: e.target.checked }))
+                    }
+                  />
+                  <span className="text-sm">
+                    <strong>Fuzzy Text Match (30%)</strong>
+                    <span className="block text-xs text-muted-foreground">
+                      Handles OCR errors and text variations
+                    </span>
+                  </span>
+                </label>
+              </div>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={confidenceWeights.useMetadata}
+                    onChange={(e) => 
+                      setConfidenceWeights(prev => ({ ...prev, useMetadata: e.target.checked }))
+                    }
+                  />
+                  <span className="text-sm">
+                    <strong>Metadata Match (20%)</strong>
+                    <span className="block text-xs text-muted-foreground">
+                      Date, size, and document type matching
+                    </span>
+                  </span>
+                </label>
+              </div>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={confidenceWeights.useFilename}
+                    onChange={(e) => 
+                      setConfidenceWeights(prev => ({ ...prev, useFilename: e.target.checked }))
+                    }
+                  />
+                  <span className="text-sm">
+                    <strong>Filename Match (10%)</strong>
+                    <span className="block text-xs text-muted-foreground">
+                      Similarity between document filenames
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Note: At least one factor must be enabled. Weights will be automatically recalculated when factors are disabled.
+            </p>
+          </div>
         </div>
 
         {/* Action Buttons */}
