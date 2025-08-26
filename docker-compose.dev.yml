@@ -10,7 +10,6 @@ services:
       - "30001:8000"
     environment:
       - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@postgres/paperless_dedupe
-      - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
       - PAPERLESS_DEDUPE_SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-long-random-string}
       # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=${PAPERLESS_API_TOKEN}
       # Or username/password auth
@@ -21,8 +20,6 @@ services:
       - ./cache:/app/cache
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -60,22 +57,6 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U paperless -d paperless_dedupe"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Redis cache
-  redis:
-    image: redis:7-alpine
-    container_name: paperless-dedupe-redis
-    command: redis-server --appendonly yes
-    volumes:
-      - ./redis-data:/data
-    networks:
-      - paperless-dedupe-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

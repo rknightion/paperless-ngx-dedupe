@@ -8,20 +8,20 @@ services:
     environment:
       # Database configuration
       - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@postgres/paperless_dedupe
-      - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
       # Paperless-NGX connection (configure via web UI or set here)
       # - PAPERLESS_DEDUPE_PAPERLESS_URL=http://your-paperless:8000
       # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-api-token
       
       # Security - IMPORTANT: Change this in production!
       - PAPERLESS_DEDUPE_SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-long-random-string}
+      
+      # Logging level (optional) - default is WARNING
+      # Uncomment and set to DEBUG or INFO for more verbose logging
+      # - PAPERLESS_DEDUPE_LOG_LEVEL=INFO
     volumes:
       - paperless-dedupe-data:/app/data
-      - paperless-dedupe-cache:/app/cache
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -71,30 +71,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis cache
-  redis:
-    image: redis:7-alpine
-    container_name: paperless-dedupe-redis
-    command: redis-server --appendonly yes
-    volumes:
-      - paperless-dedupe-redis:/data
-    networks:
-      - paperless-dedupe-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 volumes:
   paperless-dedupe-postgres:
     driver: local
-  paperless-dedupe-redis:
-    driver: local
   paperless-dedupe-data:
-    driver: local
-  paperless-dedupe-cache:
     driver: local
 
 networks:

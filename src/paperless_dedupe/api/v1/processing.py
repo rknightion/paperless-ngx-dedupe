@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from paperless_dedupe.models.database import get_db, Document, DocumentContent
 from paperless_dedupe.services.deduplication_service import DeduplicationService
-from paperless_dedupe.services.cache_service import cache_service
 from paperless_dedupe.core.config import settings
 from pydantic import BaseModel
 from typing import Optional
@@ -102,20 +101,15 @@ async def run_deduplication_analysis(
             if (idx + 1) % 10 == 0 or idx == len(documents) - 1:
                 await safe_broadcast_update()
             
-            # Try cache first
-            cached_content = await cache_service.get_document_ocr(doc.id)
-            if cached_content:
-                contents[doc.id] = cached_content
+            # Get from database
+            content = db.query(DocumentContent).filter(
+                DocumentContent.document_id == doc.id
+            ).first()
+            
+            if content and content.full_text:
+                contents[doc.id] = content.full_text
             else:
-                # Get from database
-                content = db.query(DocumentContent).filter(
-                    DocumentContent.document_id == doc.id
-                ).first()
-                
-                if content and content.full_text:
-                    contents[doc.id] = content.full_text
-                    # Cache for next time
-                    await cache_service.set_document_ocr(doc.id, content.full_text)
+                logger.warning(f"No OCR content for document {doc.id}")
         
         # Create progress callback for deduplication service
         async def dedup_progress_callback(step: str, current: int, total: int):
@@ -159,15 +153,6 @@ async def run_deduplication_analysis(
         
         db.commit()
         
-        # Cache the results
-        await cache_service.set_duplicate_groups([
-            {
-                "id": g["documents"][0].id,
-                "confidence": g["confidence"],
-                "document_count": len(g["documents"])
-            }
-            for g in duplicate_groups
-        ])
         
         processing_status["current_step"] = "Completed"
         processing_status["completed_at"] = datetime.utcnow()
@@ -197,8 +182,8 @@ async def run_deduplication_analysis(
         try:
             await safe_broadcast_update()
             await broadcast_error(f"Processing failed: {str(e)}")
-        except Exception as broadcast_error:
-            logger.error(f"Error broadcasting error status: {broadcast_error}")
+        except Exception as broadcast_exc:
+            logger.error(f"Error broadcasting error status: {broadcast_exc}")
     finally:
         processing_status["is_processing"] = False
         processing_status["progress"] = processing_status["total"]
@@ -263,6 +248,5 @@ async def cancel_processing():
 
 @router.post("/clear-cache")
 async def clear_cache():
-    """Clear all cached data"""
-    await cache_service.clear_all()
-    return {"status": "success", "message": "Cache cleared"}
+    """Clear cache endpoint (deprecated - no longer using cache)"""
+    return {"status": "success", "message": "Cache clearing not needed (Redis removed)"}

@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from paperless_dedupe.models.database import get_db, Document, DocumentContent
 from paperless_dedupe.services.paperless_client import PaperlessClient
-from paperless_dedupe.services.cache_service import cache_service
 from paperless_dedupe.core.config import settings
 from pydantic import BaseModel
 import logging
@@ -115,11 +114,6 @@ async def get_document_content(
     db: Session = Depends(get_db)
 ):
     """Get document OCR content"""
-    # Try cache first
-    cached_content = await cache_service.get_document_ocr(document_id)
-    if cached_content:
-        return {"content": cached_content, "from_cache": True}
-    
     # Get from database
     content = db.query(DocumentContent).filter(
         DocumentContent.document_id == document_id
@@ -128,10 +122,7 @@ async def get_document_content(
     if not content:
         raise HTTPException(status_code=404, detail="Document content not found")
     
-    # Cache for next time
-    await cache_service.set_document_ocr(document_id, content.full_text)
-    
-    return {"content": content.full_text, "from_cache": False}
+    return {"content": content.full_text}
 
 @router.get("/{document_id}/duplicates")
 async def get_document_duplicates(

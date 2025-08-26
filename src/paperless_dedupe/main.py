@@ -83,9 +83,6 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
     
-    # Connect to cache
-    await cache_service.connect()
-    
     # Start automatic document sync if configured
     try:
         from paperless_dedupe.models.database import Document
@@ -123,7 +120,6 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down Paperless Dedupe application")
-    await cache_service.disconnect()
 
 # Create FastAPI app
 app = FastAPI(
