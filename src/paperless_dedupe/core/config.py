@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     app_name: str = "Paperless Dedupe"
     version: str = "0.1.0"
     debug: bool = True
+    log_level: str = "WARNING"  # Can be DEBUG, INFO, WARNING, ERROR, CRITICAL
     
     # Paperless API settings
     paperless_url: str = "http://localhost:8000"
