@@ -35,6 +35,10 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
+  FileText,
+  BarChart3,
+  Percent,
+  Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { configApi } from '../../services/api/config';
@@ -298,67 +302,141 @@ export const DuplicatesPage: React.FC = () => {
       </Card>
 
       {/* Information Box */}
-      <Card className="bg-blue-50/30 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50">
-        <CardHeader 
-          className="pb-3 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-950/50 transition-colors"
-          onClick={() => setInfoBoxExpanded(!infoBoxExpanded)}
-        >
-          <CardTitle className="flex items-center justify-between text-base">
-            <div className="flex items-center space-x-2">
-              <Info className="h-5 w-5 text-blue-600" />
-              <span>Understanding Duplicate Detection</span>
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 shadow-sm">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-100/20 to-indigo-100/20 rounded-full blur-3xl" />
+        <div className="relative">
+          <div 
+            className="p-4 cursor-pointer hover:bg-white/40 transition-all duration-200"
+            onClick={() => setInfoBoxExpanded(!infoBoxExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-md">
+                  <Info className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Understanding Duplicate Detection</h3>
+              </div>
+              <div className="p-1.5 rounded-full hover:bg-indigo-50 transition-colors">
+                {infoBoxExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-indigo-600" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-indigo-600" />
+                )}
+              </div>
             </div>
-            {infoBoxExpanded ? (
-              <ChevronUp className="h-4 w-4 text-blue-600" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-blue-600" />
-            )}
-          </CardTitle>
-        </CardHeader>
-        {infoBoxExpanded && (
-          <CardContent className="space-y-3 text-sm">
-            <div className="space-y-2">
-              <div>
-                <strong className="text-blue-900 dark:text-blue-100">Primary Document:</strong> The first document found in each group, used as the reference for comparison.
+          </div>
+          
+          {infoBoxExpanded && (
+            <div className="px-4 pb-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-3 bg-white/70 rounded-lg border border-indigo-100/50">
+                  <div className="flex items-start space-x-2 mb-2">
+                    <div className="p-1 bg-indigo-100 rounded">
+                      <FileText className="h-4 w-4 text-indigo-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-800">Primary Document</h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    The first document found in each group, used as the reference for comparison.
+                  </p>
+                </div>
+                
+                <div className="p-3 bg-white/70 rounded-lg border border-purple-100/50">
+                  <div className="flex items-start space-x-2 mb-2">
+                    <div className="p-1 bg-purple-100 rounded">
+                      <BarChart3 className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-800">Confidence Score</h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    How similar documents are (0-100%), calculated from multiple factors.
+                  </p>
+                </div>
               </div>
-              <div>
-                <strong className="text-blue-900 dark:text-blue-100">Confidence Score:</strong> How similar documents are (0-100%). Calculated from:
-                <ul className="ml-4 mt-1 space-y-1 text-xs text-gray-700 dark:text-gray-300">
-                  <li>• <strong>Jaccard Similarity (40%):</strong> Overlapping unique words</li>
-                  <li>• <strong>Fuzzy Text (30%):</strong> Handles OCR errors and variations</li>
-                  <li>• <strong>Metadata (20%):</strong> Date, size, type matching</li>
-                  <li>• <strong>Filename (10%):</strong> Similar file names</li>
-                </ul>
+              
+              <div className="p-3 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-lg border border-indigo-100/30">
+                <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <Percent className="h-4 w-4 mr-2 text-indigo-600" />
+                  Confidence Breakdown
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
+                    <span className="text-gray-700 font-medium">Jaccard Similarity</span>
+                    <span className="text-indigo-600 font-semibold">40%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
+                    <span className="text-gray-700 font-medium">Fuzzy Text</span>
+                    <span className="text-purple-600 font-semibold">30%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
+                    <span className="text-gray-700 font-medium">Metadata</span>
+                    <span className="text-indigo-600 font-semibold">20%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
+                    <span className="text-gray-700 font-medium">Filename</span>
+                    <span className="text-purple-600 font-semibold">10%</span>
+                  </div>
+                </div>
               </div>
-              <div className="pt-2 border-t">
-                <strong className="text-blue-900 dark:text-blue-100">Actions Explained:</strong>
-                <ul className="ml-4 mt-1 space-y-1 text-xs text-gray-700 dark:text-gray-300">
-                  <li>• <strong>Mark Reviewed:</strong> Flag group as manually checked</li>
-                  <li>• <strong>Delete Group:</strong> Remove grouping (keeps documents)</li>
-                  <li>• <strong>Resolve Groups:</strong> Delete duplicate documents (keeps primary)</li>
-                </ul>
+              
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-semibold text-green-800">Mark Reviewed</span>
+                  </div>
+                  <p className="text-xs text-green-700 mt-1">Flag as manually checked</p>
+                </div>
+                
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-800">Delete Group</span>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-1">Remove grouping only</p>
+                </div>
+                
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Trash2 className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-semibold text-red-800">Resolve Groups</span>
+                  </div>
+                  <p className="text-xs text-red-700 mt-1">Delete duplicates</p>
+                </div>
               </div>
+              
               {config && (
-                <div className="pt-2 border-t flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-indigo-50 rounded-lg border border-gray-200">
                   <div>
-                    <strong className="text-blue-900 dark:text-blue-100">Current Settings:</strong>
-                    <div className="text-xs mt-1 space-y-1 text-gray-700 dark:text-gray-300">
-                      <div>OCR Length: {config.max_ocr_length} chars</div>
-                      <div>Fuzzy Threshold: {config.fuzzy_match_threshold}%</div>
+                    <h4 className="font-semibold text-gray-800 flex items-center">
+                      <Settings className="h-4 w-4 mr-2 text-gray-600" />
+                      Current Settings
+                    </h4>
+                    <div className="flex gap-4 mt-1">
+                      <span className="text-sm text-gray-600">
+                        OCR: <span className="font-semibold text-indigo-600">{config.max_ocr_length.toLocaleString()}</span> chars
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        Threshold: <span className="font-semibold text-purple-600">{config.fuzzy_match_threshold}%</span>
+                      </span>
                     </div>
                   </div>
                   <Link to="/settings">
-                    <Button variant="outline" size="sm">
-                      <Settings className="h-3 w-3 mr-1" />
-                      Settings
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 text-indigo-700"
+                    >
+                      <Settings className="h-3 w-3 mr-1.5" />
+                      Configure
                     </Button>
                   </Link>
                 </div>
               )}
             </div>
-          </CardContent>
-        )}
-      </Card>
+          )}
+        </div>
+      </div>
 
       {/* Results Summary and Controls */}
       <div className="space-y-4">
