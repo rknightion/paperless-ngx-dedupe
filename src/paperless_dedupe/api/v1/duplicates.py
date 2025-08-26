@@ -60,7 +60,7 @@ async def get_duplicate_groups(
             documents=documents,
             reviewed=group.reviewed,
             created_at=group.created_at.isoformat() if group.created_at else "",
-            updated_at=group.updated_at.isoformat() if group.updated_at else "",
+            updated_at=group.created_at.isoformat() if group.created_at else "",  # Use created_at since updated_at doesn't exist
             confidence_breakdown={
                 "jaccard_similarity": group.confidence_score,
                 "fuzzy_text_ratio": group.confidence_score * 0.95,
@@ -98,7 +98,7 @@ async def get_duplicate_group(
         documents=documents,
         reviewed=group.reviewed,
         created_at=group.created_at.isoformat() if group.created_at else "",
-        updated_at=group.updated_at.isoformat() if group.updated_at else "",
+        updated_at=group.created_at.isoformat() if group.created_at else "",  # Use created_at since updated_at doesn't exist
         confidence_breakdown={
             "jaccard_similarity": group.confidence_score,
             "fuzzy_text_ratio": group.confidence_score * 0.95,

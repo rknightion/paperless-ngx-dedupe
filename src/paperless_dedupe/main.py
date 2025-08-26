@@ -85,6 +85,11 @@ async def lifespan(app: FastAPI):
                 asyncio.create_task(run_document_sync(db, force_refresh=False, limit=None))
             else:
                 logger.info(f"Found {document_count} existing documents. Skipping automatic sync.")
+                # Update sync status to reflect that documents exist from a previous sync
+                most_recent = db.query(Document).order_by(Document.last_processed.desc()).first()
+                if most_recent and most_recent.last_processed:
+                    sync_status["completed_at"] = most_recent.last_processed
+                    sync_status["documents_synced"] = document_count
         else:
             if not client_settings.get('paperless_url'):
                 logger.info("Paperless URL not configured. Skipping automatic sync.")

@@ -327,10 +327,23 @@ async def sync_documents(
     }
 
 @router.get("/sync/status")
-async def get_sync_status():
+async def get_sync_status(db: Session = Depends(get_db)):
     """Get current sync status"""
     # Convert datetime objects to ISO strings for JSON serialization
     status_copy = sync_status.copy()
+    
+    # If no sync is in progress and completed_at is None, check if we have documents
+    # This handles the case where the app has restarted and lost in-memory status
+    if not status_copy["is_syncing"] and status_copy["completed_at"] is None:
+        document_count = db.query(Document).count()
+        if document_count > 0:
+            # We have documents, so a sync must have happened previously
+            # Get the most recent document's last_processed timestamp
+            most_recent = db.query(Document).order_by(Document.last_processed.desc()).first()
+            if most_recent and most_recent.last_processed:
+                status_copy["completed_at"] = most_recent.last_processed
+                status_copy["documents_synced"] = document_count
+    
     if status_copy.get("started_at") and isinstance(status_copy["started_at"], datetime):
         status_copy["started_at"] = status_copy["started_at"].isoformat()
     if status_copy.get("completed_at") and isinstance(status_copy["completed_at"], datetime):

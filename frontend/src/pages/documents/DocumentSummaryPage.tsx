@@ -14,15 +14,11 @@ import { Badge } from '../../components/ui/Badge';
 import {
   FileText,
   Database,
-  TrendingUp,
   Clock,
   AlertTriangle,
   CheckCircle,
-  Download,
   RefreshCw,
   HardDrive,
-  Calendar,
-  BarChart3,
   Info,
 } from 'lucide-react';
 
@@ -58,7 +54,6 @@ export const DocumentSummaryPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const [statistics, setStatistics] = useState<DocumentStatistics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
 
   // Load document statistics
   useEffect(() => {
@@ -106,17 +101,6 @@ export const DocumentSummaryPage: React.FC = () => {
     }
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      await documentsApi.syncDocuments();
-      await loadStatistics();
-    } catch (error) {
-      console.error('Sync failed:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -157,21 +141,11 @@ export const DocumentSummaryPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Document Library</h1>
-          <p className="text-muted-foreground">
-            Overview and statistics of your document collection
-          </p>
-        </div>
-        <Button onClick={handleSync} disabled={syncing}>
-          {syncing ? (
-            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <Download className="h-4 w-4 mr-2" />
-          )}
-          Sync from Paperless
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Document Library</h1>
+        <p className="text-muted-foreground">
+          Overview and statistics of your document collection
+        </p>
       </div>
 
       {/* Main Statistics Grid */}
