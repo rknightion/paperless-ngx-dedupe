@@ -28,26 +28,60 @@ import {
   CheckCircle,
   Clock,
   RefreshCw,
+  AlertCircle,
+  FileX,
+  Settings,
+  Info,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { configApi } from '../../services/api/config';
 
 export const DuplicatesPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { groups, loading, statistics } = useDuplicateGroups();
+  const { groups, loading, statistics, totalCount } = useDuplicateGroups();
   const selectedGroups = useSelector((state: RootState) => state.duplicates.selectedGroups);
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewedFilter, setReviewedFilter] = useState<boolean | null>(null);
   const [confidenceFilter, setConfidenceFilter] = useState(0.7);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [showConfidenceSettings, setShowConfidenceSettings] = useState(false);
+  const [confidenceWeights, setConfidenceWeights] = useState({
+    jaccard: true,
+    fuzzy: true,
+    metadata: true,
+    filename: true,
+  });
+  const [config, setConfig] = useState<any>(null);
+  const [infoBoxExpanded, setInfoBoxExpanded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<'confidence' | 'created' | 'documents' | 'filename'>('confidence');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Load duplicate groups and statistics
+  // Load duplicate groups, statistics and configuration
   useEffect(() => {
-    dispatch(fetchDuplicateGroups());
+    dispatch(fetchDuplicateGroups({
+      page: currentPage,
+      page_size: pageSize,
+      sort_by: sortBy,
+      sort_order: sortDirection,
+    }));
     dispatch(fetchDuplicateStatistics());
-  }, [dispatch]);
+    // Load configuration to show current settings
+    configApi.getConfiguration().then(setConfig).catch(console.error);
+  }, [dispatch, currentPage, pageSize, sortBy, sortDirection]);
 
   // Handle filters
   const handleRefresh = () => {
-    dispatch(fetchDuplicateGroups());
+    dispatch(fetchDuplicateGroups({
+      page: currentPage,
+      page_size: pageSize,
+      sort_by: sortBy,
+      sort_order: sortDirection,
+    }));
     dispatch(fetchDuplicateStatistics());
   };
 
@@ -57,6 +91,9 @@ export const DuplicatesPage: React.FC = () => {
   };
 
   // Filter groups based on search and filters
+  // Calculate total pages
+  const totalPages = Math.ceil(totalCount / pageSize);
+
   const filteredGroups = (groups || []).filter((group) => {
     const matchesSearch =
       searchQuery === '' ||
@@ -131,7 +168,7 @@ export const DuplicatesPage: React.FC = () => {
 
       {/* Statistics */}
       {statistics && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <StatCard
             title="Total Groups"
             value={statistics?.total_groups || 0}
@@ -143,6 +180,12 @@ export const DuplicatesPage: React.FC = () => {
             value={statistics?.total_duplicates || 0}
             icon={Copy}
             color="text-orange-600"
+          />
+          <StatCard
+            title="Potential Deletions"
+            value={statistics?.potential_deletions || 0}
+            icon={FileX}
+            color="text-red-600"
           />
           <StatCard
             title="Reviewed"
@@ -254,16 +297,157 @@ export const DuplicatesPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Results Summary */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          Showing {filteredGroups.length} of {groups.length} duplicate groups
-        </span>
-        {statistics && (
-          <span>
-            Potential savings:{' '}
-            {(statistics.potential_space_savings / (1024 * 1024)).toFixed(1)} MB
-          </span>
+      {/* Information Box */}
+      <Card className="bg-blue-50/30 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50">
+        <CardHeader 
+          className="pb-3 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-950/50 transition-colors"
+          onClick={() => setInfoBoxExpanded(!infoBoxExpanded)}
+        >
+          <CardTitle className="flex items-center justify-between text-base">
+            <div className="flex items-center space-x-2">
+              <Info className="h-5 w-5 text-blue-600" />
+              <span>Understanding Duplicate Detection</span>
+            </div>
+            {infoBoxExpanded ? (
+              <ChevronUp className="h-4 w-4 text-blue-600" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-blue-600" />
+            )}
+          </CardTitle>
+        </CardHeader>
+        {infoBoxExpanded && (
+          <CardContent className="space-y-3 text-sm">
+            <div className="space-y-2">
+              <div>
+                <strong className="text-blue-900 dark:text-blue-100">Primary Document:</strong> The first document found in each group, used as the reference for comparison.
+              </div>
+              <div>
+                <strong className="text-blue-900 dark:text-blue-100">Confidence Score:</strong> How similar documents are (0-100%). Calculated from:
+                <ul className="ml-4 mt-1 space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                  <li>• <strong>Jaccard Similarity (40%):</strong> Overlapping unique words</li>
+                  <li>• <strong>Fuzzy Text (30%):</strong> Handles OCR errors and variations</li>
+                  <li>• <strong>Metadata (20%):</strong> Date, size, type matching</li>
+                  <li>• <strong>Filename (10%):</strong> Similar file names</li>
+                </ul>
+              </div>
+              <div className="pt-2 border-t">
+                <strong className="text-blue-900 dark:text-blue-100">Actions Explained:</strong>
+                <ul className="ml-4 mt-1 space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                  <li>• <strong>Mark Reviewed:</strong> Flag group as manually checked</li>
+                  <li>• <strong>Delete Group:</strong> Remove grouping (keeps documents)</li>
+                  <li>• <strong>Resolve Groups:</strong> Delete duplicate documents (keeps primary)</li>
+                </ul>
+              </div>
+              {config && (
+                <div className="pt-2 border-t flex items-center justify-between">
+                  <div>
+                    <strong className="text-blue-900 dark:text-blue-100">Current Settings:</strong>
+                    <div className="text-xs mt-1 space-y-1 text-gray-700 dark:text-gray-300">
+                      <div>OCR Length: {config.max_ocr_length} chars</div>
+                      <div>Fuzzy Threshold: {config.fuzzy_match_threshold}%</div>
+                    </div>
+                  </div>
+                  <Link to="/settings">
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-3 w-3 mr-1" />
+                      Settings
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Results Summary and Controls */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium">Sort by:</label>
+              <select
+                className="px-3 py-1 text-sm border border-input rounded-md bg-background"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+              >
+                <option value="confidence">Confidence</option>
+                <option value="created">Date Found</option>
+                <option value="documents">Document Count</option>
+                <option value="filename">Filename</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortDirection === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium">Show:</label>
+              <select
+                className="px-3 py-1 text-sm border border-input rounded-md bg-background"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="10">10 per page</option>
+                <option value="20">20 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+              </select>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Showing {Math.min(pageSize, filteredGroups.length)} of {totalCount || groups.length} groups
+            {statistics && statistics.potential_deletions > 0 && (
+              <span className="ml-2">• {statistics.potential_deletions} documents can be deleted</span>
+            )}
+          </div>
+        </div>
+
+        {/* Page Navigation Top */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="px-3 py-1 text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              Last
+            </Button>
+          </div>
         )}
       </div>
 
@@ -361,6 +545,47 @@ export const DuplicatesPage: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Page Navigation Bottom */}
+      {totalPages > 1 && filteredGroups.length > 0 && (
+        <div className="flex items-center justify-center space-x-2 pt-4 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+          >
+            First
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="px-3 py-1 text-sm">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            Last
+          </Button>
         </div>
       )}
     </div>

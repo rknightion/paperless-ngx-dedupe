@@ -30,6 +30,7 @@ export const useDuplicateGroups = () =>
     loading: state.duplicates.loading.groups,
     error: state.duplicates.error,
     statistics: state.duplicates.statistics,
+    totalCount: state.duplicates.pagination.count,
   }));
 
 export const useProcessingStatus = () =>
