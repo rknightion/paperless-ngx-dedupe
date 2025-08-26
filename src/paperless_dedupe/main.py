@@ -45,6 +45,27 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialized")
     
+    # Run Alembic migrations
+    try:
+        from alembic import command
+        from alembic.config import Config
+        import os
+        
+        # Find the alembic.ini file
+        alembic_ini = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'alembic.ini')
+        if os.path.exists(alembic_ini):
+            logger.info("Running database migrations...")
+            alembic_cfg = Config(alembic_ini)
+            # Set the database URL for migrations
+            alembic_cfg.set_main_option('sqlalchemy.url', settings.database_url)
+            # Run migrations to latest version
+            command.upgrade(alembic_cfg, "head")
+            logger.info("Database migrations completed")
+        else:
+            logger.warning(f"Alembic config not found at {alembic_ini}, skipping migrations")
+    except Exception as e:
+        logger.error(f"Error running migrations: {e}")
+    
     # Load saved configuration from database
     from paperless_dedupe.models.database import get_db, AppConfig
     db = next(get_db())

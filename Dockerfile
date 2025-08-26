@@ -72,6 +72,9 @@ COPY --from=backend-builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY --chown=paperless:paperless src/ ./src/
 COPY --chown=paperless:paperless pyproject.toml .
+# Copy Alembic migrations
+COPY --chown=paperless:paperless alembic.ini .
+COPY --chown=paperless:paperless alembic/ ./alembic/
 
 # Switch to non-root user
 USER paperless
