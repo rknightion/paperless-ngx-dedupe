@@ -220,11 +220,30 @@ async def run_document_sync(
                     updated_count += 1
                     continue
                 
+                # Process tags - they might be IDs or objects
+                tags_list = []
+                tags_data = pdoc.get("tags", [])
+                if tags_data:
+                    for tag in tags_data:
+                        if isinstance(tag, dict):
+                            # Tag is an object with name
+                            tags_list.append(tag.get("name", str(tag.get("id", ""))))
+                        else:
+                            # Tag is just an ID, we'll store the ID as string
+                            tags_list.append(f"tag-{tag}")
+                
                 if existing:
                     # Update existing document
                     existing.title = pdoc.get("title", "")
                     existing.file_size = pdoc.get("original_file_size")
                     existing.created_date = pdoc.get("created")
+                    existing.correspondent = pdoc.get("correspondent_name")
+                    existing.document_type = pdoc.get("document_type_name")
+                    existing.tags = tags_list
+                    existing.archive_filename = pdoc.get("archive_filename")
+                    existing.original_filename = pdoc.get("original_filename")
+                    existing.added_date = pdoc.get("added")
+                    existing.modified_date = pdoc.get("modified")
                     updated_count += 1
                 else:
                     # Create new document
@@ -233,6 +252,13 @@ async def run_document_sync(
                         title=pdoc.get("title", ""),
                         file_size=pdoc.get("original_file_size"),
                         created_date=pdoc.get("created"),
+                        correspondent=pdoc.get("correspondent_name"),
+                        document_type=pdoc.get("document_type_name"),
+                        tags=tags_list,
+                        archive_filename=pdoc.get("archive_filename"),
+                        original_filename=pdoc.get("original_filename"),
+                        added_date=pdoc.get("added"),
+                        modified_date=pdoc.get("modified"),
                         processing_status="pending"
                     )
                     db.add(document)

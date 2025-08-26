@@ -17,20 +17,29 @@ class DuplicateGroupResponse(BaseModel):
     updated_at: str
     confidence_breakdown: Optional[dict] = None
     
+class DuplicateGroupsListResponse(BaseModel):
+    groups: List[DuplicateGroupResponse]
+    count: int
+    page: int
+    page_size: int
+    total_pages: int
+    
 class MarkReviewedRequest(BaseModel):
     reviewed: bool = True
     resolved: bool = False
 
-@router.get("/groups", response_model=List[DuplicateGroupResponse])
+@router.get("/groups", response_model=DuplicateGroupsListResponse)
 async def get_duplicate_groups(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=1000),
     min_confidence: float = Query(0.0, ge=0.0, le=1.0),
     reviewed: Optional[bool] = None,
     resolved: Optional[bool] = None,
+    sort_by: str = Query("confidence", regex="^(confidence|created|documents|filename)$"),
+    sort_order: str = Query("desc", regex="^(asc|desc)$"),
     db: Session = Depends(get_db)
 ):
-    """Get list of duplicate groups"""
+    """Get list of duplicate groups with pagination"""
     query = db.query(DuplicateGroup)
     
     # Apply filters
@@ -41,18 +50,57 @@ async def get_duplicate_groups(
     if resolved is not None:
         query = query.filter(DuplicateGroup.resolved == resolved)
     
-    groups = query.offset(skip).limit(limit).all()
+    # Apply sorting
+    if sort_by == "confidence":
+        order_col = DuplicateGroup.confidence_score
+    elif sort_by == "created":
+        order_col = DuplicateGroup.created_at
+    elif sort_by == "documents":
+        # Sort by number of documents in the group - this requires a subquery
+        from sqlalchemy import func
+        subquery = db.query(
+            DuplicateMember.group_id,
+            func.count(DuplicateMember.id).label('doc_count')
+        ).group_by(DuplicateMember.group_id).subquery()
+        query = query.outerjoin(subquery, DuplicateGroup.id == subquery.c.group_id)
+        order_col = subquery.c.doc_count
+    else:  # filename - sort by primary document's filename
+        # This is complex, for now just sort by confidence
+        order_col = DuplicateGroup.confidence_score
+    
+    if sort_order == "desc":
+        query = query.order_by(order_col.desc())
+    else:
+        query = query.order_by(order_col.asc())
+    
+    # Get total count before pagination
+    total_count = query.count()
+    total_pages = (total_count + page_size - 1) // page_size
+    
+    # Calculate skip from page number
+    skip = (page - 1) * page_size
+    
+    groups = query.offset(skip).limit(page_size).all()
     
     result = []
     for group in groups:
         documents = []
         for member in group.members:
-            documents.append({
+            doc_data = {
                 "id": member.document.id,
                 "paperless_id": member.document.paperless_id,
                 "title": member.document.title,
-                "is_primary": member.is_primary
-            })
+                "is_primary": member.is_primary,
+                "created": member.document.created_date.isoformat() if member.document.created_date else None,
+                "file_type": "pdf",  # TODO: Get from document metadata
+                "archive_serial_number": member.document.id,  # Using ID as placeholder
+                "correspondent": member.document.correspondent,
+                "document_type": member.document.document_type,
+                "tags": member.document.tags if member.document.tags else [],
+                "original_filename": member.document.original_filename,
+                "file_size": member.document.file_size
+            }
+            documents.append(doc_data)
         
         result.append(DuplicateGroupResponse(
             id=str(group.id),
@@ -69,7 +117,13 @@ async def get_duplicate_groups(
             } if group.confidence_score else None
         ))
     
-    return result
+    return DuplicateGroupsListResponse(
+        groups=result,
+        count=total_count,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
+    )
 
 @router.get("/groups/{group_id}", response_model=DuplicateGroupResponse)
 async def get_duplicate_group(
@@ -156,21 +210,34 @@ async def get_duplicate_statistics(
         "low": sum(1 for g in groups if g.confidence_score < 0.5)
     }
     
-    # Calculate potential space savings
+    # Calculate total duplicate documents and potential deletions
+    total_duplicate_documents = 0
+    potential_deletions = 0
+    
+    for group in groups:
+        if len(group.members) > 1:
+            # All documents in the group are duplicates
+            total_duplicate_documents += len(group.members)
+            # Can potentially delete all but one document
+            potential_deletions += len(group.members) - 1
+    
+    # Still calculate space savings for legacy compatibility
     total_duplicate_size = 0
     for group in groups:
         if len(group.members) > 1:
-            # Sum file sizes of all but the primary document
             for member in group.members:
                 if not member.is_primary and member.document.file_size:
                     total_duplicate_size += member.document.file_size
     
     return {
         "total_groups": total_groups,
+        "total_duplicates": total_duplicate_documents,  # Fixed: Now returns actual count
+        "potential_deletions": potential_deletions,  # New: Number of documents that can be deleted
         "reviewed_groups": reviewed_groups,
         "resolved_groups": resolved_groups,
         "unreviewed_groups": total_groups - reviewed_groups,
         "confidence_distribution": confidence_distribution,
+        "potential_space_savings": total_duplicate_size,  # Kept for compatibility
         "potential_space_savings_bytes": total_duplicate_size,
         "potential_space_savings_mb": round(total_duplicate_size / (1024 * 1024), 2)
     }
