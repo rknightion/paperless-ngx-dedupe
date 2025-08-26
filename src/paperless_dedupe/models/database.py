@@ -21,6 +21,15 @@ class Document(Base):
     last_processed = Column(DateTime, default=datetime.utcnow)
     processing_status = Column(String(20), default="pending")
     
+    # Additional metadata fields
+    correspondent = Column(String(200))
+    document_type = Column(String(200))
+    tags = Column(JSON)  # Store tags as JSON array
+    archive_filename = Column(String(500))
+    original_filename = Column(String(500))
+    added_date = Column(DateTime)
+    modified_date = Column(DateTime)
+    
     # Relationships
     content = relationship("DocumentContent", back_populates="document", uselist=False, cascade="all, delete-orphan")
     duplicate_memberships = relationship("DuplicateMember", back_populates="document", cascade="all, delete-orphan")
