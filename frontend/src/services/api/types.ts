@@ -22,6 +22,12 @@ export interface Document {
   processing_status: 'pending' | 'processing' | 'completed' | 'error';
   fingerprint?: string;
   has_duplicates?: boolean;
+  // Additional metadata fields
+  correspondent?: string;
+  document_type?: string;
+  tags?: string[];
+  original_filename?: string;
+  created?: string;  // Alias for created_date
 }
 
 export interface DocumentContent {
@@ -57,11 +63,15 @@ export interface DuplicateGroup {
 export interface DuplicateGroupsResponse {
   groups: DuplicateGroup[];
   count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 export interface DuplicateStatistics {
   total_groups: number;
   total_duplicates: number;
+  potential_deletions: number;
   reviewed_groups: number;
   unreviewed_groups: number;
   potential_space_savings: number;
@@ -142,4 +152,6 @@ export interface DuplicateGroupQueryParams {
   page_size?: number;
   reviewed?: boolean;
   min_confidence?: number;
+  sort_by?: 'confidence' | 'created' | 'documents' | 'filename';
+  sort_order?: 'asc' | 'desc';
 }

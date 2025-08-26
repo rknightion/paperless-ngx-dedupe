@@ -198,9 +198,18 @@ const duplicatesSlice = createSlice({
       })
       .addCase(fetchDuplicateGroups.fulfilled, (state, action) => {
         state.loading.groups = false;
-        // The API returns an array directly
-        state.groups = Array.isArray(action.payload) ? action.payload : action.payload.groups || [];
-        state.pagination.count = Array.isArray(action.payload) ? action.payload.length : action.payload.count || 0;
+        // The API returns an object with groups array and pagination info
+        const payload = action.payload as any;  // Type assertion to handle the response
+        if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+          state.groups = payload.groups || [];
+          state.pagination.count = payload.count || 0;
+          state.pagination.currentPage = payload.page || 1;
+          state.pagination.pageSize = payload.page_size || 100;
+        } else if (Array.isArray(payload)) {
+          // Fallback for old API format
+          state.groups = payload;
+          state.pagination.count = payload.length;
+        }
       })
       .addCase(fetchDuplicateGroups.rejected, (state, action) => {
         state.loading.groups = false;
