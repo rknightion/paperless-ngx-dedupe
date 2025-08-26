@@ -51,14 +51,49 @@ class DuplicateGroup(Base):
     __tablename__ = "duplicate_groups"
     
     id = Column(Integer, primary_key=True, index=True)
-    confidence_score = Column(Float)
-    algorithm_version = Column(String(10), default="1.0")
+    confidence_score = Column(Float)  # Aggregated score (can be recalculated)
+    
+    # Individual component scores for dynamic recalculation
+    jaccard_similarity = Column(Float)  # Jaccard similarity (0-1)
+    fuzzy_text_ratio = Column(Float)    # Fuzzy text matching ratio (0-1)
+    metadata_similarity = Column(Float)  # Metadata matching score (0-1)
+    filename_similarity = Column(Float)  # Filename similarity score (0-1)
+    
+    algorithm_version = Column(String(10), default="2.0")  # Updated version
     created_at = Column(DateTime, default=datetime.utcnow)
     reviewed = Column(Boolean, default=False)
     resolved = Column(Boolean, default=False)
     
     # Relationships
     members = relationship("DuplicateMember", back_populates="group", cascade="all, delete-orphan")
+    
+    def recalculate_confidence(self, weights: dict) -> float:
+        """Recalculate confidence score based on provided weights"""
+        scores = []
+        total_weight = 0
+        
+        if weights.get('jaccard', True) and self.jaccard_similarity is not None:
+            scores.append((self.jaccard_similarity, 0.4))
+            total_weight += 0.4
+            
+        if weights.get('fuzzy', True) and self.fuzzy_text_ratio is not None:
+            scores.append((self.fuzzy_text_ratio, 0.3))
+            total_weight += 0.3
+            
+        if weights.get('metadata', True) and self.metadata_similarity is not None:
+            scores.append((self.metadata_similarity, 0.2))
+            total_weight += 0.2
+            
+        if weights.get('filename', True) and self.filename_similarity is not None:
+            scores.append((self.filename_similarity, 0.1))
+            total_weight += 0.1
+            
+        if not scores:
+            return 0.0
+            
+        # Normalize weights and calculate weighted average
+        weighted_sum = sum(score * weight for score, weight in scores)
+        return weighted_sum / total_weight if total_weight > 0 else 0.0
 
 class DuplicateMember(Base):
     __tablename__ = "duplicate_members"
