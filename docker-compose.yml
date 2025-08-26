@@ -9,7 +9,6 @@ services:
       # Database configuration
       - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@postgres/paperless_dedupe
       - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
-      
       # Paperless-NGX connection (configure via web UI or set here)
       # - PAPERLESS_DEDUPE_PAPERLESS_URL=http://your-paperless:8000
       # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-api-token

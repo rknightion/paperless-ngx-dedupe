@@ -214,3 +214,9 @@ htmlcov/
 .coverage
 coverage.xml
 *.cover
+
+
+#dev
+postgres-data/
+redis-data/
+cache/
