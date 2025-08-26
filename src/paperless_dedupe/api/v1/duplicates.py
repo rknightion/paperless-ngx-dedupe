@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from paperless_dedupe.models.database import get_db, DuplicateGroup, DuplicateMember
 from pydantic import BaseModel
 import logging
@@ -28,6 +28,12 @@ class MarkReviewedRequest(BaseModel):
     reviewed: bool = True
     resolved: bool = False
 
+class ConfidenceWeights(BaseModel):
+    jaccard: bool = True
+    fuzzy: bool = True
+    metadata: bool = True
+    filename: bool = True
+
 @router.get("/groups", response_model=DuplicateGroupsListResponse)
 async def get_duplicate_groups(
     page: int = Query(1, ge=1),
@@ -37,14 +43,28 @@ async def get_duplicate_groups(
     resolved: Optional[bool] = None,
     sort_by: str = Query("confidence", regex="^(confidence|created|documents|filename)$"),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    # Dynamic confidence weights for filtering (optional)
+    use_jaccard: bool = Query(True),
+    use_fuzzy: bool = Query(True),
+    use_metadata: bool = Query(True),
+    use_filename: bool = Query(True),
+    min_fuzzy_ratio: float = Query(0.0, ge=0.0, le=1.0),
     db: Session = Depends(get_db)
 ):
-    """Get list of duplicate groups with pagination"""
+    """Get list of duplicate groups with pagination and dynamic confidence recalculation"""
     query = db.query(DuplicateGroup)
     
-    # Apply filters
-    if min_confidence > 0:
-        query = query.filter(DuplicateGroup.confidence_score >= min_confidence)
+    # Build confidence weights for dynamic recalculation
+    weights = {
+        'jaccard': use_jaccard,
+        'fuzzy': use_fuzzy,
+        'metadata': use_metadata,
+        'filename': use_filename
+    }
+    
+    # Apply filters - filter by fuzzy ratio if specified (minimum 50%)
+    if min_fuzzy_ratio > 0.5:
+        query = query.filter(DuplicateGroup.fuzzy_text_ratio >= min_fuzzy_ratio)
     if reviewed is not None:
         query = query.filter(DuplicateGroup.reviewed == reviewed)
     if resolved is not None:
@@ -83,7 +103,16 @@ async def get_duplicate_groups(
     groups = query.offset(skip).limit(page_size).all()
     
     result = []
+    skipped_count = 0
     for group in groups:
+        # Recalculate confidence based on provided weights
+        recalculated_confidence = group.recalculate_confidence(weights)
+        
+        # Skip if below minimum confidence after recalculation
+        if recalculated_confidence < min_confidence:
+            skipped_count += 1
+            continue
+            
         documents = []
         for member in group.members:
             doc_data = {
@@ -102,27 +131,42 @@ async def get_duplicate_groups(
             }
             documents.append(doc_data)
         
+        # Use actual component scores if available, otherwise estimate from total
+        if group.jaccard_similarity is not None:
+            confidence_breakdown = {
+                "jaccard_similarity": group.jaccard_similarity if use_jaccard else None,
+                "fuzzy_text_ratio": group.fuzzy_text_ratio if use_fuzzy else None,
+                "metadata_similarity": group.metadata_similarity if use_metadata else None,
+                "filename_similarity": group.filename_similarity if use_filename else None
+            }
+        else:
+            # Legacy groups - estimate breakdown
+            confidence_breakdown = {
+                "jaccard_similarity": group.confidence_score if use_jaccard else None,
+                "fuzzy_text_ratio": group.confidence_score * 0.95 if use_fuzzy else None,
+                "metadata_similarity": group.confidence_score * 0.85 if use_metadata else None,
+                "filename_similarity": group.confidence_score * 0.75 if use_filename else None
+            }
+        
         result.append(DuplicateGroupResponse(
             id=str(group.id),
-            confidence=group.confidence_score,
+            confidence=recalculated_confidence,  # Use recalculated confidence
             documents=documents,
             reviewed=group.reviewed,
             created_at=group.created_at.isoformat() if group.created_at else "",
-            updated_at=group.created_at.isoformat() if group.created_at else "",  # Use created_at since updated_at doesn't exist
-            confidence_breakdown={
-                "jaccard_similarity": group.confidence_score,
-                "fuzzy_text_ratio": group.confidence_score * 0.95,
-                "metadata_similarity": group.confidence_score * 0.85,
-                "filename_similarity": group.confidence_score * 0.75
-            } if group.confidence_score else None
+            updated_at=group.created_at.isoformat() if group.created_at else "",
+            confidence_breakdown=confidence_breakdown
         ))
+    
+    # Adjust total count to account for filtered groups
+    adjusted_count = total_count - skipped_count
     
     return DuplicateGroupsListResponse(
         groups=result,
-        count=total_count,
+        count=adjusted_count,
         page=page,
         page_size=page_size,
-        total_pages=total_pages
+        total_pages=(adjusted_count + page_size - 1) // page_size
     )
 
 @router.get("/groups/{group_id}", response_model=DuplicateGroupResponse)
