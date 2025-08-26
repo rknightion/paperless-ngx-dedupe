@@ -256,7 +256,7 @@ async def run_document_sync(
                     db.flush()  # Get the ID for the document
                     synced_count += 1
                 
-                # Get and store OCR content
+                # Get and store OCR content (up to 500K characters)
                 content_text = pdoc.get("content", "")
                 if content_text:
                     # Remove existing content if updating
@@ -265,17 +265,18 @@ async def run_document_sync(
                             DocumentContent.document_id == existing.id
                         ).delete()
                     
+                    # Store full text up to max_ocr_length (500K)
+                    # No longer truncating based on user config - always use full 500K limit
+                    truncated_text = content_text[:settings.max_ocr_length] if len(content_text) > settings.max_ocr_length else content_text
+                    
                     # Add new content
                     content = DocumentContent(
                         document_id=document.id if not existing else existing.id,
-                        full_text=content_text[:settings.max_ocr_length] if len(content_text) > settings.max_ocr_length else content_text,
-                        word_count=len(content_text.split())
+                        full_text=truncated_text,
+                        word_count=len(truncated_text.split()),
+                        normalized_text=None  # Can be used for preprocessed text later
                     )
                     db.add(content)
-                    
-                    # Cache OCR content
-                    doc_id = document.id if not existing else existing.id
-                    await cache_service.set_document_ocr(doc_id, content.full_text)
                 
                 # Commit in batches to avoid holding transaction too long
                 if (idx + 1) % 100 == 0:
@@ -385,14 +386,14 @@ async def get_document_statistics(db: Session = Depends(get_db)):
     
     # Get OCR statistics
     documents_with_ocr = db.query(Document).join(DocumentContent).filter(
-        DocumentContent.ocr_text != None,
-        func.length(DocumentContent.ocr_text) > 0
+        DocumentContent.full_text != None,
+        func.length(DocumentContent.full_text) > 0
     ).count()
     
     documents_without_ocr = total_documents - documents_with_ocr
     
     # Calculate average OCR length
-    avg_ocr_length = db.query(func.avg(func.length(DocumentContent.ocr_text))).scalar() or 0
+    avg_ocr_length = db.query(func.avg(func.length(DocumentContent.full_text))).scalar() or 0
     
     # Get total size (if stored)
     total_size = db.query(func.sum(Document.file_size)).scalar() or 0

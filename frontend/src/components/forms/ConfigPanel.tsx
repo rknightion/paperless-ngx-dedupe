@@ -321,47 +321,47 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fuzzy_match_threshold">
-                Fuzzy Match Threshold ({formData.fuzzy_match_threshold || 80}%)
+                Fuzzy Match Threshold ({formData.fuzzy_match_threshold || 85}%)
               </Label>
-              <Input
-                id="fuzzy_match_threshold"
-                type="range"
-                min="50"
-                max="100"
-                value={formData.fuzzy_match_threshold || 80}
-                onChange={(e) =>
-                  handleFieldChange(
-                    'fuzzy_match_threshold',
-                    parseInt(e.target.value)
-                  )
-                }
-                className="w-full"
-              />
+              <div className="flex items-center space-x-4">
+                <Input
+                  id="fuzzy_match_threshold"
+                  type="range"
+                  min="50"
+                  max="100"
+                  value={Math.max(50, formData.fuzzy_match_threshold || 85)}
+                  onChange={(e) =>
+                    handleFieldChange(
+                      'fuzzy_match_threshold',
+                      Math.max(50, parseInt(e.target.value))
+                    )
+                  }
+                  className="flex-1"
+                />
+                <span className="text-sm font-medium w-12 text-right">
+                  {formData.fuzzy_match_threshold || 85}%
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Higher values = fewer false positives, might miss some
-                duplicates
+                Minimum threshold for storing duplicate groups. Groups with fuzzy text similarity below 50% are never stored.
+                Higher values = fewer false positives but might miss some duplicates.
               </p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="max_ocr_length">Max OCR Length</Label>
-              <Input
-                id="max_ocr_length"
-                type="number"
-                value={formData.max_ocr_length || 10000}
-                onChange={(e) =>
-                  handleFieldChange('max_ocr_length', parseInt(e.target.value))
-                }
-                min="1000"
-                max="50000"
-                step="1000"
-              />
-              <p className="text-xs text-muted-foreground">
-                Maximum characters to analyze per document
-              </p>
+            
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-start space-x-2">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-900">Enhanced Document Storage</p>
+                  <p className="text-blue-800 mt-1">
+                    Documents now store up to 500,000 characters of OCR text for improved accuracy.
+                    Confidence scores can be dynamically adjusted without rescanning documents.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

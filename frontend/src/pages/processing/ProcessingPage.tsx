@@ -148,24 +148,28 @@ export const ProcessingPage: React.FC = () => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>1,000 documents</span>
-                <span className="text-muted-foreground">~2-3 minutes</span>
+                <span className="text-muted-foreground">~8-10 minutes</span>
               </div>
               <div className="flex justify-between">
                 <span>5,000 documents</span>
-                <span className="text-muted-foreground">~8-12 minutes</span>
+                <span className="text-muted-foreground">~40-50 minutes</span>
               </div>
               <div className="flex justify-between">
                 <span>10,000 documents</span>
-                <span className="text-muted-foreground">~20-30 minutes</span>
+                <span className="text-muted-foreground">~80-100 minutes</span>
               </div>
               <div className="flex justify-between">
-                <span>Memory usage</span>
-                <span className="text-muted-foreground">~50MB per 1K docs</span>
+                <span>15,000 documents</span>
+                <span className="text-muted-foreground">~120-150 minutes</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Processing speed</span>
+                <span className="text-muted-foreground">~100-150 docs/min</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              * Times are estimates and may vary based on document size, OCR
-              content length, and system performance.
+              * LSH index building is the slowest phase. Times vary based on 
+              document size, OCR content length (up to 500K chars), and system performance.
             </p>
           </CardContent>
         </Card>

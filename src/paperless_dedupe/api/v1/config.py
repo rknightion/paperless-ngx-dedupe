@@ -16,7 +16,7 @@ class ConfigUpdate(BaseModel):
     paperless_api_token: Optional[str] = Field(None, description="API Token for authentication")
     paperless_username: Optional[str] = Field(None, description="Username for authentication")
     paperless_password: Optional[str] = Field(None, description="Password for authentication")
-    fuzzy_match_threshold: Optional[int] = Field(None, ge=0, le=100, description="Fuzzy matching threshold (0-100)")
+    fuzzy_match_threshold: Optional[int] = Field(None, ge=50, le=100, description="Fuzzy matching threshold (50-100)")
     max_ocr_length: Optional[int] = Field(None, ge=1000, description="Maximum OCR text length to store")
     min_ocr_word_count: Optional[int] = Field(None, ge=0, le=1000, description="Minimum words in OCR to include in deduplication")
     lsh_threshold: Optional[float] = Field(None, ge=0.0, le=1.0, description="LSH similarity threshold")
