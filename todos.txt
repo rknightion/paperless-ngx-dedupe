@@ -203,12 +203,6 @@ dependencies = [
 ## 3.1 Parallel Processing Implementation
 
 ### Async Processing Framework
-- [ ] Create `src/paperless_dedupe/services/parallel_processor.py`
-  - [ ] ProcessPoolExecutor for CPU-intensive tasks
-  - [ ] Asyncio for I/O-bound operations
-  - [ ] Batch processing with configurable batch sizes
-  - [ ] Memory-efficient document streaming
-
 ### Document Processing Pipeline
 - [ ] Implement parallel MinHash generation
 - [ ] Concurrent OCR content processing
@@ -285,28 +279,15 @@ async def process_documents_parallel(documents, batch_size=100):
 
 ---
 
-# Phase 5: Infrastructure & DevOps (LOW PRIORITY)
+# Phase 5: Infrastructure & DevOps (LOW PRIORITY. Do not attempt work on these unless explicitly instructed to. )
 
 ## 5.1 CI/CD Pipeline
-
-### GitHub Actions Workflow
-- [ ] Create `.github/workflows/ci.yml`
-  - [ ] Python testing with multiple versions
-  - [ ] Frontend testing with Jest/Vitest
-  - [ ] Docker image building
-  - [ ] Security scanning with CodeQL
 
 ### Testing Pipeline
 - [ ] Automated test execution
 - [ ] Code coverage reporting
 - [ ] Performance regression testing
 - [ ] Integration test execution
-
-### Deployment Pipeline
-- [ ] Docker image publishing
-- [ ] Staging environment deployment
-- [ ] Production deployment automation
-- [ ] Rollback procedures
 
 ## 5.2 Monitoring & Observability
 
@@ -359,7 +340,7 @@ async def process_documents_parallel(documents, batch_size=100):
 - [ ] Add request validation middleware
 - [ ] Improve error messages and user feedback
 
-## Security
+## Security (LOWEST priority as this is selfhosted in home labs only)
 - [ ] Implement proper secret management
 - [ ] Add API rate limiting
 - [ ] SQL injection prevention

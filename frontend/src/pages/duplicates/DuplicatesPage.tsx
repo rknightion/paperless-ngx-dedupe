@@ -84,7 +84,7 @@ export const DuplicatesPage: React.FC = () => {
           <Icon className={`h-5 w-5 ${color}`} />
           <div>
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{value.toLocaleString()}</p>
+            <p className="text-2xl font-bold">{(value || 0).toLocaleString()}</p>
           </div>
         </div>
       </CardContent>
@@ -134,25 +134,25 @@ export const DuplicatesPage: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Groups"
-            value={statistics.total_groups}
+            value={statistics?.total_groups || 0}
             icon={Copy}
             color="text-blue-600"
           />
           <StatCard
             title="Total Duplicates"
-            value={statistics.total_duplicates}
+            value={statistics?.total_duplicates || 0}
             icon={Copy}
             color="text-orange-600"
           />
           <StatCard
             title="Reviewed"
-            value={statistics.reviewed_groups}
+            value={statistics?.reviewed_groups || 0}
             icon={CheckCircle}
             color="text-green-600"
           />
           <StatCard
             title="Pending Review"
-            value={statistics.unreviewed_groups}
+            value={statistics?.unreviewed_groups || 0}
             icon={Clock}
             color="text-yellow-600"
           />
