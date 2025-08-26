@@ -154,4 +154,10 @@ export interface DuplicateGroupQueryParams {
   min_confidence?: number;
   sort_by?: 'confidence' | 'created' | 'documents' | 'filename';
   sort_order?: 'asc' | 'desc';
+  // Dynamic confidence weight parameters
+  use_jaccard?: boolean;
+  use_fuzzy?: boolean;
+  use_metadata?: boolean;
+  use_filename?: boolean;
+  min_fuzzy_ratio?: number;
 }

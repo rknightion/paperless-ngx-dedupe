@@ -58,6 +58,7 @@ export const DuplicatesPage: React.FC = () => {
     metadata: true,
     filename: true,
   });
+  const [fuzzyRatioFilter, setFuzzyRatioFilter] = useState(0.5);
   const [config, setConfig] = useState<any>(null);
   const [infoBoxExpanded, setInfoBoxExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,11 +73,18 @@ export const DuplicatesPage: React.FC = () => {
       page_size: pageSize,
       sort_by: sortBy,
       sort_order: sortDirection,
+      min_confidence: confidenceFilter,
+      reviewed: reviewedFilter ?? undefined,
+      use_jaccard: confidenceWeights.jaccard,
+      use_fuzzy: confidenceWeights.fuzzy,
+      use_metadata: confidenceWeights.metadata,
+      use_filename: confidenceWeights.filename,
+      min_fuzzy_ratio: fuzzyRatioFilter,
     }));
     dispatch(fetchDuplicateStatistics());
     // Load configuration to show current settings
     configApi.getConfiguration().then(setConfig).catch(console.error);
-  }, [dispatch, currentPage, pageSize, sortBy, sortDirection]);
+  }, [dispatch, currentPage, pageSize, sortBy, sortDirection, confidenceFilter, reviewedFilter, confidenceWeights, fuzzyRatioFilter]);
 
   // Handle filters
   const handleRefresh = () => {
@@ -85,6 +93,13 @@ export const DuplicatesPage: React.FC = () => {
       page_size: pageSize,
       sort_by: sortBy,
       sort_order: sortDirection,
+      min_confidence: confidenceFilter,
+      reviewed: reviewedFilter ?? undefined,
+      use_jaccard: confidenceWeights.jaccard,
+      use_fuzzy: confidenceWeights.fuzzy,
+      use_metadata: confidenceWeights.metadata,
+      use_filename: confidenceWeights.filename,
+      min_fuzzy_ratio: fuzzyRatioFilter,
     }));
     dispatch(fetchDuplicateStatistics());
   };
@@ -268,6 +283,96 @@ export const DuplicatesPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Advanced Confidence Settings */}
+          <div className="space-y-3 pt-3 border-t">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Advanced Confidence Settings</h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowConfidenceSettings(!showConfidenceSettings)}
+              >
+                {showConfidenceSettings ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            
+            {showConfidenceSettings && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <Checkbox
+                      checked={confidenceWeights.jaccard}
+                      onChange={(e) => setConfidenceWeights(prev => ({ ...prev, jaccard: e.target.checked }))}
+                    />
+                    <span className="text-sm">Jaccard (40%)</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <Checkbox
+                      checked={confidenceWeights.fuzzy}
+                      onChange={(e) => setConfidenceWeights(prev => ({ ...prev, fuzzy: e.target.checked }))}
+                    />
+                    <span className="text-sm">Fuzzy Text (30%)</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <Checkbox
+                      checked={confidenceWeights.metadata}
+                      onChange={(e) => setConfidenceWeights(prev => ({ ...prev, metadata: e.target.checked }))}
+                    />
+                    <span className="text-sm">Metadata (20%)</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <Checkbox
+                      checked={confidenceWeights.filename}
+                      onChange={(e) => setConfidenceWeights(prev => ({ ...prev, filename: e.target.checked }))}
+                    />
+                    <span className="text-sm">Filename (10%)</span>
+                  </label>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Min Fuzzy Text Ratio ({Math.round(fuzzyRatioFilter * 100)}%)
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <Input
+                      type="range"
+                      min="0.5"
+                      max="1.0"
+                      step="0.05"
+                      value={fuzzyRatioFilter}
+                      onChange={(e) => setFuzzyRatioFilter(parseFloat(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm font-medium w-12 text-right">
+                      {Math.round(fuzzyRatioFilter * 100)}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Only show groups where fuzzy text similarity is at least this value.
+                    Groups below 50% are never stored.
+                  </p>
+                </div>
+                
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-start space-x-2">
+                    <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-900">Dynamic Confidence Recalculation</p>
+                      <p className="text-blue-800 mt-1">
+                        Confidence scores are recalculated on-the-fly based on your selected factors.
+                        No rescanning required - changes apply immediately!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Active Filters Display */}
           <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground">
@@ -286,6 +391,16 @@ export const DuplicatesPage: React.FC = () => {
                 Min {Math.round(confidenceFilter * 100)}% confidence
               </Badge>
             )}
+            {fuzzyRatioFilter > 0.5 && (
+              <Badge variant="outline">
+                Min {Math.round(fuzzyRatioFilter * 100)}% fuzzy ratio
+              </Badge>
+            )}
+            {(!confidenceWeights.jaccard || !confidenceWeights.fuzzy || !confidenceWeights.metadata || !confidenceWeights.filename) && (
+              <Badge variant="outline">
+                Custom weights
+              </Badge>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -293,6 +408,13 @@ export const DuplicatesPage: React.FC = () => {
                 setSearchQuery('');
                 setReviewedFilter(null);
                 setConfidenceFilter(0.7);
+                setFuzzyRatioFilter(0.5);
+                setConfidenceWeights({
+                  jaccard: true,
+                  fuzzy: true,
+                  metadata: true,
+                  filename: true,
+                });
               }}
             >
               Clear All

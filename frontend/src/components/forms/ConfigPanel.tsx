@@ -31,6 +31,7 @@ import {
   Loader2,
   Settings,
   TestTube,
+  Info,
 } from 'lucide-react';
 import type { Configuration } from '../../services/api/types';
 
