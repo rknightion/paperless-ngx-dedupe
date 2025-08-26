@@ -63,9 +63,20 @@ class ApiClient {
     endpoint: string,
     params?: Record<string, any>
   ): Promise<T> {
-    const searchParams = params
-      ? `?${new URLSearchParams(params).toString()}`
-      : '';
+    let searchParams = '';
+    if (params) {
+      // Filter out undefined values before creating URLSearchParams
+      const filteredParams = Object.entries(params).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, any>);
+      
+      if (Object.keys(filteredParams).length > 0) {
+        searchParams = `?${new URLSearchParams(filteredParams).toString()}`;
+      }
+    }
     return this.request<T>(`${endpoint}${searchParams}`);
   }
 

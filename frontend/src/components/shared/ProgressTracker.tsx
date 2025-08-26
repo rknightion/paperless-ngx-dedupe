@@ -54,10 +54,21 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
     force_rebuild: false,
   });
 
-  // Fetch initial status on mount
+  // Fetch initial status on mount and poll if processing
   useEffect(() => {
     dispatch(fetchProcessingStatus());
-  }, [dispatch]);
+    
+    // Poll status every 5 seconds if processing to handle connection issues
+    const interval = setInterval(() => {
+      if (status.is_processing) {
+        dispatch(fetchProcessingStatus()).catch(err => {
+          console.log('Status fetch failed, likely due to blocking operation. Will retry...');
+        });
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [dispatch, status.is_processing]);
 
   // Handle completion callback
   useEffect(() => {
@@ -75,6 +86,12 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
 
   // Start analysis
   const handleStart = async () => {
+    // Check if already processing
+    if (status.is_processing) {
+      alert('Analysis is already in progress. Please wait for it to complete or cancel it first.');
+      return;
+    }
+
     const request: AnalyzeRequest = {
       threshold: analysisSettings.threshold,
       force_rebuild: analysisSettings.force_rebuild,
@@ -85,7 +102,13 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       await dispatch(startAnalysis(request)).unwrap();
     } catch (error: any) {
       console.error('Failed to start analysis:', error);
-      // Error will be shown via the status.error from Redux state
+      // Check for specific error types
+      if (error?.status === 409 || error?.detail?.includes('already')) {
+        alert('Analysis is already in progress. The page will refresh to show current status.');
+        dispatch(fetchProcessingStatus());
+      } else if (error?.status === 0 || error?.message?.includes('network')) {
+        alert('Connection lost. The analysis may still be running in the background. Please refresh the page to check status.');
+      }
     }
   };
 
@@ -181,7 +204,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   wsConnected ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {wsConnected ? 'Connected' : 'Disconnected'}
+                {wsConnected ? 'Connected' : (status.is_processing ? 'Processing...' : 'Disconnected')}
               </span>
             </div>
           </div>
@@ -272,6 +295,27 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
           </div>
         )}
 
+        {/* Warning about analysis in progress */}
+        {status.is_processing && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+            <div className="flex items-start space-x-2">
+              <Activity className="h-4 w-4 text-amber-600 mt-0.5 animate-pulse" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-900">Analysis in Progress</p>
+                <p className="text-amber-800 mt-1">
+                  The deduplication analysis is running in the background. 
+                  {!wsConnected && (
+                    <span className="block mt-1">
+                      Connection temporarily lost due to intensive processing. 
+                      The analysis continues on the server - please wait or refresh the page to check status.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Analysis Settings (only show when not processing) */}
         {showControls && !status.is_processing && (
           <div className="pt-4 border-t space-y-4">
@@ -354,7 +398,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                 ) : (
                   <Play className="h-4 w-4 mr-2" />
                 )}
-                Start Analysis
+                {status.is_processing ? 'Already Running' : 'Start Analysis'}
               </Button>
 
               {status.is_processing && (

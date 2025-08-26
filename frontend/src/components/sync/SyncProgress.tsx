@@ -98,7 +98,7 @@ export const SyncProgress: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {syncStatus.error && (
+        {syncStatus.error && syncStatus.error.trim() !== '' && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{syncStatus.error}</AlertDescription>
