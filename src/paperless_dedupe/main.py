@@ -8,14 +8,17 @@ from sqlalchemy import text
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.api.v1 import documents, duplicates, config, processing, websocket, batch_operations
 from paperless_dedupe.models.database import init_db
-from paperless_dedupe.services.cache_service import cache_service
 
 # Configure logging
+log_level = getattr(logging, settings.log_level.upper(), logging.WARNING)
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Log the configured level at startup
+logger.info(f"Logging level set to: {settings.log_level}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

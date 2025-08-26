@@ -1,5 +1,20 @@
 # Paperless-NGX Deduplication Tool
 
+## ⚠️ CRITICAL: Database Schema Changes
+
+**MANDATORY**: ANY changes to database models in `src/paperless_dedupe/models/database.py` MUST be followed by creating an Alembic migration:
+
+```bash
+# After modifying ANY database model, ALWAYS run:
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@localhost:35432/paperless_dedupe \
+uv run alembic revision --autogenerate -m "Description of changes"
+
+# Review the generated migration file in alembic/versions/
+# Commit both the model changes AND the migration file
+```
+
+**Never skip this step!** Users rely on migrations to upgrade without losing data.
+
 ## Project Overview
 A comprehensive document deduplication tool for paperless-ngx that identifies and helps manage duplicate documents using advanced fuzzy matching and MinHash/LSH algorithms.
 
@@ -7,10 +22,10 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 
 ### Technology Stack
 - **Backend**: FastAPI with async/await support
-- **Database**: PostgreSQL for persistent storage
-- **Cache**: Redis for high-performance caching
+- **Database**: PostgreSQL for persistent storage (with Alembic migrations)
 - **Deduplication**: MinHash/LSH with rapidfuzz for fuzzy matching
 - **Container**: Docker with docker-compose
+- **Migrations**: Alembic for database schema versioning
 
 ### Key Components
 
@@ -25,12 +40,7 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
    - Multi-factor confidence scoring
    - Fuzzy text matching for OCR variations
 
-3. **Caching Layer** (`services/cache_service.py`)
-   - Redis for active data
-   - Document metadata, OCR text, and MinHash signatures
-   - Configurable TTLs for different data types
-
-4. **REST API** (`api/v1/`)
+3. **REST API** (`api/v1/`)
    - Document management endpoints
    - Duplicate group operations
    - Processing control
@@ -86,18 +96,18 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 ### Environment Variables
 ```bash
 PAPERLESS_DEDUPE_DATABASE_URL=postgresql://user:pass@host/db
-PAPERLESS_DEDUPE_REDIS_URL=redis://localhost:6379/0
 PAPERLESS_DEDUPE_PAPERLESS_URL=http://paperless:8000
 PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-token
-PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD=80
-PAPERLESS_DEDUPE_MAX_OCR_LENGTH=10000
+PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD=85  # Minimum 50%
+PAPERLESS_DEDUPE_LOG_LEVEL=WARNING  # Can be DEBUG, INFO, WARNING, ERROR
 ```
 
 ### Key Settings
-- `fuzzy_match_threshold`: Similarity threshold (0-100)
-- `max_ocr_length`: Maximum characters to store per document
+- `fuzzy_match_threshold`: Similarity threshold (50-100, default: 85)
+- `max_ocr_length`: Fixed at 500,000 characters (not user-configurable)
 - `lsh_threshold`: LSH similarity threshold (0.0-1.0)
 - `minhash_num_perm`: Number of MinHash permutations (default: 128)
+- `log_level`: Logging verbosity (WARNING by default)
 
 ## Development
 
@@ -106,8 +116,13 @@ PAPERLESS_DEDUPE_MAX_OCR_LENGTH=10000
 # Install dependencies
 uv sync
 
-# Run migrations (if using alembic)
-alembic upgrade head
+# IMPORTANT: Run migrations after any schema change
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@localhost:35432/paperless_dedupe \
+uv run alembic upgrade head
+
+# Create new migration after changing models
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@localhost:35432/paperless_dedupe \
+uv run alembic revision --autogenerate -m "Your change description"
 
 # Start development server
 uv run paperless-dedupe
@@ -161,15 +176,16 @@ uv run pytest --cov=paperless_dedupe
 
 ## Performance Considerations
 
-### Caching Strategy
-- Redis for hot data (24h metadata, 7d OCR, 30d MinHash)
-- SQLite fallback for persistence
-- Automatic cache invalidation on updates
+### Database Strategy
+- PostgreSQL with TOAST for large text storage (up to 500K chars per document)
+- Alembic migrations for schema versioning
+- Automatic migrations on startup
 
 ### Memory Management
-- OCR text truncation at configurable limit
+- OCR text stored up to 500K characters (fixed limit)
 - Streaming processing for large datasets
 - Efficient MinHash storage (128 bytes per document)
+- Dynamic confidence recalculation without rescanning
 
 ### Optimization Tips
 - Adjust `lsh_threshold` for speed vs accuracy

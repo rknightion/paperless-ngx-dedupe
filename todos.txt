@@ -3,29 +3,13 @@ It is okay to implement phases out of order if specifically instructed to do so.
 ALWAYS ensure this todos.txt file is kept up to date with the latest completed phase by adding ticks to the tickboxes in each line.
 
 
-Phase 0: UI IMPROVEMENTS COMPLETE ✅
-- ✅ Fixed documents page showing 'deduped' count incorrectly (now shows 'Analyzed')
-- ✅ Fixed blue info box readability (made collapsible with lighter colors)
-- ✅ Removed full-row blue highlighting for primary documents
-- ✅ Added page navigation above and below duplicate group list
-- ✅ Added sorting controls for duplicate groups
-- ✅ Made page size configurable (10, 20, 50, 100 per page)
-- ✅ Increased default fuzzy match threshold to 85%
-- ✅ Increased max OCR length to 50000 characters
-- ✅ Added remove/delete buttons for individual documents in groups
-- ✅ Added confidence weights configuration in settings
-
 Phase 0: (Original):
 
 
 Phase 1: 
 ## Duplicate Page Enhancements
-- [x] Add page navigation to the duplicate group list above and below it so users can navigate through the duplicate group pages
-- [x] Add sorting of the duplicate group list to let users sort by filename, date, size, word count and any other suitable metric (you can add additional data to our database if needed)
-- [x] Make the no of duplicate groups shown per page configurable (up to a suitable max that wavoids overwhelming the browser)
-- [x] Increase default fuzzy match threshold to 85%
-- [x] Increase max OCR Length from 10000 to 50000 characters
-- [x] Fix showing document tags on each document in the duplicate group box so it shows the tag name instead of just the tag ID 
+- [x] Make the no of duplicate groups shown per page configurable up to 500 groups per page
+- [ ] Fix showing document tags on each document in the duplicate group box so it shows the tag name instead of just the tag ID 
 - [ ] Add confidence breakdown customization UI (include/exclude factors)
 - [ ] Add similarity indicators for each document vs primary in group
 - [ ] Add bulk actions explanations with inline action buttons
