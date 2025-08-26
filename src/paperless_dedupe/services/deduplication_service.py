@@ -64,12 +64,22 @@ class DeduplicationService:
         text1: str,
         text2: str,
         quick_mode: bool = False
-    ) -> float:
+    ) -> Tuple[float, Dict[str, float]]:
         """Calculate comprehensive similarity score between two documents
         
         Args:
             quick_mode: If True, skip expensive fuzzy string operations
+            
+        Returns:
+            Tuple of (overall_score, component_scores_dict)
         """
+        
+        component_scores = {
+            'jaccard': None,
+            'fuzzy': None,
+            'metadata': None,
+            'filename': None
+        }
         
         scores = []
         weights = []
@@ -77,14 +87,48 @@ class DeduplicationService:
         # MinHash Jaccard similarity (FAST - already computed)
         if doc1.id in self.minhashes and doc2.id in self.minhashes:
             jaccard_sim = self.minhashes[doc1.id].jaccard(self.minhashes[doc2.id])
+            component_scores['jaccard'] = jaccard_sim
             scores.append(jaccard_sim)
-            weights.append(0.6 if quick_mode else 0.4)
+            weights.append(0.4)
         
-        # File size similarity (FAST)
+        # Metadata similarity - combine multiple factors
+        metadata_scores = []
+        
+        # File size similarity
         if doc1.file_size and doc2.file_size:
             size_ratio = min(doc1.file_size, doc2.file_size) / max(doc1.file_size, doc2.file_size)
-            scores.append(size_ratio)
-            weights.append(0.4 if quick_mode else 0.1)
+            metadata_scores.append(size_ratio)
+        
+        # Date similarity (if both have dates)
+        if doc1.created_date and doc2.created_date:
+            from datetime import timedelta
+            time_diff = abs((doc1.created_date - doc2.created_date).total_seconds())
+            # Documents within 24 hours get high score, decreasing over time
+            date_score = max(0, 1 - (time_diff / (86400 * 30)))  # 30 days max
+            metadata_scores.append(date_score)
+        
+        # Document type similarity
+        if doc1.document_type and doc2.document_type:
+            type_score = 1.0 if doc1.document_type == doc2.document_type else 0.0
+            metadata_scores.append(type_score)
+            
+        # Correspondent similarity
+        if doc1.correspondent and doc2.correspondent:
+            corr_score = 1.0 if doc1.correspondent == doc2.correspondent else 0.0
+            metadata_scores.append(corr_score)
+        
+        if metadata_scores:
+            component_scores['metadata'] = sum(metadata_scores) / len(metadata_scores)
+            if not quick_mode:  # Only use metadata in full mode
+                scores.append(component_scores['metadata'])
+                weights.append(0.2)
+        
+        # Filename similarity
+        if doc1.original_filename and doc2.original_filename and not quick_mode:
+            filename_score = fuzz.ratio(doc1.original_filename.lower(), doc2.original_filename.lower()) / 100.0
+            component_scores['filename'] = filename_score
+            scores.append(filename_score)
+            weights.append(0.1)
         
         # Skip expensive fuzzy matching in quick mode or if disabled
         if not quick_mode and settings.enable_fuzzy_matching and text1 and text2:
@@ -95,21 +139,17 @@ class DeduplicationService:
             
             # Token sort ratio handles word order differences (EXPENSIVE)
             fuzzy_score = fuzz.token_sort_ratio(text1_sample, text2_sample) / 100.0
+            component_scores['fuzzy'] = fuzzy_score
             scores.append(fuzzy_score)
             weights.append(0.3)
-            
-            # Skip partial ratio - it's redundant and expensive
-            # partial_score = fuzz.partial_ratio(text1_sample, text2_sample) / 100.0
-            # scores.append(partial_score)
-            # weights.append(0.2)
         
         # Calculate weighted average
         if scores:
             total_weight = sum(weights[:len(scores)])
             weighted_score = sum(s * w for s, w in zip(scores, weights)) / total_weight
-            return weighted_score
+            return weighted_score, component_scores
         
-        return 0.0
+        return 0.0, component_scores
     
     async def build_lsh_index(
         self, 
@@ -212,7 +252,7 @@ class DeduplicationService:
                             total_comparisons += 1
                             
                             # First do a quick check with MinHash only
-                            quick_score = self.calculate_similarity_score(
+                            quick_score, _ = self.calculate_similarity_score(
                                 doc,
                                 candidate_doc,
                                 "",  # No text for quick check
@@ -222,7 +262,7 @@ class DeduplicationService:
                             
                             # Only do expensive fuzzy matching if quick score is promising
                             if quick_score >= threshold * 0.8:  # 80% of threshold for quick check
-                                score = self.calculate_similarity_score(
+                                score, components = self.calculate_similarity_score(
                                     doc,
                                     candidate_doc,
                                     contents.get(doc.id, ""),
@@ -230,9 +270,12 @@ class DeduplicationService:
                                     quick_mode=False
                                 )
                                 
-                                if score >= threshold:
+                                # Store groups with fuzzy score >= 50% (baseline threshold)
+                                # This allows dynamic filtering later
+                                min_fuzzy = settings.min_fuzzy_threshold / 100.0 if hasattr(settings, 'min_fuzzy_threshold') else 0.5
+                                if components.get('fuzzy', 0) >= min_fuzzy or score >= threshold:
                                     group_docs.append(candidate_doc)
-                                    group_scores[candidate_id] = score
+                                    group_scores[candidate_id] = {'overall': score, 'components': components}
                                     processed.add(candidate_id)
                 
                 if group_docs:
@@ -240,12 +283,24 @@ class DeduplicationService:
                     group_docs.insert(0, doc)
                     processed.add(doc.id)
                     
-                    # Calculate average confidence
-                    avg_confidence = sum(group_scores.values()) / len(group_scores) if group_scores else 0
+                    # Calculate average confidence and component averages
+                    if group_scores:
+                        avg_confidence = sum(s['overall'] for s in group_scores.values()) / len(group_scores)
+                        
+                        # Calculate average component scores
+                        avg_components = {}
+                        for component in ['jaccard', 'fuzzy', 'metadata', 'filename']:
+                            component_vals = [s['components'][component] for s in group_scores.values() 
+                                            if s['components'][component] is not None]
+                            avg_components[component] = sum(component_vals) / len(component_vals) if component_vals else None
+                    else:
+                        avg_confidence = 0
+                        avg_components = {}
                     
                     duplicate_groups.append({
                         "documents": group_docs,
                         "confidence": avg_confidence,
+                        "component_scores": avg_components,
                         "scores": group_scores
                     })
             
@@ -265,13 +320,18 @@ class DeduplicationService:
         return duplicate_groups
     
     def save_duplicate_groups(self, db: Session, duplicate_groups: List[Dict]):
-        """Save duplicate groups to database"""
+        """Save duplicate groups to database with component scores"""
         
         for group_data in duplicate_groups:
-            # Create duplicate group
+            # Create duplicate group with component scores
+            components = group_data.get("component_scores", {})
             group = DuplicateGroup(
                 confidence_score=group_data["confidence"],
-                algorithm_version="1.0"
+                jaccard_similarity=components.get('jaccard'),
+                fuzzy_text_ratio=components.get('fuzzy'),
+                metadata_similarity=components.get('metadata'),
+                filename_similarity=components.get('filename'),
+                algorithm_version="2.0"  # Updated version for new scoring
             )
             db.add(group)
             db.flush()
@@ -286,7 +346,7 @@ class DeduplicationService:
                 db.add(member)
             
         db.commit()
-        logger.info(f"Saved {len(duplicate_groups)} duplicate groups to database")
+        logger.info(f"Saved {len(duplicate_groups)} duplicate groups to database with component scores")
     
     def get_document_hash(self, text: str) -> str:
         """Generate hash of document content"""
