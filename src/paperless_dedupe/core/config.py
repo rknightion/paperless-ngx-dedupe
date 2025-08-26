@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     minhash_num_perm: int = 128
     lsh_threshold: float = 0.5
     lsh_num_bands: int = 20
-    fuzzy_match_threshold: int = 80
-    max_ocr_length: int = 10000  # Max characters to store per document
+    fuzzy_match_threshold: int = 85
+    max_ocr_length: int = 50000  # Max characters to store per document
     min_ocr_word_count: int = 20  # Minimum words in OCR to include in deduplication
     enable_fuzzy_matching: bool = True  # Enable expensive fuzzy text matching
     fuzzy_match_sample_size: int = 2000  # Characters to sample for fuzzy matching
