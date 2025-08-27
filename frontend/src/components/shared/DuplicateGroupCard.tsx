@@ -369,9 +369,27 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                       </div>
                     </div>
                     {index === 0 && (
-                      <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-600">
-                        Primary
-                      </Badge>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help">
+                              Primary
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-gray-900 text-white">
+                            <p className="font-semibold mb-1">Primary Document</p>
+                            <p className="text-xs">
+                              The primary document is automatically selected based on these criteria (in order):
+                            </p>
+                            <ul className="text-xs mt-1 space-y-0.5">
+                              <li>• Newest creation date</li>
+                              <li>• Most complete metadata (title, correspondent, tags)</li>
+                              <li>• Longest OCR content</li>
+                              <li>• Highest Paperless ID (if all else equal)</li>
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                     {index !== 0 && (
                       <div className="flex items-center space-x-1">
