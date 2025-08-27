@@ -6,10 +6,10 @@ ALWAYS ensure this todos.txt file is kept up to date with the latest completed p
 Phase 0: (Original):
 
 
-Phase 1: 
+Phase 1:
 ## Duplicate Page Enhancements
 - [x] Make the no of duplicate groups shown per page configurable up to 500 groups per page
-- [ ] Fix showing document tags on each document in the duplicate group box so it shows the tag name instead of just the tag ID 
+- [ ] Fix showing document tags on each document in the duplicate group box so it shows the tag name instead of just the tag ID
 - [ ] Add confidence breakdown customization UI (include/exclude factors)
 - [ ] Add similarity indicators for each document vs primary in group
 - [ ] Add bulk actions explanations with inline action buttons

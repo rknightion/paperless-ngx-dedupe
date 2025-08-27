@@ -6,26 +6,21 @@ services:
     ports:
       - "30001:8000"
     environment:
-      # Database configuration
-      - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@postgres/paperless_dedupe
+      # Database configuration - SQLite database stored in mounted volume
+      - PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///app/data/paperless_dedupe.db
       # Paperless-NGX connection (configure via web UI or set here)
       # - PAPERLESS_DEDUPE_PAPERLESS_URL=http://your-paperless:8000
       # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-api-token
-      
+
       # Security - IMPORTANT: Change this in production!
       - PAPERLESS_DEDUPE_SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-long-random-string}
-      
+
       # Logging level (optional) - default is WARNING
       # Uncomment and set to DEBUG or INFO for more verbose logging
       # - PAPERLESS_DEDUPE_LOG_LEVEL=INFO
     volumes:
-      - paperless-dedupe-data:/app/data
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - ./data:/app/data
     restart: unless-stopped
-    networks:
-      - paperless-dedupe-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -40,43 +35,19 @@ services:
     ports:
       - "30002:3000"
     depends_on:
-      paperless-dedupe:
-        condition: service_healthy
+      - paperless-dedupe
     restart: unless-stopped
-    networks:
-      - paperless-dedupe-net
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
-
-  # PostgreSQL database
-  postgres:
-    image: postgres:15-alpine
-    container_name: paperless-dedupe-postgres
-    environment:
-      - POSTGRES_USER=paperless
-      - POSTGRES_PASSWORD=paperless
-      - POSTGRES_DB=paperless_dedupe
-    volumes:
-      - paperless-dedupe-postgres:/var/lib/postgresql/data
-    networks:
-      - paperless-dedupe-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U paperless -d paperless_dedupe"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  paperless-dedupe-postgres:
-    driver: local
-  paperless-dedupe-data:
-    driver: local
-
-networks:
-  paperless-dedupe-net:
-    driver: bridge

@@ -19,7 +19,7 @@ export interface Document {
   checksum?: string;
   archive_serial_number?: number;
   filename?: string;
-  processing_status: 'pending' | 'processing' | 'completed' | 'error';
+  processing_status: "pending" | "processing" | "completed" | "error";
   fingerprint?: string;
   has_duplicates?: boolean;
   // Additional metadata fields
@@ -27,7 +27,7 @@ export interface Document {
   document_type?: string;
   tags?: string[];
   original_filename?: string;
-  created?: string;  // Alias for created_date
+  created?: string; // Alias for created_date
 }
 
 export interface DocumentContent {
@@ -120,7 +120,7 @@ export interface TestConnectionResponse {
 
 // WebSocket Types
 export interface WebSocketMessage {
-  type: 'processing_update' | 'error' | 'completed';
+  type: "processing_update" | "error" | "completed";
   data: ProcessingStatus | string;
 }
 
@@ -152,8 +152,8 @@ export interface DuplicateGroupQueryParams {
   page_size?: number;
   reviewed?: boolean;
   min_confidence?: number;
-  sort_by?: 'confidence' | 'created' | 'documents' | 'filename';
-  sort_order?: 'asc' | 'desc';
+  sort_by?: "confidence" | "created" | "documents" | "filename";
+  sort_order?: "asc" | "desc";
   // Dynamic confidence weight parameters
   use_jaccard?: boolean;
   use_fuzzy?: boolean;

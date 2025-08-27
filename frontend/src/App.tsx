@@ -1,12 +1,12 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { store } from './store/store';
-import { Layout } from './components/layout';
-import { DashboardPage } from './pages/dashboard';
-import { DocumentsPage } from './pages/documents';
-import { DuplicatesPage } from './pages/duplicates';
-import { SettingsPage } from './pages/settings';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Provider } from "react-redux";
+import { store } from "./store/store";
+import { Layout } from "./components/layout";
+import { DashboardPage } from "./pages/dashboard";
+import { DocumentsPage } from "./pages/documents";
+import { DuplicatesPage } from "./pages/duplicates";
+import { SettingsPage } from "./pages/settings";
 
 function App() {
   return (

@@ -13,7 +13,7 @@ A powerful document deduplication tool for [paperless-ngx](https://github.com/pa
 - 🌐 **Modern Web UI**: React TypeScript frontend with real-time updates
 - ⚡ **Scalable Architecture**: Handles 13,000+ documents efficiently using MinHash/LSH algorithms
 - 🧠 **Smart Deduplication**: Multi-factor similarity scoring with OCR-aware fuzzy matching
-- 🚀 **High Performance**: Redis caching layer with configurable TTLs
+- 🚀 **High Performance**: Efficient SQLite storage with optimized indexing
 - ⚙️ **Flexible Configuration**: Web-based configuration with connection testing
 - 📊 **Detailed Analytics**: Confidence scores and space-saving calculations
 - 🔄 **Real-time Updates**: WebSocket integration for live progress tracking
@@ -22,12 +22,14 @@ A powerful document deduplication tool for [paperless-ngx](https://github.com/pa
 ## Why Use This?
 
 If you're using paperless-ngx to manage your documents, you might have:
+
 - **Duplicate scans** from re-scanning documents
 - **Multiple versions** of the same document with slight OCR differences
 - **Similar documents** that are hard to identify manually
 - **Large collections** where manual duplicate checking is impractical
 
 This tool helps you:
+
 - **Save storage space** by identifying redundant documents
 - **Clean up your archive** with confidence scores for each duplicate
 - **Process large collections** efficiently (tested with 13,000+ documents)
@@ -38,11 +40,13 @@ This tool helps you:
 ### Using Docker (Recommended)
 
 1. **Download docker-compose.yml**:
+
 ```bash
 curl -O https://raw.githubusercontent.com/rknightion/paperless-ngx-dedupe/main/docker-compose.yml
 ```
 
 2. **Start the services**:
+
 ```bash
 docker compose up -d
 ```
@@ -50,7 +54,6 @@ docker compose up -d
 3. **Access the application**:
    - **Web UI**: http://localhost:30002
    - **API Documentation**: http://localhost:30001/docs
-   
 4. **Configure paperless-ngx connection**:
    - Navigate to Settings in the web UI
    - Enter your paperless-ngx URL and API token
@@ -61,6 +64,7 @@ That's it! The application will automatically pull the latest images from GitHub
 ### Alternative: Using Specific Version
 
 To use a specific version instead of latest:
+
 ```bash
 # Edit docker-compose.yml and replace :latest with :v1.0.0
 sed -i 's/:latest/:v1.0.0/g' docker-compose.yml
@@ -69,29 +73,44 @@ docker compose up -d
 
 ## Development
 
-For development setup and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For detailed development setup and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-### Quick Development Start
+### Quick Local Development Setup
 
 ```bash
 # Clone the repository
 git clone https://github.com/rknightion/paperless-ngx-dedupe.git
 cd paperless-ngx-dedupe
 
-# Use the development docker-compose
+# Option 1: Start both frontend and backend with hot-reloading (Recommended)
+uv run python dev.py
+
+# Option 2: Use Docker for development
 docker compose -f docker-compose.dev.yml up -d
 
-# Or for local development with hot reload
+# Option 3: Manual setup
 uv sync --dev
 cd frontend && npm install
+# Then run: uv run uvicorn paperless_dedupe.main:app --reload --port 30001
+# And in another terminal: cd frontend && npm run dev
 ```
+
+The `uv run python dev.py` script:
+
+- Starts backend API on http://localhost:30001
+- Starts frontend UI on http://localhost:3000 (with hot-reloading)
+- Shows full backend logs with proper INFO/DEBUG output
+- Handles all dependencies automatically via uv
+- Shows color-coded logs for easy debugging
+- Uses uv for proper Python environment isolation
+- Note: Backend requires restart for code changes (ensures proper logging)
 
 ## Web Interface
 
 The application now includes a modern React TypeScript frontend with:
 
 - 📊 **Dashboard**: Overview with statistics and system status
-- 📄 **Documents**: Virtual scrolling list for large document collections  
+- 📄 **Documents**: Virtual scrolling list for large document collections
 - 🔍 **Duplicates**: Visual duplicate group management with confidence scores
 - ⚙️ **Processing**: Real-time analysis control with progress tracking
 - 🛠️ **Settings**: Connection configuration and system preferences
@@ -110,6 +129,7 @@ The application now includes a modern React TypeScript frontend with:
 ### Manual API Setup (Alternative)
 
 1. **Configure Paperless Connection**:
+
 ```bash
 curl -X PUT http://localhost:8000/api/v1/config/ \
   -H "Content-Type: application/json" \
@@ -120,30 +140,32 @@ curl -X PUT http://localhost:8000/api/v1/config/ \
 ```
 
 2. **Test Connection**:
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/config/test-connection
 ```
 
 3. **Sync Documents**:
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/documents/sync
 ```
 
 4. **Run Deduplication Analysis**:
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/processing/analyze
 ```
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PAPERLESS_DEDUPE_DATABASE_URL` | PostgreSQL connection string | `postgresql://paperless:paperless@localhost/paperless_dedupe` |
-| `PAPERLESS_DEDUPE_REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
-| `PAPERLESS_DEDUPE_PAPERLESS_URL` | Paperless-ngx API URL | `http://localhost:8000` |
-| `PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN` | API token for authentication | None |
-| `PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD` | Similarity threshold (0-100) | `80` |
-| `PAPERLESS_DEDUPE_MAX_OCR_LENGTH` | Max OCR text to store | `10000` |
+| Variable                                 | Description                  | Default                              |
+| ---------------------------------------- | ---------------------------- | ------------------------------------ |
+| `PAPERLESS_DEDUPE_DATABASE_URL`          | SQLite database file path    | `sqlite:///data/paperless_dedupe.db` |
+| `PAPERLESS_DEDUPE_PAPERLESS_URL`         | Paperless-ngx API URL        | `http://localhost:8000`              |
+| `PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN`   | API token for authentication | None                                 |
+| `PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD` | Similarity threshold (0-100) | `80`                                 |
+| `PAPERLESS_DEDUPE_MAX_OCR_LENGTH`        | Max OCR text to store        | `10000`                              |
 
 ## API Documentation
 
@@ -152,11 +174,13 @@ Interactive API documentation is available at http://localhost:8000/docs
 ### Key Endpoints
 
 - **Documents**
+
   - `GET /api/v1/documents/` - List all documents
   - `POST /api/v1/documents/sync` - Sync from paperless-ngx
   - `GET /api/v1/documents/{id}/duplicates` - Get document duplicates
 
 - **Duplicates**
+
   - `GET /api/v1/duplicates/groups` - List duplicate groups
   - `GET /api/v1/duplicates/statistics` - Get deduplication statistics
   - `POST /api/v1/duplicates/groups/{id}/review` - Mark group as reviewed
@@ -181,12 +205,13 @@ Interactive API documentation is available at http://localhost:8000/docs
 
 - **Scalability**: O(n log n) complexity using LSH instead of O(n²)
 - **Memory Efficient**: ~50MB for 13K document metadata
-- **Cache Strategy**: Multi-layer caching with Redis and SQLite
+- **Storage Strategy**: File-based SQLite database for simplicity and portability
 - **Processing Speed**: ~1000 documents/minute on modern hardware
 
 ## Development
 
 ### Project Structure
+
 ```
 paperless-ngx-dedupe/
 ├── frontend/            # React TypeScript frontend
@@ -211,6 +236,7 @@ paperless-ngx-dedupe/
 ```
 
 ### Running Tests
+
 ```bash
 uv run pytest
 uv run pytest --cov=paperless_dedupe
@@ -246,6 +272,7 @@ uv run pytest --cov=paperless_dedupe
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
 - Development setup instructions
 - Code style guidelines
 - How to submit pull requests

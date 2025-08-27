@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { useAppDispatch } from '../../hooks/redux';
+import React, { useState } from "react";
+import { useAppDispatch } from "../../hooks/redux";
 import {
   reviewDuplicateGroup,
   deleteDuplicateGroup,
-} from '../../store/slices/duplicatesSlice';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
-import { Progress } from '../ui/Progress';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+} from "../../store/slices/duplicatesSlice";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
+import { Progress } from "../ui/Progress";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '../ui/Tooltip';
+} from "../ui/Tooltip";
 import {
   ChevronDown,
   ChevronUp,
@@ -29,9 +29,9 @@ import {
   ExternalLink,
   Percent,
   X,
-} from 'lucide-react';
-import type { DuplicateGroup } from '../../services/api/types';
-import { configApi } from '../../services/api/config';
+} from "lucide-react";
+import type { DuplicateGroup } from "../../services/api/types";
+import { configApi } from "../../services/api/config";
 
 interface DuplicateGroupCardProps {
   group: DuplicateGroup;
@@ -45,7 +45,7 @@ interface DocumentWithSimilarity {
 }
 
 interface ConfidenceBreakdownProps {
-  breakdown?: DuplicateGroup['confidence_breakdown'];
+  breakdown?: DuplicateGroup["confidence_breakdown"];
   overallConfidence: number;
 }
 
@@ -70,28 +70,28 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
 
   const metrics = [
     {
-      label: 'Jaccard Similarity',
+      label: "Jaccard Similarity",
       value: breakdown.jaccard_similarity,
-      color: 'bg-blue-500',
-      weight: '40%',
+      color: "bg-blue-500",
+      weight: "40%",
     },
     {
-      label: 'Fuzzy Text Match',
+      label: "Fuzzy Text Match",
       value: breakdown.fuzzy_text_ratio,
-      color: 'bg-green-500',
-      weight: '30%',
+      color: "bg-green-500",
+      weight: "30%",
     },
     {
-      label: 'Metadata Match',
+      label: "Metadata Match",
       value: breakdown.metadata_similarity,
-      color: 'bg-yellow-500',
-      weight: '20%',
+      color: "bg-yellow-500",
+      weight: "20%",
     },
     {
-      label: 'Filename Match',
+      label: "Filename Match",
       value: breakdown.filename_similarity,
-      color: 'bg-purple-500',
-      weight: '10%',
+      color: "bg-purple-500",
+      weight: "10%",
     },
   ];
 
@@ -143,10 +143,10 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
     setLoading(true);
     try {
       await dispatch(
-        reviewDuplicateGroup({ id: group.id, reviewed: !group.reviewed })
+        reviewDuplicateGroup({ id: group.id, reviewed: !group.reviewed }),
       ).unwrap();
     } catch (error) {
-      console.error('Failed to update review status:', error);
+      console.error("Failed to update review status:", error);
     } finally {
       setLoading(false);
     }
@@ -155,7 +155,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   // Handle group deletion
   const handleDelete = async () => {
     if (
-      !window.confirm('Are you sure you want to delete this duplicate group?')
+      !window.confirm("Are you sure you want to delete this duplicate group?")
     ) {
       return;
     }
@@ -164,7 +164,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
     try {
       await dispatch(deleteDuplicateGroup(group.id)).unwrap();
     } catch (error) {
-      console.error('Failed to delete group:', error);
+      console.error("Failed to delete group:", error);
     } finally {
       setLoading(false);
     }
@@ -172,20 +172,20 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
 
   // Get confidence color based on percentage
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.9) return 'success';
-    if (confidence >= 0.7) return 'warning';
-    return 'secondary';
+    if (confidence >= 0.9) return "success";
+    if (confidence >= 0.7) return "warning";
+    return "secondary";
   };
 
   // Format date with fallback for invalid dates
   const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'No date';
+    if (!dateString) return "No date";
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'No date';
+      if (isNaN(date.getTime())) return "No date";
       return date.toLocaleDateString();
     } catch {
-      return 'No date';
+      return "No date";
     }
   };
 
@@ -193,51 +193,67 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   const getDocumentPreview = (doc: any) => ({
     title: doc.title,
     created: doc.created || doc.created_date,
-    fileType: doc.file_type || 'pdf',
+    fileType: doc.file_type || "pdf",
     size: doc.archive_serial_number, // Using as placeholder for size
     paperlessId: doc.paperless_id || doc.id,
   });
-  
+
   // Open document in paperless
   const openInPaperless = async (documentId: number) => {
     try {
       const config = await configApi.getConfiguration();
-      const paperlessUrl = config.paperless_url.replace(/\/+$/, '');
-      window.open(`${paperlessUrl}/documents/${documentId}/details`, '_blank');
+      const paperlessUrl = config.paperless_url.replace(/\/+$/, "");
+      window.open(`${paperlessUrl}/documents/${documentId}/details`, "_blank");
     } catch (error) {
-      console.error('Failed to get paperless URL:', error);
+      console.error("Failed to get paperless URL:", error);
       // Fallback to a reasonable default
-      window.open(`/documents/${documentId}/details`, '_blank');
+      window.open(`/documents/${documentId}/details`, "_blank");
     }
   };
 
   // Handle removing a document from the group
   const handleRemoveFromGroup = async (documentId: number) => {
-    if (!window.confirm('Are you sure you want to remove this document from the group?')) {
+    if (
+      !window.confirm(
+        "Are you sure you want to remove this document from the group?",
+      )
+    ) {
       return;
     }
     try {
       // Call API to remove document from group
-      console.log('Removing document', documentId, 'from group', group.id);
+      console.log("Removing document", documentId, "from group", group.id);
       // TODO: Implement API call to remove document from group
-      alert('Document removal feature will be implemented soon');
+      alert("Document removal feature will be implemented soon");
     } catch (error) {
-      console.error('Failed to remove document from group:', error);
+      console.error("Failed to remove document from group:", error);
     }
   };
 
   // Handle deleting a document from Paperless
-  const handleDeleteDocument = async (documentId: number, paperlessId: number) => {
-    if (!window.confirm('Are you sure you want to permanently delete this document from Paperless-ngx?')) {
+  const handleDeleteDocument = async (
+    documentId: number,
+    paperlessId: number,
+  ) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this document from Paperless-ngx?",
+      )
+    ) {
       return;
     }
     try {
       // Call API to delete document from Paperless
-      console.log('Deleting document', documentId, 'with Paperless ID', paperlessId);
+      console.log(
+        "Deleting document",
+        documentId,
+        "with Paperless ID",
+        paperlessId,
+      );
       // TODO: Implement API call to delete document from Paperless
-      alert('Document deletion feature will be implemented soon');
+      alert("Document deletion feature will be implemented soon");
     } catch (error) {
-      console.error('Failed to delete document:', error);
+      console.error("Failed to delete document:", error);
     }
   };
 
@@ -252,7 +268,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge 
+                    <Badge
                       variant={getConfidenceColor(group.confidence)}
                       className="cursor-help"
                     >
@@ -347,7 +363,9 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                           <span>{formatDate(preview.created)}</span>
                         </div>
                         {/* Additional metadata */}
-                        {(doc.correspondent || doc.document_type || (doc.tags && doc.tags.length > 0)) && (
+                        {(doc.correspondent ||
+                          doc.document_type ||
+                          (doc.tags && doc.tags.length > 0)) && (
                           <div className="flex items-center flex-wrap gap-1 mt-1">
                             {doc.correspondent && (
                               <Badge variant="outline" className="text-xs py-0">
@@ -359,11 +377,16 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                                 {doc.document_type}
                               </Badge>
                             )}
-                            {doc.tags && doc.tags.map((tag: string) => (
-                              <Badge key={tag} variant="secondary" className="text-xs py-0">
-                                {tag}
-                              </Badge>
-                            ))}
+                            {doc.tags &&
+                              doc.tags.map((tag: string) => (
+                                <Badge
+                                  key={tag}
+                                  variant="secondary"
+                                  className="text-xs py-0"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
                           </div>
                         )}
                       </div>
@@ -372,20 +395,31 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help">
+                            <Badge
+                              variant="default"
+                              className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help"
+                            >
                               Primary
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs bg-gray-900 text-white">
-                            <p className="font-semibold mb-1">Primary Document</p>
+                            <p className="font-semibold mb-1">
+                              Primary Document
+                            </p>
                             <p className="text-xs">
-                              The primary document is automatically selected based on these criteria (in order):
+                              The primary document is automatically selected
+                              based on these criteria (in order):
                             </p>
                             <ul className="text-xs mt-1 space-y-0.5">
                               <li>• Newest creation date</li>
-                              <li>• Most complete metadata (title, correspondent, tags)</li>
+                              <li>
+                                • Most complete metadata (title, correspondent,
+                                tags)
+                              </li>
                               <li>• Longest OCR content</li>
-                              <li>• Highest Paperless ID (if all else equal)</li>
+                              <li>
+                                • Highest Paperless ID (if all else equal)
+                              </li>
                             </ul>
                           </TooltipContent>
                         </Tooltip>
@@ -442,7 +476,9 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
         {isExpanded && group.documents.length > 2 && (
           <div className="pt-4 border-t">
             <p className="text-sm text-muted-foreground mb-2">
-              <strong>Similarity Note:</strong> All documents in this group have at least {Math.round(group.confidence * 100)}% similarity with the primary document.
+              <strong>Similarity Note:</strong> All documents in this group have
+              at least {Math.round(group.confidence * 100)}% similarity with the
+              primary document.
             </p>
           </div>
         )}
@@ -453,7 +489,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
             <Button
               onClick={handleReviewToggle}
               disabled={loading}
-              variant={group.reviewed ? 'outline' : 'default'}
+              variant={group.reviewed ? "outline" : "default"}
               size="sm"
             >
               {group.reviewed ? (

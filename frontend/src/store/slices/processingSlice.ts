@@ -1,38 +1,38 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { processingApi } from '../../services/api';
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { processingApi } from "../../services/api";
 import type {
   ProcessingStatus,
   AnalyzeRequest,
   AnalyzeResponse as _AnalyzeResponse,
-} from '../../services/api/types';
+} from "../../services/api/types";
 
 // Async thunks
 export const startAnalysis = createAsyncThunk(
-  'processing/startAnalysis',
+  "processing/startAnalysis",
   async (request: AnalyzeRequest) => {
     return await processingApi.startAnalysis(request);
-  }
+  },
 );
 
 export const fetchProcessingStatus = createAsyncThunk(
-  'processing/fetchStatus',
+  "processing/fetchStatus",
   async () => {
     return await processingApi.getProcessingStatus();
-  }
+  },
 );
 
 export const cancelProcessing = createAsyncThunk(
-  'processing/cancel',
+  "processing/cancel",
   async () => {
     return await processingApi.cancelProcessing();
-  }
+  },
 );
 
 export const clearCache = createAsyncThunk(
-  'processing/clearCache',
+  "processing/clearCache",
   async () => {
     return await processingApi.clearCache();
-  }
+  },
 );
 
 // State interface
@@ -43,7 +43,7 @@ interface ProcessingState {
     id: string;
     started_at: string;
     completed_at?: string;
-    status: 'completed' | 'failed' | 'cancelled';
+    status: "completed" | "failed" | "cancelled";
     documents_processed: number;
     groups_found: number;
     error?: string;
@@ -64,7 +64,7 @@ interface ProcessingState {
 const initialState: ProcessingState = {
   status: {
     is_processing: false,
-    current_step: '',
+    current_step: "",
     progress: 0,
     total: 0,
     started_at: undefined,
@@ -90,7 +90,7 @@ const calculateTimeRemaining = (
   progress: number,
   total: number,
   startTime: string,
-  currentTime: string
+  currentTime: string,
 ): number | null => {
   if (progress === 0 || !startTime) return null;
 
@@ -107,7 +107,7 @@ const calculateTimeRemaining = (
 const calculateProcessingSpeed = (
   progress: number,
   startTime: string,
-  currentTime: string
+  currentTime: string,
 ): number | null => {
   if (progress === 0 || !startTime) return null;
 
@@ -120,7 +120,7 @@ const calculateProcessingSpeed = (
 
 // Slice
 const processingSlice = createSlice({
-  name: 'processing',
+  name: "processing",
   initialState,
   reducers: {
     // WebSocket connection status
@@ -131,7 +131,7 @@ const processingSlice = createSlice({
     // Real-time processing updates (from WebSocket)
     updateProcessingStatus: (
       state,
-      action: PayloadAction<ProcessingStatus>
+      action: PayloadAction<ProcessingStatus>,
     ) => {
       const newStatus = action.payload;
       const currentTime = new Date().toISOString();
@@ -144,13 +144,13 @@ const processingSlice = createSlice({
           newStatus.progress,
           newStatus.total,
           newStatus.started_at,
-          currentTime
+          currentTime,
         );
 
         state.processingSpeed = calculateProcessingSpeed(
           newStatus.progress,
           newStatus.started_at,
-          currentTime
+          currentTime,
         );
       } else {
         state.estimatedTimeRemaining = null;
@@ -174,7 +174,7 @@ const processingSlice = createSlice({
     // Add to processing history
     addToHistory: (
       state,
-      action: PayloadAction<ProcessingState['history'][0]>
+      action: PayloadAction<ProcessingState["history"][0]>,
     ) => {
       state.history.unshift(action.payload);
       // Keep only last 10 entries
@@ -197,7 +197,7 @@ const processingSlice = createSlice({
       })
       .addCase(startAnalysis.rejected, (state, action) => {
         state.loading.start = false;
-        state.error = action.error.message || 'Failed to start analysis';
+        state.error = action.error.message || "Failed to start analysis";
       })
 
       // Fetch status
@@ -215,20 +215,20 @@ const processingSlice = createSlice({
             action.payload.progress,
             action.payload.total,
             action.payload.started_at,
-            currentTime
+            currentTime,
           );
 
           state.processingSpeed = calculateProcessingSpeed(
             action.payload.progress,
             action.payload.started_at,
-            currentTime
+            currentTime,
           );
         }
       })
       .addCase(fetchProcessingStatus.rejected, (state, action) => {
         state.loading.fetchStatus = false;
         state.error =
-          action.error.message || 'Failed to fetch processing status';
+          action.error.message || "Failed to fetch processing status";
       })
 
       // Cancel processing
@@ -242,7 +242,7 @@ const processingSlice = createSlice({
       })
       .addCase(cancelProcessing.rejected, (state, action) => {
         state.loading.cancel = false;
-        state.error = action.error.message || 'Failed to cancel processing';
+        state.error = action.error.message || "Failed to cancel processing";
       })
 
       // Clear cache
@@ -255,7 +255,7 @@ const processingSlice = createSlice({
       })
       .addCase(clearCache.rejected, (state, action) => {
         state.loading.clearCache = false;
-        state.error = action.error.message || 'Failed to clear cache';
+        state.error = action.error.message || "Failed to clear cache";
       });
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Button,
   Dialog,
@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui';
+} from "../ui";
 import {
   Trash2,
   Tag,
@@ -16,14 +16,14 @@ import {
   Loader2,
   FileX,
   Eye,
-} from 'lucide-react';
-import { batchApi, OperationType } from '../../services/api/batch';
-import { useAppDispatch } from '../../hooks/redux';
-import { fetchDuplicateGroups } from '../../store/slices/duplicatesSlice';
+} from "lucide-react";
+import { batchApi, OperationType } from "../../services/api/batch";
+import { useAppDispatch } from "../../hooks/redux";
+import { fetchDuplicateGroups } from "../../store/slices/duplicatesSlice";
 
 interface BulkActionsProps {
   selectedItems: string[] | number[];
-  itemType: 'documents' | 'duplicates';
+  itemType: "documents" | "duplicates";
   onClearSelection: () => void;
   onOperationComplete?: (result: any) => void;
 }
@@ -53,41 +53,41 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
       let result;
 
       switch (currentAction) {
-        case 'delete':
-          if (itemType === 'documents') {
+        case "delete":
+          if (itemType === "documents") {
             result = await batchApi.deleteDocuments(selectedItems as number[]);
           } else {
             // For duplicate groups, resolve them (delete non-primary documents)
             result = await batchApi.bulkResolveDuplicates(
               selectedItems as string[],
-              true
+              true,
             );
           }
           break;
 
-        case 'mark-reviewed':
-          if (itemType === 'duplicates') {
+        case "mark-reviewed":
+          if (itemType === "duplicates") {
             result = await batchApi.bulkReviewDuplicates(
               selectedItems as string[],
-              true
+              true,
             );
           }
           break;
 
-        case 'mark-unreviewed':
-          if (itemType === 'duplicates') {
+        case "mark-unreviewed":
+          if (itemType === "duplicates") {
             result = await batchApi.bulkReviewDuplicates(
               selectedItems as string[],
-              false
+              false,
             );
           }
           break;
 
-        case 'resolve':
-          if (itemType === 'duplicates') {
+        case "resolve":
+          if (itemType === "duplicates") {
             result = await batchApi.bulkResolveDuplicates(
               selectedItems as string[],
-              true
+              true,
             );
           }
           break;
@@ -100,7 +100,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
       onClearSelection();
 
       // Refresh data
-      if (itemType === 'duplicates') {
+      if (itemType === "duplicates") {
         dispatch(fetchDuplicateGroups());
       }
 
@@ -108,7 +108,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
         onOperationComplete(result);
       }
     } catch (error) {
-      console.error('Bulk operation failed:', error);
+      console.error("Bulk operation failed:", error);
       setOperationResult({
         error: true,
         message: `Failed to ${currentAction}: ${error}`,
@@ -121,18 +121,18 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
 
   const getActionDescription = () => {
     switch (currentAction) {
-      case 'delete':
-        return itemType === 'documents'
+      case "delete":
+        return itemType === "documents"
           ? `This will permanently delete ${selectedItems.length} document(s) from Paperless-NGX.`
           : `This will resolve ${selectedItems.length} duplicate group(s) by keeping the primary document and deleting the rest.`;
-      case 'mark-reviewed':
+      case "mark-reviewed":
         return `This will mark ${selectedItems.length} duplicate group(s) as reviewed.`;
-      case 'mark-unreviewed':
+      case "mark-unreviewed":
         return `This will mark ${selectedItems.length} duplicate group(s) as unreviewed.`;
-      case 'resolve':
+      case "resolve":
         return `This will resolve ${selectedItems.length} duplicate group(s) by keeping the primary document and removing the duplicates.`;
       default:
-        return '';
+        return "";
     }
   };
 
@@ -144,18 +144,19 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
     <>
       <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-lg border">
         <span className="text-sm font-medium">
-          {selectedItems.length} {itemType === 'documents' ? 'document' : 'group'}
-          {selectedItems.length > 1 ? 's' : ''} selected
+          {selectedItems.length}{" "}
+          {itemType === "documents" ? "document" : "group"}
+          {selectedItems.length > 1 ? "s" : ""} selected
         </span>
 
         <div className="flex-1" />
 
-        {itemType === 'duplicates' && (
+        {itemType === "duplicates" && (
           <>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleAction('mark-reviewed')}
+              onClick={() => handleAction("mark-reviewed")}
               disabled={isProcessing}
             >
               <Eye className="h-4 w-4 mr-2" />
@@ -165,7 +166,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleAction('mark-unreviewed')}
+              onClick={() => handleAction("mark-unreviewed")}
               disabled={isProcessing}
             >
               <FileX className="h-4 w-4 mr-2" />
@@ -175,7 +176,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleAction('resolve')}
+              onClick={() => handleAction("resolve")}
               disabled={isProcessing}
               className="text-orange-600 hover:text-orange-700"
             >
@@ -188,12 +189,12 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => handleAction('delete')}
+          onClick={() => handleAction("delete")}
           disabled={isProcessing}
           className="text-red-600 hover:text-red-700"
         >
           <Trash2 className="h-4 w-4 mr-2" />
-          {itemType === 'documents' ? 'Delete' : 'Delete Duplicates'}
+          {itemType === "documents" ? "Delete" : "Delete Duplicates"}
         </Button>
 
         <Button
@@ -216,7 +217,9 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
             </DialogTitle>
             <DialogDescription className="space-y-2">
               <p>{getActionDescription()}</p>
-              <p className="text-red-600 font-medium">This action cannot be undone.</p>
+              <p className="text-red-600 font-medium">
+                This action cannot be undone.
+              </p>
             </DialogDescription>
           </DialogHeader>
 
@@ -239,7 +242,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
                   Processing...
                 </>
               ) : (
-                'Confirm'
+                "Confirm"
               )}
             </Button>
           </DialogFooter>
@@ -255,7 +258,9 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {operationResult.error ? 'Operation Failed' : 'Operation Complete'}
+                {operationResult.error
+                  ? "Operation Failed"
+                  : "Operation Complete"}
               </DialogTitle>
               <DialogDescription>
                 {operationResult.message ||

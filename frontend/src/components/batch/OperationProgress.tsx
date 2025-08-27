@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -7,7 +7,7 @@ import {
   Progress,
   Badge,
   Button,
-} from '../ui';
+} from "../ui";
 import {
   Loader2,
   CheckCircle,
@@ -15,8 +15,12 @@ import {
   AlertTriangle,
   X,
   RefreshCw,
-} from 'lucide-react';
-import { batchApi, OperationStatus, OperationType } from '../../services/api/batch';
+} from "lucide-react";
+import {
+  batchApi,
+  OperationStatus,
+  OperationType,
+} from "../../services/api/batch";
 
 interface OperationProgressProps {
   operationId: string;
@@ -53,8 +57,8 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
           }
         }
       } catch (err) {
-        console.error('Failed to get operation status:', err);
-        setError('Failed to get operation status');
+        console.error("Failed to get operation status:", err);
+        setError("Failed to get operation status");
         setPolling(false);
       }
     };
@@ -90,16 +94,16 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
     if (!progress) return null;
 
     const variants: Record<OperationStatus, any> = {
-      [OperationStatus.PENDING]: 'secondary',
-      [OperationStatus.IN_PROGRESS]: 'default',
-      [OperationStatus.COMPLETED]: 'success',
-      [OperationStatus.FAILED]: 'destructive',
-      [OperationStatus.PARTIALLY_COMPLETED]: 'warning',
+      [OperationStatus.PENDING]: "secondary",
+      [OperationStatus.IN_PROGRESS]: "default",
+      [OperationStatus.COMPLETED]: "success",
+      [OperationStatus.FAILED]: "destructive",
+      [OperationStatus.PARTIALLY_COMPLETED]: "warning",
     };
 
     return (
       <Badge variant={variants[progress.status as OperationStatus]}>
-        {progress.status.replace('_', ' ')}
+        {progress.status.replace("_", " ")}
       </Badge>
     );
   };
@@ -112,23 +116,25 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
         onClose();
       }
     } catch (err) {
-      console.error('Failed to cancel operation:', err);
+      console.error("Failed to cancel operation:", err);
     }
   };
 
   const getOperationTitle = () => {
-    if (!progress) return 'Processing...';
-    
+    if (!progress) return "Processing...";
+
     const titles: Partial<Record<OperationType, string>> = {
-      [OperationType.DELETE]: 'Deleting Documents',
-      [OperationType.TAG]: 'Adding Tags',
-      [OperationType.UNTAG]: 'Removing Tags',
-      [OperationType.UPDATE_METADATA]: 'Updating Metadata',
-      [OperationType.RESOLVE_DUPLICATES]: 'Resolving Duplicates',
-      [OperationType.MARK_REVIEWED]: 'Marking as Reviewed',
+      [OperationType.DELETE]: "Deleting Documents",
+      [OperationType.TAG]: "Adding Tags",
+      [OperationType.UNTAG]: "Removing Tags",
+      [OperationType.UPDATE_METADATA]: "Updating Metadata",
+      [OperationType.RESOLVE_DUPLICATES]: "Resolving Duplicates",
+      [OperationType.MARK_REVIEWED]: "Marking as Reviewed",
     };
 
-    return titles[progress.operation as OperationType] || 'Processing Operation';
+    return (
+      titles[progress.operation as OperationType] || "Processing Operation"
+    );
   };
 
   if (error) {
@@ -202,7 +208,8 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
             </span>
             {progress.results && (
               <span>
-                {progress.results.processed} processed, {progress.results.failed} failed
+                {progress.results.processed} processed,{" "}
+                {progress.results.failed} failed
               </span>
             )}
           </div>
@@ -245,12 +252,12 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
           <div className="space-y-2">
             {progress.results?.started_at && progress.results?.completed_at && (
               <div className="text-xs text-muted-foreground text-center">
-                Duration:{' '}
+                Duration:{" "}
                 {Math.round(
                   (new Date(progress.results.completed_at).getTime() -
                     new Date(progress.results.started_at).getTime()) /
-                    1000
-                )}{' '}
+                    1000,
+                )}{" "}
                 seconds
               </div>
             )}

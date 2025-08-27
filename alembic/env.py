@@ -1,31 +1,42 @@
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from alembic import context
 import os
 import sys
+from logging.config import fileConfig
 from pathlib import Path
+
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 # Add parent directory to path to import our models
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Import our models and settings
-from src.paperless_dedupe.models.database import Base
 from src.paperless_dedupe.core.config import settings
+from src.paperless_dedupe.models.database import Base
 
 # this is the Alembic Config object
 config = context.config
 
 # Set the database URL from settings
-config.set_main_option('sqlalchemy.url', settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.database_url)
+
+# Ensure data directory exists for SQLite
+if settings.database_url.startswith("sqlite"):
+    data_dir = os.path.dirname(settings.database_url.replace("sqlite:///", ""))
+    if data_dir and not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-if config.config_file_name is not None:
+# Skip logging configuration if we're running inside the app (not from CLI)
+if config.config_file_name is not None and not os.environ.get(
+    "ALEMBIC_SKIP_LOGGING_CONFIG"
+):
     fileConfig(config.config_file_name)
 
 # Add your model's MetaData object here for 'autogenerate' support
 target_metadata = Base.metadata
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -66,7 +77,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, 
+            connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,

@@ -1,17 +1,17 @@
-import { apiClient } from './client';
-import type { Configuration, TestConnectionResponse } from './types';
+import { apiClient } from "./client";
+import type { Configuration, TestConnectionResponse } from "./types";
 
 export const configApi = {
   // Get current configuration
   async getConfiguration(): Promise<Configuration> {
-    return apiClient.get<Configuration>('/config/');
+    return apiClient.get<Configuration>("/config/");
   },
 
   // Update configuration
   async updateConfiguration(
-    config: Partial<Configuration>
+    config: Partial<Configuration>,
   ): Promise<Configuration> {
-    return apiClient.put<Configuration>('/config/', config);
+    return apiClient.put<Configuration>("/config/", config);
   },
 
   // Test paperless-ngx connection
@@ -22,19 +22,19 @@ export const configApi = {
     paperless_password?: string;
   }): Promise<TestConnectionResponse> {
     return apiClient.post<TestConnectionResponse>(
-      '/config/test-connection',
-      config
+      "/config/test-connection",
+      config,
     );
   },
 
   // Reset configuration to defaults
   async resetConfiguration(): Promise<Configuration> {
-    return apiClient.post<Configuration>('/config/reset');
+    return apiClient.post<Configuration>("/config/reset");
   },
 
   // Get configuration schema/defaults
   async getConfigurationDefaults(): Promise<Configuration> {
-    return apiClient.get<Configuration>('/config/defaults');
+    return apiClient.get<Configuration>("/config/defaults");
   },
 
   // Validate configuration
@@ -42,7 +42,7 @@ export const configApi = {
     valid: boolean;
     errors: Record<string, string[]>;
   }> {
-    return apiClient.post('/config/validate', config);
+    return apiClient.post("/config/validate", config);
   },
 };
 

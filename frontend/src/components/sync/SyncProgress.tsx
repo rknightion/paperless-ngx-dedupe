@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Progress } from '../ui/Progress';
-import { Button } from '../ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Alert, AlertDescription } from '../ui/Alert';
-import { Loader2, CheckCircle, AlertCircle, RefreshCw, FileText } from 'lucide-react';
-import { documentsApi } from '../../services/api/documents';
-import { wsClient } from '../../services/websocket/client';
-import { useAppDispatch } from '../../hooks/redux';
-import { fetchDocuments } from '../../store/slices/documentsSlice';
+import React, { useEffect, useState } from "react";
+import { Progress } from "../ui/Progress";
+import { Button } from "../ui/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Alert, AlertDescription } from "../ui/Alert";
+import {
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+  FileText,
+} from "lucide-react";
+import { documentsApi } from "../../services/api/documents";
+import { wsClient } from "../../services/websocket/client";
+import { useAppDispatch } from "../../hooks/redux";
+import { fetchDocuments } from "../../store/slices/documentsSlice";
 
 interface SyncStatus {
   is_syncing: boolean;
@@ -36,24 +42,28 @@ export const SyncProgress: React.FC = () => {
     };
 
     const handleSyncCompleted = (data: any) => {
-      setSyncStatus(prev => prev ? {
-        ...prev,
-        is_syncing: false,
-        current_step: 'Completed',
-        completed_at: data.completed_at,
-        progress: prev.total,
-      } : null);
-      
+      setSyncStatus((prev) =>
+        prev
+          ? {
+              ...prev,
+              is_syncing: false,
+              current_step: "Completed",
+              completed_at: data.completed_at,
+              progress: prev.total,
+            }
+          : null,
+      );
+
       // Refresh document list after sync
       dispatch(fetchDocuments({}));
     };
 
-    wsClient.on('sync_update', handleSyncUpdate);
-    wsClient.on('sync_completed', handleSyncCompleted);
+    wsClient.on("sync_update", handleSyncUpdate);
+    wsClient.on("sync_completed", handleSyncCompleted);
 
     return () => {
-      wsClient.off('sync_update', handleSyncUpdate);
-      wsClient.off('sync_completed', handleSyncCompleted);
+      wsClient.off("sync_update", handleSyncUpdate);
+      wsClient.off("sync_completed", handleSyncCompleted);
     };
   }, [dispatch]);
 
@@ -63,7 +73,7 @@ export const SyncProgress: React.FC = () => {
       await documentsApi.syncDocuments();
       // Status will be updated via WebSocket
     } catch (error) {
-      console.error('Failed to start sync:', error);
+      console.error("Failed to start sync:", error);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +85,7 @@ export const SyncProgress: React.FC = () => {
       await documentsApi.syncDocuments({ force_refresh: true });
       // Status will be updated via WebSocket
     } catch (error) {
-      console.error('Failed to start force sync:', error);
+      console.error("Failed to start force sync:", error);
     } finally {
       setIsLoading(false);
     }
@@ -85,9 +95,10 @@ export const SyncProgress: React.FC = () => {
     return null;
   }
 
-  const progressPercentage = syncStatus.total > 0 
-    ? Math.round((syncStatus.progress / syncStatus.total) * 100)
-    : 0;
+  const progressPercentage =
+    syncStatus.total > 0
+      ? Math.round((syncStatus.progress / syncStatus.total) * 100)
+      : 0;
 
   return (
     <Card>
@@ -98,7 +109,7 @@ export const SyncProgress: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {syncStatus.error && syncStatus.error.trim() !== '' && (
+        {syncStatus.error && syncStatus.error.trim() !== "" && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{syncStatus.error}</AlertDescription>
@@ -111,11 +122,13 @@ export const SyncProgress: React.FC = () => {
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>{syncStatus.current_step}</span>
             </div>
-            
+
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span>Progress</span>
-                <span>{syncStatus.progress} / {syncStatus.total}</span>
+                <span>
+                  {syncStatus.progress} / {syncStatus.total}
+                </span>
               </div>
               <Progress value={progressPercentage} />
               <p className="text-xs text-muted-foreground text-right">
@@ -129,7 +142,8 @@ export const SyncProgress: React.FC = () => {
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <CheckCircle className="h-4 w-4" />
                 <span>
-                  Last sync completed: {new Date(syncStatus.completed_at).toLocaleString()}
+                  Last sync completed:{" "}
+                  {new Date(syncStatus.completed_at).toLocaleString()}
                 </span>
               </div>
             ) : (
@@ -138,15 +152,20 @@ export const SyncProgress: React.FC = () => {
               </p>
             )}
 
-            {(syncStatus.documents_synced > 0 || syncStatus.documents_updated > 0) && (
+            {(syncStatus.documents_synced > 0 ||
+              syncStatus.documents_updated > 0) && (
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">New Documents</p>
-                  <p className="text-2xl font-semibold">{syncStatus.documents_synced}</p>
+                  <p className="text-2xl font-semibold">
+                    {syncStatus.documents_synced}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Updated Documents</p>
-                  <p className="text-2xl font-semibold">{syncStatus.documents_updated}</p>
+                  <p className="text-2xl font-semibold">
+                    {syncStatus.documents_updated}
+                  </p>
                 </div>
               </div>
             )}
@@ -169,7 +188,7 @@ export const SyncProgress: React.FC = () => {
                   </>
                 )}
               </Button>
-              
+
               <Button
                 onClick={handleForceSync}
                 disabled={isLoading || syncStatus.is_syncing}

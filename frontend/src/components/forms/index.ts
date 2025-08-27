@@ -1,1 +1,1 @@
-export { default as ConfigPanel } from './ConfigPanel';
+export { default as ConfigPanel } from "./ConfigPanel";

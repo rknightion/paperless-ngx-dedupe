@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   useAppDispatch,
   useConfig,
   useConnectionStatus,
-} from '../../hooks/redux';
+} from "../../hooks/redux";
 import {
   fetchConfiguration,
   updateConfiguration,
@@ -13,18 +13,18 @@ import {
   resetFormData,
   clearError,
   clearConnectionTest,
-} from '../../store/slices/configSlice';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
-import { Checkbox } from '../ui/Checkbox';
+} from "../../store/slices/configSlice";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Label } from "../ui/Label";
+import { Checkbox } from "../ui/Checkbox";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '../ui/Card';
+} from "../ui/Card";
 import {
   CheckCircle,
   XCircle,
@@ -32,8 +32,8 @@ import {
   Settings,
   TestTube,
   Info,
-} from 'lucide-react';
-import type { Configuration } from '../../services/api/types';
+} from "lucide-react";
+import type { Configuration } from "../../services/api/types";
 
 interface ConfigPanelProps {
   className?: string;
@@ -61,7 +61,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   // Handle form field changes
   const handleFieldChange = (
     field: keyof Configuration,
-    value: string | number
+    value: string | number,
   ) => {
     dispatch(updateFormData({ [field]: value }));
   };
@@ -73,14 +73,14 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
     try {
       await dispatch(updateConfiguration(formData)).unwrap();
     } catch (error) {
-      console.error('Failed to save configuration:', error);
+      console.error("Failed to save configuration:", error);
     }
   };
 
   // Handle connection test
   const handleTestConnection = async () => {
     const testConfig = {
-      paperless_url: formData.paperless_url || '',
+      paperless_url: formData.paperless_url || "",
       paperless_api_token: formData.paperless_api_token,
       paperless_username: formData.paperless_username,
       paperless_password: formData.paperless_password,
@@ -89,7 +89,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
     try {
       await dispatch(testConnection(testConfig)).unwrap();
     } catch (error) {
-      console.error('Connection test failed:', error);
+      console.error("Connection test failed:", error);
     }
   };
 
@@ -105,7 +105,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
     try {
       await dispatch(resetConfiguration()).unwrap();
     } catch (error) {
-      console.error('Failed to reset configuration:', error);
+      console.error("Failed to reset configuration:", error);
     }
   };
 
@@ -194,16 +194,16 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
             <Input
               id="paperless_url"
               type="url"
-              value={formData.paperless_url || ''}
+              value={formData.paperless_url || ""}
               onChange={(e) =>
-                handleFieldChange('paperless_url', e.target.value)
+                handleFieldChange("paperless_url", e.target.value)
               }
               placeholder="http://localhost:8000"
-              className={validationErrors.paperless_url ? 'border-red-500' : ''}
+              className={validationErrors.paperless_url ? "border-red-500" : ""}
             />
             {validationErrors.paperless_url && (
               <p className="text-sm text-red-600">
-                {validationErrors.paperless_url.join(', ')}
+                {validationErrors.paperless_url.join(", ")}
               </p>
             )}
           </div>
@@ -213,13 +213,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
             <Input
               id="paperless_api_token"
               type="password"
-              value={formData.paperless_api_token || ''}
+              value={formData.paperless_api_token || ""}
               onChange={(e) =>
-                handleFieldChange('paperless_api_token', e.target.value)
+                handleFieldChange("paperless_api_token", e.target.value)
               }
               placeholder="Your paperless API token"
               className={
-                validationErrors.paperless_api_token ? 'border-red-500' : ''
+                validationErrors.paperless_api_token ? "border-red-500" : ""
               }
             />
             <p className="text-xs text-muted-foreground">
@@ -227,7 +227,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
             </p>
             {validationErrors.paperless_api_token && (
               <p className="text-sm text-red-600">
-                {validationErrors.paperless_api_token.join(', ')}
+                {validationErrors.paperless_api_token.join(", ")}
               </p>
             )}
           </div>
@@ -244,18 +244,18 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 <Label htmlFor="paperless_username">Username</Label>
                 <Input
                   id="paperless_username"
-                  value={formData.paperless_username || ''}
+                  value={formData.paperless_username || ""}
                   onChange={(e) =>
-                    handleFieldChange('paperless_username', e.target.value)
+                    handleFieldChange("paperless_username", e.target.value)
                   }
                   placeholder="Username"
                   className={
-                    validationErrors.paperless_username ? 'border-red-500' : ''
+                    validationErrors.paperless_username ? "border-red-500" : ""
                   }
                 />
                 {validationErrors.paperless_username && (
                   <p className="text-sm text-red-600">
-                    {validationErrors.paperless_username.join(', ')}
+                    {validationErrors.paperless_username.join(", ")}
                   </p>
                 )}
               </div>
@@ -265,18 +265,18 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 <Input
                   id="paperless_password"
                   type="password"
-                  value={formData.paperless_password || ''}
+                  value={formData.paperless_password || ""}
                   onChange={(e) =>
-                    handleFieldChange('paperless_password', e.target.value)
+                    handleFieldChange("paperless_password", e.target.value)
                   }
                   placeholder="Password"
                   className={
-                    validationErrors.paperless_password ? 'border-red-500' : ''
+                    validationErrors.paperless_password ? "border-red-500" : ""
                   }
                 />
                 {validationErrors.paperless_password && (
                   <p className="text-sm text-red-600">
-                    {validationErrors.paperless_password.join(', ')}
+                    {validationErrors.paperless_password.join(", ")}
                   </p>
                 )}
               </div>
@@ -317,7 +317,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               variant="ghost"
               size="sm"
             >
-              {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
+              {showAdvanced ? "Hide Advanced" : "Show Advanced"}
             </Button>
           </div>
 
@@ -335,8 +335,8 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   value={Math.max(50, formData.fuzzy_match_threshold || 85)}
                   onChange={(e) =>
                     handleFieldChange(
-                      'fuzzy_match_threshold',
-                      Math.max(50, parseInt(e.target.value))
+                      "fuzzy_match_threshold",
+                      Math.max(50, parseInt(e.target.value)),
                     )
                   }
                   className="flex-1"
@@ -346,19 +346,23 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Minimum threshold for storing duplicate groups. Groups with fuzzy text similarity below 50% are never stored.
-                Higher values = fewer false positives but might miss some duplicates.
+                Minimum threshold for storing duplicate groups. Groups with
+                fuzzy text similarity below 50% are never stored. Higher values
+                = fewer false positives but might miss some duplicates.
               </p>
             </div>
-            
+
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
               <div className="flex items-start space-x-2">
                 <Info className="h-4 w-4 text-blue-600 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium text-blue-900">Enhanced Document Storage</p>
+                  <p className="font-medium text-blue-900">
+                    Enhanced Document Storage
+                  </p>
                   <p className="text-blue-800 mt-1">
-                    Documents now store up to 500,000 characters of OCR text for improved accuracy.
-                    Confidence scores can be dynamically adjusted without rescanning documents.
+                    Documents now store up to 500,000 characters of OCR text for
+                    improved accuracy. Confidence scores can be dynamically
+                    adjusted without rescanning documents.
                   </p>
                 </div>
               </div>
@@ -378,8 +382,8 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   value={formData.lsh_threshold || 0.7}
                   onChange={(e) =>
                     handleFieldChange(
-                      'lsh_threshold',
-                      parseFloat(e.target.value)
+                      "lsh_threshold",
+                      parseFloat(e.target.value),
                     )
                   }
                 />
@@ -399,8 +403,8 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   value={formData.minhash_num_perm || 128}
                   onChange={(e) =>
                     handleFieldChange(
-                      'minhash_num_perm',
-                      parseInt(e.target.value)
+                      "minhash_num_perm",
+                      parseInt(e.target.value),
                     )
                   }
                 />
@@ -413,14 +417,19 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
 
           {/* Confidence Weights Configuration */}
           <div className="pt-4 border-t">
-            <h4 className="text-sm font-medium mb-3">Confidence Score Factors</h4>
+            <h4 className="text-sm font-medium mb-3">
+              Confidence Score Factors
+            </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <Checkbox
                     checked={confidenceWeights.useJaccard}
-                    onChange={(e) => 
-                      setConfidenceWeights(prev => ({ ...prev, useJaccard: e.target.checked }))
+                    onChange={(e) =>
+                      setConfidenceWeights((prev) => ({
+                        ...prev,
+                        useJaccard: e.target.checked,
+                      }))
                     }
                   />
                   <span className="text-sm">
@@ -435,8 +444,11 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <Checkbox
                     checked={confidenceWeights.useFuzzy}
-                    onChange={(e) => 
-                      setConfidenceWeights(prev => ({ ...prev, useFuzzy: e.target.checked }))
+                    onChange={(e) =>
+                      setConfidenceWeights((prev) => ({
+                        ...prev,
+                        useFuzzy: e.target.checked,
+                      }))
                     }
                   />
                   <span className="text-sm">
@@ -451,8 +463,11 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <Checkbox
                     checked={confidenceWeights.useMetadata}
-                    onChange={(e) => 
-                      setConfidenceWeights(prev => ({ ...prev, useMetadata: e.target.checked }))
+                    onChange={(e) =>
+                      setConfidenceWeights((prev) => ({
+                        ...prev,
+                        useMetadata: e.target.checked,
+                      }))
                     }
                   />
                   <span className="text-sm">
@@ -467,8 +482,11 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <Checkbox
                     checked={confidenceWeights.useFilename}
-                    onChange={(e) => 
-                      setConfidenceWeights(prev => ({ ...prev, useFilename: e.target.checked }))
+                    onChange={(e) =>
+                      setConfidenceWeights((prev) => ({
+                        ...prev,
+                        useFilename: e.target.checked,
+                      }))
                     }
                   />
                   <span className="text-sm">
@@ -481,7 +499,8 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Note: At least one factor must be enabled. Weights will be automatically recalculated when factors are disabled.
+              Note: At least one factor must be enabled. Weights will be
+              automatically recalculated when factors are disabled.
             </p>
           </div>
         </div>
@@ -507,7 +526,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   Resetting...
                 </>
               ) : (
-                'Reset to Defaults'
+                "Reset to Defaults"
               )}
             </Button>
           </div>
@@ -522,7 +541,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 Saving...
               </>
             ) : (
-              'Save Configuration'
+              "Save Configuration"
             )}
           </Button>
         </div>

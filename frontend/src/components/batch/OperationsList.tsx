@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Badge } from '../ui';
-import { OperationProgress } from './OperationProgress';
+import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, Badge } from "../ui";
+import { OperationProgress } from "./OperationProgress";
 import {
   Activity,
   CheckCircle,
@@ -8,13 +8,15 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
-} from 'lucide-react';
-import { batchApi, OperationStatus } from '../../services/api/batch';
+} from "lucide-react";
+import { batchApi, OperationStatus } from "../../services/api/batch";
 
 export const OperationsList: React.FC = () => {
   const [operations, setOperations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
+  const [selectedOperation, setSelectedOperation] = useState<string | null>(
+    null,
+  );
 
   const loadOperations = async () => {
     setLoading(true);
@@ -22,7 +24,7 @@ export const OperationsList: React.FC = () => {
       const ops = await batchApi.listOperations();
       setOperations(ops);
     } catch (error) {
-      console.error('Failed to load operations:', error);
+      console.error("Failed to load operations:", error);
     } finally {
       setLoading(false);
     }
@@ -30,7 +32,7 @@ export const OperationsList: React.FC = () => {
 
   useEffect(() => {
     loadOperations();
-    
+
     // Refresh every 5 seconds
     const interval = setInterval(loadOperations, 5000);
     return () => clearInterval(interval);
@@ -55,16 +57,16 @@ export const OperationsList: React.FC = () => {
 
   const getStatusBadge = (status: OperationStatus) => {
     const variants: Record<OperationStatus, any> = {
-      [OperationStatus.PENDING]: 'secondary',
-      [OperationStatus.IN_PROGRESS]: 'default',
-      [OperationStatus.COMPLETED]: 'success',
-      [OperationStatus.FAILED]: 'destructive',
-      [OperationStatus.PARTIALLY_COMPLETED]: 'warning',
+      [OperationStatus.PENDING]: "secondary",
+      [OperationStatus.IN_PROGRESS]: "default",
+      [OperationStatus.COMPLETED]: "success",
+      [OperationStatus.FAILED]: "destructive",
+      [OperationStatus.PARTIALLY_COMPLETED]: "warning",
     };
 
     return (
       <Badge variant={variants[status]} className="text-xs">
-        {status.replace('_', ' ')}
+        {status.replace("_", " ")}
       </Badge>
     );
   };
@@ -73,7 +75,7 @@ export const OperationsList: React.FC = () => {
   const activeOperations = operations.filter(
     (op) =>
       op.status === OperationStatus.PENDING ||
-      op.status === OperationStatus.IN_PROGRESS
+      op.status === OperationStatus.IN_PROGRESS,
   );
 
   const recentOperations = operations
@@ -81,7 +83,7 @@ export const OperationsList: React.FC = () => {
       (op) =>
         op.status === OperationStatus.COMPLETED ||
         op.status === OperationStatus.FAILED ||
-        op.status === OperationStatus.PARTIALLY_COMPLETED
+        op.status === OperationStatus.PARTIALLY_COMPLETED,
     )
     .slice(0, 5);
 
@@ -170,7 +172,7 @@ export const OperationsList: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium">{op.message}</p>
                     <p className="text-xs text-muted-foreground">
-                      {op.results?.processed || 0} processed,{' '}
+                      {op.results?.processed || 0} processed,{" "}
                       {op.results?.failed || 0} failed
                     </p>
                   </div>

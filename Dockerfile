@@ -26,7 +26,6 @@ FROM python:3.13-slim AS backend-builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
-    postgresql-client \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -95,7 +94,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 CMD ["uvicorn", "paperless_dedupe.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # =============================================================================
-# Frontend Production Stage  
+# Frontend Production Stage
 # =============================================================================
 FROM nginx:alpine AS frontend
 

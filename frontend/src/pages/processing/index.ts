@@ -1,1 +1,1 @@
-export { default as ProcessingPage } from './ProcessingPage';
+export { default as ProcessingPage } from "./ProcessingPage";

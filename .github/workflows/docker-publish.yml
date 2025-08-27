@@ -3,7 +3,7 @@ name: Docker Publish
 on:
   schedule:
     # Run every Monday at 2 AM UTC
-    - cron: '0 2 * * 1'
+    - cron: "0 2 * * 1"
   workflow_dispatch:
   push:
     branches:
@@ -35,61 +35,63 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=raw,value=${{ matrix.arch }}-${{ github.sha }}
-    
-    - name: Build and push backend by digest
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        target: backend
-        platforms: ${{ matrix.platform }}
-        outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: |
-          type=gha,scope=backend-${{ matrix.arch }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-backend-${{ matrix.arch }}
-        cache-to: |
-          type=gha,mode=max,scope=backend-${{ matrix.arch }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-backend-${{ matrix.arch }},mode=max
-        build-args: |
-          BUILD_DATE=${{ github.event.repository.updated_at }}
-          VCS_REF=${{ github.sha }}
-    
-    - name: Export digest
-      run: |
-        mkdir -p /tmp/digests
-        digest="${{ steps.build.outputs.digest }}"
-        touch "/tmp/digests/${digest#sha256:}"
-    
-    - name: Upload digest
-      uses: actions/upload-artifact@v4
-      with:
-        name: digests-backend-${{ matrix.arch }}
-        path: /tmp/digests/*
-        if-no-files-found: error
-        retention-days: 1
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ matrix.arch }}-${{ github.sha }}
+
+      - name: Build and push backend by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: backend
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=backend-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-backend-${{ matrix.arch }}
+          cache-to: |
+            type=gha,mode=max,scope=backend-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-backend-${{ matrix.arch }},mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-backend-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
   # Build frontend images on native runners for each platform
   build-frontend:
@@ -108,61 +110,63 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
-        tags: |
-          type=raw,value=${{ matrix.arch }}-${{ github.sha }}
-    
-    - name: Build and push frontend by digest
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        target: frontend
-        platforms: ${{ matrix.platform }}
-        outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend,push-by-digest=true,name-canonical=true,push=true
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: |
-          type=gha,scope=frontend-${{ matrix.arch }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-frontend-${{ matrix.arch }}
-        cache-to: |
-          type=gha,mode=max,scope=frontend-${{ matrix.arch }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-frontend-${{ matrix.arch }},mode=max
-        build-args: |
-          BUILD_DATE=${{ github.event.repository.updated_at }}
-          VCS_REF=${{ github.sha }}
-    
-    - name: Export digest
-      run: |
-        mkdir -p /tmp/digests
-        digest="${{ steps.build.outputs.digest }}"
-        touch "/tmp/digests/${digest#sha256:}"
-    
-    - name: Upload digest
-      uses: actions/upload-artifact@v4
-      with:
-        name: digests-frontend-${{ matrix.arch }}
-        path: /tmp/digests/*
-        if-no-files-found: error
-        retention-days: 1
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=raw,value=${{ matrix.arch }}-${{ github.sha }}
+
+      - name: Build and push frontend by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: frontend
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend,push-by-digest=true,name-canonical=true,push=true
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=frontend-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-frontend-${{ matrix.arch }}
+          cache-to: |
+            type=gha,mode=max,scope=frontend-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-frontend-${{ matrix.arch }},mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-frontend-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
   # Merge backend manifests
   merge-backend:
@@ -172,45 +176,47 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
-    - name: Download digests
-      uses: actions/download-artifact@v4
-      with:
-        pattern: digests-backend-*
-        path: /tmp/digests
-        merge-multiple: true
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=raw,value=latest
-          type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }}
-          type=sha,prefix={{branch}}-
-          type=raw,value={{date 'YYYYMMDD'}},enable=${{ github.event_name == 'schedule' }}
-    
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Create manifest list and push
-      working-directory: /tmp/digests
-      run: |
-        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
-    
-    - name: Inspect image
-      run: |
-        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-backend-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }}
+            type=sha,prefix={{branch}}-
+            type=raw,value={{date 'YYYYMMDD'}},enable=${{ github.event_name == 'schedule' }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${IMAGE_NAME}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${IMAGE_NAME}:${STEPS_META_OUTPUTS_VERSION}
+        env:
+          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
 
   # Merge frontend manifests
   merge-frontend:
@@ -220,45 +226,47 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
-    - name: Download digests
-      uses: actions/download-artifact@v4
-      with:
-        pattern: digests-frontend-*
-        path: /tmp/digests
-        merge-multiple: true
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
-        tags: |
-          type=raw,value=latest
-          type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }}
-          type=sha,prefix={{branch}}-
-          type=raw,value={{date 'YYYYMMDD'}},enable=${{ github.event_name == 'schedule' }}
-    
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Create manifest list and push
-      working-directory: /tmp/digests
-      run: |
-        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend@sha256:%s ' *)
-    
-    - name: Inspect image
-      run: |
-        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ steps.meta.outputs.version }}
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-frontend-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=raw,value=latest
+            type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }}
+            type=sha,prefix={{branch}}-
+            type=raw,value={{date 'YYYYMMDD'}},enable=${{ github.event_name == 'schedule' }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${IMAGE_NAME}-frontend@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${IMAGE_NAME}-frontend:${STEPS_META_OUTPUTS_VERSION}
+        env:
+          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
 
   # Security scanning (optional, runs after builds complete)
   security-scan:
@@ -268,34 +276,34 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       security-events: write
-    
+
     steps:
-    - name: Run Trivy vulnerability scanner on backend
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        format: 'sarif'
-        output: 'trivy-backend-results.sarif'
-        severity: 'CRITICAL,HIGH'
-        timeout: '10m'
-    
-    - name: Run Trivy vulnerability scanner on frontend
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest
-        format: 'sarif'
-        output: 'trivy-frontend-results.sarif'
-        severity: 'CRITICAL,HIGH'
-        timeout: '10m'
-    
-    - name: Upload backend Trivy results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: 'trivy-backend-results.sarif'
-        category: 'trivy-backend'
-    
-    - name: Upload frontend Trivy results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: 'trivy-frontend-results.sarif'
-        category: 'trivy-frontend'
+      - name: Run Trivy vulnerability scanner on backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          format: "sarif"
+          output: "trivy-backend-results.sarif"
+          severity: "CRITICAL,HIGH"
+          timeout: "10m"
+
+      - name: Run Trivy vulnerability scanner on frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest
+          format: "sarif"
+          output: "trivy-frontend-results.sarif"
+          severity: "CRITICAL,HIGH"
+          timeout: "10m"
+
+      - name: Upload backend Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-backend-results.sarif"
+          category: "trivy-backend"
+
+      - name: Upload frontend Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-frontend-results.sarif"
+          category: "trivy-frontend"

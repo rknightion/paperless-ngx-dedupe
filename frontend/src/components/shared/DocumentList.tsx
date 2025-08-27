@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { FixedSizeList as List } from 'react-window';
-import { useAppDispatch, useDocumentsList } from '../../hooks/redux';
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { FixedSizeList as List } from "react-window";
+import { useAppDispatch, useDocumentsList } from "../../hooks/redux";
 import {
   fetchDocuments,
   syncDocuments,
@@ -10,12 +10,12 @@ import {
   deselectDocument,
   selectAllDocuments,
   clearSelection,
-} from '../../store/slices/documentsSlice';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Badge } from '../ui/Badge';
-import { Checkbox } from '../ui/Checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+} from "../../store/slices/documentsSlice";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Badge } from "../ui/Badge";
+import { Checkbox } from "../ui/Checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import {
   Search,
   RefreshCw,
@@ -24,8 +24,8 @@ import {
   Calendar,
   HardDrive,
   Copy,
-} from 'lucide-react';
-import type { Document } from '../../services/api/types';
+} from "lucide-react";
+import type { Document } from "../../services/api/types";
 
 interface DocumentListProps {
   className?: string;
@@ -73,12 +73,12 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
     }
   };
 
-  const getStatusBadge = (status: Document['processing_status']) => {
+  const getStatusBadge = (status: Document["processing_status"]) => {
     const variants = {
-      pending: 'secondary',
-      processing: 'warning',
-      completed: 'success',
-      error: 'destructive',
+      pending: "secondary",
+      processing: "warning",
+      completed: "success",
+      error: "destructive",
     } as const;
 
     return (
@@ -89,7 +89,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
   };
 
@@ -98,8 +98,8 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
       <div
         style={style}
         className={`flex items-center px-4 py-2 border-b hover:bg-muted/50 cursor-pointer ${
-          isEven ? 'bg-background' : 'bg-muted/20'
-        } ${isSelected ? 'bg-blue-50 border-blue-200' : ''}`}
+          isEven ? "bg-background" : "bg-muted/20"
+        } ${isSelected ? "bg-blue-50 border-blue-200" : ""}`}
         onClick={() => onDocumentClick(document)}
       >
         {selectable && (
@@ -132,8 +132,8 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
     <div
       style={style}
       className={`flex items-center px-6 py-4 border-b hover:bg-muted/50 cursor-pointer ${
-        isEven ? 'bg-background' : 'bg-muted/20'
-      } ${isSelected ? 'bg-blue-50 border-blue-200' : ''}`}
+        isEven ? "bg-background" : "bg-muted/20"
+      } ${isSelected ? "bg-blue-50 border-blue-200" : ""}`}
       onClick={() => onDocumentClick(document)}
     >
       {selectable && (
@@ -179,7 +179,9 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
       </div>
 
       <div className="flex flex-col items-end space-y-1 text-sm">
-        <span className="font-mono text-muted-foreground">#{document.paperless_id}</span>
+        <span className="font-mono text-muted-foreground">
+          #{document.paperless_id}
+        </span>
         {document.file_size && (
           <span className="text-xs text-muted-foreground">
             {(document.file_size / 1024 / 1024).toFixed(2)} MB
@@ -211,7 +213,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       dispatch(setSearchFilter(query));
       dispatch(fetchDocuments({ search: query }));
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Handle status filter
@@ -220,7 +222,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       dispatch(setProcessingStatusFilter(status));
       dispatch(fetchDocuments({ processing_status: status }));
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Handle sync documents
@@ -230,7 +232,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       // Refresh the list after sync
       dispatch(fetchDocuments());
     } catch (error) {
-      console.error('Failed to sync documents:', error);
+      console.error("Failed to sync documents:", error);
     }
   }, [dispatch]);
 
@@ -239,14 +241,14 @@ export const DocumentList: React.FC<DocumentListProps> = ({
     (id: number) => {
       dispatch(selectDocument(id));
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleDeselect = useCallback(
     (id: number) => {
       dispatch(deselectDocument(id));
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleSelectAll = useCallback(() => {
@@ -261,7 +263,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
     (document: Document) => {
       onDocumentSelect?.(document);
     },
-    [onDocumentSelect]
+    [onDocumentSelect],
   );
 
   // Memoize the data for virtual list
@@ -282,7 +284,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       handleDocumentClick,
       selectable,
       compact,
-    ]
+    ],
   );
 
   // Calculate item height based on compact mode
@@ -409,17 +411,19 @@ export const DocumentList: React.FC<DocumentListProps> = ({
         {documents.length > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/20">
             <p className="text-sm text-muted-foreground">
-              Showing {documents.length} of {pagination.count.toLocaleString()}{' '}
+              Showing {documents.length} of {pagination.count.toLocaleString()}{" "}
               documents
             </p>
             {pagination.count > documents.length && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
-                onClick={() => dispatch(fetchDocuments({ page: pagination.currentPage + 1 }))}
+                onClick={() =>
+                  dispatch(fetchDocuments({ page: pagination.currentPage + 1 }))
+                }
                 disabled={loading}
               >
-                {loading ? 'Loading...' : 'Load More'}
+                {loading ? "Loading..." : "Load More"}
               </Button>
             )}
           </div>

@@ -5,6 +5,7 @@ Thank you for your interest in contributing to the Paperless-NGX Deduplication T
 ## Code of Conduct
 
 By participating in this project, you agree to abide by our Code of Conduct:
+
 - Be respectful and inclusive
 - Welcome newcomers and help them get started
 - Focus on constructive criticism
@@ -35,6 +36,7 @@ By participating in this project, you agree to abide by our Code of Conduct:
 #### Development Setup
 
 1. **Fork and clone the repository**
+
    ```bash
    git clone https://github.com/your-username/paperless-ngx-dedupe.git
    cd paperless-ngx-dedupe
@@ -43,21 +45,23 @@ By participating in this project, you agree to abide by our Code of Conduct:
 2. **Set up the development environment**
 
    **Backend (Python):**
+
    ```bash
    # Install uv package manager
    curl -LsSf https://astral.sh/uv/install.sh | sh
-   
+
    # Install dependencies
    uv sync --dev
-   
+
    # Start development services
    docker-compose -f docker-compose.dev.yml up -d postgres redis
-   
+
    # Run the backend
    uv run uvicorn paperless_dedupe.main:app --reload --port 30001
    ```
 
    **Frontend (React/TypeScript):**
+
    ```bash
    cd frontend
    npm install
@@ -72,32 +76,36 @@ By participating in this project, you agree to abide by our Code of Conduct:
 #### Development Workflow
 
 1. **Write clean, documented code**
+
    - Follow PEP 8 for Python code
    - Use TypeScript for frontend code
    - Add type hints to all Python functions
    - Write clear, concise comments for complex logic
 
 2. **Write tests**
+
    - Add unit tests for new functionality
    - Ensure existing tests pass
    - Aim for >80% code coverage
+
    ```bash
    # Run Python tests
    uv run pytest
-   
+
    # Run with coverage
    uv run pytest --cov=paperless_dedupe
-   
+
    # Run frontend tests
    cd frontend && npm test
    ```
 
 3. **Lint and format your code**
+
    ```bash
    # Backend
    uv run ruff check src/
    uv run ruff format src/
-   
+
    # Frontend
    cd frontend
    npm run lint
@@ -105,11 +113,13 @@ By participating in this project, you agree to abide by our Code of Conduct:
    ```
 
 4. **Update documentation**
+
    - Update README.md if adding new features
    - Add docstrings to new functions/classes
    - Update CHANGELOG.md with your changes
 
 5. **Commit your changes**
+
    - Use clear, descriptive commit messages
    - Follow conventional commits format:
      ```
@@ -202,6 +212,7 @@ uv run pytest tests/integration/
 ## Recognition
 
 Contributors will be recognized in:
+
 - The project README
 - Release notes
 - GitHub contributors page

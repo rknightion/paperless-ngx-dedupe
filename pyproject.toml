@@ -43,12 +43,11 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "rapidfuzz>=3.10.1",
     "datasketch>=1.6.5",
-    "psycopg2-binary>=2.9.10",
     "python-multipart>=0.0.12",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "aiofiles>=24.1.0",
-    "asyncpg>=0.30.0",
+    "python-dateutil>=2.8.2",
 ]
 
 [project.urls]
@@ -60,6 +59,7 @@ Changelog = "https://github.com/rknightion/paperless-ngx-dedupe/blob/main/CHANGE
 
 [project.scripts]
 paperless-dedupe = "paperless_dedupe:main"
+paperless-dedupe-dev = "dev:main"
 
 [build-system]
 requires = ["uv_build>=0.8.4,<0.9.0"]
@@ -74,3 +74,130 @@ dev = [
     "pytest-cov>=6.2.1",
     "pytest-timeout>=2.3.1",
 ]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = false
+follow_imports = "silent"
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+strict_optional = true
+show_error_codes = true
+exclude = [
+    "tests/",
+    "scripts/",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=custom_components.autopi",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=10",
+    "-vv",
+    "-s",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+]
+
+[tool.coverage.run]
+source = ["custom_components.autopi"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "D",   # pydocstyle
+    "N",  # pep8-naming
+    "Q",  # flake8-quotes
+    "S",
+]
+ignore = [
+    "E501",  # line too long
+    "D202",  # no blank lines after function docstring
+    "D203",  # one blank line before class
+    "D213",  # multi-line docstring summary should start at the second line
+    "C901",  # too complex (we'll allow some complexity for now)
+    "COM812", "COM819",
+    "D100", "D203", "D213", "D300",
+    "E111", "E114", "E117",
+    "ISC001", "ISC002",
+    "Q000", "Q001", "Q002", "Q003",
+    "W191",
+    # Lower priority style preferences
+    "TRY003",  # Avoid specifying long messages outside exception class
+    "TRY300",  # Consider moving statements to else blocks
+    "TRY002",  # Create custom exceptions
+    "TRY301",  # Abstract raise to an inner function
+    "PLR2004", # Magic value used in comparison
+    "PLR0912", # Too many branches
+    "PLR0915", # Too many statements
+    "PLR0913", # Too many arguments
+    "PLR0911", # Too many return statements
+    "PLC0415", # Import outside top-level (lazy imports)
+    "TD002",   # Missing author in TODO
+    "TD003",   # Missing issue link in TODO
+    "FIX002",  # Line contains TODO
+    "ERA001",  # Commented-out code
+    "ANN401",  # Use of Any (sometimes necessary)
+    # Type checking imports (many false positives)
+    "TC001",   # Move application imports to TYPE_CHECKING
+    "TC002",   # Move third-party imports to TYPE_CHECKING
+    "TC006",   # Quotes in cast expressions
+]
+
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ALL"]
+"scripts/*" = [
+    "ALL",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+# Use double quotes for strings.
+quote-style = "double"
+# Like Black, indent with spaces.
+indent-style = "space"

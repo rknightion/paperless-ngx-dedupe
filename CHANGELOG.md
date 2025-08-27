@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - GitHub Actions CI/CD pipeline for automated testing and deployment
 - Multi-platform Docker image support (amd64, arm64)
 - Automated dependency updates with Dependabot
@@ -15,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image publishing to GitHub Container Registry
 
 ### Changed
+
 - Improved documentation for open source release
 - Enhanced .env.example with clear optional configuration notes
 - Separated development and production docker-compose configurations
@@ -22,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-01-18
 
 ### Added
+
 - **Web Interface**: Modern React TypeScript frontend with real-time updates
+
   - Dashboard with statistics and system overview
   - Virtual scrolling for large document collections
   - Real-time WebSocket updates for processing status
@@ -30,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Visual duplicate group management
 
 - **Core Features**:
+
   - Advanced fuzzy matching using MinHash/LSH algorithms
   - Multi-factor confidence scoring system
   - Scalable architecture handling 13,000+ documents
@@ -37,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PostgreSQL for persistent storage
 
 - **API Endpoints**:
+
   - Complete REST API with OpenAPI documentation
   - Document management and synchronization
   - Duplicate group operations
@@ -44,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configuration management
 
 - **Deduplication Engine**:
+
   - MinHash signatures for fast similarity detection
   - LSH indexing for O(n log n) scaling
   - Fuzzy text matching for OCR variations
@@ -56,12 +63,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - TypeScript for frontend type safety
 
 ### Performance
+
 - Processes ~1000 documents/minute on modern hardware
 - Sub-linear complexity using LSH indexing
 - Memory efficient (~50MB for 13K document metadata)
 - Multi-layer caching strategy
 
 ### Infrastructure
+
 - FastAPI backend with async/await support
 - React 19 with Redux Toolkit for state management
 - WebSocket integration for real-time updates
@@ -71,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-01-01 (Pre-release)
 
 ### Added
+
 - Initial proof of concept
 - Basic deduplication algorithm
 - Command-line interface
@@ -87,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Upgrade Notes
 
 ### From 0.x to 1.0.0
+
 - First stable release - no upgrade path from pre-release versions
 - Recommend fresh installation with Docker
 

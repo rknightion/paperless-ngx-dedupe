@@ -20,10 +20,12 @@ Security vulnerabilities should **never** be reported through public GitHub issu
 ### 2. Report Privately
 
 Please report security vulnerabilities by emailing:
+
 - **Email**: 12484127+rknightion@users.noreply.github.com
 - **Subject**: [SECURITY] Paperless-NGX Dedupe Vulnerability
 
 Include the following information:
+
 - Type of vulnerability
 - Full paths of source file(s) related to the vulnerability
 - Location of the affected source code (tag/branch/commit or direct URL)
@@ -145,12 +147,14 @@ The application includes these security features:
 ## Contact
 
 For security concerns, contact:
+
 - **Security Email**: 12484127+rknightion@users.noreply.github.com
 - **PGP Key**: Available upon request
 
 ## Acknowledgments
 
 We appreciate responsible disclosure and will acknowledge security researchers who:
+
 - Follow this security policy
 - Allow reasonable time for patching
 - Avoid privacy violations or data destruction

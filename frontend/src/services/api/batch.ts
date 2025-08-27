@@ -1,27 +1,28 @@
-import { apiClient } from './client';
+import { apiClient } from "./client";
 
 export const OperationType = {
-  MARK_FOR_DELETION: 'mark_for_deletion',
-  DELETE: 'delete',
-  TAG: 'tag',
-  UNTAG: 'untag',
-  UPDATE_METADATA: 'update_metadata',
-  MERGE_DOCUMENTS: 'merge_documents',
-  MARK_REVIEWED: 'mark_reviewed',
-  RESOLVE_DUPLICATES: 'resolve_duplicates',
+  MARK_FOR_DELETION: "mark_for_deletion",
+  DELETE: "delete",
+  TAG: "tag",
+  UNTAG: "untag",
+  UPDATE_METADATA: "update_metadata",
+  MERGE_DOCUMENTS: "merge_documents",
+  MARK_REVIEWED: "mark_reviewed",
+  RESOLVE_DUPLICATES: "resolve_duplicates",
 } as const;
 
-export type OperationType = typeof OperationType[keyof typeof OperationType];
+export type OperationType = (typeof OperationType)[keyof typeof OperationType];
 
 export const OperationStatus = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  PARTIALLY_COMPLETED: 'partially_completed',
+  PENDING: "pending",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  FAILED: "failed",
+  PARTIALLY_COMPLETED: "partially_completed",
 } as const;
 
-export type OperationStatus = typeof OperationStatus[keyof typeof OperationStatus];
+export type OperationStatus =
+  (typeof OperationStatus)[keyof typeof OperationStatus];
 
 export interface BatchOperationRequest {
   operation: OperationType;
@@ -61,28 +62,28 @@ export interface BatchOperationProgress {
 export const batchApi = {
   // Execute batch operation
   async executeBatchOperation(
-    request: BatchOperationRequest
+    request: BatchOperationRequest,
   ): Promise<BatchOperationResponse> {
-    return apiClient.post<BatchOperationResponse>('/batch/execute', request);
+    return apiClient.post<BatchOperationResponse>("/batch/execute", request);
   },
 
   // Get operation status
   async getOperationStatus(
-    operationId: string
+    operationId: string,
   ): Promise<BatchOperationProgress> {
     return apiClient.get<BatchOperationProgress>(
-      `/batch/status/${operationId}`
+      `/batch/status/${operationId}`,
     );
   },
 
   // List operations
   async listOperations(
     status?: OperationStatus,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<BatchOperationProgress[]> {
     const params: any = { limit };
     if (status) params.status = status;
-    return apiClient.get<BatchOperationProgress[]>('/batch/operations', params);
+    return apiClient.get<BatchOperationProgress[]>("/batch/operations", params);
   },
 
   // Cancel operation
@@ -93,30 +94,32 @@ export const batchApi = {
   // Bulk resolve duplicates
   async bulkResolveDuplicates(
     groupIds: string[],
-    keepPrimary: boolean = true
+    keepPrimary: boolean = true,
   ): Promise<BatchOperationResponse> {
     return apiClient.post<BatchOperationResponse>(
-      '/batch/duplicates/bulk-resolve',
+      "/batch/duplicates/bulk-resolve",
       {
         group_ids: groupIds,
         keep_primary: keepPrimary,
-      }
+      },
     );
   },
 
   // Bulk review duplicates
   async bulkReviewDuplicates(
     groupIds: string[],
-    reviewed: boolean = true
+    reviewed: boolean = true,
   ): Promise<any> {
-    return apiClient.post('/batch/duplicates/bulk-review', {
+    return apiClient.post("/batch/duplicates/bulk-review", {
       group_ids: groupIds,
       reviewed,
     });
   },
 
   // Helper functions for common operations
-  async deleteDocuments(documentIds: number[]): Promise<BatchOperationResponse> {
+  async deleteDocuments(
+    documentIds: number[],
+  ): Promise<BatchOperationResponse> {
     return this.executeBatchOperation({
       operation: OperationType.DELETE,
       document_ids: documentIds,
@@ -125,7 +128,7 @@ export const batchApi = {
 
   async tagDocuments(
     documentIds: number[],
-    tagIds: number[]
+    tagIds: number[],
   ): Promise<BatchOperationResponse> {
     return this.executeBatchOperation({
       operation: OperationType.TAG,
@@ -136,7 +139,7 @@ export const batchApi = {
 
   async untagDocuments(
     documentIds: number[],
-    tagIds: number[]
+    tagIds: number[],
   ): Promise<BatchOperationResponse> {
     return this.executeBatchOperation({
       operation: OperationType.UNTAG,
@@ -147,7 +150,7 @@ export const batchApi = {
 
   async updateDocumentMetadata(
     documentIds: number[],
-    metadata: Record<string, any>
+    metadata: Record<string, any>,
   ): Promise<BatchOperationResponse> {
     return this.executeBatchOperation({
       operation: OperationType.UPDATE_METADATA,

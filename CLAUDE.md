@@ -6,7 +6,7 @@
 
 ```bash
 # After modifying ANY database model, ALWAYS run:
-PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@localhost:35432/paperless_dedupe \
+PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
 uv run alembic revision --autogenerate -m "Description of changes"
 
 # Review the generated migration file in alembic/versions/
@@ -15,14 +15,88 @@ uv run alembic revision --autogenerate -m "Description of changes"
 
 **Never skip this step!** Users rely on migrations to upgrade without losing data.
 
+## Local Development Setup
+
+### Prerequisites
+
+- Python 3.13+
+- Node.js and npm
+- uv package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+
+### Quick Start for Local Development
+
+```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd paperless-ngx-dedupe
+
+# 2. Set up environment (optional)
+cp .env.example .env
+# Edit .env to configure your Paperless-NGX connection
+
+# 3. Start both frontend and backend with hot-reloading
+uv run python dev.py
+```
+
+This starts:
+
+- Backend API: http://localhost:30001 (manual restart needed for changes)
+- Frontend UI: http://localhost:3000 (with HMR/hot-reload)
+- API Docs: http://localhost:30001/docs
+- Full logging output visible in terminal
+
+### Testing During Development
+
+```bash
+# Backend testing commands
+uv run pytest                           # Run all tests
+uv run pytest tests/unit                # Unit tests only
+uv run pytest tests/integration         # Integration tests only
+uv run pytest --cov=paperless_dedupe    # With coverage report
+
+# Frontend testing commands
+cd frontend
+npm run lint                            # Check code style
+npm run lint:fix                        # Auto-fix style issues
+npm run type-check                      # TypeScript checking
+npm run build                           # Test production build
+
+# Code quality checks
+uv run ruff check src/                  # Python linting
+uv run ruff format src/                 # Python formatting
+
+# Database operations
+PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
+uv run alembic upgrade head             # Apply all migrations
+
+PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
+uv run alembic downgrade -1             # Rollback one migration
+
+# API testing
+curl http://localhost:30001/health      # Health check
+curl http://localhost:30001/api/v1/config/  # Get current config
+```
+
+### Development Workflow
+
+1. **Backend Changes**: Edit files in `src/paperless_dedupe/` - server auto-reloads
+2. **Frontend Changes**: Edit files in `frontend/src/` - browser auto-refreshes
+3. **Database Schema Changes**:
+   - Modify models in `src/paperless_dedupe/models/database.py`
+   - Create migration: `PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db uv run alembic revision --autogenerate -m "description"`
+   - Test locally before committing
+4. **Testing API**: Use http://localhost:30001/docs for interactive testing
+
 ## Project Overview
+
 A comprehensive document deduplication tool for paperless-ngx that identifies and helps manage duplicate documents using advanced fuzzy matching and MinHash/LSH algorithms.
 
 ## Architecture
 
 ### Technology Stack
+
 - **Backend**: FastAPI with async/await support
-- **Database**: PostgreSQL for persistent storage (with Alembic migrations)
+- **Database**: SQLite for persistent storage (with Alembic migrations)
 - **Deduplication**: MinHash/LSH with rapidfuzz for fuzzy matching
 - **Container**: Docker with docker-compose
 - **Migrations**: Alembic for database schema versioning
@@ -30,11 +104,13 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 ### Key Components
 
 1. **API Client** (`services/paperless_client.py`)
+
    - Handles authentication (token or username/password)
    - Implements retry logic and rate limiting
    - Manages pagination for large document sets
 
 2. **Deduplication Engine** (`services/deduplication_service.py`)
+
    - MinHash signatures for fast similarity detection
    - LSH indexing for O(n log n) scaling
    - Multi-factor confidence scoring
@@ -49,6 +125,7 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 ## API Endpoints
 
 ### Documents
+
 - `GET /api/v1/documents/` - List documents
 - `GET /api/v1/documents/{id}` - Get document details
 - `GET /api/v1/documents/{id}/content` - Get OCR content
@@ -56,6 +133,7 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 - `POST /api/v1/documents/sync` - Sync from paperless-ngx
 
 ### Duplicates
+
 - `GET /api/v1/duplicates/groups` - List duplicate groups
 - `GET /api/v1/duplicates/groups/{id}` - Get group details
 - `POST /api/v1/duplicates/groups/{id}/review` - Mark as reviewed
@@ -63,12 +141,14 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 - `GET /api/v1/duplicates/statistics` - Get statistics
 
 ### Processing
+
 - `POST /api/v1/processing/analyze` - Start deduplication
 - `GET /api/v1/processing/status` - Get processing status
 - `POST /api/v1/processing/cancel` - Cancel processing
 - `POST /api/v1/processing/clear-cache` - Clear cache
 
 ### Configuration
+
 - `GET /api/v1/config/` - Get configuration
 - `PUT /api/v1/config/` - Update configuration
 - `POST /api/v1/config/test-connection` - Test paperless connection
@@ -77,6 +157,7 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 ## Deduplication Algorithm
 
 ### Multi-Stage Process
+
 1. **MinHash Generation**: Create 128-bit signatures for each document
 2. **LSH Indexing**: Build locality-sensitive hash tables for fast candidate selection
 3. **Fuzzy Matching**: Apply rapidfuzz algorithms for refined scoring
@@ -87,6 +168,7 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
    - Filename similarity (10%)
 
 ### Scalability
+
 - Handles 13,000+ documents efficiently
 - Sub-linear O(n log n) complexity using LSH
 - Configurable thresholds for precision/recall balance
@@ -94,8 +176,9 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 ## Configuration
 
 ### Environment Variables
+
 ```bash
-PAPERLESS_DEDUPE_DATABASE_URL=postgresql://user:pass@host/db
+PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db
 PAPERLESS_DEDUPE_PAPERLESS_URL=http://paperless:8000
 PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-token
 PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD=85  # Minimum 50%
@@ -103,6 +186,7 @@ PAPERLESS_DEDUPE_LOG_LEVEL=WARNING  # Can be DEBUG, INFO, WARNING, ERROR
 ```
 
 ### Key Settings
+
 - `fuzzy_match_threshold`: Similarity threshold (50-100, default: 85)
 - `max_ocr_length`: Fixed at 500,000 characters (not user-configurable)
 - `lsh_threshold`: LSH similarity threshold (0.0-1.0)
@@ -111,24 +195,37 @@ PAPERLESS_DEDUPE_LOG_LEVEL=WARNING  # Can be DEBUG, INFO, WARNING, ERROR
 
 ## Development
 
-### Local Setup
+### Local Development (Recommended)
+
+```bash
+# Use the development script for hot-reloading both frontend and backend
+uv run python dev.py
+
+# Or install and use the dev command
+uv sync
+uv run paperless-dedupe-dev
+```
+
+### Manual Backend-Only Setup
+
 ```bash
 # Install dependencies
 uv sync
 
 # IMPORTANT: Run migrations after any schema change
-PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@localhost:35432/paperless_dedupe \
+PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
 uv run alembic upgrade head
 
 # Create new migration after changing models
-PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless:paperless@localhost:35432/paperless_dedupe \
+PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
 uv run alembic revision --autogenerate -m "Your change description"
 
-# Start development server
-uv run paperless-dedupe
+# Start backend server only
+uv run uvicorn paperless_dedupe.main:app --reload --port 30001
 ```
 
 ### Docker Setup
+
 ```bash
 # Build and start services
 docker-compose up -d
@@ -141,6 +238,7 @@ docker-compose down
 ```
 
 ### Testing
+
 ```bash
 # Run tests
 uv run pytest
@@ -152,20 +250,24 @@ uv run pytest --cov=paperless_dedupe
 ## Usage Workflow
 
 1. **Initial Setup**
+
    - Configure paperless-ngx connection via API or UI
    - Test connection to ensure authentication works
 
 2. **Document Sync**
+
    - Call `/api/v1/documents/sync` to import documents
    - Handles pagination automatically
    - Stores OCR content in database
 
 3. **Run Analysis**
+
    - Call `/api/v1/processing/analyze` to start deduplication
    - Monitor progress via `/api/v1/processing/status`
    - Analysis runs in background
 
 4. **Review Results**
+
    - Get duplicate groups via `/api/v1/duplicates/groups`
    - Review confidence scores and document details
    - Mark groups as reviewed/resolved
@@ -177,17 +279,20 @@ uv run pytest --cov=paperless_dedupe
 ## Performance Considerations
 
 ### Database Strategy
-- PostgreSQL with TOAST for large text storage (up to 500K chars per document)
+
+- SQLite for simple file-based storage (up to 500K chars per document)
 - Alembic migrations for schema versioning
 - Automatic migrations on startup
 
 ### Memory Management
+
 - OCR text stored up to 500K characters (fixed limit)
 - Streaming processing for large datasets
 - Efficient MinHash storage (128 bytes per document)
 - Dynamic confidence recalculation without rescanning
 
 ### Optimization Tips
+
 - Adjust `lsh_threshold` for speed vs accuracy
 - Tune `fuzzy_match_threshold` based on OCR quality
 - Use `force_rebuild` sparingly to preserve cache
@@ -195,6 +300,7 @@ uv run pytest --cov=paperless_dedupe
 ## Future Enhancements
 
 ### Planned Features
+
 - Web UI with React frontend
 - Automated document deletion
 - Webhook integration for real-time sync
@@ -203,6 +309,7 @@ uv run pytest --cov=paperless_dedupe
 - Batch resolution operations
 
 ### API Improvements
+
 - WebSocket for real-time progress
 - Bulk operations endpoint
 - Export functionality
@@ -213,21 +320,30 @@ uv run pytest --cov=paperless_dedupe
 ### Common Issues
 
 1. **Connection Failed**
+
    - Verify paperless-ngx URL is accessible
    - Check authentication credentials
    - Ensure API version compatibility
 
 2. **Slow Processing**
+
    - Reduce `max_ocr_length` for faster processing
    - Increase Redis memory limit
    - Use document limit for testing
 
-3. **High False Positives**
+3. **Database Issues**
+
+   - Ensure data directory exists and is writable
+   - Check disk space for SQLite database file
+   - Verify file permissions on data volume
+
+4. **High False Positives**
+
    - Increase `fuzzy_match_threshold`
    - Adjust `lsh_threshold` higher
    - Review confidence score weights
 
-4. **Missing Duplicates**
+5. **Missing Duplicates**
    - Lower thresholds carefully
    - Check OCR quality in paperless
    - Verify documents have content
@@ -235,17 +351,20 @@ uv run pytest --cov=paperless_dedupe
 ## Contributing
 
 ### Code Style
+
 - Follow PEP 8 guidelines
 - Use type hints for all functions
 - Document complex algorithms
 - Write unit tests for new features
 
 ### Commit Messages
+
 - Use conventional commits format
 - Reference issues when applicable
 - Keep messages concise but descriptive
 
 ### Testing Requirements
+
 - Maintain >80% code coverage
 - Test edge cases and error conditions
 - Include integration tests for API endpoints
