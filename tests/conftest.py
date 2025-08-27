@@ -12,8 +12,6 @@ import redis
 
 from paperless_dedupe.models.database import Base, get_db
 from paperless_dedupe.core.config import settings
-from paperless_dedupe.services.cache_service import cache_service
-
 
 @pytest.fixture(scope="function")
 def event_loop():
