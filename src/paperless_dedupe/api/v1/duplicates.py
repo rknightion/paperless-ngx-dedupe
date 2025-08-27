@@ -84,24 +84,33 @@ async def get_duplicate_groups(
         order_col = DuplicateGroup.created_at
     elif sort_by == "documents":
         # Sort by number of documents in the group - this requires a subquery
-        from sqlalchemy import func
         subquery = db.query(
             DuplicateMember.group_id,
             func.count(DuplicateMember.id).label('doc_count')
         ).group_by(DuplicateMember.group_id).subquery()
         query = query.outerjoin(subquery, DuplicateGroup.id == subquery.c.group_id)
-        order_col = subquery.c.doc_count
-    else:  # filename - sort by primary document's filename
-        # This is complex, for now just sort by confidence
+        order_col = func.coalesce(subquery.c.doc_count, 0)  # Handle NULLs from outer join
+    elif sort_by == "filename":
+        # Sort by primary document's filename
+        from sqlalchemy.orm import aliased
+        primary_member = aliased(DuplicateMember)
+        primary_doc = aliased(Document)
+        query = query.outerjoin(
+            primary_member, 
+            (DuplicateGroup.id == primary_member.group_id) & (primary_member.is_primary == True)
+        ).outerjoin(
+            primary_doc, 
+            primary_member.document_id == primary_doc.id
+        )
+        order_col = func.coalesce(primary_doc.original_filename, '')
+    else:
+        # Default to confidence
         order_col = DuplicateGroup.confidence_score
     
     if sort_order == "desc":
         query = query.order_by(order_col.desc())
     else:
         query = query.order_by(order_col.asc())
-    
-    # Get total count before pagination
-    total_count = query.count()
     total_pages = (total_count + page_size - 1) // page_size
     
     # Calculate skip from page number
