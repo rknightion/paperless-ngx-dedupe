@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
-from paperless_dedupe.models.database import get_db, DuplicateGroup, DuplicateMember
+from paperless_dedupe.models.database import get_db, DuplicateGroup, DuplicateMember, Document
 from pydantic import BaseModel
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -52,7 +53,9 @@ async def get_duplicate_groups(
     db: Session = Depends(get_db)
 ):
     """Get list of duplicate groups with pagination and dynamic confidence recalculation"""
-    query = db.query(DuplicateGroup)
+    try:
+        logger.debug(f"Getting duplicate groups: page={page}, page_size={page_size}, sort_by={sort_by}, sort_order={sort_order}")
+        query = db.query(DuplicateGroup)
     
     # Build confidence weights for dynamic recalculation
     weights = {
@@ -69,6 +72,10 @@ async def get_duplicate_groups(
         query = query.filter(DuplicateGroup.reviewed == reviewed)
     if resolved is not None:
         query = query.filter(DuplicateGroup.resolved == resolved)
+    
+    # Get total count before any joins for sorting
+    from sqlalchemy import func
+    total_count = query.count()
     
     # Apply sorting
     if sort_by == "confidence":
@@ -158,16 +165,21 @@ async def get_duplicate_groups(
             confidence_breakdown=confidence_breakdown
         ))
     
-    # Adjust total count to account for filtered groups
-    adjusted_count = total_count - skipped_count
-    
-    return DuplicateGroupsListResponse(
-        groups=result,
-        count=adjusted_count,
-        page=page,
-        page_size=page_size,
-        total_pages=(adjusted_count + page_size - 1) // page_size
-    )
+        # Adjust total count to account for filtered groups
+        adjusted_count = total_count - skipped_count
+        
+        return DuplicateGroupsListResponse(
+            groups=result,
+            count=adjusted_count,
+            page=page,
+            page_size=page_size,
+            total_pages=(adjusted_count + page_size - 1) // page_size
+        )
+    except Exception as e:
+        logger.error(f"Error in get_duplicate_groups: {str(e)}")
+        logger.error(f"Parameters: sort_by={sort_by}, sort_order={sort_order}, page={page}, page_size={page_size}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error fetching duplicate groups: {str(e)}")
 
 @router.get("/groups/{group_id}", response_model=DuplicateGroupResponse)
 async def get_duplicate_group(
