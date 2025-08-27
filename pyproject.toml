@@ -49,6 +49,27 @@ dependencies = [
     "aiofiles>=24.1.0",
     "python-dateutil>=2.8.2",
     "pypaperless>=1.2.1",
+    "opentelemetry-distro>=0.57b0",
+    "opentelemetry-exporter-otlp>=1.36.0",
+    "opentelemetry-instrumentation-asyncio==0.57b0",
+    "opentelemetry-instrumentation-dbapi==0.57b0",
+    "opentelemetry-instrumentation-logging==0.57b0",
+    "opentelemetry-instrumentation-sqlite3==0.57b0",
+    "opentelemetry-instrumentation-threading==0.57b0",
+    "opentelemetry-instrumentation-urllib==0.57b0",
+    "opentelemetry-instrumentation-wsgi==0.57b0",
+    "opentelemetry-instrumentation-aiohttp-client==0.57b0",
+    "opentelemetry-instrumentation-aiohttp-server==0.57b0",
+    "opentelemetry-instrumentation-click==0.57b0",
+    "opentelemetry-instrumentation-fastapi==0.57b0",
+    "opentelemetry-instrumentation-grpc==0.57b0",
+    "opentelemetry-instrumentation-httpx==0.57b0",
+    "opentelemetry-instrumentation-requests==0.57b0",
+    "opentelemetry-instrumentation-sqlalchemy==0.57b0",
+    "opentelemetry-instrumentation-starlette==0.57b0",
+    "opentelemetry-instrumentation-system-metrics==0.57b0",
+    "opentelemetry-instrumentation-tortoiseorm==0.57b0",
+    "opentelemetry-instrumentation-urllib3==0.57b0",
 ]
 
 [project.urls]
@@ -86,6 +107,7 @@ warn_return_any = true
 warn_unreachable = true
 strict_optional = true
 show_error_codes = true
+namespace_packages = true
 exclude = [
     "tests/",
     "scripts/",

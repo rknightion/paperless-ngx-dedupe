@@ -10,6 +10,12 @@ import { Progress } from "../ui/Progress";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Alert, AlertDescription } from "../ui/Alert";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/Tooltip";
+import {
   Play,
   Square,
   RefreshCw,
@@ -21,6 +27,7 @@ import {
   Activity,
   Wifi,
   WifiOff,
+  Info,
 } from "lucide-react";
 import type { AnalyzeRequest } from "../../services/api/types";
 
@@ -53,6 +60,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   const [analysisSettings, setAnalysisSettings] = useState<AnalysisSettings>({
     force_rebuild: false,
   });
+  const [showForceRebuildWarning, setShowForceRebuildWarning] = useState(false);
 
   // Fetch initial status on mount
   useEffect(() => {
@@ -82,6 +90,19 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         "Analysis is already in progress. Please wait for it to complete or cancel it first.",
       );
       return;
+    }
+
+    // Show warning if force rebuild is enabled
+    if (analysisSettings.force_rebuild) {
+      const confirmed = window.confirm(
+        "⚠️ Force Rebuild Warning\n\n" +
+        "This will DELETE all existing duplicate analysis results and re-analyze ALL documents from scratch.\n\n" +
+        "This action cannot be undone. Are you sure you want to continue?"
+      );
+      
+      if (!confirmed) {
+        return;
+      }
     }
 
     const request: AnalyzeRequest = {
@@ -385,8 +406,23 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   })
                 }
               />
-              <label htmlFor="force-rebuild" className="text-sm">
+              <label htmlFor="force-rebuild" className="text-sm flex items-center gap-1">
                 Force rebuild (reprocess all documents)
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>
+                        <strong>Default behavior:</strong> Only analyzes new documents that haven't been processed yet.
+                      </p>
+                      <p className="mt-1">
+                        <strong>With Force rebuild:</strong> Re-analyzes ALL documents in the database, recalculating all similarity scores. Use this if you've changed analysis settings or want to ensure everything is up-to-date.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </label>
             </div>
           </div>

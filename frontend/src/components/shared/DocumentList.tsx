@@ -74,6 +74,8 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
   };
 
   const getStatusBadge = (status: Document["processing_status"]) => {
+    if (!status) return null;
+    
     const variants = {
       pending: "secondary",
       processing: "warning",

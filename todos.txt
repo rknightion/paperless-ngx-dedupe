@@ -2,20 +2,14 @@
 It is okay to implement phases out of order if specifically instructed to do so.
 ALWAYS ensure this todos.txt file is kept up to date with the latest completed phase by adding ticks to the tickboxes in each line.
 
-
-Phase 0: (Original):
-
-
-Phase 1:
-## Duplicate Page Enhancements
-- [x] Make the no of duplicate groups shown per page configurable up to 500 groups per page
-- [ ] Fix showing document tags on each document in the duplicate group box so it shows the tag name instead of just the tag ID
-- [ ] Add confidence breakdown customization UI (include/exclude factors)
-- [ ] Add similarity indicators for each document vs primary in group
-- [ ] Add bulk actions explanations with inline action buttons
-- [x] Allow manual removal of documents from groups (UI added, backend pending)
-- [x] Add option to delete individual documents from paperless-ngx directly from the duplicate group section on the duplicates page (UI added, backend pending)
-- [x] Add confidence weights configuration in settings so users can enable or disable Filename and/or Metadata from being used to calculate the total confidence score
+Phase 1: ✅ COMPLETED
+## Ongoing tasks
+- [x] Fixed pagination issue - only showing 1 group regardless of page_size setting (COMPLETED: Fixed indentation in duplicates.py causing loop to exit early)
+- [x] Fixed expand button not working on duplicate group cards (COMPLETED: Removed redundant expand button, enhanced tooltips)
+- [x] Fixed tag display showing 'tag-1' instead of actual tag names (COMPLETED: Added tag fetching and ID->name mapping with type handling)
+- [x] Fixed similarity calculation returning None causing 0% similarity display (COMPLETED: Added None checks for round() operations)
+- [x] Added detailed confidence factor descriptions in Understanding dropdown (COMPLETED: Added comprehensive explanations for Jaccard, Fuzzy, Metadata, Filename)
+- [x] Implemented confidence weight customization in settings (COMPLETED: Added sliders for adjusting weights 0-100%, backend support, validation)
 
 
 Phase 2:

@@ -44,6 +44,18 @@ class ConfigUpdate(BaseModel):
     fuzzy_match_sample_size: int | None = Field(
         None, ge=100, le=10000, description="Characters to sample for fuzzy matching"
     )
+    confidence_weight_jaccard: int | None = Field(
+        None, ge=0, le=100, description="Weight for Jaccard similarity (0-100)"
+    )
+    confidence_weight_fuzzy: int | None = Field(
+        None, ge=0, le=100, description="Weight for fuzzy text matching (0-100)"
+    )
+    confidence_weight_metadata: int | None = Field(
+        None, ge=0, le=100, description="Weight for metadata similarity (0-100)"
+    )
+    confidence_weight_filename: int | None = Field(
+        None, ge=0, le=100, description="Weight for filename similarity (0-100)"
+    )
 
     @validator("paperless_url")
     def validate_url(cls, v):
@@ -54,6 +66,25 @@ class ConfigUpdate(BaseModel):
             raise ValueError("URL must start with http:// or https://")
         # Remove trailing slashes for consistency
         return v.rstrip("/")
+    
+    @validator("confidence_weight_filename")
+    def validate_weights(cls, v, values):
+        """Validate that confidence weights sum to 100 if any are provided"""
+        # Only validate if at least one weight is being updated
+        weights = []
+        for key in ['confidence_weight_jaccard', 'confidence_weight_fuzzy', 
+                    'confidence_weight_metadata', 'confidence_weight_filename']:
+            if key in values and values[key] is not None:
+                weights.append(values[key])
+            elif key == 'confidence_weight_filename' and v is not None:
+                weights.append(v)
+                
+        if weights and len(weights) == 4:  # All weights provided
+            total = sum(weights)
+            if total != 100:
+                raise ValueError(f"Confidence weights must sum to 100 (currently {total})")
+        
+        return v
 
 
 class ConnectionTestResponse(BaseModel):
@@ -91,6 +122,18 @@ async def get_config(db: Session = Depends(get_db)):
         ),
         "fuzzy_match_sample_size": db_config.get(
             "fuzzy_match_sample_size", settings.fuzzy_match_sample_size
+        ),
+        "confidence_weight_jaccard": db_config.get(
+            "confidence_weight_jaccard", settings.confidence_weight_jaccard
+        ),
+        "confidence_weight_fuzzy": db_config.get(
+            "confidence_weight_fuzzy", settings.confidence_weight_fuzzy
+        ),
+        "confidence_weight_metadata": db_config.get(
+            "confidence_weight_metadata", settings.confidence_weight_metadata
+        ),
+        "confidence_weight_filename": db_config.get(
+            "confidence_weight_filename", settings.confidence_weight_filename
         ),
         "minhash_num_perm": settings.minhash_num_perm,
         "lsh_num_bands": settings.lsh_num_bands,

@@ -32,6 +32,7 @@ import {
   Settings,
   TestTube,
   Info,
+  AlertCircle,
 } from "lucide-react";
 import type { Configuration } from "../../services/api/types";
 
@@ -47,16 +48,31 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [confidenceWeights, setConfidenceWeights] = useState({
-    useJaccard: true,
-    useFuzzy: true,
-    useMetadata: true,
-    useFilename: true,
+    jaccard: 40,
+    fuzzy: 30,
+    metadata: 20,
+    filename: 10,
   });
+  const [weightsChanged, setWeightsChanged] = useState(false);
 
   // Load configuration on mount
   useEffect(() => {
     dispatch(fetchConfiguration());
   }, [dispatch]);
+
+  // Update confidence weights when config loads
+  useEffect(() => {
+    if (formData.confidence_weight_jaccard !== undefined) {
+      const newWeights = {
+        jaccard: formData.confidence_weight_jaccard ?? 40,
+        fuzzy: formData.confidence_weight_fuzzy ?? 30,
+        metadata: formData.confidence_weight_metadata ?? 20,
+        filename: formData.confidence_weight_filename ?? 10,
+      };
+      setConfidenceWeights(newWeights);
+      setWeightsChanged(false); // Reset when loading from server
+    }
+  }, [formData]);
 
   // Handle form field changes
   const handleFieldChange = (
@@ -68,10 +84,19 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
 
   // Handle form submission
   const handleSave = async () => {
-    if (!hasUnsavedChanges) return;
+    if (!hasUnsavedChanges && !weightsChanged) return;
 
     try {
-      await dispatch(updateConfiguration(formData)).unwrap();
+      // Include confidence weights in the update
+      const configWithWeights = {
+        ...formData,
+        confidence_weight_jaccard: confidenceWeights.jaccard,
+        confidence_weight_fuzzy: confidenceWeights.fuzzy,
+        confidence_weight_metadata: confidenceWeights.metadata,
+        confidence_weight_filename: confidenceWeights.filename,
+      };
+      await dispatch(updateConfiguration(configWithWeights)).unwrap();
+      setWeightsChanged(false); // Reset after successful save
     } catch (error) {
       console.error("Failed to save configuration:", error);
     }
@@ -418,90 +443,192 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
           {/* Confidence Weights Configuration */}
           <div className="pt-4 border-t">
             <h4 className="text-sm font-medium mb-3">
-              Confidence Score Factors
+              Confidence Score Weights
             </h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {/* Jaccard Weight */}
               <div className="space-y-2">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={confidenceWeights.useJaccard}
-                    onChange={(e) =>
-                      setConfidenceWeights((prev) => ({
-                        ...prev,
-                        useJaccard: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span className="text-sm">
-                    <strong>Jaccard Similarity (40%)</strong>
-                    <span className="block text-xs text-muted-foreground">
-                      Overlapping unique words between documents
-                    </span>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="weight_jaccard">
+                    Jaccard Similarity ({confidenceWeights.jaccard}%)
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    MinHash content fingerprinting
                   </span>
-                </label>
+                </div>
+                <Input
+                  id="weight_jaccard"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={confidenceWeights.jaccard}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value);
+                    const diff = newValue - confidenceWeights.jaccard;
+                    // Auto-adjust other weights proportionally
+                    const remaining = 100 - newValue;
+                    const currentOthers = 100 - confidenceWeights.jaccard;
+                    if (currentOthers > 0 && remaining >= 0) {
+                      const scale = remaining / currentOthers;
+                      setConfidenceWeights({
+                        jaccard: newValue,
+                        fuzzy: Math.round(confidenceWeights.fuzzy * scale),
+                        metadata: Math.round(confidenceWeights.metadata * scale),
+                        filename: remaining - Math.round(confidenceWeights.fuzzy * scale) - Math.round(confidenceWeights.metadata * scale),
+                      });
+                      setWeightsChanged(true);
+                    }
+                  }}
+                  className="w-full"
+                />
               </div>
+
+              {/* Fuzzy Weight */}
               <div className="space-y-2">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={confidenceWeights.useFuzzy}
-                    onChange={(e) =>
-                      setConfidenceWeights((prev) => ({
-                        ...prev,
-                        useFuzzy: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span className="text-sm">
-                    <strong>Fuzzy Text Match (30%)</strong>
-                    <span className="block text-xs text-muted-foreground">
-                      Handles OCR errors and text variations
-                    </span>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="weight_fuzzy">
+                    Fuzzy Text Match ({confidenceWeights.fuzzy}%)
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    Handles OCR errors and variations
                   </span>
-                </label>
+                </div>
+                <Input
+                  id="weight_fuzzy"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={confidenceWeights.fuzzy}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value);
+                    const diff = newValue - confidenceWeights.fuzzy;
+                    const remaining = 100 - newValue - confidenceWeights.jaccard;
+                    if (remaining >= 0) {
+                      const currentOthers = confidenceWeights.metadata + confidenceWeights.filename;
+                      if (currentOthers > 0) {
+                        const scale = remaining / currentOthers;
+                        setConfidenceWeights({
+                          ...confidenceWeights,
+                          fuzzy: newValue,
+                          metadata: Math.round(confidenceWeights.metadata * scale),
+                          filename: remaining - Math.round(confidenceWeights.metadata * scale),
+                        });
+                        setWeightsChanged(true);
+                      }
+                    }
+                  }}
+                  className="w-full"
+                />
               </div>
+
+              {/* Metadata Weight */}
               <div className="space-y-2">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={confidenceWeights.useMetadata}
-                    onChange={(e) =>
-                      setConfidenceWeights((prev) => ({
-                        ...prev,
-                        useMetadata: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span className="text-sm">
-                    <strong>Metadata Match (20%)</strong>
-                    <span className="block text-xs text-muted-foreground">
-                      Date, size, and document type matching
-                    </span>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="weight_metadata">
+                    Metadata Match ({confidenceWeights.metadata}%)
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    File size, dates, types, correspondents
                   </span>
-                </label>
+                </div>
+                <Input
+                  id="weight_metadata"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={confidenceWeights.metadata}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value);
+                    const remaining = 100 - newValue - confidenceWeights.jaccard - confidenceWeights.fuzzy;
+                    if (remaining >= 0) {
+                      setConfidenceWeights({
+                        ...confidenceWeights,
+                        metadata: newValue,
+                        filename: remaining,
+                      });
+                      setWeightsChanged(true);
+                    }
+                  }}
+                  className="w-full"
+                />
               </div>
+
+              {/* Filename Weight */}
               <div className="space-y-2">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={confidenceWeights.useFilename}
-                    onChange={(e) =>
-                      setConfidenceWeights((prev) => ({
-                        ...prev,
-                        useFilename: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span className="text-sm">
-                    <strong>Filename Match (10%)</strong>
-                    <span className="block text-xs text-muted-foreground">
-                      Similarity between document filenames
-                    </span>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="weight_filename">
+                    Filename Match ({confidenceWeights.filename}%)
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    Original filename similarity
                   </span>
-                </label>
+                </div>
+                <Input
+                  id="weight_filename"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={confidenceWeights.filename}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value);
+                    const remaining = 100 - newValue - confidenceWeights.jaccard - confidenceWeights.fuzzy;
+                    if (remaining >= 0) {
+                      setConfidenceWeights({
+                        ...confidenceWeights,
+                        filename: newValue,
+                        metadata: remaining,
+                      });
+                      setWeightsChanged(true);
+                    }
+                  }}
+                  className="w-full"
+                />
               </div>
+
+              {/* Total Weight Display */}
+              <div className="p-3 bg-muted rounded-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Total Weight:</span>
+                  <span className={`text-sm font-bold ${
+                    confidenceWeights.jaccard + confidenceWeights.fuzzy + 
+                    confidenceWeights.metadata + confidenceWeights.filename === 100
+                      ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {confidenceWeights.jaccard + confidenceWeights.fuzzy + 
+                     confidenceWeights.metadata + confidenceWeights.filename}%
+                  </span>
+                </div>
+                {confidenceWeights.jaccard + confidenceWeights.fuzzy + 
+                 confidenceWeights.metadata + confidenceWeights.filename !== 100 && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Weights must sum to exactly 100%. Adjust the sliders to balance.
+                  </p>
+                )}
+              </div>
+
+              {/* Warning about re-analysis */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-900">
+                      Re-analysis Required
+                    </p>
+                    <p className="text-amber-800 mt-1">
+                      Changing confidence weights will require re-analyzing documents to 
+                      recalculate duplicate groups with the new weightings. This process 
+                      will start automatically after saving.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Tip: Set a weight to 0 to completely disable that factor. For poor quality 
+                scans, increase fuzzy text weight. For consistent document types, increase 
+                metadata weight.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              Note: At least one factor must be enabled. Weights will be
-              automatically recalculated when factors are disabled.
-            </p>
           </div>
         </div>
 
@@ -509,9 +636,12 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
         <div className="flex items-center justify-between pt-6 border-t">
           <div className="space-x-2">
             <Button
-              onClick={handleReset}
+              onClick={() => {
+                handleReset();
+                setWeightsChanged(false);
+              }}
               variant="outline"
-              disabled={!hasUnsavedChanges}
+              disabled={!hasUnsavedChanges && !weightsChanged}
             >
               Reset
             </Button>
@@ -533,7 +663,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
 
           <Button
             onClick={handleSave}
-            disabled={!hasUnsavedChanges || loading.update}
+            disabled={(!hasUnsavedChanges && !weightsChanged) || loading.update}
           >
             {loading.update ? (
               <>
@@ -546,7 +676,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
           </Button>
         </div>
 
-        {hasUnsavedChanges && (
+        {(hasUnsavedChanges || weightsChanged) && (
           <p className="text-sm text-muted-foreground">
             * You have unsaved changes
           </p>

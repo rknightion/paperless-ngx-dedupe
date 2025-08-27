@@ -89,13 +89,19 @@ class DeduplicationService:
 
         scores = []
         weights = []
+        
+        # Get weights from settings (convert percentages to decimals)
+        weight_jaccard = settings.confidence_weight_jaccard / 100.0
+        weight_fuzzy = settings.confidence_weight_fuzzy / 100.0
+        weight_metadata = settings.confidence_weight_metadata / 100.0
+        weight_filename = settings.confidence_weight_filename / 100.0
 
         # MinHash Jaccard similarity (FAST - already computed)
-        if doc1.id in self.minhashes and doc2.id in self.minhashes:
+        if doc1.id in self.minhashes and doc2.id in self.minhashes and weight_jaccard > 0:
             jaccard_sim = self.minhashes[doc1.id].jaccard(self.minhashes[doc2.id])
             component_scores["jaccard"] = jaccard_sim
             scores.append(jaccard_sim)
-            weights.append(0.4)
+            weights.append(weight_jaccard)
 
         # Metadata similarity - combine multiple factors
         metadata_scores = []
@@ -126,12 +132,12 @@ class DeduplicationService:
 
         if metadata_scores:
             component_scores["metadata"] = sum(metadata_scores) / len(metadata_scores)
-            if not quick_mode:  # Only use metadata in full mode
+            if not quick_mode and weight_metadata > 0:  # Only use metadata in full mode and if weight > 0
                 scores.append(component_scores["metadata"])
-                weights.append(0.2)
+                weights.append(weight_metadata)
 
         # Filename similarity
-        if doc1.original_filename and doc2.original_filename and not quick_mode:
+        if doc1.original_filename and doc2.original_filename and not quick_mode and weight_filename > 0:
             filename_score = (
                 fuzz.ratio(
                     doc1.original_filename.lower(), doc2.original_filename.lower()
@@ -140,10 +146,10 @@ class DeduplicationService:
             )
             component_scores["filename"] = filename_score
             scores.append(filename_score)
-            weights.append(0.1)
+            weights.append(weight_filename)
 
         # Skip expensive fuzzy matching in quick mode or if disabled
-        if not quick_mode and settings.enable_fuzzy_matching and text1 and text2:
+        if not quick_mode and settings.enable_fuzzy_matching and text1 and text2 and weight_fuzzy > 0:
             # Limit text size for fuzzy matching to improve performance
             sample_size = settings.fuzzy_match_sample_size
             text1_sample = text1[:sample_size]
@@ -153,7 +159,7 @@ class DeduplicationService:
             fuzzy_score = fuzz.token_sort_ratio(text1_sample, text2_sample) / 100.0
             component_scores["fuzzy"] = fuzzy_score
             scores.append(fuzzy_score)
-            weights.append(0.3)
+            weights.append(weight_fuzzy)
 
         # Calculate weighted average
         if scores:
@@ -173,6 +179,10 @@ class DeduplicationService:
     ):
         """Build LSH index for all documents"""
         logger.info(f"Building LSH index for {len(documents)} documents")
+        
+        # Send initial progress immediately
+        if progress_callback:
+            await progress_callback("Generating document fingerprints", 0, len(documents))
 
         self.lsh_index = MinHashLSH(
             threshold=settings.lsh_threshold, num_perm=settings.minhash_num_perm
@@ -201,9 +211,22 @@ class DeduplicationService:
 
             processed += 1
 
-            # Report progress every 100 documents or on last
-            if progress_callback and (processed % 100 == 0 or idx == total_docs - 1):
-                await progress_callback("Building LSH index", processed, total_docs)
+            # Report progress more frequently at the beginning, then less often
+            # First 100: every document
+            # 100-1000: every 5 documents  
+            # 1000+: every 10 documents
+            should_report = False
+            if processed <= 100:
+                should_report = True
+            elif processed <= 1000 and processed % 5 == 0:
+                should_report = True
+            elif processed % 10 == 0:
+                should_report = True
+            elif idx == total_docs - 1:  # Always report last
+                should_report = True
+                
+            if progress_callback and should_report:
+                await progress_callback("Building similarity index", processed, total_docs)
 
             # Yield control periodically to prevent blocking
             if processed % 50 == 0:
@@ -242,6 +265,14 @@ class DeduplicationService:
         for idx, doc in enumerate(documents):
             if doc.id in processed or doc.id not in self.minhashes:
                 continue
+
+            # Report progress periodically during duplicate detection
+            if progress_callback and (idx % 50 == 0 or idx == total_docs - 1):
+                await progress_callback(
+                    f"Detecting duplicates ({len(duplicate_groups)} groups found)",
+                    idx + 1,
+                    total_docs
+                )
 
             # Query LSH for similar documents (FAST)
             candidates = self.lsh_index.query(self.minhashes[doc.id])
@@ -342,8 +373,8 @@ class DeduplicationService:
                         }
                     )
 
-            # Report progress more frequently during the computationally intensive phase
-            if progress_callback and ((idx + 1) % 50 == 0 or idx == total_docs - 1):
+            # Report progress frequently during the computationally intensive phase
+            if progress_callback and ((idx + 1) % 10 == 0 or idx == total_docs - 1):
                 await progress_callback(
                     f"Analyzing documents for duplicates ({total_comparisons} comparisons)",
                     idx + 1,

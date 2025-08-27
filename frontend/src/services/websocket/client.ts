@@ -43,6 +43,9 @@ class WebSocketClient {
 
           // Start ping interval to keep connection alive
           this.startPingInterval();
+          
+          // Emit connection event
+          this.emit("connected", true);
 
           resolve();
         };
@@ -50,6 +53,9 @@ class WebSocketClient {
         this.socket.onclose = (event) => {
           this.isConnected = false;
           this.stopPingInterval();
+          
+          // Emit disconnection event
+          this.emit("disconnected", false);
 
           // Auto-reconnect unless it was a normal closure
           if (event.code !== 1000) {
@@ -176,6 +182,8 @@ class WebSocketClient {
   }
 
   // Event listener methods
+  on(event: "connected", callback: (connected: boolean) => void): void;
+  on(event: "disconnected", callback: (connected: boolean) => void): void;
   on(event: "processing_update", callback: ProcessingUpdateCallback): void;
   on(event: "sync_update", callback: SyncUpdateCallback): void;
   on(event: "sync_completed", callback: (data: any) => void): void;

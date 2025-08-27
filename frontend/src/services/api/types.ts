@@ -19,7 +19,7 @@ export interface Document {
   checksum?: string;
   archive_serial_number?: number;
   filename?: string;
-  processing_status: "pending" | "processing" | "completed" | "error";
+  processing_status?: "pending" | "processing" | "completed" | "error";
   fingerprint?: string;
   has_duplicates?: boolean;
   // Additional metadata fields
@@ -28,6 +28,15 @@ export interface Document {
   tags?: string[];
   original_filename?: string;
   created?: string; // Alias for created_date
+  is_primary?: boolean;
+  // Similarity data for documents in duplicate groups
+  similarity_to_primary?: {
+    overall: number;
+    jaccard_similarity: number;
+    fuzzy_text_ratio: number;
+    metadata_similarity: number;
+    filename_similarity: number;
+  };
 }
 
 export interface DocumentContent {
@@ -110,6 +119,10 @@ export interface Configuration {
   max_ocr_length: number;
   lsh_threshold: number;
   minhash_num_perm: number;
+  confidence_weight_jaccard?: number;
+  confidence_weight_fuzzy?: number;
+  confidence_weight_metadata?: number;
+  confidence_weight_filename?: number;
 }
 
 export interface TestConnectionResponse {

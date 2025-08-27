@@ -28,6 +28,14 @@ const webSocketMiddleware: Middleware = (store) => (next) => (action: any) => {
         store.dispatch(setWebSocketConnected(true));
 
         // Set up WebSocket event listeners
+        wsClient.on("connected", (connected) => {
+          store.dispatch(setWebSocketConnected(connected));
+        });
+        
+        wsClient.on("disconnected", (connected) => {
+          store.dispatch(setWebSocketConnected(connected));
+        });
+        
         wsClient.on("processing_update", (status) => {
           store.dispatch(updateProcessingStatus(status));
         });

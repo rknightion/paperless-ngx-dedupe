@@ -32,7 +32,6 @@ import {
   FileX,
   Settings,
   Info,
-  HelpCircle,
   ChevronDown,
   ChevronUp,
   FileText,
@@ -128,8 +127,6 @@ export const DuplicatesPage: React.FC = () => {
   };
 
   // Filter groups based on search and filters
-  // Calculate total pages
-  const totalPages = Math.ceil(totalCount / pageSize);
 
   const filteredGroups = (groups || []).filter((group) => {
     const matchesSearch =
@@ -145,6 +142,14 @@ export const DuplicatesPage: React.FC = () => {
 
     return matchesSearch && matchesReviewed && matchesConfidence;
   });
+  
+  // Calculate total pages based on filtered groups
+  const totalPages = Math.ceil(filteredGroups.length / pageSize);
+  
+  // Paginate the filtered groups
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedGroups = filteredGroups.slice(startIndex, endIndex);
 
   const StatCard: React.FC<{
     title: string;
@@ -326,56 +331,172 @@ export const DuplicatesPage: React.FC = () => {
 
             {showConfidenceSettings && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox
-                      checked={confidenceWeights.jaccard}
-                      onChange={(e) =>
-                        setConfidenceWeights((prev) => ({
-                          ...prev,
-                          jaccard: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span className="text-sm">Jaccard (40%)</span>
-                  </label>
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox
-                      checked={confidenceWeights.fuzzy}
-                      onChange={(e) =>
-                        setConfidenceWeights((prev) => ({
-                          ...prev,
-                          fuzzy: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span className="text-sm">Fuzzy Text (30%)</span>
-                  </label>
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox
-                      checked={confidenceWeights.metadata}
-                      onChange={(e) =>
-                        setConfidenceWeights((prev) => ({
-                          ...prev,
-                          metadata: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span className="text-sm">Metadata (20%)</span>
-                  </label>
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox
-                      checked={confidenceWeights.filename}
-                      onChange={(e) =>
-                        setConfidenceWeights((prev) => ({
-                          ...prev,
-                          filename: e.target.checked,
-                        }))
-                      }
-                    />
-                    <span className="text-sm">Filename (10%)</span>
-                  </label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-sm font-medium text-gray-900">
+                      Include/Exclude Confidence Factors
+                    </h5>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const allEnabled = Object.values(confidenceWeights).every(Boolean);
+                        if (allEnabled) {
+                          // If all are enabled, we need to keep at least one enabled
+                          setConfidenceWeights({
+                            jaccard: true,  // Keep one enabled as fallback
+                            fuzzy: false,
+                            metadata: false,
+                            filename: false,
+                          });
+                        } else {
+                          // Enable all
+                          setConfidenceWeights({
+                            jaccard: true,
+                            fuzzy: true,
+                            metadata: true,
+                            filename: true,
+                          });
+                        }
+                      }}
+                      className="text-xs"
+                    >
+                      {Object.values(confidenceWeights).every(Boolean) ? "Disable All" : "Enable All"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Toggle factors on/off to customize how confidence is calculated. 
+                    Disabled factors are completely excluded from scoring.
+                  </p>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                      confidenceWeights.jaccard 
+                        ? "border-blue-200 bg-blue-50" 
+                        : "border-gray-200 bg-gray-50"
+                    }`}>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={confidenceWeights.jaccard}
+                          onChange={(e) => {
+                            const newWeights = { ...confidenceWeights, jaccard: e.target.checked };
+                            // Prevent disabling all factors
+                            if (Object.values(newWeights).some(Boolean)) {
+                              setConfidenceWeights(newWeights);
+                            }
+                          }}
+                        />
+                        <div>
+                          <span className="text-sm font-medium">Content Similarity</span>
+                          <p className="text-xs text-muted-foreground">
+                            MinHash/Jaccard similarity of document text
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        40%
+                      </Badge>
+                    </label>
+
+                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                      confidenceWeights.fuzzy 
+                        ? "border-green-200 bg-green-50" 
+                        : "border-gray-200 bg-gray-50"
+                    }`}>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={confidenceWeights.fuzzy}
+                          onChange={(e) => {
+                            const newWeights = { ...confidenceWeights, fuzzy: e.target.checked };
+                            // Prevent disabling all factors
+                            if (Object.values(newWeights).some(Boolean)) {
+                              setConfidenceWeights(newWeights);
+                            }
+                          }}
+                        />
+                        <div>
+                          <span className="text-sm font-medium">Fuzzy Text Match</span>
+                          <p className="text-xs text-muted-foreground">
+                            Handles OCR errors and word order changes
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        30%
+                      </Badge>
+                    </label>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                      confidenceWeights.metadata 
+                        ? "border-yellow-200 bg-yellow-50" 
+                        : "border-gray-200 bg-gray-50"
+                    }`}>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={confidenceWeights.metadata}
+                          onChange={(e) => {
+                            const newWeights = { ...confidenceWeights, metadata: e.target.checked };
+                            // Prevent disabling all factors
+                            if (Object.values(newWeights).some(Boolean)) {
+                              setConfidenceWeights(newWeights);
+                            }
+                          }}
+                        />
+                        <div>
+                          <span className="text-sm font-medium">Metadata Match</span>
+                          <p className="text-xs text-muted-foreground">
+                            File size, dates, types, correspondents
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        20%
+                      </Badge>
+                    </label>
+
+                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                      confidenceWeights.filename 
+                        ? "border-purple-200 bg-purple-50" 
+                        : "border-gray-200 bg-gray-50"
+                    }`}>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={confidenceWeights.filename}
+                          onChange={(e) => {
+                            const newWeights = { ...confidenceWeights, filename: e.target.checked };
+                            // Prevent disabling all factors
+                            if (Object.values(newWeights).some(Boolean)) {
+                              setConfidenceWeights(newWeights);
+                            }
+                          }}
+                        />
+                        <div>
+                          <span className="text-sm font-medium">Filename Match</span>
+                          <p className="text-xs text-muted-foreground">
+                            Original filename similarity
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        10%
+                      </Badge>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Validation Warning */}
+                {!Object.values(confidenceWeights).some(Boolean) && (
+                  <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <p className="text-sm text-red-800">
+                      At least one factor must be enabled for confidence calculation.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
@@ -535,30 +656,84 @@ export const DuplicatesPage: React.FC = () => {
               </div>
 
               <div className="p-3 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-lg border border-indigo-100/30">
-                <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
                   <Percent className="h-4 w-4 mr-2 text-indigo-600" />
-                  Confidence Breakdown
+                  Confidence Factors Explained
                 </h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
-                    <span className="text-gray-700 font-medium">
-                      Jaccard Similarity
-                    </span>
-                    <span className="text-indigo-600 font-semibold">40%</span>
+                <div className="space-y-3">
+                  <div className="p-3 bg-white/60 rounded-lg border border-indigo-100/50">
+                    <div className="flex items-start justify-between mb-1">
+                      <span className="text-gray-800 font-semibold">
+                        Jaccard Similarity
+                      </span>
+                      <Badge variant="outline" className="text-xs bg-indigo-50">
+                        40% weight
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Measures the overlap between document content using MinHash signatures. This technique creates a 
+                      "fingerprint" of each document by selecting a set of characteristic word sequences (shingles). 
+                      Documents with similar fingerprints likely contain similar content. Highly effective for finding 
+                      near-duplicates even when word order varies or small edits have been made.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
-                    <span className="text-gray-700 font-medium">
-                      Fuzzy Text
-                    </span>
-                    <span className="text-purple-600 font-semibold">30%</span>
+                  
+                  <div className="p-3 bg-white/60 rounded-lg border border-purple-100/50">
+                    <div className="flex items-start justify-between mb-1">
+                      <span className="text-gray-800 font-semibold">
+                        Fuzzy Text Matching
+                      </span>
+                      <Badge variant="outline" className="text-xs bg-purple-50">
+                        30% weight
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Uses advanced string matching algorithms (Levenshtein distance) to find similar text even when 
+                      there are OCR errors, typos, or minor variations. This is crucial for scanned documents where 
+                      OCR might misread characters (e.g., "0" as "O", "rn" as "m"). Can detect documents that are 
+                      the same despite scanning artifacts or quality issues.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
-                    <span className="text-gray-700 font-medium">Metadata</span>
-                    <span className="text-indigo-600 font-semibold">20%</span>
+                  
+                  <div className="p-3 bg-white/60 rounded-lg border border-yellow-100/50">
+                    <div className="flex items-start justify-between mb-1">
+                      <span className="text-gray-800 font-semibold">
+                        Metadata Similarity
+                      </span>
+                      <Badge variant="outline" className="text-xs bg-yellow-50">
+                        20% weight
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Compares document properties including: file size (within 10% tolerance), creation and modification 
+                      dates (same day), document type (invoice, receipt, etc.), correspondent (sender/company), and tags. 
+                      Documents with matching metadata are more likely to be duplicates. This helps catch re-scanned 
+                      documents that might have different text due to OCR variations.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-white/60 rounded">
-                    <span className="text-gray-700 font-medium">Filename</span>
-                    <span className="text-purple-600 font-semibold">10%</span>
+                  
+                  <div className="p-3 bg-white/60 rounded-lg border border-green-100/50">
+                    <div className="flex items-start justify-between mb-1">
+                      <span className="text-gray-800 font-semibold">
+                        Filename Similarity
+                      </span>
+                      <Badge variant="outline" className="text-xs bg-green-50">
+                        10% weight
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Compares the original filenames of documents using fuzzy matching. Useful for finding documents 
+                      that were renamed slightly (e.g., "invoice_2024.pdf" vs "invoice-2024.pdf" or "scan001.pdf" vs 
+                      "scan002.pdf"). Lower weight because filenames can be arbitrary.
+                    </p>
+                  </div>
+                  
+                  <div className="mt-3 p-2 bg-blue-50/50 rounded border border-blue-200/50">
+                    <p className="text-xs text-blue-800">
+                      <strong>Note:</strong> You can customize these weights in Settings to better match your document types. 
+                      For example, increase metadata weight for invoices with consistent formatting, or increase fuzzy text 
+                      weight for poor quality scans.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -683,8 +858,8 @@ export const DuplicatesPage: React.FC = () => {
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            Showing {Math.min(pageSize, filteredGroups.length)} of{" "}
-            {totalCount || groups.length} groups
+            Showing {paginatedGroups.length} of{" "}
+            {filteredGroups.length} groups
             {statistics && statistics.potential_deletions > 0 && (
               <span className="ml-2">
                 • {statistics.potential_deletions} documents can be deleted
@@ -812,7 +987,7 @@ export const DuplicatesPage: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredGroups.map((group) => (
+          {paginatedGroups.map((group) => (
             <div key={group.id} className="flex items-start space-x-2">
               {bulkSelectMode && (
                 <Checkbox
@@ -833,7 +1008,7 @@ export const DuplicatesPage: React.FC = () => {
       )}
 
       {/* Page Navigation Bottom */}
-      {totalPages > 1 && filteredGroups.length > 0 && (
+      {totalPages > 1 && paginatedGroups.length > 0 && (
         <div className="flex items-center justify-center space-x-2 pt-4 border-t">
           <Button
             variant="outline"

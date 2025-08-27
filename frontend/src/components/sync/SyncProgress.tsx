@@ -4,15 +4,22 @@ import { Button } from "../ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Alert, AlertDescription } from "../ui/Alert";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/Tooltip";
+import {
   Loader2,
   CheckCircle,
   AlertCircle,
   RefreshCw,
   FileText,
+  Info,
 } from "lucide-react";
 import { documentsApi } from "../../services/api/documents";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
-import { fetchDocuments } from "../../store/slices/documentsSlice";
+import { fetchDocuments, updateSyncStatus } from "../../store/slices/documentsSlice";
 import { useProcessingStatus } from "../../hooks/redux";
 
 interface SyncStatus {
@@ -41,7 +48,7 @@ export const SyncProgress: React.FC = () => {
       .then((status) => {
         // Update Redux store with initial status
         if (status) {
-          dispatch({ type: 'documents/updateSyncStatus', payload: status });
+          dispatch(updateSyncStatus(status));
         }
       })
       .catch(console.error);
@@ -70,6 +77,17 @@ export const SyncProgress: React.FC = () => {
   };
 
   const handleForceSync = async () => {
+    // Show warning dialog
+    const confirmed = window.confirm(
+      "⚠️ Force Refresh Warning\n\n" +
+      "This will DELETE all existing documents and duplicate analysis results, then re-import everything from Paperless-NGX.\n\n" +
+      "This action cannot be undone. Are you sure you want to continue?"
+    );
+    
+    if (!confirmed) {
+      return;
+    }
+    
     setIsLoading(true);
     try {
       await documentsApi.syncDocuments({ force_refresh: true });
@@ -164,32 +182,64 @@ export const SyncProgress: React.FC = () => {
             )}
 
             <div className="flex gap-2">
-              <Button
-                onClick={handleStartSync}
-                disabled={isLoading || syncStatus.is_syncing || processingStatus.is_processing}
-                className="flex-1"
-                title={processingStatus.is_processing ? "Cannot sync while analysis is in progress" : ""}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Sync Documents
-                  </>
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex-1">
+                      <Button
+                        onClick={handleStartSync}
+                        disabled={isLoading || syncStatus.is_syncing || processingStatus.is_processing}
+                        className="w-full"
+                        title={processingStatus.is_processing ? "Cannot sync while analysis is in progress" : ""}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Starting...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Sync Documents
+                            <Info className="h-3 w-3 ml-1" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>
+                      <strong>Sync Documents:</strong> Fetches only NEW documents from Paperless-NGX that haven't been imported yet. Existing documents are skipped.
+                    </p>
+                    <p className="mt-1 text-xs">
+                      Use this for regular updates to import recently added documents.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-              <Button
-                onClick={handleForceSync}
-                disabled={isLoading || syncStatus.is_syncing}
-                variant="outline"
-              >
-                Force Refresh
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleForceSync}
+                      disabled={isLoading || syncStatus.is_syncing || processingStatus.is_processing}
+                      variant="outline"
+                    >
+                      Force Refresh
+                      <Info className="h-3 w-3 ml-1" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>
+                      <strong>Force Refresh:</strong> Re-fetches ALL documents from Paperless-NGX, updating metadata and OCR content for existing documents.
+                    </p>
+                    <p className="mt-1 text-xs">
+                      Use this if document metadata or OCR content has changed in Paperless-NGX and you need to update the local copies.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </>
         )}

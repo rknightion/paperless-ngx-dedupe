@@ -7,13 +7,68 @@ from sqlalchemy.orm import Session
 
 from paperless_dedupe.models.database import (
     Document,
+    DocumentContent,
     DuplicateGroup,
     DuplicateMember,
     get_db,
 )
+from paperless_dedupe.services.deduplication_service import DeduplicationService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def calculate_document_similarity(
+    dedup_service: DeduplicationService, 
+    primary_doc: Document, 
+    secondary_doc: Document,
+    primary_content: str = None,
+    secondary_content: str = None
+) -> dict[str, float]:
+    """Calculate similarity between two documents and return component breakdown"""
+    try:
+        if primary_doc.id == secondary_doc.id:
+            return {
+                "overall": 1.0,
+                "jaccard_similarity": 1.0,
+                "fuzzy_text_ratio": 1.0,
+                "metadata_similarity": 1.0,
+                "filename_similarity": 1.0,
+            }
+        
+        # Use cached contents if available, otherwise empty strings
+        content1 = primary_content or ""
+        content2 = secondary_content or ""
+        
+        # Generate MinHash for Jaccard similarity if content is available
+        if content1 and content2:
+            minhash1 = dedup_service.create_minhash(content1)
+            minhash2 = dedup_service.create_minhash(content2)
+            if minhash1 and minhash2:
+                dedup_service.minhashes[primary_doc.id] = minhash1
+                dedup_service.minhashes[secondary_doc.id] = minhash2
+        
+        # Calculate similarity score and components
+        overall_score, components = dedup_service.calculate_similarity_score(
+            primary_doc, secondary_doc, content1, content2, quick_mode=False
+        )
+        
+        return {
+            "overall": round(overall_score, 3) if overall_score is not None else 0.0,
+            "jaccard_similarity": round(components.get("jaccard") or 0, 3),
+            "fuzzy_text_ratio": round(components.get("fuzzy") or 0, 3),
+            "metadata_similarity": round(components.get("metadata") or 0, 3),
+            "filename_similarity": round(components.get("filename") or 0, 3),
+        }
+    except Exception as e:
+        logger.warning(f"Failed to calculate similarity between documents {primary_doc.id} and {secondary_doc.id}: {e}")
+        return {
+            "overall": 0.0,
+            "jaccard_similarity": 0.0,
+            "fuzzy_text_ratio": 0.0,
+            "metadata_similarity": 0.0,
+            "filename_similarity": 0.0,
+        }
 
 
 class DuplicateGroupResponse(BaseModel):
@@ -141,6 +196,8 @@ async def get_duplicate_groups(
 
         result = []
         skipped_count = 0
+        dedup_service = DeduplicationService()
+        
         for group in groups:
             # Recalculate confidence based on provided weights
             recalculated_confidence = group.recalculate_confidence(weights)
@@ -150,8 +207,46 @@ async def get_duplicate_groups(
                 skipped_count += 1
                 continue
 
+            # Find primary document and load content for similarity calculations
+            primary_doc = None
+            primary_content = None
+            document_contents = {}
+            
+            for member in group.members:
+                if member.is_primary:
+                    primary_doc = member.document
+                    # Load primary document content
+                    content_row = db.query(DocumentContent).filter(
+                        DocumentContent.document_id == primary_doc.id
+                    ).first()
+                    if content_row:
+                        primary_content = content_row.full_text
+                        document_contents[primary_doc.id] = primary_content
+                    break
+            
+            # Load content for all documents in the group for similarity calculations
+            for member in group.members:
+                if member.document.id not in document_contents:
+                    content_row = db.query(DocumentContent).filter(
+                        DocumentContent.document_id == member.document.id
+                    ).first()
+                    if content_row:
+                        document_contents[member.document.id] = content_row.full_text
+
             documents = []
             for member in group.members:
+                # Calculate similarity to primary (only for non-primary documents)
+                similarity_to_primary = None
+                if not member.is_primary and primary_doc:
+                    similarity = calculate_document_similarity(
+                        dedup_service,
+                        primary_doc,
+                        member.document,
+                        primary_content,
+                        document_contents.get(member.document.id, "")
+                    )
+                    similarity_to_primary = similarity
+                
                 doc_data = {
                     "id": member.document.id,
                     "paperless_id": member.document.paperless_id,
@@ -167,47 +262,48 @@ async def get_duplicate_groups(
                     "tags": member.document.tags if member.document.tags else [],
                     "original_filename": member.document.original_filename,
                     "file_size": member.document.file_size,
+                    "similarity_to_primary": similarity_to_primary,
                 }
-            documents.append(doc_data)
+                documents.append(doc_data)
 
-        # Use actual component scores if available, otherwise estimate from total
-        if group.jaccard_similarity is not None:
-            confidence_breakdown = {
-                "jaccard_similarity": group.jaccard_similarity if use_jaccard else None,
-                "fuzzy_text_ratio": group.fuzzy_text_ratio if use_fuzzy else None,
-                "metadata_similarity": group.metadata_similarity
-                if use_metadata
-                else None,
-                "filename_similarity": group.filename_similarity
-                if use_filename
-                else None,
-            }
-        else:
-            # Legacy groups - estimate breakdown
-            confidence_breakdown = {
-                "jaccard_similarity": group.confidence_score if use_jaccard else None,
-                "fuzzy_text_ratio": group.confidence_score * 0.95
-                if use_fuzzy
-                else None,
-                "metadata_similarity": group.confidence_score * 0.85
-                if use_metadata
-                else None,
-                "filename_similarity": group.confidence_score * 0.75
-                if use_filename
-                else None,
-            }
+            # Use actual component scores if available, otherwise estimate from total
+            if group.jaccard_similarity is not None:
+                confidence_breakdown = {
+                    "jaccard_similarity": group.jaccard_similarity if use_jaccard else None,
+                    "fuzzy_text_ratio": group.fuzzy_text_ratio if use_fuzzy else None,
+                    "metadata_similarity": group.metadata_similarity
+                    if use_metadata
+                    else None,
+                    "filename_similarity": group.filename_similarity
+                    if use_filename
+                    else None,
+                }
+            else:
+                # Legacy groups - estimate breakdown
+                confidence_breakdown = {
+                    "jaccard_similarity": group.confidence_score if use_jaccard else None,
+                    "fuzzy_text_ratio": group.confidence_score * 0.95
+                    if use_fuzzy
+                    else None,
+                    "metadata_similarity": group.confidence_score * 0.85
+                    if use_metadata
+                    else None,
+                    "filename_similarity": group.confidence_score * 0.75
+                    if use_filename
+                    else None,
+                }
 
-        result.append(
-            DuplicateGroupResponse(
-                id=str(group.id),
-                confidence=recalculated_confidence,  # Use recalculated confidence
-                documents=documents,
-                reviewed=group.reviewed,
-                created_at=group.created_at.isoformat() if group.created_at else "",
-                updated_at=group.created_at.isoformat() if group.created_at else "",
-                confidence_breakdown=confidence_breakdown,
+            result.append(
+                DuplicateGroupResponse(
+                    id=str(group.id),
+                    confidence=recalculated_confidence,  # Use recalculated confidence
+                    documents=documents,
+                    reviewed=group.reviewed,
+                    created_at=group.created_at.isoformat() if group.created_at else "",
+                    updated_at=group.created_at.isoformat() if group.created_at else "",
+                    confidence_breakdown=confidence_breakdown,
+                )
             )
-        )
 
         # Adjust total count to account for filtered groups
         adjusted_count = total_count - skipped_count
@@ -237,8 +333,48 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
     if not group:
         raise HTTPException(status_code=404, detail="Duplicate group not found")
 
+    dedup_service = DeduplicationService()
+    
+    # Find primary document and load content for similarity calculations
+    primary_doc = None
+    primary_content = None
+    document_contents = {}
+    
+    for member in group.members:
+        if member.is_primary:
+            primary_doc = member.document
+            # Load primary document content
+            content_row = db.query(DocumentContent).filter(
+                DocumentContent.document_id == primary_doc.id
+            ).first()
+            if content_row:
+                primary_content = content_row.full_text
+                document_contents[primary_doc.id] = primary_content
+            break
+    
+    # Load content for all documents in the group for similarity calculations
+    for member in group.members:
+        if member.document.id not in document_contents:
+            content_row = db.query(DocumentContent).filter(
+                DocumentContent.document_id == member.document.id
+            ).first()
+            if content_row:
+                document_contents[member.document.id] = content_row.full_text
+
     documents = []
     for member in group.members:
+        # Calculate similarity to primary (only for non-primary documents)
+        similarity_to_primary = None
+        if not member.is_primary and primary_doc:
+            similarity = calculate_document_similarity(
+                dedup_service,
+                primary_doc,
+                member.document,
+                primary_content,
+                document_contents.get(member.document.id, "")
+            )
+            similarity_to_primary = similarity
+            
         documents.append(
             {
                 "id": member.document.id,
@@ -249,6 +385,7 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
                 "created_date": member.document.created_date.isoformat()
                 if member.document.created_date
                 else None,
+                "similarity_to_primary": similarity_to_primary,
             }
         )
 

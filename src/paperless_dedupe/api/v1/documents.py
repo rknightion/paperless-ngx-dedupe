@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 
@@ -300,6 +301,34 @@ async def run_document_sync(
         sync_status["documents_updated"] = 0
 
         await safe_broadcast_sync_update()
+        
+        # If force refresh, clean up all existing data first
+        if force_refresh:
+            sync_status["current_step"] = "Clearing existing data for fresh sync"
+            await safe_broadcast_sync_update()
+            
+            from paperless_dedupe.models.database import DuplicateGroup, DuplicateMember
+            
+            # Delete all duplicate analysis results
+            deleted_members = db.query(DuplicateMember).delete()
+            deleted_groups = db.query(DuplicateGroup).delete()
+            
+            # Delete all document content
+            deleted_content = db.query(DocumentContent).delete()
+            
+            # Delete all documents
+            deleted_docs = db.query(Document).delete()
+            
+            db.commit()
+            
+            logger.info(
+                f"Force refresh cleanup: Deleted {deleted_docs} documents, "
+                f"{deleted_content} content records, {deleted_groups} duplicate groups, "
+                f"{deleted_members} duplicate members"
+            )
+            
+            # Small delay after cleanup
+            await asyncio.sleep(0.1)
 
         # Get current config from database
         from paperless_dedupe.core.config_utils import get_current_paperless_config
@@ -311,6 +340,20 @@ async def run_document_sync(
             if not await client.test_connection():
                 raise Exception("Cannot connect to paperless-ngx API")
 
+            # First fetch all tags to build ID->name mapping
+            sync_status["current_step"] = "Fetching tags"
+            await safe_broadcast_sync_update()
+            
+            tags_list = await client.get_tags()
+            # Create mappings for both int and string keys to handle both cases
+            tag_id_to_name = {}
+            for tag in tags_list:
+                tag_id = tag["id"]
+                tag_name = tag["name"]
+                tag_id_to_name[tag_id] = tag_name  # Store with original type (likely int)
+                tag_id_to_name[str(tag_id)] = tag_name  # Also store as string
+            logger.info(f"Fetched {len(tags_list)} tags from paperless-ngx")
+
             # Get all documents from paperless
             sync_status["current_step"] = "Fetching document list"
             await safe_broadcast_sync_update()
@@ -320,13 +363,21 @@ async def run_document_sync(
             start_time = time.time()
             
             # Define callback to track progress during fetch
+            last_fetch_broadcast = time.time()
+            
             async def batch_progress_callback(batch):
+                nonlocal last_fetch_broadcast
                 sync_status["documents_synced"] += len(batch)
-                if sync_status["documents_synced"] % 100 == 0:
-                    elapsed = time.time() - start_time
-                    rate = sync_status["documents_synced"] / elapsed
+                current_time = time.time()
+                
+                # Broadcast every second during fetch
+                if current_time - last_fetch_broadcast >= 1:
+                    elapsed = current_time - start_time
+                    rate = sync_status["documents_synced"] / elapsed if elapsed > 0 else 0
                     logger.info(f"Fetched {sync_status['documents_synced']} documents ({rate:.1f} docs/sec)")
+                    sync_status["current_step"] = f"Fetching documents... ({sync_status['documents_synced']} so far)"
                     await safe_broadcast_sync_update()
+                    last_fetch_broadcast = current_time
             
             # Reset counter for accurate tracking during fetch
             sync_status["documents_synced"] = 0
@@ -346,15 +397,30 @@ async def run_document_sync(
             synced_count = 0
             updated_count = 0
             last_broadcast_time = time.time()
+            last_progress = 0
 
             for idx, pdoc in enumerate(paperless_docs):
                 sync_status["progress"] = idx + 1
                 current_time = time.time()
+                
+                # Calculate progress percentage
+                current_progress = int((idx + 1) / len(paperless_docs) * 100)
 
-                # Broadcast progress every 15 seconds or on last document
-                if (current_time - last_broadcast_time >= 15) or idx == len(paperless_docs) - 1:
+                # Broadcast if:
+                # - 1 second has passed since last update
+                # - Progress increased by 5% or more
+                # - It's the first or last document
+                time_elapsed = current_time - last_broadcast_time >= 1
+                progress_jump = current_progress - last_progress >= 5
+                is_first = idx == 0
+                is_last = idx == len(paperless_docs) - 1
+                
+                if time_elapsed or progress_jump or is_first or is_last:
+                    sync_status["documents_synced"] = synced_count
+                    sync_status["documents_updated"] = updated_count
                     await safe_broadcast_sync_update()
                     last_broadcast_time = current_time
+                    last_progress = current_progress
 
                 # Check if document exists
                 existing = (
@@ -377,8 +443,9 @@ async def run_document_sync(
                             # Tag is an object with name
                             tags_list.append(tag.get("name", str(tag.get("id", ""))))
                         else:
-                            # Tag is just an ID, we'll store the ID as string
-                            tags_list.append(f"tag-{tag}")
+                            # Tag is just an ID, look up the name
+                            tag_name = tag_id_to_name.get(tag, f"tag-{tag}")
+                            tags_list.append(tag_name)
 
                 if existing:
                     # Update existing document

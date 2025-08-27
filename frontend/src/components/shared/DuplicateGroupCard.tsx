@@ -6,7 +6,6 @@ import {
 } from "../../store/slices/duplicatesSlice";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
-import { Progress } from "../ui/Progress";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import {
   Tooltip,
@@ -15,23 +14,20 @@ import {
   TooltipTrigger,
 } from "../ui/Tooltip";
 import {
-  ChevronDown,
-  ChevronUp,
   Eye,
   EyeOff,
   Trash2,
   FileText,
   Calendar,
-  BarChart3,
   Copy,
   CheckCircle,
   AlertCircle,
   ExternalLink,
-  Percent,
   X,
 } from "lucide-react";
 import type { DuplicateGroup } from "../../services/api/types";
 import { configApi } from "../../services/api/config";
+import SimilarityIndicator from "../duplicates/SimilarityIndicator";
 
 interface DuplicateGroupCardProps {
   group: DuplicateGroup;
@@ -39,91 +35,114 @@ interface DuplicateGroupCardProps {
   onDocumentSelect?: (documentId: number) => void;
 }
 
-interface DocumentWithSimilarity {
-  document: any;
-  similarity?: number;
-}
+// Custom progress bar with proper color coding based on value
+const ColoredProgress: React.FC<{ value: number; className?: string }> = ({ value, className = "" }) => {
+  // Determine color based on value
+  let barColor = "bg-red-500"; // 0-50% - Poor match
+  if (value >= 90) {
+    barColor = "bg-green-500"; // 90-100% - Excellent match
+  } else if (value >= 70) {
+    barColor = "bg-yellow-500"; // 70-89% - Good match
+  } else if (value >= 50) {
+    barColor = "bg-orange-500"; // 50-69% - Fair match
+  }
+
+  return (
+    <div className={`relative h-2 w-full overflow-hidden rounded-full bg-gray-200 ${className}`}>
+      <div
+        className={`h-full transition-all ${barColor}`}
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  );
+};
 
 interface ConfidenceBreakdownProps {
   breakdown?: DuplicateGroup["confidence_breakdown"];
   overallConfidence: number;
 }
 
-// Component to visualize confidence breakdown
+// Component to visualize confidence breakdown - matching SimilarityBreakdown style
 const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
   breakdown,
   overallConfidence,
 }) => {
-  if (!breakdown) {
-    return (
-      <div className="p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Overall Confidence</span>
-          <span className="text-sm font-bold">
-            {Math.round(overallConfidence * 100)}%
-          </span>
-        </div>
-        <Progress value={overallConfidence * 100} className="h-3" />
-      </div>
-    );
-  }
-
   const metrics = [
     {
-      label: "Jaccard Similarity",
-      value: breakdown.jaccard_similarity,
+      label: "Overall Confidence",
+      value: overallConfidence,
+      color: "bg-indigo-500",
+      weight: "Combined",
+    },
+    {
+      label: "Content Similarity",
+      value: breakdown?.jaccard_similarity || 0,
       color: "bg-blue-500",
       weight: "40%",
     },
     {
-      label: "Fuzzy Text Match",
-      value: breakdown.fuzzy_text_ratio,
+      label: "Text Fuzzy Match",
+      value: breakdown?.fuzzy_text_ratio || 0,
       color: "bg-green-500",
       weight: "30%",
     },
     {
       label: "Metadata Match",
-      value: breakdown.metadata_similarity,
+      value: breakdown?.metadata_similarity || 0,
       color: "bg-yellow-500",
       weight: "20%",
     },
     {
       label: "Filename Match",
-      value: breakdown.filename_similarity,
+      value: breakdown?.filename_similarity || 0,
       color: "bg-purple-500",
       weight: "10%",
     },
   ];
 
   return (
-    <div className="p-3 space-y-4 min-w-[250px]">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Overall Confidence</span>
-        <span className="text-lg font-bold text-primary">
-          {Math.round(overallConfidence * 100)}%
-        </span>
+    <div className="p-3 space-y-4 min-w-[280px]">
+      <div className="text-center">
+        <h4 className="font-semibold text-sm mb-1">Group Confidence</h4>
+        <p className="text-xs text-muted-foreground">
+          How confident we are these documents are duplicates
+        </p>
       </div>
-      <Progress value={overallConfidence * 100} className="h-3" />
 
       <div className="space-y-3">
-        {metrics.map((metric) => (
-          <div key={metric.label} className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
+        {metrics.map((metric, index) => (
+          <div key={metric.label}>
+            <div className="flex items-center justify-between mb-1">
               <div className="flex items-center space-x-2">
                 <div
                   className={`w-3 h-3 rounded-full ${metric.color}`}
                   aria-hidden="true"
                 />
-                <span className="font-medium">{metric.label}</span>
-                <span className="text-muted-foreground">({metric.weight})</span>
+                <span className="text-xs font-medium">{metric.label}</span>
+                <span className="text-xs text-muted-foreground">
+                  ({metric.weight})
+                </span>
               </div>
-              <span className="font-medium">
-                {Math.round(metric.value * 100)}%
+              <span className="text-xs font-bold">
+                {Math.round((metric.value || 0) * 100)}%
               </span>
             </div>
-            <Progress value={metric.value * 100} className="h-1.5" />
+            <ColoredProgress
+              value={(metric.value || 0) * 100}
+              className={index === 0 ? "mb-2" : ""}
+            />
+            {index === 0 && (
+              <hr className="border-muted" />
+            )}
           </div>
         ))}
+      </div>
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>• Content: Based on document text similarity</p>
+        <p>• Text: Fuzzy matching accounting for OCR variations</p>
+        <p>• Metadata: File size, dates, types, correspondents</p>
+        <p>• Filename: Original filename similarity</p>
       </div>
     </div>
   );
@@ -135,8 +154,10 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   onDocumentSelect,
 }) => {
   const dispatch = useAppDispatch();
-  const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Debug logging to check group data
+  console.log(`Group ${group.id} has ${group.documents?.length || 0} documents:`, group.documents);
 
   // Handle review status toggle
   const handleReviewToggle = async () => {
@@ -304,30 +325,15 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
               </div>
             </div>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={() => setIsExpanded(!isExpanded)}
-              variant="outline"
-              size="sm"
-            >
-              {isExpanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Document List Preview */}
+        {/* Document List */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Documents in this group:</h4>
           <div className="space-y-2">
             {group.documents
-              .slice(0, isExpanded ? undefined : 2)
               .map((doc, index) => {
                 const preview = getDocumentPreview(doc);
                 return (
@@ -391,18 +397,19 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                         )}
                       </div>
                     </div>
-                    {index === 0 && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge
-                              variant="default"
-                              className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help"
-                            >
-                              Primary
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-gray-900 text-white">
+                    <div className="flex items-center space-x-2">
+                      {doc.is_primary && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="default"
+                                className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help"
+                              >
+                                Primary
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs bg-gray-900 text-white">
                             <p className="font-semibold mb-1">
                               Primary Document
                             </p>
@@ -424,8 +431,15 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    )}
-                    {index !== 0 && (
+                      )}
+                      {!doc.is_primary && doc.similarity_to_primary && (
+                        <SimilarityIndicator 
+                          similarity={doc.similarity_to_primary}
+                          className="text-xs"
+                        />
+                      )}
+                    </div>
+                    {!doc.is_primary && (
                       <div className="flex items-center space-x-1">
                         <Button
                           variant="ghost"
@@ -457,75 +471,122 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                 );
               })}
 
-            {!isExpanded && group.documents.length > 2 && (
-              <div className="text-center">
-                <Button
-                  onClick={() => setIsExpanded(true)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                >
-                  +{group.documents.length - 2} more documents
-                </Button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Additional details when expanded */}
-        {isExpanded && group.documents.length > 2 && (
-          <div className="pt-4 border-t">
-            <p className="text-sm text-muted-foreground mb-2">
-              <strong>Similarity Note:</strong> All documents in this group have
-              at least {Math.round(group.confidence * 100)}% similarity with the
-              primary document.
-            </p>
-          </div>
-        )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={handleReviewToggle}
-              disabled={loading}
-              variant={group.reviewed ? "outline" : "default"}
-              size="sm"
-            >
-              {group.reviewed ? (
-                <>
-                  <EyeOff className="h-4 w-4 mr-2" />
-                  Mark as Unreviewed
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Mark as Reviewed
-                </>
+        <div className="space-y-3 pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleReviewToggle}
+                      disabled={loading}
+                      variant={group.reviewed ? "outline" : "default"}
+                      size="sm"
+                    >
+                      {group.reviewed ? (
+                        <>
+                          <EyeOff className="h-4 w-4 mr-2" />
+                          Mark as Unreviewed
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Mark as Reviewed
+                        </>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {group.reviewed 
+                      ? "Remove reviewed status to re-examine this group later" 
+                      : "Mark as reviewed to track your progress without making changes"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        if (window.confirm(
+                          `This will keep the primary document and delete ${group.documents.length - 1} duplicate(s) from Paperless-NGX. This cannot be undone. Continue?`
+                        )) {
+                          // TODO: Implement resolve functionality
+                          alert("Resolve functionality will be implemented soon");
+                        }
+                      }}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-300"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Resolve Group
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Keep the primary document and remove duplicates from Paperless-NGX. 
+                    This frees up storage space by eliminating true duplicates.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {!group.reviewed && group.confidence < 0.8 && (
+                <div className="flex items-center space-x-1 text-amber-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-xs">
+                    Low confidence - review carefully
+                  </span>
+                </div>
               )}
-            </Button>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleDelete}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Group
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Remove this entire group as a false positive. 
+                    No documents will be deleted from Paperless-NGX.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {!group.reviewed && group.confidence < 0.8 && (
-              <div className="flex items-center space-x-1 text-amber-600">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-xs">
-                  Low confidence - review carefully
-                </span>
+          {/* Action Explanations */}
+          <div className="text-xs text-muted-foreground bg-gray-50 p-3 rounded-md">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <span className="font-medium">📝 Review:</span> Track your examination progress
               </div>
-            )}
-
-            <Button
-              onClick={handleDelete}
-              disabled={loading}
-              variant="outline"
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Group
-            </Button>
+              <div>
+                <span className="font-medium">✅ Resolve:</span> Keep primary, delete duplicates
+              </div>
+              <div>
+                <span className="font-medium">❌ Delete Group:</span> Mark as false positive
+              </div>
+              <div>
+                <span className="font-medium">💡 Primary:</span> Auto-selected (blue badge)
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
