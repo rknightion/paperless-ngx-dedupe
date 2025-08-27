@@ -9,7 +9,11 @@ import {
   updateProcessingStatus,
   setWebSocketConnected,
 } from "./slices/processingSlice";
-import { updateDocumentStatus as _updateDocumentStatus } from "./slices/documentsSlice";
+import { 
+  updateDocumentStatus as _updateDocumentStatus,
+  updateSyncStatus,
+  syncCompleted,
+} from "./slices/documentsSlice";
 import { wsClient } from "../services/websocket";
 
 // WebSocket middleware for real-time updates
@@ -26,6 +30,14 @@ const webSocketMiddleware: Middleware = (store) => (next) => (action: any) => {
         // Set up WebSocket event listeners
         wsClient.on("processing_update", (status) => {
           store.dispatch(updateProcessingStatus(status));
+        });
+        
+        wsClient.on("sync_update", (status) => {
+          store.dispatch(updateSyncStatus(status));
+        });
+        
+        wsClient.on("sync_completed", (data) => {
+          store.dispatch(syncCompleted(data));
         });
 
         wsClient.on("error", (error) => {

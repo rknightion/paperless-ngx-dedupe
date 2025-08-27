@@ -97,13 +97,13 @@ cd frontend && npm install
 
 The `uv run python dev.py` script:
 
-- Starts backend API on http://localhost:30001
+- Starts backend API on http://localhost:30001 (with hot-reloading)
 - Starts frontend UI on http://localhost:3000 (with hot-reloading)
 - Shows full backend logs with proper INFO/DEBUG output
 - Handles all dependencies automatically via uv
 - Shows color-coded logs for easy debugging
 - Uses uv for proper Python environment isolation
-- Note: Backend requires restart for code changes (ensures proper logging)
+- Automatically restarts on code changes for rapid development
 
 ## Web Interface
 

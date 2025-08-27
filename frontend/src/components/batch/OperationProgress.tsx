@@ -63,13 +63,10 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
       }
     };
 
-    // Initial poll
+    // Initial poll to get current status
     pollStatus();
-
-    // Set up interval
-    const interval = setInterval(pollStatus, 1000);
-
-    return () => clearInterval(interval);
+    
+    // No interval needed - WebSocket will handle updates
   }, [operationId, polling, onComplete]);
 
   const getStatusIcon = () => {

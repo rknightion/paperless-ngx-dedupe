@@ -54,23 +54,11 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
     force_rebuild: false,
   });
 
-  // Fetch initial status on mount and poll if processing
+  // Fetch initial status on mount
   useEffect(() => {
     dispatch(fetchProcessingStatus());
-
-    // Poll status every 5 seconds if processing to handle connection issues
-    const interval = setInterval(() => {
-      if (status.is_processing) {
-        dispatch(fetchProcessingStatus()).catch((err) => {
-          console.log(
-            "Status fetch failed, likely due to blocking operation. Will retry...",
-          );
-        });
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [dispatch, status.is_processing]);
+    // No polling needed - WebSocket will handle real-time updates
+  }, [dispatch]);
 
   // Handle completion callback
   useEffect(() => {
@@ -104,6 +92,8 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
 
     try {
       await dispatch(startAnalysis(request)).unwrap();
+      // Immediately fetch status after starting
+      dispatch(fetchProcessingStatus());
     } catch (error: any) {
       console.error("Failed to start analysis:", error);
       // Check for specific error types

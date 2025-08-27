@@ -11,9 +11,9 @@ import {
   FileText,
 } from "lucide-react";
 import { documentsApi } from "../../services/api/documents";
-import { wsClient } from "../../services/websocket/client";
-import { useAppDispatch } from "../../hooks/redux";
+import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import { fetchDocuments } from "../../store/slices/documentsSlice";
+import { useProcessingStatus } from "../../hooks/redux";
 
 interface SyncStatus {
   is_syncing: boolean;
@@ -29,51 +29,41 @@ interface SyncStatus {
 
 export const SyncProgress: React.FC = () => {
   const dispatch = useAppDispatch();
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const { status: processingStatus } = useProcessingStatus();
+  
+  // Get sync status from Redux store
+  const syncStatus = useAppSelector((state) => state.documents.syncStatus);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Get initial sync status
-    documentsApi.getSyncStatus().then(setSyncStatus).catch(console.error);
-
-    // Listen for WebSocket updates
-    const handleSyncUpdate = (status: SyncStatus) => {
-      setSyncStatus(status);
-    };
-
-    const handleSyncCompleted = (data: any) => {
-      setSyncStatus((prev) =>
-        prev
-          ? {
-              ...prev,
-              is_syncing: false,
-              current_step: "Completed",
-              completed_at: data.completed_at,
-              progress: prev.total,
-            }
-          : null,
-      );
-
-      // Refresh document list after sync
-      dispatch(fetchDocuments({}));
-    };
-
-    wsClient.on("sync_update", handleSyncUpdate);
-    wsClient.on("sync_completed", handleSyncCompleted);
-
-    return () => {
-      wsClient.off("sync_update", handleSyncUpdate);
-      wsClient.off("sync_completed", handleSyncCompleted);
-    };
+    documentsApi.getSyncStatus()
+      .then((status) => {
+        // Update Redux store with initial status
+        if (status) {
+          dispatch({ type: 'documents/updateSyncStatus', payload: status });
+        }
+      })
+      .catch(console.error);
   }, [dispatch]);
+
+  useEffect(() => {
+    // Refresh document list after sync completion
+    if (syncStatus?.completed_at && !syncStatus?.is_syncing) {
+      dispatch(fetchDocuments({}));
+    }
+  }, [syncStatus, dispatch]);
 
   const handleStartSync = async () => {
     setIsLoading(true);
     try {
       await documentsApi.syncDocuments();
       // Status will be updated via WebSocket
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start sync:", error);
+      if (error?.response?.data?.detail) {
+        alert(error.response.data.detail);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -84,8 +74,11 @@ export const SyncProgress: React.FC = () => {
     try {
       await documentsApi.syncDocuments({ force_refresh: true });
       // Status will be updated via WebSocket
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start force sync:", error);
+      if (error?.response?.data?.detail) {
+        alert(error.response.data.detail);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -173,8 +166,9 @@ export const SyncProgress: React.FC = () => {
             <div className="flex gap-2">
               <Button
                 onClick={handleStartSync}
-                disabled={isLoading || syncStatus.is_syncing}
+                disabled={isLoading || syncStatus.is_syncing || processingStatus.is_processing}
                 className="flex-1"
+                title={processingStatus.is_processing ? "Cannot sync while analysis is in progress" : ""}
               >
                 {isLoading ? (
                   <>

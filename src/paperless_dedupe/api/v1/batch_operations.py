@@ -88,83 +88,82 @@ async def execute_batch_operation(
         batch_operations[operation_id]["status"] = OperationStatus.IN_PROGRESS
         batch_operations[operation_id]["started_at"] = datetime.utcnow()
 
-        client = PaperlessClient(
-            base_url=settings.paperless_url,
-            api_token=settings.paperless_api_token,
-            username=settings.paperless_username,
-            password=settings.paperless_password,
-        )
+        # Get current config from database
+        from paperless_dedupe.core.config_utils import get_current_paperless_config
+        
+        client_settings = get_current_paperless_config(db)
+        
+        async with PaperlessClient(**client_settings) as client:
+            total = len(document_ids)
+            processed = 0
+            failed = 0
+            errors = []
 
-        total = len(document_ids)
-        processed = 0
-        failed = 0
-        errors = []
+            for idx, doc_id in enumerate(document_ids):
+                try:
+                    # Update progress
+                    batch_operations[operation_id]["current_item"] = idx + 1
+                    batch_operations[operation_id]["message"] = (
+                        f"Processing document {doc_id} ({idx + 1}/{total})"
+                    )
 
-        for idx, doc_id in enumerate(document_ids):
-            try:
-                # Update progress
-                batch_operations[operation_id]["current_item"] = idx + 1
-                batch_operations[operation_id]["message"] = (
-                    f"Processing document {doc_id} ({idx + 1}/{total})"
-                )
+                    # Execute operation based on type
+                    if operation == OperationType.MARK_FOR_DELETION:
+                        # For now, we'll just track this in memory or skip it
+                        # In production, you might want to track this differently
+                        pass
 
-                # Execute operation based on type
-                if operation == OperationType.MARK_FOR_DELETION:
-                    # For now, we'll just track this in memory or skip it
-                    # In production, you might want to track this differently
-                    pass
+                    elif operation == OperationType.DELETE:
+                        # Delete from paperless if we have the paperless_id
+                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        if document and document.paperless_id:
+                            await client.delete_document(document.paperless_id)
+                            # Also remove from our database
+                            db.delete(document)
+                            db.commit()
 
-                elif operation == OperationType.DELETE:
-                    # Delete from paperless if we have the paperless_id
-                    document = db.query(Document).filter(Document.id == doc_id).first()
-                    if document and document.paperless_id:
-                        await client.delete_document(document.paperless_id)
-                        # Also remove from our database
-                        db.delete(document)
-                        db.commit()
+                    elif operation == OperationType.TAG:
+                        # Add tags to document
+                        tags = parameters.get("tags", [])
+                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        if document and document.paperless_id:
+                            await client.add_tags_to_document(document.paperless_id, tags)
 
-                elif operation == OperationType.TAG:
-                    # Add tags to document
-                    tags = parameters.get("tags", [])
-                    document = db.query(Document).filter(Document.id == doc_id).first()
-                    if document and document.paperless_id:
-                        await client.add_tags_to_document(document.paperless_id, tags)
+                    elif operation == OperationType.UNTAG:
+                        # Remove tags from document
+                        tags = parameters.get("tags", [])
+                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        if document and document.paperless_id:
+                            await client.remove_tags_from_document(
+                                document.paperless_id, tags
+                            )
 
-                elif operation == OperationType.UNTAG:
-                    # Remove tags from document
-                    tags = parameters.get("tags", [])
-                    document = db.query(Document).filter(Document.id == doc_id).first()
-                    if document and document.paperless_id:
-                        await client.remove_tags_from_document(
-                            document.paperless_id, tags
-                        )
+                    elif operation == OperationType.UPDATE_METADATA:
+                        # Update document metadata
+                        metadata = parameters.get("metadata", {})
+                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        if document and document.paperless_id:
+                            await client.update_document_metadata(
+                                document.paperless_id, metadata
+                            )
+                            # Update local record
+                            for key, value in metadata.items():
+                                if hasattr(document, key):
+                                    setattr(document, key, value)
+                            db.commit()
 
-                elif operation == OperationType.UPDATE_METADATA:
-                    # Update document metadata
-                    metadata = parameters.get("metadata", {})
-                    document = db.query(Document).filter(Document.id == doc_id).first()
-                    if document and document.paperless_id:
-                        await client.update_document_metadata(
-                            document.paperless_id, metadata
-                        )
-                        # Update local record
-                        for key, value in metadata.items():
-                            if hasattr(document, key):
-                                setattr(document, key, value)
-                        db.commit()
+                    processed += 1
+                    batch_operations[operation_id]["processed_items"] = processed
 
-                processed += 1
-                batch_operations[operation_id]["processed_items"] = processed
+                except Exception as e:
+                    logger.error(f"Failed to process document {doc_id}: {e}")
+                    failed += 1
+                    batch_operations[operation_id]["failed_items"] = failed
+                    errors.append(f"Document {doc_id}: {str(e)}")
 
-            except Exception as e:
-                logger.error(f"Failed to process document {doc_id}: {e}")
-                failed += 1
-                batch_operations[operation_id]["failed_items"] = failed
-                errors.append(f"Document {doc_id}: {str(e)}")
-
-            # Yield control periodically
-            if idx % 10 == 0:
-                await asyncio.sleep(0.1)
+                # Yield control periodically
+                if idx % 10 == 0:
+                    await asyncio.sleep(0.1)
 
         # Update final status
         if failed == 0:
@@ -288,7 +287,7 @@ async def get_operation_status(operation_id: str):
 
 
 @router.get("/operations", response_model=list[BatchOperationProgress])
-async def list_operations(status: OperationStatus | None = None, limit: int = 10):
+async def list_operations(status: OperationStatus | None = None, limit: int = 100):
     """List recent batch operations"""
 
     operations = []

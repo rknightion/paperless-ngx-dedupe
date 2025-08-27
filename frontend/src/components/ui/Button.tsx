@@ -39,7 +39,9 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
+  ({ className, variant, size, asChild, ...props }, ref) => {
+    // Note: asChild functionality would require Radix UI Slot component
+    // For now, we just filter it out to avoid React warnings
     return (
       <button
         className={cn(buttonVariants({ variant, size, className }))}

@@ -52,6 +52,17 @@ interface DocumentsState {
   };
   error: string | null;
   lastSyncedAt: string | null;
+  syncStatus: {
+    is_syncing: boolean;
+    current_step: string;
+    progress: number;
+    total: number;
+    error: string | null;
+    documents_synced: number;
+    documents_updated: number;
+    started_at: string | null;
+    completed_at: string | null;
+  } | null;
 }
 
 // Initial state
@@ -78,6 +89,7 @@ const initialState: DocumentsState = {
   },
   error: null,
   lastSyncedAt: null,
+  syncStatus: null,
 };
 
 // Slice
@@ -150,6 +162,24 @@ const documentsSlice = createSlice({
           action.payload.processing_status;
       }
     },
+    
+    // Sync status updates (from WebSocket)
+    updateSyncStatus: (state, action: PayloadAction<any>) => {
+      state.syncStatus = action.payload;
+    },
+    
+    syncCompleted: (state, action: PayloadAction<any>) => {
+      if (state.syncStatus) {
+        state.syncStatus = {
+          ...state.syncStatus,
+          is_syncing: false,
+          current_step: "Completed",
+          completed_at: new Date().toISOString(),
+        };
+      }
+      state.lastSyncedAt = new Date().toISOString();
+      // Optionally trigger a refresh of documents
+    },
   },
   extraReducers: (builder) => {
     // Fetch documents
@@ -212,6 +242,8 @@ export const {
   clearSelection,
   clearError,
   updateDocumentStatus,
+  updateSyncStatus,
+  syncCompleted,
 } = documentsSlice.actions;
 
 export default documentsSlice.reducer;

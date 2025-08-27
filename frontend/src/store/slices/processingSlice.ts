@@ -193,7 +193,12 @@ const processingSlice = createSlice({
       })
       .addCase(startAnalysis.fulfilled, (state, _action) => {
         state.loading.start = false;
-        // The actual status will come from WebSocket updates
+        // Set processing as started immediately
+        state.status.is_processing = true;
+        state.status.current_step = "Starting analysis...";
+        state.status.progress = 0;
+        state.status.started_at = new Date().toISOString();
+        // The actual status will come from WebSocket updates or polling
       })
       .addCase(startAnalysis.rejected, (state, action) => {
         state.loading.start = false;

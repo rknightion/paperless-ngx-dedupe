@@ -18,8 +18,11 @@ import {
   AlertTriangle,
   CheckCircle,
   RefreshCw,
-  HardDrive,
+  Tags,
+  Users,
+  FileType,
   Info,
+  FolderOpen,
 } from "lucide-react";
 
 interface DocumentStatistics {
@@ -47,6 +50,19 @@ interface DocumentStatistics {
     last_sync: string | null;
     documents_synced: number;
     sync_in_progress: boolean;
+  };
+  paperless_stats?: {
+    total_tags?: number;
+    total_correspondents?: number;
+    total_document_types?: number;
+    total_storage_paths?: number;
+    total_custom_fields?: number;
+    documents_with_correspondent?: number;
+    documents_with_tags?: number;
+    documents_with_type?: number;
+    top_tags?: Array<{id: number; name: string; document_count: number}>;
+    top_correspondents?: Array<{id: number; name: string; document_count: number}>;
+    top_document_types?: Array<{id: number; name: string; document_count: number}>;
   };
 }
 
@@ -144,19 +160,15 @@ export const DocumentSummaryPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Storage</CardTitle>
-            <HardDrive className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Tags</CardTitle>
+            <Tags className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statistics.total_size > 0 
-                ? formatBytes(statistics.total_size)
-                : "N/A"}
+              {statistics.paperless_stats?.total_tags || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {statistics.total_size > 0 
-                ? `Avg: ${formatBytes(statistics.total_size / statistics.total_documents)}`
-                : "Size data not available"}
+              {statistics.paperless_stats?.documents_with_tags || 0} documents tagged
             </p>
           </CardContent>
         </Card>
@@ -188,81 +200,86 @@ export const DocumentSummaryPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Document Size Distribution - Only show if we have size data */}
+      {/* Document Organization Statistics */}
       <div className="grid gap-6 md:grid-cols-2">
-        {statistics.total_size > 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Document Size Distribution</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Document Organization</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm">Correspondents</span>
+                </div>
+                <Badge variant="outline">
+                  {statistics.paperless_stats?.total_correspondents || 0}
+                </Badge>
+              </div>
+              <Progress
+                value={
+                  ((statistics.paperless_stats?.documents_with_correspondent || 0) /
+                    statistics.total_documents) *
+                  100
+                }
+                className="h-2"
+              />
+              <p className="text-xs text-muted-foreground">
+                {statistics.paperless_stats?.documents_with_correspondent || 0} documents assigned
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <FileType className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Document Types</span>
+                </div>
+                <Badge variant="outline">
+                  {statistics.paperless_stats?.total_document_types || 0}
+                </Badge>
+              </div>
+              <Progress
+                value={
+                  ((statistics.paperless_stats?.documents_with_type || 0) /
+                    statistics.total_documents) *
+                  100
+                }
+                className="h-2"
+              />
+              <p className="text-xs text-muted-foreground">
+                {statistics.paperless_stats?.documents_with_type || 0} documents classified
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm">Storage Paths</span>
+                </div>
+                <Badge variant="outline">
+                  {statistics.paperless_stats?.total_storage_paths || 0}
+                </Badge>
+              </div>
+            </div>
+
+            {statistics.paperless_stats?.total_custom_fields ? (
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Small (&lt; 100KB)</span>
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm">Custom Fields</span>
+                  </div>
                   <Badge variant="outline">
-                    {statistics.size_distribution.small.toLocaleString()}
+                    {statistics.paperless_stats.total_custom_fields}
                   </Badge>
                 </div>
-                <Progress
-                  value={
-                    (statistics.size_distribution.small /
-                      statistics.total_documents) *
-                    100
-                  }
-                  className="h-2"
-                />
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Medium (100KB - 1MB)</span>
-                  <Badge variant="outline">
-                    {statistics.size_distribution.medium.toLocaleString()}
-                  </Badge>
-                </div>
-                <Progress
-                  value={
-                    (statistics.size_distribution.medium /
-                      statistics.total_documents) *
-                    100
-                  }
-                  className="h-2"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Large (1MB - 10MB)</span>
-                  <Badge variant="outline">
-                    {statistics.size_distribution.large.toLocaleString()}
-                  </Badge>
-                </div>
-                <Progress
-                  value={
-                    (statistics.size_distribution.large /
-                      statistics.total_documents) *
-                    100
-                  }
-                  className="h-2"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Extra Large (&gt; 10MB)</span>
-                  <Badge variant="outline">
-                    {statistics.size_distribution.xlarge.toLocaleString()}
-                  </Badge>
-                </div>
-                <Progress
-                  value={
-                    (statistics.size_distribution.xlarge /
-                      statistics.total_documents) *
-                    100
-                  }
-                  className="h-2"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
+            ) : null}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -319,6 +336,43 @@ export const DocumentSummaryPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top Tags and Correspondents */}
+      {statistics.paperless_stats?.top_tags || statistics.paperless_stats?.top_correspondents ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          {statistics.paperless_stats?.top_tags && statistics.paperless_stats.top_tags.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Most Used Tags</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {statistics.paperless_stats.top_tags.slice(0, 5).map((tag) => (
+                  <div key={tag.id} className="flex justify-between items-center">
+                    <span className="text-sm truncate max-w-[200px]">{tag.name}</span>
+                    <Badge variant="secondary">{tag.document_count}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {statistics.paperless_stats?.top_correspondents && statistics.paperless_stats.top_correspondents.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Correspondents</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {statistics.paperless_stats.top_correspondents.slice(0, 5).map((corr) => (
+                  <div key={corr.id} className="flex justify-between items-center">
+                    <span className="text-sm truncate max-w-[200px]">{corr.name}</span>
+                    <Badge variant="secondary">{corr.document_count}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Sync Status */}
       <Card>

@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # API settings
     api_rate_limit: int = 10  # requests per second
-    api_page_size: int = 100
+    api_page_size: int = 200  # Increased for better performance
     api_max_retries: int = 3
     api_timeout: int = 30
 

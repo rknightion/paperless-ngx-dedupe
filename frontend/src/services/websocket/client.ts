@@ -38,7 +38,6 @@ class WebSocketClient {
         this.socket = new WebSocket(this.url);
 
         this.socket.onopen = () => {
-          console.log("WebSocket connected");
           this.isConnected = true;
           this.reconnectAttempts = 0;
 
@@ -49,7 +48,6 @@ class WebSocketClient {
         };
 
         this.socket.onclose = (event) => {
-          console.log("WebSocket disconnected:", event.code, event.reason);
           this.isConnected = false;
           this.stopPingInterval();
 
@@ -86,7 +84,7 @@ class WebSocketClient {
   private handleMessage(message: WebSocketMessage): void {
     switch (message.type) {
       case "connection_established":
-        console.log("Connection established:", message.data);
+        // Connection confirmed
         break;
 
       case "processing_update":
@@ -114,7 +112,7 @@ class WebSocketClient {
         break;
 
       default:
-        console.log("Unknown message type:", message.type);
+        // Unknown message type - ignore
     }
   }
 

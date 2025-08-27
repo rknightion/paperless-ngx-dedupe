@@ -1,5 +1,63 @@
 # Paperless-NGX Deduplication Tool
 
+## 🔧 CRITICAL: PyPaperless SDK Usage
+
+**IMPORTANT**: This project uses the PyPaperless SDK for ALL Paperless-NGX API interactions. 
+
+### PyPaperless Documentation Access
+- Use Context7 MCP server with library ID: `/tb1337/paperless-api` 
+- Or search for "PyPaperless" to get the SDK documentation
+- The SDK provides async/await patterns, rich model objects, and comprehensive API coverage
+
+### Key PyPaperless Patterns
+```python
+# Client initialization (use existing pattern in codebase)
+from paperless_dedupe.services.paperless_client import PaperlessClient
+
+async with PaperlessClient(**client_settings) as client:
+    # All operations here
+    await client.test_connection()
+    docs = await client.get_all_documents()
+    stats = await client.get_statistics()
+```
+
+**DO NOT**:
+- Use httpx directly for Paperless API calls
+- Create new HTTP client implementations
+- Use synchronous API patterns
+
+**ALWAYS**:
+- Use the existing `PaperlessClient` wrapper in `services/paperless_client.py`
+- Follow async/await patterns
+- Use Context7 to check PyPaperless documentation for new features
+
+### Available PyPaperless Features in Our Client
+
+The `PaperlessClient` wrapper provides access to:
+- **Documents**: CRUD operations, search, similarity matching, suggestions
+- **Tags**: List, create, manage document tags
+- **Correspondents**: Access and manage document correspondents
+- **Document Types**: Manage document type classifications
+- **Storage Paths**: Handle document storage locations
+- **Custom Fields**: Support for custom document metadata
+- **Statistics**: Comprehensive stats about the Paperless instance
+
+Example usage for new features:
+```python
+# Search documents
+results = await client.search_documents("invoice 2024")
+
+# Get similar documents
+similar = await client.get_similar_documents(document_id)
+
+# Get comprehensive statistics
+stats = await client.get_statistics()
+# Returns: total_tags, total_correspondents, top_tags, etc.
+
+# Get document suggestions (auto-classification)
+suggestions = await client.get_document_suggestions(document_id)
+```
+
 ## ⚠️ CRITICAL: Database Schema Changes
 
 **MANDATORY**: ANY changes to database models in `src/paperless_dedupe/models/database.py` MUST be followed by creating an Alembic migration:

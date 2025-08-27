@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -100,13 +101,18 @@ async def run_deduplication_analysis(
         processing_status["current_step"] = "Loading OCR content"
         contents = {}
         await safe_broadcast_update()
+        
+        import time
+        last_broadcast_time = time.time()
 
         for idx, doc in enumerate(documents):
             processing_status["progress"] = idx + 1
+            current_time = time.time()
 
-            # Broadcast progress every 10 documents or on last document
-            if (idx + 1) % 10 == 0 or idx == len(documents) - 1:
+            # Broadcast progress every 15 seconds or on last document
+            if (current_time - last_broadcast_time >= 15) or idx == len(documents) - 1:
                 await safe_broadcast_update()
+                last_broadcast_time = current_time
 
             # Get from database
             content = (
@@ -121,7 +127,10 @@ async def run_deduplication_analysis(
                 logger.warning(f"No OCR content for document {doc.id}")
 
         # Create progress callback for deduplication service
+        last_dedup_broadcast = time.time()
+        
         async def dedup_progress_callback(step: str, current: int, total: int):
+            nonlocal last_dedup_broadcast
             processing_status["current_step"] = step
             processing_status["progress"] = current
             processing_status["total"] = total
@@ -134,7 +143,12 @@ async def run_deduplication_analysis(
                     rate = current / elapsed
                     remaining = (total - current) / rate if rate > 0 else 0
                     processing_status["estimated_remaining"] = int(remaining)
-            await safe_broadcast_update()
+            
+            # Only broadcast every 15 seconds or on completion
+            current_time = time.time()
+            if (current_time - last_dedup_broadcast >= 15) or (current == total):
+                await safe_broadcast_update()
+                last_dedup_broadcast = current_time
 
         # Run deduplication
         processing_status["current_step"] = "Initializing deduplication"
@@ -213,6 +227,14 @@ async def start_analysis(
 
     if processing_status["is_processing"]:
         raise HTTPException(status_code=409, detail="Analysis already in progress")
+    
+    # Check if sync is in progress
+    from paperless_dedupe.api.v1.documents import sync_status
+    if sync_status.get("is_syncing", False):
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot start analysis while document sync is in progress"
+        )
 
     # Check if there are documents to process
     document_count = db.query(Document).count()

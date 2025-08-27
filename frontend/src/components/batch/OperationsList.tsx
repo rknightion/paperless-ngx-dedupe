@@ -32,10 +32,7 @@ export const OperationsList: React.FC = () => {
 
   useEffect(() => {
     loadOperations();
-
-    // Refresh every 5 seconds
-    const interval = setInterval(loadOperations, 5000);
-    return () => clearInterval(interval);
+    // No polling needed - WebSocket will handle updates
   }, []);
 
   const getStatusIcon = (status: OperationStatus) => {

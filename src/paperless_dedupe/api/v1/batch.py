@@ -21,7 +21,7 @@ class BatchOperation(BaseModel):
 
 
 @router.get("/operations")
-async def list_operations(limit: int = 10, db: Session = Depends(get_db)):
+async def list_operations(limit: int = 100, db: Session = Depends(get_db)):
     """List batch operations (stub endpoint for now)"""
     # Return empty list for now - this feature is not yet implemented
     return []

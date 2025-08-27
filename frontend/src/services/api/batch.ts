@@ -79,7 +79,7 @@ export const batchApi = {
   // List operations
   async listOperations(
     status?: OperationStatus,
-    limit: number = 10,
+    limit: number = 100,
   ): Promise<BatchOperationProgress[]> {
     const params: any = { limit };
     if (status) params.status = status;
