@@ -90,8 +90,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
-CMD ["uvicorn", "paperless_dedupe.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application under OpenTelemetry auto-instrumentation with resource attributes
+CMD ["sh", "-lc", "OTEL_RESOURCE_ATTRIBUTES='service.name=paperless-dedupe,service.namespace=paperless-ngx,deployment.environment=production,service.version=1.0.0,service.instance.id=$HOSTNAME' opentelemetry-instrument uvicorn paperless_dedupe.main:app --host 0.0.0.0 --port 8000"]
 
 # =============================================================================
 # Frontend Production Stage

@@ -285,6 +285,31 @@ async def run_deduplication_analysis(
             await safe_broadcast_update()
 
 
+async def trigger_analysis_internal(
+    db: Session, 
+    force_rebuild: bool = False,
+    threshold: float | None = None,
+    limit: int | None = None
+):
+    """Internal function to trigger analysis programmatically (e.g., after config change)"""
+    global processing_status
+    
+    if processing_status["is_processing"]:
+        logger.warning("Analysis already in progress, skipping re-trigger")
+        return False
+        
+    # Use default threshold if not provided
+    if threshold is None:
+        threshold = settings.fuzzy_match_threshold / 100.0
+        
+    # Run analysis in background
+    asyncio.create_task(
+        run_deduplication_analysis(db, threshold, force_rebuild, limit)
+    )
+    
+    return True
+
+
 @router.post("/analyze")
 async def start_analysis(
     request: AnalyzeRequest,

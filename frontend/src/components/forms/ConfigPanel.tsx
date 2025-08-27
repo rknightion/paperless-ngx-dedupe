@@ -54,6 +54,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
     filename: 10,
   });
   const [weightsChanged, setWeightsChanged] = useState(false);
+  const [reanalysisMessage, setReanalysisMessage] = useState<string | null>(null);
 
   // Load configuration on mount
   useEffect(() => {
@@ -87,6 +88,9 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
     if (!hasUnsavedChanges && !weightsChanged) return;
 
     try {
+      // Check if only weights changed (not other config)
+      const onlyWeightsChanged = !hasUnsavedChanges && weightsChanged;
+      
       // Include confidence weights in the update
       const configWithWeights = {
         ...formData,
@@ -95,8 +99,16 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
         confidence_weight_metadata: confidenceWeights.metadata,
         confidence_weight_filename: confidenceWeights.filename,
       };
-      await dispatch(updateConfiguration(configWithWeights)).unwrap();
+      
+      const result = await dispatch(updateConfiguration(configWithWeights)).unwrap();
       setWeightsChanged(false); // Reset after successful save
+      
+      // If weights were changed and re-analysis was triggered, show a message
+      if (result && (result as any).reanalysis_triggered) {
+        setReanalysisMessage("Configuration saved. Re-analysis has been triggered due to weight changes.");
+        // Clear message after 10 seconds
+        setTimeout(() => setReanalysisMessage(null), 10000);
+      }
     } catch (error) {
       console.error("Failed to save configuration:", error);
     }
@@ -205,6 +217,29 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   Configuration Error
                 </h3>
                 <div className="mt-2 text-sm text-red-700">{error}</div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Re-analysis notification */}
+        {reanalysisMessage && (
+          <div className="rounded-md bg-green-50 border border-green-200 p-4">
+            <div className="flex">
+              <CheckCircle className="h-5 w-5 text-green-400" />
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-800">
+                  Success
+                </h3>
+                <div className="mt-2 text-sm text-green-700">{reanalysisMessage}</div>
+                <div className="mt-3">
+                  <a 
+                    href="/processing" 
+                    className="text-sm font-medium text-green-800 hover:text-green-900 underline"
+                  >
+                    View processing status →
+                  </a>
+                </div>
               </div>
             </div>
           </div>

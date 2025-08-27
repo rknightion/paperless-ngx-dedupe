@@ -146,7 +146,16 @@ async def get_config(db: Session = Depends(get_db)):
 async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_db)):
     """Update configuration"""
     updated_fields = []
+    weights_changed = False
 
+    # Check if confidence weights are being updated
+    weight_fields = [
+        "confidence_weight_jaccard",
+        "confidence_weight_fuzzy", 
+        "confidence_weight_metadata",
+        "confidence_weight_filename"
+    ]
+    
     # Update each provided field
     for field, value in config_update.dict(exclude_unset=True).items():
         if value is not None:
@@ -154,8 +163,13 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
             config_item = db.query(AppConfig).filter(AppConfig.key == field).first()
 
             if config_item:
+                # Check if this is a weight field and if it's actually changing
+                if field in weight_fields and config_item.value != value:
+                    weights_changed = True
                 config_item.value = value
             else:
+                if field in weight_fields:
+                    weights_changed = True
                 config_item = AppConfig(key=field, value=value)
                 db.add(config_item)
 
@@ -167,11 +181,26 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
 
     db.commit()
 
-    return {
+    response = {
         "status": "success",
         "updated_fields": updated_fields,
         "message": f"Updated {len(updated_fields)} configuration fields",
+        "weights_changed": weights_changed,
     }
+    
+    # If weights changed, trigger re-analysis
+    if weights_changed:
+        from paperless_dedupe.api.v1.processing import trigger_analysis_internal
+        
+        logger.info("Confidence weights changed, triggering re-analysis")
+        response["message"] += ". Confidence weights changed - triggering re-analysis."
+        response["reanalysis_triggered"] = True
+        
+        # Trigger analysis in the background
+        import asyncio
+        asyncio.create_task(trigger_analysis_internal(db, force_rebuild=True))
+    
+    return response
 
 
 @router.post("/test-connection")

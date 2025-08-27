@@ -70,6 +70,22 @@ class DevServer:
         )
         env.setdefault("PAPERLESS_DEDUPE_LOG_LEVEL", "INFO")
 
+        # Configure OpenTelemetry Resource attributes for dev without requiring user env
+        # See: https://opentelemetry.io/docs/specs/semconv/registry/attributes/service/#service-attributes
+        if "OTEL_RESOURCE_ATTRIBUTES" not in env:
+            # Prefer hostname as instance id; fall back to PID
+            try:
+                instance_id = os.uname().nodename  # type: ignore[attr-defined]
+            except Exception:
+                instance_id = str(os.getpid())
+
+            env["OTEL_RESOURCE_ATTRIBUTES"] = (
+                "service.name=paperless-dedupe,"
+                "service.namespace=paperless-ngx,"
+                "deployment.environment=development,"
+                f"service.instance.id={instance_id}"
+            )
+
         # Load from .env if it exists
         env_file = self.root_dir / ".env"
         if env_file.exists():
@@ -79,7 +95,36 @@ class DevServer:
                     line = line.strip()
                     if line and not line.startswith("#") and "=" in line:
                         key, value = line.split("=", 1)
-                        env[key.strip()] = value.strip()
+                        key = key.strip()
+                        value = value.strip()
+                        # Remove surrounding quotes if present
+                        if value and len(value) >= 2:
+                            if (value[0] == '"' and value[-1] == '"') or (value[0] == "'" and value[-1] == "'"):
+                                value = value[1:-1]
+                        # Special handling for OTEL_EXPORTER_OTLP_HEADERS
+                        # Should be in format: "Authorization=Basic <token>"
+                        # NOT URL encoded like "Authorization=Basic%20<token>"
+                        if key == "OTEL_EXPORTER_OTLP_HEADERS":
+                            # Replace URL-encoded space if present
+                            value = value.replace("%20", " ")
+                        env[key] = value
+                        
+            # Debug: Show OTEL env vars if present
+            otel_vars = {k: v for k, v in env.items() if k.startswith("OTEL_")}
+            if otel_vars:
+                print(f"{INFO_COLOR}🔭 OpenTelemetry configuration detected:{RESET}")
+                for k, v in otel_vars.items():
+                    if "HEADERS" in k or "TOKEN" in k or "AUTH" in k:
+                        # Mask sensitive values
+                        masked_value = v[:20] + "..." if len(v) > 20 else v
+                        print(f"  {k}={masked_value}")
+                    else:
+                        print(f"  {k}={v}")
+                
+                # Enable OTEL debug logging if not set
+                if "OTEL_LOG_LEVEL" not in env:
+                    env["OTEL_LOG_LEVEL"] = "info"
+                    print(f"{INFO_COLOR}  Setting OTEL_LOG_LEVEL=info for debugging{RESET}")
 
         return env
 
@@ -149,24 +194,61 @@ class DevServer:
         print(f"{BACKEND_COLOR}📝 Using log level: {log_level.upper()}{RESET}")
         print(f"{BACKEND_COLOR}🔥 Hot-reloading enabled for development{RESET}")
 
-        # Build uvicorn command WITH --reload now that logging is fixed
-        cmd = [
-            "uv",
-            "run",
-            "uvicorn",
-            "paperless_dedupe.main:app",
-            "--host",
-            "0.0.0.0",
-            "--port",
-            "30001",
-            "--log-level",
-            log_level,
-            "--reload",  # Re-enable hot-reloading!
-        ]
+        # Check if OTEL is configured
+        otel_configured = any(k.startswith("OTEL_EXPORTER") for k in env.keys())
+        
+        # Build uvicorn command - WITHOUT --reload if OTEL is configured
+        # (--reload breaks opentelemetry-instrument due to subprocess spawning)
+        if otel_configured:
+            print(f"{BACKEND_COLOR}⚠️  OTEL detected: Disabling --reload (incompatible with opentelemetry-instrument){RESET}")
+            print(f"{BACKEND_COLOR}   See: https://github.com/open-telemetry/opentelemetry-python-contrib/issues/385{RESET}")
+            cmd = [
+                "uv",
+                "run",
+                "opentelemetry-instrument",
+                "uvicorn",
+                "paperless_dedupe.main:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "30001",
+                "--log-level",
+                log_level,
+                # NO --reload when using OTEL!
+            ]
+        else:
+            # Normal dev mode with hot-reloading
+            cmd = [
+                "uv",
+                "run",
+                "uvicorn",
+                "paperless_dedupe.main:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "30001",
+                "--log-level",
+                log_level,
+                "--reload",  # Hot-reloading enabled when not using OTEL
+            ]
 
         # Add access log for info and debug levels
         if log_level in ["info", "debug"]:
             cmd.append("--access-log")
+
+        # Debug: Verify OTEL variables are in env right before subprocess creation
+        otel_in_env = {k: v for k, v in env.items() if k.startswith("OTEL_")}
+        if otel_in_env:
+            print(f"{BACKEND_COLOR}🔭 Passing OTEL config to backend process:{RESET}")
+            for k in sorted(otel_in_env.keys()):
+                v = otel_in_env[k]
+                if "HEADERS" in k or "TOKEN" in k or "AUTH" in k:
+                    print(f"{BACKEND_COLOR}  {k}=***{RESET}")
+                else:
+                    print(f"{BACKEND_COLOR}  {k}={v}{RESET}")
+        
+        print(f"{BACKEND_COLOR}🚀 Launching backend with command:{RESET}")
+        print(f"{BACKEND_COLOR}  {' '.join(cmd)}{RESET}")
 
         # Normal subprocess creation - no special buffering needed
         self.backend_process = await asyncio.create_subprocess_exec(

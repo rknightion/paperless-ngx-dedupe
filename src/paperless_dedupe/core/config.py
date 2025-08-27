@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_prefix = "PAPERLESS_DEDUPE_"
+        extra = "allow"  # Allow extra env vars like OTEL_ without interference
 
 
 settings = Settings()

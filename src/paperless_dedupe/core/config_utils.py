@@ -57,4 +57,16 @@ def get_current_config(db: Session) -> dict[str, Any]:
         ),
         "max_ocr_length": config_items.get("max_ocr_length", settings.max_ocr_length),
         "lsh_threshold": config_items.get("lsh_threshold", settings.lsh_threshold),
+        "confidence_weight_jaccard": config_items.get(
+            "confidence_weight_jaccard", settings.confidence_weight_jaccard
+        ),
+        "confidence_weight_fuzzy": config_items.get(
+            "confidence_weight_fuzzy", settings.confidence_weight_fuzzy
+        ),
+        "confidence_weight_metadata": config_items.get(
+            "confidence_weight_metadata", settings.confidence_weight_metadata
+        ),
+        "confidence_weight_filename": config_items.get(
+            "confidence_weight_filename", settings.confidence_weight_filename
+        ),
     }
