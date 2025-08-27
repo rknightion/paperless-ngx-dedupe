@@ -147,7 +147,8 @@ async def test_paperless_connection(
                     data = response.json()
                     doc_count = data.get("count", 0)
                     version = f"Connected (found {doc_count} documents)"
-                except:
+                except Exception as e:
+                    logger.warning(f"Could not get document count from API: {e}")
                     version = "Connected"
                 
                 return ConnectionTestResponse(
