@@ -68,34 +68,8 @@ export const DocumentSummaryPage: React.FC = () => {
       setStatistics(response);
     } catch (error) {
       console.error("Failed to load document statistics:", error);
-      // Set mock data for now until API endpoint is created
-      setStatistics({
-        total_documents: 13378,
-        total_size: 5.2 * 1024 * 1024 * 1024, // 5.2GB in bytes
-        processed_count: 3707,
-        pending_count: 9671,
-        error_count: 0,
-        average_ocr_length: 2450,
-        documents_with_ocr: 12800,
-        documents_without_ocr: 578,
-        size_distribution: {
-          small: 3200,
-          medium: 7800,
-          large: 2100,
-          xlarge: 278,
-        },
-        processing_status: {
-          pending: 9671,
-          processing: 0,
-          completed: 3707,
-          error: 0,
-        },
-        sync_status: {
-          last_sync: new Date().toISOString(),
-          documents_synced: 13378,
-          sync_in_progress: false,
-        },
-      });
+      // Don't mask the error with mock data
+      setStatistics(null);
     } finally {
       setLoading(false);
     }
@@ -175,11 +149,14 @@ export const DocumentSummaryPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatBytes(statistics.total_size)}
+              {statistics.total_size > 0 
+                ? formatBytes(statistics.total_size)
+                : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground">
-              Avg:{" "}
-              {formatBytes(statistics.total_size / statistics.total_documents)}
+              {statistics.total_size > 0 
+                ? `Avg: ${formatBytes(statistics.total_size / statistics.total_documents)}`
+                : "Size data not available"}
             </p>
           </CardContent>
         </Card>
@@ -211,79 +188,81 @@ export const DocumentSummaryPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Document Size Distribution */}
+      {/* Document Size Distribution - Only show if we have size data */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Document Size Distribution</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Small (&lt; 100KB)</span>
-                <Badge variant="outline">
-                  {statistics.size_distribution.small.toLocaleString()}
-                </Badge>
+        {statistics.total_size > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Document Size Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Small (&lt; 100KB)</span>
+                  <Badge variant="outline">
+                    {statistics.size_distribution.small.toLocaleString()}
+                  </Badge>
+                </div>
+                <Progress
+                  value={
+                    (statistics.size_distribution.small /
+                      statistics.total_documents) *
+                    100
+                  }
+                  className="h-2"
+                />
               </div>
-              <Progress
-                value={
-                  (statistics.size_distribution.small /
-                    statistics.total_documents) *
-                  100
-                }
-                className="h-2"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Medium (100KB - 1MB)</span>
-                <Badge variant="outline">
-                  {statistics.size_distribution.medium.toLocaleString()}
-                </Badge>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Medium (100KB - 1MB)</span>
+                  <Badge variant="outline">
+                    {statistics.size_distribution.medium.toLocaleString()}
+                  </Badge>
+                </div>
+                <Progress
+                  value={
+                    (statistics.size_distribution.medium /
+                      statistics.total_documents) *
+                    100
+                  }
+                  className="h-2"
+                />
               </div>
-              <Progress
-                value={
-                  (statistics.size_distribution.medium /
-                    statistics.total_documents) *
-                  100
-                }
-                className="h-2"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Large (1MB - 10MB)</span>
-                <Badge variant="outline">
-                  {statistics.size_distribution.large.toLocaleString()}
-                </Badge>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Large (1MB - 10MB)</span>
+                  <Badge variant="outline">
+                    {statistics.size_distribution.large.toLocaleString()}
+                  </Badge>
+                </div>
+                <Progress
+                  value={
+                    (statistics.size_distribution.large /
+                      statistics.total_documents) *
+                    100
+                  }
+                  className="h-2"
+                />
               </div>
-              <Progress
-                value={
-                  (statistics.size_distribution.large /
-                    statistics.total_documents) *
-                  100
-                }
-                className="h-2"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Extra Large (&gt; 10MB)</span>
-                <Badge variant="outline">
-                  {statistics.size_distribution.xlarge.toLocaleString()}
-                </Badge>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Extra Large (&gt; 10MB)</span>
+                  <Badge variant="outline">
+                    {statistics.size_distribution.xlarge.toLocaleString()}
+                  </Badge>
+                </div>
+                <Progress
+                  value={
+                    (statistics.size_distribution.xlarge /
+                      statistics.total_documents) *
+                    100
+                  }
+                  className="h-2"
+                />
               </div>
-              <Progress
-                value={
-                  (statistics.size_distribution.xlarge /
-                    statistics.total_documents) *
-                  100
-                }
-                className="h-2"
-              />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>

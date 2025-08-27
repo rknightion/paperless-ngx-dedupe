@@ -61,9 +61,6 @@ class DevServer:
         """Set up environment variables for local development."""
         env = os.environ.copy()
 
-        # Force unbuffered Python output
-        env["PYTHONUNBUFFERED"] = "1"
-
         # Set default environment variables if not already set
         env.setdefault(
             "PAPERLESS_DEDUPE_DATABASE_URL", "sqlite:///data/paperless_dedupe.db"
@@ -71,7 +68,7 @@ class DevServer:
         env.setdefault(
             "PAPERLESS_DEDUPE_SECRET_KEY", "dev-secret-key-change-in-production"
         )
-        env.setdefault("PAPERLESS_DEDUPE_LOG_LEVEL", "DEBUG")
+        env.setdefault("PAPERLESS_DEDUPE_LOG_LEVEL", "INFO")
 
         # Load from .env if it exists
         env_file = self.root_dir / ".env"
@@ -91,46 +88,21 @@ class DevServer:
         if line:
             print(f"{color}[{name}]{RESET} {line}", end="")
 
-    async def read_stream(self, stream, name, color):
-        """Read from a stream continuously."""
-        if not stream:
-            return
-
-        try:
-            while self.running:
-                try:
-                    line = await asyncio.wait_for(stream.readline(), timeout=0.1)
-                    if not line:
-                        continue
-
+    async def read_backend_output(self):
+        """Read backend output continuously."""
+        if self.backend_process and self.backend_process.stdout:
+            try:
+                async for line in self.backend_process.stdout:
+                    if not self.running:
+                        break
                     try:
                         decoded = line.decode("utf-8")
                     except UnicodeDecodeError:
                         decoded = line.decode("latin-1", errors="replace")
-
-                    self.print_output(name, color, decoded)
-                    sys.stdout.flush()  # Force flush output
-
-                except TimeoutError:
-                    # No output available, continue
-                    continue
-
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            if self.running:
-                print(f"{ERROR_COLOR}{name} output error: {e}{RESET}")
-
-    async def read_backend_output(self):
-        """Read backend stdout and stderr concurrently."""
-        if not self.backend_process:
-            return
-
-        await asyncio.gather(
-            self.read_stream(self.backend_process.stdout, "BACKEND", BACKEND_COLOR),
-            self.read_stream(self.backend_process.stderr, "BACKEND", BACKEND_COLOR),
-            return_exceptions=True,
-        )
+                    self.print_output("BACKEND", BACKEND_COLOR, decoded)
+            except Exception as e:
+                if self.running:
+                    print(f"{ERROR_COLOR}Backend output error: {e}{RESET}")
 
     async def run_backend(self, env):
         """Run the backend FastAPI server."""
@@ -175,10 +147,9 @@ class DevServer:
         # Get log level from environment (default to INFO)
         log_level = env.get("PAPERLESS_DEDUPE_LOG_LEVEL", "INFO").lower()
         print(f"{BACKEND_COLOR}📝 Using log level: {log_level.upper()}{RESET}")
-        print(f"{BACKEND_COLOR}🔧 Hot-reloading disabled for proper logging{RESET}")
+        print(f"{BACKEND_COLOR}🔥 Hot-reloading enabled for development{RESET}")
 
-        # Build uvicorn command without --reload for proper logging
-        # Run uvicorn directly which should improve output handling
+        # Build uvicorn command WITH --reload now that logging is fixed
         cmd = [
             "uv",
             "run",
@@ -190,20 +161,20 @@ class DevServer:
             "30001",
             "--log-level",
             log_level,
+            "--reload",  # Re-enable hot-reloading!
         ]
 
         # Add access log for info and debug levels
         if log_level in ["info", "debug"]:
             cmd.append("--access-log")
 
-        # Force unbuffered output at process creation level
+        # Normal subprocess creation - no special buffering needed
         self.backend_process = await asyncio.create_subprocess_exec(
             *cmd,
             env=env,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,  # Separate stderr
+            stderr=asyncio.subprocess.STDOUT,  # Combine streams again
             cwd=self.root_dir,
-            bufsize=0,  # Unbuffered
         )
 
         # Don't block here - the output will be read in a separate task
