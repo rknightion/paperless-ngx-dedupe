@@ -1,24 +1,35 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
 import time
 import asyncio
+import traceback
 from sqlalchemy import text
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.api.v1 import documents, duplicates, config, processing, websocket, batch_operations
 from paperless_dedupe.models.database import init_db
 
-# Configure logging
+# Configure logging with more detailed format
 log_level = getattr(logging, settings.log_level.upper(), logging.WARNING)
 logging.basicConfig(
     level=log_level,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+    force=True  # Force reconfiguration
 )
+
+# Set specific loggers to ensure errors are always visible
+logging.getLogger("uvicorn.error").setLevel(logging.ERROR)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+logging.getLogger("paperless_dedupe").setLevel(log_level)
+
 logger = logging.getLogger(__name__)
 
-# Log the configured level at startup
+# Always log startup info and errors regardless of level
 logger.info(f"Logging level set to: {settings.log_level}")
+logger.info("Error and exception logging is always enabled")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -139,6 +150,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add global exception handler middleware
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    """Catch and log all exceptions"""
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        # Log the full exception with traceback
+        logger.error(f"Unhandled exception during {request.method} {request.url.path}: {str(exc)}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        
+        # Return a proper error response
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal server error: {str(exc)}"}
+        )
+
+# Add exception handler for unhandled exceptions
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Global exception handler for unhandled exceptions"""
+    logger.error(f"Unhandled exception: {exc.__class__.__name__}: {str(exc)}")
+    logger.error(f"Request: {request.method} {request.url}")
+    logger.error(f"Traceback:\n{traceback.format_exc()}")
+    
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"An unexpected error occurred: {str(exc)}"}
+    )
 
 # Include API routers
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
