@@ -1,13 +1,8 @@
 name: Docker Publish
 
 on:
-  schedule:
-    # Run every Monday at 2 AM UTC
-    - cron: "0 2 * * 1"
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main, develop]
 
 env:
   REGISTRY: ghcr.io
