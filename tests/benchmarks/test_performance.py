@@ -306,8 +306,8 @@ class TestDatabasePerformance:
 
         total_time = end_time - start_time
         docs_per_second = doc_count / total_time
-        
-        print("\nDocument Insertion Performance:")
+
+        print(f"\nDocument Insertion Performance:")
         print(f"  {doc_count} documents in {total_time:.2f}s")
         print(f"  Rate: {docs_per_second:.1f} docs/second")
 
@@ -365,8 +365,8 @@ class TestDatabasePerformance:
         end_time = time.time()
 
         avg_time = (end_time - start_time) / iterations * 1000  # ms
-        
-        print("\nDuplicate Group Query Performance:")
+
+        print(f"\nDuplicate Group Query Performance:")
         print(f"  Average query time: {avg_time:.2f}ms")
         print(f"  Groups queried: {len(groups)}")
 

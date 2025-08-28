@@ -1,4 +1,7 @@
+import pytest
+from fastapi.testclient import TestClient
 from unittest.mock import patch, Mock, AsyncMock
+import json
 
 from paperless_dedupe.models.database import (
     Document,

@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Optional
+
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException
 
 logger = logging.getLogger(__name__)
@@ -170,7 +170,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         await manager.send_error(
                             f"Server error: {str(e)}", connection_id
                         )
-                    except Exception:
+                    except:
                         pass  # Connection might be closed, ignore error
 
     except WebSocketException as e:

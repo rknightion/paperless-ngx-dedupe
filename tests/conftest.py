@@ -1,13 +1,14 @@
-import asyncio
-import os
-import tempfile
-
 import pytest
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+import asyncio
+from typing import Generator, AsyncGenerator
+import tempfile
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from fastapi.testclient import TestClient
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+import redis
 
 from paperless_dedupe.models.database import Base, get_db
 from paperless_dedupe.core.config import settings
@@ -21,7 +22,7 @@ def event_loop():
     yield loop
     try:
         loop.run_until_complete(asyncio.sleep(0))
-    except Exception:
+    except:
         pass
     loop.close()
 
