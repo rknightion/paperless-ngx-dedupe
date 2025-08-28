@@ -1,31 +1,31 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { documentsApi } from "../../services/api";
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { documentsApi } from '../../services/api';
 import type {
   Document,
   DocumentListResponse as _DocumentListResponse,
   DocumentQueryParams,
-} from "../../services/api/types";
+} from '../../services/api/types';
 
 // Async thunks
 export const fetchDocuments = createAsyncThunk(
-  "documents/fetchDocuments",
+  'documents/fetchDocuments',
   async (params?: DocumentQueryParams) => {
     return await documentsApi.getDocuments(params);
-  },
+  }
 );
 
 export const fetchDocument = createAsyncThunk(
-  "documents/fetchDocument",
+  'documents/fetchDocument',
   async (id: number) => {
     return await documentsApi.getDocument(id);
-  },
+  }
 );
 
 export const syncDocuments = createAsyncThunk(
-  "documents/syncDocuments",
+  'documents/syncDocuments',
   async () => {
     return await documentsApi.syncDocuments();
-  },
+  }
 );
 
 // State interface
@@ -77,9 +77,9 @@ const initialState: DocumentsState = {
     pageSize: 25,
   },
   filters: {
-    search: "",
-    processing_status: "",
-    ordering: "-created",
+    search: '',
+    processing_status: '',
+    ordering: '-created',
   },
   selectedDocuments: [],
   loading: {
@@ -94,7 +94,7 @@ const initialState: DocumentsState = {
 
 // Slice
 const documentsSlice = createSlice({
-  name: "documents",
+  name: 'documents',
   initialState,
   reducers: {
     // Filter actions
@@ -128,7 +128,7 @@ const documentsSlice = createSlice({
     },
     deselectDocument: (state, action: PayloadAction<number>) => {
       state.selectedDocuments = state.selectedDocuments.filter(
-        (id) => id !== action.payload,
+        (id) => id !== action.payload
       );
     },
     selectAllDocuments: (state) => {
@@ -148,11 +148,11 @@ const documentsSlice = createSlice({
       state,
       action: PayloadAction<{
         id: number;
-        processing_status: Document["processing_status"];
-      }>,
+        processing_status: Document['processing_status'];
+      }>
     ) => {
       const document = state.documents.find(
-        (doc) => doc.id === action.payload.id,
+        (doc) => doc.id === action.payload.id
       );
       if (document) {
         document.processing_status = action.payload.processing_status;
@@ -162,18 +162,18 @@ const documentsSlice = createSlice({
           action.payload.processing_status;
       }
     },
-    
+
     // Sync status updates (from WebSocket)
     updateSyncStatus: (state, action: PayloadAction<any>) => {
       state.syncStatus = action.payload;
     },
-    
+
     syncCompleted: (state, action: PayloadAction<any>) => {
       if (state.syncStatus) {
         state.syncStatus = {
           ...state.syncStatus,
           is_syncing: false,
-          current_step: "Completed",
+          current_step: 'Completed',
           completed_at: new Date().toISOString(),
         };
       }
@@ -197,7 +197,7 @@ const documentsSlice = createSlice({
       })
       .addCase(fetchDocuments.rejected, (state, action) => {
         state.loading.list = false;
-        state.error = action.error.message || "Failed to fetch documents";
+        state.error = action.error.message || 'Failed to fetch documents';
       })
 
       // Fetch single document
@@ -211,7 +211,7 @@ const documentsSlice = createSlice({
       })
       .addCase(fetchDocument.rejected, (state, action) => {
         state.loading.single = false;
-        state.error = action.error.message || "Failed to fetch document";
+        state.error = action.error.message || 'Failed to fetch document';
       })
 
       // Sync documents
@@ -225,7 +225,7 @@ const documentsSlice = createSlice({
       })
       .addCase(syncDocuments.rejected, (state, action) => {
         state.loading.sync = false;
-        state.error = action.error.message || "Failed to sync documents";
+        state.error = action.error.message || 'Failed to sync documents';
       });
   },
 });

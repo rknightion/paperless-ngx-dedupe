@@ -2,14 +2,16 @@
 
 ## 🔧 CRITICAL: PyPaperless SDK Usage
 
-**IMPORTANT**: This project uses the PyPaperless SDK for ALL Paperless-NGX API interactions. 
+**IMPORTANT**: This project uses the PyPaperless SDK for ALL Paperless-NGX API interactions.
 
 ### PyPaperless Documentation Access
-- Use Context7 MCP server with library ID: `/tb1337/paperless-api` 
+
+- Use Context7 MCP server with library ID: `/tb1337/paperless-api`
 - Or search for "PyPaperless" to get the SDK documentation
 - The SDK provides async/await patterns, rich model objects, and comprehensive API coverage
 
 ### Key PyPaperless Patterns
+
 ```python
 # Client initialization (use existing pattern in codebase)
 from paperless_dedupe.services.paperless_client import PaperlessClient
@@ -22,11 +24,13 @@ async with PaperlessClient(**client_settings) as client:
 ```
 
 **DO NOT**:
+
 - Use httpx directly for Paperless API calls
 - Create new HTTP client implementations
 - Use synchronous API patterns
 
 **ALWAYS**:
+
 - Use the existing `PaperlessClient` wrapper in `services/paperless_client.py`
 - Follow async/await patterns
 - Use Context7 to check PyPaperless documentation for new features
@@ -34,6 +38,7 @@ async with PaperlessClient(**client_settings) as client:
 ### Available PyPaperless Features in Our Client
 
 The `PaperlessClient` wrapper provides access to:
+
 - **Documents**: CRUD operations, search, similarity matching, suggestions
 - **Tags**: List, create, manage document tags
 - **Correspondents**: Access and manage document correspondents
@@ -43,6 +48,7 @@ The `PaperlessClient` wrapper provides access to:
 - **Statistics**: Comprehensive stats about the Paperless instance
 
 Example usage for new features:
+
 ```python
 # Search documents
 results = await client.search_documents("invoice 2024")

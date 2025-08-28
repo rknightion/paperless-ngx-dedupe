@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from "react";
-import { useAppDispatch } from "../../hooks/redux";
-import { fetchDocuments } from "../../store/slices/documentsSlice";
-import { documentsApi } from "../../services/api";
+import React, { useEffect, useState } from 'react';
+import { useAppDispatch } from '../../hooks/redux';
+import { fetchDocuments } from '../../store/slices/documentsSlice';
+import { documentsApi } from '../../services/api';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
-import { Progress } from "../../components/ui/Progress";
-import { Badge } from "../../components/ui/Badge";
+} from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Progress } from '../../components/ui/Progress';
+import { Badge } from '../../components/ui/Badge';
 import {
   FileText,
   Database,
@@ -23,7 +23,7 @@ import {
   FileType,
   Info,
   FolderOpen,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface DocumentStatistics {
   total_documents: number;
@@ -60,9 +60,17 @@ interface DocumentStatistics {
     documents_with_correspondent?: number;
     documents_with_tags?: number;
     documents_with_type?: number;
-    top_tags?: Array<{id: number; name: string; document_count: number}>;
-    top_correspondents?: Array<{id: number; name: string; document_count: number}>;
-    top_document_types?: Array<{id: number; name: string; document_count: number}>;
+    top_tags?: Array<{ id: number; name: string; document_count: number }>;
+    top_correspondents?: Array<{
+      id: number;
+      name: string;
+      document_count: number;
+    }>;
+    top_document_types?: Array<{
+      id: number;
+      name: string;
+      document_count: number;
+    }>;
   };
 }
 
@@ -83,7 +91,7 @@ export const DocumentSummaryPage: React.FC = () => {
       const response = await documentsApi.getStatistics();
       setStatistics(response);
     } catch (error) {
-      console.error("Failed to load document statistics:", error);
+      console.error('Failed to load document statistics:', error);
       // Don't mask the error with mock data
       setStatistics(null);
     } finally {
@@ -92,15 +100,15 @@ export const DocumentSummaryPage: React.FC = () => {
   };
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Never";
+    if (!dateString) return 'Never';
     return new Date(dateString).toLocaleString();
   };
 
@@ -168,7 +176,8 @@ export const DocumentSummaryPage: React.FC = () => {
               {statistics.paperless_stats?.total_tags || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {statistics.paperless_stats?.documents_with_tags || 0} documents tagged
+              {statistics.paperless_stats?.documents_with_tags || 0} documents
+              tagged
             </p>
           </CardContent>
         </Card>
@@ -219,17 +228,19 @@ export const DocumentSummaryPage: React.FC = () => {
               </div>
               <Progress
                 value={
-                  ((statistics.paperless_stats?.documents_with_correspondent || 0) /
+                  ((statistics.paperless_stats?.documents_with_correspondent ||
+                    0) /
                     statistics.total_documents) *
                   100
                 }
                 className="h-2"
               />
               <p className="text-xs text-muted-foreground">
-                {statistics.paperless_stats?.documents_with_correspondent || 0} documents assigned
+                {statistics.paperless_stats?.documents_with_correspondent || 0}{' '}
+                documents assigned
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -249,7 +260,8 @@ export const DocumentSummaryPage: React.FC = () => {
                 className="h-2"
               />
               <p className="text-xs text-muted-foreground">
-                {statistics.paperless_stats?.documents_with_type || 0} documents classified
+                {statistics.paperless_stats?.documents_with_type || 0} documents
+                classified
               </p>
             </div>
 
@@ -338,17 +350,24 @@ export const DocumentSummaryPage: React.FC = () => {
       </div>
 
       {/* Top Tags and Correspondents */}
-      {statistics.paperless_stats?.top_tags || statistics.paperless_stats?.top_correspondents ? (
+      {statistics.paperless_stats?.top_tags ||
+      statistics.paperless_stats?.top_correspondents ? (
         <div className="grid gap-6 md:grid-cols-2">
-          {statistics.paperless_stats?.top_tags && statistics.paperless_stats.top_tags.length > 0 ? (
+          {statistics.paperless_stats?.top_tags &&
+          statistics.paperless_stats.top_tags.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Most Used Tags</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {statistics.paperless_stats.top_tags.slice(0, 5).map((tag) => (
-                  <div key={tag.id} className="flex justify-between items-center">
-                    <span className="text-sm truncate max-w-[200px]">{tag.name}</span>
+                  <div
+                    key={tag.id}
+                    className="flex justify-between items-center"
+                  >
+                    <span className="text-sm truncate max-w-[200px]">
+                      {tag.name}
+                    </span>
                     <Badge variant="secondary">{tag.document_count}</Badge>
                   </div>
                 ))}
@@ -356,18 +375,26 @@ export const DocumentSummaryPage: React.FC = () => {
             </Card>
           ) : null}
 
-          {statistics.paperless_stats?.top_correspondents && statistics.paperless_stats.top_correspondents.length > 0 ? (
+          {statistics.paperless_stats?.top_correspondents &&
+          statistics.paperless_stats.top_correspondents.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Top Correspondents</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {statistics.paperless_stats.top_correspondents.slice(0, 5).map((corr) => (
-                  <div key={corr.id} className="flex justify-between items-center">
-                    <span className="text-sm truncate max-w-[200px]">{corr.name}</span>
-                    <Badge variant="secondary">{corr.document_count}</Badge>
-                  </div>
-                ))}
+                {statistics.paperless_stats.top_correspondents
+                  .slice(0, 5)
+                  .map((corr) => (
+                    <div
+                      key={corr.id}
+                      className="flex justify-between items-center"
+                    >
+                      <span className="text-sm truncate max-w-[200px]">
+                        {corr.name}
+                      </span>
+                      <Badge variant="secondary">{corr.document_count}</Badge>
+                    </div>
+                  ))}
               </CardContent>
             </Card>
           ) : null}

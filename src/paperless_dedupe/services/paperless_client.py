@@ -1,7 +1,7 @@
 """Enhanced Paperless client using PyPaperless SDK."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from pypaperless import Paperless
 from pypaperless.models import Document
@@ -23,11 +23,11 @@ class PaperlessClient:
     ):
         """Initialize the Paperless client."""
         self.base_url = (paperless_url or settings.paperless_url).rstrip("/")
-        
+
         # PyPaperless expects URL without /api prefix
         if "/api" in self.base_url:
             self.base_url = self.base_url.replace("/api", "")
-        
+
         # Prefer token auth
         if paperless_api_token or settings.paperless_api_token:
             self.token = paperless_api_token or settings.paperless_api_token
@@ -53,16 +53,18 @@ class PaperlessClient:
                 self.base_url, self._username, self._password
             )
             self.paperless = Paperless(self.base_url, self.token)
-        
+
         await self.paperless.initialize()
-        
+
         # Initialize custom fields cache for better field handling
         try:
-            self.paperless.cache.custom_fields = await self.paperless.custom_fields.as_dict()
+            self.paperless.cache.custom_fields = (
+                await self.paperless.custom_fields.as_dict()
+            )
         except Exception:
             # Custom fields might not be available
             pass
-        
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -72,14 +74,14 @@ class PaperlessClient:
 
     async def get_all_documents(self, batch_callback=None) -> list[dict[str, Any]]:
         """Get all documents from paperless with optimized pagination.
-        
+
         Args:
             batch_callback: Optional callback function to process documents in batches.
                            Called with list of documents every batch_size documents.
         """
         documents = []
         batch_size = 200  # Process in batches for better memory efficiency
-        
+
         try:
             # Use reduce with larger page size for faster fetching
             async with self.paperless.documents.reduce(page_size=batch_size) as reduced:
@@ -88,52 +90,54 @@ class PaperlessClient:
                     doc_dict = self._document_to_dict(doc)
                     documents.append(doc_dict)
                     batch.append(doc_dict)
-                    
+
                     # Process batch if we have enough documents
                     if len(batch) >= batch_size and batch_callback:
                         await batch_callback(batch)
                         batch = []
-                
+
                 # Process remaining documents in last batch
                 if batch and batch_callback:
                     await batch_callback(batch)
-                
+
             logger.info(f"Fetched {len(documents)} documents total")
             return documents
-            
+
         except Exception as e:
             logger.error(f"Failed to fetch documents: {e}")
             raise
 
-    async def get_documents(self, page: int = 1, page_size: int = None) -> dict[str, Any]:
+    async def get_documents(
+        self, page: int = 1, page_size: int = None
+    ) -> dict[str, Any]:
         """Get paginated list of documents."""
         page_size = page_size or settings.api_page_size
-        
+
         try:
             # PyPaperless handles pagination internally
             # Collect documents for the specific page
             all_docs = []
             doc_count = 0
             skip = (page - 1) * page_size
-            
+
             async for doc in self.paperless.documents:
                 if doc_count >= skip and len(all_docs) < page_size:
                     all_docs.append(self._document_to_dict(doc))
                 doc_count += 1
                 if len(all_docs) >= page_size:
                     break
-            
+
             # Determine if there are more pages
             has_next = doc_count > skip + len(all_docs)
             has_prev = page > 1
-            
+
             return {
                 "count": doc_count,
                 "next": f"?page={page + 1}" if has_next else None,
                 "previous": f"?page={page - 1}" if has_prev else None,
-                "results": all_docs
+                "results": all_docs,
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to fetch documents page {page}: {e}")
             raise
@@ -237,16 +241,20 @@ class PaperlessClient:
         try:
             tags = []
             async for tag in self.paperless.tags:
-                tags.append({
-                    "id": tag.id,
-                    "name": tag.name,
-                    "color": tag.color,
-                    "slug": tag.slug,
-                    "match": tag.match,
-                    "matching_algorithm": str(tag.matching_algorithm) if tag.matching_algorithm else None,
-                    "is_inbox_tag": tag.is_inbox_tag,
-                    "document_count": tag.document_count,
-                })
+                tags.append(
+                    {
+                        "id": tag.id,
+                        "name": tag.name,
+                        "color": tag.color,
+                        "slug": tag.slug,
+                        "match": tag.match,
+                        "matching_algorithm": str(tag.matching_algorithm)
+                        if tag.matching_algorithm
+                        else None,
+                        "is_inbox_tag": tag.is_inbox_tag,
+                        "document_count": tag.document_count,
+                    }
+                )
             return tags
         except Exception as e:
             logger.error(f"Failed to get tags: {e}")
@@ -269,16 +277,22 @@ class PaperlessClient:
         try:
             correspondents = []
             async for corr in self.paperless.correspondents:
-                correspondents.append({
-                    "id": corr.id,
-                    "name": corr.name,
-                    "slug": corr.slug,
-                    "match": corr.match,
-                    "matching_algorithm": str(corr.matching_algorithm) if corr.matching_algorithm else None,
-                    "is_insensitive": corr.is_insensitive,
-                    "document_count": corr.document_count,
-                    "last_correspondence": corr.last_correspondence.isoformat() if corr.last_correspondence else None,
-                })
+                correspondents.append(
+                    {
+                        "id": corr.id,
+                        "name": corr.name,
+                        "slug": corr.slug,
+                        "match": corr.match,
+                        "matching_algorithm": str(corr.matching_algorithm)
+                        if corr.matching_algorithm
+                        else None,
+                        "is_insensitive": corr.is_insensitive,
+                        "document_count": corr.document_count,
+                        "last_correspondence": corr.last_correspondence.isoformat()
+                        if corr.last_correspondence
+                        else None,
+                    }
+                )
             return correspondents
         except Exception as e:
             logger.error(f"Failed to get correspondents: {e}")
@@ -289,15 +303,19 @@ class PaperlessClient:
         try:
             types = []
             async for doc_type in self.paperless.document_types:
-                types.append({
-                    "id": doc_type.id,
-                    "name": doc_type.name,
-                    "slug": doc_type.slug,
-                    "match": doc_type.match,
-                    "matching_algorithm": str(doc_type.matching_algorithm) if doc_type.matching_algorithm else None,
-                    "is_insensitive": doc_type.is_insensitive,
-                    "document_count": doc_type.document_count,
-                })
+                types.append(
+                    {
+                        "id": doc_type.id,
+                        "name": doc_type.name,
+                        "slug": doc_type.slug,
+                        "match": doc_type.match,
+                        "matching_algorithm": str(doc_type.matching_algorithm)
+                        if doc_type.matching_algorithm
+                        else None,
+                        "is_insensitive": doc_type.is_insensitive,
+                        "document_count": doc_type.document_count,
+                    }
+                )
             return types
         except Exception as e:
             logger.error(f"Failed to get document types: {e}")
@@ -308,16 +326,20 @@ class PaperlessClient:
         try:
             paths = []
             async for path in self.paperless.storage_paths:
-                paths.append({
-                    "id": path.id,
-                    "name": path.name,
-                    "slug": path.slug,
-                    "path": path.path,
-                    "match": path.match,
-                    "matching_algorithm": str(path.matching_algorithm) if path.matching_algorithm else None,
-                    "is_insensitive": path.is_insensitive,
-                    "document_count": path.document_count,
-                })
+                paths.append(
+                    {
+                        "id": path.id,
+                        "name": path.name,
+                        "slug": path.slug,
+                        "path": path.path,
+                        "match": path.match,
+                        "matching_algorithm": str(path.matching_algorithm)
+                        if path.matching_algorithm
+                        else None,
+                        "is_insensitive": path.is_insensitive,
+                        "document_count": path.document_count,
+                    }
+                )
             return paths
         except Exception as e:
             logger.error(f"Failed to get storage paths: {e}")
@@ -328,12 +350,14 @@ class PaperlessClient:
         try:
             fields = []
             async for field in self.paperless.custom_fields:
-                fields.append({
-                    "id": field.id,
-                    "name": field.name,
-                    "data_type": field.data_type,
-                    "extra_data": field.extra_data,
-                })
+                fields.append(
+                    {
+                        "id": field.id,
+                        "name": field.name,
+                        "data_type": field.data_type,
+                        "extra_data": field.extra_data,
+                    }
+                )
             return fields
         except Exception as e:
             logger.error(f"Failed to get custom fields: {e}")
@@ -391,23 +415,25 @@ class PaperlessClient:
             doc_types = await self.get_document_types()
             storage_paths = await self.get_storage_paths()
             custom_fields = await self.get_custom_fields()
-            
+
             # Get document count from a single page request (much faster)
             first_page = await self.get_documents(page=1, page_size=1)
             total_docs = first_page.get("count", 0)
-            
+
             # Calculate documents with metadata from the counts in each category
             # This is approximate but much faster than iterating all documents
-            docs_with_correspondent = sum(c.get("document_count", 0) for c in correspondents)
+            docs_with_correspondent = sum(
+                c.get("document_count", 0) for c in correspondents
+            )
             docs_with_tags = sum(t.get("document_count", 0) for t in tags)
             docs_with_type = sum(dt.get("document_count", 0) for dt in doc_types)
-            
+
             # Note: These counts might be higher than total_docs if documents have multiple tags
             # Clamp them to be at most total_docs
             docs_with_correspondent = min(docs_with_correspondent, total_docs)
             docs_with_tags = min(docs_with_tags, total_docs)
             docs_with_type = min(docs_with_type, total_docs)
-            
+
             return {
                 "total_documents": total_docs,
                 "total_tags": len(tags),
@@ -418,9 +444,17 @@ class PaperlessClient:
                 "documents_with_correspondent": docs_with_correspondent,
                 "documents_with_tags": docs_with_tags,
                 "documents_with_type": docs_with_type,
-                "top_tags": sorted(tags, key=lambda x: x.get("document_count", 0), reverse=True)[:10],
-                "top_correspondents": sorted(correspondents, key=lambda x: x.get("document_count", 0), reverse=True)[:10],
-                "top_document_types": sorted(doc_types, key=lambda x: x.get("document_count", 0), reverse=True)[:5],
+                "top_tags": sorted(
+                    tags, key=lambda x: x.get("document_count", 0), reverse=True
+                )[:10],
+                "top_correspondents": sorted(
+                    correspondents,
+                    key=lambda x: x.get("document_count", 0),
+                    reverse=True,
+                )[:10],
+                "top_document_types": sorted(
+                    doc_types, key=lambda x: x.get("document_count", 0), reverse=True
+                )[:5],
             }
         except Exception as e:
             logger.error(f"Failed to get statistics: {e}")
@@ -445,7 +479,9 @@ class PaperlessClient:
             "owner": doc.owner,
             "notes": doc.notes or [],
             "custom_fields": [
-                {"field": cf.field, "value": cf.value} 
+                {"field": cf.field, "value": cf.value}
                 for cf in (doc.custom_fields or [])
-            ] if hasattr(doc, "custom_fields") else [],
+            ]
+            if hasattr(doc, "custom_fields")
+            else [],
         }

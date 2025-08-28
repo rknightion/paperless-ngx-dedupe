@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { Progress } from "../ui/Progress";
-import { Button } from "../ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
-import { Alert, AlertDescription } from "../ui/Alert";
+import React, { useEffect, useState } from 'react';
+import { Progress } from '../ui/Progress';
+import { Button } from '../ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Alert, AlertDescription } from '../ui/Alert';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/Tooltip";
+} from '../ui/Tooltip';
 import {
   Loader2,
   CheckCircle,
@@ -16,11 +16,14 @@ import {
   RefreshCw,
   FileText,
   Info,
-} from "lucide-react";
-import { documentsApi } from "../../services/api/documents";
-import { useAppDispatch, useAppSelector } from "../../hooks/redux";
-import { fetchDocuments, updateSyncStatus } from "../../store/slices/documentsSlice";
-import { useProcessingStatus } from "../../hooks/redux";
+} from 'lucide-react';
+import { documentsApi } from '../../services/api/documents';
+import { useAppDispatch, useAppSelector } from '../../hooks/redux';
+import {
+  fetchDocuments,
+  updateSyncStatus,
+} from '../../store/slices/documentsSlice';
+import { useProcessingStatus } from '../../hooks/redux';
 
 interface SyncStatus {
   is_syncing: boolean;
@@ -37,14 +40,15 @@ interface SyncStatus {
 export const SyncProgress: React.FC = () => {
   const dispatch = useAppDispatch();
   const { status: processingStatus } = useProcessingStatus();
-  
+
   // Get sync status from Redux store
   const syncStatus = useAppSelector((state) => state.documents.syncStatus);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Get initial sync status
-    documentsApi.getSyncStatus()
+    documentsApi
+      .getSyncStatus()
       .then((status) => {
         // Update Redux store with initial status
         if (status) {
@@ -67,7 +71,7 @@ export const SyncProgress: React.FC = () => {
       await documentsApi.syncDocuments();
       // Status will be updated via WebSocket
     } catch (error: any) {
-      console.error("Failed to start sync:", error);
+      console.error('Failed to start sync:', error);
       if (error?.response?.data?.detail) {
         alert(error.response.data.detail);
       }
@@ -79,21 +83,21 @@ export const SyncProgress: React.FC = () => {
   const handleForceSync = async () => {
     // Show warning dialog
     const confirmed = window.confirm(
-      "⚠️ Force Refresh Warning\n\n" +
-      "This will DELETE all existing documents and duplicate analysis results, then re-import everything from Paperless-NGX.\n\n" +
-      "This action cannot be undone. Are you sure you want to continue?"
+      '⚠️ Force Refresh Warning\n\n' +
+        'This will DELETE all existing documents and duplicate analysis results, then re-import everything from Paperless-NGX.\n\n' +
+        'This action cannot be undone. Are you sure you want to continue?'
     );
-    
+
     if (!confirmed) {
       return;
     }
-    
+
     setIsLoading(true);
     try {
       await documentsApi.syncDocuments({ force_refresh: true });
       // Status will be updated via WebSocket
     } catch (error: any) {
-      console.error("Failed to start force sync:", error);
+      console.error('Failed to start force sync:', error);
       if (error?.response?.data?.detail) {
         alert(error.response.data.detail);
       }
@@ -120,7 +124,7 @@ export const SyncProgress: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {syncStatus.error && syncStatus.error.trim() !== "" && (
+        {syncStatus.error && syncStatus.error.trim() !== '' && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{syncStatus.error}</AlertDescription>
@@ -153,7 +157,7 @@ export const SyncProgress: React.FC = () => {
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <CheckCircle className="h-4 w-4" />
                 <span>
-                  Last sync completed:{" "}
+                  Last sync completed:{' '}
                   {new Date(syncStatus.completed_at).toLocaleString()}
                 </span>
               </div>
@@ -188,9 +192,17 @@ export const SyncProgress: React.FC = () => {
                     <div className="flex-1">
                       <Button
                         onClick={handleStartSync}
-                        disabled={isLoading || syncStatus.is_syncing || processingStatus.is_processing}
+                        disabled={
+                          isLoading ||
+                          syncStatus.is_syncing ||
+                          processingStatus.is_processing
+                        }
                         className="w-full"
-                        title={processingStatus.is_processing ? "Cannot sync while analysis is in progress" : ""}
+                        title={
+                          processingStatus.is_processing
+                            ? 'Cannot sync while analysis is in progress'
+                            : ''
+                        }
                       >
                         {isLoading ? (
                           <>
@@ -209,10 +221,13 @@ export const SyncProgress: React.FC = () => {
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p>
-                      <strong>Sync Documents:</strong> Fetches only NEW documents from Paperless-NGX that haven't been imported yet. Existing documents are skipped.
+                      <strong>Sync Documents:</strong> Fetches only NEW
+                      documents from Paperless-NGX that haven't been imported
+                      yet. Existing documents are skipped.
                     </p>
                     <p className="mt-1 text-xs">
-                      Use this for regular updates to import recently added documents.
+                      Use this for regular updates to import recently added
+                      documents.
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -223,7 +238,11 @@ export const SyncProgress: React.FC = () => {
                   <TooltipTrigger asChild>
                     <Button
                       onClick={handleForceSync}
-                      disabled={isLoading || syncStatus.is_syncing || processingStatus.is_processing}
+                      disabled={
+                        isLoading ||
+                        syncStatus.is_syncing ||
+                        processingStatus.is_processing
+                      }
                       variant="outline"
                     >
                       Force Refresh
@@ -232,10 +251,13 @@ export const SyncProgress: React.FC = () => {
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p>
-                      <strong>Force Refresh:</strong> Re-fetches ALL documents from Paperless-NGX, updating metadata and OCR content for existing documents.
+                      <strong>Force Refresh:</strong> Re-fetches ALL documents
+                      from Paperless-NGX, updating metadata and OCR content for
+                      existing documents.
                     </p>
                     <p className="mt-1 text-xs">
-                      Use this if document metadata or OCR content has changed in Paperless-NGX and you need to update the local copies.
+                      Use this if document metadata or OCR content has changed
+                      in Paperless-NGX and you need to update the local copies.
                     </p>
                   </TooltipContent>
                 </Tooltip>

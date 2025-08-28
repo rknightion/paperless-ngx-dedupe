@@ -1,4 +1,4 @@
-import type { ProcessingStatus } from "../api/types";
+import type { ProcessingStatus } from '../api/types';
 
 type WebSocketEventCallback = (data: any) => void;
 type ProcessingUpdateCallback = (status: ProcessingStatus) => void;
@@ -20,9 +20,9 @@ class WebSocketClient {
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
 
-  constructor(url: string = "") {
+  constructor(url: string = '') {
     // Build WebSocket URL based on current location
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     this.url = url || `${protocol}//${host}/ws`;
   }
@@ -43,9 +43,9 @@ class WebSocketClient {
 
           // Start ping interval to keep connection alive
           this.startPingInterval();
-          
+
           // Emit connection event
-          this.emit("connected", true);
+          this.emit('connected', true);
 
           resolve();
         };
@@ -53,9 +53,9 @@ class WebSocketClient {
         this.socket.onclose = (event) => {
           this.isConnected = false;
           this.stopPingInterval();
-          
+
           // Emit disconnection event
-          this.emit("disconnected", false);
+          this.emit('disconnected', false);
 
           // Auto-reconnect unless it was a normal closure
           if (event.code !== 1000) {
@@ -64,11 +64,11 @@ class WebSocketClient {
         };
 
         this.socket.onerror = (error) => {
-          console.error("WebSocket error:", error);
+          console.error('WebSocket error:', error);
           this.isConnected = false;
 
           if (this.reconnectAttempts === 0) {
-            reject(new Error("Failed to connect to WebSocket"));
+            reject(new Error('Failed to connect to WebSocket'));
           }
         };
 
@@ -77,11 +77,11 @@ class WebSocketClient {
             const message: WebSocketMessage = JSON.parse(event.data);
             this.handleMessage(message);
           } catch (error) {
-            console.error("Failed to parse WebSocket message:", error);
+            console.error('Failed to parse WebSocket message:', error);
           }
         };
       } catch (error) {
-        console.error("Failed to create WebSocket:", error);
+        console.error('Failed to create WebSocket:', error);
         reject(error);
       }
     });
@@ -89,36 +89,36 @@ class WebSocketClient {
 
   private handleMessage(message: WebSocketMessage): void {
     switch (message.type) {
-      case "connection_established":
+      case 'connection_established':
         // Connection confirmed
         break;
 
-      case "processing_update":
-        this.emit("processing_update", message.data);
+      case 'processing_update':
+        this.emit('processing_update', message.data);
         break;
 
-      case "error":
-        this.emit("error", message.data);
+      case 'error':
+        this.emit('error', message.data);
         break;
 
-      case "processing_completed":
-        this.emit("processing_completed", message.data);
+      case 'processing_completed':
+        this.emit('processing_completed', message.data);
         break;
 
-      case "sync_update":
-        this.emit("sync_update", message.data);
+      case 'sync_update':
+        this.emit('sync_update', message.data);
         break;
 
-      case "sync_completed":
-        this.emit("sync_completed", message.data);
+      case 'sync_completed':
+        this.emit('sync_completed', message.data);
         break;
 
-      case "pong":
+      case 'pong':
         // Pong received, connection is alive
         break;
 
       default:
-        // Unknown message type - ignore
+      // Unknown message type - ignore
     }
   }
 
@@ -128,7 +128,7 @@ class WebSocketClient {
     // Send ping every 30 seconds to keep connection alive
     this.pingInterval = setInterval(() => {
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        this.send({ type: "ping", data: { timestamp: Date.now() } });
+        this.send({ type: 'ping', data: { timestamp: Date.now() } });
       }
     }, 30000);
   }
@@ -155,7 +155,7 @@ class WebSocketClient {
     }
 
     if (this.socket) {
-      this.socket.close(1000, "Client disconnect");
+      this.socket.close(1000, 'Client disconnect');
       this.socket = null;
       this.isConnected = false;
     }
@@ -167,29 +167,29 @@ class WebSocketClient {
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
 
       console.log(
-        `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`,
+        `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`
       );
 
       this.reconnectTimeout = setTimeout(() => {
         this.connect().catch((error) => {
-          console.error("Reconnection failed:", error);
+          console.error('Reconnection failed:', error);
         });
       }, delay);
     } else {
-      console.error("Max reconnection attempts reached");
-      this.emit("max_reconnect_attempts_reached", null);
+      console.error('Max reconnection attempts reached');
+      this.emit('max_reconnect_attempts_reached', null);
     }
   }
 
   // Event listener methods
-  on(event: "connected", callback: (connected: boolean) => void): void;
-  on(event: "disconnected", callback: (connected: boolean) => void): void;
-  on(event: "processing_update", callback: ProcessingUpdateCallback): void;
-  on(event: "sync_update", callback: SyncUpdateCallback): void;
-  on(event: "sync_completed", callback: (data: any) => void): void;
-  on(event: "error", callback: ErrorCallback): void;
-  on(event: "processing_completed", callback: (data: any) => void): void;
-  on(event: "max_reconnect_attempts_reached", callback: () => void): void;
+  on(event: 'connected', callback: (connected: boolean) => void): void;
+  on(event: 'disconnected', callback: (connected: boolean) => void): void;
+  on(event: 'processing_update', callback: ProcessingUpdateCallback): void;
+  on(event: 'sync_update', callback: SyncUpdateCallback): void;
+  on(event: 'sync_completed', callback: (data: any) => void): void;
+  on(event: 'error', callback: ErrorCallback): void;
+  on(event: 'processing_completed', callback: (data: any) => void): void;
+  on(event: 'max_reconnect_attempts_reached', callback: () => void): void;
   on(event: string, callback: WebSocketEventCallback): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
@@ -216,7 +216,7 @@ class WebSocketClient {
         } catch (error) {
           console.error(
             `Error in WebSocket event handler for ${event}:`,
-            error,
+            error
           );
         }
       });
@@ -228,18 +228,18 @@ class WebSocketClient {
     return this.isConnected && this.socket?.readyState === WebSocket.OPEN;
   }
 
-  getConnectionState(): "connected" | "disconnected" | "connecting" {
-    if (!this.socket) return "disconnected";
+  getConnectionState(): 'connected' | 'disconnected' | 'connecting' {
+    if (!this.socket) return 'disconnected';
 
     switch (this.socket.readyState) {
       case WebSocket.CONNECTING:
-        return "connecting";
+        return 'connecting';
       case WebSocket.OPEN:
-        return "connected";
+        return 'connected';
       case WebSocket.CLOSING:
       case WebSocket.CLOSED:
       default:
-        return "disconnected";
+        return 'disconnected';
     }
   }
 }

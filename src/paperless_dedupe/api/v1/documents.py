@@ -204,10 +204,13 @@ async def get_document_statistics(db: Session = Depends(get_db)):
     paperless_stats = {}
     try:
         from paperless_dedupe.models.database import AppConfig
-        
-        stats_config = db.query(AppConfig).filter(AppConfig.key == "paperless_stats").first()
+
+        stats_config = (
+            db.query(AppConfig).filter(AppConfig.key == "paperless_stats").first()
+        )
         if stats_config and stats_config.value:
             import json
+
             paperless_stats = json.loads(stats_config.value)
     except Exception as e:
         logger.warning(f"Could not load cached Paperless statistics: {e}")
@@ -301,32 +304,32 @@ async def run_document_sync(
         sync_status["documents_updated"] = 0
 
         await safe_broadcast_sync_update()
-        
+
         # If force refresh, clean up all existing data first
         if force_refresh:
             sync_status["current_step"] = "Clearing existing data for fresh sync"
             await safe_broadcast_sync_update()
-            
+
             from paperless_dedupe.models.database import DuplicateGroup, DuplicateMember
-            
+
             # Delete all duplicate analysis results
             deleted_members = db.query(DuplicateMember).delete()
             deleted_groups = db.query(DuplicateGroup).delete()
-            
+
             # Delete all document content
             deleted_content = db.query(DocumentContent).delete()
-            
+
             # Delete all documents
             deleted_docs = db.query(Document).delete()
-            
+
             db.commit()
-            
+
             logger.info(
                 f"Force refresh cleanup: Deleted {deleted_docs} documents, "
                 f"{deleted_content} content records, {deleted_groups} duplicate groups, "
                 f"{deleted_members} duplicate members"
             )
-            
+
             # Small delay after cleanup
             await asyncio.sleep(0.1)
 
@@ -343,14 +346,16 @@ async def run_document_sync(
             # First fetch all tags to build ID->name mapping
             sync_status["current_step"] = "Fetching tags"
             await safe_broadcast_sync_update()
-            
+
             tags_list = await client.get_tags()
             # Create mappings for both int and string keys to handle both cases
             tag_id_to_name = {}
             for tag in tags_list:
                 tag_id = tag["id"]
                 tag_name = tag["name"]
-                tag_id_to_name[tag_id] = tag_name  # Store with original type (likely int)
+                tag_id_to_name[tag_id] = (
+                    tag_name  # Store with original type (likely int)
+                )
                 tag_id_to_name[str(tag_id)] = tag_name  # Also store as string
             logger.info(f"Fetched {len(tags_list)} tags from paperless-ngx")
 
@@ -360,31 +365,42 @@ async def run_document_sync(
 
             logger.info("Starting document sync from paperless-ngx")
             import time
+
             start_time = time.time()
-            
+
             # Define callback to track progress during fetch
             last_fetch_broadcast = time.time()
-            
+
             async def batch_progress_callback(batch):
                 nonlocal last_fetch_broadcast
                 sync_status["documents_synced"] += len(batch)
                 current_time = time.time()
-                
+
                 # Broadcast every second during fetch
                 if current_time - last_fetch_broadcast >= 1:
                     elapsed = current_time - start_time
-                    rate = sync_status["documents_synced"] / elapsed if elapsed > 0 else 0
-                    logger.info(f"Fetched {sync_status['documents_synced']} documents ({rate:.1f} docs/sec)")
-                    sync_status["current_step"] = f"Fetching documents... ({sync_status['documents_synced']} so far)"
+                    rate = (
+                        sync_status["documents_synced"] / elapsed if elapsed > 0 else 0
+                    )
+                    logger.info(
+                        f"Fetched {sync_status['documents_synced']} documents ({rate:.1f} docs/sec)"
+                    )
+                    sync_status["current_step"] = (
+                        f"Fetching documents... ({sync_status['documents_synced']} so far)"
+                    )
                     await safe_broadcast_sync_update()
                     last_fetch_broadcast = current_time
-            
+
             # Reset counter for accurate tracking during fetch
             sync_status["documents_synced"] = 0
-            paperless_docs = await client.get_all_documents(batch_callback=batch_progress_callback)
-            
+            paperless_docs = await client.get_all_documents(
+                batch_callback=batch_progress_callback
+            )
+
             fetch_time = time.time() - start_time
-            logger.info(f"Document list fetched in {fetch_time:.2f} seconds ({len(paperless_docs)}/{fetch_time:.1f} = {len(paperless_docs)/fetch_time:.1f} docs/sec)")
+            logger.info(
+                f"Document list fetched in {fetch_time:.2f} seconds ({len(paperless_docs)}/{fetch_time:.1f} = {len(paperless_docs) / fetch_time:.1f} docs/sec)"
+            )
 
             if limit:
                 paperless_docs = paperless_docs[:limit]
@@ -402,7 +418,7 @@ async def run_document_sync(
             for idx, pdoc in enumerate(paperless_docs):
                 sync_status["progress"] = idx + 1
                 current_time = time.time()
-                
+
                 # Calculate progress percentage
                 current_progress = int((idx + 1) / len(paperless_docs) * 100)
 
@@ -414,7 +430,7 @@ async def run_document_sync(
                 progress_jump = current_progress - last_progress >= 5
                 is_first = idx == 0
                 is_last = idx == len(paperless_docs) - 1
-                
+
                 if time_elapsed or progress_jump or is_first or is_last:
                     sync_status["documents_synced"] = synced_count
                     sync_status["documents_updated"] = updated_count
@@ -518,37 +534,45 @@ async def run_document_sync(
             # After sync, update Paperless statistics in database
             sync_status["current_step"] = "Updating statistics"
             await safe_broadcast_sync_update()
-            
+
             try:
                 logger.info("Fetching and caching Paperless statistics...")
                 paperless_stats = await client.get_statistics()
-                
+
                 if paperless_stats:
                     # Store stats in database as JSON
                     import json
+
                     from paperless_dedupe.models.database import AppConfig
-                    
-                    stats_config = db.query(AppConfig).filter(AppConfig.key == "paperless_stats").first()
+
+                    stats_config = (
+                        db.query(AppConfig)
+                        .filter(AppConfig.key == "paperless_stats")
+                        .first()
+                    )
                     if stats_config:
                         stats_config.value = json.dumps(paperless_stats)
                     else:
                         stats_config = AppConfig(
-                            key="paperless_stats",
-                            value=json.dumps(paperless_stats)
+                            key="paperless_stats", value=json.dumps(paperless_stats)
                         )
                         db.add(stats_config)
-                    
+
                     # Also store last update time
-                    stats_time_config = db.query(AppConfig).filter(AppConfig.key == "paperless_stats_updated").first()
+                    stats_time_config = (
+                        db.query(AppConfig)
+                        .filter(AppConfig.key == "paperless_stats_updated")
+                        .first()
+                    )
                     if stats_time_config:
                         stats_time_config.value = datetime.utcnow().isoformat()
                     else:
                         stats_time_config = AppConfig(
                             key="paperless_stats_updated",
-                            value=datetime.utcnow().isoformat()
+                            value=datetime.utcnow().isoformat(),
                         )
                         db.add(stats_time_config)
-                    
+
                     db.commit()
                     logger.info("Paperless statistics cached successfully")
             except Exception as e:
@@ -575,9 +599,13 @@ async def run_document_sync(
             except Exception as e:
                 logger.error(f"Error broadcasting sync completion: {e}")
 
-            total_sync_time = (datetime.utcnow() - sync_status["started_at"]).total_seconds()
-            docs_per_sec = len(paperless_docs) / total_sync_time if total_sync_time > 0 else 0
-            
+            total_sync_time = (
+                datetime.utcnow() - sync_status["started_at"]
+            ).total_seconds()
+            docs_per_sec = (
+                len(paperless_docs) / total_sync_time if total_sync_time > 0 else 0
+            )
+
             logger.info(
                 f"Document sync completed. Synced: {synced_count}, Updated: {updated_count}, "
                 f"Total time: {total_sync_time:.2f}s ({docs_per_sec:.1f} docs/sec)"
@@ -608,13 +636,14 @@ async def sync_documents(
 
     if sync_status["is_syncing"]:
         raise HTTPException(status_code=409, detail="Sync already in progress")
-    
+
     # Check if analysis is in progress
     from paperless_dedupe.api.v1.processing import processing_status
+
     if processing_status.get("is_processing", False):
         raise HTTPException(
-            status_code=409, 
-            detail="Cannot sync while deduplication analysis is in progress"
+            status_code=409,
+            detail="Cannot sync while deduplication analysis is in progress",
         )
 
     # Start background task
@@ -629,55 +658,69 @@ async def sync_documents(
 async def refresh_statistics(db: Session = Depends(get_db)):
     """Manually refresh Paperless statistics cache"""
     try:
+        import json
+
         from paperless_dedupe.core.config_utils import get_current_paperless_config
         from paperless_dedupe.models.database import AppConfig
-        import json
-        
+
         client_settings = get_current_paperless_config(db)
         if not client_settings:
-            raise HTTPException(status_code=400, detail="Paperless connection not configured")
-        
+            raise HTTPException(
+                status_code=400, detail="Paperless connection not configured"
+            )
+
         async with PaperlessClient(**client_settings) as client:
             logger.info("Manually refreshing Paperless statistics...")
             paperless_stats = await client.get_statistics()
-            
+
             if paperless_stats:
                 # Store stats in database as JSON
-                stats_config = db.query(AppConfig).filter(AppConfig.key == "paperless_stats").first()
+                stats_config = (
+                    db.query(AppConfig)
+                    .filter(AppConfig.key == "paperless_stats")
+                    .first()
+                )
                 if stats_config:
                     stats_config.value = json.dumps(paperless_stats)
                 else:
                     stats_config = AppConfig(
-                        key="paperless_stats",
-                        value=json.dumps(paperless_stats)
+                        key="paperless_stats", value=json.dumps(paperless_stats)
                     )
                     db.add(stats_config)
-                
+
                 # Also store last update time
-                stats_time_config = db.query(AppConfig).filter(AppConfig.key == "paperless_stats_updated").first()
+                stats_time_config = (
+                    db.query(AppConfig)
+                    .filter(AppConfig.key == "paperless_stats_updated")
+                    .first()
+                )
                 if stats_time_config:
                     stats_time_config.value = datetime.utcnow().isoformat()
                 else:
                     stats_time_config = AppConfig(
                         key="paperless_stats_updated",
-                        value=datetime.utcnow().isoformat()
+                        value=datetime.utcnow().isoformat(),
                     )
                     db.add(stats_time_config)
-                
+
                 db.commit()
                 logger.info("Paperless statistics refreshed successfully")
-                
+
                 return {
                     "status": "success",
                     "message": "Statistics refreshed successfully",
-                    "stats": paperless_stats
+                    "stats": paperless_stats,
                 }
             else:
-                raise HTTPException(status_code=500, detail="Failed to fetch statistics")
-                
+                raise HTTPException(
+                    status_code=500, detail="Failed to fetch statistics"
+                )
+
     except Exception as e:
         logger.error(f"Failed to refresh statistics: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to refresh statistics: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to refresh statistics: {str(e)}"
+        )
 
 
 @router.get("/sync/status")

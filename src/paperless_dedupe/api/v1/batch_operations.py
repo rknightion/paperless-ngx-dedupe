@@ -8,7 +8,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import Document, DuplicateGroup, get_db
 from paperless_dedupe.services.paperless_client import PaperlessClient
 
@@ -90,9 +89,9 @@ async def execute_batch_operation(
 
         # Get current config from database
         from paperless_dedupe.core.config_utils import get_current_paperless_config
-        
+
         client_settings = get_current_paperless_config(db)
-        
+
         async with PaperlessClient(**client_settings) as client:
             total = len(document_ids)
             processed = 0
@@ -115,7 +114,9 @@ async def execute_batch_operation(
 
                     elif operation == OperationType.DELETE:
                         # Delete from paperless if we have the paperless_id
-                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        document = (
+                            db.query(Document).filter(Document.id == doc_id).first()
+                        )
                         if document and document.paperless_id:
                             await client.delete_document(document.paperless_id)
                             # Also remove from our database
@@ -125,14 +126,20 @@ async def execute_batch_operation(
                     elif operation == OperationType.TAG:
                         # Add tags to document
                         tags = parameters.get("tags", [])
-                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        document = (
+                            db.query(Document).filter(Document.id == doc_id).first()
+                        )
                         if document and document.paperless_id:
-                            await client.add_tags_to_document(document.paperless_id, tags)
+                            await client.add_tags_to_document(
+                                document.paperless_id, tags
+                            )
 
                     elif operation == OperationType.UNTAG:
                         # Remove tags from document
                         tags = parameters.get("tags", [])
-                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        document = (
+                            db.query(Document).filter(Document.id == doc_id).first()
+                        )
                         if document and document.paperless_id:
                             await client.remove_tags_from_document(
                                 document.paperless_id, tags
@@ -141,7 +148,9 @@ async def execute_batch_operation(
                     elif operation == OperationType.UPDATE_METADATA:
                         # Update document metadata
                         metadata = parameters.get("metadata", {})
-                        document = db.query(Document).filter(Document.id == doc_id).first()
+                        document = (
+                            db.query(Document).filter(Document.id == doc_id).first()
+                        )
                         if document and document.paperless_id:
                             await client.update_document_metadata(
                                 document.paperless_id, metadata

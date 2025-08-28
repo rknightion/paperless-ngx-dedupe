@@ -1,5 +1,5 @@
-import React from "react";
-import { ConfigPanel } from "../../components/forms";
+import React from 'react';
+import { ConfigPanel } from '../../components/forms';
 
 export const SettingsPage: React.FC = () => {
   return (

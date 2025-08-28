@@ -1,1 +1,1 @@
-export { default as DuplicatesPage } from "./DuplicatesPage";
+export { default as DuplicatesPage } from './DuplicatesPage';

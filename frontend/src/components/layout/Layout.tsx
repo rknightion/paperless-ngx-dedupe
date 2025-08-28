@@ -1,6 +1,6 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { cn } from "../../utils/cn";
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { cn } from '../../utils/cn';
 import {
   LayoutDashboard,
   FileText,
@@ -8,7 +8,7 @@ import {
   Settings,
   Menu,
   X,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,10 +21,10 @@ interface NavigationItem {
 }
 
 const navigation: NavigationItem[] = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Documents", href: "/documents", icon: FileText },
-  { name: "Duplicates", href: "/duplicates", icon: Copy },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Documents', href: '/documents', icon: FileText },
+  { name: 'Duplicates', href: '/duplicates', icon: Copy },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
@@ -70,10 +70,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       key={item.name}
                       to={item.href}
                       className={cn(
-                        "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md',
                         isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                       )}
                       onClick={() => setSidebarOpen(false)}
                     >
@@ -106,10 +106,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       key={item.name}
                       to={item.href}
                       className={cn(
-                        "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
+                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
                         isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                       )}
                     >
                       <item.icon className="mr-3 h-5 w-5" />

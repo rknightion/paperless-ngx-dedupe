@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from './client';
 import type {
   Document,
   DocumentContent,
@@ -6,14 +6,14 @@ import type {
   DocumentQueryParams,
   DuplicateGroup,
   ApiResponse,
-} from "./types";
+} from './types';
 
 export const documentsApi = {
   // Get list of documents
   async getDocuments(
-    params?: DocumentQueryParams,
+    params?: DocumentQueryParams
   ): Promise<DocumentListResponse> {
-    return apiClient.get<DocumentListResponse>("/documents/", params);
+    return apiClient.get<DocumentListResponse>('/documents/', params);
   },
 
   // Get specific document
@@ -36,7 +36,7 @@ export const documentsApi = {
     force_refresh?: boolean;
     limit?: number;
   }): Promise<ApiResponse> {
-    return apiClient.post<ApiResponse>("/documents/sync", params || {});
+    return apiClient.post<ApiResponse>('/documents/sync', params || {});
   },
 
   // Get sync status
@@ -51,7 +51,7 @@ export const documentsApi = {
     documents_synced: number;
     documents_updated: number;
   }> {
-    return apiClient.get("/documents/sync/status");
+    return apiClient.get('/documents/sync/status');
   },
 
   // Get document statistics (old endpoint - kept for compatibility)
@@ -62,12 +62,12 @@ export const documentsApi = {
     completed: number;
     errors: number;
   }> {
-    return apiClient.get("/documents/stats");
+    return apiClient.get('/documents/stats');
   },
 
   // Get comprehensive document statistics
   async getStatistics(): Promise<any> {
-    return apiClient.get("/documents/statistics");
+    return apiClient.get('/documents/statistics');
   },
 };
 

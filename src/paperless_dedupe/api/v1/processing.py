@@ -78,34 +78,35 @@ async def run_deduplication_analysis(
 
         # Broadcast initial status immediately
         await safe_broadcast_update()
-        
+
         # Small delay to ensure websocket message is sent
         await asyncio.sleep(0.1)
-        
+
         # If force rebuild, clean up all existing duplicate groups first
         if force_rebuild:
             processing_status["current_step"] = "Clearing existing analysis data"
             await safe_broadcast_update()
-            
+
             # Import required models
             from paperless_dedupe.models.database import DuplicateGroup, DuplicateMember
-            
+
             # Delete all existing duplicate groups and members
             deleted_members = db.query(DuplicateMember).delete()
             deleted_groups = db.query(DuplicateGroup).delete()
-            
+
             # Reset all documents to pending status
-            db.query(Document).update({
-                "processing_status": "pending",
-                "last_processed": None
-            })
-            
+            db.query(Document).update(
+                {"processing_status": "pending", "last_processed": None}
+            )
+
             db.commit()
-            logger.info(f"Cleared {deleted_groups} duplicate groups and {deleted_members} duplicate members for force rebuild")
-            
+            logger.info(
+                f"Cleared {deleted_groups} duplicate groups and {deleted_members} duplicate members for force rebuild"
+            )
+
             # Small delay after cleanup
             await asyncio.sleep(0.1)
-        
+
         # Now update to loading documents
         processing_status["current_step"] = "Loading documents"
         await safe_broadcast_update()
@@ -136,54 +137,60 @@ async def run_deduplication_analysis(
         processing_status["total"] = len(documents)
         contents = {}
         await safe_broadcast_update()
-        
+
         # For large document sets, load in chunks to provide progress updates
         document_ids = [doc.id for doc in documents]
         chunk_size = 500  # Process 500 documents at a time
-        
+
         for i in range(0, len(document_ids), chunk_size):
-            chunk_ids = document_ids[i:i + chunk_size]
-            
+            chunk_ids = document_ids[i : i + chunk_size]
+
             # Update progress
             processing_status["progress"] = min(i + chunk_size, len(document_ids))
-            processing_status["current_step"] = f"Loading document content ({processing_status['progress']}/{len(documents)})"
+            processing_status["current_step"] = (
+                f"Loading document content ({processing_status['progress']}/{len(documents)})"
+            )
             await safe_broadcast_update()
-            
+
             # Load this chunk
             ocr_chunk = (
                 db.query(DocumentContent.document_id, DocumentContent.full_text)
                 .filter(DocumentContent.document_id.in_(chunk_ids))
                 .all()
             )
-            
+
             # Add to contents dictionary
             for doc_id, full_text in ocr_chunk:
                 if full_text:
                     contents[doc_id] = full_text
-            
+
             # Yield control to prevent blocking
             await asyncio.sleep(0)
-        
+
         docs_without_ocr = len(documents) - len(contents)
         if docs_without_ocr > 0:
-            logger.warning(f"{docs_without_ocr} documents have no OCR content and will be skipped")
-        
+            logger.warning(
+                f"{docs_without_ocr} documents have no OCR content and will be skipped"
+            )
+
         # Update status with actual document count that will be processed
         processing_status["total"] = len(contents)
-        processing_status["current_step"] = f"Preparing to analyze {len(contents)} documents"
+        processing_status["current_step"] = (
+            f"Preparing to analyze {len(contents)} documents"
+        )
         processing_status["progress"] = 0
         await safe_broadcast_update()
 
         # Create progress callback for deduplication service
         last_dedup_broadcast = time.time()
         last_dedup_progress = 0
-        
+
         async def dedup_progress_callback(step: str, current: int, total: int):
             nonlocal last_dedup_broadcast, last_dedup_progress
             processing_status["current_step"] = step
             processing_status["progress"] = current
             processing_status["total"] = total
-            
+
             # Add estimated time remaining based on progress
             if current > 0 and processing_status.get("started_at"):
                 elapsed = (
@@ -193,11 +200,11 @@ async def run_deduplication_analysis(
                     rate = current / elapsed
                     remaining = (total - current) / rate if rate > 0 else 0
                     processing_status["estimated_remaining"] = int(remaining)
-            
+
             # Calculate progress percentage
-            current_progress = int((current / total * 100)) if total > 0 else 0
+            current_progress = int(current / total * 100) if total > 0 else 0
             current_time = time.time()
-            
+
             # Broadcast if:
             # - 1 second has passed
             # - Progress increased by 2% or more (finer granularity for dedup)
@@ -205,7 +212,7 @@ async def run_deduplication_analysis(
             time_elapsed = current_time - last_dedup_broadcast >= 1
             progress_jump = current_progress - last_dedup_progress >= 2
             is_complete = current == total
-            
+
             if time_elapsed or progress_jump or is_complete:
                 await safe_broadcast_update()
                 last_dedup_broadcast = current_time
@@ -244,7 +251,7 @@ async def run_deduplication_analysis(
 
         # Broadcast completion status
         await safe_broadcast_update()
-        
+
         # Small delay to ensure status update is sent before completion event
         await asyncio.sleep(0.1)
 
@@ -286,27 +293,25 @@ async def run_deduplication_analysis(
 
 
 async def trigger_analysis_internal(
-    db: Session, 
+    db: Session,
     force_rebuild: bool = False,
     threshold: float | None = None,
-    limit: int | None = None
+    limit: int | None = None,
 ):
     """Internal function to trigger analysis programmatically (e.g., after config change)"""
     global processing_status
-    
+
     if processing_status["is_processing"]:
         logger.warning("Analysis already in progress, skipping re-trigger")
         return False
-        
+
     # Use default threshold if not provided
     if threshold is None:
         threshold = settings.fuzzy_match_threshold / 100.0
-        
+
     # Run analysis in background
-    asyncio.create_task(
-        run_deduplication_analysis(db, threshold, force_rebuild, limit)
-    )
-    
+    asyncio.create_task(run_deduplication_analysis(db, threshold, force_rebuild, limit))
+
     return True
 
 
@@ -321,13 +326,14 @@ async def start_analysis(
 
     if processing_status["is_processing"]:
         raise HTTPException(status_code=409, detail="Analysis already in progress")
-    
+
     # Check if sync is in progress
     from paperless_dedupe.api.v1.documents import sync_status
+
     if sync_status.get("is_syncing", False):
         raise HTTPException(
             status_code=409,
-            detail="Cannot start analysis while document sync is in progress"
+            detail="Cannot start analysis while document sync is in progress",
         )
 
     # Check if there are documents to process
@@ -391,31 +397,31 @@ async def clear_cache():
 @router.post("/cleanup-duplicates")
 async def cleanup_duplicate_data(db: Session = Depends(get_db)):
     """Clean up all duplicate analysis data - useful for fixing corrupted state"""
-    from paperless_dedupe.models.database import DuplicateGroup, DuplicateMember, Document
-    
+    from paperless_dedupe.models.database import (
+        Document,
+        DuplicateGroup,
+        DuplicateMember,
+    )
+
     # Check if processing is running
     global processing_status
     if processing_status["is_processing"]:
         raise HTTPException(
-            status_code=409,
-            detail="Cannot clean up while analysis is in progress"
+            status_code=409, detail="Cannot clean up while analysis is in progress"
         )
-    
+
     # Delete all duplicate groups and members
     deleted_members = db.query(DuplicateMember).delete()
     deleted_groups = db.query(DuplicateGroup).delete()
-    
+
     # Reset all documents to pending status
-    db.query(Document).update({
-        "processing_status": "pending",
-        "last_processed": None
-    })
-    
+    db.query(Document).update({"processing_status": "pending", "last_processed": None})
+
     db.commit()
-    
+
     return {
         "status": "success",
         "deleted_groups": deleted_groups,
         "deleted_members": deleted_members,
-        "message": f"Cleaned up {deleted_groups} duplicate groups and {deleted_members} member records"
+        "message": f"Cleaned up {deleted_groups} duplicate groups and {deleted_members} member records",
     }

@@ -1,22 +1,22 @@
-import React, { useEffect } from "react";
+import React, { useEffect } from 'react';
 import {
   useAppDispatch,
   useDocuments,
   useDuplicates,
   useProcessingStatus,
-} from "../../hooks/redux";
-import { fetchDuplicateStatistics } from "../../store/slices/duplicatesSlice";
-import { fetchDocuments } from "../../store/slices/documentsSlice";
-import { ProgressTracker } from "../../components/shared";
-import { SyncProgress } from "../../components/sync/SyncProgress";
-import { OperationsList } from "../../components/batch/OperationsList";
+} from '../../hooks/redux';
+import { fetchDuplicateStatistics } from '../../store/slices/duplicatesSlice';
+import { fetchDocuments } from '../../store/slices/documentsSlice';
+import { ProgressTracker } from '../../components/shared';
+import { SyncProgress } from '../../components/sync/SyncProgress';
+import { OperationsList } from '../../components/batch/OperationsList';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+} from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 import {
   FileText,
   Copy,
@@ -25,7 +25,7 @@ import {
   TrendingUp,
   Activity,
   Clock,
-} from "lucide-react";
+} from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -59,7 +59,7 @@ export const DashboardPage: React.FC = () => {
     description,
     icon: Icon,
     trend,
-    color = "text-primary",
+    color = 'text-primary',
   }) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -68,13 +68,13 @@ export const DashboardPage: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">
-          {typeof value === "number" ? value.toLocaleString() : value}
+          {typeof value === 'number' ? value.toLocaleString() : value}
         </div>
         <p className="text-xs text-muted-foreground">{description}</p>
         {trend !== undefined && (
           <div className="flex items-center text-xs text-green-600 mt-1">
             <TrendingUp className="h-3 w-3 mr-1" />
-            {trend > 0 ? "+" : ""}
+            {trend > 0 ? '+' : ''}
             {trend}% from last scan
           </div>
         )}
@@ -202,12 +202,12 @@ export const DashboardPage: React.FC = () => {
               {(
                 statistics.potential_space_savings /
                 (1024 * 1024 * 1024)
-              ).toFixed(2)}{" "}
+              ).toFixed(2)}{' '}
               GB
             </div>
             <p className="text-sm text-muted-foreground">
               Estimated space that could be saved by removing duplicate
-              documents. This is based on {statistics.total_duplicates}{" "}
+              documents. This is based on {statistics.total_duplicates}{' '}
               duplicate documents across {statistics.total_groups} groups.
             </p>
             <div className="mt-4">

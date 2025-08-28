@@ -1,26 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { useAppDispatch, useDuplicateGroups } from "../../hooks/redux";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store/store";
+import React, { useEffect, useState } from 'react';
+import { useAppDispatch, useDuplicateGroups } from '../../hooks/redux';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 import {
   fetchDuplicateGroups,
   fetchDuplicateStatistics,
   toggleGroupSelection,
   selectAllGroups,
   clearSelection,
-} from "../../store/slices/duplicatesSlice";
-import { DuplicateGroupCard } from "../../components/shared";
-import { BulkActions } from "../../components/batch/BulkActions";
-import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
-import { Badge } from "../../components/ui/Badge";
-import { Checkbox } from "../../components/ui/Checkbox";
+} from '../../store/slices/duplicatesSlice';
+import { DuplicateGroupCard } from '../../components/shared';
+import { BulkActions } from '../../components/batch/BulkActions';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Badge } from '../../components/ui/Badge';
+import { Checkbox } from '../../components/ui/Checkbox';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/Card";
+} from '../../components/ui/Card';
 import {
   Copy,
   Search,
@@ -38,17 +38,17 @@ import {
   BarChart3,
   Percent,
   Trash2,
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { configApi } from "../../services/api/config";
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { configApi } from '../../services/api/config';
 
 export const DuplicatesPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { groups, loading, statistics, totalCount } = useDuplicateGroups();
   const selectedGroups = useSelector(
-    (state: RootState) => state.duplicates.selectedGroups,
+    (state: RootState) => state.duplicates.selectedGroups
   );
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [reviewedFilter, setReviewedFilter] = useState<boolean | null>(null);
   const [confidenceFilter, setConfidenceFilter] = useState(0.7);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
@@ -65,9 +65,9 @@ export const DuplicatesPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState<
-    "confidence" | "created" | "documents" | "filename"
-  >("confidence");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+    'confidence' | 'created' | 'documents' | 'filename'
+  >('confidence');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Load duplicate groups, statistics and configuration
   useEffect(() => {
@@ -84,7 +84,7 @@ export const DuplicatesPage: React.FC = () => {
         use_metadata: confidenceWeights.metadata,
         use_filename: confidenceWeights.filename,
         min_fuzzy_ratio: fuzzyRatioFilter,
-      }),
+      })
     );
     dispatch(fetchDuplicateStatistics());
     // Load configuration to show current settings
@@ -116,23 +116,23 @@ export const DuplicatesPage: React.FC = () => {
         use_metadata: confidenceWeights.metadata,
         use_filename: confidenceWeights.filename,
         min_fuzzy_ratio: fuzzyRatioFilter,
-      }),
+      })
     );
     dispatch(fetchDuplicateStatistics());
   };
 
   const handleDocumentSelect = (documentId: number) => {
     // Could navigate to document detail or open in paperless
-    console.log("Selected document:", documentId);
+    console.log('Selected document:', documentId);
   };
 
   // Filter groups based on search and filters
 
   const filteredGroups = (groups || []).filter((group) => {
     const matchesSearch =
-      searchQuery === "" ||
+      searchQuery === '' ||
       group.documents.some((doc) =>
-        doc.title.toLowerCase().includes(searchQuery.toLowerCase()),
+        doc.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
     const matchesReviewed =
@@ -142,10 +142,10 @@ export const DuplicatesPage: React.FC = () => {
 
     return matchesSearch && matchesReviewed && matchesConfidence;
   });
-  
+
   // Calculate total pages based on filtered groups
   const totalPages = Math.ceil(filteredGroups.length / pageSize);
-  
+
   // Paginate the filtered groups
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -156,7 +156,7 @@ export const DuplicatesPage: React.FC = () => {
     value: number;
     icon: React.ComponentType<{ className?: string }>;
     color?: string;
-  }> = ({ title, value, icon: Icon, color = "text-primary" }) => (
+  }> = ({ title, value, icon: Icon, color = 'text-primary' }) => (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center space-x-2">
@@ -204,7 +204,7 @@ export const DuplicatesPage: React.FC = () => {
         </div>
         <Button onClick={handleRefresh} disabled={loading}>
           <RefreshCw
-            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
           />
           Refresh
         </Button>
@@ -276,11 +276,11 @@ export const DuplicatesPage: React.FC = () => {
               <select
                 className="w-full px-3 py-2 border border-input rounded-md bg-background"
                 value={
-                  reviewedFilter === null ? "all" : reviewedFilter.toString()
+                  reviewedFilter === null ? 'all' : reviewedFilter.toString()
                 }
                 onChange={(e) => {
                   const value = e.target.value;
-                  setReviewedFilter(value === "all" ? null : value === "true");
+                  setReviewedFilter(value === 'all' ? null : value === 'true');
                 }}
               >
                 <option value="all">All Groups</option>
@@ -340,11 +340,12 @@ export const DuplicatesPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        const allEnabled = Object.values(confidenceWeights).every(Boolean);
+                        const allEnabled =
+                          Object.values(confidenceWeights).every(Boolean);
                         if (allEnabled) {
                           // If all are enabled, we need to keep at least one enabled
                           setConfidenceWeights({
-                            jaccard: true,  // Keep one enabled as fallback
+                            jaccard: true, // Keep one enabled as fallback
                             fuzzy: false,
                             metadata: false,
                             filename: false,
@@ -361,27 +362,35 @@ export const DuplicatesPage: React.FC = () => {
                       }}
                       className="text-xs"
                     >
-                      {Object.values(confidenceWeights).every(Boolean) ? "Disable All" : "Enable All"}
+                      {Object.values(confidenceWeights).every(Boolean)
+                        ? 'Disable All'
+                        : 'Enable All'}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Toggle factors on/off to customize how confidence is calculated. 
-                    Disabled factors are completely excluded from scoring.
+                    Toggle factors on/off to customize how confidence is
+                    calculated. Disabled factors are completely excluded from
+                    scoring.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                      confidenceWeights.jaccard 
-                        ? "border-blue-200 bg-blue-50" 
-                        : "border-gray-200 bg-gray-50"
-                    }`}>
+                    <label
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                        confidenceWeights.jaccard
+                          ? 'border-blue-200 bg-blue-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           checked={confidenceWeights.jaccard}
                           onChange={(e) => {
-                            const newWeights = { ...confidenceWeights, jaccard: e.target.checked };
+                            const newWeights = {
+                              ...confidenceWeights,
+                              jaccard: e.target.checked,
+                            };
                             // Prevent disabling all factors
                             if (Object.values(newWeights).some(Boolean)) {
                               setConfidenceWeights(newWeights);
@@ -389,7 +398,9 @@ export const DuplicatesPage: React.FC = () => {
                           }}
                         />
                         <div>
-                          <span className="text-sm font-medium">Content Similarity</span>
+                          <span className="text-sm font-medium">
+                            Content Similarity
+                          </span>
                           <p className="text-xs text-muted-foreground">
                             MinHash/Jaccard similarity of document text
                           </p>
@@ -400,16 +411,21 @@ export const DuplicatesPage: React.FC = () => {
                       </Badge>
                     </label>
 
-                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                      confidenceWeights.fuzzy 
-                        ? "border-green-200 bg-green-50" 
-                        : "border-gray-200 bg-gray-50"
-                    }`}>
+                    <label
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                        confidenceWeights.fuzzy
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           checked={confidenceWeights.fuzzy}
                           onChange={(e) => {
-                            const newWeights = { ...confidenceWeights, fuzzy: e.target.checked };
+                            const newWeights = {
+                              ...confidenceWeights,
+                              fuzzy: e.target.checked,
+                            };
                             // Prevent disabling all factors
                             if (Object.values(newWeights).some(Boolean)) {
                               setConfidenceWeights(newWeights);
@@ -417,7 +433,9 @@ export const DuplicatesPage: React.FC = () => {
                           }}
                         />
                         <div>
-                          <span className="text-sm font-medium">Fuzzy Text Match</span>
+                          <span className="text-sm font-medium">
+                            Fuzzy Text Match
+                          </span>
                           <p className="text-xs text-muted-foreground">
                             Handles OCR errors and word order changes
                           </p>
@@ -430,16 +448,21 @@ export const DuplicatesPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                      confidenceWeights.metadata 
-                        ? "border-yellow-200 bg-yellow-50" 
-                        : "border-gray-200 bg-gray-50"
-                    }`}>
+                    <label
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                        confidenceWeights.metadata
+                          ? 'border-yellow-200 bg-yellow-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           checked={confidenceWeights.metadata}
                           onChange={(e) => {
-                            const newWeights = { ...confidenceWeights, metadata: e.target.checked };
+                            const newWeights = {
+                              ...confidenceWeights,
+                              metadata: e.target.checked,
+                            };
                             // Prevent disabling all factors
                             if (Object.values(newWeights).some(Boolean)) {
                               setConfidenceWeights(newWeights);
@@ -447,7 +470,9 @@ export const DuplicatesPage: React.FC = () => {
                           }}
                         />
                         <div>
-                          <span className="text-sm font-medium">Metadata Match</span>
+                          <span className="text-sm font-medium">
+                            Metadata Match
+                          </span>
                           <p className="text-xs text-muted-foreground">
                             File size, dates, types, correspondents
                           </p>
@@ -458,16 +483,21 @@ export const DuplicatesPage: React.FC = () => {
                       </Badge>
                     </label>
 
-                    <label className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                      confidenceWeights.filename 
-                        ? "border-purple-200 bg-purple-50" 
-                        : "border-gray-200 bg-gray-50"
-                    }`}>
+                    <label
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                        confidenceWeights.filename
+                          ? 'border-purple-200 bg-purple-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           checked={confidenceWeights.filename}
                           onChange={(e) => {
-                            const newWeights = { ...confidenceWeights, filename: e.target.checked };
+                            const newWeights = {
+                              ...confidenceWeights,
+                              filename: e.target.checked,
+                            };
                             // Prevent disabling all factors
                             if (Object.values(newWeights).some(Boolean)) {
                               setConfidenceWeights(newWeights);
@@ -475,7 +505,9 @@ export const DuplicatesPage: React.FC = () => {
                           }}
                         />
                         <div>
-                          <span className="text-sm font-medium">Filename Match</span>
+                          <span className="text-sm font-medium">
+                            Filename Match
+                          </span>
                           <p className="text-xs text-muted-foreground">
                             Original filename similarity
                           </p>
@@ -493,7 +525,8 @@ export const DuplicatesPage: React.FC = () => {
                   <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-600" />
                     <p className="text-sm text-red-800">
-                      At least one factor must be enabled for confidence calculation.
+                      At least one factor must be enabled for confidence
+                      calculation.
                     </p>
                   </div>
                 )}
@@ -553,7 +586,7 @@ export const DuplicatesPage: React.FC = () => {
             )}
             {reviewedFilter !== null && (
               <Badge variant="outline">
-                {reviewedFilter ? "Reviewed" : "Unreviewed"}
+                {reviewedFilter ? 'Reviewed' : 'Unreviewed'}
               </Badge>
             )}
             {confidenceFilter > 0.7 && (
@@ -576,7 +609,7 @@ export const DuplicatesPage: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={() => {
-                setSearchQuery("");
+                setSearchQuery('');
                 setReviewedFilter(null);
                 setConfidenceFilter(0.7);
                 setFuzzyRatioFilter(0.5);
@@ -671,13 +704,16 @@ export const DuplicatesPage: React.FC = () => {
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Measures the overlap between document content using MinHash signatures. This technique creates a 
-                      "fingerprint" of each document by selecting a set of characteristic word sequences (shingles). 
-                      Documents with similar fingerprints likely contain similar content. Highly effective for finding 
-                      near-duplicates even when word order varies or small edits have been made.
+                      Measures the overlap between document content using
+                      MinHash signatures. This technique creates a "fingerprint"
+                      of each document by selecting a set of characteristic word
+                      sequences (shingles). Documents with similar fingerprints
+                      likely contain similar content. Highly effective for
+                      finding near-duplicates even when word order varies or
+                      small edits have been made.
                     </p>
                   </div>
-                  
+
                   <div className="p-3 bg-white/60 rounded-lg border border-purple-100/50">
                     <div className="flex items-start justify-between mb-1">
                       <span className="text-gray-800 font-semibold">
@@ -688,13 +724,15 @@ export const DuplicatesPage: React.FC = () => {
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Uses advanced string matching algorithms (Levenshtein distance) to find similar text even when 
-                      there are OCR errors, typos, or minor variations. This is crucial for scanned documents where 
-                      OCR might misread characters (e.g., "0" as "O", "rn" as "m"). Can detect documents that are 
-                      the same despite scanning artifacts or quality issues.
+                      Uses advanced string matching algorithms (Levenshtein
+                      distance) to find similar text even when there are OCR
+                      errors, typos, or minor variations. This is crucial for
+                      scanned documents where OCR might misread characters
+                      (e.g., "0" as "O", "rn" as "m"). Can detect documents that
+                      are the same despite scanning artifacts or quality issues.
                     </p>
                   </div>
-                  
+
                   <div className="p-3 bg-white/60 rounded-lg border border-yellow-100/50">
                     <div className="flex items-start justify-between mb-1">
                       <span className="text-gray-800 font-semibold">
@@ -705,13 +743,16 @@ export const DuplicatesPage: React.FC = () => {
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Compares document properties including: file size (within 10% tolerance), creation and modification 
-                      dates (same day), document type (invoice, receipt, etc.), correspondent (sender/company), and tags. 
-                      Documents with matching metadata are more likely to be duplicates. This helps catch re-scanned 
-                      documents that might have different text due to OCR variations.
+                      Compares document properties including: file size (within
+                      10% tolerance), creation and modification dates (same
+                      day), document type (invoice, receipt, etc.),
+                      correspondent (sender/company), and tags. Documents with
+                      matching metadata are more likely to be duplicates. This
+                      helps catch re-scanned documents that might have different
+                      text due to OCR variations.
                     </p>
                   </div>
-                  
+
                   <div className="p-3 bg-white/60 rounded-lg border border-green-100/50">
                     <div className="flex items-start justify-between mb-1">
                       <span className="text-gray-800 font-semibold">
@@ -722,17 +763,21 @@ export const DuplicatesPage: React.FC = () => {
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Compares the original filenames of documents using fuzzy matching. Useful for finding documents 
-                      that were renamed slightly (e.g., "invoice_2024.pdf" vs "invoice-2024.pdf" or "scan001.pdf" vs 
-                      "scan002.pdf"). Lower weight because filenames can be arbitrary.
+                      Compares the original filenames of documents using fuzzy
+                      matching. Useful for finding documents that were renamed
+                      slightly (e.g., "invoice_2024.pdf" vs "invoice-2024.pdf"
+                      or "scan001.pdf" vs "scan002.pdf"). Lower weight because
+                      filenames can be arbitrary.
                     </p>
                   </div>
-                  
+
                   <div className="mt-3 p-2 bg-blue-50/50 rounded border border-blue-200/50">
                     <p className="text-xs text-blue-800">
-                      <strong>Note:</strong> You can customize these weights in Settings to better match your document types. 
-                      For example, increase metadata weight for invoices with consistent formatting, or increase fuzzy text 
-                      weight for poor quality scans.
+                      <strong>Note:</strong> You can customize these weights in
+                      Settings to better match your document types. For example,
+                      increase metadata weight for invoices with consistent
+                      formatting, or increase fuzzy text weight for poor quality
+                      scans.
                     </p>
                   </div>
                 </div>
@@ -783,14 +828,14 @@ export const DuplicatesPage: React.FC = () => {
                     </h4>
                     <div className="flex gap-4 mt-1">
                       <span className="text-sm text-gray-600">
-                        OCR:{" "}
+                        OCR:{' '}
                         <span className="font-semibold text-indigo-600">
                           {config.max_ocr_length.toLocaleString()}
-                        </span>{" "}
+                        </span>{' '}
                         chars
                       </span>
                       <span className="text-sm text-gray-600">
-                        Threshold:{" "}
+                        Threshold:{' '}
                         <span className="font-semibold text-purple-600">
                           {config.fuzzy_match_threshold}%
                         </span>
@@ -834,10 +879,10 @@ export const DuplicatesPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+                  setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
                 }
               >
-                {sortDirection === "asc" ? "↑" : "↓"}
+                {sortDirection === 'asc' ? '↑' : '↓'}
               </Button>
             </div>
             <div className="flex items-center space-x-2">
@@ -858,8 +903,7 @@ export const DuplicatesPage: React.FC = () => {
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            Showing {paginatedGroups.length} of{" "}
-            {filteredGroups.length} groups
+            Showing {paginatedGroups.length} of {filteredGroups.length} groups
             {statistics && statistics.potential_deletions > 0 && (
               <span className="ml-2">
                 • {statistics.potential_deletions} documents can be deleted
@@ -928,7 +972,7 @@ export const DuplicatesPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Button
-            variant={bulkSelectMode ? "default" : "outline"}
+            variant={bulkSelectMode ? 'default' : 'outline'}
             size="sm"
             onClick={() => {
               setBulkSelectMode(!bulkSelectMode);
@@ -937,7 +981,7 @@ export const DuplicatesPage: React.FC = () => {
               }
             }}
           >
-            {bulkSelectMode ? "Exit Bulk Mode" : "Bulk Select"}
+            {bulkSelectMode ? 'Exit Bulk Mode' : 'Bulk Select'}
           </Button>
           {bulkSelectMode && (
             <>
@@ -970,13 +1014,13 @@ export const DuplicatesPage: React.FC = () => {
             <Copy className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="font-medium mb-2">
               {groups.length === 0
-                ? "No duplicate groups found"
-                : "No groups match your filters"}
+                ? 'No duplicate groups found'
+                : 'No groups match your filters'}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               {groups.length === 0
-                ? "Run the deduplication analysis to find duplicate documents"
-                : "Try adjusting your search criteria or filters"}
+                ? 'Run the deduplication analysis to find duplicate documents'
+                : 'Try adjusting your search criteria or filters'}
             </p>
             {groups.length === 0 && (
               <Button asChild>

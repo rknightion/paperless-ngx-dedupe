@@ -1,2 +1,2 @@
-export { wsClient, default } from "./client";
-export type { ProcessingStatus, WebSocketMessage } from "../api/types";
+export { wsClient, default } from './client';
+export type { ProcessingStatus, WebSocketMessage } from '../api/types';

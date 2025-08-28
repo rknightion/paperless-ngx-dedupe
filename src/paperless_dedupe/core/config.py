@@ -32,12 +32,12 @@ class Settings(BaseSettings):
     fuzzy_match_sample_size: int = (
         5000  # Characters to sample for fuzzy matching (increased for better accuracy)
     )
-    
+
     # Confidence score weight configuration (percentages, must sum to 100)
     confidence_weight_jaccard: int = 40  # Weight for Jaccard similarity (MinHash)
-    confidence_weight_fuzzy: int = 30    # Weight for fuzzy text matching  
-    confidence_weight_metadata: int = 20 # Weight for metadata similarity
-    confidence_weight_filename: int = 10 # Weight for filename similarity
+    confidence_weight_fuzzy: int = 30  # Weight for fuzzy text matching
+    confidence_weight_metadata: int = 20  # Weight for metadata similarity
+    confidence_weight_filename: int = 10  # Weight for filename similarity
 
     # API settings
     api_rate_limit: int = 10  # requests per second

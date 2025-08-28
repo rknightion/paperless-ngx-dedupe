@@ -1,17 +1,17 @@
-import React from "react";
-import { ProgressTracker } from "../../components/shared";
-import { SyncProgress } from "../../components/sync/SyncProgress";
+import React from 'react';
+import { ProgressTracker } from '../../components/shared';
+import { SyncProgress } from '../../components/sync/SyncProgress';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/Card";
-import { Activity, Info } from "lucide-react";
+} from '../../components/ui/Card';
+import { Activity, Info } from 'lucide-react';
 
 export const ProcessingPage: React.FC = () => {
   const handleProcessingComplete = (results: any) => {
-    console.log("Processing completed:", results);
+    console.log('Processing completed:', results);
     // Could show notification or redirect
   };
 

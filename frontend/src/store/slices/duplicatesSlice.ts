@@ -1,56 +1,56 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { duplicatesApi } from "../../services/api";
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { duplicatesApi } from '../../services/api';
 import type {
   DuplicateGroup,
   DuplicateGroupsResponse as _DuplicateGroupsResponse,
   DuplicateGroupQueryParams,
   DuplicateStatistics,
-} from "../../services/api/types";
+} from '../../services/api/types';
 
 // Async thunks
 export const fetchDuplicateGroups = createAsyncThunk(
-  "duplicates/fetchDuplicateGroups",
+  'duplicates/fetchDuplicateGroups',
   async (params?: DuplicateGroupQueryParams) => {
     return await duplicatesApi.getDuplicateGroups(params);
-  },
+  }
 );
 
 export const fetchDuplicateGroup = createAsyncThunk(
-  "duplicates/fetchDuplicateGroup",
+  'duplicates/fetchDuplicateGroup',
   async (id: string) => {
     return await duplicatesApi.getDuplicateGroup(id);
-  },
+  }
 );
 
 export const reviewDuplicateGroup = createAsyncThunk(
-  "duplicates/reviewDuplicateGroup",
+  'duplicates/reviewDuplicateGroup',
   async ({ id, reviewed }: { id: string; reviewed: boolean }) => {
     await duplicatesApi.reviewDuplicateGroup(id, reviewed);
     return { id, reviewed };
-  },
+  }
 );
 
 export const deleteDuplicateGroup = createAsyncThunk(
-  "duplicates/deleteDuplicateGroup",
+  'duplicates/deleteDuplicateGroup',
   async (id: string) => {
     await duplicatesApi.deleteDuplicateGroup(id);
     return id;
-  },
+  }
 );
 
 export const fetchDuplicateStatistics = createAsyncThunk(
-  "duplicates/fetchStatistics",
+  'duplicates/fetchStatistics',
   async () => {
     return await duplicatesApi.getDuplicateStatistics();
-  },
+  }
 );
 
 export const bulkReviewGroups = createAsyncThunk(
-  "duplicates/bulkReviewGroups",
+  'duplicates/bulkReviewGroups',
   async ({ groupIds, reviewed }: { groupIds: string[]; reviewed: boolean }) => {
     await duplicatesApi.bulkReviewGroups(groupIds, reviewed);
     return { groupIds, reviewed };
-  },
+  }
 );
 
 // State interface
@@ -107,7 +107,7 @@ const initialState: DuplicatesState = {
 
 // Slice
 const duplicatesSlice = createSlice({
-  name: "duplicates",
+  name: 'duplicates',
   initialState,
   reducers: {
     // Filter actions
@@ -137,7 +137,7 @@ const duplicatesSlice = createSlice({
     },
     deselectGroup: (state, action: PayloadAction<string>) => {
       state.selectedGroups = state.selectedGroups.filter(
-        (id) => id !== action.payload,
+        (id) => id !== action.payload
       );
     },
     selectAllGroups: (state) => {
@@ -166,7 +166,7 @@ const duplicatesSlice = createSlice({
       action: PayloadAction<{
         id: string;
         reviewed: boolean;
-      }>,
+      }>
     ) => {
       const group = state.groups.find((g) => g.id === action.payload.id);
       if (group) {
@@ -179,10 +179,10 @@ const duplicatesSlice = createSlice({
 
     removeGroup: (state, action: PayloadAction<string>) => {
       state.groups = state.groups.filter(
-        (group) => group.id !== action.payload,
+        (group) => group.id !== action.payload
       );
       state.selectedGroups = state.selectedGroups.filter(
-        (id) => id !== action.payload,
+        (id) => id !== action.payload
       );
       if (state.currentGroup?.id === action.payload) {
         state.currentGroup = null;
@@ -200,7 +200,7 @@ const duplicatesSlice = createSlice({
         state.loading.groups = false;
         // The API returns an object with groups array and pagination info
         const payload = action.payload as any; // Type assertion to handle the response
-        if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+        if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
           state.groups = payload.groups || [];
           state.pagination.count = payload.count || 0;
           state.pagination.currentPage = payload.page || 1;
@@ -214,7 +214,7 @@ const duplicatesSlice = createSlice({
       .addCase(fetchDuplicateGroups.rejected, (state, action) => {
         state.loading.groups = false;
         state.error =
-          action.error.message || "Failed to fetch duplicate groups";
+          action.error.message || 'Failed to fetch duplicate groups';
       })
 
       // Fetch single group
@@ -228,7 +228,7 @@ const duplicatesSlice = createSlice({
       })
       .addCase(fetchDuplicateGroup.rejected, (state, action) => {
         state.loading.singleGroup = false;
-        state.error = action.error.message || "Failed to fetch duplicate group";
+        state.error = action.error.message || 'Failed to fetch duplicate group';
       })
 
       // Review group
@@ -248,7 +248,7 @@ const duplicatesSlice = createSlice({
       })
       .addCase(reviewDuplicateGroup.rejected, (state, action) => {
         state.loading.review = false;
-        state.error = action.error.message || "Failed to update review status";
+        state.error = action.error.message || 'Failed to update review status';
       })
 
       // Delete group
@@ -258,10 +258,10 @@ const duplicatesSlice = createSlice({
       .addCase(deleteDuplicateGroup.fulfilled, (state, action) => {
         state.loading.delete = false;
         state.groups = state.groups.filter(
-          (group) => group.id !== action.payload,
+          (group) => group.id !== action.payload
         );
         state.selectedGroups = state.selectedGroups.filter(
-          (id) => id !== action.payload,
+          (id) => id !== action.payload
         );
         if (state.currentGroup?.id === action.payload) {
           state.currentGroup = null;
@@ -269,7 +269,7 @@ const duplicatesSlice = createSlice({
       })
       .addCase(deleteDuplicateGroup.rejected, (state, action) => {
         state.loading.delete = false;
-        state.error = action.error.message || "Failed to delete group";
+        state.error = action.error.message || 'Failed to delete group';
       })
 
       // Statistics
@@ -282,7 +282,7 @@ const duplicatesSlice = createSlice({
       })
       .addCase(fetchDuplicateStatistics.rejected, (state, action) => {
         state.loading.statistics = false;
-        state.error = action.error.message || "Failed to fetch statistics";
+        state.error = action.error.message || 'Failed to fetch statistics';
       })
 
       // Bulk operations
@@ -303,7 +303,7 @@ const duplicatesSlice = createSlice({
       .addCase(bulkReviewGroups.rejected, (state, action) => {
         state.loading.bulkActions = false;
         state.error =
-          action.error.message || "Failed to perform bulk operation";
+          action.error.message || 'Failed to perform bulk operation';
       });
   },
 });

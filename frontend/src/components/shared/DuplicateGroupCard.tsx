@@ -1,18 +1,18 @@
-import React, { useState } from "react";
-import { useAppDispatch } from "../../hooks/redux";
+import React, { useState } from 'react';
+import { useAppDispatch } from '../../hooks/redux';
 import {
   reviewDuplicateGroup,
   deleteDuplicateGroup,
-} from "../../store/slices/duplicatesSlice";
-import { Button } from "../ui/Button";
-import { Badge } from "../ui/Badge";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+} from '../../store/slices/duplicatesSlice';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/Tooltip";
+} from '../ui/Tooltip';
 import {
   Eye,
   EyeOff,
@@ -24,10 +24,10 @@ import {
   AlertCircle,
   ExternalLink,
   X,
-} from "lucide-react";
-import type { DuplicateGroup } from "../../services/api/types";
-import { configApi } from "../../services/api/config";
-import SimilarityIndicator from "../duplicates/SimilarityIndicator";
+} from 'lucide-react';
+import type { DuplicateGroup } from '../../services/api/types';
+import { configApi } from '../../services/api/config';
+import SimilarityIndicator from '../duplicates/SimilarityIndicator';
 
 interface DuplicateGroupCardProps {
   group: DuplicateGroup;
@@ -36,19 +36,24 @@ interface DuplicateGroupCardProps {
 }
 
 // Custom progress bar with proper color coding based on value
-const ColoredProgress: React.FC<{ value: number; className?: string }> = ({ value, className = "" }) => {
+const ColoredProgress: React.FC<{ value: number; className?: string }> = ({
+  value,
+  className = '',
+}) => {
   // Determine color based on value
-  let barColor = "bg-red-500"; // 0-50% - Poor match
+  let barColor = 'bg-red-500'; // 0-50% - Poor match
   if (value >= 90) {
-    barColor = "bg-green-500"; // 90-100% - Excellent match
+    barColor = 'bg-green-500'; // 90-100% - Excellent match
   } else if (value >= 70) {
-    barColor = "bg-yellow-500"; // 70-89% - Good match
+    barColor = 'bg-yellow-500'; // 70-89% - Good match
   } else if (value >= 50) {
-    barColor = "bg-orange-500"; // 50-69% - Fair match
+    barColor = 'bg-orange-500'; // 50-69% - Fair match
   }
 
   return (
-    <div className={`relative h-2 w-full overflow-hidden rounded-full bg-gray-200 ${className}`}>
+    <div
+      className={`relative h-2 w-full overflow-hidden rounded-full bg-gray-200 ${className}`}
+    >
       <div
         className={`h-full transition-all ${barColor}`}
         style={{ width: `${value}%` }}
@@ -58,7 +63,7 @@ const ColoredProgress: React.FC<{ value: number; className?: string }> = ({ valu
 };
 
 interface ConfidenceBreakdownProps {
-  breakdown?: DuplicateGroup["confidence_breakdown"];
+  breakdown?: DuplicateGroup['confidence_breakdown'];
   overallConfidence: number;
 }
 
@@ -69,34 +74,34 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
 }) => {
   const metrics = [
     {
-      label: "Overall Confidence",
+      label: 'Overall Confidence',
       value: overallConfidence,
-      color: "bg-indigo-500",
-      weight: "Combined",
+      color: 'bg-indigo-500',
+      weight: 'Combined',
     },
     {
-      label: "Content Similarity",
+      label: 'Content Similarity',
       value: breakdown?.jaccard_similarity || 0,
-      color: "bg-blue-500",
-      weight: "40%",
+      color: 'bg-blue-500',
+      weight: '40%',
     },
     {
-      label: "Text Fuzzy Match",
+      label: 'Text Fuzzy Match',
       value: breakdown?.fuzzy_text_ratio || 0,
-      color: "bg-green-500",
-      weight: "30%",
+      color: 'bg-green-500',
+      weight: '30%',
     },
     {
-      label: "Metadata Match",
+      label: 'Metadata Match',
       value: breakdown?.metadata_similarity || 0,
-      color: "bg-yellow-500",
-      weight: "20%",
+      color: 'bg-yellow-500',
+      weight: '20%',
     },
     {
-      label: "Filename Match",
+      label: 'Filename Match',
       value: breakdown?.filename_similarity || 0,
-      color: "bg-purple-500",
-      weight: "10%",
+      color: 'bg-purple-500',
+      weight: '10%',
     },
   ];
 
@@ -129,11 +134,9 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
             </div>
             <ColoredProgress
               value={(metric.value || 0) * 100}
-              className={index === 0 ? "mb-2" : ""}
+              className={index === 0 ? 'mb-2' : ''}
             />
-            {index === 0 && (
-              <hr className="border-muted" />
-            )}
+            {index === 0 && <hr className="border-muted" />}
           </div>
         ))}
       </div>
@@ -155,19 +158,22 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
-  
+
   // Debug logging to check group data
-  console.log(`Group ${group.id} has ${group.documents?.length || 0} documents:`, group.documents);
+  console.log(
+    `Group ${group.id} has ${group.documents?.length || 0} documents:`,
+    group.documents
+  );
 
   // Handle review status toggle
   const handleReviewToggle = async () => {
     setLoading(true);
     try {
       await dispatch(
-        reviewDuplicateGroup({ id: group.id, reviewed: !group.reviewed }),
+        reviewDuplicateGroup({ id: group.id, reviewed: !group.reviewed })
       ).unwrap();
     } catch (error) {
-      console.error("Failed to update review status:", error);
+      console.error('Failed to update review status:', error);
     } finally {
       setLoading(false);
     }
@@ -176,7 +182,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   // Handle group deletion
   const handleDelete = async () => {
     if (
-      !window.confirm("Are you sure you want to delete this duplicate group?")
+      !window.confirm('Are you sure you want to delete this duplicate group?')
     ) {
       return;
     }
@@ -185,7 +191,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
     try {
       await dispatch(deleteDuplicateGroup(group.id)).unwrap();
     } catch (error) {
-      console.error("Failed to delete group:", error);
+      console.error('Failed to delete group:', error);
     } finally {
       setLoading(false);
     }
@@ -193,20 +199,20 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
 
   // Get confidence color based on percentage
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.9) return "success";
-    if (confidence >= 0.7) return "warning";
-    return "secondary";
+    if (confidence >= 0.9) return 'success';
+    if (confidence >= 0.7) return 'warning';
+    return 'secondary';
   };
 
   // Format date with fallback for invalid dates
   const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "No date";
+    if (!dateString) return 'No date';
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "No date";
+      if (isNaN(date.getTime())) return 'No date';
       return date.toLocaleDateString();
     } catch {
-      return "No date";
+      return 'No date';
     }
   };
 
@@ -214,7 +220,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   const getDocumentPreview = (doc: any) => ({
     title: doc.title,
     created: doc.created || doc.created_date,
-    fileType: doc.file_type || "pdf",
+    fileType: doc.file_type || 'pdf',
     size: doc.archive_serial_number, // Using as placeholder for size
     paperlessId: doc.paperless_id || doc.id,
   });
@@ -223,12 +229,12 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   const openInPaperless = async (documentId: number) => {
     try {
       const config = await configApi.getConfiguration();
-      const paperlessUrl = config.paperless_url.replace(/\/+$/, "");
-      window.open(`${paperlessUrl}/documents/${documentId}/details`, "_blank");
+      const paperlessUrl = config.paperless_url.replace(/\/+$/, '');
+      window.open(`${paperlessUrl}/documents/${documentId}/details`, '_blank');
     } catch (error) {
-      console.error("Failed to get paperless URL:", error);
+      console.error('Failed to get paperless URL:', error);
       // Fallback to a reasonable default
-      window.open(`/documents/${documentId}/details`, "_blank");
+      window.open(`/documents/${documentId}/details`, '_blank');
     }
   };
 
@@ -236,29 +242,29 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   const handleRemoveFromGroup = async (documentId: number) => {
     if (
       !window.confirm(
-        "Are you sure you want to remove this document from the group?",
+        'Are you sure you want to remove this document from the group?'
       )
     ) {
       return;
     }
     try {
       // Call API to remove document from group
-      console.log("Removing document", documentId, "from group", group.id);
+      console.log('Removing document', documentId, 'from group', group.id);
       // TODO: Implement API call to remove document from group
-      alert("Document removal feature will be implemented soon");
+      alert('Document removal feature will be implemented soon');
     } catch (error) {
-      console.error("Failed to remove document from group:", error);
+      console.error('Failed to remove document from group:', error);
     }
   };
 
   // Handle deleting a document from Paperless
   const handleDeleteDocument = async (
     documentId: number,
-    paperlessId: number,
+    paperlessId: number
   ) => {
     if (
       !window.confirm(
-        "Are you sure you want to permanently delete this document from Paperless-ngx?",
+        'Are you sure you want to permanently delete this document from Paperless-ngx?'
       )
     ) {
       return;
@@ -266,15 +272,15 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
     try {
       // Call API to delete document from Paperless
       console.log(
-        "Deleting document",
+        'Deleting document',
         documentId,
-        "with Paperless ID",
-        paperlessId,
+        'with Paperless ID',
+        paperlessId
       );
       // TODO: Implement API call to delete document from Paperless
-      alert("Document deletion feature will be implemented soon");
+      alert('Document deletion feature will be implemented soon');
     } catch (error) {
-      console.error("Failed to delete document:", error);
+      console.error('Failed to delete document:', error);
     }
   };
 
@@ -333,83 +339,82 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Documents in this group:</h4>
           <div className="space-y-2">
-            {group.documents
-              .map((doc, index) => {
-                const preview = getDocumentPreview(doc);
-                return (
-                  <div
-                    key={doc.id}
-                    className="relative flex items-center justify-between p-3 rounded-md border bg-background hover:bg-muted/50"
-                  >
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium truncate">
-                            {preview.title}
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openInPaperless(preview.paperlessId);
-                            }}
-                            title="Open in Paperless-ngx"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          <span>ID: {preview.paperlessId}</span>
-                          {preview.fileType && (
-                            <span>{preview.fileType.toUpperCase()}</span>
-                          )}
-                          <span>{formatDate(preview.created)}</span>
-                        </div>
-                        {/* Additional metadata */}
-                        {(doc.correspondent ||
-                          doc.document_type ||
-                          (doc.tags && doc.tags.length > 0)) && (
-                          <div className="flex items-center flex-wrap gap-1 mt-1">
-                            {doc.correspondent && (
-                              <Badge variant="outline" className="text-xs py-0">
-                                {doc.correspondent}
-                              </Badge>
-                            )}
-                            {doc.document_type && (
-                              <Badge variant="outline" className="text-xs py-0">
-                                {doc.document_type}
-                              </Badge>
-                            )}
-                            {doc.tags &&
-                              doc.tags.map((tag: string) => (
-                                <Badge
-                                  key={tag}
-                                  variant="secondary"
-                                  className="text-xs py-0"
-                                >
-                                  {tag}
-                                </Badge>
-                              ))}
-                          </div>
-                        )}
+            {group.documents.map((doc, index) => {
+              const preview = getDocumentPreview(doc);
+              return (
+                <div
+                  key={doc.id}
+                  className="relative flex items-center justify-between p-3 rounded-md border bg-background hover:bg-muted/50"
+                >
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm font-medium truncate">
+                          {preview.title}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openInPaperless(preview.paperlessId);
+                          }}
+                          title="Open in Paperless-ngx"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {doc.is_primary && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                        <span>ID: {preview.paperlessId}</span>
+                        {preview.fileType && (
+                          <span>{preview.fileType.toUpperCase()}</span>
+                        )}
+                        <span>{formatDate(preview.created)}</span>
+                      </div>
+                      {/* Additional metadata */}
+                      {(doc.correspondent ||
+                        doc.document_type ||
+                        (doc.tags && doc.tags.length > 0)) && (
+                        <div className="flex items-center flex-wrap gap-1 mt-1">
+                          {doc.correspondent && (
+                            <Badge variant="outline" className="text-xs py-0">
+                              {doc.correspondent}
+                            </Badge>
+                          )}
+                          {doc.document_type && (
+                            <Badge variant="outline" className="text-xs py-0">
+                              {doc.document_type}
+                            </Badge>
+                          )}
+                          {doc.tags &&
+                            doc.tags.map((tag: string) => (
                               <Badge
-                                variant="default"
-                                className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help"
+                                key={tag}
+                                variant="secondary"
+                                className="text-xs py-0"
                               >
-                                Primary
+                                {tag}
                               </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs bg-gray-900 text-white">
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {doc.is_primary && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="default"
+                              className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help"
+                            >
+                              Primary
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-gray-900 text-white">
                             <p className="font-semibold mb-1">
                               Primary Document
                             </p>
@@ -431,49 +436,47 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      )}
-                      {!doc.is_primary && doc.similarity_to_primary && (
-                        <SimilarityIndicator 
-                          similarity={doc.similarity_to_primary}
-                          className="text-xs"
-                        />
-                      )}
-                    </div>
-                    {!doc.is_primary && (
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFromGroup(doc.id);
-                          }}
-                          title="Remove from this group"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDocument(doc.id, preview.paperlessId);
-                          }}
-                          title="Delete from Paperless-ngx"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    )}
+                    {!doc.is_primary && doc.similarity_to_primary && (
+                      <SimilarityIndicator
+                        similarity={doc.similarity_to_primary}
+                        className="text-xs"
+                      />
                     )}
                   </div>
-                );
-              })}
-
+                  {!doc.is_primary && (
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFromGroup(doc.id);
+                        }}
+                        title="Remove from this group"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDocument(doc.id, preview.paperlessId);
+                        }}
+                        title="Delete from Paperless-ngx"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-
 
         {/* Actions */}
         <div className="space-y-3 pt-4 border-t">
@@ -485,7 +488,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                     <Button
                       onClick={handleReviewToggle}
                       disabled={loading}
-                      variant={group.reviewed ? "outline" : "default"}
+                      variant={group.reviewed ? 'outline' : 'default'}
                       size="sm"
                     >
                       {group.reviewed ? (
@@ -502,9 +505,9 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    {group.reviewed 
-                      ? "Remove reviewed status to re-examine this group later" 
-                      : "Mark as reviewed to track your progress without making changes"}
+                    {group.reviewed
+                      ? 'Remove reviewed status to re-examine this group later'
+                      : 'Mark as reviewed to track your progress without making changes'}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -514,11 +517,17 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                   <TooltipTrigger asChild>
                     <Button
                       onClick={() => {
-                        if (window.confirm(
-                          `This will keep the primary document and delete ${group.documents.length - 1} duplicate(s) from Paperless-NGX. This cannot be undone. Continue?`
-                        )) {
+                        if (
+                          window.confirm(
+                            `This will keep the primary document and delete ${
+                              group.documents.length - 1
+                            } duplicate(s) from Paperless-NGX. This cannot be undone. Continue?`
+                          )
+                        ) {
                           // TODO: Implement resolve functionality
-                          alert("Resolve functionality will be implemented soon");
+                          alert(
+                            'Resolve functionality will be implemented soon'
+                          );
                         }
                       }}
                       disabled={loading}
@@ -531,8 +540,9 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    Keep the primary document and remove duplicates from Paperless-NGX. 
-                    This frees up storage space by eliminating true duplicates.
+                    Keep the primary document and remove duplicates from
+                    Paperless-NGX. This frees up storage space by eliminating
+                    true duplicates.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -563,8 +573,8 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    Remove this entire group as a false positive. 
-                    No documents will be deleted from Paperless-NGX.
+                    Remove this entire group as a false positive. No documents
+                    will be deleted from Paperless-NGX.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -575,16 +585,20 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
           <div className="text-xs text-muted-foreground bg-gray-50 p-3 rounded-md">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div>
-                <span className="font-medium">📝 Review:</span> Track your examination progress
+                <span className="font-medium">📝 Review:</span> Track your
+                examination progress
               </div>
               <div>
-                <span className="font-medium">✅ Resolve:</span> Keep primary, delete duplicates
+                <span className="font-medium">✅ Resolve:</span> Keep primary,
+                delete duplicates
               </div>
               <div>
-                <span className="font-medium">❌ Delete Group:</span> Mark as false positive
+                <span className="font-medium">❌ Delete Group:</span> Mark as
+                false positive
               </div>
               <div>
-                <span className="font-medium">💡 Primary:</span> Auto-selected (blue badge)
+                <span className="font-medium">💡 Primary:</span> Auto-selected
+                (blue badge)
               </div>
             </div>
           </div>

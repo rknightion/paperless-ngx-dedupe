@@ -99,7 +99,9 @@ class DevServer:
                         value = value.strip()
                         # Remove surrounding quotes if present
                         if value and len(value) >= 2:
-                            if (value[0] == '"' and value[-1] == '"') or (value[0] == "'" and value[-1] == "'"):
+                            if (value[0] == '"' and value[-1] == '"') or (
+                                value[0] == "'" and value[-1] == "'"
+                            ):
                                 value = value[1:-1]
                         # Special handling for OTEL_EXPORTER_OTLP_HEADERS
                         # Should be in format: "Authorization=Basic <token>"
@@ -108,7 +110,7 @@ class DevServer:
                             # Replace URL-encoded space if present
                             value = value.replace("%20", " ")
                         env[key] = value
-                        
+
             # Debug: Show OTEL env vars if present
             otel_vars = {k: v for k, v in env.items() if k.startswith("OTEL_")}
             if otel_vars:
@@ -120,11 +122,13 @@ class DevServer:
                         print(f"  {k}={masked_value}")
                     else:
                         print(f"  {k}={v}")
-                
+
                 # Enable OTEL debug logging if not set
                 if "OTEL_LOG_LEVEL" not in env:
                     env["OTEL_LOG_LEVEL"] = "info"
-                    print(f"{INFO_COLOR}  Setting OTEL_LOG_LEVEL=info for debugging{RESET}")
+                    print(
+                        f"{INFO_COLOR}  Setting OTEL_LOG_LEVEL=info for debugging{RESET}"
+                    )
 
         return env
 
@@ -196,12 +200,16 @@ class DevServer:
 
         # Check if OTEL is configured
         otel_configured = any(k.startswith("OTEL_EXPORTER") for k in env.keys())
-        
+
         # Build uvicorn command - WITHOUT --reload if OTEL is configured
         # (--reload breaks opentelemetry-instrument due to subprocess spawning)
         if otel_configured:
-            print(f"{BACKEND_COLOR}⚠️  OTEL detected: Disabling --reload (incompatible with opentelemetry-instrument){RESET}")
-            print(f"{BACKEND_COLOR}   See: https://github.com/open-telemetry/opentelemetry-python-contrib/issues/385{RESET}")
+            print(
+                f"{BACKEND_COLOR}⚠️  OTEL detected: Disabling --reload (incompatible with opentelemetry-instrument){RESET}"
+            )
+            print(
+                f"{BACKEND_COLOR}   See: https://github.com/open-telemetry/opentelemetry-python-contrib/issues/385{RESET}"
+            )
             cmd = [
                 "uv",
                 "run",
@@ -246,7 +254,7 @@ class DevServer:
                     print(f"{BACKEND_COLOR}  {k}=***{RESET}")
                 else:
                     print(f"{BACKEND_COLOR}  {k}={v}{RESET}")
-        
+
         print(f"{BACKEND_COLOR}🚀 Launching backend with command:{RESET}")
         print(f"{BACKEND_COLOR}  {' '.join(cmd)}{RESET}")
 

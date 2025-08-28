@@ -1,7 +1,7 @@
-export { default as documentsSlice } from "./documentsSlice";
-export { default as duplicatesSlice } from "./duplicatesSlice";
-export { default as processingSlice } from "./processingSlice";
-export { default as configSlice } from "./configSlice";
+export { default as documentsSlice } from './documentsSlice';
+export { default as duplicatesSlice } from './duplicatesSlice';
+export { default as processingSlice } from './processingSlice';
+export { default as configSlice } from './configSlice';
 
 // Export document actions
 export {
@@ -19,7 +19,7 @@ export {
   clearSelection as clearDocumentSelection,
   clearError as clearDocumentError,
   updateDocumentStatus,
-} from "./documentsSlice";
+} from './documentsSlice';
 
 // Export duplicate actions
 export {
@@ -40,7 +40,7 @@ export {
   clearError as clearDuplicateError,
   updateGroupReviewStatus,
   removeGroup,
-} from "./duplicatesSlice";
+} from './duplicatesSlice';
 
 // Export processing actions
 export {
@@ -53,7 +53,7 @@ export {
   clearError as clearProcessingError,
   resetProcessingState,
   addToHistory,
-} from "./processingSlice";
+} from './processingSlice';
 
 // Export config actions
 export {
@@ -70,4 +70,4 @@ export {
   setConnectionStatus,
   clearError as clearConfigError,
   clearConnectionTest,
-} from "./configSlice";
+} from './configSlice';

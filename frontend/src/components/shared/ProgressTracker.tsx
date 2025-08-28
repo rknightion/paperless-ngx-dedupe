@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { useAppDispatch, useProcessingStatus } from "../../hooks/redux";
+import React, { useEffect, useState } from 'react';
+import { useAppDispatch, useProcessingStatus } from '../../hooks/redux';
 import {
   startAnalysis,
   cancelProcessing,
   fetchProcessingStatus,
-} from "../../store/slices/processingSlice";
-import { Button } from "../ui/Button";
-import { Progress } from "../ui/Progress";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
-import { Alert, AlertDescription } from "../ui/Alert";
+} from '../../store/slices/processingSlice';
+import { Button } from '../ui/Button';
+import { Progress } from '../ui/Progress';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Alert, AlertDescription } from '../ui/Alert';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/Tooltip";
+} from '../ui/Tooltip';
 import {
   Play,
   Square,
@@ -28,8 +28,8 @@ import {
   Wifi,
   WifiOff,
   Info,
-} from "lucide-react";
-import type { AnalyzeRequest } from "../../services/api/types";
+} from 'lucide-react';
+import type { AnalyzeRequest } from '../../services/api/types';
 
 interface ProgressTrackerProps {
   className?: string;
@@ -71,7 +71,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   // Handle completion callback
   useEffect(() => {
     if (
-      status.current_step === "Completed" &&
+      status.current_step === 'Completed' &&
       status.completed_at &&
       onComplete
     ) {
@@ -87,7 +87,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
     // Check if already processing
     if (status.is_processing) {
       alert(
-        "Analysis is already in progress. Please wait for it to complete or cancel it first.",
+        'Analysis is already in progress. Please wait for it to complete or cancel it first.'
       );
       return;
     }
@@ -95,11 +95,11 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
     // Show warning if force rebuild is enabled
     if (analysisSettings.force_rebuild) {
       const confirmed = window.confirm(
-        "⚠️ Force Rebuild Warning\n\n" +
-        "This will DELETE all existing duplicate analysis results and re-analyze ALL documents from scratch.\n\n" +
-        "This action cannot be undone. Are you sure you want to continue?"
+        '⚠️ Force Rebuild Warning\n\n' +
+          'This will DELETE all existing duplicate analysis results and re-analyze ALL documents from scratch.\n\n' +
+          'This action cannot be undone. Are you sure you want to continue?'
       );
-      
+
       if (!confirmed) {
         return;
       }
@@ -116,16 +116,16 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       // Immediately fetch status after starting
       dispatch(fetchProcessingStatus());
     } catch (error: any) {
-      console.error("Failed to start analysis:", error);
+      console.error('Failed to start analysis:', error);
       // Check for specific error types
-      if (error?.status === 409 || error?.detail?.includes("already")) {
+      if (error?.status === 409 || error?.detail?.includes('already')) {
         alert(
-          "Analysis is already in progress. The page will refresh to show current status.",
+          'Analysis is already in progress. The page will refresh to show current status.'
         );
         dispatch(fetchProcessingStatus());
-      } else if (error?.status === 0 || error?.message?.includes("network")) {
+      } else if (error?.status === 0 || error?.message?.includes('network')) {
         alert(
-          "Connection lost. The analysis may still be running in the background. Please refresh the page to check status.",
+          'Connection lost. The analysis may still be running in the background. Please refresh the page to check status.'
         );
       }
     }
@@ -136,13 +136,13 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
     try {
       await dispatch(cancelProcessing()).unwrap();
     } catch (error) {
-      console.error("Failed to cancel processing:", error);
+      console.error('Failed to cancel processing:', error);
     }
   };
 
   // Format time remaining
   const formatTimeRemaining = (seconds: number | null) => {
-    if (!seconds) return "Calculating...";
+    if (!seconds) return 'Calculating...';
 
     if (seconds < 60) return `${seconds}s remaining`;
     if (seconds < 3600)
@@ -163,40 +163,40 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   const getStatusDisplay = () => {
     if (status.error) {
       return {
-        color: "text-red-600",
-        bgColor: "bg-red-50",
-        borderColor: "border-red-200",
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200',
         icon: XCircle,
-        label: "Error",
+        label: 'Error',
       };
     }
 
     if (status.is_processing) {
       return {
-        color: "text-blue-600",
-        bgColor: "bg-blue-50",
-        borderColor: "border-blue-200",
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200',
         icon: Activity,
-        label: "Processing",
+        label: 'Processing',
       };
     }
 
-    if (status.current_step === "Completed") {
+    if (status.current_step === 'Completed') {
       return {
-        color: "text-green-600",
-        bgColor: "bg-green-50",
-        borderColor: "border-green-200",
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
         icon: CheckCircle,
-        label: "Completed",
+        label: 'Completed',
       };
     }
 
     return {
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
-      borderColor: "border-gray-200",
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50',
+      borderColor: 'border-gray-200',
       icon: Clock,
-      label: "Ready",
+      label: 'Ready',
     };
   };
 
@@ -220,14 +220,14 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
               )}
               <span
                 className={`text-xs ${
-                  wsConnected ? "text-green-600" : "text-red-600"
+                  wsConnected ? 'text-green-600' : 'text-red-600'
                 }`}
               >
                 {wsConnected
-                  ? "Connected"
+                  ? 'Connected'
                   : status.is_processing
-                    ? "Processing..."
-                    : "Disconnected"}
+                    ? 'Processing...'
+                    : 'Disconnected'}
               </span>
             </div>
           </div>
@@ -245,12 +245,12 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-medium">
-              {status.current_step || "Waiting to start"}
+              {status.current_step || 'Waiting to start'}
             </h3>
             <div className="text-sm text-muted-foreground">
               {status.total > 0 && (
                 <span>
-                  {status.progress.toLocaleString()} /{" "}
+                  {status.progress.toLocaleString()} /{' '}
                   {status.total.toLocaleString()}
                 </span>
               )}
@@ -287,7 +287,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               {status.error}
-              {status.error.includes("No documents available") && (
+              {status.error.includes('No documents available') && (
                 <div className="mt-2">
                   <p className="font-semibold">
                     Please sync documents first using the Document Sync panel
@@ -361,7 +361,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   max="1.0"
                   step="0.01"
                   placeholder="Default (0.8)"
-                  value={analysisSettings.threshold || ""}
+                  value={analysisSettings.threshold || ''}
                   onChange={(e) =>
                     setAnalysisSettings({
                       ...analysisSettings,
@@ -380,7 +380,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   type="number"
                   min="1"
                   placeholder="All documents"
-                  value={analysisSettings.limit || ""}
+                  value={analysisSettings.limit || ''}
                   onChange={(e) =>
                     setAnalysisSettings({
                       ...analysisSettings,
@@ -406,7 +406,10 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   })
                 }
               />
-              <label htmlFor="force-rebuild" className="text-sm flex items-center gap-1">
+              <label
+                htmlFor="force-rebuild"
+                className="text-sm flex items-center gap-1"
+              >
                 Force rebuild (reprocess all documents)
                 <TooltipProvider>
                   <Tooltip>
@@ -415,10 +418,14 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>
-                        <strong>Default behavior:</strong> Only analyzes new documents that haven't been processed yet.
+                        <strong>Default behavior:</strong> Only analyzes new
+                        documents that haven't been processed yet.
                       </p>
                       <p className="mt-1">
-                        <strong>With Force rebuild:</strong> Re-analyzes ALL documents in the database, recalculating all similarity scores. Use this if you've changed analysis settings or want to ensure everything is up-to-date.
+                        <strong>With Force rebuild:</strong> Re-analyzes ALL
+                        documents in the database, recalculating all similarity
+                        scores. Use this if you've changed analysis settings or
+                        want to ensure everything is up-to-date.
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -435,14 +442,14 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
               <Button
                 onClick={handleStart}
                 disabled={status.is_processing || loading.start}
-                variant={status.is_processing ? "outline" : "default"}
+                variant={status.is_processing ? 'outline' : 'default'}
               >
                 {loading.start ? (
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <Play className="h-4 w-4 mr-2" />
                 )}
-                {status.is_processing ? "Already Running" : "Start Analysis"}
+                {status.is_processing ? 'Already Running' : 'Start Analysis'}
               </Button>
 
               {status.is_processing && (

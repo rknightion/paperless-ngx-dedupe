@@ -1,27 +1,27 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { configApi } from "../../services/api";
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { configApi } from '../../services/api';
 import type {
   Configuration,
   TestConnectionResponse,
-} from "../../services/api/types";
+} from '../../services/api/types';
 
 // Async thunks
 export const fetchConfiguration = createAsyncThunk(
-  "config/fetchConfiguration",
+  'config/fetchConfiguration',
   async () => {
     return await configApi.getConfiguration();
-  },
+  }
 );
 
 export const updateConfiguration = createAsyncThunk(
-  "config/updateConfiguration",
+  'config/updateConfiguration',
   async (config: Partial<Configuration>) => {
     return await configApi.updateConfiguration(config);
-  },
+  }
 );
 
 export const testConnection = createAsyncThunk(
-  "config/testConnection",
+  'config/testConnection',
   async (connectionConfig?: {
     paperless_url: string;
     paperless_api_token?: string;
@@ -29,21 +29,21 @@ export const testConnection = createAsyncThunk(
     paperless_password?: string;
   }) => {
     return await configApi.testConnection(connectionConfig);
-  },
+  }
 );
 
 export const resetConfiguration = createAsyncThunk(
-  "config/resetConfiguration",
+  'config/resetConfiguration',
   async () => {
     return await configApi.resetConfiguration();
-  },
+  }
 );
 
 export const fetchConfigurationDefaults = createAsyncThunk(
-  "config/fetchDefaults",
+  'config/fetchDefaults',
   async () => {
     return await configApi.getConfigurationDefaults();
-  },
+  }
 );
 
 // State interface
@@ -90,7 +90,7 @@ const initialState: ConfigState = {
 
 // Slice
 const configSlice = createSlice({
-  name: "config",
+  name: 'config',
   initialState,
   reducers: {
     // Form data management
@@ -114,7 +114,7 @@ const configSlice = createSlice({
     // Validation
     setValidationErrors: (
       state,
-      action: PayloadAction<Record<string, string[]>>,
+      action: PayloadAction<Record<string, string[]>>
     ) => {
       state.validationErrors = action.payload;
     },
@@ -154,7 +154,7 @@ const configSlice = createSlice({
       })
       .addCase(fetchConfiguration.rejected, (state, action) => {
         state.loading.fetch = false;
-        state.error = action.error.message || "Failed to fetch configuration";
+        state.error = action.error.message || 'Failed to fetch configuration';
       })
 
       // Update configuration
@@ -174,7 +174,7 @@ const configSlice = createSlice({
 
         // Try to parse validation errors from error message
         const errorMessage =
-          action.error.message || "Failed to update configuration";
+          action.error.message || 'Failed to update configuration';
         try {
           const errorData = JSON.parse(errorMessage);
           if (errorData.errors) {
@@ -201,7 +201,7 @@ const configSlice = createSlice({
         state.loading.testConnection = false;
         state.connectionStatus.testResult = {
           success: false,
-          message: action.error.message || "Connection test failed",
+          message: action.error.message || 'Connection test failed',
         };
         state.connectionStatus.isConnected = false;
         state.connectionStatus.lastTested = new Date().toISOString();
@@ -221,7 +221,7 @@ const configSlice = createSlice({
       })
       .addCase(resetConfiguration.rejected, (state, action) => {
         state.loading.reset = false;
-        state.error = action.error.message || "Failed to reset configuration";
+        state.error = action.error.message || 'Failed to reset configuration';
       })
 
       // Fetch defaults
