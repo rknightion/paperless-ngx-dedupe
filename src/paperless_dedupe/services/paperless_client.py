@@ -144,7 +144,7 @@ class PaperlessClient:
     
     async def get_document_content(self, document_id: int) -> str:
         """Get document OCR content"""
-        await self._request_with_retry(
+        response = await self._request_with_retry(
             "GET",
             f"{self.base_url}/api/documents/{document_id}/download/",
             params={"original": "false"}  # Get the archived version with OCR
