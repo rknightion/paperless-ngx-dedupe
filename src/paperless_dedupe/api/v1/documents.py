@@ -7,7 +7,6 @@ from paperless_dedupe.services.cache_service import cache_service
 from paperless_dedupe.core.config import settings
 from pydantic import BaseModel
 import logging
-import asyncio
 from datetime import datetime
 from .websocket import broadcast_sync_update, broadcast_sync_completion, broadcast_error
 
@@ -394,7 +393,7 @@ async def get_document_statistics(db: Session = Depends(get_db)):
     
     # Get OCR statistics
     documents_with_ocr = db.query(Document).join(DocumentContent).filter(
-        DocumentContent.ocr_text != None,
+        DocumentContent.ocr_text.isnot(None),
         func.length(DocumentContent.ocr_text) > 0
     ).count()
     

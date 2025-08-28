@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from paperless_dedupe.models.database import get_db, AppConfig
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from pydantic import BaseModel, Field, validator
 from typing import Optional
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -140,14 +139,14 @@ async def test_paperless_connection(
                 # Try to get document count as a test
                 try:
                     response = await client._request_with_retry(
-                        "GET", 
+                        "GET",
                         f"{client.base_url}/api/documents/",
                         params={"page_size": 1}
                     )
                     data = response.json()
                     doc_count = data.get("count", 0)
                     version = f"Connected (found {doc_count} documents)"
-                except:
+                except Exception:
                     version = "Connected"
                 
                 return ConnectionTestResponse(

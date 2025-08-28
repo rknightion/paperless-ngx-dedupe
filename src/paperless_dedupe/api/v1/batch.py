@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Optional
 from paperless_dedupe.models.database import get_db
 from pydantic import BaseModel
 from datetime import datetime

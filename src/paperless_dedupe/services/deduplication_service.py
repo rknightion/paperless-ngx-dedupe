@@ -1,11 +1,11 @@
 import hashlib
 import re
-from typing import List, Tuple, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable
 from datasketch import MinHash, MinHashLSH
 from rapidfuzz import fuzz
 import logging
 from paperless_dedupe.core.config import settings
-from paperless_dedupe.models.database import Document, DocumentContent, DuplicateGroup, DuplicateMember
+from paperless_dedupe.models.database import Document, DuplicateGroup, DuplicateMember
 from sqlalchemy.orm import Session
 import pickle
 import asyncio

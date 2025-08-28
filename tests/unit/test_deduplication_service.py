@@ -1,9 +1,8 @@
-import pytest
 from unittest.mock import Mock, patch
 from datasketch import MinHash
 
 from paperless_dedupe.services.deduplication_service import DeduplicationService
-from paperless_dedupe.models.database import Document, DocumentContent, DuplicateGroup, DuplicateMember
+from paperless_dedupe.models.database import Document, DuplicateGroup, DuplicateMember
 
 
 class TestDeduplicationService:

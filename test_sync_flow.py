@@ -4,8 +4,6 @@ Test script to verify document sync and deduplication flow
 """
 import asyncio
 import httpx
-import json
-import time
 
 BASE_URL = "http://localhost:8000/api/v1"
 
@@ -96,7 +94,7 @@ async def check_analysis_status():
                         print(f"❌ Analysis error: {status['error']}")
                         return False
                     else:
-                        print(f"✅ Analysis completed")
+                        print("✅ Analysis completed")
                         return True
             else:
                 print(f"Failed to get analysis status: {response.status_code}")

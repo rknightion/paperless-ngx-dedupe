@@ -199,8 +199,8 @@ async def get_duplicate_statistics(
 ):
     """Get statistics about duplicates"""
     total_groups = db.query(DuplicateGroup).count()
-    reviewed_groups = db.query(DuplicateGroup).filter(DuplicateGroup.reviewed == True).count()
-    resolved_groups = db.query(DuplicateGroup).filter(DuplicateGroup.resolved == True).count()
+    reviewed_groups = db.query(DuplicateGroup).filter(DuplicateGroup.reviewed).count()
+    resolved_groups = db.query(DuplicateGroup).filter(DuplicateGroup.resolved).count()
     
     # Get confidence distribution
     groups = db.query(DuplicateGroup).all()

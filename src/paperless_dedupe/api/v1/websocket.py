@@ -1,10 +1,8 @@
-import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Set, Any, Optional
+from typing import Dict, Optional
 from fastapi import WebSocket, WebSocketDisconnect, WebSocketException
-from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +171,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if connection_id in manager.active_connections:
                     try:
                         await manager.send_error(f"Server error: {str(e)}", connection_id)
-                    except:
+                    except Exception:
                         pass  # Connection might be closed, ignore error
                 
     except WebSocketException as e:

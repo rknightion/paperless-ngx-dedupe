@@ -1,6 +1,5 @@
 import json
-import pickle
-from typing import Optional, Any, Dict, List
+from typing import Optional, Dict, List
 import redis.asyncio as redis
 from paperless_dedupe.core.config import settings
 import logging

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
                 conn.execute(text("SELECT 1"))
             logger.info("Database connection established")
             break
-        except Exception as e:
+        except Exception:
             retry_count += 1
             if retry_count >= max_retries:
                 logger.error(f"Failed to connect to database after {max_retries} attempts")

@@ -206,7 +206,7 @@ class TestDeduplicationPerformance:
             iterations = 1000
             
             for _ in range(iterations):
-                score = self.service.calculate_similarity_score(doc1, doc2, text1, text2)
+                self.service.calculate_similarity_score(doc1, doc2, text1, text2)
             
             end_time = time.time()
             
@@ -255,7 +255,7 @@ class TestDatabasePerformance:
     
     def test_document_insertion_performance(self, db_session):
         """Benchmark document insertion performance"""
-        from paperless_dedupe.models.database import Document, DocumentContent
+        from paperless_dedupe.models.database import Document
         
         doc_count = 1000
         
@@ -280,7 +280,7 @@ class TestDatabasePerformance:
         total_time = end_time - start_time
         docs_per_second = doc_count / total_time
         
-        print(f"\nDocument Insertion Performance:")
+        print("\nDocument Insertion Performance:")
         print(f"  {doc_count} documents in {total_time:.2f}s")
         print(f"  Rate: {docs_per_second:.1f} docs/second")
         
@@ -335,7 +335,7 @@ class TestDatabasePerformance:
         
         avg_time = (end_time - start_time) / iterations * 1000  # ms
         
-        print(f"\nDuplicate Group Query Performance:")
+        print("\nDuplicate Group Query Performance:")
         print(f"  Average query time: {avg_time:.2f}ms")
         print(f"  Groups queried: {len(groups)}")
         
