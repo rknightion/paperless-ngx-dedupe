@@ -186,7 +186,7 @@ class TestDeduplicationPerformance:
             # Clear for next iteration
             self.service.minhashes.clear()
             self.service.lsh_index._hashtables = [
-                dict() for _ in range(self.service.lsh_index.b)
+                {} for _ in range(self.service.lsh_index.b)
             ]
 
         # Check that memory usage is roughly linear

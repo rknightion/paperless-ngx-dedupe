@@ -8,7 +8,6 @@ from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-import redis
 
 from paperless_dedupe.models.database import Base, get_db
 from paperless_dedupe.core.config import settings

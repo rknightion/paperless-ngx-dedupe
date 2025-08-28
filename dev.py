@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Development server runner for Paperless-NGX Dedupe.
+
 Runs both backend and frontend concurrently for local development.
 """
 

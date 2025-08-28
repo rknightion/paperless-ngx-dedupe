@@ -170,7 +170,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         await manager.send_error(
                             f"Server error: {str(e)}", connection_id
                         )
-                    except:
+                    except Exception:  # noqa: E722
                         pass  # Connection might be closed, ignore error
 
     except WebSocketException as e:

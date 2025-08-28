@@ -31,7 +31,7 @@ class PaperlessClient:
         # Prefer token auth
         if paperless_api_token or settings.paperless_api_token:
             self.token = paperless_api_token or settings.paperless_api_token
-            self.paperless = Paperless(self.base_url, self.token)
+            self.paperless = Paperless(self.base_url, self.token)  # type: ignore[abstract]
         elif (paperless_username or settings.paperless_username) and (
             paperless_password or settings.paperless_password
         ):
@@ -39,7 +39,7 @@ class PaperlessClient:
             username = paperless_username or settings.paperless_username
             password = paperless_password or settings.paperless_password
             self.token = None  # Will be generated on first use
-            self.paperless = None
+            self.paperless: Paperless | None = None
             self._username = username
             self._password = password
         else:
@@ -52,7 +52,7 @@ class PaperlessClient:
             self.token = await Paperless.generate_api_token(
                 self.base_url, self._username, self._password
             )
-            self.paperless = Paperless(self.base_url, self.token)
+            self.paperless = Paperless(self.base_url, self.token)  # type: ignore[abstract]
 
         await self.paperless.initialize()
 
@@ -108,7 +108,7 @@ class PaperlessClient:
             raise
 
     async def get_documents(
-        self, page: int = 1, page_size: int = None
+        self, page: int = 1, page_size: int | None = None
     ) -> dict[str, Any]:
         """Get paginated list of documents."""
         page_size = page_size or settings.api_page_size
@@ -116,7 +116,7 @@ class PaperlessClient:
         try:
             # PyPaperless handles pagination internally
             # Collect documents for the specific page
-            all_docs = []
+            all_docs: list[dict[str, Any]] = []
             doc_count = 0
             skip = (page - 1) * page_size
 
@@ -164,7 +164,7 @@ class PaperlessClient:
         """Get document thumbnail."""
         try:
             thumbnail = await self.paperless.documents.thumbnail(document_id)
-            return thumbnail.data
+            return thumbnail  # type: ignore[return-value]
         except Exception as e:
             logger.error(f"Failed to fetch thumbnail {document_id}: {e}")
             raise
@@ -173,7 +173,7 @@ class PaperlessClient:
         """Get document preview."""
         try:
             preview = await self.paperless.documents.preview(document_id)
-            return preview.data
+            return preview  # type: ignore[return-value]
         except Exception as e:
             logger.error(f"Failed to fetch preview {document_id}: {e}")
             raise
@@ -265,7 +265,7 @@ class PaperlessClient:
         try:
             draft = self.paperless.tags.draft(name=name, color=color)
             new_id = await draft.save()
-            return new_id
+            return int(new_id) if new_id is not None else None
         except Exception as e:
             logger.error(f"Failed to create tag {name}: {e}")
             return None

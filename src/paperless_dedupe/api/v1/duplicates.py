@@ -178,7 +178,7 @@ async def get_duplicate_groups(
             query = query.outerjoin(
                 primary_member,
                 (DuplicateGroup.id == primary_member.group_id)
-                & (primary_member.is_primary == True),
+                & primary_member.is_primary,
             ).outerjoin(primary_doc, primary_member.document_id == primary_doc.id)
             order_col = func.coalesce(primary_doc.original_filename, "")
         else:
@@ -189,8 +189,6 @@ async def get_duplicate_groups(
             query = query.order_by(order_col.desc())
         else:
             query = query.order_by(order_col.asc())
-        total_pages = (total_count + page_size - 1) // page_size
-
         # Calculate skip from page number
         skip = (page - 1) * page_size
 
@@ -333,7 +331,7 @@ async def get_duplicate_groups(
         logger.error(f"Full traceback:\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=500, detail=f"Error fetching duplicate groups: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/groups/{group_id}", response_model=DuplicateGroupResponse)
@@ -461,12 +459,8 @@ async def delete_duplicate_group(group_id: int, db: Session = Depends(get_db)):
 async def get_duplicate_statistics(db: Session = Depends(get_db)):
     """Get statistics about duplicates"""
     total_groups = db.query(DuplicateGroup).count()
-    reviewed_groups = (
-        db.query(DuplicateGroup).filter(DuplicateGroup.reviewed == True).count()
-    )
-    resolved_groups = (
-        db.query(DuplicateGroup).filter(DuplicateGroup.resolved == True).count()
-    )
+    reviewed_groups = db.query(DuplicateGroup).filter(DuplicateGroup.reviewed).count()
+    resolved_groups = db.query(DuplicateGroup).filter(DuplicateGroup.resolved).count()
 
     # Get confidence distribution
     groups = db.query(DuplicateGroup).all()

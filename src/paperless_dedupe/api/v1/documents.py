@@ -145,7 +145,7 @@ async def get_document_statistics(db: Session = Depends(get_db)):
         db.query(Document)
         .join(DocumentContent)
         .filter(
-            DocumentContent.full_text != None,
+            DocumentContent.full_text.isnot(None),
             func.length(DocumentContent.full_text) > 0,
         )
         .count()
@@ -720,7 +720,7 @@ async def refresh_statistics(db: Session = Depends(get_db)):
         logger.error(f"Failed to refresh statistics: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to refresh statistics: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/sync/status")

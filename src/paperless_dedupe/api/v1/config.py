@@ -58,7 +58,7 @@ class ConfigUpdate(BaseModel):
     )
 
     @validator("paperless_url")
-    def validate_url(cls, v):
+    def validate_url(cls, v):  # noqa: N805
         if v is None:
             return v
         # Basic URL validation
@@ -68,7 +68,7 @@ class ConfigUpdate(BaseModel):
         return v.rstrip("/")
 
     @validator("confidence_weight_filename")
-    def validate_weights(cls, v, values):
+    def validate_weights(cls, v, values):  # noqa: N805
         """Validate that confidence weights sum to 100 if any are provided"""
         # Only validate if at least one weight is being updated
         weights = []

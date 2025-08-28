@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -20,7 +21,7 @@ from sqlalchemy.types import TypeDecorator
 
 from paperless_dedupe.core.config import settings
 
-Base = declarative_base()
+Base = declarative_base()  # type: Any
 
 
 class JSONType(TypeDecorator):
@@ -28,12 +29,12 @@ class JSONType(TypeDecorator):
 
     impl = Text
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value: Any, dialect: Any) -> str | None:
         if value is None:
             return None
         return json.dumps(value)
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value: str | None, dialect: Any) -> Any:
         if value is None:
             return None
         return json.loads(value)
@@ -113,23 +114,23 @@ class DuplicateGroup(Base):
 
     def recalculate_confidence(self, weights: dict) -> float:
         """Recalculate confidence score based on provided weights"""
-        scores = []
-        total_weight = 0
+        scores: list[tuple[float, float]] = []
+        total_weight: float = 0.0
 
         if weights.get("jaccard", True) and self.jaccard_similarity is not None:
-            scores.append((self.jaccard_similarity, 0.4))
+            scores.append((float(self.jaccard_similarity), 0.4))
             total_weight += 0.4
 
         if weights.get("fuzzy", True) and self.fuzzy_text_ratio is not None:
-            scores.append((self.fuzzy_text_ratio, 0.3))
+            scores.append((float(self.fuzzy_text_ratio), 0.3))
             total_weight += 0.3
 
         if weights.get("metadata", True) and self.metadata_similarity is not None:
-            scores.append((self.metadata_similarity, 0.2))
+            scores.append((float(self.metadata_similarity), 0.2))
             total_weight += 0.2
 
         if weights.get("filename", True) and self.filename_similarity is not None:
-            scores.append((self.filename_similarity, 0.1))
+            scores.append((float(self.filename_similarity), 0.1))
             total_weight += 0.1
 
         if not scores:
@@ -137,7 +138,7 @@ class DuplicateGroup(Base):
 
         # Normalize weights and calculate weighted average
         weighted_sum = sum(score * weight for score, weight in scores)
-        return weighted_sum / total_weight if total_weight > 0 else 0.0
+        return float(weighted_sum / total_weight) if total_weight > 0 else 0.0
 
 
 class DuplicateMember(Base):

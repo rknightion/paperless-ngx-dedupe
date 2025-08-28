@@ -112,8 +112,8 @@ class DeduplicationService:
 
         # File size similarity
         if doc1.file_size and doc2.file_size:
-            size_ratio = min(doc1.file_size, doc2.file_size) / max(
-                doc1.file_size, doc2.file_size
+            size_ratio = float(min(doc1.file_size, doc2.file_size)) / float(
+                max(doc1.file_size, doc2.file_size)
             )
             metadata_scores.append(size_ratio)
 
