@@ -4,7 +4,6 @@ import logging
 import pickle
 import re
 from collections.abc import Callable
-
 from datasketch import MinHash, MinHashLSH
 from rapidfuzz import fuzz
 from sqlalchemy.orm import Session

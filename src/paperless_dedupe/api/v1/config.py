@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import AppConfig, get_db
 from paperless_dedupe.services.paperless_client import PaperlessClient
+from pydantic import BaseModel, Field, validator
+from typing import Optional
+import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -284,5 +287,8 @@ async def reset_config(db: Session = Depends(get_db)):
     # Delete all config items
     db.query(AppConfig).delete()
     db.commit()
-
-    return {"status": "success", "message": "Configuration reset to defaults"}
+    
+    return {
+        "status": "success",
+        "message": "Configuration reset to defaults"
+    }

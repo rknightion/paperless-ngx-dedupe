@@ -4,7 +4,6 @@ Test fixtures for document data and realistic test scenarios
 
 import pytest
 from datetime import datetime, timedelta
-from typing import List, Dict
 
 
 @pytest.fixture
