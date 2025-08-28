@@ -70,6 +70,7 @@ dependencies = [
     "opentelemetry-instrumentation-system-metrics==0.57b0",
     "opentelemetry-instrumentation-tortoiseorm==0.57b0",
     "opentelemetry-instrumentation-urllib3==0.57b0",
+    "ruff>=0.12.10",
 ]
 
 [project.urls]
