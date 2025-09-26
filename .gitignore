@@ -218,6 +218,7 @@ coverage.xml
 
 #dev
 postgres-data/
+postgres_data/
 redis-data/
 cache/
 data/

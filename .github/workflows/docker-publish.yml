@@ -189,8 +189,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest
-            type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }}
+            type=raw,value=nightly,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-
             type=raw,value={{date 'YYYYMMDD'}},enable=${{ github.event_name == 'schedule' }}
 
@@ -239,8 +238,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
           tags: |
-            type=raw,value=latest
-            type=raw,value=nightly,enable=${{ github.event_name == 'schedule' }}
+            type=raw,value=nightly,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-
             type=raw,value={{date 'YYYYMMDD'}},enable=${{ github.event_name == 'schedule' }}
 

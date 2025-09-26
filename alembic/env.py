@@ -1,7 +1,7 @@
-import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
+import os  # Still needed for ALEMBIC_SKIP_LOGGING_CONFIG check
 
 from sqlalchemy import engine_from_config, pool
 
@@ -17,14 +17,8 @@ from src.paperless_dedupe.models.database import Base
 # this is the Alembic Config object
 config = context.config
 
-# Set the database URL from settings
+# Set the PostgreSQL database URL from settings
 config.set_main_option("sqlalchemy.url", settings.database_url)
-
-# Ensure data directory exists for SQLite
-if settings.database_url.startswith("sqlite"):
-    data_dir = os.path.dirname(settings.database_url.replace("sqlite:///", ""))
-    if data_dir and not os.path.exists(data_dir):
-        os.makedirs(data_dir, exist_ok=True)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

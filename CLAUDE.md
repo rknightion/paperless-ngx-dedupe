@@ -70,7 +70,7 @@ suggestions = await client.get_document_suggestions(document_id)
 
 ```bash
 # After modifying ANY database model, ALWAYS run:
-PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe \
 uv run alembic revision --autogenerate -m "Description of changes"
 
 # Review the generated migration file in alembic/versions/
@@ -85,6 +85,7 @@ uv run alembic revision --autogenerate -m "Description of changes"
 
 - Python 3.13+
 - Node.js and npm
+- PostgreSQL 16+ or Docker
 - uv package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 
 ### Quick Start for Local Development
@@ -129,11 +130,11 @@ npm run build                           # Test production build
 uv run ruff check src/                  # Python linting
 uv run ruff format src/                 # Python formatting
 
-# Database operations
-PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
+# Database operations (PostgreSQL required)
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe \
 uv run alembic upgrade head             # Apply all migrations
 
-PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe \
 uv run alembic downgrade -1             # Rollback one migration
 
 # API testing
@@ -147,7 +148,7 @@ curl http://localhost:30001/api/v1/config/  # Get current config
 2. **Frontend Changes**: Edit files in `frontend/src/` - browser auto-refreshes
 3. **Database Schema Changes**:
    - Modify models in `src/paperless_dedupe/models/database.py`
-   - Create migration: `PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db uv run alembic revision --autogenerate -m "description"`
+   - Create migration: `PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe uv run alembic revision --autogenerate -m "description"`
    - Test locally before committing
 4. **Testing API**: Use http://localhost:30001/docs for interactive testing
 
@@ -160,9 +161,10 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 ### Technology Stack
 
 - **Backend**: FastAPI with async/await support
-- **Database**: SQLite for persistent storage (with Alembic migrations)
+- **Database**: PostgreSQL for persistent storage (with Alembic migrations)
 - **Deduplication**: MinHash/LSH with rapidfuzz for fuzzy matching
 - **Container**: Docker with docker-compose
+- **Worker Queue**: Celery with Redis for background tasks
 - **Migrations**: Alembic for database schema versioning
 
 ### Key Components
@@ -242,7 +244,7 @@ A comprehensive document deduplication tool for paperless-ngx that identifies an
 ### Environment Variables
 
 ```bash
-PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:password@localhost:5432/paperless_dedupe
 PAPERLESS_DEDUPE_PAPERLESS_URL=http://paperless:8000
 PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-token
 PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD=85  # Minimum 50%
@@ -277,11 +279,11 @@ uv run paperless-dedupe-dev
 uv sync
 
 # IMPORTANT: Run migrations after any schema change
-PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe \
 uv run alembic upgrade head
 
 # Create new migration after changing models
-PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///data/paperless_dedupe.db \
+PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe \
 uv run alembic revision --autogenerate -m "Your change description"
 
 # Start backend server only
@@ -344,8 +346,9 @@ uv run pytest --cov=paperless_dedupe
 
 ### Database Strategy
 
-- SQLite for simple file-based storage (up to 500K chars per document)
+- PostgreSQL for robust concurrent access and JSON support
 - Alembic migrations for schema versioning
+- GIN indexes for JSON and full-text search
 - Automatic migrations on startup
 
 ### Memory Management
@@ -397,9 +400,9 @@ uv run pytest --cov=paperless_dedupe
 
 3. **Database Issues**
 
-   - Ensure data directory exists and is writable
-   - Check disk space for SQLite database file
-   - Verify file permissions on data volume
+   - Ensure PostgreSQL is running and accessible
+   - Check database credentials and connection string
+   - Verify PostgreSQL version is 16 or higher
 
 4. **High False Positives**
 

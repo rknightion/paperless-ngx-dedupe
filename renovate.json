@@ -1,10 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":dependencyDashboardAutoclose"
+  ],
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true
   },
+  "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": true,
   "packageRules": [
@@ -15,22 +20,10 @@
       "automerge": true
     },
     {
-      "description": "Automerge patch and minor updates for low risk",
-      "matchUpdateTypes": ["patch", "minor"],
+      "description": "Automerge most dependency updates",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true,
-      "labels": ["dep:low-risk"]
-    },
-    {
-      "description": "Automerge pin updates",
-      "matchUpdateTypes": ["pin"],
-      "automerge": true,
-      "labels": ["dep:low-risk"]
-    },
-    {
-      "description": "Automerge digest updates (Docker, etc)",
-      "matchUpdateTypes": ["digest"],
-      "automerge": true,
-      "labels": ["dep:low-risk"]
+      "labels": ["dep:automerge"]
     }
   ]
 }

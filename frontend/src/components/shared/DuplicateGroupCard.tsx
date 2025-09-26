@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAppDispatch } from '../../hooks/redux';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 import {
   reviewDuplicateGroup,
   deleteDuplicateGroup,
@@ -72,6 +74,15 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
   breakdown,
   overallConfidence,
 }) => {
+  // Get confidence weights from config
+  const config = useSelector((state: RootState) => state.config.configuration);
+  const weights = {
+    jaccard: config?.confidence_weight_jaccard ?? 40,
+    fuzzy: config?.confidence_weight_fuzzy ?? 30,
+    metadata: config?.confidence_weight_metadata ?? 20,
+    filename: config?.confidence_weight_filename ?? 10,
+  };
+
   const metrics = [
     {
       label: 'Overall Confidence',
@@ -83,25 +94,25 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
       label: 'Content Similarity',
       value: breakdown?.jaccard_similarity || 0,
       color: 'bg-blue-500',
-      weight: '40%',
+      weight: `${weights.jaccard}%`,
     },
     {
       label: 'Text Fuzzy Match',
       value: breakdown?.fuzzy_text_ratio || 0,
       color: 'bg-green-500',
-      weight: '30%',
+      weight: `${weights.fuzzy}%`,
     },
     {
       label: 'Metadata Match',
       value: breakdown?.metadata_similarity || 0,
       color: 'bg-yellow-500',
-      weight: '20%',
+      weight: `${weights.metadata}%`,
     },
     {
       label: 'Filename Match',
       value: breakdown?.filename_similarity || 0,
       color: 'bg-purple-500',
-      weight: '10%',
+      weight: `${weights.filename}%`,
     },
   ];
 

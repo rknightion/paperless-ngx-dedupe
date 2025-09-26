@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { configApi } from '../../services/api/config';
+import { fetchConfiguration } from '../../store/slices/configSlice';
 
 export const DuplicatesPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -48,6 +49,15 @@ export const DuplicatesPage: React.FC = () => {
   const selectedGroups = useSelector(
     (state: RootState) => state.duplicates.selectedGroups
   );
+
+  // Get confidence weights from config
+  const reduxConfig = useSelector((state: RootState) => state.config.configuration);
+  const configWeights = {
+    jaccard: reduxConfig?.confidence_weight_jaccard ?? 40,
+    fuzzy: reduxConfig?.confidence_weight_fuzzy ?? 30,
+    metadata: reduxConfig?.confidence_weight_metadata ?? 20,
+    filename: reduxConfig?.confidence_weight_filename ?? 10,
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewedFilter, setReviewedFilter] = useState<boolean | null>(null);
   const [confidenceFilter, setConfidenceFilter] = useState(0.7);
@@ -70,6 +80,11 @@ export const DuplicatesPage: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Load duplicate groups, statistics and configuration
+  useEffect(() => {
+    // Fetch configuration to get weights
+    dispatch(fetchConfiguration());
+  }, [dispatch]);
+
   useEffect(() => {
     dispatch(
       fetchDuplicateGroups({
@@ -407,7 +422,7 @@ export const DuplicatesPage: React.FC = () => {
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        40%
+                        {configWeights.jaccard}%
                       </Badge>
                     </label>
 
@@ -442,7 +457,7 @@ export const DuplicatesPage: React.FC = () => {
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        30%
+                        {configWeights.fuzzy}%
                       </Badge>
                     </label>
                   </div>
@@ -479,7 +494,7 @@ export const DuplicatesPage: React.FC = () => {
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        20%
+                        {configWeights.metadata}%
                       </Badge>
                     </label>
 
@@ -514,7 +529,7 @@ export const DuplicatesPage: React.FC = () => {
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        10%
+                        {configWeights.filename}%
                       </Badge>
                     </label>
                   </div>
@@ -700,7 +715,7 @@ export const DuplicatesPage: React.FC = () => {
                         Jaccard Similarity
                       </span>
                       <Badge variant="outline" className="text-xs bg-indigo-50">
-                        40% weight
+                        {configWeights.jaccard}% weight
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">
@@ -720,7 +735,7 @@ export const DuplicatesPage: React.FC = () => {
                         Fuzzy Text Matching
                       </span>
                       <Badge variant="outline" className="text-xs bg-purple-50">
-                        30% weight
+                        {configWeights.fuzzy}% weight
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">
@@ -739,7 +754,7 @@ export const DuplicatesPage: React.FC = () => {
                         Metadata Similarity
                       </span>
                       <Badge variant="outline" className="text-xs bg-yellow-50">
-                        20% weight
+                        {configWeights.metadata}% weight
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">
@@ -759,7 +774,7 @@ export const DuplicatesPage: React.FC = () => {
                         Filename Similarity
                       </span>
                       <Badge variant="outline" className="text-xs bg-green-50">
-                        10% weight
+                        {configWeights.filename}% weight
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">

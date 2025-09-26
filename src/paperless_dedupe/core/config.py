@@ -2,10 +2,12 @@ import os
 
 from pydantic_settings import BaseSettings
 
+from paperless_dedupe import __version__
+
 
 class Settings(BaseSettings):
     app_name: str = "Paperless Dedupe"
-    version: str = "0.1.0"
+    version: str = __version__
     debug: bool = True
     log_level: str = "WARNING"  # Can be DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -15,8 +17,12 @@ class Settings(BaseSettings):
     paperless_username: str | None = None
     paperless_password: str | None = None
 
-    # Database settings
-    database_url: str = "sqlite:///data/paperless_dedupe.db"
+    # Database settings - PostgreSQL required
+    database_url: str = "postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe"
+
+    # Task queue settings
+    redis_url: str = "redis://localhost:6379/0"
+    celery_result_expires: int = 86400  # Results expire after 1 day
 
     # Deduplication settings
     minhash_num_perm: int = 128

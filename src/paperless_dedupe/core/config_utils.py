@@ -18,7 +18,10 @@ def get_current_paperless_config(db: Session) -> dict[str, Any]:
     paperless_username, and paperless_password.
     """
     # Get config from database
-    config_items = {item.key: item.value for item in db.query(AppConfig).all()}
+    config_items = {}
+    for item in db.query(AppConfig).all():
+        # Since we store as text, values are already strings, no conversion needed
+        config_items[item.key] = item.value
 
     # Return merged config
     return {
@@ -38,7 +41,22 @@ def get_current_paperless_config(db: Session) -> dict[str, Any]:
 def get_current_config(db: Session) -> dict[str, Any]:
     """Get all current configuration from database or defaults."""
     # Get config from database
-    config_items = {item.key: item.value for item in db.query(AppConfig).all()}
+    config_items = {}
+    for item in db.query(AppConfig).all():
+        # Convert stored text values back to appropriate types
+        value = item.value
+        if value is not None and isinstance(value, str):
+            # Try to convert to appropriate type
+            if value.lower() in ('true', 'false'):
+                value = value.lower() == 'true'
+            elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
+                # It's a number
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+            # Otherwise keep as string
+        config_items[item.key] = value
 
     # Return merged config
     return {

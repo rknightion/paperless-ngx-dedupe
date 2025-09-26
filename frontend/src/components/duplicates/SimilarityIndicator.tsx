@@ -1,4 +1,6 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 import { Badge } from '../ui/Badge';
 import {
   Tooltip,
@@ -87,6 +89,15 @@ interface SimilarityBreakdownProps {
 const SimilarityBreakdown: React.FC<SimilarityBreakdownProps> = ({
   similarity,
 }) => {
+  // Get confidence weights from config
+  const config = useSelector((state: RootState) => state.config.configuration);
+  const weights = {
+    jaccard: config?.confidence_weight_jaccard ?? 40,
+    fuzzy: config?.confidence_weight_fuzzy ?? 30,
+    metadata: config?.confidence_weight_metadata ?? 20,
+    filename: config?.confidence_weight_filename ?? 10,
+  };
+
   const metrics = [
     {
       label: 'Overall Similarity',
@@ -98,25 +109,25 @@ const SimilarityBreakdown: React.FC<SimilarityBreakdownProps> = ({
       label: 'Content Similarity',
       value: similarity.jaccard_similarity,
       color: 'bg-blue-500',
-      weight: '40%',
+      weight: `${weights.jaccard}%`,
     },
     {
       label: 'Text Fuzzy Match',
       value: similarity.fuzzy_text_ratio,
       color: 'bg-green-500',
-      weight: '30%',
+      weight: `${weights.fuzzy}%`,
     },
     {
       label: 'Metadata Match',
       value: similarity.metadata_similarity,
       color: 'bg-yellow-500',
-      weight: '20%',
+      weight: `${weights.metadata}%`,
     },
     {
       label: 'Filename Match',
       value: similarity.filename_similarity,
       color: 'bg-purple-500',
-      weight: '10%',
+      weight: `${weights.filename}%`,
     },
   ];
 

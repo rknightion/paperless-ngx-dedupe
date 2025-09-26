@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING**: Migrated to PostgreSQL-only database backend (removed SQLite support)
+  - Required for Celery worker concurrency
+  - Adds GIN indexes for JSON and full-text search
+  - Better performance with large datasets
 - Improved documentation for open source release
 - Enhanced .env.example with clear optional configuration notes
 - Separated development and production docker-compose configurations
@@ -84,7 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial proof of concept
 - Basic deduplication algorithm
 - Command-line interface
-- SQLite storage backend
+- Initial database backend
 
 ---
 

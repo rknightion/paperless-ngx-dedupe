@@ -1,6 +1,4 @@
-import json
-import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import (
@@ -17,27 +15,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy.dialects.postgresql import JSON
 
 from paperless_dedupe.core.config import settings
 
 Base = declarative_base()  # type: Any
 
 
-class JSONType(TypeDecorator):
-    """SQLite-compatible JSON field."""
-
-    impl = Text
-
-    def process_bind_param(self, value: Any, dialect: Any) -> str | None:
-        if value is None:
-            return None
-        return json.dumps(value)
-
-    def process_result_value(self, value: str | None, dialect: Any) -> Any:
-        if value is None:
-            return None
-        return json.loads(value)
+# Use PostgreSQL native JSON type directly
+JSONType = JSON
 
 
 class Document(Base):
@@ -52,7 +38,7 @@ class Document(Base):
     ocr_confidence = Column(Float)
     file_size = Column(Integer)
     created_date = Column(DateTime)
-    last_processed = Column(DateTime, default=datetime.utcnow)
+    last_processed = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     processing_status = Column(String(20), default="pending")
 
     # Additional metadata fields
@@ -84,7 +70,7 @@ class DocumentContent(Base):
     full_text = Column(Text)
     normalized_text = Column(Text)
     word_count = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     document = relationship("Document", back_populates="content")
@@ -103,7 +89,7 @@ class DuplicateGroup(Base):
     filename_similarity = Column(Float)  # Filename similarity score (0-1)
 
     algorithm_version = Column(String(10), default="2.0")  # Updated version
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     reviewed = Column(Boolean, default=False)
     resolved = Column(Boolean, default=False)
 
@@ -157,31 +143,21 @@ class AppConfig(Base):
     __tablename__ = "app_config"
 
     key = Column(String(100), primary_key=True)
-    value = Column(JSONType)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    value = Column(Text)  # Changed from JSONType to Text to avoid JSON encoding issues
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 # Database setup
 def create_database_engine():
-    """Create database engine with appropriate settings for SQLite or PostgreSQL."""
-    if settings.database_url.startswith("sqlite"):
-        # Ensure data directory exists
-        data_dir = os.path.dirname(settings.database_url.replace("sqlite:///", ""))
-        if data_dir and not os.path.exists(data_dir):
-            os.makedirs(data_dir, exist_ok=True)
-
-        return create_engine(
-            settings.database_url,
-            connect_args={"check_same_thread": False},  # Allow multiple threads
-            echo=False,  # Set to True for SQL debugging
-        )
-    else:
-        # PostgreSQL or other databases
-        return create_engine(
-            settings.database_url,
-            pool_pre_ping=True,  # Verify connections before using them
-            pool_recycle=3600,  # Recycle connections after 1 hour
-        )
+    """Create PostgreSQL database engine."""
+    return create_engine(
+        settings.database_url,
+        pool_pre_ping=True,  # Verify connections before using them
+        pool_recycle=3600,  # Recycle connections after 1 hour
+        pool_size=10,  # Connection pool size
+        max_overflow=20,  # Maximum overflow connections
+        echo=False,  # Set to True for SQL debugging
+    )
 
 
 engine = create_database_engine()

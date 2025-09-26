@@ -1,4 +1,37 @@
 services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:17
+    container_name: paperless-dedupe-postgres-dev
+    restart: unless-stopped
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=paperless_dedupe
+      - POSTGRES_USER=paperless_dedupe
+      - POSTGRES_PASSWORD=paperless_dedupe
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless_dedupe -d paperless_dedupe"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Celery task queue
+  redis:
+    image: redis:7-alpine
+    container_name: paperless-dedupe-redis-dev
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # Backend API service
   paperless-dedupe:
     build:
@@ -6,29 +39,112 @@ services:
       dockerfile: Dockerfile
       target: backend
     container_name: paperless-dedupe
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     ports:
       - "30001:8000"
     environment:
-      - PAPERLESS_DEDUPE_DATABASE_URL=sqlite:///app/data/paperless_dedupe.db
+      - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@postgres:5432/paperless_dedupe
+      - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
       - PAPERLESS_DEDUPE_SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-long-random-string}
-      # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=${PAPERLESS_API_TOKEN}
-      # Or username/password auth
-      # - PAPERLESS_DEDUPE_PAPERLESS_USERNAME=${PAPERLESS_USERNAME}
-      # - PAPERLESS_DEDUPE_PAPERLESS_PASSWORD=${PAPERLESS_PASSWORD}
+      - PAPERLESS_DEDUPE_LOG_LEVEL=${PAPERLESS_DEDUPE_LOG_LEVEL:-INFO}
+      # Paperless-NGX connection settings (configure one of these):
+      # - PAPERLESS_DEDUPE_PAPERLESS_URL=${PAPERLESS_DEDUPE_PAPERLESS_URL}
+      # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=${PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN}
     volumes:
-      - ./data:/app/data
-      - ./cache:/app/cache
+      - ./src:/app/src  # Mount source for hot-reloading in dev
+      - ./alembic:/app/alembic  # Mount alembic migrations
     restart: unless-stopped
+    # Override command for development with hot-reload and auto-migrations
+    command: >
+      sh -c "
+      echo 'Waiting for database...' &&
+      sleep 5 &&
+      echo 'Running database migrations...' &&
+      alembic upgrade head &&
+      echo 'Starting API server...' &&
+      uvicorn paperless_dedupe.main:app --host 0.0.0.0 --port 8000 --reload"
 
-  # Frontend web UI service
-  frontend:
+  # Celery worker service
+  worker:
     build:
       context: .
       dockerfile: Dockerfile
-      target: frontend
-    container_name: paperless-dedupe-frontend
+      target: backend
+    container_name: paperless-dedupe-worker-dev
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      paperless-dedupe:
+        condition: service_started
+    environment:
+      - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://paperless_dedupe:paperless_dedupe@postgres:5432/paperless_dedupe
+      - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
+      - PAPERLESS_DEDUPE_LOG_LEVEL=${PAPERLESS_DEDUPE_LOG_LEVEL:-INFO}
+      - DOCKER_CONTAINER=1
+      - PYTHONPATH=/app/src
+      # Copy Paperless-NGX connection settings from main service
+      # - PAPERLESS_DEDUPE_PAPERLESS_URL=${PAPERLESS_DEDUPE_PAPERLESS_URL}
+      # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=${PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN}
+    volumes:
+      - ./src:/app/src  # Mount source for hot-reloading in dev
+      - ./alembic:/app/alembic  # Mount alembic migrations
+    restart: unless-stopped
+    # Wait for migrations to complete, then start worker
+    command: >
+      sh -c "
+      echo 'Waiting for database migrations...' &&
+      sleep 20 &&
+      echo 'Starting Celery worker...' &&
+      celery -A paperless_dedupe.worker.celery_app worker
+      --loglevel=info
+      --concurrency=4
+      --queues=high_priority,default,low_priority,deduplication,sync"
+
+  # Frontend web UI service (development with hot-reload)
+  frontend:
+    image: node:20-alpine
+    container_name: paperless-dedupe-frontend-dev
+    working_dir: /app
     ports:
       - "30002:3000"
     depends_on:
       - paperless-dedupe
     restart: unless-stopped
+    volumes:
+      - ./frontend:/app  # Mount frontend source for development
+      - /app/node_modules  # Prevent node_modules from being overwritten by mount
+    environment:
+      - NODE_ENV=development
+      # Tell Vite to use the container's backend service
+      - VITE_API_URL=http://paperless-dedupe:8000
+    # Install dependencies and run dev server with Docker config
+    command: sh -c "npm install && npm run dev:docker"
+
+  # Optional: Flower for monitoring Celery tasks in development
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    container_name: paperless-dedupe-flower-dev
+    depends_on:
+      - redis
+    environment:
+      - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+      - FLOWER_BASIC_AUTH=admin:changeme  # Change in production!
+    ports:
+      - "5555:5555"
+    command: >
+      celery -A paperless_dedupe.worker.celery_app flower
+      --port=5555
+      --broker=redis://redis:6379/0
+
+volumes:
+  redis_data:

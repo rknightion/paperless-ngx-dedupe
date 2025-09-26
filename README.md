@@ -13,7 +13,7 @@ A powerful document deduplication tool for [paperless-ngx](https://github.com/pa
 - 🌐 **Modern Web UI**: React TypeScript frontend with real-time updates
 - ⚡ **Scalable Architecture**: Handles 13,000+ documents efficiently using MinHash/LSH algorithms
 - 🧠 **Smart Deduplication**: Multi-factor similarity scoring with OCR-aware fuzzy matching
-- 🚀 **High Performance**: Efficient SQLite storage with optimized indexing
+- 🚀 **High Performance**: PostgreSQL with optimized GIN indexes for JSON and full-text search
 - ⚙️ **Flexible Configuration**: Web-based configuration with connection testing
 - 📊 **Detailed Analytics**: Confidence scores and space-saving calculations
 - 🔄 **Real-time Updates**: WebSocket integration for live progress tracking
@@ -161,7 +161,7 @@ curl -X POST http://localhost:8000/api/v1/processing/analyze
 
 | Variable                                 | Description                  | Default                              |
 | ---------------------------------------- | ---------------------------- | ------------------------------------ |
-| `PAPERLESS_DEDUPE_DATABASE_URL`          | SQLite database file path    | `sqlite:///data/paperless_dedupe.db` |
+| `PAPERLESS_DEDUPE_DATABASE_URL`          | PostgreSQL connection string | `postgresql://user:pass@localhost/db` |
 | `PAPERLESS_DEDUPE_PAPERLESS_URL`         | Paperless-ngx API URL        | `http://localhost:8000`              |
 | `PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN`   | API token for authentication | None                                 |
 | `PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD` | Similarity threshold (0-100) | `80`                                 |
@@ -205,7 +205,7 @@ Interactive API documentation is available at http://localhost:8000/docs
 
 - **Scalability**: O(n log n) complexity using LSH instead of O(n²)
 - **Memory Efficient**: ~50MB for 13K document metadata
-- **Storage Strategy**: File-based SQLite database for simplicity and portability
+- **Storage Strategy**: PostgreSQL database for concurrency, JSON support, and performance
 - **Processing Speed**: ~1000 documents/minute on modern hardware
 
 ## Development

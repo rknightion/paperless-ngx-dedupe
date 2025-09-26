@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import datetime
 
+from celery.result import AsyncResult
 from dateutil import parser as date_parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import Document, DocumentContent, get_db
 from paperless_dedupe.services.paperless_client import PaperlessClient
+from paperless_dedupe.worker.celery_app import app as celery_app
 
 from .websocket import broadcast_error, broadcast_sync_completion, broadcast_sync_update
 
@@ -75,6 +77,10 @@ class DocumentListResponse(BaseModel):
     count: int
     next: str | None = None
     previous: str | None = None
+    next_cursor: str | None = None
+    prev_cursor: str | None = None
+    has_next: bool = False
+    has_prev: bool = False
 
 
 class DocumentSync(BaseModel):
@@ -86,14 +92,44 @@ class DocumentSync(BaseModel):
 async def get_documents(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    cursor: str | None = Query(None, description="Cursor for pagination"),
+    order_by: str = Query("id", description="Field to order by"),
+    order_desc: bool = Query(False, description="Order descending"),
     db: Session = Depends(get_db),
 ):
-    """Get list of documents"""
-    # Get total count
-    total_count = db.query(Document).count()
+    """Get list of documents with cursor or offset pagination"""
+    from paperless_dedupe.utils.pagination import apply_cursor_pagination
 
-    # Get paginated documents
-    documents = db.query(Document).offset(skip).limit(limit).all()
+    # If cursor is provided, use cursor pagination
+    if cursor:
+        query = db.query(Document)
+        documents, pagination_info = apply_cursor_pagination(
+            query=query,
+            cursor=cursor,
+            limit=limit,
+            order_by_field=order_by,
+            order_desc=order_desc
+        )
+    else:
+        # Fall back to offset pagination for backward compatibility
+        # Get total count
+        total_count = db.query(Document).count()
+
+        # Get paginated documents
+        if order_desc:
+            order_field = getattr(Document, order_by, Document.id)
+            documents = db.query(Document).order_by(order_field.desc()).offset(skip).limit(limit).all()
+        else:
+            order_field = getattr(Document, order_by, Document.id)
+            documents = db.query(Document).order_by(order_field.asc()).offset(skip).limit(limit).all()
+
+        pagination_info = {
+            'count': len(documents),
+            'has_next': skip + limit < total_count,
+            'has_prev': skip > 0,
+            'next_cursor': None,
+            'prev_cursor': None
+        }
 
     # Check if documents have duplicates
     results = []
@@ -102,17 +138,46 @@ async def get_documents(
         doc_response.has_duplicates = len(doc.duplicate_memberships) > 0
         results.append(doc_response)
 
-    # Create pagination URLs (simplified for now)
-    next_url = None
-    previous_url = None
-    if skip + limit < total_count:
-        next_url = f"?skip={skip + limit}&limit={limit}"
-    if skip > 0:
-        previous_url = f"?skip={max(0, skip - limit)}&limit={limit}"
+    # Build response with both cursor and offset pagination support
+    if cursor:
+        # Using cursor pagination
+        return DocumentListResponse(
+            results=results,
+            count=pagination_info['count'],
+            next_cursor=pagination_info.get('next_cursor'),
+            prev_cursor=pagination_info.get('prev_cursor'),
+            has_next=pagination_info.get('has_next', False),
+            has_prev=pagination_info.get('has_prev', False),
+            # Provide offset URLs for backward compatibility
+            next=f"?skip={skip + limit}&limit={limit}" if pagination_info.get('has_next') else None,
+            previous=f"?skip={max(0, skip - limit)}&limit={limit}" if skip > 0 else None
+        )
+    else:
+        # Using offset pagination with cursor fields for future migration
+        # Generate cursor for the current page if we have results
+        next_cursor_token = None
+        if documents and pagination_info.get('has_next'):
+            from paperless_dedupe.utils.pagination import PaginationCursor
+            cursor_handler = PaginationCursor()
+            last_doc = documents[-1]
+            cursor_data = {
+                'last_id': last_doc.id,
+                'last_value': getattr(last_doc, order_by, None),
+                'order_by': order_by,
+                'order_desc': order_desc
+            }
+            next_cursor_token = cursor_handler.encode(cursor_data)
 
-    return DocumentListResponse(
-        results=results, count=total_count, next=next_url, previous=previous_url
-    )
+        return DocumentListResponse(
+            results=results,
+            count=total_count,
+            next=f"?skip={skip + limit}&limit={limit}" if pagination_info['has_next'] else None,
+            previous=f"?skip={max(0, skip - limit)}&limit={limit}" if skip > 0 else None,
+            next_cursor=next_cursor_token,
+            prev_cursor=None,
+            has_next=pagination_info['has_next'],
+            has_prev=pagination_info['has_prev']
+        )
 
 
 @router.get("/statistics")
@@ -628,30 +693,62 @@ async def run_document_sync(
 @router.post("/sync")
 async def sync_documents(
     sync_config: DocumentSync,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Sync documents from paperless-ngx"""
-    global sync_status
+    """Sync documents from paperless-ngx using Celery task queue"""
+    # First check if Paperless is configured
+    from paperless_dedupe.core.config_utils import get_current_paperless_config
 
-    if sync_status["is_syncing"]:
-        raise HTTPException(status_code=409, detail="Sync already in progress")
-
-    # Check if analysis is in progress
-    from paperless_dedupe.api.v1.processing import processing_status
-
-    if processing_status.get("is_processing", False):
+    client_settings = get_current_paperless_config(db)
+    if not client_settings.get("paperless_url"):
         raise HTTPException(
-            status_code=409,
-            detail="Cannot sync while deduplication analysis is in progress",
+            status_code=400,
+            detail="Paperless URL is not configured. Please configure the connection to Paperless-NGX first."
         )
 
-    # Start background task
-    background_tasks.add_task(
-        run_document_sync, db, sync_config.force_refresh, sync_config.limit
+    # Check if there's already a sync in progress
+    active_tasks = celery_app.control.inspect().active()
+    if active_tasks:
+        for worker, tasks in active_tasks.items():
+            for task in tasks:
+                if 'document_sync.sync_documents' in task.get('name', ''):
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Sync already in progress (task: {task['id']})"
+                    )
+
+    # Check if analysis is in progress
+    if active_tasks:
+        for worker, tasks in active_tasks.items():
+            for task in tasks:
+                if 'deduplication.analyze_duplicates' in task.get('name', ''):
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Cannot sync while deduplication analysis is in progress"
+                    )
+
+    # Dispatch Celery task
+    from paperless_dedupe.worker.tasks.document_sync import sync_documents as sync_task
+
+    task = sync_task.apply_async(
+        kwargs={
+            'force_refresh': sync_config.force_refresh,
+            'limit': sync_config.limit,
+            'broadcast_progress': True
+        },
+        queue='sync'
     )
 
-    return {"status": "started", "message": "Document sync started in background"}
+    # Store task ID in global status for compatibility
+    global sync_status
+    sync_status["task_id"] = task.id
+    sync_status["is_syncing"] = True
+
+    return {
+        "status": "started",
+        "message": "Document sync started in background",
+        "task_id": task.id
+    }
 
 
 @router.post("/statistics/refresh")

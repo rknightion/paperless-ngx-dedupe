@@ -9,6 +9,7 @@ Create Date: 2025-08-26 20:46:11.507332
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -44,7 +45,7 @@ def upgrade() -> None:
         sa.Column("processing_status", sa.String(length=20), nullable=True),
         sa.Column("correspondent", sa.String(length=200), nullable=True),
         sa.Column("document_type", sa.String(length=200), nullable=True),
-        sa.Column("tags", sa.Text(), nullable=True),
+        sa.Column("tags", postgresql.JSON(astext_type=sa.Text()), nullable=True),
         sa.Column("archive_filename", sa.String(length=500), nullable=True),
         sa.Column("original_filename", sa.String(length=500), nullable=True),
         sa.Column("added_date", sa.DateTime(), nullable=True),

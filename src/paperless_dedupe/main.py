@@ -14,6 +14,7 @@ from paperless_dedupe.api.v1 import (
     config,
     documents,
     duplicates,
+    internal,
     processing,
     websocket,
 )
@@ -144,9 +145,23 @@ async def lifespan(app: FastAPI):
         config_items = db.query(AppConfig).all()
         for item in config_items:
             if hasattr(settings, item.key):
-                setattr(settings, item.key, item.value)
+                # Convert stored text values back to appropriate types
+                value = item.value
+                if value is not None and isinstance(value, str):
+                    # Try to convert to appropriate type
+                    if value.lower() in ('true', 'false'):
+                        value = value.lower() == 'true'
+                    elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
+                        # It's a number
+                        if '.' in value:
+                            value = float(value)
+                        else:
+                            value = int(value)
+                    # Otherwise keep as string
+
+                setattr(settings, item.key, value)
                 # Handle logging for different value types
-                value_str = str(item.value)
+                value_str = str(value)
                 display_value = (
                     value_str[:50] + "..." if len(value_str) > 50 else value_str
                 )
@@ -156,47 +171,26 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    # Start automatic document sync if configured
+    # Automatic sync disabled - all sync operations should go through the worker
+    # Check document count for logging purposes only
     try:
-        from paperless_dedupe.api.v1.documents import run_document_sync, sync_status
         from paperless_dedupe.models.database import Document
 
-        # Check if this is the first run or we have no documents
         db = next(get_db())
         document_count = db.query(Document).count()
 
-        # Check if Paperless is configured
-        from paperless_dedupe.core.config_utils import get_current_paperless_config
-
-        client_settings = get_current_paperless_config(db)
-
-        if client_settings.get("paperless_url") and not sync_status["is_syncing"]:
-            if document_count == 0:
-                logger.info(
-                    "No documents found. Starting initial sync from Paperless..."
-                )
-                # Run sync in background
-                asyncio.create_task(
-                    run_document_sync(db, force_refresh=False, limit=None)
-                )
-            else:
-                logger.info(
-                    f"Found {document_count} existing documents. Skipping automatic sync."
-                )
-                # Update sync status to reflect that documents exist from a previous sync
-                most_recent = (
-                    db.query(Document).order_by(Document.last_processed.desc()).first()
-                )
-                if most_recent and most_recent.last_processed:
-                    sync_status["completed_at"] = most_recent.last_processed
-                    sync_status["documents_synced"] = document_count
+        if document_count == 0:
+            logger.info(
+                "No documents found. Use the UI or API to trigger a sync from Paperless."
+            )
         else:
-            if not client_settings.get("paperless_url"):
-                logger.info("Paperless URL not configured. Skipping automatic sync.")
+            logger.info(
+                f"Found {document_count} existing documents in the database."
+            )
 
         db.close()
     except Exception as e:
-        logger.error(f"Error during startup sync check: {e}")
+        logger.error(f"Error checking document count: {e}")
 
     yield
 
@@ -255,6 +249,7 @@ app.include_router(duplicates.router, prefix="/api/v1/duplicates", tags=["duplic
 app.include_router(processing.router, prefix="/api/v1/processing", tags=["processing"])
 app.include_router(config.router, prefix="/api/v1/config", tags=["config"])
 app.include_router(batch_operations.router, prefix="/api/v1/batch", tags=["batch"])
+app.include_router(internal.router, prefix="/api/v1/internal", tags=["internal"])
 
 # WebSocket endpoint
 app.websocket("/ws")(websocket.websocket_endpoint)

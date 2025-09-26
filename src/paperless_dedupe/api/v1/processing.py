@@ -2,7 +2,9 @@ import asyncio
 import logging
 import time
 from datetime import datetime
+from typing import Any, Optional
 
+from celery.result import AsyncResult
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -10,6 +12,7 @@ from sqlalchemy.orm import Session
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import Document, DocumentContent, get_db
 from paperless_dedupe.services.deduplication_service import DeduplicationService
+from paperless_dedupe.worker.celery_app import app as celery_app
 
 from .websocket import (
     broadcast_completion,
@@ -62,7 +65,9 @@ class AnalyzeRequest(BaseModel):
     limit: int | None = None
 
 
-async def run_deduplication_analysis(
+# DEPRECATED: Analysis now runs through Celery worker
+# This function is kept for reference but should not be used
+async def run_deduplication_analysis_deprecated(
     db: Session, threshold: float, force_rebuild: bool, limit: int | None = None
 ):
     """Background task to run deduplication analysis"""
@@ -292,49 +297,45 @@ async def run_deduplication_analysis(
             await safe_broadcast_update()
 
 
-async def trigger_analysis_internal(
+# DEPRECATED: Analysis now triggers through Celery worker
+# Use the analyze_duplicates task directly instead
+async def trigger_analysis_internal_deprecated(
     db: Session,
     force_rebuild: bool = False,
     threshold: float | None = None,
     limit: int | None = None,
 ):
-    """Internal function to trigger analysis programmatically (e.g., after config change)"""
-    global processing_status
-
-    if processing_status["is_processing"]:
-        logger.warning("Analysis already in progress, skipping re-trigger")
-        return False
-
-    # Use default threshold if not provided
-    if threshold is None:
-        threshold = settings.fuzzy_match_threshold / 100.0
-
-    # Run analysis in background
-    asyncio.create_task(run_deduplication_analysis(db, threshold, force_rebuild, limit))
-
-    return True
+    """DEPRECATED: Use Celery task instead"""
+    logger.warning("trigger_analysis_internal is deprecated. Use Celery worker tasks instead.")
+    return False
 
 
 @router.post("/analyze")
 async def start_analysis(
     request: AnalyzeRequest,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Start deduplication analysis"""
-    global processing_status
+    """Start deduplication analysis using Celery task queue"""
+    # Check if there's already an analysis in progress
+    active_tasks = celery_app.control.inspect().active()
+    if active_tasks:
+        for worker, tasks in active_tasks.items():
+            for task in tasks:
+                if 'deduplication.analyze_duplicates' in task.get('name', ''):
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Analysis already in progress (task: {task['id']})"
+                    )
 
-    if processing_status["is_processing"]:
-        raise HTTPException(status_code=409, detail="Analysis already in progress")
-
-    # Check if sync is in progress
-    from paperless_dedupe.api.v1.documents import sync_status
-
-    if sync_status.get("is_syncing", False):
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot start analysis while document sync is in progress",
-        )
+    # Check if sync is in progress by checking for active sync tasks
+    if active_tasks:
+        for worker, tasks in active_tasks.items():
+            for task in tasks:
+                if 'document_sync.sync_documents' in task.get('name', ''):
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Cannot start analysis while document sync is in progress"
+                    )
 
     # Check if there are documents to process
     document_count = db.query(Document).count()
@@ -346,22 +347,72 @@ async def start_analysis(
 
     threshold = request.threshold or (settings.fuzzy_match_threshold / 100.0)
 
-    # Start background task
-    background_tasks.add_task(
-        run_deduplication_analysis, db, threshold, request.force_rebuild, request.limit
+    # Dispatch Celery task
+    from paperless_dedupe.worker.tasks.deduplication import analyze_duplicates
+
+    task = analyze_duplicates.apply_async(
+        kwargs={
+            'threshold': threshold,
+            'force_rebuild': request.force_rebuild,
+            'limit': request.limit,
+            'broadcast_progress': True
+        },
+        queue='deduplication'
     )
+
+    # Store task ID in global status for compatibility
+    global processing_status
+    processing_status["task_id"] = task.id
+    processing_status["is_processing"] = True
 
     return {
         "status": "started",
         "message": "Deduplication analysis started",
+        "task_id": task.id,
         "document_count": document_count,
     }
 
 
 @router.get("/status")
 async def get_processing_status():
-    """Get current processing status"""
-    # Convert datetime objects to ISO strings for JSON serialization
+    """Get current processing status from Celery task"""
+    global processing_status
+
+    # If there's a task ID, get status from Celery
+    if processing_status.get("task_id"):
+        task_result = AsyncResult(processing_status["task_id"], app=celery_app)
+
+        if task_result.state == 'PENDING':
+            return {
+                "is_processing": False,
+                "current_step": "No task found or task waiting to start",
+                "progress": 0,
+                "total": 0
+            }
+        elif task_result.state == 'PROGRESS':
+            return {
+                "is_processing": True,
+                "task_id": processing_status["task_id"],
+                **task_result.info
+            }
+        elif task_result.state == 'SUCCESS':
+            processing_status["is_processing"] = False
+            return {
+                "is_processing": False,
+                "task_id": processing_status["task_id"],
+                "status": "completed",
+                **task_result.result
+            }
+        elif task_result.state == 'FAILURE':
+            processing_status["is_processing"] = False
+            return {
+                "is_processing": False,
+                "task_id": processing_status["task_id"],
+                "status": "failed",
+                "error": str(task_result.info)
+            }
+
+    # Fall back to global status if no task ID
     status_copy = processing_status.copy()
     if status_copy.get("started_at") and isinstance(
         status_copy["started_at"], datetime
@@ -392,6 +443,17 @@ async def cancel_processing():
 async def clear_cache():
     """Clear cache endpoint (deprecated - no longer using cache)"""
     return {"status": "success", "message": "Cache clearing not needed (Redis removed)"}
+
+
+@router.post("/internal/broadcast-task-update")
+async def broadcast_task_update(update: dict):
+    """Internal endpoint for Celery workers to broadcast task updates via WebSocket"""
+    try:
+        await broadcast_processing_update(update)
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Error broadcasting task update: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 @router.post("/cleanup-duplicates")

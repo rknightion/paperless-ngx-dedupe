@@ -22,7 +22,17 @@ class PaperlessClient:
         paperless_password: str | None = None,
     ):
         """Initialize the Paperless client."""
-        self.base_url = (paperless_url or settings.paperless_url).rstrip("/")
+        # Get URL from parameter or settings
+        url = paperless_url or settings.paperless_url
+
+        # Validate URL is configured
+        if not url or url.strip() == "":
+            raise ValueError(
+                "Paperless URL is not configured. Please configure the Paperless URL "
+                "in the settings or environment variables."
+            )
+
+        self.base_url = url.rstrip("/")
 
         # PyPaperless expects URL without /api prefix
         if "/api" in self.base_url:
@@ -72,15 +82,17 @@ class PaperlessClient:
         if self.paperless:
             await self.paperless.close()
 
-    async def get_all_documents(self, batch_callback=None) -> list[dict[str, Any]]:
+    async def get_all_documents(self, batch_callback=None, limit=None) -> list[dict[str, Any]]:
         """Get all documents from paperless with optimized pagination.
 
         Args:
             batch_callback: Optional callback function to process documents in batches.
                            Called with list of documents every batch_size documents.
+            limit: Optional maximum number of documents to fetch.
         """
         documents = []
         batch_size = 200  # Process in batches for better memory efficiency
+        fetched_count = 0
 
         try:
             # Use reduce with larger page size for faster fetching
@@ -90,6 +102,13 @@ class PaperlessClient:
                     doc_dict = self._document_to_dict(doc)
                     documents.append(doc_dict)
                     batch.append(doc_dict)
+                    fetched_count += 1
+
+                    # Stop if we've reached the limit
+                    if limit and fetched_count >= limit:
+                        if batch and batch_callback:
+                            await batch_callback(batch)
+                        break
 
                     # Process batch if we have enough documents
                     if len(batch) >= batch_size and batch_callback:

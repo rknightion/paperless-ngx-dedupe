@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from paperless_dedupe.models.database import Document, DuplicateGroup, get_db
+from paperless_dedupe.models.database import Document, DuplicateGroup, DocumentContent, get_db
 from paperless_dedupe.services.paperless_client import PaperlessClient
 
 logger = logging.getLogger(__name__)
@@ -293,6 +293,126 @@ async def get_operation_status(operation_id: str):
             else None,
         },
     )
+
+
+@router.post("/documents/bulk-get")
+async def bulk_get_documents(
+    document_ids: list[int],
+    include_content: bool = False,
+    db: Session = Depends(get_db),
+):
+    """Bulk fetch multiple documents by IDs"""
+    if not document_ids:
+        raise HTTPException(status_code=400, detail="No document IDs provided")
+
+    if len(document_ids) > 1000:
+        raise HTTPException(status_code=400, detail="Maximum 1000 documents per request")
+
+    # Fetch documents in bulk
+    documents = db.query(Document).filter(Document.id.in_(document_ids)).all()
+
+    # Build response
+    results = []
+    for doc in documents:
+        doc_data = {
+            "id": doc.id,
+            "paperless_id": doc.paperless_id,
+            "title": doc.title,
+            "fingerprint": doc.fingerprint,
+            "created_date": doc.created_date,
+            "processing_status": doc.processing_status,
+            "correspondent": doc.correspondent,
+            "document_type": doc.document_type,
+            "tags": doc.tags,
+            "has_duplicates": len(doc.duplicate_memberships) > 0
+        }
+
+        if include_content and doc.content:
+            doc_data["content"] = {
+                "full_text": doc.content.full_text[:1000],  # Limit for bulk response
+                "word_count": doc.content.word_count
+            }
+
+        results.append(doc_data)
+
+    return {
+        "requested": len(document_ids),
+        "found": len(results),
+        "documents": results
+    }
+
+
+@router.post("/duplicates/bulk-resolve")
+async def bulk_resolve_duplicates(
+    group_ids: list[str],
+    keep_primary: bool = True,
+    db: Session = Depends(get_db),
+):
+    """Bulk resolve multiple duplicate groups using Celery"""
+    if not group_ids:
+        raise HTTPException(status_code=400, detail="No group IDs provided")
+
+    if len(group_ids) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 groups per request")
+
+    # Dispatch Celery task for bulk resolution
+    from paperless_dedupe.worker.tasks.batch_operations import resolve_duplicate_groups
+
+    task = resolve_duplicate_groups.apply_async(
+        kwargs={
+            'group_ids': group_ids,
+            'keep_primary': keep_primary,
+            'broadcast_progress': True
+        },
+        queue='default'
+    )
+
+    return {
+        "status": "started",
+        "message": f"Resolving {len(group_ids)} duplicate groups",
+        "task_id": task.id,
+        "group_count": len(group_ids)
+    }
+
+
+@router.post("/documents/bulk-metadata-update")
+async def bulk_update_metadata(
+    document_ids: list[int],
+    updates: dict[str, Any],
+    db: Session = Depends(get_db),
+):
+    """Bulk update metadata for multiple documents"""
+    if not document_ids:
+        raise HTTPException(status_code=400, detail="No document IDs provided")
+
+    if len(document_ids) > 500:
+        raise HTTPException(status_code=400, detail="Maximum 500 documents per request")
+
+    # Validate update fields
+    allowed_fields = {"correspondent", "document_type", "tags", "processing_status"}
+    update_fields = {k: v for k, v in updates.items() if k in allowed_fields}
+
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid update fields provided")
+
+    # Perform bulk update in transaction
+    try:
+        updated_count = db.query(Document).filter(
+            Document.id.in_(document_ids)
+        ).update(update_fields, synchronize_session=False)
+
+        db.commit()
+
+        return {
+            "status": "completed",
+            "documents_updated": updated_count,
+            "fields_updated": list(update_fields.keys())
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error in bulk metadata update: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}")
 
 
 @router.get("/operations", response_model=list[BatchOperationProgress])

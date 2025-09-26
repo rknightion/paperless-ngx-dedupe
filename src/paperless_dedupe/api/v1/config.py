@@ -106,7 +106,20 @@ async def get_config(db: Session = Depends(get_db)):
     db_config = {}
     config_items = db.query(AppConfig).all()
     for item in config_items:
-        db_config[item.key] = item.value
+        # Convert stored text values back to appropriate types
+        value = item.value
+        if value is not None and isinstance(value, str):
+            # Try to convert to appropriate type
+            if value.lower() in ('true', 'false'):
+                value = value.lower() == 'true'
+            elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
+                # It's a number
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+            # Otherwise keep as string
+        db_config[item.key] = value
 
     # Merge with settings
     return {
@@ -165,18 +178,21 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
     # Update each provided field
     for field, value in config_update.dict(exclude_unset=True).items():
         if value is not None:
+            # Convert value to string for storage
+            str_value = str(value)
+
             # Check if config exists
             config_item = db.query(AppConfig).filter(AppConfig.key == field).first()
 
             if config_item:
                 # Check if this is a weight field and if it's actually changing
-                if field in weight_fields and config_item.value != value:
+                if field in weight_fields and config_item.value != str_value:
                     weights_changed = True
-                config_item.value = value
+                config_item.value = str_value
             else:
                 if field in weight_fields:
                     weights_changed = True
-                config_item = AppConfig(key=field, value=value)
+                config_item = AppConfig(key=field, value=str_value)
                 db.add(config_item)
 
             updated_fields.append(field)
@@ -194,18 +210,40 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
         "weights_changed": weights_changed,
     }
 
-    # If weights changed, trigger re-analysis
+    # If weights changed, trigger re-analysis through worker
     if weights_changed:
-        from paperless_dedupe.api.v1.processing import trigger_analysis_internal
-
-        logger.info("Confidence weights changed, triggering re-analysis")
+        logger.info("Confidence weights changed, triggering re-analysis via worker")
         response["message"] += ". Confidence weights changed - triggering re-analysis."
-        response["reanalysis_triggered"] = True
 
-        # Trigger analysis in the background
-        import asyncio
+        # Dispatch Celery task for re-analysis
+        from paperless_dedupe.worker.tasks.deduplication import analyze_duplicates
+        from paperless_dedupe.worker.celery_app import app as celery_app
 
-        asyncio.create_task(trigger_analysis_internal(db, force_rebuild=True))
+        # Check if there's already an analysis in progress
+        active_tasks = celery_app.control.inspect().active()
+        analysis_in_progress = False
+        if active_tasks:
+            for worker, tasks in active_tasks.items():
+                for task in tasks:
+                    if 'deduplication.analyze_duplicates' in task.get('name', ''):
+                        analysis_in_progress = True
+                        break
+
+        if not analysis_in_progress:
+            task = analyze_duplicates.apply_async(
+                kwargs={
+                    'threshold': settings.fuzzy_match_threshold / 100.0,
+                    'force_rebuild': True,
+                    'limit': None,
+                    'broadcast_progress': True
+                },
+                queue='deduplication'
+            )
+            response["reanalysis_triggered"] = True
+            response["task_id"] = task.id
+        else:
+            response["reanalysis_triggered"] = False
+            response["message"] += " (Analysis already in progress)"
 
     return response
 

@@ -1,218 +1,35 @@
-# Paperless-NGX Deduplication Tool - Detailed Implementation Plan
-It is okay to implement phases out of order if specifically instructed to do so.
-ALWAYS ensure this todos.txt file is kept up to date with the latest completed phase by adding ticks to the tickboxes in each line.
+     UX Improvements
 
-Phase 1: ✅ COMPLETED
-## Ongoing tasks
-- [x] Fixed pagination issue - only showing 1 group regardless of page_size setting (COMPLETED: Fixed indentation in duplicates.py causing loop to exit early)
-- [x] Fixed expand button not working on duplicate group cards (COMPLETED: Removed redundant expand button, enhanced tooltips)
-- [x] Fixed tag display showing 'tag-1' instead of actual tag names (COMPLETED: Added tag fetching and ID->name mapping with type handling)
-- [x] Fixed similarity calculation returning None causing 0% similarity display (COMPLETED: Added None checks for round() operations)
-- [x] Added detailed confidence factor descriptions in Understanding dropdown (COMPLETED: Added comprehensive explanations for Jaccard, Fuzzy, Metadata, Filename)
-- [x] Implemented confidence weight customization in settings (COMPLETED: Added sliders for adjusting weights 0-100%, backend support, validation)
+     User Interface
 
-
-Phase 2:
-## Document Preview and Dry Run
-
-### Preview Service
-- [ ] Fetch document thumbnails from paperless
-- [ ] Generate document previews
-- [ ] Cache preview images
-- [ ] Implement zoom and navigation
-
-### Dry Run
-- [ ] Allow users to do a dry run where instead of actually deleting a document from paperless-ngx it just assigns a tag to the document instead
-- [ ] Create settings to allow users to choose which tag is used for marking deleted documents (query paperless-ngx for tag names/list)
-- [ ] Track the state of all dry runs in the database
+     1. Dashboard Enhancements
+       - System health indicators
+     2. Duplicate Review Workflow
+       - Side-by-side document comparison view
+       - Diff highlighting for content differences
+       - Keyboard shortcuts for quick navigation
+       - Batch selection with smart filters
+       - Allowing select all duplicate groups in the result not limited to pagesize
+     3. Document Management
+       - Virtualized lists for handling 10K+ documents
+       - More Advanced filtering options
+       - Document preview without leaving the list
+       - Bulk operations with progress indicators
+     5. Onboarding & Help
+       - More Contextual help tooltips
 
 
-# Phase 3: Enhanced Deduplication Features (MEDIUM PRIORITY)
+     Developer Experience
 
-## Image-based Similarity (Perceptual Hashing)
+     1. Testing Infrastructure
+       - Add E2E testing with Playwright
+       - Implement visual regression testing
+       - Add performance testing suite
+       - Mock API server for frontend development
+       - Test data generation utilities
+     2. Development Tools
+       - Pre-commit hooks for code quality
+     3. Documentation
+       - Deployment guides for various platforms
+       - Troubleshooting guide with common issues
 
-### Image Processing Service
-- [ ] Create `src/paperless_dedupe/services/image_deduplication.py`
-  - [ ] Install and configure imagehash library
-  - [ ] Implement average hash for general similarity
-  - [ ] Add pHash for robust matching
-  - [ ] Implement difference hash for modifications
-  - [ ] Batch processing for multiple images
-
-### Database Schema Updates
-- [ ] Add `image_hash` column to documents table
-- [ ] Create migration for new column
-- [ ] Update document models to include image hash
-- [ ] Add index on image_hash for fast lookups
-
-### Integration with Paperless API
-- [ ] Fetch document thumbnails from paperless API
-- [ ] Process images during document sync
-- [ ] Cache processed hashes in Redis
-- [ ] Weight image similarity in confidence scoring (15-20%)
-
-
----
-
-# Phase 4: Performance Optimizations (MEDIUM PRIORITY)
-
-## Parallel Processing Implementation
-
-### Async Processing Framework
-### Document Processing Pipeline
-- [ ] Implement parallel MinHash generation
-- [ ] Concurrent OCR content processing
-- [ ] Parallel similarity calculations
-- [ ] Progress tracking across processes
-
-### Reference Implementation:
-```python
-# Example structure:
-async def process_documents_parallel(documents, batch_size=100):
-    executor = ProcessPoolExecutor(max_workers=4)
-    batches = create_batches(documents, batch_size)
-    tasks = [process_batch_async(executor, batch) for batch in batches]
-    results = await asyncio.gather(*tasks)
-    return combine_results(results)
-```
-
-Phase 5
-## Database Query Optimization
-
-### Index Strategy
-- [ ] Add performance-critical indexes (ONLY if needed)
-  - [ ] `idx_documents_processing_status` for pending documents
-  - [ ] `idx_duplicate_groups_confidence` for sorting
-  - [ ] `idx_document_content_document_id` for joins
-  - [ ] Partial indexes for frequently filtered columns
-
-### Query Optimization
-- [ ] Implement prepared statements for frequent queries
-- [ ] Add connection pooling with asyncpg
-- [ ] Use materialized views for complex aggregations
-- [ ] Implement query result caching
-
-Phase 6
-##  Incremental Processing & State Management
-
-### Checkpoint System
-- [ ] Create `src/paperless_dedupe/services/checkpoint.py`
-  - [ ] Save processing state to database
-  - [ ] Resume from interruption points
-  - [ ] Skip already processed documents
-  - [ ] Validate checkpoint integrity
-
-### State Persistence
-- [ ] Document processing status tracking
-- [ ] Progress persistence across restarts
-- [ ] Error recovery mechanisms
-- [ ] Cleanup of stale processing states
-
----
-
-# Phase 4: Paperless Integration Improvements (LOW PRIORITY)
-
-## 4.1 Webhook Support for Real-time Updates
-
-### Webhook Receiver
-- [ ] Create `src/paperless_dedupe/api/v1/webhooks.py`
-  - [ ] Endpoint for paperless document events
-  - [ ] Signature verification for security
-  - [ ] Event type handling (created, updated, deleted)
-  - [ ] Background task queuing
-
-### Event Processing
-- [ ] Process new document events automatically
-- [ ] Update existing documents on changes
-- [ ] Handle document deletion events
-- [ ] Trigger reprocessing when needed
-
-### Configuration
-- [ ] Add webhook URL to paperless configuration
-- [ ] Document webhook setup process
-- [ ] Add webhook testing endpoint
-- [ ] Implement webhook retry logic
-
-
----
-
-# Phase 5: Infrastructure & DevOps (LOW PRIORITY. Do not attempt work on these unless explicitly instructed to. )
-
-## 5.1 CI/CD Pipeline
-
-### Testing Pipeline
-- [ ] Automated test execution
-- [ ] Code coverage reporting
-- [ ] Performance regression testing
-- [ ] Integration test execution
-
-## 5.2 Monitoring & Observability
-
-### Metrics Collection
-- [ ] Add Prometheus metrics endpoints
-  - [ ] Document processing counters
-  - [ ] Duplicate detection metrics
-  - [ ] Performance histograms
-  - [ ] Error rate tracking
-
-### Logging Enhancement
-- [ ] Structured logging with structlog
-- [ ] Log aggregation configuration
-- [ ] Error tracking integration
-- [ ] Performance monitoring
-
-### Health Checks
-- [ ] Comprehensive health check endpoints
-- [ ] Database connection monitoring
-- [ ] Redis connection status
-- [ ] External API availability
-
-## 5.3 Authentication & Multi-tenancy (VERY LOW PRIORITY)
-
-### User Management
-- [ ] JWT-based authentication system
-- [ ] User registration and login
-- [ ] Role-based access control
-- [ ] API key management
-
-### Multi-tenant Architecture
-- [ ] Tenant isolation at database level
-- [ ] Row-level security implementation
-- [ ] Tenant-specific configurations
-- [ ] Resource quota management
-
-### Security Enhancements
-- [ ] API rate limiting implementation
-- [ ] Request validation and sanitization
-- [ ] SQL injection prevention
-- [ ] XSS protection headers
-
----
-
-# Technical Debt to Address During Implementation
-
-## Code Quality
-- [ ] Add comprehensive error handling
-- [ ] Implement proper logging throughout
-- [ ] Add request validation middleware
-- [ ] Improve error messages and user feedback
-
-## Security (LOWEST priority as this is selfhosted in home labs only)
-- [ ] Implement proper secret management
-- [ ] Add API rate limiting
-- [ ] SQL injection prevention
-- [ ] XSS protection headers
-
-## Performance
-- [ ] Database connection pooling
-- [ ] Memory optimization for large OCR texts
-- [ ] Connection retry logic
-- [ ] Query optimization
-
-## Testing
-- [ ] Integration tests for new features
-- [ ] End-to-end testing setup
-- [ ] Performance testing framework
-- [ ] Security testing automation
-
----
