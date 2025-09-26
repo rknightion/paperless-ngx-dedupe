@@ -1,5 +1,4 @@
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     Boolean,
@@ -13,9 +12,9 @@ from sqlalchemy import (
     Text,
     create_engine,
 )
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy.dialects.postgresql import JSON
 
 from paperless_dedupe.core.config import settings
 
@@ -38,7 +37,7 @@ class Document(Base):
     ocr_confidence = Column(Float)
     file_size = Column(Integer)
     created_date = Column(DateTime)
-    last_processed = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_processed = Column(DateTime, default=lambda: datetime.now(UTC))
     processing_status = Column(String(20), default="pending")
 
     # Additional metadata fields
@@ -70,7 +69,7 @@ class DocumentContent(Base):
     full_text = Column(Text)
     normalized_text = Column(Text)
     word_count = Column(Integer)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     # Relationships
     document = relationship("Document", back_populates="content")
@@ -89,7 +88,7 @@ class DuplicateGroup(Base):
     filename_similarity = Column(Float)  # Filename similarity score (0-1)
 
     algorithm_version = Column(String(10), default="2.0")  # Updated version
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     reviewed = Column(Boolean, default=False)
     resolved = Column(Boolean, default=False)
 
@@ -144,7 +143,9 @@ class AppConfig(Base):
 
     key = Column(String(100), primary_key=True)
     value = Column(Text)  # Changed from JSONType to Text to avoid JSON encoding issues
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
 
 
 # Database setup

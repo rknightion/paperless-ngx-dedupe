@@ -159,13 +159,13 @@ curl -X POST http://localhost:8000/api/v1/processing/analyze
 
 ### Environment Variables
 
-| Variable                                 | Description                  | Default                              |
-| ---------------------------------------- | ---------------------------- | ------------------------------------ |
+| Variable                                 | Description                  | Default                               |
+| ---------------------------------------- | ---------------------------- | ------------------------------------- |
 | `PAPERLESS_DEDUPE_DATABASE_URL`          | PostgreSQL connection string | `postgresql://user:pass@localhost/db` |
-| `PAPERLESS_DEDUPE_PAPERLESS_URL`         | Paperless-ngx API URL        | `http://localhost:8000`              |
-| `PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN`   | API token for authentication | None                                 |
-| `PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD` | Similarity threshold (0-100) | `80`                                 |
-| `PAPERLESS_DEDUPE_MAX_OCR_LENGTH`        | Max OCR text to store        | `10000`                              |
+| `PAPERLESS_DEDUPE_PAPERLESS_URL`         | Paperless-ngx API URL        | `http://localhost:8000`               |
+| `PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN`   | API token for authentication | None                                  |
+| `PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD` | Similarity threshold (0-100) | `80`                                  |
+| `PAPERLESS_DEDUPE_MAX_OCR_LENGTH`        | Max OCR text to store        | `10000`                               |
 
 ## API Documentation
 

@@ -116,7 +116,7 @@ By participating in this project, you agree to abide by our Code of Conduct:
 
    - Update README.md if adding new features
    - Add docstrings to new functions/classes
-   - Update CHANGELOG.md with your changes
+   - Write Conventional Commit messages so the automated release notes capture the change
 
 5. **Commit your changes**
 
@@ -197,11 +197,9 @@ uv run pytest tests/integration/
 
 ## Release Process
 
-1. Update version in `pyproject.toml` and `frontend/package.json`
-2. Update CHANGELOG.md
-3. Create a git tag: `git tag v1.0.0`
-4. Push tag: `git push origin v1.0.0`
-5. GitHub Actions will automatically build and publish Docker images
+1. Keep commits on `main` in Conventional Commit format (`feat:`, `fix:`, etc.).
+2. Let CI run; once the `CI` workflow succeeds on `main`, the `Auto Release` workflow will version, tag, and publish GitHub releases with release notes.
+3. Docker images for backend and frontend are built automatically from the published release.
 
 ## Getting Help
 

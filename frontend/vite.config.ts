@@ -5,7 +5,9 @@ import faroUploader from '@grafana/faro-rollup-plugin';
 const apiKey = process.env.FARO_SOURCEMAP_TOKEN;
 const isCI = process.env.CI === 'true' || process.env.CI === '1';
 if (isCI && !apiKey) {
-  throw new Error('FARO_SOURCEMAP_TOKEN is required for Faro sourcemap upload in CI');
+  throw new Error(
+    'FARO_SOURCEMAP_TOKEN is required for Faro sourcemap upload in CI'
+  );
 }
 
 // https://vite.dev/config/
@@ -16,7 +18,8 @@ export default defineConfig({
       ? [
           faroUploader({
             appName: 'paperless-dedupe',
-            endpoint: 'https://faro-api-prod-gb-south-1.grafana.net/faro/api/v1',
+            endpoint:
+              'https://faro-api-prod-gb-south-1.grafana.net/faro/api/v1',
             appId: '231',
             stackId: '1217581',
             // instructions on how to obtain your API key are in the documentation

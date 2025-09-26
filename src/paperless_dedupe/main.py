@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import time
 import traceback
@@ -14,6 +13,7 @@ from paperless_dedupe.api.v1 import (
     config,
     documents,
     duplicates,
+    health,
     internal,
     processing,
     websocket,
@@ -99,8 +99,9 @@ async def lifespan(app: FastAPI):
     try:
         import os
 
-        from alembic import command
         from alembic.config import Config
+
+        from alembic import command
 
         # Find the alembic.ini file
         alembic_ini = os.path.join(
@@ -149,11 +150,11 @@ async def lifespan(app: FastAPI):
                 value = item.value
                 if value is not None and isinstance(value, str):
                     # Try to convert to appropriate type
-                    if value.lower() in ('true', 'false'):
-                        value = value.lower() == 'true'
-                    elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
+                    if value.lower() in ("true", "false"):
+                        value = value.lower() == "true"
+                    elif value.replace(".", "", 1).replace("-", "", 1).isdigit():
                         # It's a number
-                        if '.' in value:
+                        if "." in value:
                             value = float(value)
                         else:
                             value = int(value)
@@ -184,9 +185,7 @@ async def lifespan(app: FastAPI):
                 "No documents found. Use the UI or API to trigger a sync from Paperless."
             )
         else:
-            logger.info(
-                f"Found {document_count} existing documents in the database."
-            )
+            logger.info(f"Found {document_count} existing documents in the database.")
 
         db.close()
     except Exception as e:
@@ -250,6 +249,7 @@ app.include_router(processing.router, prefix="/api/v1/processing", tags=["proces
 app.include_router(config.router, prefix="/api/v1/config", tags=["config"])
 app.include_router(batch_operations.router, prefix="/api/v1/batch", tags=["batch"])
 app.include_router(internal.router, prefix="/api/v1/internal", tags=["internal"])
+app.include_router(health.router, prefix="/api/v1", tags=["health"])
 
 # WebSocket endpoint
 app.websocket("/ws")(websocket.websocket_endpoint)

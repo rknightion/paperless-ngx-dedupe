@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 from datetime import datetime
-from typing import Any, List, Optional, Tuple, TypeVar
+from typing import Any, TypeVar
 
 from cryptography.fernet import Fernet
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from paperless_dedupe.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class PaginationCursor:
@@ -20,7 +20,7 @@ class PaginationCursor:
 
     def __init__(self):
         # Use secret key from settings for encryption
-        key = settings.secret_key[:32].encode().ljust(32, b'0')
+        key = settings.secret_key[:32].encode().ljust(32, b"0")
         self.cipher = Fernet(base64.urlsafe_b64encode(key))
 
     def encode(self, data: dict) -> str:
@@ -28,7 +28,7 @@ class PaginationCursor:
         try:
             json_data = json.dumps(data, default=str)
             encrypted = self.cipher.encrypt(json_data.encode())
-            return base64.urlsafe_b64encode(encrypted).decode('utf-8')
+            return base64.urlsafe_b64encode(encrypted).decode("utf-8")
         except Exception as e:
             logger.error(f"Error encoding cursor: {e}")
             raise ValueError("Failed to encode cursor")
@@ -46,23 +46,23 @@ class PaginationCursor:
 
 class CursorPaginatedResponse(BaseModel):
     """Response model for cursor-paginated results"""
-    results: List[Any]
+
+    results: list[Any]
     count: int
-    next_cursor: Optional[str] = None
-    prev_cursor: Optional[str] = None
+    next_cursor: str | None = None
+    prev_cursor: str | None = None
     has_next: bool = False
     has_prev: bool = False
 
 
 def apply_cursor_pagination(
     query: Query,
-    cursor: Optional[str] = None,
+    cursor: str | None = None,
     limit: int = 100,
-    order_by_field: str = 'id',
-    order_desc: bool = False
-) -> Tuple[List[Any], dict]:
-    """
-    Apply cursor-based pagination to a query.
+    order_by_field: str = "id",
+    order_desc: bool = False,
+) -> tuple[list[Any], dict]:
+    """Apply cursor-based pagination to a query.
 
     Args:
         query: SQLAlchemy query object
@@ -87,11 +87,11 @@ def apply_cursor_pagination(
 
     # Apply cursor filter if we have cursor data
     if cursor_data:
-        last_id = cursor_data.get('last_id')
-        last_value = cursor_data.get('last_value')
+        last_id = cursor_data.get("last_id")
+        last_value = cursor_data.get("last_value")
 
         # Get the model from the query
-        model = query.column_descriptions[0]['type']
+        model = query.column_descriptions[0]["type"]
 
         if last_id and hasattr(model, order_by_field):
             order_field = getattr(model, order_by_field)
@@ -101,8 +101,8 @@ def apply_cursor_pagination(
                 if last_value is not None:
                     # Use composite key comparison for stable pagination
                     query = query.filter(
-                        (order_field < last_value) |
-                        ((order_field == last_value) & (model.id < last_id))
+                        (order_field < last_value)
+                        | ((order_field == last_value) & (model.id < last_id))
                     )
                 else:
                     query = query.filter(model.id < last_id)
@@ -111,14 +111,14 @@ def apply_cursor_pagination(
                 if last_value is not None:
                     # Use composite key comparison for stable pagination
                     query = query.filter(
-                        (order_field > last_value) |
-                        ((order_field == last_value) & (model.id > last_id))
+                        (order_field > last_value)
+                        | ((order_field == last_value) & (model.id > last_id))
                     )
                 else:
                     query = query.filter(model.id > last_id)
 
     # Apply ordering
-    model = query.column_descriptions[0]['type']
+    model = query.column_descriptions[0]["type"]
     if hasattr(model, order_by_field):
         order_field = getattr(model, order_by_field)
         if order_desc:
@@ -151,10 +151,10 @@ def apply_cursor_pagination(
                 last_value = last_value.isoformat()
 
         cursor_data = {
-            'last_id': last_result.id,
-            'last_value': last_value,
-            'order_by': order_by_field,
-            'order_desc': order_desc
+            "last_id": last_result.id,
+            "last_value": last_value,
+            "order_by": order_by_field,
+            "order_desc": order_desc,
         }
         next_cursor = cursor_handler.encode(cursor_data)
 
@@ -162,47 +162,46 @@ def apply_cursor_pagination(
     prev_cursor = cursor if cursor else None
 
     pagination_info = {
-        'next_cursor': next_cursor,
-        'prev_cursor': prev_cursor,
-        'has_next': has_next,
-        'has_prev': cursor is not None,
-        'count': len(results)
+        "next_cursor": next_cursor,
+        "prev_cursor": prev_cursor,
+        "has_next": has_next,
+        "has_prev": cursor is not None,
+        "count": len(results),
     }
 
     return results, pagination_info
 
 
 def create_offset_compatible_response(
-    results: List[Any],
+    results: list[Any],
     pagination_info: dict,
     base_url: str,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
 ) -> dict:
-    """
-    Create a response that's compatible with both cursor and offset pagination.
+    """Create a response that's compatible with both cursor and offset pagination.
 
     This allows gradual migration from offset to cursor pagination.
     """
     response = {
-        'results': results,
-        'count': pagination_info['count'],
-        'next_cursor': pagination_info.get('next_cursor'),
-        'prev_cursor': pagination_info.get('prev_cursor'),
-        'has_next': pagination_info.get('has_next', False),
-        'has_prev': pagination_info.get('has_prev', False),
+        "results": results,
+        "count": pagination_info["count"],
+        "next_cursor": pagination_info.get("next_cursor"),
+        "prev_cursor": pagination_info.get("prev_cursor"),
+        "has_next": pagination_info.get("has_next", False),
+        "has_prev": pagination_info.get("has_prev", False),
     }
 
     # Add offset-based URLs for backward compatibility
-    if pagination_info.get('has_next'):
-        response['next'] = f"{base_url}?skip={skip + limit}&limit={limit}"
+    if pagination_info.get("has_next"):
+        response["next"] = f"{base_url}?skip={skip + limit}&limit={limit}"
     else:
-        response['next'] = None
+        response["next"] = None
 
     if skip > 0:
         prev_skip = max(0, skip - limit)
-        response['previous'] = f"{base_url}?skip={prev_skip}&limit={limit}"
+        response["previous"] = f"{base_url}?skip={prev_skip}&limit={limit}"
     else:
-        response['previous'] = None
+        response["previous"] = None
 
     return response

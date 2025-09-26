@@ -8,7 +8,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from paperless_dedupe.models.database import Document, DuplicateGroup, DocumentContent, get_db
+from paperless_dedupe.models.database import (
+    Document,
+    DuplicateGroup,
+    get_db,
+)
 from paperless_dedupe.services.paperless_client import PaperlessClient
 
 logger = logging.getLogger(__name__)
@@ -306,7 +310,9 @@ async def bulk_get_documents(
         raise HTTPException(status_code=400, detail="No document IDs provided")
 
     if len(document_ids) > 1000:
-        raise HTTPException(status_code=400, detail="Maximum 1000 documents per request")
+        raise HTTPException(
+            status_code=400, detail="Maximum 1000 documents per request"
+        )
 
     # Fetch documents in bulk
     documents = db.query(Document).filter(Document.id.in_(document_ids)).all()
@@ -324,22 +330,18 @@ async def bulk_get_documents(
             "correspondent": doc.correspondent,
             "document_type": doc.document_type,
             "tags": doc.tags,
-            "has_duplicates": len(doc.duplicate_memberships) > 0
+            "has_duplicates": len(doc.duplicate_memberships) > 0,
         }
 
         if include_content and doc.content:
             doc_data["content"] = {
                 "full_text": doc.content.full_text[:1000],  # Limit for bulk response
-                "word_count": doc.content.word_count
+                "word_count": doc.content.word_count,
             }
 
         results.append(doc_data)
 
-    return {
-        "requested": len(document_ids),
-        "found": len(results),
-        "documents": results
-    }
+    return {"requested": len(document_ids), "found": len(results), "documents": results}
 
 
 @router.post("/duplicates/bulk-resolve")
@@ -360,18 +362,18 @@ async def bulk_resolve_duplicates(
 
     task = resolve_duplicate_groups.apply_async(
         kwargs={
-            'group_ids': group_ids,
-            'keep_primary': keep_primary,
-            'broadcast_progress': True
+            "group_ids": group_ids,
+            "keep_primary": keep_primary,
+            "broadcast_progress": True,
         },
-        queue='default'
+        queue="default",
     )
 
     return {
         "status": "started",
         "message": f"Resolving {len(group_ids)} duplicate groups",
         "task_id": task.id,
-        "group_count": len(group_ids)
+        "group_count": len(group_ids),
     }
 
 
@@ -397,16 +399,18 @@ async def bulk_update_metadata(
 
     # Perform bulk update in transaction
     try:
-        updated_count = db.query(Document).filter(
-            Document.id.in_(document_ids)
-        ).update(update_fields, synchronize_session=False)
+        updated_count = (
+            db.query(Document)
+            .filter(Document.id.in_(document_ids))
+            .update(update_fields, synchronize_session=False)
+        )
 
         db.commit()
 
         return {
             "status": "completed",
             "documents_updated": updated_count,
-            "fields_updated": list(update_fields.keys())
+            "fields_updated": list(update_fields.keys()),
         }
 
     except Exception as e:

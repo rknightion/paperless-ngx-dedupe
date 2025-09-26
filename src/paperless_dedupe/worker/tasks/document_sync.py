@@ -1,20 +1,19 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from celery import Task, current_task
 from celery.exceptions import SoftTimeLimitExceeded
 from dateutil import parser as date_parser
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import Document, DocumentContent
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from paperless_dedupe.worker.celery_app import app
-from paperless_dedupe.worker.utils import broadcast_task_status
 from paperless_dedupe.worker.database import get_worker_session
+from paperless_dedupe.worker.utils import broadcast_task_status
 
 logger = logging.getLogger(__name__)
 
@@ -26,14 +25,14 @@ def parse_date_field(date_value):
     if isinstance(date_value, datetime):
         # If datetime but naive, make it UTC-aware
         if date_value.tzinfo is None:
-            return date_value.replace(tzinfo=timezone.utc)
+            return date_value.replace(tzinfo=UTC)
         return date_value
     if isinstance(date_value, str):
         try:
             parsed = date_parser.parse(date_value)
             # If parsed datetime is naive, make it UTC-aware
             if parsed and parsed.tzinfo is None:
-                return parsed.replace(tzinfo=timezone.utc)
+                return parsed.replace(tzinfo=UTC)
             return parsed
         except (ValueError, TypeError):
             return None
@@ -46,7 +45,7 @@ async def _sync_documents_async(
     force_refresh: bool,
     limit: int,
     broadcast_progress: bool,
-    task_id: str
+    task_id: str,
 ) -> dict[str, Any]:
     """Async implementation of document sync"""
     documents_synced = 0
@@ -58,9 +57,9 @@ async def _sync_documents_async(
         if broadcast_progress:
             await broadcast_task_status(
                 task_id=task_id,
-                status='processing',
-                step='Testing connection to paperless-ngx',
-                progress=0
+                status="processing",
+                step="Testing connection to paperless-ngx",
+                progress=0,
             )
 
         await client.test_connection()
@@ -77,10 +76,10 @@ async def _sync_documents_async(
         if broadcast_progress:
             await broadcast_task_status(
                 task_id=task_id,
-                status='processing',
-                step=f'Syncing {total_documents} documents',
+                status="processing",
+                step=f"Syncing {total_documents} documents",
                 progress=0,
-                total=total_documents
+                total=total_documents,
             )
 
         # Get all document IDs from paperless
@@ -95,28 +94,28 @@ async def _sync_documents_async(
         # Process each document
         for idx, doc_data in enumerate(all_documents):
             try:
-                paperless_id = doc_data['id']
+                paperless_id = doc_data["id"]
 
                 # Update progress periodically
                 if broadcast_progress and idx % 100 == 0:
                     await broadcast_task_status(
                         task_id=task_id,
-                        status='processing',
-                        step=f'Processing documents',
+                        status="processing",
+                        step="Processing documents",
                         progress=idx + 1,
-                        total=total_documents
+                        total=total_documents,
                     )
 
                 # Check if document needs update
                 existing_doc = existing_docs.get(paperless_id)
                 if existing_doc and not force_refresh:
                     # Check if document was modified
-                    modified_date = parse_date_field(doc_data.get('modified'))
+                    modified_date = parse_date_field(doc_data.get("modified"))
                     if modified_date and existing_doc.modified_date:
                         # Ensure both dates are timezone-aware for comparison
                         existing_date = existing_doc.modified_date
                         if existing_date.tzinfo is None:
-                            existing_date = existing_date.replace(tzinfo=timezone.utc)
+                            existing_date = existing_date.replace(tzinfo=UTC)
                         if modified_date <= existing_date:
                             continue  # Skip unchanged document
 
@@ -136,18 +135,20 @@ async def _sync_documents_async(
                     documents_synced += 1
 
                 # Update document fields
-                document.title = doc_data.get('title', '')[:500]
-                document.fingerprint = doc_data.get('checksum', '')[:64]
-                document.correspondent = doc_data.get('correspondent_name', '')[:200]
-                document.document_type = doc_data.get('document_type_name', '')[:200]
-                document.tags = [tag.get('name', '') for tag in doc_data.get('tags', [])]
-                document.archive_filename = doc_data.get('archive_filename', '')[:500]
-                document.original_filename = doc_data.get('original_filename', '')[:500]
-                document.created_date = parse_date_field(doc_data.get('created'))
-                document.added_date = parse_date_field(doc_data.get('added'))
-                document.modified_date = parse_date_field(doc_data.get('modified'))
-                document.processing_status = 'pending'
-                document.last_processed = datetime.now(timezone.utc)
+                document.title = doc_data.get("title", "")[:500]
+                document.fingerprint = doc_data.get("checksum", "")[:64]
+                document.correspondent = doc_data.get("correspondent_name", "")[:200]
+                document.document_type = doc_data.get("document_type_name", "")[:200]
+                document.tags = [
+                    tag.get("name", "") for tag in doc_data.get("tags", [])
+                ]
+                document.archive_filename = doc_data.get("archive_filename", "")[:500]
+                document.original_filename = doc_data.get("original_filename", "")[:500]
+                document.created_date = parse_date_field(doc_data.get("created"))
+                document.added_date = parse_date_field(doc_data.get("added"))
+                document.modified_date = parse_date_field(doc_data.get("modified"))
+                document.processing_status = "pending"
+                document.last_processed = datetime.now(UTC)
 
                 if not existing_doc:
                     db.add(document)
@@ -155,14 +156,12 @@ async def _sync_documents_async(
                 db.flush()
 
                 # Store document content
-                doc_content = db.query(DocumentContent).filter_by(
-                    document_id=document.id
-                ).first()
+                doc_content = (
+                    db.query(DocumentContent).filter_by(document_id=document.id).first()
+                )
 
                 if not doc_content:
-                    doc_content = DocumentContent(
-                        document_id=document.id
-                    )
+                    doc_content = DocumentContent(document_id=document.id)
 
                 # Truncate content if too long
                 max_length = settings.max_ocr_length
@@ -181,10 +180,7 @@ async def _sync_documents_async(
 
             except Exception as e:
                 logger.error(f"Error syncing document {paperless_id}: {str(e)}")
-                errors.append({
-                    'document_id': paperless_id,
-                    'error': str(e)
-                })
+                errors.append({"document_id": paperless_id, "error": str(e)})
                 db.rollback()
                 continue
 
@@ -192,11 +188,11 @@ async def _sync_documents_async(
         db.commit()
 
     return {
-        'documents_synced': documents_synced,
-        'documents_updated': documents_updated,
-        'total_documents': total_documents,
-        'errors': errors,
-        'status': 'completed' if len(errors) == 0 else 'completed_with_errors'
+        "documents_synced": documents_synced,
+        "documents_updated": documents_updated,
+        "total_documents": total_documents,
+        "errors": errors,
+        "status": "completed" if len(errors) == 0 else "completed_with_errors",
     }
 
 
@@ -204,7 +200,7 @@ class DocumentSyncTask(Task):
     """Base task class with database session management"""
 
     def __init__(self):
-        self.db: Optional[Session] = None
+        self.db: Session | None = None
 
     def before_start(self, task_id, args, kwargs):
         """Initialize database session before task starts"""
@@ -220,18 +216,17 @@ class DocumentSyncTask(Task):
 @app.task(
     base=DocumentSyncTask,
     bind=True,
-    name='paperless_dedupe.worker.tasks.document_sync.sync_documents',
+    name="paperless_dedupe.worker.tasks.document_sync.sync_documents",
     max_retries=3,
-    default_retry_delay=60
+    default_retry_delay=60,
 )
 def sync_documents(
     self,
     force_refresh: bool = False,
     limit: int = None,
-    broadcast_progress: bool = True
+    broadcast_progress: bool = True,
 ) -> dict[str, Any]:
-    """
-    Sync documents from paperless-ngx to local database.
+    """Sync documents from paperless-ngx to local database.
 
     Args:
         force_refresh: Whether to refresh all documents
@@ -243,51 +238,58 @@ def sync_documents(
     """
     try:
         task_id = current_task.request.id
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         # Update task state
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Initializing document sync',
-                'progress': 0,
-                'total': 0,
-                'started_at': start_time.isoformat()
-            }
+                "current_step": "Initializing document sync",
+                "progress": 0,
+                "total": 0,
+                "started_at": start_time.isoformat(),
+            },
         )
 
         # Broadcast initial status
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Initializing document sync',
-                progress=0,
-                total=0
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Initializing document sync",
+                    progress=0,
+                    total=0,
+                )
+            )
 
         # Get current config from database
         from paperless_dedupe.core.config_utils import get_current_paperless_config
+
         client_settings = get_current_paperless_config(self.db)
 
         # Initialize client and sync documents
-        result = asyncio.run(_sync_documents_async(
-            self.db,
-            client_settings,
-            force_refresh,
-            limit,
-            broadcast_progress,
-            task_id
-        ))
+        result = asyncio.run(
+            _sync_documents_async(
+                self.db,
+                client_settings,
+                force_refresh,
+                limit,
+                broadcast_progress,
+                task_id,
+            )
+        )
 
         # Broadcast completion
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='completed',
-                step='Sync complete',
-                result=result
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="completed",
+                    step="Sync complete",
+                    result=result,
+                )
+            )
 
         return result
 
@@ -302,12 +304,14 @@ def sync_documents(
 
         # Broadcast error
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=current_task.request.id,
-                status='failed',
-                step='Sync failed',
-                error=str(e)
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=current_task.request.id,
+                    status="failed",
+                    step="Sync failed",
+                    error=str(e),
+                )
+            )
 
         # Retry the task
         raise self.retry(exc=e)

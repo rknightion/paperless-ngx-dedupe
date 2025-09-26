@@ -1,7 +1,7 @@
+import os  # Still needed for ALEMBIC_SKIP_LOGGING_CONFIG check
 import sys
 from logging.config import fileConfig
 from pathlib import Path
-import os  # Still needed for ALEMBIC_SKIP_LOGGING_CONFIG check
 
 from sqlalchemy import engine_from_config, pool
 

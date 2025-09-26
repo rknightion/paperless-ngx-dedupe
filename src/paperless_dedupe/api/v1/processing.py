@@ -2,10 +2,9 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Any, Optional
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -306,7 +305,9 @@ async def trigger_analysis_internal_deprecated(
     limit: int | None = None,
 ):
     """DEPRECATED: Use Celery task instead"""
-    logger.warning("trigger_analysis_internal is deprecated. Use Celery worker tasks instead.")
+    logger.warning(
+        "trigger_analysis_internal is deprecated. Use Celery worker tasks instead."
+    )
     return False
 
 
@@ -321,20 +322,20 @@ async def start_analysis(
     if active_tasks:
         for worker, tasks in active_tasks.items():
             for task in tasks:
-                if 'deduplication.analyze_duplicates' in task.get('name', ''):
+                if "deduplication.analyze_duplicates" in task.get("name", ""):
                     raise HTTPException(
                         status_code=409,
-                        detail=f"Analysis already in progress (task: {task['id']})"
+                        detail=f"Analysis already in progress (task: {task['id']})",
                     )
 
     # Check if sync is in progress by checking for active sync tasks
     if active_tasks:
         for worker, tasks in active_tasks.items():
             for task in tasks:
-                if 'document_sync.sync_documents' in task.get('name', ''):
+                if "document_sync.sync_documents" in task.get("name", ""):
                     raise HTTPException(
                         status_code=409,
-                        detail="Cannot start analysis while document sync is in progress"
+                        detail="Cannot start analysis while document sync is in progress",
                     )
 
     # Check if there are documents to process
@@ -352,12 +353,12 @@ async def start_analysis(
 
     task = analyze_duplicates.apply_async(
         kwargs={
-            'threshold': threshold,
-            'force_rebuild': request.force_rebuild,
-            'limit': request.limit,
-            'broadcast_progress': True
+            "threshold": threshold,
+            "force_rebuild": request.force_rebuild,
+            "limit": request.limit,
+            "broadcast_progress": True,
         },
-        queue='deduplication'
+        queue="deduplication",
     )
 
     # Store task ID in global status for compatibility
@@ -382,34 +383,34 @@ async def get_processing_status():
     if processing_status.get("task_id"):
         task_result = AsyncResult(processing_status["task_id"], app=celery_app)
 
-        if task_result.state == 'PENDING':
+        if task_result.state == "PENDING":
             return {
                 "is_processing": False,
                 "current_step": "No task found or task waiting to start",
                 "progress": 0,
-                "total": 0
+                "total": 0,
             }
-        elif task_result.state == 'PROGRESS':
+        elif task_result.state == "PROGRESS":
             return {
                 "is_processing": True,
                 "task_id": processing_status["task_id"],
-                **task_result.info
+                **task_result.info,
             }
-        elif task_result.state == 'SUCCESS':
+        elif task_result.state == "SUCCESS":
             processing_status["is_processing"] = False
             return {
                 "is_processing": False,
                 "task_id": processing_status["task_id"],
                 "status": "completed",
-                **task_result.result
+                **task_result.result,
             }
-        elif task_result.state == 'FAILURE':
+        elif task_result.state == "FAILURE":
             processing_status["is_processing"] = False
             return {
                 "is_processing": False,
                 "task_id": processing_status["task_id"],
                 "status": "failed",
-                "error": str(task_result.info)
+                "error": str(task_result.info),
             }
 
     # Fall back to global status if no task ID

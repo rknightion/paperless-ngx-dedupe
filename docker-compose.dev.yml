@@ -55,8 +55,8 @@ services:
       # - PAPERLESS_DEDUPE_PAPERLESS_URL=${PAPERLESS_DEDUPE_PAPERLESS_URL}
       # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=${PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN}
     volumes:
-      - ./src:/app/src  # Mount source for hot-reloading in dev
-      - ./alembic:/app/alembic  # Mount alembic migrations
+      - ./src:/app/src # Mount source for hot-reloading in dev
+      - ./alembic:/app/alembic # Mount alembic migrations
     restart: unless-stopped
     # Override command for development with hot-reload and auto-migrations
     command: >
@@ -92,8 +92,8 @@ services:
       # - PAPERLESS_DEDUPE_PAPERLESS_URL=${PAPERLESS_DEDUPE_PAPERLESS_URL}
       # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=${PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN}
     volumes:
-      - ./src:/app/src  # Mount source for hot-reloading in dev
-      - ./alembic:/app/alembic  # Mount alembic migrations
+      - ./src:/app/src # Mount source for hot-reloading in dev
+      - ./alembic:/app/alembic # Mount alembic migrations
     restart: unless-stopped
     # Wait for migrations to complete, then start worker
     command: >
@@ -117,8 +117,8 @@ services:
       - paperless-dedupe
     restart: unless-stopped
     volumes:
-      - ./frontend:/app  # Mount frontend source for development
-      - /app/node_modules  # Prevent node_modules from being overwritten by mount
+      - ./frontend:/app # Mount frontend source for development
+      - /app/node_modules # Prevent node_modules from being overwritten by mount
     environment:
       - NODE_ENV=development
       # Tell Vite to use the container's backend service
@@ -138,7 +138,7 @@ services:
     environment:
       - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
       - FLOWER_PORT=5555
-      - FLOWER_BASIC_AUTH=admin:changeme  # Change in production!
+      - FLOWER_BASIC_AUTH=admin:changeme # Change in production!
     ports:
       - "5555:5555"
     command: >

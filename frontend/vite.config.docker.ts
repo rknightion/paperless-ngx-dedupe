@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0',  // Listen on all interfaces
+    host: '0.0.0.0', // Listen on all interfaces
     port: 3000,
     strictPort: true,
     proxy: {
@@ -14,7 +14,9 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/ws': {
-        target: (process.env.VITE_API_URL || 'http://paperless-dedupe:8000').replace('http', 'ws'),
+        target: (
+          process.env.VITE_API_URL || 'http://paperless-dedupe:8000'
+        ).replace('http', 'ws'),
         ws: true,
       },
       '/health': {

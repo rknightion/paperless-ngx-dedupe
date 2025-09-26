@@ -1,18 +1,15 @@
 import asyncio
 import logging
-from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
 
 from celery import Task, current_task
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import Document, DuplicateGroup, DuplicateMember
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from paperless_dedupe.worker.celery_app import app
-from paperless_dedupe.worker.utils import broadcast_task_status
 from paperless_dedupe.worker.database import get_worker_session
+from paperless_dedupe.worker.utils import broadcast_task_status
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +18,7 @@ class BatchOperationTask(Task):
     """Base task class with database session management"""
 
     def __init__(self):
-        self.db: Optional[Session] = None
+        self.db: Session | None = None
 
     def before_start(self, task_id, args, kwargs):
         """Initialize database session before task starts"""
@@ -37,16 +34,13 @@ class BatchOperationTask(Task):
 @app.task(
     base=BatchOperationTask,
     bind=True,
-    name='paperless_dedupe.worker.tasks.batch_operations.mark_duplicates_reviewed',
-    max_retries=3
+    name="paperless_dedupe.worker.tasks.batch_operations.mark_duplicates_reviewed",
+    max_retries=3,
 )
 def mark_duplicates_reviewed(
-    self,
-    group_ids: List[str],
-    broadcast_progress: bool = True
+    self, group_ids: list[str], broadcast_progress: bool = True
 ) -> dict[str, Any]:
-    """
-    Mark multiple duplicate groups as reviewed.
+    """Mark multiple duplicate groups as reviewed.
 
     Args:
         group_ids: List of duplicate group IDs to mark as reviewed
@@ -63,22 +57,24 @@ def mark_duplicates_reviewed(
 
         # Update initial state
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Marking duplicate groups as reviewed',
-                'progress': 0,
-                'total': total
-            }
+                "current_step": "Marking duplicate groups as reviewed",
+                "progress": 0,
+                "total": total,
+            },
         )
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Marking duplicate groups as reviewed',
-                progress=0,
-                total=total
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Marking duplicate groups as reviewed",
+                    progress=0,
+                    total=total,
+                )
+            )
 
         # Process each group
         for idx, group_id in enumerate(group_ids):
@@ -94,22 +90,24 @@ def mark_duplicates_reviewed(
                 # Update progress
                 if idx % 10 == 0:
                     self.update_state(
-                        state='PROGRESS',
+                        state="PROGRESS",
                         meta={
-                            'current_step': f'Processing group {idx + 1}/{total}',
-                            'progress': idx + 1,
-                            'total': total
-                        }
+                            "current_step": f"Processing group {idx + 1}/{total}",
+                            "progress": idx + 1,
+                            "total": total,
+                        },
                     )
 
                     if broadcast_progress and idx % 50 == 0:
-                        asyncio.run(broadcast_task_status(
-                            task_id=task_id,
-                            status='processing',
-                            step='Marking groups as reviewed',
-                            progress=idx + 1,
-                            total=total
-                        ))
+                        asyncio.run(
+                            broadcast_task_status(
+                                task_id=task_id,
+                                status="processing",
+                                step="Marking groups as reviewed",
+                                progress=idx + 1,
+                                total=total,
+                            )
+                        )
 
             except Exception as e:
                 logger.error(f"Error processing group {group_id}: {str(e)}")
@@ -119,20 +117,22 @@ def mark_duplicates_reviewed(
         self.db.commit()
 
         result = {
-            'status': 'completed',
-            'task_id': task_id,
-            'groups_processed': processed,
-            'groups_failed': failed,
-            'total_groups': total
+            "status": "completed",
+            "task_id": task_id,
+            "groups_processed": processed,
+            "groups_failed": failed,
+            "total_groups": total,
         }
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='completed',
-                step='Batch review complete',
-                result=result
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="completed",
+                    step="Batch review complete",
+                    result=result,
+                )
+            )
 
         return result
 
@@ -145,17 +145,16 @@ def mark_duplicates_reviewed(
 @app.task(
     base=BatchOperationTask,
     bind=True,
-    name='paperless_dedupe.worker.tasks.batch_operations.resolve_duplicate_groups',
-    max_retries=3
+    name="paperless_dedupe.worker.tasks.batch_operations.resolve_duplicate_groups",
+    max_retries=3,
 )
 def resolve_duplicate_groups(
     self,
-    group_ids: List[str],
+    group_ids: list[str],
     keep_primary: bool = True,
-    broadcast_progress: bool = True
+    broadcast_progress: bool = True,
 ) -> dict[str, Any]:
-    """
-    Resolve duplicate groups by marking them as resolved.
+    """Resolve duplicate groups by marking them as resolved.
 
     Args:
         group_ids: List of duplicate group IDs to resolve
@@ -172,22 +171,24 @@ def resolve_duplicate_groups(
         documents_affected = 0
 
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Resolving duplicate groups',
-                'progress': 0,
-                'total': total
-            }
+                "current_step": "Resolving duplicate groups",
+                "progress": 0,
+                "total": total,
+            },
         )
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Resolving duplicate groups',
-                progress=0,
-                total=total
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Resolving duplicate groups",
+                    progress=0,
+                    total=total,
+                )
+            )
 
         for idx, group_id in enumerate(group_ids):
             try:
@@ -197,9 +198,11 @@ def resolve_duplicate_groups(
                     group.reviewed = True
 
                     # Count affected documents
-                    members = self.db.query(DuplicateMember).filter_by(
-                        group_id=group_id
-                    ).all()
+                    members = (
+                        self.db.query(DuplicateMember)
+                        .filter_by(group_id=group_id)
+                        .all()
+                    )
                     documents_affected += len(members)
 
                     processed += 1
@@ -207,22 +210,24 @@ def resolve_duplicate_groups(
                 # Update progress
                 if idx % 5 == 0:
                     self.update_state(
-                        state='PROGRESS',
+                        state="PROGRESS",
                         meta={
-                            'current_step': f'Resolving group {idx + 1}/{total}',
-                            'progress': idx + 1,
-                            'total': total
-                        }
+                            "current_step": f"Resolving group {idx + 1}/{total}",
+                            "progress": idx + 1,
+                            "total": total,
+                        },
                     )
 
                     if broadcast_progress and idx % 20 == 0:
-                        asyncio.run(broadcast_task_status(
-                            task_id=task_id,
-                            status='processing',
-                            step='Resolving groups',
-                            progress=idx + 1,
-                            total=total
-                        ))
+                        asyncio.run(
+                            broadcast_task_status(
+                                task_id=task_id,
+                                status="processing",
+                                step="Resolving groups",
+                                progress=idx + 1,
+                                total=total,
+                            )
+                        )
 
             except Exception as e:
                 logger.error(f"Error resolving group {group_id}: {str(e)}")
@@ -230,20 +235,22 @@ def resolve_duplicate_groups(
         self.db.commit()
 
         result = {
-            'status': 'completed',
-            'task_id': task_id,
-            'groups_resolved': processed,
-            'documents_affected': documents_affected,
-            'total_groups': total
+            "status": "completed",
+            "task_id": task_id,
+            "groups_resolved": processed,
+            "documents_affected": documents_affected,
+            "total_groups": total,
         }
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='completed',
-                step='Resolution complete',
-                result=result
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="completed",
+                    step="Resolution complete",
+                    result=result,
+                )
+            )
 
         return result
 
@@ -256,17 +263,13 @@ def resolve_duplicate_groups(
 @app.task(
     base=BatchOperationTask,
     bind=True,
-    name='paperless_dedupe.worker.tasks.batch_operations.tag_documents',
-    max_retries=3
+    name="paperless_dedupe.worker.tasks.batch_operations.tag_documents",
+    max_retries=3,
 )
 def tag_documents(
-    self,
-    document_ids: List[int],
-    tag_names: List[str],
-    broadcast_progress: bool = True
+    self, document_ids: list[int], tag_names: list[str], broadcast_progress: bool = True
 ) -> dict[str, Any]:
-    """
-    Add tags to multiple documents in paperless-ngx.
+    """Add tags to multiple documents in paperless-ngx.
 
     Args:
         document_ids: List of document IDs to tag
@@ -281,42 +284,46 @@ def tag_documents(
         total = len(document_ids)
 
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Adding tags to documents',
-                'progress': 0,
-                'total': total
-            }
+                "current_step": "Adding tags to documents",
+                "progress": 0,
+                "total": total,
+            },
         )
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Adding tags to documents',
-                progress=0,
-                total=total
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Adding tags to documents",
+                    progress=0,
+                    total=total,
+                )
+            )
 
         # Get current config from database
         from paperless_dedupe.core.config_utils import get_current_paperless_config
+
         client_settings = get_current_paperless_config(self.db)
 
         # Run async tagging operation
-        result = asyncio.run(self._tag_documents_async(
-            client_settings,
-            document_ids,
-            tag_names,
-            broadcast_progress
-        ))
+        result = asyncio.run(
+            self._tag_documents_async(
+                client_settings, document_ids, tag_names, broadcast_progress
+            )
+        )
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='completed',
-                step='Tagging complete',
-                result=result
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="completed",
+                    step="Tagging complete",
+                    result=result,
+                )
+            )
 
         return result
 
@@ -327,9 +334,9 @@ def tag_documents(
     async def _tag_documents_async(
         self,
         client_settings: dict,
-        document_ids: List[int],
-        tag_names: List[str],
-        broadcast_progress: bool
+        document_ids: list[int],
+        tag_names: list[str],
+        broadcast_progress: bool,
     ) -> dict[str, Any]:
         """Async implementation of document tagging"""
         processed = 0
@@ -357,21 +364,21 @@ def tag_documents(
                     # Update progress
                     if idx % 10 == 0:
                         self.update_state(
-                            state='PROGRESS',
+                            state="PROGRESS",
                             meta={
-                                'current_step': f'Tagging document {idx + 1}/{len(document_ids)}',
-                                'progress': idx + 1,
-                                'total': len(document_ids)
-                            }
+                                "current_step": f"Tagging document {idx + 1}/{len(document_ids)}",
+                                "progress": idx + 1,
+                                "total": len(document_ids),
+                            },
                         )
 
                         if broadcast_progress and idx % 50 == 0:
                             await broadcast_task_status(
                                 task_id=current_task.request.id,
-                                status='processing',
-                                step='Tagging documents',
+                                status="processing",
+                                step="Tagging documents",
                                 progress=idx + 1,
-                                total=len(document_ids)
+                                total=len(document_ids),
                             )
 
                 except Exception as e:
@@ -380,22 +387,17 @@ def tag_documents(
                     failed += 1
 
         return {
-            'status': 'completed',
-            'documents_tagged': processed,
-            'documents_failed': failed,
-            'tags_added': tag_names,
-            'errors': errors[:10]  # Limit error details
+            "status": "completed",
+            "documents_tagged": processed,
+            "documents_failed": failed,
+            "tags_added": tag_names,
+            "errors": errors[:10],  # Limit error details
         }
 
 
-@app.task(
-    name='paperless_dedupe.worker.tasks.batch_operations.delete_duplicate_groups'
-)
-def delete_duplicate_groups(
-    group_ids: List[str]
-) -> dict[str, Any]:
-    """
-    Delete duplicate groups and their members.
+@app.task(name="paperless_dedupe.worker.tasks.batch_operations.delete_duplicate_groups")
+def delete_duplicate_groups(group_ids: list[str]) -> dict[str, Any]:
+    """Delete duplicate groups and their members.
 
     Args:
         group_ids: List of duplicate group IDs to delete
@@ -424,9 +426,9 @@ def delete_duplicate_groups(
         db.commit()
 
         return {
-            'status': 'completed',
-            'groups_deleted': deleted_groups,
-            'members_deleted': deleted_members
+            "status": "completed",
+            "groups_deleted": deleted_groups,
+            "members_deleted": deleted_members,
         }
 
     except Exception as e:

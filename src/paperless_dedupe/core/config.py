@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     paperless_password: str | None = None
 
     # Database settings - PostgreSQL required
-    database_url: str = "postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe"
+    database_url: str = (
+        "postgresql://paperless_dedupe:paperless_dedupe@localhost:5432/paperless_dedupe"
+    )
 
     # Task queue settings
     redis_url: str = "redis://localhost:6379/0"

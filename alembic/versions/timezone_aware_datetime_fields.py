@@ -5,20 +5,16 @@ Revises: 84daede32136
 Create Date: 2025-01-26 17:45:00.000000
 
 """
-from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
-revision = 'timezone_aware_datetimes'
-down_revision = 'postgresql_opt_001'
+revision = "timezone_aware_datetimes"
+down_revision = "postgresql_opt_001"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    """
-    Update datetime fields to be timezone-aware.
+    """Update datetime fields to be timezone-aware.
 
     Note: The column type doesn't change in PostgreSQL (still TIMESTAMP),
     but this migration documents that the application layer now handles
@@ -33,8 +29,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """
-    No database changes needed for downgrade.
+    """No database changes needed for downgrade.
     The application would need to be reverted to handle naive datetimes.
     """
     pass

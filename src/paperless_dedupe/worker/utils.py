@@ -1,8 +1,7 @@
-import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -15,12 +14,11 @@ async def broadcast_task_status(
     step: str = "",
     progress: int = 0,
     total: int = 0,
-    error: Optional[str] = None,
-    result: Optional[dict[str, Any]] = None,
-    websocket_url: Optional[str] = None
+    error: str | None = None,
+    result: dict[str, Any] | None = None,
+    websocket_url: str | None = None,
 ) -> None:
-    """
-    Broadcast task status updates via WebSocket through the FastAPI server.
+    """Broadcast task status updates via WebSocket through the FastAPI server.
 
     Args:
         task_id: Celery task ID
@@ -36,8 +34,9 @@ async def broadcast_task_status(
         # Determine the WebSocket URL based on environment
         if websocket_url is None:
             import os
+
             # In Docker, use container name; locally use localhost
-            if os.environ.get('DOCKER_CONTAINER'):
+            if os.environ.get("DOCKER_CONTAINER"):
                 websocket_url = "http://paperless-dedupe:8000"
             else:
                 websocket_url = "http://localhost:30001"
@@ -50,7 +49,7 @@ async def broadcast_task_status(
             "progress": progress,
             "total": total,
             "error": error,
-            "result": result
+            "result": result,
         }
 
         # Send update to FastAPI server endpoint that will broadcast via WebSocket
@@ -58,11 +57,13 @@ async def broadcast_task_status(
             response = await client.post(
                 f"{websocket_url}/api/v1/internal/broadcast-task-update",
                 json=update_data,
-                timeout=5.0
+                timeout=5.0,
             )
 
             if response.status_code != 200:
-                logger.warning(f"Failed to broadcast task update: {response.status_code}")
+                logger.warning(
+                    f"Failed to broadcast task update: {response.status_code}"
+                )
 
     except Exception as e:
         # Don't let broadcast errors affect the task
@@ -70,11 +71,15 @@ async def broadcast_task_status(
 
 
 async def get_database_session():
-    """
-    Get a database session for async operations.
+    """Get a database session for async operations.
     This is a utility for tasks that need database access.
     """
-    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+    from sqlalchemy.ext.asyncio import (
+        AsyncSession,
+        async_sessionmaker,
+        create_async_engine,
+    )
+
     from paperless_dedupe.core.config import settings
 
     # Convert sync database URL to async if needed
@@ -85,15 +90,16 @@ async def get_database_session():
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
 
     engine = create_async_engine(db_url)
-    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
 
     async with async_session() as session:
         return session
 
 
 def parse_celery_task_result(task_result: Any) -> dict:
-    """
-    Parse Celery task result into a standardized format.
+    """Parse Celery task result into a standardized format.
 
     Args:
         task_result: Raw Celery task result
@@ -112,15 +118,11 @@ def parse_celery_task_result(task_result: Any) -> dict:
         pass
 
     # Return as wrapped result if we can't parse it
-    return {
-        "status": "completed",
-        "result": str(task_result)
-    }
+    return {"status": "completed", "result": str(task_result)}
 
 
-def calculate_eta(progress: int, total: int, start_time: datetime) -> Optional[datetime]:
-    """
-    Calculate estimated time of arrival for task completion.
+def calculate_eta(progress: int, total: int, start_time: datetime) -> datetime | None:
+    """Calculate estimated time of arrival for task completion.
 
     Args:
         progress: Current progress count
@@ -146,8 +148,7 @@ def calculate_eta(progress: int, total: int, start_time: datetime) -> Optional[d
 
 
 def format_task_duration(seconds: float) -> str:
-    """
-    Format task duration in human-readable format.
+    """Format task duration in human-readable format.
 
     Args:
         seconds: Duration in seconds

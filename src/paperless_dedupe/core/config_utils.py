@@ -47,11 +47,11 @@ def get_current_config(db: Session) -> dict[str, Any]:
         value = item.value
         if value is not None and isinstance(value, str):
             # Try to convert to appropriate type
-            if value.lower() in ('true', 'false'):
-                value = value.lower() == 'true'
-            elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
+            if value.lower() in ("true", "false"):
+                value = value.lower() == "true"
+            elif value.replace(".", "", 1).replace("-", "", 1).isdigit():
                 # It's a number
-                if '.' in value:
+                if "." in value:
                     value = float(value)
                 else:
                     value = int(value)

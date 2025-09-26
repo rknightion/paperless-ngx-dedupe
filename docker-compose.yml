@@ -9,9 +9,13 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-paperless_dedupe}
       - POSTGRES_USER=${POSTGRES_USER:-paperless_dedupe}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}  # Required in production
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # Required in production
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paperless_dedupe} -d ${POSTGRES_DB:-paperless_dedupe}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-paperless_dedupe} -d ${POSTGRES_DB:-paperless_dedupe}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -74,11 +78,11 @@ services:
       postgres:
         condition: service_healthy
       paperless-dedupe:
-        condition: service_started  # Wait for main app to run migrations
+        condition: service_started # Wait for main app to run migrations
     environment:
       - PAPERLESS_DEDUPE_DATABASE_URL=postgresql://${POSTGRES_USER:-paperless_dedupe}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-paperless_dedupe}
       - PAPERLESS_DEDUPE_REDIS_URL=redis://redis:6379/0
-      - DOCKER_CONTAINER=1  # Tell worker it's running in Docker
+      - DOCKER_CONTAINER=1 # Tell worker it's running in Docker
       # Copy Paperless-NGX connection settings from main service
       # - PAPERLESS_DEDUPE_PAPERLESS_URL=http://your-paperless:8000
       # - PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-api-token

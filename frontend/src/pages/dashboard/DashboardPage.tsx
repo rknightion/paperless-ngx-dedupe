@@ -10,6 +10,7 @@ import { fetchDocuments } from '../../store/slices/documentsSlice';
 import { ProgressTracker } from '../../components/shared';
 import { SyncProgress } from '../../components/sync/SyncProgress';
 import { OperationsList } from '../../components/batch/OperationsList';
+import { SystemHealthCard } from '../../components/dashboard/SystemHealthCard';
 import {
   Card,
   CardContent,
@@ -126,8 +127,11 @@ export const DashboardPage: React.FC = () => {
         />
       </div>
 
-      {/* Processing Status and Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* System Health and Processing Status */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* System Health */}
+        <SystemHealthCard />
+
         {/* Progress Tracker */}
         <div className="space-y-4">
           <ProgressTracker

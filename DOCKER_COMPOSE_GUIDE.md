@@ -18,6 +18,7 @@ docker-compose down
 ```
 
 **Features:**
+
 - Uses pre-built images from GitHub Container Registry
 - PostgreSQL database for robust data storage
 - Redis for Celery task queue
@@ -26,6 +27,7 @@ docker-compose down
 - Optional Flower service for monitoring (uncomment to enable)
 
 **Services:**
+
 - `postgres` - PostgreSQL database (internal only)
 - `redis` - Task queue broker (port 6379, internal only)
 - `paperless-dedupe` - Backend API (port 30001)
@@ -49,6 +51,7 @@ docker-compose -f docker-compose.dev.yml down
 ```
 
 **Features:**
+
 - Builds from local Dockerfile
 - Mounts source code for hot-reloading
 - Backend runs with `--reload` flag
@@ -57,6 +60,7 @@ docker-compose -f docker-compose.dev.yml down
 - Source directories mounted as volumes
 
 **Services:**
+
 - Same as production, plus:
 - Source code mounted for live development
 - Flower enabled by default for debugging
@@ -91,6 +95,7 @@ Both configurations include Flower for monitoring Celery tasks:
 The PostgreSQL database is managed by Docker and persists data in a named volume.
 
 Migrations are automatically applied on container startup. To manually run migrations:
+
 ```bash
 # Production
 docker-compose exec paperless-dedupe alembic upgrade head
@@ -100,6 +105,7 @@ docker-compose -f docker-compose.dev.yml exec paperless-dedupe alembic upgrade h
 ```
 
 For production, set PostgreSQL credentials in environment:
+
 ```bash
 POSTGRES_DB=paperless_dedupe
 POSTGRES_USER=paperless_dedupe

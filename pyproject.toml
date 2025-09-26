@@ -85,7 +85,7 @@ Homepage = "https://github.com/rknightion/paperless-ngx-dedupe"
 Documentation = "https://github.com/rknightion/paperless-ngx-dedupe#readme"
 Repository = "https://github.com/rknightion/paperless-ngx-dedupe"
 Issues = "https://github.com/rknightion/paperless-ngx-dedupe/issues"
-Changelog = "https://github.com/rknightion/paperless-ngx-dedupe/blob/main/CHANGELOG.md"
+Releases = "https://github.com/rknightion/paperless-ngx-dedupe/releases"
 
 [project.scripts]
 paperless-dedupe = "paperless_dedupe:main"

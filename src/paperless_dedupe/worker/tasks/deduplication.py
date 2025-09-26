@@ -1,13 +1,11 @@
 import asyncio
 import logging
-import time
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from celery import Task, current_task
 from celery.exceptions import SoftTimeLimitExceeded
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import (
@@ -18,8 +16,8 @@ from paperless_dedupe.models.database import (
 )
 from paperless_dedupe.services.deduplication_service import DeduplicationService
 from paperless_dedupe.worker.celery_app import app
-from paperless_dedupe.worker.utils import broadcast_task_status
 from paperless_dedupe.worker.database import get_worker_session
+from paperless_dedupe.worker.utils import broadcast_task_status
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +26,7 @@ class DeduplicationTask(Task):
     """Base task class with database session management"""
 
     def __init__(self):
-        self.db: Optional[Session] = None
+        self.db: Session | None = None
 
     def before_start(self, task_id, args, kwargs):
         """Initialize database session before task starts"""
@@ -44,19 +42,18 @@ class DeduplicationTask(Task):
 @app.task(
     base=DeduplicationTask,
     bind=True,
-    name='paperless_dedupe.worker.tasks.deduplication.analyze_duplicates',
+    name="paperless_dedupe.worker.tasks.deduplication.analyze_duplicates",
     max_retries=3,
-    default_retry_delay=60
+    default_retry_delay=60,
 )
 def analyze_duplicates(
     self,
     threshold: float = None,
     force_rebuild: bool = False,
     limit: int = None,
-    broadcast_progress: bool = True
+    broadcast_progress: bool = True,
 ) -> dict[str, Any]:
-    """
-    Analyze documents for duplicates using MinHash/LSH and fuzzy matching.
+    """Analyze documents for duplicates using MinHash/LSH and fuzzy matching.
 
     Args:
         threshold: Similarity threshold for duplicate detection
@@ -69,28 +66,30 @@ def analyze_duplicates(
     """
     try:
         task_id = current_task.request.id
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         # Update task state
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Initializing analysis',
-                'progress': 0,
-                'total': 0,
-                'started_at': start_time.isoformat()
-            }
+                "current_step": "Initializing analysis",
+                "progress": 0,
+                "total": 0,
+                "started_at": start_time.isoformat(),
+            },
         )
 
         # Broadcast initial status if enabled
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Initializing analysis',
-                progress=0,
-                total=0
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Initializing analysis",
+                    progress=0,
+                    total=0,
+                )
+            )
 
         # Use threshold from settings if not provided
         # Convert from percentage (0-100) to decimal (0.0-1.0) if needed
@@ -103,35 +102,38 @@ def analyze_duplicates(
         # Clear existing data if force rebuild
         if force_rebuild:
             self.update_state(
-                state='PROGRESS',
-                meta={'current_step': 'Clearing existing analysis data', 'progress': 0}
+                state="PROGRESS",
+                meta={"current_step": "Clearing existing analysis data", "progress": 0},
             )
 
             if broadcast_progress:
-                asyncio.run(broadcast_task_status(
-                    task_id=task_id,
-                    status='processing',
-                    step='Clearing existing analysis data',
-                    progress=0
-                ))
+                asyncio.run(
+                    broadcast_task_status(
+                        task_id=task_id,
+                        status="processing",
+                        step="Clearing existing analysis data",
+                        progress=0,
+                    )
+                )
 
             # Delete all existing duplicate groups and members
             deleted_members = self.db.query(DuplicateMember).delete()
             deleted_groups = self.db.query(DuplicateGroup).delete()
 
             # Reset all documents to pending status
-            self.db.query(Document).update({
-                'processing_status': 'pending',
-                'last_processed': None
-            })
+            self.db.query(Document).update(
+                {"processing_status": "pending", "last_processed": None}
+            )
 
             self.db.commit()
-            logger.info(f"Cleared {deleted_groups} duplicate groups and {deleted_members} members")
+            logger.info(
+                f"Cleared {deleted_groups} duplicate groups and {deleted_members} members"
+            )
 
         # Get documents to process
         query = self.db.query(Document)
         if not force_rebuild:
-            query = query.filter(Document.processing_status == 'pending')
+            query = query.filter(Document.processing_status == "pending")
         if limit:
             query = query.limit(limit)
 
@@ -140,33 +142,35 @@ def analyze_duplicates(
 
         if not documents:
             return {
-                'status': 'completed',
-                'message': 'No documents to process',
-                'documents_processed': 0,
-                'duplicates_found': 0,
-                'duration': 0
+                "status": "completed",
+                "message": "No documents to process",
+                "documents_processed": 0,
+                "duplicates_found": 0,
+                "duration": 0,
             }
 
         logger.info(f"Processing {total_docs} documents for deduplication")
 
         # Update state with document count
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Loading document content',
-                'progress': 0,
-                'total': total_docs
-            }
+                "current_step": "Loading document content",
+                "progress": 0,
+                "total": total_docs,
+            },
         )
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Loading document content',
-                progress=0,
-                total=total_docs
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Loading document content",
+                    progress=0,
+                    total=total_docs,
+                )
+            )
 
         # Load document content in chunks
         contents = {}
@@ -174,32 +178,36 @@ def analyze_duplicates(
         chunk_size = 500
 
         for i in range(0, len(document_ids), chunk_size):
-            chunk_ids = document_ids[i:i + chunk_size]
+            chunk_ids = document_ids[i : i + chunk_size]
 
             # Update progress
             progress = min(i + chunk_size, len(document_ids))
             self.update_state(
-                state='PROGRESS',
+                state="PROGRESS",
                 meta={
-                    'current_step': f'Loading document content ({progress}/{total_docs})',
-                    'progress': progress,
-                    'total': total_docs
-                }
+                    "current_step": f"Loading document content ({progress}/{total_docs})",
+                    "progress": progress,
+                    "total": total_docs,
+                },
             )
 
             if broadcast_progress and i % 1000 == 0:  # Broadcast every 1000 docs
-                asyncio.run(broadcast_task_status(
-                    task_id=task_id,
-                    status='processing',
-                    step=f'Loading document content',
-                    progress=progress,
-                    total=total_docs
-                ))
+                asyncio.run(
+                    broadcast_task_status(
+                        task_id=task_id,
+                        status="processing",
+                        step="Loading document content",
+                        progress=progress,
+                        total=total_docs,
+                    )
+                )
 
             # Query content for chunk
-            doc_contents = self.db.query(DocumentContent).filter(
-                DocumentContent.document_id.in_(chunk_ids)
-            ).all()
+            doc_contents = (
+                self.db.query(DocumentContent)
+                .filter(DocumentContent.document_id.in_(chunk_ids))
+                .all()
+            )
 
             for content in doc_contents:
                 # Use full_text (populated by sync) instead of normalized_text (never populated)
@@ -208,54 +216,52 @@ def analyze_duplicates(
 
         # Initialize deduplication service
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Initializing deduplication service',
-                'progress': 0,
-                'total': total_docs
-            }
+                "current_step": "Initializing deduplication service",
+                "progress": 0,
+                "total": total_docs,
+            },
         )
 
         dedup_service = DeduplicationService()
 
         # Find duplicates
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Analyzing documents for duplicates',
-                'progress': 0,
-                'total': total_docs
-            }
+                "current_step": "Analyzing documents for duplicates",
+                "progress": 0,
+                "total": total_docs,
+            },
         )
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Analyzing documents for duplicates',
-                progress=0,
-                total=total_docs
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Analyzing documents for duplicates",
+                    progress=0,
+                    total=total_docs,
+                )
+            )
 
         # Create progress callback for deduplication service
         async def dedup_progress_callback(step: str, current: int, total: int):
             """Progress callback for deduplication service"""
             self.update_state(
-                state='PROGRESS',
-                meta={
-                    'current_step': step,
-                    'progress': current,
-                    'total': total
-                }
+                state="PROGRESS",
+                meta={"current_step": step, "progress": current, "total": total},
             )
 
             if broadcast_progress:
                 await broadcast_task_status(
                     task_id=task_id,
-                    status='processing',
+                    status="processing",
                     step=step,
                     progress=current,
-                    total=total
+                    total=total,
                 )
 
         # Run deduplication with async support
@@ -264,57 +270,59 @@ def analyze_duplicates(
                 documents,
                 contents,
                 threshold=threshold,
-                progress_callback=dedup_progress_callback
+                progress_callback=dedup_progress_callback,
             )
         )
 
         # Save results to database
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': 'Saving duplicate groups to database',
-                'progress': total_docs,
-                'total': total_docs
-            }
+                "current_step": "Saving duplicate groups to database",
+                "progress": total_docs,
+                "total": total_docs,
+            },
         )
 
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='processing',
-                step='Saving duplicate groups to database',
-                progress=total_docs,
-                total=total_docs
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Saving duplicate groups to database",
+                    progress=total_docs,
+                    total=total_docs,
+                )
+            )
 
         groups_created = 0
         for group in duplicate_groups:
             # Extract component scores from the group data
-            component_scores = group.get('component_scores', {})
+            component_scores = group.get("component_scores", {})
 
             db_group = DuplicateGroup(
-                confidence_score=group.get('confidence', 0.0),  # Key is 'confidence' not 'confidence_score'
-                jaccard_similarity=component_scores.get('jaccard'),
-                fuzzy_text_ratio=component_scores.get('fuzzy'),
-                metadata_similarity=component_scores.get('metadata'),
-                filename_similarity=component_scores.get('filename'),
-                algorithm_version='2.0'
+                confidence_score=group.get(
+                    "confidence", 0.0
+                ),  # Key is 'confidence' not 'confidence_score'
+                jaccard_similarity=component_scores.get("jaccard"),
+                fuzzy_text_ratio=component_scores.get("fuzzy"),
+                metadata_similarity=component_scores.get("metadata"),
+                filename_similarity=component_scores.get("filename"),
+                algorithm_version="2.0",
             )
             self.db.add(db_group)
             self.db.flush()
 
             # Get document IDs from the group
             # The service returns 'documents' which is a list of Document objects
-            documents_in_group = group.get('documents', [])
+            documents_in_group = group.get("documents", [])
 
             for i, doc in enumerate(documents_in_group):
                 # Extract document ID - doc might be a Document object or dict
-                doc_id = doc.id if hasattr(doc, 'id') else doc.get('id')
+                doc_id = doc.id if hasattr(doc, "id") else doc.get("id")
 
                 member = DuplicateMember(
-                    group_id=db_group.id,
-                    document_id=doc_id,
-                    is_primary=(i == 0)
+                    group_id=db_group.id, document_id=doc_id, is_primary=(i == 0)
                 )
                 self.db.add(member)
 
@@ -322,34 +330,36 @@ def analyze_duplicates(
 
         # Update document processing status
         for doc in documents:
-            doc.processing_status = 'processed'
-            doc.last_processed = datetime.now(timezone.utc)
+            doc.processing_status = "processed"
+            doc.last_processed = datetime.now(UTC)
 
         self.db.commit()
 
         # Calculate duration
-        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+        duration = (datetime.now(UTC) - start_time).total_seconds()
 
         result = {
-            'status': 'completed',
-            'task_id': task_id,
-            'documents_processed': total_docs,
-            'duplicate_groups_found': groups_created,
-            'threshold_used': threshold,
-            'duration': duration,
-            'completed_at': datetime.now(timezone.utc).isoformat()
+            "status": "completed",
+            "task_id": task_id,
+            "documents_processed": total_docs,
+            "duplicate_groups_found": groups_created,
+            "threshold_used": threshold,
+            "duration": duration,
+            "completed_at": datetime.now(UTC).isoformat(),
         }
 
         # Broadcast completion
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=task_id,
-                status='completed',
-                step='Analysis complete',
-                progress=total_docs,
-                total=total_docs,
-                result=result
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=task_id,
+                    status="completed",
+                    step="Analysis complete",
+                    progress=total_docs,
+                    total=total_docs,
+                    result=result,
+                )
+            )
 
         logger.info(f"Deduplication analysis completed: {result}")
         return result
@@ -365,12 +375,14 @@ def analyze_duplicates(
 
         # Broadcast error
         if broadcast_progress:
-            asyncio.run(broadcast_task_status(
-                task_id=current_task.request.id,
-                status='failed',
-                step='Analysis failed',
-                error=str(e)
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=current_task.request.id,
+                    status="failed",
+                    step="Analysis failed",
+                    error=str(e),
+                )
+            )
 
         # Retry the task
         raise self.retry(exc=e)
@@ -378,32 +390,31 @@ def analyze_duplicates(
     def _update_progress(self, progress: int, total: int, broadcast: bool):
         """Update task progress and optionally broadcast via WebSocket"""
         self.update_state(
-            state='PROGRESS',
+            state="PROGRESS",
             meta={
-                'current_step': f'Processing documents ({progress}/{total})',
-                'progress': progress,
-                'total': total
-            }
+                "current_step": f"Processing documents ({progress}/{total})",
+                "progress": progress,
+                "total": total,
+            },
         )
 
         if broadcast and progress % 100 == 0:  # Broadcast every 100 documents
-            asyncio.run(broadcast_task_status(
-                task_id=current_task.request.id,
-                status='processing',
-                step=f'Processing documents',
-                progress=progress,
-                total=total
-            ))
+            asyncio.run(
+                broadcast_task_status(
+                    task_id=current_task.request.id,
+                    status="processing",
+                    step="Processing documents",
+                    progress=progress,
+                    total=total,
+                )
+            )
 
 
 @app.task(
-    name='paperless_dedupe.worker.tasks.deduplication.recalculate_confidence_scores'
+    name="paperless_dedupe.worker.tasks.deduplication.recalculate_confidence_scores"
 )
-def recalculate_confidence_scores(
-    weights: dict[str, bool] = None
-) -> dict[str, Any]:
-    """
-    Recalculate confidence scores for all duplicate groups based on new weights.
+def recalculate_confidence_scores(weights: dict[str, bool] = None) -> dict[str, Any]:
+    """Recalculate confidence scores for all duplicate groups based on new weights.
 
     Args:
         weights: Dictionary of weight flags for score components
@@ -415,10 +426,10 @@ def recalculate_confidence_scores(
     try:
         if weights is None:
             weights = {
-                'jaccard': True,
-                'fuzzy': True,
-                'metadata': True,
-                'filename': True
+                "jaccard": True,
+                "fuzzy": True,
+                "metadata": True,
+                "filename": True,
             }
 
         groups = db.query(DuplicateGroup).all()
@@ -433,9 +444,9 @@ def recalculate_confidence_scores(
         db.commit()
 
         return {
-            'status': 'completed',
-            'groups_updated': updated_count,
-            'total_groups': len(groups)
+            "status": "completed",
+            "groups_updated": updated_count,
+            "total_groups": len(groups),
         }
 
     except Exception as e:
@@ -448,13 +459,10 @@ def recalculate_confidence_scores(
 
 
 @app.task(
-    name='paperless_dedupe.worker.tasks.deduplication.cleanup_low_confidence_groups'
+    name="paperless_dedupe.worker.tasks.deduplication.cleanup_low_confidence_groups"
 )
-def cleanup_low_confidence_groups(
-    min_confidence: float = 50.0
-) -> dict[str, Any]:
-    """
-    Remove duplicate groups with confidence scores below threshold.
+def cleanup_low_confidence_groups(min_confidence: float = 50.0) -> dict[str, Any]:
+    """Remove duplicate groups with confidence scores below threshold.
 
     Args:
         min_confidence: Minimum confidence score to keep
@@ -465,9 +473,11 @@ def cleanup_low_confidence_groups(
     db = get_worker_session()
     try:
         # Find and delete low confidence groups
-        low_confidence_groups = db.query(DuplicateGroup).filter(
-            DuplicateGroup.confidence_score < min_confidence
-        ).all()
+        low_confidence_groups = (
+            db.query(DuplicateGroup)
+            .filter(DuplicateGroup.confidence_score < min_confidence)
+            .all()
+        )
 
         deleted_count = len(low_confidence_groups)
 
@@ -477,9 +487,9 @@ def cleanup_low_confidence_groups(
         db.commit()
 
         return {
-            'status': 'completed',
-            'groups_deleted': deleted_count,
-            'min_confidence_used': min_confidence
+            "status": "completed",
+            "groups_deleted": deleted_count,
+            "min_confidence_used": min_confidence,
         }
 
     except Exception as e:

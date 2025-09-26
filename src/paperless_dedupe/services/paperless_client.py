@@ -82,7 +82,9 @@ class PaperlessClient:
         if self.paperless:
             await self.paperless.close()
 
-    async def get_all_documents(self, batch_callback=None, limit=None) -> list[dict[str, Any]]:
+    async def get_all_documents(
+        self, batch_callback=None, limit=None
+    ) -> list[dict[str, Any]]:
         """Get all documents from paperless with optimized pagination.
 
         Args:

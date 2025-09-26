@@ -26,10 +26,12 @@ import {
   AlertCircle,
   ExternalLink,
   X,
+  ArrowLeftRight,
 } from 'lucide-react';
 import type { DuplicateGroup } from '../../services/api/types';
 import { configApi } from '../../services/api/config';
 import SimilarityIndicator from '../duplicates/SimilarityIndicator';
+import { DocumentComparisonModal } from '../duplicates/DocumentComparisonModal';
 
 interface DuplicateGroupCardProps {
   group: DuplicateGroup;
@@ -169,6 +171,11 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+
+  // Find the primary document in the group
+  const primaryDocument =
+    group.documents?.find((d) => d.is_primary) || group.documents?.[0];
 
   // Debug logging to check group data
   console.log(
@@ -497,6 +504,15 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
+                      onClick={() => setShowComparison(true)}
+                      variant="outline"
+                      size="sm"
+                      className="hover:bg-blue-50"
+                    >
+                      <ArrowLeftRight className="h-3 w-3 mr-1" />
+                      Compare
+                    </Button>
+                    <Button
                       onClick={handleReviewToggle}
                       disabled={loading}
                       variant={group.reviewed ? 'outline' : 'default'}
@@ -615,6 +631,17 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
           </div>
         </div>
       </CardContent>
+
+      {/* Document Comparison Modal */}
+      {showComparison && primaryDocument && (
+        <DocumentComparisonModal
+          open={showComparison}
+          onClose={() => setShowComparison(false)}
+          primaryDocument={primaryDocument}
+          compareDocuments={group.documents.filter((d) => !d.is_primary)}
+          confidence={group.confidence}
+        />
+      )}
     </Card>
   );
 };

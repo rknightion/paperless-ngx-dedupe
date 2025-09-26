@@ -110,11 +110,11 @@ async def get_config(db: Session = Depends(get_db)):
         value = item.value
         if value is not None and isinstance(value, str):
             # Try to convert to appropriate type
-            if value.lower() in ('true', 'false'):
-                value = value.lower() == 'true'
-            elif value.replace('.', '', 1).replace('-', '', 1).isdigit():
+            if value.lower() in ("true", "false"):
+                value = value.lower() == "true"
+            elif value.replace(".", "", 1).replace("-", "", 1).isdigit():
                 # It's a number
-                if '.' in value:
+                if "." in value:
                     value = float(value)
                 else:
                     value = int(value)
@@ -216,8 +216,8 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
         response["message"] += ". Confidence weights changed - triggering re-analysis."
 
         # Dispatch Celery task for re-analysis
-        from paperless_dedupe.worker.tasks.deduplication import analyze_duplicates
         from paperless_dedupe.worker.celery_app import app as celery_app
+        from paperless_dedupe.worker.tasks.deduplication import analyze_duplicates
 
         # Check if there's already an analysis in progress
         active_tasks = celery_app.control.inspect().active()
@@ -225,19 +225,19 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
         if active_tasks:
             for worker, tasks in active_tasks.items():
                 for task in tasks:
-                    if 'deduplication.analyze_duplicates' in task.get('name', ''):
+                    if "deduplication.analyze_duplicates" in task.get("name", ""):
                         analysis_in_progress = True
                         break
 
         if not analysis_in_progress:
             task = analyze_duplicates.apply_async(
                 kwargs={
-                    'threshold': settings.fuzzy_match_threshold / 100.0,
-                    'force_rebuild': True,
-                    'limit': None,
-                    'broadcast_progress': True
+                    "threshold": settings.fuzzy_match_threshold / 100.0,
+                    "force_rebuild": True,
+                    "limit": None,
+                    "broadcast_progress": True,
                 },
-                queue='deduplication'
+                queue="deduplication",
             )
             response["reanalysis_triggered"] = True
             response["task_id"] = task.id
