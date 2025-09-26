@@ -1,17 +1,16 @@
-import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from paperless_dedupe.core.config_utils import get_current_paperless_config
 from paperless_dedupe.models.database import get_db
 from paperless_dedupe.services.paperless_client import PaperlessClient
-from paperless_dedupe.core.config_utils import get_current_paperless_config
 from paperless_dedupe.worker.celery_app import app as celery_app
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,7 @@ router = APIRouter()
 class ComponentHealth(BaseModel):
     status: str  # healthy, degraded, unhealthy
     latency_ms: float | None = None
-    details: Dict[str, Any] | None = None
+    details: dict[str, Any] | None = None
     last_check: datetime | None = None
     message: str | None = None
 
@@ -96,13 +95,13 @@ async def get_quick_health(db: Session = Depends(get_db)):
         return {
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),
-            "uptime_seconds": time.time() - APP_START_TIME
+            "uptime_seconds": time.time() - APP_START_TIME,
         }
     except Exception as e:
         return {
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
 
@@ -159,7 +158,7 @@ async def check_database_health(db: Session) -> ComponentHealth:
             latency_ms=round(latency, 2),
             details=stats,
             last_check=datetime.utcnow(),
-            message="Database is operational"
+            message="Database is operational",
         )
 
     except Exception as e:
@@ -167,7 +166,7 @@ async def check_database_health(db: Session) -> ComponentHealth:
         return ComponentHealth(
             status="unhealthy",
             message=f"Database connection failed: {str(e)}",
-            last_check=datetime.utcnow()
+            last_check=datetime.utcnow(),
         )
 
 
@@ -179,11 +178,11 @@ async def check_paperless_api_health(db: Session) -> ComponentHealth:
         # Get Paperless client configuration
         client_settings = get_current_paperless_config(db)
 
-        if not client_settings.get("base_url"):
+        if not client_settings.get("paperless_url"):
             return ComponentHealth(
                 status="unhealthy",
                 message="Paperless API not configured",
-                last_check=datetime.utcnow()
+                last_check=datetime.utcnow(),
             )
 
         # Test API connectivity
@@ -191,14 +190,21 @@ async def check_paperless_api_health(db: Session) -> ComponentHealth:
             # Test connection with a simple request
             test_result = await client.test_connection()
 
+            if not test_result:
+                return ComponentHealth(
+                    status="unhealthy",
+                    message="Failed to connect to Paperless API",
+                    last_check=datetime.utcnow()
+                )
+
             # Try to get statistics if possible
             stats = {}
             try:
                 api_stats = await client.get_statistics()
                 stats = {
-                    "total_documents": api_stats.get("documents_total", 0),
-                    "total_tags": api_stats.get("tags_total", 0),
-                    "total_correspondents": api_stats.get("correspondents_total", 0),
+                    "total_documents": api_stats.get("total_documents", 0),
+                    "total_tags": api_stats.get("total_tags", 0),
+                    "total_correspondents": api_stats.get("total_correspondents", 0),
                 }
             except:
                 pass
@@ -210,7 +216,7 @@ async def check_paperless_api_health(db: Session) -> ComponentHealth:
                 latency_ms=round(latency, 2),
                 details=stats,
                 last_check=datetime.utcnow(),
-                message="Paperless API is operational"
+                message="Paperless API is operational",
             )
 
     except Exception as e:
@@ -218,7 +224,7 @@ async def check_paperless_api_health(db: Session) -> ComponentHealth:
         return ComponentHealth(
             status="unhealthy",
             message=f"Paperless API connection failed: {str(e)}",
-            last_check=datetime.utcnow()
+            last_check=datetime.utcnow(),
         )
 
 
@@ -237,7 +243,7 @@ def check_celery_health() -> ComponentHealth | None:
             return ComponentHealth(
                 status="unhealthy",
                 message="No Celery workers available",
-                last_check=datetime.utcnow()
+                last_check=datetime.utcnow(),
             )
 
         worker_count = len(stats)
@@ -248,6 +254,7 @@ def check_celery_health() -> ComponentHealth | None:
         try:
             # This requires redis backend
             from celery import current_app
+
             with current_app.connection_or_acquire() as conn:
                 for queue_name in ["default", "high_priority", "low_priority"]:
                     queue_length = conn.default_channel.client.llen(queue_name)
@@ -265,7 +272,7 @@ def check_celery_health() -> ComponentHealth | None:
             status="healthy",
             details=details,
             last_check=datetime.utcnow(),
-            message=f"{worker_count} worker(s) active, {active_tasks} tasks running"
+            message=f"{worker_count} worker(s) active, {active_tasks} tasks running",
         )
 
     except Exception as e:
@@ -273,7 +280,7 @@ def check_celery_health() -> ComponentHealth | None:
         return ComponentHealth(
             status="degraded",
             message="Celery status unknown",
-            last_check=datetime.utcnow()
+            last_check=datetime.utcnow(),
         )
 
 
@@ -282,10 +289,11 @@ def check_redis_health() -> ComponentHealth | None:
     try:
         # Try to import redis
         import redis
+
         from paperless_dedupe.core.config import settings
 
-        # Parse redis URL from celery broker
-        broker_url = settings.CELERY_BROKER_URL
+        # Parse redis URL from settings
+        broker_url = settings.redis_url
         if not broker_url or not broker_url.startswith("redis://"):
             return None
 
@@ -314,7 +322,7 @@ def check_redis_health() -> ComponentHealth | None:
             latency_ms=round(latency, 2),
             details=details,
             last_check=datetime.utcnow(),
-            message="Redis is operational"
+            message="Redis is operational",
         )
 
     except ImportError:
@@ -324,7 +332,7 @@ def check_redis_health() -> ComponentHealth | None:
         return ComponentHealth(
             status="unhealthy",
             message=f"Redis connection failed: {str(e)}",
-            last_check=datetime.utcnow()
+            last_check=datetime.utcnow(),
         )
 
 
@@ -342,33 +350,39 @@ async def get_health_metrics(db: Session = Depends(get_db)):
         db_metrics = {}
 
         # Document processing metrics
-        result = db.execute(text("""
+        result = db.execute(
+            text("""
             SELECT
                 processing_status,
                 COUNT(*) as count
             FROM documents
             GROUP BY processing_status
-        """))
+        """)
+        )
 
         status_counts = {row.processing_status: row.count for row in result}
         db_metrics["documents_by_status"] = status_counts
 
         # Duplicate metrics
-        result = db.execute(text("""
+        result = db.execute(
+            text("""
             SELECT
                 COUNT(*) as total_groups,
                 COUNT(CASE WHEN reviewed = true THEN 1 END) as reviewed_groups,
                 COUNT(CASE WHEN resolved = true THEN 1 END) as resolved_groups,
                 AVG(confidence_score) as avg_confidence
             FROM duplicate_groups
-        """))
+        """)
+        )
         row = result.first()
         if row:
             db_metrics["duplicate_groups"] = {
                 "total": row.total_groups,
                 "reviewed": row.reviewed_groups,
                 "resolved": row.resolved_groups,
-                "avg_confidence": float(row.avg_confidence) if row.avg_confidence else 0
+                "avg_confidence": float(row.avg_confidence)
+                if row.avg_confidence
+                else 0,
             }
 
         metrics["database"] = db_metrics
@@ -380,6 +394,7 @@ async def get_health_metrics(db: Session = Depends(get_db)):
     # Memory metrics
     try:
         import psutil
+
         process = psutil.Process()
 
         metrics["memory"] = {

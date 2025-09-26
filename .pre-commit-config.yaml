@@ -101,9 +101,12 @@ repos:
     rev: v1.18.2 # Keep updated
     hooks:
       - id: mypy
+        pass_filenames: false
+        args: ["src/paperless_dedupe"]
         additional_dependencies:
           - types-requests
           - types-PyYAML
+          - types-python-dateutil
 
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.37.1

@@ -59,18 +59,16 @@ interface DiffStats {
   similarity: number;
 }
 
-export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = ({
-  open,
-  onClose,
-  primaryDocument,
-  compareDocuments,
-  confidence = 0,
-}) => {
+export const DocumentComparisonModal: React.FC<
+  DocumentComparisonModalProps
+> = ({ open, onClose, primaryDocument, compareDocuments, confidence = 0 }) => {
   const [selectedCompareIndex, setSelectedCompareIndex] = useState(0);
   const [primaryContent, setPrimaryContent] = useState<string>('');
   const [compareContent, setCompareContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'side-by-side' | 'unified'>('side-by-side');
+  const [viewMode, setViewMode] = useState<'side-by-side' | 'unified'>(
+    'side-by-side'
+  );
   const [diffType, setDiffType] = useState<'words' | 'lines'>('lines');
   const [syncScroll, setSyncScroll] = useState(true);
 
@@ -87,11 +85,15 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
     setLoading(true);
     try {
       // Fetch primary document content
-      const primaryResponse = await documentsApi.getDocumentContent(primaryDocument.id);
+      const primaryResponse = await documentsApi.getDocumentContent(
+        primaryDocument.id
+      );
       setPrimaryContent(primaryResponse.full_text || '');
 
       // Fetch compare document content
-      const compareResponse = await documentsApi.getDocumentContent(selectedCompareDocument.id);
+      const compareResponse = await documentsApi.getDocumentContent(
+        selectedCompareDocument.id
+      );
       setCompareContent(compareResponse.full_text || '');
     } catch (error) {
       console.error('Failed to fetch document content:', error);
@@ -120,9 +122,10 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
     let unchanged = 0;
 
     diffResult.forEach((part) => {
-      const count = diffType === 'words'
-        ? part.value.split(/\s+/).length
-        : part.value.split('\n').length;
+      const count =
+        diffType === 'words'
+          ? part.value.split(/\s+/).length
+          : part.value.split('\n').length;
 
       if (part.added) additions += count;
       else if (part.removed) deletions += count;
@@ -141,8 +144,8 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
       const className = part.added
         ? 'bg-green-100 text-green-900'
         : part.removed
-        ? 'bg-red-100 text-red-900'
-        : '';
+          ? 'bg-red-100 text-red-900'
+          : '';
 
       return (
         <span key={index} className={className}>
@@ -155,28 +158,61 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
   // Render metadata comparison
   const renderMetadataComparison = () => {
     const fields = [
-      { label: 'Title', primary: primaryDocument.title, compare: selectedCompareDocument.title },
-      { label: 'Created', primary: primaryDocument.created_date, compare: selectedCompareDocument.created_date },
-      { label: 'Correspondent', primary: primaryDocument.correspondent, compare: selectedCompareDocument.correspondent },
-      { label: 'Type', primary: primaryDocument.document_type, compare: selectedCompareDocument.document_type },
-      { label: 'Filename', primary: primaryDocument.original_filename, compare: selectedCompareDocument.original_filename },
-      { label: 'File Size', primary: primaryDocument.file_size, compare: selectedCompareDocument.file_size, format: (v: any) => v ? `${(v / 1024 / 1024).toFixed(2)} MB` : 'N/A' },
+      {
+        label: 'Title',
+        primary: primaryDocument.title,
+        compare: selectedCompareDocument.title,
+      },
+      {
+        label: 'Created',
+        primary: primaryDocument.created_date,
+        compare: selectedCompareDocument.created_date,
+      },
+      {
+        label: 'Correspondent',
+        primary: primaryDocument.correspondent,
+        compare: selectedCompareDocument.correspondent,
+      },
+      {
+        label: 'Type',
+        primary: primaryDocument.document_type,
+        compare: selectedCompareDocument.document_type,
+      },
+      {
+        label: 'Filename',
+        primary: primaryDocument.original_filename,
+        compare: selectedCompareDocument.original_filename,
+      },
+      {
+        label: 'File Size',
+        primary: primaryDocument.file_size,
+        compare: selectedCompareDocument.file_size,
+        format: (v: any) => (v ? `${(v / 1024 / 1024).toFixed(2)} MB` : 'N/A'),
+      },
     ];
 
     return (
       <div className="space-y-3">
         {fields.map(({ label, primary, compare, format }) => {
-          const primaryValue = format && primary ? format(primary) : (primary || 'N/A');
-          const compareValue = format && compare ? format(compare) : (compare || 'N/A');
+          const primaryValue =
+            format && primary ? format(primary) : primary || 'N/A';
+          const compareValue =
+            format && compare ? format(compare) : compare || 'N/A';
           const isMatch = primaryValue === compareValue;
 
           return (
             <div key={label} className="grid grid-cols-3 gap-4 items-center">
-              <div className="text-sm font-medium text-muted-foreground">{label}</div>
+              <div className="text-sm font-medium text-muted-foreground">
+                {label}
+              </div>
               <div className={`text-sm ${!isMatch ? 'font-medium' : ''}`}>
                 {primaryValue}
               </div>
-              <div className={`text-sm flex items-center space-x-2 ${!isMatch ? 'font-medium' : ''}`}>
+              <div
+                className={`text-sm flex items-center space-x-2 ${
+                  !isMatch ? 'font-medium' : ''
+                }`}
+              >
                 {compareValue}
                 {isMatch ? (
                   <Check className="h-3 w-3 text-green-500" />
@@ -205,8 +241,12 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{primaryDocument.title}</span>
-              <Badge variant="outline" className="text-xs">Primary</Badge>
+              <span className="text-sm font-medium">
+                {primaryDocument.title}
+              </span>
+              <Badge variant="outline" className="text-xs">
+                Primary
+              </Badge>
             </div>
             <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
             <div className="flex items-center space-x-2">
@@ -214,7 +254,9 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
                 <select
                   className="text-sm border rounded px-2 py-1"
                   value={selectedCompareIndex}
-                  onChange={(e) => setSelectedCompareIndex(Number(e.target.value))}
+                  onChange={(e) =>
+                    setSelectedCompareIndex(Number(e.target.value))
+                  }
                 >
                   {compareDocuments.map((doc, index) => (
                     <option key={doc.id} value={index}>
@@ -225,21 +267,38 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
               ) : (
                 <>
                   <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{selectedCompareDocument.title}</span>
+                  <span className="text-sm font-medium">
+                    {selectedCompareDocument.title}
+                  </span>
                 </>
               )}
-              <Badge variant="outline" className="text-xs">Duplicate</Badge>
+              <Badge variant="outline" className="text-xs">
+                Duplicate
+              </Badge>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <Badge variant={confidence >= 0.9 ? 'destructive' : confidence >= 0.7 ? 'warning' : 'secondary'}>
+            <Badge
+              variant={
+                confidence >= 0.9
+                  ? 'destructive'
+                  : confidence >= 0.7
+                    ? 'warning'
+                    : 'secondary'
+              }
+            >
               {Math.round(confidence * 100)}% Match
             </Badge>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/paperless/documents/${primaryDocument.paperless_id}`, '_blank')}
+              onClick={() =>
+                window.open(
+                  `/paperless/documents/${primaryDocument.paperless_id}`,
+                  '_blank'
+                )
+              }
             >
               <ExternalLink className="h-4 w-4 mr-1" />
               Open Primary
@@ -247,7 +306,12 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/paperless/documents/${selectedCompareDocument.paperless_id}`, '_blank')}
+              onClick={() =>
+                window.open(
+                  `/paperless/documents/${selectedCompareDocument.paperless_id}`,
+                  '_blank'
+                )
+              }
             >
               <ExternalLink className="h-4 w-4 mr-1" />
               Open Duplicate
@@ -260,13 +324,19 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Similarity: {diffStats.similarity.toFixed(1)}%</span>
+              <span className="text-sm">
+                Similarity: {diffStats.similarity.toFixed(1)}%
+              </span>
             </div>
             <Progress value={diffStats.similarity} className="w-24 h-2" />
           </div>
           <div className="flex items-center space-x-4 text-sm">
-            <span className="text-green-600">+{diffStats.additions} additions</span>
-            <span className="text-red-600">-{diffStats.deletions} deletions</span>
+            <span className="text-green-600">
+              +{diffStats.additions} additions
+            </span>
+            <span className="text-red-600">
+              -{diffStats.deletions} deletions
+            </span>
           </div>
           <div className="flex items-center space-x-2">
             <label className="flex items-center space-x-1 text-sm">
@@ -310,7 +380,9 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
                 <select
                   className="text-sm border rounded px-2 py-1"
                   value={diffType}
-                  onChange={(e) => setDiffType(e.target.value as 'words' | 'lines')}
+                  onChange={(e) =>
+                    setDiffType(e.target.value as 'words' | 'lines')
+                  }
                 >
                   <option value="lines">Lines</option>
                   <option value="words">Words</option>
@@ -322,7 +394,9 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
                   <Progress className="w-48 mb-2" />
-                  <p className="text-sm text-muted-foreground">Loading document content...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Loading document content...
+                  </p>
                 </div>
               </div>
             ) : viewMode === 'side-by-side' ? (
@@ -368,12 +442,20 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Overall Confidence</p>
-                    <p className="text-2xl font-bold">{Math.round(confidence * 100)}%</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Overall Confidence
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {Math.round(confidence * 100)}%
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Content Similarity</p>
-                    <p className="text-2xl font-bold">{diffStats.similarity.toFixed(1)}%</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Content Similarity
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {diffStats.similarity.toFixed(1)}%
+                    </p>
                   </div>
                 </div>
               </div>
@@ -382,13 +464,15 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-yellow-900">Recommendation</h4>
+                    <h4 className="font-medium text-yellow-900">
+                      Recommendation
+                    </h4>
                     <p className="text-sm text-yellow-800 mt-1">
                       {confidence >= 0.9
                         ? 'These documents are very likely duplicates. Consider keeping only one.'
                         : confidence >= 0.7
-                        ? 'These documents are probable duplicates. Review carefully before deletion.'
-                        : 'These documents have some similarities but may not be true duplicates.'}
+                          ? 'These documents are probable duplicates. Review carefully before deletion.'
+                          : 'These documents have some similarities but may not be true duplicates.'}
                     </p>
                   </div>
                 </div>
@@ -398,9 +482,7 @@ export const DocumentComparisonModal: React.FC<DocumentComparisonModalProps> = (
                 <Button variant="outline" onClick={onClose}>
                   Close
                 </Button>
-                <Button variant="destructive">
-                  Delete Duplicate
-                </Button>
+                <Button variant="destructive">Delete Duplicate</Button>
               </div>
             </div>
           </TabsContent>

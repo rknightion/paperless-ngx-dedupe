@@ -42,8 +42,10 @@ export const Tabs: React.FC<TabsProps> = ({
   className,
   children,
 }) => {
-  const [uncontrolledValue, setUncontrolledValue] = React.useState(defaultValue);
-  const value = controlledValue !== undefined ? controlledValue : uncontrolledValue;
+  const [uncontrolledValue, setUncontrolledValue] =
+    React.useState(defaultValue);
+  const value =
+    controlledValue !== undefined ? controlledValue : uncontrolledValue;
 
   const handleValueChange = (newValue: string) => {
     if (controlledValue === undefined) {

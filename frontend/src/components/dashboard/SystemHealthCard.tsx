@@ -1,10 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Progress } from '../ui/Progress';
 import {
@@ -241,13 +236,15 @@ export const SystemHealthCard: React.FC = () => {
                 <div>
                   <span className="text-muted-foreground">Documents:</span>
                   <span className="ml-1 font-medium">
-                    {health.database.details.document_count?.toLocaleString() || 0}
+                    {health.database.details.document_count?.toLocaleString() ||
+                      0}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Groups:</span>
                   <span className="ml-1 font-medium">
-                    {health.database.details.duplicate_group_count?.toLocaleString() || 0}
+                    {health.database.details.duplicate_group_count?.toLocaleString() ||
+                      0}
                   </span>
                 </div>
               </div>
@@ -272,7 +269,8 @@ export const SystemHealthCard: React.FC = () => {
               <div className="ml-6 text-xs text-muted-foreground">
                 {health.paperless_api.details.total_documents && (
                   <span>
-                    {health.paperless_api.details.total_documents.toLocaleString()} documents
+                    {health.paperless_api.details.total_documents.toLocaleString()}{' '}
+                    documents
                   </span>
                 )}
               </div>
@@ -287,11 +285,15 @@ export const SystemHealthCard: React.FC = () => {
                   <Server className="h-4 w-4 text-purple-500" />
                   <span className="text-sm font-medium">Background Worker</span>
                 </div>
-                {getStatusIcon(health.celery_worker.status)}
+                <div className="flex items-center space-x-2">
+                  {getStatusIcon(health.celery_worker.status)}
+                </div>
               </div>
               {health.celery_worker.details && (
                 <div className="ml-6 text-xs text-muted-foreground">
-                  <span>{health.celery_worker.details.worker_count} worker(s)</span>
+                  <span>
+                    {health.celery_worker.details.worker_count} worker(s)
+                  </span>
                   {health.celery_worker.details.active_tasks > 0 && (
                     <span className="ml-2">
                       • {health.celery_worker.details.active_tasks} active tasks
@@ -327,7 +329,8 @@ export const SystemHealthCard: React.FC = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Memory Usage</span>
                   <span className="font-medium">
-                    {Math.round(metrics.memory.rss_mb)} MB ({metrics.memory.percent.toFixed(1)}%)
+                    {Math.round(metrics.memory.rss_mb)} MB (
+                    {metrics.memory.percent.toFixed(1)}%)
                   </span>
                 </div>
                 <Progress value={metrics.memory.percent} className="h-2" />
@@ -339,7 +342,8 @@ export const SystemHealthCard: React.FC = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">CPU Usage</span>
                   <span className="font-medium">
-                    {metrics.cpu.percent.toFixed(1)}% ({metrics.cpu.num_threads} threads)
+                    {metrics.cpu.percent.toFixed(1)}% ({metrics.cpu.num_threads}{' '}
+                    threads)
                   </span>
                 </div>
                 <Progress value={metrics.cpu.percent} className="h-2" />
@@ -352,7 +356,10 @@ export const SystemHealthCard: React.FC = () => {
                 <div className="flex items-center space-x-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
                   <span className="font-medium">
-                    {(metrics.database.duplicate_groups.avg_confidence * 100).toFixed(1)}%
+                    {(
+                      metrics.database.duplicate_groups.avg_confidence * 100
+                    ).toFixed(1)}
+                    %
                   </span>
                 </div>
               </div>

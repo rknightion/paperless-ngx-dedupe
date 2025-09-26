@@ -103,8 +103,12 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
         <div className="mt-6 space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-800">
-              <strong>Tip:</strong> Press <Badge variant="outline" className="mx-1">?</Badge>
-              anytime to show this help. Most shortcuts work when not typing in an input field.
+              <strong>Tip:</strong> Press{' '}
+              <Badge variant="outline" className="mx-1">
+                ?
+              </Badge>
+              anytime to show this help. Most shortcuts work when not typing in
+              an input field.
             </p>
           </div>
 
@@ -125,7 +129,9 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
                         <ShortcutKey shortcut={shortcut} />
                         {shortcut.key2 && (
                           <>
-                            <span className="text-xs text-muted-foreground mx-1">then</span>
+                            <span className="text-xs text-muted-foreground mx-1">
+                              then
+                            </span>
                             <ShortcutKey shortcut={{ key: shortcut.key2 }} />
                           </>
                         )}
@@ -140,10 +146,15 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
           <div className="border-t pt-4">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <div>
-                <strong>Navigation keys:</strong> Vim-style (j/k/h/l) for movement
+                <strong>Navigation keys:</strong> Vim-style (j/k/h/l) for
+                movement
               </div>
               <div>
-                Press <Badge variant="outline" className="mx-1">Escape</Badge> to close
+                Press{' '}
+                <Badge variant="outline" className="mx-1">
+                  Escape
+                </Badge>{' '}
+                to close
               </div>
             </div>
           </div>

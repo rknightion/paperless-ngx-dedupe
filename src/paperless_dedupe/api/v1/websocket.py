@@ -41,6 +41,12 @@ class ConnectionManager:
         websocket = self.active_connections.get(connection_id)
         if websocket:
             try:
+                # Check if websocket is still connected
+                if websocket.client_state.value != 1:  # 1 = CONNECTED
+                    logger.debug(f"WebSocket {connection_id} is not connected, removing from active connections")
+                    self.disconnect(connection_id)
+                    return
+
                 # Convert datetime objects to ISO format strings
                 def serialize_datetime(obj):
                     if isinstance(obj, datetime):
@@ -53,7 +59,8 @@ class ConnectionManager:
                     json.dumps(message, default=serialize_datetime)
                 )
             except Exception as e:
-                logger.error(f"Error sending message to {connection_id}: {e}")
+                if "Need to call \"accept\" first" not in str(e):
+                    logger.error(f"Error sending message to {connection_id}: {e}")
                 self.disconnect(connection_id)
 
     async def broadcast(self, message: dict):
@@ -82,7 +89,8 @@ class ConnectionManager:
                 else:
                     disconnected_connections.append(connection_id)
             except Exception as e:
-                logger.error(f"Error broadcasting to {connection_id}: {e}")
+                if "Need to call \"accept\" first" not in str(e):
+                    logger.error(f"Error broadcasting to {connection_id}: {e}")
                 disconnected_connections.append(connection_id)
 
         # Clean up disconnected connections
@@ -163,13 +171,21 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.info(f"Client disconnected: {connection_id}")
                 break
             except Exception as e:
+                # Check if it's a "Need to call accept first" error and break immediately
+                if "Need to call \"accept\" first" in str(e):
+                    logger.debug(f"WebSocket connection already closed: {connection_id}")
+                    break
+
                 logger.error(f"Error handling WebSocket message: {e}")
                 # Only send error if WebSocket is still connected
                 if connection_id in manager.active_connections:
                     try:
-                        await manager.send_error(
-                            f"Server error: {str(e)}", connection_id
-                        )
+                        websocket = manager.active_connections.get(connection_id)
+                        # Check WebSocket state before sending
+                        if websocket and websocket.client_state.value == 1:  # 1 = CONNECTED
+                            await manager.send_error(
+                                f"Server error: {str(e)}", connection_id
+                            )
                     except Exception:  # noqa: E722
                         pass  # Connection might be closed, ignore error
 

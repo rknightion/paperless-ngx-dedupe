@@ -117,7 +117,6 @@ warn_unreachable = false
 strict_optional = false
 show_error_codes = true
 namespace_packages = true
-mypy_path = "src"
 check_untyped_defs = true
 disallow_untyped_defs = false
 disallow_any_generics = false
