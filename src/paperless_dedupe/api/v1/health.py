@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from paperless_dedupe.models.database import get_db
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from paperless_dedupe.core.config_utils import get_current_paperless_config
-from paperless_dedupe.worker.celery_app import celery_app
+from paperless_dedupe.worker.celery_app import app as celery_app
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
