@@ -5,10 +5,14 @@
     "enabled": true,
     "automerge": true
   },
-  "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": true,
   "packageRules": [
+    {
+      "description": "Never automerge release-please PRs - manual review required",
+      "matchPaths": [".release-please-*.json"],
+      "automerge": false
+    },
     {
       "description": "Automerge GitHub Actions",
       "matchManagers": ["github-actions"],
@@ -16,10 +20,22 @@
       "automerge": true
     },
     {
-      "description": "Automerge most dependency updates",
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "description": "Automerge patch and minor updates for low risk",
+      "matchUpdateTypes": ["patch", "minor"],
       "automerge": true,
-      "labels": ["dep:automerge"]
+      "labels": ["dep:low-risk"]
+    },
+    {
+      "description": "Automerge pin updates",
+      "matchUpdateTypes": ["pin"],
+      "automerge": true,
+      "labels": ["dep:low-risk"]
+    },
+    {
+      "description": "Automerge digest updates (Docker, etc)",
+      "matchUpdateTypes": ["digest"],
+      "automerge": true,
+      "labels": ["dep:low-risk"]
     }
   ]
 }

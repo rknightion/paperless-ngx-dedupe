@@ -43,7 +43,9 @@ class ConnectionManager:
             try:
                 # Check if websocket is still connected
                 if websocket.client_state.value != 1:  # 1 = CONNECTED
-                    logger.debug(f"WebSocket {connection_id} is not connected, removing from active connections")
+                    logger.debug(
+                        f"WebSocket {connection_id} is not connected, removing from active connections"
+                    )
                     self.disconnect(connection_id)
                     return
 
@@ -59,7 +61,7 @@ class ConnectionManager:
                     json.dumps(message, default=serialize_datetime)
                 )
             except Exception as e:
-                if "Need to call \"accept\" first" not in str(e):
+                if 'Need to call "accept" first' not in str(e):
                     logger.error(f"Error sending message to {connection_id}: {e}")
                 self.disconnect(connection_id)
 
@@ -89,7 +91,7 @@ class ConnectionManager:
                 else:
                     disconnected_connections.append(connection_id)
             except Exception as e:
-                if "Need to call \"accept\" first" not in str(e):
+                if 'Need to call "accept" first' not in str(e):
                     logger.error(f"Error broadcasting to {connection_id}: {e}")
                 disconnected_connections.append(connection_id)
 
@@ -172,8 +174,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 break
             except Exception as e:
                 # Check if it's a "Need to call accept first" error and break immediately
-                if "Need to call \"accept\" first" in str(e):
-                    logger.debug(f"WebSocket connection already closed: {connection_id}")
+                if 'Need to call "accept" first' in str(e):
+                    logger.debug(
+                        f"WebSocket connection already closed: {connection_id}"
+                    )
                     break
 
                 logger.error(f"Error handling WebSocket message: {e}")
@@ -182,7 +186,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     try:
                         websocket = manager.active_connections.get(connection_id)
                         # Check WebSocket state before sending
-                        if websocket and websocket.client_state.value == 1:  # 1 = CONNECTED
+                        if (
+                            websocket and websocket.client_state.value == 1
+                        ):  # 1 = CONNECTED
                             await manager.send_error(
                                 f"Server error: {str(e)}", connection_id
                             )

@@ -194,7 +194,7 @@ async def check_paperless_api_health(db: Session) -> ComponentHealth:
                 return ComponentHealth(
                     status="unhealthy",
                     message="Failed to connect to Paperless API",
-                    last_check=datetime.utcnow()
+                    last_check=datetime.utcnow(),
                 )
 
             # Try to get statistics if possible
