@@ -3,19 +3,19 @@
 # =============================================================================
 FROM node:20-alpine AS frontend-builder
 
-WORKDIR /app/frontend
+WORKDIR /app
 
-# Copy package files first for better layer caching
-COPY frontend/package.json frontend/package-lock.json ./
+# Bring in the whole repo so we can read a local .env if present (optional)
+COPY . .
 
 # Install dependencies (this layer will be cached if package files don't change)
+WORKDIR /app/frontend
 RUN npm ci --silent
 
-# Copy frontend source (separate layer for code changes)
-COPY frontend/ ./
-
-# Build frontend
-RUN npm run build
+# Build frontend with Vite/Faro env pulled from .env when available
+RUN if [ -f /app/.env ]; then set -a; . /app/.env; set +a; fi; \
+    export FARO_SOURCEMAP_UPLOAD=true; \
+    npm run build
 
 # =============================================================================
 # Backend Build Stage
@@ -91,7 +91,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application under OpenTelemetry auto-instrumentation with resource attributes
-CMD ["sh", "-lc", "OTEL_RESOURCE_ATTRIBUTES='service.name=paperless-dedupe,service.namespace=paperless-ngx,deployment.environment=production,service.version=1.0.0,service.instance.id=$HOSTNAME' opentelemetry-instrument uvicorn paperless_dedupe.main:app --host 0.0.0.0 --port 8000"]
+# Allow service.version and deployment.environment to be overridden via env vars
+CMD ["sh", "-lc", "OTEL_RESOURCE_ATTRIBUTES=\"service.name=paperless-dedupe,service.namespace=paperless-ngx,deployment.environment=${DEPLOYMENT_ENVIRONMENT:-production},service.version=${APP_VERSION:-dev},service.instance.id=$HOSTNAME\" opentelemetry-instrument uvicorn paperless_dedupe.main:app --host 0.0.0.0 --port 8000"]
 
 # =============================================================================
 # Frontend Production Stage

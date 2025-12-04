@@ -6,9 +6,13 @@ import time
 from sqlalchemy import create_engine, text
 
 from paperless_dedupe.core.config import settings
+from paperless_dedupe.observability.tracing import setup_tracing
 from paperless_dedupe.worker.celery_app import app
 
 logger = logging.getLogger(__name__)
+
+# Ensure tracing is active for worker processes
+setup_tracing(component="worker")
 
 
 @app.on_after_configure.connect

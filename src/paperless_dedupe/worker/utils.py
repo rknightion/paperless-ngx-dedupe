@@ -17,6 +17,9 @@ async def broadcast_task_status(
     error: str | None = None,
     result: dict[str, Any] | None = None,
     websocket_url: str | None = None,
+    task_type: str | None = None,
+    started_at: Any | None = None,
+    completed_at: Any | None = None,
 ) -> None:
     """Broadcast task status updates via WebSocket through the FastAPI server.
 
@@ -50,7 +53,20 @@ async def broadcast_task_status(
             "total": total,
             "error": error,
             "result": result,
+            "task_type": task_type,
         }
+
+        if started_at:
+            if isinstance(started_at, datetime):
+                update_data["started_at"] = started_at.isoformat()
+            else:
+                update_data["started_at"] = str(started_at)
+
+        if completed_at:
+            if isinstance(completed_at, datetime):
+                update_data["completed_at"] = completed_at.isoformat()
+            else:
+                update_data["completed_at"] = str(completed_at)
 
         # Send update to FastAPI server endpoint that will broadcast via WebSocket
         async with httpx.AsyncClient() as client:

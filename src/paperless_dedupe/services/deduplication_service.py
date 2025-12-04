@@ -4,6 +4,7 @@ import logging
 import pickle
 import re
 from collections.abc import Callable
+from datetime import datetime
 
 from datasketch import MinHash, MinHashLSH
 from rapidfuzz import fuzz
@@ -94,7 +95,6 @@ class DeduplicationService:
         weight_jaccard = settings.confidence_weight_jaccard / 100.0
         weight_fuzzy = settings.confidence_weight_fuzzy / 100.0
         weight_metadata = settings.confidence_weight_metadata / 100.0
-        weight_filename = settings.confidence_weight_filename / 100.0
 
         # MinHash Jaccard similarity (FAST - already computed)
         if (
@@ -118,7 +118,12 @@ class DeduplicationService:
             metadata_scores.append(size_ratio)
 
         # Date similarity (if both have dates)
-        if doc1.created_date and doc2.created_date:
+        if (
+            doc1.created_date
+            and doc2.created_date
+            and isinstance(doc1.created_date, datetime)
+            and isinstance(doc2.created_date, datetime)
+        ):
             time_diff = abs((doc1.created_date - doc2.created_date).total_seconds())
             # Documents within 24 hours get high score, decreasing over time
             date_score = max(0, 1 - (time_diff / (86400 * 30)))  # 30 days max
@@ -136,28 +141,10 @@ class DeduplicationService:
 
         if metadata_scores:
             component_scores["metadata"] = sum(metadata_scores) / len(metadata_scores)
-            if (
-                not quick_mode and weight_metadata > 0
-            ):  # Only use metadata in full mode and if weight > 0
+            # Keep metadata as fallback when no text signals are usable
+            if weight_metadata > 0 or (not scores and metadata_scores):
                 scores.append(component_scores["metadata"])
-                weights.append(weight_metadata)
-
-        # Filename similarity
-        if (
-            doc1.original_filename
-            and doc2.original_filename
-            and not quick_mode
-            and weight_filename > 0
-        ):
-            filename_score = (
-                fuzz.ratio(
-                    doc1.original_filename.lower(), doc2.original_filename.lower()
-                )
-                / 100.0
-            )
-            component_scores["filename"] = filename_score
-            scores.append(filename_score)
-            weights.append(weight_filename)
+                weights.append(weight_metadata if weight_metadata > 0 else 1.0)
 
         # Skip expensive fuzzy matching in quick mode or if disabled
         if (

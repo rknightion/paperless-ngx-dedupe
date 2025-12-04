@@ -293,14 +293,25 @@ uv run uvicorn paperless_dedupe.main:app --reload --port 30001
 ### Docker Setup
 
 ```bash
-# Build and start services
-docker-compose up -d
+# Start all services
+docker compose up
 
 # View logs
-docker-compose logs -f paperless-dedupe
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
+```
+
+### Helper Scripts
+
+```bash
+# Unified development helper
+./scripts/dev.sh setup         # Initial setup
+./scripts/dev.sh reset-db      # Reset database
+./scripts/dev.sh test          # Run all tests
+./scripts/dev.sh test:unit     # Unit tests only
+./scripts/dev.sh worker        # Start Celery worker locally
 ```
 
 ### Testing

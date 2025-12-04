@@ -9,8 +9,9 @@ docs/
 LICENSE
 
 # Development
-.env
+# Keep .env out of git but allow it into the Docker build context for optional build-time configuration.
 .env.*
+!.env
 !.env.example
 *.log
 *.pid

@@ -1,6 +1,6 @@
 [project]
 name = "paperless-dedupe"
-version = "1.0.0"
+version = "0.1.0"
 description = "Advanced document deduplication tool for paperless-ngx with fuzzy matching and web UI"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -70,9 +70,11 @@ dependencies = [
     "opentelemetry-instrumentation-grpc==0.57b0",
     "opentelemetry-instrumentation-httpx==0.57b0",
     "opentelemetry-instrumentation-requests==0.57b0",
+    "opentelemetry-instrumentation-redis==0.57b0",
     "opentelemetry-instrumentation-sqlalchemy==0.57b0",
     "opentelemetry-instrumentation-starlette==0.57b0",
     "opentelemetry-instrumentation-system-metrics==0.57b0",
+    "opentelemetry-instrumentation-celery==0.57b0",
     "opentelemetry-instrumentation-tortoiseorm==0.57b0",
     "opentelemetry-instrumentation-urllib3==0.57b0",
     "ruff>=0.12.10",
@@ -103,7 +105,6 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
     "pytest-timeout>=2.3.1",
-    "python-semantic-release>=9.8.0",
 ]
 
 [tool.mypy]
@@ -147,23 +148,26 @@ exclude = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
 norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = [
+    "-v",
+    "--tb=short",
     "--strict-markers",
     "--strict-config",
-    "--cov=paperless_dedupe",
-    "--cov-report=term-missing:skip-covered",
-    "--cov-report=html",
-    "--cov-report=xml",
-    "--cov-fail-under=0",
-    "-q",
+    "--timeout=10",
+    "--maxfail=3",
+    "-m", "not benchmark and not slow",
 ]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
-    "slow: Slow tests",
+    "slow: Slow running tests",
+    "benchmark: Performance benchmark tests",
 ]
 
 [tool.coverage.run]
@@ -272,14 +276,3 @@ quote-style = "double"
 # Like Black, indent with spaces.
 indent-style = "space"
 
-[tool.semantic_release]
-branch = "main"
-commit_parser = "angular"
-commit_message = "chore(release): {version} [skip ci]"
-tag_format = "v{version}"
-version_toml = ["pyproject.toml:project.version"]
-version_variables = ["src/paperless_dedupe/__init__.py:__version__"]
-changelog_file = "CHANGELOG.md"
-build_command = ""
-upload_to_release = true
-upload_to_pypi = false

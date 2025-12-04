@@ -43,7 +43,6 @@ interface SimilarityIndicatorProps {
     jaccard_similarity: number;
     fuzzy_text_ratio: number;
     metadata_similarity: number;
-    filename_similarity: number;
   };
   className?: string;
 }
@@ -92,10 +91,9 @@ const SimilarityBreakdown: React.FC<SimilarityBreakdownProps> = ({
   // Get confidence weights from config
   const config = useSelector((state: RootState) => state.config.configuration);
   const weights = {
-    jaccard: config?.confidence_weight_jaccard ?? 40,
-    fuzzy: config?.confidence_weight_fuzzy ?? 30,
-    metadata: config?.confidence_weight_metadata ?? 20,
-    filename: config?.confidence_weight_filename ?? 10,
+    jaccard: config?.confidence_weight_jaccard ?? 90,
+    fuzzy: config?.confidence_weight_fuzzy ?? 10,
+    metadata: config?.confidence_weight_metadata ?? 0,
   };
 
   const metrics = [
@@ -122,12 +120,6 @@ const SimilarityBreakdown: React.FC<SimilarityBreakdownProps> = ({
       value: similarity.metadata_similarity,
       color: 'bg-yellow-500',
       weight: `${weights.metadata}%`,
-    },
-    {
-      label: 'Filename Match',
-      value: similarity.filename_similarity,
-      color: 'bg-purple-500',
-      weight: `${weights.filename}%`,
     },
   ];
 

@@ -35,7 +35,6 @@ export interface Document {
     jaccard_similarity: number;
     fuzzy_text_ratio: number;
     metadata_similarity: number;
-    filename_similarity: number;
   };
 }
 
@@ -65,7 +64,6 @@ export interface DuplicateGroup {
     jaccard_similarity: number;
     fuzzy_text_ratio: number;
     metadata_similarity: number;
-    filename_similarity: number;
   };
 }
 
@@ -122,7 +120,6 @@ export interface Configuration {
   confidence_weight_jaccard?: number;
   confidence_weight_fuzzy?: number;
   confidence_weight_metadata?: number;
-  confidence_weight_filename?: number;
 }
 
 export interface TestConnectionResponse {
@@ -165,12 +162,11 @@ export interface DuplicateGroupQueryParams {
   page_size?: number;
   reviewed?: boolean;
   min_confidence?: number;
-  sort_by?: 'confidence' | 'created' | 'documents' | 'filename';
+  sort_by?: 'confidence' | 'created' | 'documents';
   sort_order?: 'asc' | 'desc';
   // Dynamic confidence weight parameters
   use_jaccard?: boolean;
   use_fuzzy?: boolean;
   use_metadata?: boolean;
-  use_filename?: boolean;
   min_fuzzy_ratio?: number;
 }

@@ -33,7 +33,6 @@ def calculate_document_similarity(
                 "jaccard_similarity": 1.0,
                 "fuzzy_text_ratio": 1.0,
                 "metadata_similarity": 1.0,
-                "filename_similarity": 1.0,
             }
 
         # Use cached contents if available, otherwise empty strings
@@ -58,7 +57,6 @@ def calculate_document_similarity(
             "jaccard_similarity": round(components.get("jaccard") or 0, 3),
             "fuzzy_text_ratio": round(components.get("fuzzy") or 0, 3),
             "metadata_similarity": round(components.get("metadata") or 0, 3),
-            "filename_similarity": round(components.get("filename") or 0, 3),
         }
     except Exception as e:
         logger.warning(
@@ -69,7 +67,6 @@ def calculate_document_similarity(
             "jaccard_similarity": 0.0,
             "fuzzy_text_ratio": 0.0,
             "metadata_similarity": 0.0,
-            "filename_similarity": 0.0,
         }
 
 
@@ -100,7 +97,6 @@ class ConfidenceWeights(BaseModel):
     jaccard: bool = True
     fuzzy: bool = True
     metadata: bool = True
-    filename: bool = True
 
 
 @router.get("/groups", response_model=DuplicateGroupsListResponse)
@@ -110,15 +106,12 @@ async def get_duplicate_groups(
     min_confidence: float = Query(0.0, ge=0.0, le=1.0),
     reviewed: bool | None = None,
     resolved: bool | None = None,
-    sort_by: str = Query(
-        "confidence", regex="^(confidence|created|documents|filename)$"
-    ),
+    sort_by: str = Query("confidence", regex="^(confidence|created|documents)$"),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
     # Dynamic confidence weights for filtering (optional)
     use_jaccard: bool = Query(True),
     use_fuzzy: bool = Query(True),
     use_metadata: bool = Query(True),
-    use_filename: bool = Query(True),
     min_fuzzy_ratio: float = Query(0.0, ge=0.0, le=1.0),
     db: Session = Depends(get_db),
 ):
@@ -134,7 +127,6 @@ async def get_duplicate_groups(
             "jaccard": use_jaccard,
             "fuzzy": use_fuzzy,
             "metadata": use_metadata,
-            "filename": use_filename,
         }
 
         # Apply filters - filter by fuzzy ratio if specified (minimum 50%)
@@ -280,9 +272,6 @@ async def get_duplicate_groups(
                     "metadata_similarity": group.metadata_similarity
                     if use_metadata
                     else None,
-                    "filename_similarity": group.filename_similarity
-                    if use_filename
-                    else None,
                 }
             else:
                 # Legacy groups - estimate breakdown
@@ -295,9 +284,6 @@ async def get_duplicate_groups(
                     else None,
                     "metadata_similarity": group.confidence_score * 0.85
                     if use_metadata
-                    else None,
-                    "filename_similarity": group.confidence_score * 0.75
-                    if use_filename
                     else None,
                 }
 
@@ -414,7 +400,6 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
             "jaccard_similarity": group.confidence_score,
             "fuzzy_text_ratio": group.confidence_score * 0.95,
             "metadata_similarity": group.confidence_score * 0.85,
-            "filename_similarity": group.confidence_score * 0.75,
         }
         if group.confidence_score
         else None,

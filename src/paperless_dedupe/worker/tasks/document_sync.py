@@ -1,21 +1,24 @@
 import asyncio
+import hashlib
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from celery import Task, current_task
 from celery.exceptions import SoftTimeLimitExceeded
 from dateutil import parser as date_parser
+from opentelemetry import trace
 from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
-from paperless_dedupe.models.database import Document, DocumentContent
+from paperless_dedupe.models.database import AppConfig, Document, DocumentContent
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from paperless_dedupe.worker.celery_app import app
 from paperless_dedupe.worker.database import get_worker_session
 from paperless_dedupe.worker.utils import broadcast_task_status
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 def parse_date_field(date_value):
@@ -36,6 +39,9 @@ def parse_date_field(date_value):
             return parsed
         except (ValueError, TypeError):
             return None
+    if isinstance(date_value, date):
+        # Preserve the date while making it timezone-aware at midnight
+        return datetime.combine(date_value, datetime.min.time(), tzinfo=UTC)
     return None
 
 
@@ -46,146 +52,335 @@ async def _sync_documents_async(
     limit: int,
     broadcast_progress: bool,
     task_id: str,
+    started_at: datetime,
 ) -> dict[str, Any]:
     """Async implementation of document sync"""
     documents_synced = 0
     documents_updated = 0
     errors = []
 
-    async with PaperlessClient(**client_settings) as client:
-        # Test connection first
-        if broadcast_progress:
-            await broadcast_task_status(
-                task_id=task_id,
-                status="processing",
-                step="Testing connection to paperless-ngx",
-                progress=0,
-            )
-
-        await client.test_connection()
-
-        # Get total document count
-        stats = await client.get_statistics()
-        total_documents = stats.get("documents_total", 0)
-
-        if limit:
-            total_documents = min(total_documents, limit)
-
-        logger.info(f"Found {total_documents} documents in paperless-ngx")
-
-        if broadcast_progress:
-            await broadcast_task_status(
-                task_id=task_id,
-                status="processing",
-                step=f"Syncing {total_documents} documents",
-                progress=0,
-                total=total_documents,
-            )
-
-        # Get all document IDs from paperless
-        all_documents = await client.get_all_documents(limit=limit)
-
-        # Create mapping of existing documents
-        existing_docs = {}
-        if not force_refresh:
-            for doc in db.query(Document).all():
-                existing_docs[doc.paperless_id] = doc
-
-        # Process each document
-        for idx, doc_data in enumerate(all_documents):
-            try:
-                paperless_id = doc_data["id"]
-
-                # Update progress periodically
-                if broadcast_progress and idx % 100 == 0:
-                    await broadcast_task_status(
-                        task_id=task_id,
-                        status="processing",
-                        step="Processing documents",
-                        progress=idx + 1,
-                        total=total_documents,
-                    )
-
-                # Check if document needs update
-                existing_doc = existing_docs.get(paperless_id)
-                if existing_doc and not force_refresh:
-                    # Check if document was modified
-                    modified_date = parse_date_field(doc_data.get("modified"))
-                    if modified_date and existing_doc.modified_date:
-                        # Ensure both dates are timezone-aware for comparison
-                        existing_date = existing_doc.modified_date
-                        if existing_date.tzinfo is None:
-                            existing_date = existing_date.replace(tzinfo=UTC)
-                        if modified_date <= existing_date:
-                            continue  # Skip unchanged document
-
-                # Get document content
-                content_text = await client.get_document_content(paperless_id)
-
-                if not content_text:
-                    logger.warning(f"Document {paperless_id} has no content, skipping")
-                    continue
-
-                # Create or update document record
-                if existing_doc:
-                    document = existing_doc
-                    documents_updated += 1
-                else:
-                    document = Document(paperless_id=paperless_id)
-                    documents_synced += 1
-
-                # Update document fields
-                document.title = doc_data.get("title", "")[:500]
-                document.fingerprint = doc_data.get("checksum", "")[:64]
-                document.correspondent = doc_data.get("correspondent_name", "")[:200]
-                document.document_type = doc_data.get("document_type_name", "")[:200]
-                document.tags = [
-                    tag.get("name", "") for tag in doc_data.get("tags", [])
-                ]
-                document.archive_filename = doc_data.get("archive_filename", "")[:500]
-                document.original_filename = doc_data.get("original_filename", "")[:500]
-                document.created_date = parse_date_field(doc_data.get("created"))
-                document.added_date = parse_date_field(doc_data.get("added"))
-                document.modified_date = parse_date_field(doc_data.get("modified"))
-                document.processing_status = "pending"
-                document.last_processed = datetime.now(UTC)
-
-                if not existing_doc:
-                    db.add(document)
-
-                db.flush()
-
-                # Store document content
-                doc_content = (
-                    db.query(DocumentContent).filter_by(document_id=document.id).first()
+    with tracer.start_as_current_span(
+        "paperless.sync_documents",
+        attributes={
+            "paperless.force_refresh": force_refresh,
+            "paperless.limit": limit or 0,
+            "paperless.broadcast": broadcast_progress,
+        },
+    ):
+        async with PaperlessClient(**client_settings) as client:
+            # Test connection first
+            if broadcast_progress:
+                await broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step="Testing connection to paperless-ngx",
+                    progress=0,
+                    started_at=started_at,
+                    task_type="sync",
                 )
 
-                if not doc_content:
-                    doc_content = DocumentContent(document_id=document.id)
+            with tracer.start_as_current_span("paperless.test_connection"):
+                await client.test_connection()
 
-                # Truncate content if too long
-                max_length = settings.max_ocr_length
-                if len(content_text) > max_length:
-                    content_text = content_text[:max_length]
+            # Get total document count (fallback to actual fetched count below)
+            with tracer.start_as_current_span("paperless.fetch_statistics"):
+                stats = await client.get_statistics()
+            total_documents = (
+                stats.get("total_documents") or stats.get("documents_total") or 0
+            )
 
-                doc_content.full_text = content_text
-                doc_content.word_count = len(content_text.split())
+            if limit:
+                total_documents = min(total_documents, limit)
 
-                if not doc_content.id:
-                    db.add(doc_content)
+            logger.info(f"Found {total_documents} documents in paperless-ngx")
 
-                # Commit periodically
-                if (idx + 1) % 50 == 0:
-                    db.commit()
+            if broadcast_progress:
+                await broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step=f"Syncing {total_documents} documents",
+                    progress=0,
+                    total=total_documents,
+                    started_at=started_at,
+                    task_type="sync",
+                )
 
+            # Preload reference data for better metadata mapping
+            tag_map: dict[str, str] = {}
+            correspondent_map: dict[str, str] = {}
+            document_type_map: dict[str, str] = {}
+
+            try:
+                with tracer.start_as_current_span("paperless.preload.tags"):
+                    tag_map = {
+                        str(tag["id"]): tag.get("name", "")
+                        for tag in await client.get_tags()
+                        if tag.get("id") is not None
+                    }
             except Exception as e:
-                logger.error(f"Error syncing document {paperless_id}: {str(e)}")
-                errors.append({"document_id": paperless_id, "error": str(e)})
-                db.rollback()
-                continue
+                logger.warning(f"Could not preload tags: {e}")
 
-        # Final commit
-        db.commit()
+            try:
+                with tracer.start_as_current_span("paperless.preload.correspondents"):
+                    correspondent_map = {
+                        str(c["id"]): c.get("name", "")
+                        for c in await client.get_correspondents()
+                        if c.get("id") is not None
+                    }
+            except Exception as e:
+                logger.warning(f"Could not preload correspondents: {e}")
+
+            try:
+                with tracer.start_as_current_span("paperless.preload.document_types"):
+                    document_type_map = {
+                        str(dt["id"]): dt.get("name", "")
+                        for dt in await client.get_document_types()
+                        if dt.get("id") is not None
+                    }
+            except Exception as e:
+                logger.warning(f"Could not preload document types: {e}")
+
+            # Get all document IDs from paperless
+            with tracer.start_as_current_span(
+                "paperless.fetch_documents", attributes={"paperless.limit": limit or 0}
+            ) as fetch_span:
+                all_documents = await client.get_all_documents(limit=limit)
+                fetch_span.set_attribute("paperless.documents.count", len(all_documents))
+
+            total_documents = len(all_documents)
+
+            # Create mapping of existing documents
+            existing_docs = {doc.paperless_id: doc for doc in db.query(Document).all()}
+
+            # Align broadcast total with actual documents fetched
+            if broadcast_progress:
+                await broadcast_task_status(
+                    task_id=task_id,
+                    status="processing",
+                    step=f"Syncing {total_documents} documents",
+                    progress=0,
+                    total=total_documents,
+                    started_at=started_at,
+                    task_type="sync",
+                )
+
+            # Process each document
+            for idx, doc_data in enumerate(all_documents):
+                try:
+                    paperless_id = doc_data.get("id")
+                    if paperless_id is None:
+                        logger.warning("Skipping document without id: %s", doc_data)
+                        continue
+
+                    # Update progress periodically
+                    if broadcast_progress and idx % 100 == 0:
+                        await broadcast_task_status(
+                            task_id=task_id,
+                            status="processing",
+                            step="Processing documents",
+                            progress=idx + 1,
+                            total=total_documents,
+                            started_at=started_at,
+                            task_type="sync",
+                        )
+
+                    # Check if document needs update
+                    existing_doc = existing_docs.get(paperless_id)
+                    if existing_doc and not force_refresh:
+                        # Check if document was modified
+                        modified_date = parse_date_field(doc_data.get("modified"))
+                        if modified_date and existing_doc.modified_date:
+                            # Ensure both dates are timezone-aware for comparison
+                            existing_date = existing_doc.modified_date
+                            if existing_date.tzinfo is None:
+                                existing_date = existing_date.replace(tzinfo=UTC)
+                            if modified_date <= existing_date:
+                                continue  # Skip unchanged document
+
+                    # Resolve metadata names
+                    correspondent_name = doc_data.get("correspondent_name")
+                    if (
+                        not correspondent_name
+                        and doc_data.get("correspondent") is not None
+                        and correspondent_map
+                    ):
+                        correspondent_name = correspondent_map.get(
+                            str(doc_data.get("correspondent"))
+                        ) or correspondent_map.get(doc_data.get("correspondent"))
+
+                    document_type_name = doc_data.get("document_type_name")
+                    if (
+                        not document_type_name
+                        and doc_data.get("document_type") is not None
+                        and document_type_map
+                    ):
+                        document_type_name = document_type_map.get(
+                            str(doc_data.get("document_type"))
+                        ) or document_type_map.get(doc_data.get("document_type"))
+
+                    # Resolve tag names, supporting both IDs and objects
+                    tags_list: list[str] = []
+                    tags_data = doc_data.get("tags") or []
+                    for tag in tags_data:
+                        name = None
+                        tag_id = None
+                        if isinstance(tag, dict):
+                            name = tag.get("name") or tag.get("label")
+                            tag_id = tag.get("id")
+                        else:
+                            tag_id = tag
+
+                        if name:
+                            tags_list.append(name)
+                        elif tag_id is not None:
+                            mapped = tag_map.get(str(tag_id)) or tag_map.get(tag_id)
+                            tags_list.append(mapped or str(tag_id))
+
+                    # Fetch document content (reuse if already provided)
+                    if "content" in doc_data and doc_data.get("content") is not None:
+                        content_text = doc_data.get("content") or ""
+                    else:
+                        content_text = await client.get_document_content(paperless_id)
+
+                    # Create or update document record
+                    if existing_doc:
+                        document = existing_doc
+                        documents_updated += 1
+                    else:
+                        document = Document(paperless_id=paperless_id)
+                        documents_synced += 1
+
+                    # Update document fields
+                    document.title = doc_data.get("title", "")[:500]
+
+                    fingerprint_raw = doc_data.get("checksum") or doc_data.get(
+                        "fingerprint"
+                    )
+                    fingerprint_value = (
+                        str(fingerprint_raw).strip() if fingerprint_raw is not None else ""
+                    )
+                    if not fingerprint_value:
+                        fingerprint_value = f"paperless-{paperless_id}"
+                    document.fingerprint = fingerprint_value[:64]
+
+                    content_hash = doc_data.get("checksum") or doc_data.get("fingerprint")
+                    if not content_hash and content_text:
+                        content_hash = hashlib.sha256(
+                            content_text.encode("utf-8")
+                        ).hexdigest()
+                    document.content_hash = content_hash
+
+                    document.correspondent = (correspondent_name or "")[:200]
+                    document.document_type = (document_type_name or "")[:200]
+                    document.tags = tags_list
+                    document.archive_filename = (
+                        doc_data.get("archived_file_name")
+                        or doc_data.get("archive_filename")
+                        or ""
+                    )[:500]
+                    document.original_filename = (
+                        doc_data.get("original_file_name")
+                        or doc_data.get("original_filename")
+                        or ""
+                    )[:500]
+                    document.file_size = doc_data.get("file_size")
+                    document.created_date = parse_date_field(doc_data.get("created"))
+                    document.added_date = parse_date_field(doc_data.get("added"))
+                    document.modified_date = parse_date_field(doc_data.get("modified"))
+                    document.processing_status = "pending"
+                    document.last_processed = datetime.now(UTC)
+
+                    if not existing_doc:
+                        db.add(document)
+
+                    db.flush()
+
+                    # Store document content when available
+                    if content_text:
+                        doc_content = (
+                            db.query(DocumentContent)
+                            .filter_by(document_id=document.id)
+                            .first()
+                        )
+
+                        if not doc_content:
+                            doc_content = DocumentContent(document_id=document.id)
+
+                        # Truncate content if too long
+                        max_length = settings.max_ocr_length
+                        if len(content_text) > max_length:
+                            content_text = content_text[:max_length]
+
+                        doc_content.full_text = content_text
+                        doc_content.word_count = len(content_text.split())
+
+                        if not doc_content.id:
+                            db.add(doc_content)
+                    else:
+                        logger.warning(
+                            "Document %s has no OCR content; metadata stored only",
+                            paperless_id,
+                        )
+
+                    # Commit periodically
+                    if (idx + 1) % 100 == 0:
+                        db.commit()
+
+                except Exception as e:
+                    trace.get_current_span().record_exception(e)
+                    logger.error(
+                        f"Error syncing document {paperless_id}: {str(e)}", exc_info=True
+                    )
+                    errors.append({"document_id": paperless_id, "error": str(e)})
+                    db.rollback()
+                    continue
+
+            # Final commit
+            db.commit()
+
+            # Cache latest Paperless statistics for the dashboard
+            try:
+                if stats:
+                    import json
+
+                    with tracer.start_as_current_span("paperless.cache_statistics"):
+                        stats_config = (
+                            db.query(AppConfig)
+                            .filter(AppConfig.key == "paperless_stats")
+                            .first()
+                        )
+                        serialized_stats = json.dumps(stats)
+                        if stats_config:
+                            stats_config.value = serialized_stats
+                        else:
+                            stats_config = AppConfig(
+                                key="paperless_stats", value=serialized_stats
+                            )
+                            db.add(stats_config)
+
+                        stats_time_config = (
+                            db.query(AppConfig)
+                            .filter(AppConfig.key == "paperless_stats_updated")
+                            .first()
+                        )
+                        timestamp = datetime.now(UTC).isoformat()
+                        if stats_time_config:
+                            stats_time_config.value = timestamp
+                        else:
+                            stats_time_config = AppConfig(
+                                key="paperless_stats_updated", value=timestamp
+                            )
+                            db.add(stats_time_config)
+
+                        db.commit()
+            except Exception as e:
+                logger.warning(f"Could not cache Paperless statistics after sync: {e}")
+
+            sync_span = trace.get_current_span()
+            sync_span.set_attribute("paperless.documents.synced", documents_synced)
+            sync_span.set_attribute("paperless.documents.updated", documents_updated)
+            sync_span.set_attribute("paperless.documents.total", total_documents)
+            sync_span.set_attribute("paperless.documents.errors", len(errors))
 
     return {
         "documents_synced": documents_synced,
@@ -240,58 +435,82 @@ def sync_documents(
         task_id = current_task.request.id
         start_time = datetime.now(UTC)
 
-        # Update task state
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current_step": "Initializing document sync",
-                "progress": 0,
-                "total": 0,
-                "started_at": start_time.isoformat(),
+        with tracer.start_as_current_span(
+            "paperless.sync_documents.task",
+            attributes={
+                "celery.task_id": task_id,
+                "paperless.force_refresh": force_refresh,
+                "paperless.limit": limit or 0,
             },
-        )
+        ):
+            # Update task state
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current_step": "Initializing document sync",
+                    "progress": 0,
+                    "total": 0,
+                    "started_at": start_time.isoformat(),
+                },
+            )
 
-        # Broadcast initial status
-        if broadcast_progress:
-            asyncio.run(
-                broadcast_task_status(
-                    task_id=task_id,
-                    status="processing",
-                    step="Initializing document sync",
-                    progress=0,
-                    total=0,
+            # Broadcast initial status
+            if broadcast_progress:
+                asyncio.run(
+                    broadcast_task_status(
+                        task_id=task_id,
+                        status="processing",
+                        step="Initializing document sync",
+                        progress=0,
+                        total=0,
+                        started_at=start_time,
+                        task_type="sync",
+                    )
+                )
+
+            # Get current config from database
+            from paperless_dedupe.core.config_utils import get_current_paperless_config
+
+            client_settings = get_current_paperless_config(self.db)
+
+            # Initialize client and sync documents
+            result = asyncio.run(
+                _sync_documents_async(
+                    self.db,
+                    client_settings,
+                    force_refresh,
+                    limit,
+                    broadcast_progress,
+                    task_id,
+                    start_time,
                 )
             )
 
-        # Get current config from database
-        from paperless_dedupe.core.config_utils import get_current_paperless_config
+            completed_at = datetime.now(UTC)
+            result["started_at"] = start_time.isoformat()
+            result["completed_at"] = completed_at.isoformat()
 
-        client_settings = get_current_paperless_config(self.db)
-
-        # Initialize client and sync documents
-        result = asyncio.run(
-            _sync_documents_async(
-                self.db,
-                client_settings,
-                force_refresh,
-                limit,
-                broadcast_progress,
-                task_id,
-            )
-        )
-
-        # Broadcast completion
-        if broadcast_progress:
-            asyncio.run(
-                broadcast_task_status(
-                    task_id=task_id,
-                    status="completed",
-                    step="Sync complete",
-                    result=result,
+            # Broadcast completion
+            if broadcast_progress:
+                asyncio.run(
+                    broadcast_task_status(
+                        task_id=task_id,
+                        status="completed",
+                        step="Sync complete",
+                        progress=result.get(
+                            "total_documents", result.get("documents_synced", 0)
+                        ),
+                        total=result.get(
+                            "total_documents", result.get("documents_synced", 0)
+                        ),
+                        result=result,
+                        started_at=start_time,
+                        completed_at=completed_at,
+                        task_type="sync",
+                    )
                 )
-            )
 
-        return result
+            return result
 
     except SoftTimeLimitExceeded:
         logger.error(f"Task {current_task.request.id} exceeded time limit")
@@ -299,6 +518,7 @@ def sync_documents(
         raise
 
     except Exception as e:
+        trace.get_current_span().record_exception(e)
         logger.error(f"Error in document sync task: {str(e)}", exc_info=True)
         self.db.rollback()
 
@@ -310,6 +530,8 @@ def sync_documents(
                     status="failed",
                     step="Sync failed",
                     error=str(e),
+                    started_at=start_time,
+                    task_type="sync",
                 )
             )
 

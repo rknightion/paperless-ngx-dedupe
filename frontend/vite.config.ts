@@ -3,25 +3,29 @@ import react from '@vitejs/plugin-react';
 import faroUploader from '@grafana/faro-rollup-plugin';
 
 const apiKey = process.env.FARO_SOURCEMAP_TOKEN;
-const isCI = process.env.CI === 'true' || process.env.CI === '1';
-if (isCI && !apiKey) {
-  throw new Error(
-    'FARO_SOURCEMAP_TOKEN is required for Faro sourcemap upload in CI'
-  );
-}
+const faroSourcemapEndpoint = process.env.FARO_SOURCEMAP_ENDPOINT;
+const faroSourcemapAppName =
+  process.env.FARO_SOURCEMAP_APP_NAME || 'paperless-dedupe';
+const faroSourcemapAppId = process.env.FARO_SOURCEMAP_APP_ID;
+const faroSourcemapStackId = process.env.FARO_SOURCEMAP_STACK_ID;
+const sourcemapUploadEnabled =
+  (process.env.FARO_SOURCEMAP_UPLOAD || '').toLowerCase() === 'true';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    ...(apiKey
+    ...(apiKey &&
+    sourcemapUploadEnabled &&
+    faroSourcemapEndpoint &&
+    faroSourcemapAppId &&
+    faroSourcemapStackId
       ? [
           faroUploader({
-            appName: 'paperless-dedupe',
-            endpoint:
-              'https://faro-api-prod-gb-south-1.grafana.net/faro/api/v1',
-            appId: '231',
-            stackId: '1217581',
+            appName: faroSourcemapAppName,
+            endpoint: faroSourcemapEndpoint,
+            appId: faroSourcemapAppId,
+            stackId: faroSourcemapStackId,
             // instructions on how to obtain your API key are in the documentation
             // https://grafana.com/docs/grafana-cloud/monitor-applications/frontend-observability/sourcemap-upload-plugins/#obtain-an-api-key
             apiKey,

@@ -70,10 +70,9 @@ export const DuplicatesPage: React.FC = () => {
     (state: RootState) => state.config.configuration
   );
   const configWeights = {
-    jaccard: reduxConfig?.confidence_weight_jaccard ?? 40,
-    fuzzy: reduxConfig?.confidence_weight_fuzzy ?? 30,
-    metadata: reduxConfig?.confidence_weight_metadata ?? 20,
-    filename: reduxConfig?.confidence_weight_filename ?? 10,
+    jaccard: reduxConfig?.confidence_weight_jaccard ?? 90,
+    fuzzy: reduxConfig?.confidence_weight_fuzzy ?? 10,
+    metadata: reduxConfig?.confidence_weight_metadata ?? 0,
   };
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewedFilter, setReviewedFilter] = useState<boolean | null>(null);
@@ -84,16 +83,15 @@ export const DuplicatesPage: React.FC = () => {
     jaccard: true,
     fuzzy: true,
     metadata: true,
-    filename: true,
   });
   const [fuzzyRatioFilter, setFuzzyRatioFilter] = useState(0.5);
   const [config, setConfig] = useState<any>(null);
   const [infoBoxExpanded, setInfoBoxExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [sortBy, setSortBy] = useState<
-    'confidence' | 'created' | 'documents' | 'filename'
-  >('confidence');
+  const [sortBy, setSortBy] = useState<'confidence' | 'created' | 'documents'>(
+    'confidence'
+  );
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Keyboard shortcuts state
@@ -120,7 +118,6 @@ export const DuplicatesPage: React.FC = () => {
         use_jaccard: confidenceWeights.jaccard,
         use_fuzzy: confidenceWeights.fuzzy,
         use_metadata: confidenceWeights.metadata,
-        use_filename: confidenceWeights.filename,
         min_fuzzy_ratio: fuzzyRatioFilter,
       })
     );
@@ -152,7 +149,6 @@ export const DuplicatesPage: React.FC = () => {
         use_jaccard: confidenceWeights.jaccard,
         use_fuzzy: confidenceWeights.fuzzy,
         use_metadata: confidenceWeights.metadata,
-        use_filename: confidenceWeights.filename,
         min_fuzzy_ratio: fuzzyRatioFilter,
       })
     );
@@ -247,7 +243,6 @@ export const DuplicatesPage: React.FC = () => {
         use_jaccard: confidenceWeights.jaccard,
         use_fuzzy: confidenceWeights.fuzzy,
         use_metadata: confidenceWeights.metadata,
-        use_filename: confidenceWeights.filename,
         min_fuzzy_ratio: fuzzyRatioFilter,
         page_size: 10000, // Get all IDs
       };
@@ -627,21 +622,18 @@ export const DuplicatesPage: React.FC = () => {
                         onClick={() => {
                           const allEnabled =
                             Object.values(confidenceWeights).every(Boolean);
+                          // Toggle all while keeping at least one factor on
                           if (allEnabled) {
-                            // If all are enabled, we need to keep at least one enabled
                             setConfidenceWeights({
-                              jaccard: true, // Keep one enabled as fallback
+                              jaccard: true,
                               fuzzy: false,
                               metadata: false,
-                              filename: false,
                             });
                           } else {
-                            // Enable all
                             setConfidenceWeights({
                               jaccard: true,
                               fuzzy: true,
                               metadata: true,
-                              filename: true,
                             });
                           }
                         }}
@@ -779,41 +771,6 @@ export const DuplicatesPage: React.FC = () => {
                           {configWeights.metadata}%
                         </Badge>
                       </label>
-
-                      <label
-                        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                          confidenceWeights.filename
-                            ? 'border-purple-200 bg-purple-50'
-                            : 'border-gray-200 bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={confidenceWeights.filename}
-                            onChange={(e) => {
-                              const newWeights = {
-                                ...confidenceWeights,
-                                filename: e.target.checked,
-                              };
-                              // Prevent disabling all factors
-                              if (Object.values(newWeights).some(Boolean)) {
-                                setConfidenceWeights(newWeights);
-                              }
-                            }}
-                          />
-                          <div>
-                            <span className="text-sm font-medium">
-                              Filename Match
-                            </span>
-                            <p className="text-xs text-muted-foreground">
-                              Original filename similarity
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {configWeights.filename}%
-                        </Badge>
-                      </label>
                     </div>
                   </div>
 
@@ -899,8 +856,7 @@ export const DuplicatesPage: React.FC = () => {
               )}
               {(!confidenceWeights.jaccard ||
                 !confidenceWeights.fuzzy ||
-                !confidenceWeights.metadata ||
-                !confidenceWeights.filename) && (
+                !confidenceWeights.metadata) && (
                 <Badge variant="outline">Custom weights</Badge>
               )}
               <Button
@@ -915,7 +871,6 @@ export const DuplicatesPage: React.FC = () => {
                     jaccard: true,
                     fuzzy: true,
                     metadata: true,
-                    filename: true,
                   });
                 }}
               >
@@ -1061,34 +1016,12 @@ export const DuplicatesPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="p-3 bg-white/60 rounded-lg border border-green-100/50">
-                      <div className="flex items-start justify-between mb-1">
-                        <span className="text-gray-800 font-semibold">
-                          Filename Similarity
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-green-50"
-                        >
-                          {configWeights.filename}% weight
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        Compares the original filenames of documents using fuzzy
-                        matching. Useful for finding documents that were renamed
-                        slightly (e.g., "invoice_2024.pdf" vs "invoice-2024.pdf"
-                        or "scan001.pdf" vs "scan002.pdf"). Lower weight because
-                        filenames can be arbitrary.
-                      </p>
-                    </div>
-
                     <div className="mt-3 p-2 bg-blue-50/50 rounded border border-blue-200/50">
                       <p className="text-xs text-blue-800">
-                        <strong>Note:</strong> You can customize these weights
-                        in Settings to better match your document types. For
-                        example, increase metadata weight for invoices with
-                        consistent formatting, or increase fuzzy text weight for
-                        poor quality scans.
+                        <strong>Note:</strong> We recommend keeping scoring
+                        focused on OCR content (90% Jaccard, 10% fuzzy).
+                        Metadata only kicks in as a fallback when OCR text is
+                        missing. You can adjust these in Settings if needed.
                       </p>
                     </div>
                   </div>
@@ -1186,7 +1119,6 @@ export const DuplicatesPage: React.FC = () => {
                   <option value="confidence">Confidence</option>
                   <option value="created">Date Found</option>
                   <option value="documents">Document Count</option>
-                  <option value="filename">Filename</option>
                 </select>
                 <Button
                   variant="outline"

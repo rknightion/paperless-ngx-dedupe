@@ -1,0 +1,122 @@
+name: Clean Up Draft Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (show what would be deleted without actually deleting)'
+        required: false
+        type: boolean
+        default: false
+      keep_latest:
+        description: 'Number of latest draft releases to keep'
+        required: false
+        type: string
+        default: '0'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Clean up draft releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_INPUTS_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          GITHUB_EVENT_INPUTS_KEEP_LATEST: ${{ github.event.inputs.keep_latest }}
+        run: |
+          DRY_RUN="${GITHUB_EVENT_INPUTS_DRY_RUN}"
+          KEEP_LATEST="${GITHUB_EVENT_INPUTS_KEEP_LATEST}"
+
+          # Validate keep_latest input
+          if ! [[ "$KEEP_LATEST" =~ ^[0-9]+$ ]]; then
+            echo "Error: keep_latest must be a number"
+            exit 1
+          fi
+
+          echo "Configuration:"
+          echo "- Dry run: $DRY_RUN"
+          echo "- Keep latest: $KEEP_LATEST draft releases"
+          echo ""
+
+          # Get all draft releases sorted by created date (newest first)
+          echo "Fetching all draft releases..."
+          DRAFT_RELEASES=$(gh api repos/${{ github.repository }}/releases --paginate | \
+            jq -r '.[] | select(.draft == true) | "\(.created_at)|\(.tag_name)|\(.name)"' | \
+            sort -r)
+
+          TOTAL_DRAFTS=$(echo "$DRAFT_RELEASES" | grep -c "^" || echo "0")
+          echo "Found $TOTAL_DRAFTS draft releases"
+
+          if [ "$TOTAL_DRAFTS" -eq 0 ]; then
+            echo "No draft releases to clean up"
+            exit 0
+          fi
+
+          # Show all draft releases
+          echo ""
+          echo "Draft releases (newest first):"
+          echo "$DRAFT_RELEASES" | while IFS='|' read -r created tag name; do
+            echo "  - $tag ($name) - Created: $created"
+          done
+
+          # Determine which releases to delete
+          if [ "$KEEP_LATEST" -gt 0 ] && [ "$TOTAL_DRAFTS" -gt "$KEEP_LATEST" ]; then
+            # Skip the latest N releases
+            RELEASES_TO_DELETE=$(echo "$DRAFT_RELEASES" | tail -n +$((KEEP_LATEST + 1)))
+            DELETE_COUNT=$(echo "$RELEASES_TO_DELETE" | grep -c "^" || echo "0")
+          else
+            # Delete all if keep_latest is 0
+            RELEASES_TO_DELETE="$DRAFT_RELEASES"
+            DELETE_COUNT="$TOTAL_DRAFTS"
+          fi
+
+          if [ "$DELETE_COUNT" -eq 0 ]; then
+            echo ""
+            echo "No releases to delete (keeping $KEEP_LATEST latest releases)"
+            exit 0
+          fi
+
+          echo ""
+          echo "Will delete $DELETE_COUNT draft releases:"
+          echo "$RELEASES_TO_DELETE" | while IFS='|' read -r created tag name; do
+            echo "  - $tag ($name)"
+          done
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo ""
+            echo "DRY RUN: No releases were actually deleted"
+            echo "Remove the dry_run option to perform the deletion"
+          else
+            echo ""
+            echo "Deleting draft releases..."
+
+            SUCCESS_COUNT=0
+            FAIL_COUNT=0
+
+            echo "$RELEASES_TO_DELETE" | while IFS='|' read -r created tag name; do
+              if [ -n "$tag" ]; then
+                echo -n "Deleting $tag... "
+                if gh release delete "$tag" --yes --cleanup-tag 2>/dev/null; then
+                  echo "Deleted"
+                  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+                else
+                  echo "Failed"
+                  FAIL_COUNT=$((FAIL_COUNT + 1))
+                fi
+              fi
+            done
+
+            echo ""
+            echo "Summary:"
+            echo "- Successfully deleted: $SUCCESS_COUNT releases"
+            echo "- Failed to delete: $FAIL_COUNT releases"
+            echo "- Kept: $KEEP_LATEST latest releases"
+          fi

@@ -26,6 +26,7 @@ import {
   Copy,
 } from 'lucide-react';
 import type { Document } from '../../services/api/types';
+import { trackUserAction } from '../../observability/userActions';
 
 interface DocumentListProps {
   className?: string;
@@ -230,9 +231,11 @@ export const DocumentList: React.FC<DocumentListProps> = ({
   // Handle sync documents
   const handleSync = useCallback(async () => {
     try {
-      await dispatch(syncDocuments()).unwrap();
-      // Refresh the list after sync
-      dispatch(fetchDocuments());
+      await trackUserAction('sync_documents', async () => {
+        await dispatch(syncDocuments()).unwrap();
+        // Refresh the list after sync
+        dispatch(fetchDocuments());
+      });
     } catch (error) {
       console.error('Failed to sync documents:', error);
     }

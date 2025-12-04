@@ -249,6 +249,11 @@ export const SystemHealthCard: React.FC = () => {
                 </div>
               </div>
             )}
+            {health.database.message && (
+              <p className="ml-6 text-xs text-muted-foreground">
+                {health.database.message}
+              </p>
+            )}
           </div>
 
           {/* Paperless API */}
@@ -266,12 +271,19 @@ export const SystemHealthCard: React.FC = () => {
               </div>
             </div>
             {health.paperless_api.details && (
-              <div className="ml-6 text-xs text-muted-foreground">
-                {health.paperless_api.details.total_documents && (
-                  <span>
-                    {health.paperless_api.details.total_documents.toLocaleString()}{' '}
+              <div className="ml-6 text-xs text-muted-foreground space-y-1">
+                {health.paperless_api.details.total_documents !== undefined && (
+                  <div>
+                    <span className="font-medium">
+                      {health.paperless_api.details.total_documents.toLocaleString()}
+                    </span>{' '}
                     documents
-                  </span>
+                  </div>
+                )}
+                {health.paperless_api.message && (
+                  <div className="text-[11px] text-muted-foreground">
+                    {health.paperless_api.message}
+                  </div>
                 )}
               </div>
             )}
@@ -300,6 +312,11 @@ export const SystemHealthCard: React.FC = () => {
                     </span>
                   )}
                 </div>
+              )}
+              {health.celery_worker.message && (
+                <p className="ml-6 text-[11px] text-muted-foreground">
+                  {health.celery_worker.message}
+                </p>
               )}
             </div>
           )}

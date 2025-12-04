@@ -30,6 +30,7 @@ import {
   Info,
 } from 'lucide-react';
 import type { AnalyzeRequest } from '../../services/api/types';
+import { trackUserAction } from '../../observability/userActions';
 
 interface ProgressTrackerProps {
   className?: string;
@@ -112,9 +113,17 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
     };
 
     try {
-      await dispatch(startAnalysis(request)).unwrap();
-      // Immediately fetch status after starting
-      dispatch(fetchProcessingStatus());
+      await trackUserAction(
+        'start_duplicate_analysis',
+        async () => {
+          await dispatch(startAnalysis(request)).unwrap();
+          // Immediately fetch status after starting
+          dispatch(fetchProcessingStatus());
+        },
+        {
+          force_rebuild: String(analysisSettings.force_rebuild),
+        }
+      );
     } catch (error: any) {
       console.error('Failed to start analysis:', error);
       // Check for specific error types
@@ -134,7 +143,9 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   // Cancel analysis
   const handleCancel = async () => {
     try {
-      await dispatch(cancelProcessing()).unwrap();
+      await trackUserAction('cancel_duplicate_analysis', async () => {
+        await dispatch(cancelProcessing()).unwrap();
+      });
     } catch (error) {
       console.error('Failed to cancel processing:', error);
     }

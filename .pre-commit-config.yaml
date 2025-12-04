@@ -14,7 +14,7 @@ repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Check for the latest ruff version
-    rev: v0.14.7
+    rev: v0.14.8
     hooks:
       - id: ruff-check
         args: [--fix]

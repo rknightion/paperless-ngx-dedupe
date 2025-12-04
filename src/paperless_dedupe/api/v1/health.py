@@ -197,7 +197,7 @@ async def check_paperless_api_health(db: Session) -> ComponentHealth:
                     last_check=datetime.utcnow(),
                 )
 
-            # Try to get statistics if possible
+            # Try to get statistics if possible (fast count)
             stats = {}
             try:
                 api_stats = await client.get_statistics()
@@ -206,23 +206,27 @@ async def check_paperless_api_health(db: Session) -> ComponentHealth:
                     "total_tags": api_stats.get("total_tags", 0),
                     "total_correspondents": api_stats.get("total_correspondents", 0),
                 }
-            except:
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"Paperless stats fetch skipped: {e}")
 
             latency = (time.time() - start) * 1000  # Convert to ms
 
             return ComponentHealth(
-                status="healthy" if latency < 1000 else "degraded",
+                status="healthy" if latency < 1500 else "degraded",
                 latency_ms=round(latency, 2),
                 details=stats,
                 last_check=datetime.utcnow(),
-                message="Paperless API is operational",
+                message=(
+                    "Paperless API is operational"
+                    if latency < 1500
+                    else "Paperless API responses are slow"
+                ),
             )
 
     except Exception as e:
         logger.error(f"Paperless API health check failed: {e}")
         return ComponentHealth(
-            status="unhealthy",
+            status="degraded",
             message=f"Paperless API connection failed: {str(e)}",
             last_check=datetime.utcnow(),
         )
@@ -236,18 +240,13 @@ def check_celery_health() -> ComponentHealth | None:
             return None
 
         # Get worker stats
-        stats = celery_app.control.inspect().stats()
-        active = celery_app.control.inspect().active()
+        inspector = celery_app.control.inspect()
+        stats = inspector.stats()
+        active = inspector.active()
+        pings = inspector.ping() or []
 
-        if not stats:
-            return ComponentHealth(
-                status="unhealthy",
-                message="No Celery workers available",
-                last_check=datetime.utcnow(),
-            )
-
-        worker_count = len(stats)
-        active_tasks = sum(len(tasks) for tasks in (active or {}).values())
+        worker_count = len(stats or pings)
+        active_tasks = sum(len(tasks) for tasks in (active or {}).values()) if active else 0
 
         # Get queue lengths
         queue_lengths = {}
@@ -268,11 +267,19 @@ def check_celery_health() -> ComponentHealth | None:
             "queue_lengths": queue_lengths,
         }
 
+        if worker_count == 0:
+            return ComponentHealth(
+                status="degraded",
+                details=details,
+                last_check=datetime.utcnow(),
+                message="No Celery workers responded to ping",
+            )
+
         return ComponentHealth(
             status="healthy",
             details=details,
             last_check=datetime.utcnow(),
-            message=f"{worker_count} worker(s) active, {active_tasks} tasks running",
+            message=f"{worker_count} worker(s) reachable, {active_tasks} tasks running",
         )
 
     except Exception as e:

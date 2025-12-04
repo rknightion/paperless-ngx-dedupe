@@ -36,6 +36,7 @@
 # Option 2: Username/Password (if API token not available)
 # PAPERLESS_DEDUPE_PAPERLESS_USERNAME=your-username
 # PAPERLESS_DEDUPE_PAPERLESS_PASSWORD=your-password
+# Note: Values saved in the UI will override these only if non-empty.
 
 # -----------------------------------------------------------------------------
 # Deduplication Settings (can be configured via Web UI)
@@ -64,6 +65,37 @@ SECRET_KEY=change-me-in-production-use-a-long-random-string
 # -----------------------------------------------------------------------------
 # Options: DEBUG, INFO, WARNING, ERROR
 # PAPERLESS_DEDUPE_LOG_LEVEL=INFO
+
+# -----------------------------------------------------------------------------
+# OpenTelemetry Tracing (optional but recommended)
+# -----------------------------------------------------------------------------
+# Enable OTEL exporter and point to your collector (HTTP/protobuf OTLP shown)
+OTEL_TRACES_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector.example.com/otlp
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+# Escape spaces in headers if needed (example with Basic auth)
+# OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic\ base64token
+OTEL_SERVICE_NAME=paperless-dedupe-api
+OTEL_RESOURCE_ATTRIBUTES=service.namespace=paperless-ngx,deployment.environment=development
+
+# -----------------------------------------------------------------------------
+# Grafana Faro Frontend Observability (optional)
+# -----------------------------------------------------------------------------
+# VITE_FARO_ENABLED=true
+# VITE_FARO_URL=https://faro-collector.example.com/collect/your-app-id
+# VITE_FARO_API_KEY=your-faro-api-key   # optional if your collector needs it
+# VITE_FARO_APP_NAME=paperless-dedupe
+# VITE_FARO_NAMESPACE=paperless-ngx
+# VITE_APP_ENV=development
+# VITE_APP_VERSION=dev
+
+# Sourcemap Upload to Faro (CI/opt-in)
+# FARO_SOURCEMAP_UPLOAD=true
+# FARO_SOURCEMAP_TOKEN=your-faro-api-key
+# FARO_SOURCEMAP_ENDPOINT=https://faro-api-prod-gb-south-1.grafana.net/faro/api/v1
+# FARO_SOURCEMAP_APP_NAME=paperless-dedupe
+# FARO_SOURCEMAP_APP_ID=231
+# FARO_SOURCEMAP_STACK_ID=1217581
 
 # -----------------------------------------------------------------------------
 # Advanced Settings (usually not needed)

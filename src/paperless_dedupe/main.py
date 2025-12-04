@@ -20,6 +20,10 @@ from paperless_dedupe.api.v1 import (
 )
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import init_db
+from paperless_dedupe.observability.tracing import (
+    instrument_fastapi_app,
+    setup_tracing,
+)
 
 # Configure logging with more detailed format
 log_level = getattr(logging, settings.log_level.upper(), logging.WARNING)
@@ -52,6 +56,9 @@ logger.warning(f"Logging level set to: {settings.log_level}")
 logger.warning("Error and exception logging is always enabled")
 logger.info("This is an INFO log message - you should see this with INFO level")
 logger.debug("This is a DEBUG log message - you should only see this with DEBUG level")
+
+# Initialise tracing early so downstream components share the provider
+tracer_provider = setup_tracing(component="api")
 
 
 @asynccontextmanager
@@ -145,7 +152,8 @@ async def lifespan(app: FastAPI):
     try:
         config_items = db.query(AppConfig).all()
         for item in config_items:
-            if hasattr(settings, item.key):
+            # Only override env/defaults when DB actually has a value
+            if hasattr(settings, item.key) and item.value not in (None, ""):
                 # Convert stored text values back to appropriate types
                 value = item.value
                 if value is not None and isinstance(value, str):
@@ -208,6 +216,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Attach OTEL middleware after other middlewares are registered so it wraps them
+instrument_fastapi_app(app, tracer_provider=tracer_provider)
 
 
 # Add global exception handler middleware

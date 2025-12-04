@@ -9,6 +9,13 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
+from paperless_dedupe.core.task_status import (
+    start_sync_status,
+    sync_status_snapshot,
+)
+from paperless_dedupe.core.task_status import (
+    sync_status_state as sync_status,
+)
 from paperless_dedupe.models.database import Document, DocumentContent, get_db
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from paperless_dedupe.worker.celery_app import app as celery_app
@@ -34,24 +41,10 @@ def parse_date_field(date_value):
     return None
 
 
-# Global sync status
-sync_status = {
-    "is_syncing": False,
-    "current_step": "",
-    "progress": 0,
-    "total": 0,
-    "started_at": None,
-    "completed_at": None,
-    "error": None,
-    "documents_synced": 0,
-    "documents_updated": 0,
-}
-
-
 async def safe_broadcast_sync_update():
     """Safely broadcast sync status update via WebSocket"""
     try:
-        await broadcast_sync_update(sync_status.copy())
+        await broadcast_sync_update(sync_status_snapshot())
     except Exception as e:
         logger.error(f"Error broadcasting sync WebSocket update: {e}")
 
@@ -378,13 +371,9 @@ async def run_document_sync(
     db: Session, force_refresh: bool = False, limit: int | None = None
 ):
     """Background task to sync documents from paperless-ngx"""
-    global sync_status
-
     try:
-        sync_status["is_syncing"] = True
+        start_sync_status()
         sync_status["current_step"] = "Connecting to Paperless"
-        sync_status["started_at"] = datetime.utcnow()
-        sync_status["error"] = None
         sync_status["documents_synced"] = 0
         sync_status["documents_updated"] = 0
 
@@ -760,9 +749,7 @@ async def sync_documents(
     )
 
     # Store task ID in global status for compatibility
-    global sync_status
-    sync_status["task_id"] = task.id
-    sync_status["is_syncing"] = True
+    start_sync_status(task_id=task.id)
 
     return {
         "status": "started",
@@ -843,8 +830,7 @@ async def refresh_statistics(db: Session = Depends(get_db)):
 @router.get("/sync/status")
 async def get_sync_status(db: Session = Depends(get_db)):
     """Get current sync status"""
-    # Convert datetime objects to ISO strings for JSON serialization
-    status_copy = sync_status.copy()
+    status_copy = sync_status_snapshot()
 
     # If no sync is in progress and completed_at is None, check if we have documents
     # This handles the case where the app has restarted and lost in-memory status

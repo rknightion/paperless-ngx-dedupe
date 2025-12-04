@@ -54,7 +54,10 @@ class ConfigUpdate(BaseModel):
         None, ge=0, le=100, description="Weight for metadata similarity (0-100)"
     )
     confidence_weight_filename: int | None = Field(
-        None, ge=0, le=100, description="Weight for filename similarity (0-100)"
+        None,
+        ge=0,
+        le=100,
+        description="Weight for filename similarity (0-100, currently unused)",
     )
 
     @validator("paperless_url")
@@ -69,21 +72,17 @@ class ConfigUpdate(BaseModel):
 
     @validator("confidence_weight_filename")
     def validate_weights(cls, v, values):  # noqa: N805
-        """Validate that confidence weights sum to 100 if any are provided"""
-        # Only validate if at least one weight is being updated
+        """Validate that content-based weights sum to 100 if provided"""
         weights = []
         for key in [
             "confidence_weight_jaccard",
             "confidence_weight_fuzzy",
             "confidence_weight_metadata",
-            "confidence_weight_filename",
         ]:
             if key in values and values[key] is not None:
                 weights.append(values[key])
-            elif key == "confidence_weight_filename" and v is not None:
-                weights.append(v)
 
-        if weights and len(weights) == 4:  # All weights provided
+        if weights and len(weights) == 3:  # All content weights provided
             total = sum(weights)
             if total != 100:
                 raise ValueError(

@@ -9,6 +9,14 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
+from paperless_dedupe.core.task_status import (
+    merge_processing_status,
+    processing_status_snapshot,
+    start_processing_status,
+)
+from paperless_dedupe.core.task_status import (
+    processing_status_state as processing_status,
+)
 from paperless_dedupe.models.database import Document, DocumentContent, get_db
 from paperless_dedupe.services.deduplication_service import DeduplicationService
 from paperless_dedupe.worker.celery_app import app as celery_app
@@ -22,22 +30,11 @@ from .websocket import (
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Global processing status
-processing_status = {
-    "is_processing": False,
-    "current_step": "",
-    "progress": 0,
-    "total": 0,
-    "started_at": None,
-    "completed_at": None,
-    "error": None,
-}
-
 
 async def safe_broadcast_update():
     """Safely broadcast processing status update via WebSocket"""
     try:
-        await broadcast_processing_update(processing_status.copy())
+        await broadcast_processing_update(processing_status_snapshot())
     except Exception as e:
         logger.error(f"Error broadcasting WebSocket update: {e}")
 
@@ -70,12 +67,9 @@ async def run_deduplication_analysis_deprecated(
     db: Session, threshold: float, force_rebuild: bool, limit: int | None = None
 ):
     """Background task to run deduplication analysis"""
-    global processing_status
-
     try:
-        processing_status["is_processing"] = True
+        start_processing_status()
         processing_status["current_step"] = "Initializing analysis"
-        processing_status["started_at"] = datetime.utcnow()
         processing_status["error"] = None
         processing_status["progress"] = 0
         processing_status["total"] = 0
@@ -362,9 +356,7 @@ async def start_analysis(
     )
 
     # Store task ID in global status for compatibility
-    global processing_status
-    processing_status["task_id"] = task.id
-    processing_status["is_processing"] = True
+    start_processing_status(task_id=task.id)
 
     return {
         "status": "started",
@@ -377,15 +369,16 @@ async def start_analysis(
 @router.get("/status")
 async def get_processing_status():
     """Get current processing status from Celery task"""
-    global processing_status
+    status_snapshot = processing_status_snapshot()
 
     # If there's a task ID, get status from Celery
-    if processing_status.get("task_id"):
-        task_result = AsyncResult(processing_status["task_id"], app=celery_app)
+    if status_snapshot.get("task_id"):
+        task_result = AsyncResult(status_snapshot["task_id"], app=celery_app)
 
         if task_result.state == "PENDING":
             return {
                 "is_processing": False,
+                "task_id": status_snapshot["task_id"],
                 "current_step": "No task found or task waiting to start",
                 "progress": 0,
                 "total": 0,
@@ -393,28 +386,36 @@ async def get_processing_status():
         elif task_result.state == "PROGRESS":
             return {
                 "is_processing": True,
-                "task_id": processing_status["task_id"],
+                "task_id": status_snapshot["task_id"],
                 **task_result.info,
             }
         elif task_result.state == "SUCCESS":
-            processing_status["is_processing"] = False
+            merge_processing_status(
+                {"status": "completed", "task_id": status_snapshot["task_id"]}
+            )
             return {
                 "is_processing": False,
-                "task_id": processing_status["task_id"],
+                "task_id": status_snapshot["task_id"],
                 "status": "completed",
                 **task_result.result,
             }
         elif task_result.state == "FAILURE":
-            processing_status["is_processing"] = False
+            merge_processing_status(
+                {
+                    "status": "failed",
+                    "task_id": status_snapshot["task_id"],
+                    "error": str(task_result.info),
+                }
+            )
             return {
                 "is_processing": False,
-                "task_id": processing_status["task_id"],
+                "task_id": status_snapshot["task_id"],
                 "status": "failed",
                 "error": str(task_result.info),
             }
 
     # Fall back to global status if no task ID
-    status_copy = processing_status.copy()
+    status_copy = processing_status_snapshot()
     if status_copy.get("started_at") and isinstance(
         status_copy["started_at"], datetime
     ):

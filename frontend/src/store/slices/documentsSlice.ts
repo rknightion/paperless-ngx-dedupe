@@ -169,16 +169,46 @@ const documentsSlice = createSlice({
     },
 
     syncCompleted: (state, action: PayloadAction<any>) => {
-      if (state.syncStatus) {
-        state.syncStatus = {
-          ...state.syncStatus,
+      const payload = action.payload || {};
+      const completedAt =
+        payload.completed_at ||
+        state.syncStatus?.completed_at ||
+        new Date().toISOString();
+
+      const baseStatus =
+        state.syncStatus || {
           is_syncing: false,
-          current_step: 'Completed',
-          completed_at: new Date().toISOString(),
+          current_step: '',
+          progress: 0,
+          total: 0,
+          error: null,
+          documents_synced: 0,
+          documents_updated: 0,
+          started_at: null,
+          completed_at: null,
         };
+
+      state.syncStatus = {
+        ...baseStatus,
+        ...payload,
+        is_syncing: false,
+        current_step: payload.current_step || 'Completed',
+        completed_at: completedAt,
+      } as any;
+
+      const status = state.syncStatus as NonNullable<DocumentsState['syncStatus']>;
+      if (payload.documents_synced !== undefined) {
+        status.documents_synced = payload.documents_synced;
       }
-      state.lastSyncedAt = new Date().toISOString();
-      // Optionally trigger a refresh of documents
+      if (payload.documents_updated !== undefined) {
+        status.documents_updated = payload.documents_updated;
+      }
+      if (payload.total !== undefined) {
+        status.total = payload.total;
+        status.progress = payload.progress ?? payload.total;
+      }
+
+      state.lastSyncedAt = completedAt;
     },
   },
   extraReducers: (builder) => {

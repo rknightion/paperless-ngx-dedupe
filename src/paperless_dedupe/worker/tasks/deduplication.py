@@ -5,6 +5,7 @@ from typing import Any
 
 from celery import Task, current_task
 from celery.exceptions import SoftTimeLimitExceeded
+from opentelemetry import trace
 from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
@@ -20,6 +21,7 @@ from paperless_dedupe.worker.database import get_worker_session
 from paperless_dedupe.worker.utils import broadcast_task_status
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class DeduplicationTask(Task):
@@ -68,301 +70,342 @@ def analyze_duplicates(
         task_id = current_task.request.id
         start_time = datetime.now(UTC)
 
-        # Update task state
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current_step": "Initializing analysis",
-                "progress": 0,
-                "total": 0,
-                "started_at": start_time.isoformat(),
+        with tracer.start_as_current_span(
+            "duplicate_analysis.task",
+            attributes={
+                "celery.task_id": task_id,
+                "force_rebuild": force_rebuild,
+                "limit": limit or 0,
             },
-        )
-
-        # Broadcast initial status if enabled
-        if broadcast_progress:
-            asyncio.run(
-                broadcast_task_status(
-                    task_id=task_id,
-                    status="processing",
-                    step="Initializing analysis",
-                    progress=0,
-                    total=0,
-                )
-            )
-
-        # Use threshold from settings if not provided
-        # Convert from percentage (0-100) to decimal (0.0-1.0) if needed
-        if threshold is None:
-            threshold = settings.fuzzy_match_threshold / 100.0
-        elif threshold > 1.0:
-            # If passed as percentage, convert to decimal
-            threshold = threshold / 100.0
-
-        # Clear existing data if force rebuild
-        if force_rebuild:
+        ) as task_span:
+            # Update task state
             self.update_state(
                 state="PROGRESS",
-                meta={"current_step": "Clearing existing analysis data", "progress": 0},
+                meta={
+                    "current_step": "Initializing analysis",
+                    "progress": 0,
+                    "total": 0,
+                    "started_at": start_time.isoformat(),
+                },
             )
 
+            # Broadcast initial status if enabled
             if broadcast_progress:
                 asyncio.run(
                     broadcast_task_status(
                         task_id=task_id,
                         status="processing",
-                        step="Clearing existing analysis data",
+                        step="Initializing analysis",
                         progress=0,
+                        total=0,
+                        started_at=start_time,
+                        task_type="processing",
                     )
                 )
 
-            # Delete all existing duplicate groups and members
-            deleted_members = self.db.query(DuplicateMember).delete()
-            deleted_groups = self.db.query(DuplicateGroup).delete()
+            # Use threshold from settings if not provided
+            # Convert from percentage (0-100) to decimal (0.0-1.0) if needed
+            if threshold is None:
+                threshold = settings.fuzzy_match_threshold / 100.0
+            elif threshold > 1.0:
+                # If passed as percentage, convert to decimal
+                threshold = threshold / 100.0
 
-            # Reset all documents to pending status
-            self.db.query(Document).update(
-                {"processing_status": "pending", "last_processed": None}
-            )
+            task_span.set_attribute("dedupe.threshold", threshold or 0.0)
 
-            self.db.commit()
-            logger.info(
-                f"Cleared {deleted_groups} duplicate groups and {deleted_members} members"
-            )
-
-        # Get documents to process
-        query = self.db.query(Document)
-        if not force_rebuild:
-            query = query.filter(Document.processing_status == "pending")
-        if limit:
-            query = query.limit(limit)
-
-        documents = query.all()
-        total_docs = len(documents)
-
-        if not documents:
-            return {
-                "status": "completed",
-                "message": "No documents to process",
-                "documents_processed": 0,
-                "duplicates_found": 0,
-                "duration": 0,
-            }
-
-        logger.info(f"Processing {total_docs} documents for deduplication")
-
-        # Update state with document count
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current_step": "Loading document content",
-                "progress": 0,
-                "total": total_docs,
-            },
-        )
-
-        if broadcast_progress:
-            asyncio.run(
-                broadcast_task_status(
-                    task_id=task_id,
-                    status="processing",
-                    step="Loading document content",
-                    progress=0,
-                    total=total_docs,
+            # Clear existing data if force rebuild
+            if force_rebuild:
+                self.update_state(
+                    state="PROGRESS",
+                    meta={
+                        "current_step": "Clearing existing analysis data",
+                        "progress": 0,
+                    },
                 )
-            )
 
-        # Load document content in chunks
-        contents = {}
-        document_ids = [doc.id for doc in documents]
-        chunk_size = 500
+                if broadcast_progress:
+                    asyncio.run(
+                        broadcast_task_status(
+                            task_id=task_id,
+                            status="processing",
+                            step="Clearing existing analysis data",
+                            progress=0,
+                            started_at=start_time,
+                            task_type="processing",
+                        )
+                    )
 
-        for i in range(0, len(document_ids), chunk_size):
-            chunk_ids = document_ids[i : i + chunk_size]
+                # Delete all existing duplicate groups and members
+                deleted_members = self.db.query(DuplicateMember).delete()
+                deleted_groups = self.db.query(DuplicateGroup).delete()
 
-            # Update progress
-            progress = min(i + chunk_size, len(document_ids))
+                # Reset all documents to pending status
+                self.db.query(Document).update(
+                    {"processing_status": "pending", "last_processed": None}
+                )
+
+                self.db.commit()
+                logger.info(
+                    f"Cleared {deleted_groups} duplicate groups and {deleted_members} members"
+                )
+
+            # Get documents to process
+            query = self.db.query(Document)
+            if not force_rebuild:
+                query = query.filter(Document.processing_status == "pending")
+            if limit:
+                query = query.limit(limit)
+
+            documents = query.all()
+            total_docs = len(documents)
+            task_span.set_attribute("dedupe.documents.total", total_docs)
+
+            if not documents:
+                return {
+                    "status": "completed",
+                    "message": "No documents to process",
+                    "documents_processed": 0,
+                    "duplicates_found": 0,
+                    "duration": 0,
+                }
+
+            logger.info(f"Processing {total_docs} documents for deduplication")
+
+            # Update state with document count
             self.update_state(
                 state="PROGRESS",
                 meta={
-                    "current_step": f"Loading document content ({progress}/{total_docs})",
-                    "progress": progress,
+                    "current_step": "Loading document content",
+                    "progress": 0,
                     "total": total_docs,
                 },
             )
 
-            if broadcast_progress and i % 1000 == 0:  # Broadcast every 1000 docs
+            if broadcast_progress:
                 asyncio.run(
                     broadcast_task_status(
                         task_id=task_id,
                         status="processing",
                         step="Loading document content",
-                        progress=progress,
+                        progress=0,
                         total=total_docs,
+                        started_at=start_time,
+                        task_type="processing",
                     )
                 )
 
-            # Query content for chunk
-            doc_contents = (
-                self.db.query(DocumentContent)
-                .filter(DocumentContent.document_id.in_(chunk_ids))
-                .all()
-            )
+            # Load document content in chunks
+            contents = {}
+            document_ids = [doc.id for doc in documents]
+            chunk_size = 500
 
-            for content in doc_contents:
-                # Use full_text (populated by sync) instead of normalized_text (never populated)
-                if content.full_text:
-                    contents[content.document_id] = content.full_text
+            with tracer.start_as_current_span(
+                "duplicate_analysis.load_content",
+                attributes={"dedupe.documents.chunk_size": chunk_size},
+            ):
+                for i in range(0, len(document_ids), chunk_size):
+                    chunk_ids = document_ids[i : i + chunk_size]
 
-        # Initialize deduplication service
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current_step": "Initializing deduplication service",
-                "progress": 0,
-                "total": total_docs,
-            },
-        )
+                    # Update progress
+                    progress = min(i + chunk_size, len(document_ids))
+                    self.update_state(
+                        state="PROGRESS",
+                        meta={
+                            "current_step": f"Loading document content ({progress}/{total_docs})",
+                            "progress": progress,
+                            "total": total_docs,
+                        },
+                    )
 
-        dedup_service = DeduplicationService()
+                    if broadcast_progress and i % 1000 == 0:  # Broadcast every 1000 docs
+                        asyncio.run(
+                            broadcast_task_status(
+                                task_id=task_id,
+                                status="processing",
+                                step="Loading document content",
+                                progress=progress,
+                                total=total_docs,
+                                started_at=start_time,
+                                task_type="processing",
+                            )
+                        )
 
-        # Find duplicates
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current_step": "Analyzing documents for duplicates",
-                "progress": 0,
-                "total": total_docs,
-            },
-        )
+                    # Query content for chunk
+                    doc_contents = (
+                        self.db.query(DocumentContent)
+                        .filter(DocumentContent.document_id.in_(chunk_ids))
+                        .all()
+                    )
 
-        if broadcast_progress:
-            asyncio.run(
-                broadcast_task_status(
-                    task_id=task_id,
-                    status="processing",
-                    step="Analyzing documents for duplicates",
-                    progress=0,
-                    total=total_docs,
-                )
-            )
+                    for content in doc_contents:
+                        # Use full_text (populated by sync) instead of normalized_text (never populated)
+                        if content.full_text:
+                            contents[content.document_id] = content.full_text
 
-        # Create progress callback for deduplication service
-        async def dedup_progress_callback(step: str, current: int, total: int):
-            """Progress callback for deduplication service"""
+            # Initialize deduplication service
             self.update_state(
                 state="PROGRESS",
-                meta={"current_step": step, "progress": current, "total": total},
+                meta={
+                    "current_step": "Initializing deduplication service",
+                    "progress": 0,
+                    "total": total_docs,
+                },
+            )
+
+            dedup_service = DeduplicationService()
+
+            # Find duplicates
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current_step": "Analyzing documents for duplicates",
+                    "progress": 0,
+                    "total": total_docs,
+                },
             )
 
             if broadcast_progress:
-                await broadcast_task_status(
-                    task_id=task_id,
-                    status="processing",
-                    step=step,
-                    progress=current,
-                    total=total,
+                asyncio.run(
+                    broadcast_task_status(
+                        task_id=task_id,
+                        status="processing",
+                        step="Analyzing documents for duplicates",
+                        progress=0,
+                        total=total_docs,
+                        started_at=start_time,
+                        task_type="processing",
+                    )
                 )
 
-        # Run deduplication with async support
-        duplicate_groups = asyncio.run(
-            dedup_service.find_duplicates(
-                documents,
-                contents,
-                threshold=threshold,
-                progress_callback=dedup_progress_callback,
-            )
-        )
-
-        # Save results to database
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current_step": "Saving duplicate groups to database",
-                "progress": total_docs,
-                "total": total_docs,
-            },
-        )
-
-        if broadcast_progress:
-            asyncio.run(
-                broadcast_task_status(
-                    task_id=task_id,
-                    status="processing",
-                    step="Saving duplicate groups to database",
-                    progress=total_docs,
-                    total=total_docs,
+            # Create progress callback for deduplication service
+            async def dedup_progress_callback(step: str, current: int, total: int):
+                """Progress callback for deduplication service"""
+                self.update_state(
+                    state="PROGRESS",
+                    meta={"current_step": step, "progress": current, "total": total},
                 )
-            )
 
-        groups_created = 0
-        for group in duplicate_groups:
-            # Extract component scores from the group data
-            component_scores = group.get("component_scores", {})
+                if broadcast_progress:
+                    await broadcast_task_status(
+                        task_id=task_id,
+                        status="processing",
+                        step=step,
+                        progress=current,
+                        total=total,
+                        started_at=start_time,
+                        task_type="processing",
+                    )
 
-            db_group = DuplicateGroup(
-                confidence_score=group.get(
-                    "confidence", 0.0
-                ),  # Key is 'confidence' not 'confidence_score'
-                jaccard_similarity=component_scores.get("jaccard"),
-                fuzzy_text_ratio=component_scores.get("fuzzy"),
-                metadata_similarity=component_scores.get("metadata"),
-                filename_similarity=component_scores.get("filename"),
-                algorithm_version="2.0",
-            )
-            self.db.add(db_group)
-            self.db.flush()
-
-            # Get document IDs from the group
-            # The service returns 'documents' which is a list of Document objects
-            documents_in_group = group.get("documents", [])
-
-            for i, doc in enumerate(documents_in_group):
-                # Extract document ID - doc might be a Document object or dict
-                doc_id = doc.id if hasattr(doc, "id") else doc.get("id")
-
-                member = DuplicateMember(
-                    group_id=db_group.id, document_id=doc_id, is_primary=(i == 0)
+            # Run deduplication with async support
+            with tracer.start_as_current_span("duplicate_analysis.compute_duplicates"):
+                duplicate_groups = asyncio.run(
+                    dedup_service.find_duplicates(
+                        documents,
+                        contents,
+                        threshold=threshold,
+                        progress_callback=dedup_progress_callback,
+                    )
                 )
-                self.db.add(member)
 
-            groups_created += 1
-
-        # Update document processing status
-        for doc in documents:
-            doc.processing_status = "processed"
-            doc.last_processed = datetime.now(UTC)
-
-        self.db.commit()
-
-        # Calculate duration
-        duration = (datetime.now(UTC) - start_time).total_seconds()
-
-        result = {
-            "status": "completed",
-            "task_id": task_id,
-            "documents_processed": total_docs,
-            "duplicate_groups_found": groups_created,
-            "threshold_used": threshold,
-            "duration": duration,
-            "completed_at": datetime.now(UTC).isoformat(),
-        }
-
-        # Broadcast completion
-        if broadcast_progress:
-            asyncio.run(
-                broadcast_task_status(
-                    task_id=task_id,
-                    status="completed",
-                    step="Analysis complete",
-                    progress=total_docs,
-                    total=total_docs,
-                    result=result,
-                )
+            # Save results to database
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current_step": "Saving duplicate groups to database",
+                    "progress": total_docs,
+                    "total": total_docs,
+                },
             )
 
-        logger.info(f"Deduplication analysis completed: {result}")
-        return result
+            if broadcast_progress:
+                asyncio.run(
+                    broadcast_task_status(
+                        task_id=task_id,
+                        status="processing",
+                        step="Saving duplicate groups to database",
+                        progress=total_docs,
+                        total=total_docs,
+                        started_at=start_time,
+                        task_type="processing",
+                    )
+                )
+
+            groups_created = 0
+            with tracer.start_as_current_span("duplicate_analysis.persist_results"):
+                for group in duplicate_groups:
+                    # Extract component scores from the group data
+                    component_scores = group.get("component_scores", {})
+
+                    db_group = DuplicateGroup(
+                        confidence_score=group.get(
+                            "confidence", 0.0
+                        ),  # Key is 'confidence' not 'confidence_score'
+                        jaccard_similarity=component_scores.get("jaccard"),
+                        fuzzy_text_ratio=component_scores.get("fuzzy"),
+                        metadata_similarity=component_scores.get("metadata"),
+                        filename_similarity=component_scores.get("filename"),
+                        algorithm_version="2.0",
+                    )
+                    self.db.add(db_group)
+                    self.db.flush()
+
+                    # Get document IDs from the group
+                    # The service returns 'documents' which is a list of Document objects
+                    documents_in_group = group.get("documents", [])
+
+                    for i, doc in enumerate(documents_in_group):
+                        # Extract document ID - doc might be a Document object or dict
+                        doc_id = doc.id if hasattr(doc, "id") else doc.get("id")
+
+                        member = DuplicateMember(
+                            group_id=db_group.id, document_id=doc_id, is_primary=(i == 0)
+                        )
+                        self.db.add(member)
+
+                    groups_created += 1
+
+                # Update document processing status
+                for doc in documents:
+                    doc.processing_status = "completed"
+                    doc.last_processed = datetime.now(UTC)
+
+                self.db.commit()
+
+            # Calculate duration
+            duration = (datetime.now(UTC) - start_time).total_seconds()
+
+            result = {
+                "status": "completed",
+                "task_id": task_id,
+                "documents_processed": total_docs,
+                "duplicate_groups_found": groups_created,
+                "threshold_used": threshold,
+                "duration": duration,
+                "started_at": start_time.isoformat(),
+                "completed_at": datetime.now(UTC).isoformat(),
+            }
+
+            task_span.set_attribute("dedupe.groups.created", groups_created)
+            task_span.set_attribute("dedupe.duration.seconds", duration)
+
+            # Broadcast completion
+            if broadcast_progress:
+                asyncio.run(
+                    broadcast_task_status(
+                        task_id=task_id,
+                        status="completed",
+                        step="Analysis complete",
+                        progress=total_docs,
+                        total=total_docs,
+                        result=result,
+                        started_at=start_time,
+                        completed_at=datetime.fromisoformat(result["completed_at"]),
+                        task_type="processing",
+                    )
+                )
+
+            logger.info(f"Deduplication analysis completed: {result}")
+            return result
 
     except SoftTimeLimitExceeded:
         logger.error(f"Task {current_task.request.id} exceeded time limit")
@@ -370,6 +413,7 @@ def analyze_duplicates(
         raise
 
     except Exception as e:
+        trace.get_current_span().record_exception(e)
         logger.error(f"Error in deduplication task: {str(e)}", exc_info=True)
         self.db.rollback()
 
@@ -381,6 +425,8 @@ def analyze_duplicates(
                     status="failed",
                     step="Analysis failed",
                     error=str(e),
+                    started_at=start_time,
+                    task_type="processing",
                 )
             )
 
@@ -406,6 +452,7 @@ def analyze_duplicates(
                     step="Processing documents",
                     progress=progress,
                     total=total,
+                    task_type="processing",
                 )
             )
 

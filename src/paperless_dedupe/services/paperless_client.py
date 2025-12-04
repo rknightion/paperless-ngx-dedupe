@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+import httpx
 from pypaperless import Paperless
 from pypaperless.models import Document
 
@@ -163,6 +164,27 @@ class PaperlessClient:
             logger.error(f"Failed to fetch documents page {page}: {e}")
             raise
 
+    async def get_total_document_count(self) -> int:
+        """Lightweight call to fetch only the total document count."""
+        try:
+            headers = {}
+            if self.token:
+                headers["Authorization"] = f"Token {self.token}"
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/api/documents/",
+                    params={"page": 1, "page_size": 1},
+                    headers=headers,
+                    timeout=5.0,
+                )
+                response.raise_for_status()
+                data = response.json()
+                return int(data.get("count") or 0)
+        except Exception as e:
+            logger.error(f"Failed to fetch total document count: {e}")
+            return 0
+
     async def get_document(self, document_id: int) -> dict[str, Any]:
         """Get single document details."""
         try:
@@ -180,6 +202,24 @@ class PaperlessClient:
         except Exception as e:
             logger.error(f"Failed to fetch document content {document_id}: {e}")
             return ""
+
+    async def get_document_metadata(self, document_id: int) -> dict[str, Any]:
+        """Get document metadata (checksums, sizes, filenames)."""
+        try:
+            meta = await self.paperless.documents.metadata(document_id)
+            return {
+                "id": meta.id,
+                "original_checksum": getattr(meta, "original_checksum", None),
+                "archive_checksum": getattr(meta, "archive_checksum", None),
+                "original_size": getattr(meta, "original_size", None),
+                "archive_size": getattr(meta, "archive_size", None),
+                "original_filename": getattr(meta, "original_filename", None),
+                "archive_media_filename": getattr(meta, "archive_media_filename", None),
+                "lang": getattr(meta, "lang", None),
+            }
+        except Exception as e:
+            logger.error(f"Failed to fetch metadata for document {document_id}: {e}")
+            return {}
 
     async def get_document_thumbnail(self, document_id: int) -> bytes:
         """Get document thumbnail."""
@@ -437,9 +477,8 @@ class PaperlessClient:
             storage_paths = await self.get_storage_paths()
             custom_fields = await self.get_custom_fields()
 
-            # Get document count from a single page request (much faster)
-            first_page = await self.get_documents(page=1, page_size=1)
-            total_docs = first_page.get("count", 0)
+            # Get document count from a lightweight API request
+            total_docs = await self.get_total_document_count()
 
             # Calculate documents with metadata from the counts in each category
             # This is approximate but much faster than iterating all documents
@@ -483,21 +522,40 @@ class PaperlessClient:
 
     def _document_to_dict(self, doc: Document) -> dict[str, Any]:
         """Convert PyPaperless Document to dict."""
+        raw_data = getattr(doc, "_data", {}) or {}
+        checksum = raw_data.get("checksum") or raw_data.get("original_checksum")
+        correspondent_name = raw_data.get("correspondent_name") or raw_data.get(
+            "correspondent__name"
+        )
+        document_type_name = raw_data.get("document_type_name") or raw_data.get(
+            "document_type__name"
+        )
+        tags = raw_data.get("tags", doc.tags or [])
+
         return {
             "id": doc.id,
             "title": doc.title,
             "content": doc.content,
             "correspondent": doc.correspondent,
+            "correspondent_name": correspondent_name,
             "document_type": doc.document_type,
+            "document_type_name": document_type_name,
             "storage_path": doc.storage_path,
-            "tags": doc.tags or [],
+            "tags": tags or [],
+            "checksum": checksum,
             "created": doc.created.isoformat() if doc.created else None,
             "modified": doc.modified.isoformat() if doc.modified else None,
             "added": doc.added.isoformat() if doc.added else None,
             "archive_serial_number": doc.archive_serial_number,
-            "original_file_name": doc.original_file_name,
-            "archived_file_name": doc.archived_file_name,
+            "original_file_name": raw_data.get("original_file_name")
+            or raw_data.get("original_filename")
+            or doc.original_file_name,
+            "archived_file_name": raw_data.get("archived_file_name")
+            or raw_data.get("archive_media_filename")
+            or doc.archived_file_name,
             "owner": doc.owner,
+            "fingerprint": checksum,
+            "file_size": raw_data.get("original_size") or raw_data.get("archive_size"),
             "notes": doc.notes or [],
             "custom_fields": [
                 {"field": cf.field, "value": cf.value}

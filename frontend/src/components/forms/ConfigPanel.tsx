@@ -48,10 +48,9 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [confidenceWeights, setConfidenceWeights] = useState({
-    jaccard: 40,
-    fuzzy: 30,
-    metadata: 20,
-    filename: 10,
+    jaccard: 90,
+    fuzzy: 10,
+    metadata: 0,
   });
   const [weightsChanged, setWeightsChanged] = useState(false);
   const [reanalysisMessage, setReanalysisMessage] = useState<string | null>(
@@ -67,10 +66,9 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   useEffect(() => {
     if (formData.confidence_weight_jaccard !== undefined) {
       const newWeights = {
-        jaccard: formData.confidence_weight_jaccard ?? 40,
-        fuzzy: formData.confidence_weight_fuzzy ?? 30,
-        metadata: formData.confidence_weight_metadata ?? 20,
-        filename: formData.confidence_weight_filename ?? 10,
+        jaccard: formData.confidence_weight_jaccard ?? 90,
+        fuzzy: formData.confidence_weight_fuzzy ?? 10,
+        metadata: formData.confidence_weight_metadata ?? 0,
       };
       setConfidenceWeights(newWeights);
       setWeightsChanged(false); // Reset when loading from server
@@ -99,7 +97,6 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
         confidence_weight_jaccard: confidenceWeights.jaccard,
         confidence_weight_fuzzy: confidenceWeights.fuzzy,
         confidence_weight_metadata: confidenceWeights.metadata,
-        confidence_weight_filename: confidenceWeights.filename,
       };
 
       const result = await dispatch(
@@ -508,22 +505,22 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                     const diff = newValue - confidenceWeights.jaccard;
                     // Auto-adjust other weights proportionally
                     const remaining = 100 - newValue;
-                    const currentOthers = 100 - confidenceWeights.jaccard;
-                    if (currentOthers > 0 && remaining >= 0) {
-                      const scale = remaining / currentOthers;
-                      setConfidenceWeights({
-                        jaccard: newValue,
-                        fuzzy: Math.round(confidenceWeights.fuzzy * scale),
-                        metadata: Math.round(
-                          confidenceWeights.metadata * scale
-                        ),
-                        filename:
-                          remaining -
-                          Math.round(confidenceWeights.fuzzy * scale) -
-                          Math.round(confidenceWeights.metadata * scale),
-                      });
-                      setWeightsChanged(true);
-                    }
+                      const currentOthers =
+                        confidenceWeights.fuzzy + confidenceWeights.metadata;
+                      if (currentOthers > 0 && remaining >= 0) {
+                        const scale = remaining / currentOthers;
+                        const nextFuzzy = Math.round(
+                          confidenceWeights.fuzzy * scale
+                        );
+                        const nextMetadata =
+                          remaining - nextFuzzy; // ensure sum = 100
+                        setConfidenceWeights({
+                          jaccard: newValue,
+                          fuzzy: nextFuzzy,
+                          metadata: nextMetadata,
+                        });
+                        setWeightsChanged(true);
+                      }
                   }}
                   className="w-full"
                 />
@@ -547,12 +544,10 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   value={confidenceWeights.fuzzy}
                   onChange={(e) => {
                     const newValue = parseInt(e.target.value);
-                    const diff = newValue - confidenceWeights.fuzzy;
                     const remaining =
                       100 - newValue - confidenceWeights.jaccard;
                     if (remaining >= 0) {
-                      const currentOthers =
-                        confidenceWeights.metadata + confidenceWeights.filename;
+                      const currentOthers = confidenceWeights.metadata;
                       if (currentOthers > 0) {
                         const scale = remaining / currentOthers;
                         setConfidenceWeights({
@@ -561,9 +556,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                           metadata: Math.round(
                             confidenceWeights.metadata * scale
                           ),
-                          filename:
-                            remaining -
-                            Math.round(confidenceWeights.metadata * scale),
+                        });
+                        setWeightsChanged(true);
+                      } else {
+                        setConfidenceWeights({
+                          ...confidenceWeights,
+                          fuzzy: newValue,
+                          metadata: remaining,
                         });
                         setWeightsChanged(true);
                       }
@@ -600,43 +599,6 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                       setConfidenceWeights({
                         ...confidenceWeights,
                         metadata: newValue,
-                        filename: remaining,
-                      });
-                      setWeightsChanged(true);
-                    }
-                  }}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Filename Weight */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="weight_filename">
-                    Filename Match ({confidenceWeights.filename}%)
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    Original filename similarity
-                  </span>
-                </div>
-                <Input
-                  id="weight_filename"
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={confidenceWeights.filename}
-                  onChange={(e) => {
-                    const newValue = parseInt(e.target.value);
-                    const remaining =
-                      100 -
-                      newValue -
-                      confidenceWeights.jaccard -
-                      confidenceWeights.fuzzy;
-                    if (remaining >= 0) {
-                      setConfidenceWeights({
-                        ...confidenceWeights,
-                        filename: newValue,
-                        metadata: remaining,
                       });
                       setWeightsChanged(true);
                     }
@@ -653,8 +615,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                     className={`text-sm font-bold ${
                       confidenceWeights.jaccard +
                         confidenceWeights.fuzzy +
-                        confidenceWeights.metadata +
-                        confidenceWeights.filename ===
+                        confidenceWeights.metadata ===
                       100
                         ? 'text-green-600'
                         : 'text-red-600'
@@ -662,15 +623,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                   >
                     {confidenceWeights.jaccard +
                       confidenceWeights.fuzzy +
-                      confidenceWeights.metadata +
-                      confidenceWeights.filename}
+                      confidenceWeights.metadata}
                     %
                   </span>
                 </div>
                 {confidenceWeights.jaccard +
                   confidenceWeights.fuzzy +
-                  confidenceWeights.metadata +
-                  confidenceWeights.filename !==
+                  confidenceWeights.metadata !==
                   100 && (
                   <p className="text-xs text-red-600 mt-1">
                     Weights must sum to exactly 100%. Adjust the sliders to

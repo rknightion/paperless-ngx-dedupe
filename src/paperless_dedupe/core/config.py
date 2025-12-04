@@ -42,10 +42,13 @@ class Settings(BaseSettings):
     )
 
     # Confidence score weight configuration (percentages, must sum to 100)
-    confidence_weight_jaccard: int = 40  # Weight for Jaccard similarity (MinHash)
-    confidence_weight_fuzzy: int = 30  # Weight for fuzzy text matching
-    confidence_weight_metadata: int = 20  # Weight for metadata similarity
-    confidence_weight_filename: int = 10  # Weight for filename similarity
+    # Default scoring leans on OCR content (Jaccard + a little fuzzy), metadata only as fallback
+    confidence_weight_jaccard: int = 90  # Weight for Jaccard similarity (MinHash)
+    confidence_weight_fuzzy: int = 10  # Weight for fuzzy text matching
+    confidence_weight_metadata: int = (
+        0  # Weight for metadata similarity (used as fallback if no text)
+    )
+    confidence_weight_filename: int = 0  # Filename similarity disabled by default
 
     # API settings
     api_rate_limit: int = 10  # requests per second

@@ -79,10 +79,9 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
   // Get confidence weights from config
   const config = useSelector((state: RootState) => state.config.configuration);
   const weights = {
-    jaccard: config?.confidence_weight_jaccard ?? 40,
-    fuzzy: config?.confidence_weight_fuzzy ?? 30,
-    metadata: config?.confidence_weight_metadata ?? 20,
-    filename: config?.confidence_weight_filename ?? 10,
+    jaccard: config?.confidence_weight_jaccard ?? 90,
+    fuzzy: config?.confidence_weight_fuzzy ?? 10,
+    metadata: config?.confidence_weight_metadata ?? 0,
   };
 
   const metrics = [
@@ -109,12 +108,6 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
       value: breakdown?.metadata_similarity || 0,
       color: 'bg-yellow-500',
       weight: `${weights.metadata}%`,
-    },
-    {
-      label: 'Filename Match',
-      value: breakdown?.filename_similarity || 0,
-      color: 'bg-purple-500',
-      weight: `${weights.filename}%`,
     },
   ];
 
@@ -158,7 +151,6 @@ const ConfidenceBreakdown: React.FC<ConfidenceBreakdownProps> = ({
         <p>• Content: Based on document text similarity</p>
         <p>• Text: Fuzzy matching accounting for OCR variations</p>
         <p>• Metadata: File size, dates, types, correspondents</p>
-        <p>• Filename: Original filename similarity</p>
       </div>
     </div>
   );
@@ -512,6 +504,17 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                       <ArrowLeftRight className="h-3 w-3 mr-1" />
                       Compare
                     </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Open a side-by-side comparison of the primary document and
+                    its matches.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <Button
                       onClick={handleReviewToggle}
                       disabled={loading}
