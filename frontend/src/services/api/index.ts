@@ -5,6 +5,7 @@ export { duplicatesApi } from './duplicates';
 export { processingApi } from './processing';
 export { configApi } from './config';
 export { batchApi, OperationType, OperationStatus } from './batch';
+export { aiApi } from './ai';
 
 // Export types
 export type * from './types';
@@ -16,6 +17,7 @@ export const api = {
   processing: () => import('./processing').then((m) => m.processingApi),
   config: () => import('./config').then((m) => m.configApi),
   batch: () => import('./batch').then((m) => m.batchApi),
+  ai: () => import('./ai').then((m) => m.aiApi),
 };
 
 // Convenience methods
@@ -25,4 +27,5 @@ export const getApi = () => ({
   processing: import('./processing').then((m) => m.processingApi),
   config: import('./config').then((m) => m.configApi),
   batch: import('./batch').then((m) => m.batchApi),
+  ai: import('./ai').then((m) => m.aiApi),
 });

@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from paperless_dedupe.api.v1 import (
+    ai_processing,
     batch_operations,
     config,
     documents,
@@ -257,6 +258,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(duplicates.router, prefix="/api/v1/duplicates", tags=["duplicates"])
 app.include_router(processing.router, prefix="/api/v1/processing", tags=["processing"])
+app.include_router(ai_processing.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(config.router, prefix="/api/v1/config", tags=["config"])
 app.include_router(batch_operations.router, prefix="/api/v1/batch", tags=["batch"])
 app.include_router(internal.router, prefix="/api/v1/internal", tags=["internal"])

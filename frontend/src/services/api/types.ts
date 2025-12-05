@@ -125,6 +125,7 @@ export interface Configuration {
   paperless_api_token?: string;
   paperless_username?: string;
   paperless_password?: string;
+  openai_api_key?: string;
   fuzzy_match_threshold: number;
   max_ocr_length: number;
   lsh_threshold: number;
@@ -132,6 +133,11 @@ export interface Configuration {
   confidence_weight_jaccard?: number;
   confidence_weight_fuzzy?: number;
   confidence_weight_metadata?: number;
+  openai_model?: string;
+  openai_reasoning_effort?: string;
+  ai_max_input_chars?: number;
+  ai_prompt_caching_enabled?: boolean;
+  openai_configured?: boolean;
 }
 
 export interface TestConnectionResponse {
@@ -192,4 +198,52 @@ export interface DuplicateGroupQueryParams {
   use_fuzzy?: boolean;
   use_metadata?: boolean;
   min_fuzzy_ratio?: number;
+}
+
+// AI processing
+export type AIField =
+  | 'title'
+  | 'correspondent'
+  | 'document_type'
+  | 'tags'
+  | 'date'
+  | 'all';
+
+export interface AIJob {
+  id: number;
+  status: string;
+  tag_filter?: string | null;
+  include_all: boolean;
+  target_fields: AIField[];
+  processed_count: number;
+  total_count: number;
+  created_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  error?: string | null;
+}
+
+export interface AIResult {
+  id: number;
+  job_id: number;
+  status: string;
+  document_id: number;
+  paperless_id: number;
+  document_title?: string | null;
+  document_correspondent?: string | null;
+  document_type?: string | null;
+  document_tags?: string[];
+  suggested_title?: string | null;
+  title_confidence?: number | null;
+  suggested_correspondent?: string | null;
+  correspondent_confidence?: number | null;
+  suggested_document_type?: string | null;
+  document_type_confidence?: number | null;
+  suggested_tags?: Array<{ value?: string; confidence?: number } | string>;
+  tags_confidence?: number | null;
+  suggested_date?: string | null;
+  date_confidence?: number | null;
+  requested_fields?: AIField[];
+  applied_at?: string | null;
+  error?: string | null;
 }

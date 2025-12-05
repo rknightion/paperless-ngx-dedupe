@@ -15,6 +15,7 @@ app = Celery(
         "paperless_dedupe.worker.tasks.deduplication",
         "paperless_dedupe.worker.tasks.document_sync",
         "paperless_dedupe.worker.tasks.batch_operations",
+        "paperless_dedupe.worker.tasks.ai_processing",
     ],
 )
 
@@ -50,6 +51,7 @@ app.conf.task_queues = (
     Queue("low_priority", Exchange("low_priority"), routing_key="low_priority"),
     Queue("deduplication", Exchange("deduplication"), routing_key="deduplication"),
     Queue("sync", Exchange("sync"), routing_key="sync"),
+    Queue("ai", Exchange("ai"), routing_key="ai"),
 )
 
 # Task routing
@@ -57,6 +59,7 @@ app.conf.task_routes = {
     "paperless_dedupe.worker.tasks.deduplication.*": {"queue": "deduplication"},
     "paperless_dedupe.worker.tasks.document_sync.*": {"queue": "sync"},
     "paperless_dedupe.worker.tasks.batch_operations.*": {"queue": "default"},
+    "paperless_dedupe.worker.tasks.ai_processing.*": {"queue": "ai"},
 }
 
 # Beat schedule for periodic tasks (if needed)

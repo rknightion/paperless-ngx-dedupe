@@ -60,6 +60,11 @@ class Document(Base):
     duplicate_memberships = relationship(
         "DuplicateMember", back_populates="document", cascade="all, delete-orphan"
     )
+    ai_results = relationship(
+        "AIExtractionResult",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
 
 
 class DocumentContent(Base):
@@ -147,6 +152,63 @@ class AppConfig(Base):
     updated_at = Column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
+
+
+class AIExtractionJob(Base):
+    __tablename__ = "ai_extraction_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    status = Column(String(30), default="pending")
+    target_fields = Column(JSONType)  # e.g., ["title", "correspondent"]
+    tag_filter = Column(String(200), nullable=True)
+    include_all = Column(Boolean, default=False)
+    model = Column(String(50))
+    reasoning_level = Column(String(20))
+    max_input_chars = Column(Integer)
+    prompt_version = Column(String(20), default="v1")
+    processed_count = Column(Integer, default=0)
+    total_count = Column(Integer, default=0)
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    results = relationship(
+        "AIExtractionResult",
+        back_populates="job",
+        cascade="all, delete-orphan",
+    )
+
+
+class AIExtractionResult(Base):
+    __tablename__ = "ai_extraction_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(
+        Integer, ForeignKey("ai_extraction_jobs.id", ondelete="CASCADE"), index=True
+    )
+    document_id = Column(
+        Integer, ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    status = Column(String(30), default="pending_review")  # pending_review|applied|rejected|failed
+    suggested_title = Column(String(500), nullable=True)
+    title_confidence = Column(Float, nullable=True)
+    suggested_correspondent = Column(String(200), nullable=True)
+    correspondent_confidence = Column(Float, nullable=True)
+    suggested_document_type = Column(String(200), nullable=True)
+    document_type_confidence = Column(Float, nullable=True)
+    suggested_tags = Column(JSONType, nullable=True)  # list of {"value": str, "confidence": float}
+    tags_confidence = Column(Float, nullable=True)
+    suggested_date = Column(DateTime, nullable=True)
+    date_confidence = Column(Float, nullable=True)
+    raw_response = Column(JSONType, nullable=True)
+    requested_fields = Column(JSONType, nullable=True)
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    applied_at = Column(DateTime, nullable=True)
+
+    job = relationship("AIExtractionJob", back_populates="results")
+    document = relationship("Document", back_populates="ai_results")
 
 
 # Database setup

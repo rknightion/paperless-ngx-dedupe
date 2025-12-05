@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     paperless_api_token: str | None = None
     paperless_username: str | None = None
     paperless_password: str | None = None
+    fetch_metadata_on_sync: bool = False  # Avoid expensive /metadata calls unless explicitly enabled
 
     # Database settings - PostgreSQL required
     database_url: str = (
@@ -64,6 +65,13 @@ class Settings(BaseSettings):
     secret_key: str = os.environ.get("SECRET_KEY", "change-me-in-production")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    # AI metadata extraction
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-5-mini"  # Allowed: gpt-5.1, gpt-5-mini, gpt-5-nano
+    openai_reasoning_effort: str = "medium"  # low, medium, high
+    ai_max_input_chars: int = 12000
+    ai_prompt_caching_enabled: bool = True
 
     # File storage
     data_dir: str = "./data"

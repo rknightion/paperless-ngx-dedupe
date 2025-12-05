@@ -361,6 +361,26 @@ class PaperlessClient:
             logger.error(f"Failed to create tag {name}: {e}")
             return None
 
+    async def create_correspondent(self, name: str) -> int | None:
+        """Create a new correspondent."""
+        try:
+            draft = self.paperless.correspondents.draft(name=name)
+            new_id = await draft.save()
+            return int(new_id) if new_id is not None else None
+        except Exception as e:
+            logger.error(f"Failed to create correspondent {name}: {e}")
+            return None
+
+    async def create_document_type(self, name: str) -> int | None:
+        """Create a new document type."""
+        try:
+            draft = self.paperless.document_types.draft(name=name)
+            new_id = await draft.save()
+            return int(new_id) if new_id is not None else None
+        except Exception as e:
+            logger.error(f"Failed to create document type {name}: {e}")
+            return None
+
     # New methods enabled by PyPaperless
 
     async def get_correspondents(self) -> list[dict[str, Any]]:

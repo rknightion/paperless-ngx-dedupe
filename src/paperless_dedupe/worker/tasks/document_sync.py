@@ -152,6 +152,12 @@ async def _sync_documents_async(
             # Create mapping of existing documents
             existing_docs = {doc.paperless_id: doc for doc in db.query(Document).all()}
 
+            if not settings.fetch_metadata_on_sync:
+                logger.info(
+                    "Skipping per-document /metadata requests for faster sync; "
+                    "file sizes may be empty. Set PAPERLESS_DEDUPE_FETCH_METADATA_ON_SYNC=true to re-enable."
+                )
+
             # Align broadcast total with actual documents fetched
             if broadcast_progress:
                 await broadcast_task_status(
@@ -245,11 +251,15 @@ async def _sync_documents_async(
                     original_size = doc_data.get("original_file_size")
                     archive_size = doc_data.get("archive_file_size")
                     meta = None
-                    if original_size is None or archive_size is None:
+                    should_fetch_metadata = (
+                        settings.fetch_metadata_on_sync
+                        and (original_size is None or archive_size is None)
+                    )
+                    if should_fetch_metadata:
                         try:
                             meta = await client.get_document_metadata(paperless_id)
-                            original_size = meta.get("original_size")
-                            archive_size = meta.get("archive_size")
+                            original_size = original_size or meta.get("original_size")
+                            archive_size = archive_size or meta.get("archive_size")
                         except Exception as meta_err:
                             logger.warning(
                                 "Could not fetch metadata for document %s: %s",

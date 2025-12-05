@@ -31,6 +31,9 @@
 
 # Authentication (recommended: API Token from paperless-ngx admin)
 # PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-api-token-here
+# Skip slow per-document metadata calls during sync (default: false). Set to true if
+# you explicitly need file size data at the cost of speed.
+# PAPERLESS_DEDUPE_FETCH_METADATA_ON_SYNC=false
 
 # -----------------------------------------------------------------------------
 # Deduplication Settings

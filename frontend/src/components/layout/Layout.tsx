@@ -7,6 +7,7 @@ import {
   Copy,
   Settings,
   Sparkles,
+  Brain,
   Menu,
   X,
 } from 'lucide-react';
@@ -26,6 +27,7 @@ const navigation: NavigationItem[] = [
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Duplicates', href: '/duplicates', icon: Copy },
   { name: 'Bulk Wizard', href: '/bulk-wizard', icon: Sparkles },
+  { name: 'AI Processing', href: '/ai-processing', icon: Brain },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

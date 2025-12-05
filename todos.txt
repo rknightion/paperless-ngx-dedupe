@@ -1,0 +1,6 @@
+[] Validate the OpenAI Responses integration end-to-end and adjust response parsing if the SDK output shape differs; add tests around AIProcessingService.
+[] Expand the AI review UI to allow per-field accept/reject/edit and show document previews (thumbnails/content) instead of only applying whole rows.
+[] Emit websocket/task-status updates for AI jobs (or tighter polling) so the wizard shows live progress; worker currently just updates DB.
+[] Improve tag selection by fetching available tags from Paperless/DB (case-insensitive lookup); today tag filtering expects an exact match string.
+[] Track review decisions (accepted/rejected), mark jobs as fully applied, and surface Paperless update failures to the UI; consider field-level statuses.
+[] Run `alembic upgrade head` to apply migration b2c4f6f9c2a1 in deployed environments.

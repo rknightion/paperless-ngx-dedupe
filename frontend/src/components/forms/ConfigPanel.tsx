@@ -35,6 +35,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import type { Configuration } from '../../services/api/types';
+import { Badge } from '../ui/Badge';
 import {
   Tooltip,
   TooltipContent,
@@ -62,6 +63,11 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   const [reanalysisMessage, setReanalysisMessage] = useState<string | null>(
     null
   );
+  const aiModelOptions = [
+    { value: 'gpt-5.1', label: 'gpt-5.1 (best quality)' },
+    { value: 'gpt-5-mini', label: 'gpt-5-mini (balanced)' },
+    { value: 'gpt-5-nano', label: 'gpt-5-nano (cheapest)' },
+  ];
 
   // Load configuration on mount
   useEffect(() => {
@@ -84,7 +90,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   // Handle form field changes
   const handleFieldChange = (
     field: keyof Configuration,
-    value: string | number
+    value: string | number | boolean
   ) => {
     dispatch(updateFormData({ [field]: value }));
   };
@@ -375,6 +381,135 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               <TestTube className="h-4 w-4 mr-2" />
               Test Connection
             </Button>
+          </div>
+        </div>
+
+        {/* AI Processing */}
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">AI Processing</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure OpenAI to generate titles, correspondents, document types, tags, and dates.
+              </p>
+            </div>
+            {formData.openai_configured ? (
+              <Badge variant="secondary">API key saved</Badge>
+            ) : (
+              <Badge variant="outline">API key missing</Badge>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="openai_api_key">OpenAI API Key</Label>
+            <Input
+              id="openai_api_key"
+              type="password"
+              value={formData.openai_api_key || ''}
+              onChange={(e) =>
+                handleFieldChange('openai_api_key', e.target.value)
+              }
+              placeholder="sk-..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Required for AI metadata extraction. Stored in the application
+              database; not sent anywhere else.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="openai_model">Model</Label>
+              <select
+                id="openai_model"
+                value={formData.openai_model || 'gpt-5-mini'}
+                onChange={(e) =>
+                  handleFieldChange('openai_model', e.target.value)
+                }
+                className="border rounded-md px-3 py-2 text-sm w-full bg-background"
+              >
+                {aiModelOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Only gpt-5.1, gpt-5-mini, or gpt-5-nano are allowed to balance
+                accuracy and cost.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="openai_reasoning_effort">
+                Reasoning effort
+              </Label>
+              <select
+                id="openai_reasoning_effort"
+                value={formData.openai_reasoning_effort || 'medium'}
+                onChange={(e) =>
+                  handleFieldChange('openai_reasoning_effort', e.target.value)
+                }
+                className="border rounded-md px-3 py-2 text-sm w-full bg-background"
+              >
+                <option value="low">Low (fastest)</option>
+                <option value="medium">Medium (default)</option>
+                <option value="high">High (best quality)</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Higher effort improves extraction quality at the cost of latency
+                and tokens.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="ai_max_input_chars">
+                Max characters sent to OpenAI
+              </Label>
+              <Input
+                id="ai_max_input_chars"
+                type="number"
+                min={1000}
+                max={100000}
+                step={500}
+                value={formData.ai_max_input_chars ?? 12000}
+                onChange={(e) =>
+                  handleFieldChange(
+                    'ai_max_input_chars',
+                    Math.max(1000, parseInt(e.target.value) || 0)
+                  )
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Caps OCR characters per document to keep token usage and costs
+                predictable.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center space-x-2" htmlFor="ai_prompt_caching_enabled">
+                <span>Prompt caching</span>
+              </Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ai_prompt_caching_enabled"
+                  checked={!!formData.ai_prompt_caching_enabled}
+                  onCheckedChange={(checked) =>
+                    handleFieldChange(
+                      'ai_prompt_caching_enabled',
+                      Boolean(checked)
+                    )
+                  }
+                />
+                <span className="text-sm">Enable OpenAI prompt caching</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Reuses the heavy instruction prompt across documents to save
+                tokens; only document text changes per call.
+              </p>
+            </div>
           </div>
         </div>
 

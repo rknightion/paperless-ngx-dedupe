@@ -1,7 +1,16 @@
 # API v1 endpoints
-from . import batch_operations, config, documents, duplicates, processing, websocket
+from . import (
+    ai_processing,
+    batch_operations,
+    config,
+    documents,
+    duplicates,
+    processing,
+    websocket,
+)
 
 __all__ = [
+    "ai_processing",
     "documents",
     "duplicates",
     "config",

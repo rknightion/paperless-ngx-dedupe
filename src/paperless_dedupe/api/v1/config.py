@@ -59,6 +59,26 @@ class ConfigUpdate(BaseModel):
         le=100,
         description="Weight for filename similarity (0-100, currently unused)",
     )
+    openai_api_key: str | None = Field(
+        None, description="OpenAI API key for AI metadata extraction"
+    )
+    openai_model: str | None = Field(
+        None,
+        description="OpenAI model to use for metadata extraction (gpt-5.1, gpt-5-mini, gpt-5-nano)",
+    )
+    openai_reasoning_effort: str | None = Field(
+        None,
+        description="Reasoning depth to trade latency for quality (low, medium, high)",
+    )
+    ai_max_input_chars: int | None = Field(
+        None,
+        ge=1000,
+        le=100000,
+        description="Maximum characters of document content sent to the LLM per document",
+    )
+    ai_prompt_caching_enabled: bool | None = Field(
+        None, description="Enable OpenAI prompt caching to reduce costs"
+    )
 
     @validator("paperless_url")
     def validate_url(cls, v):  # noqa: N805
@@ -89,6 +109,24 @@ class ConfigUpdate(BaseModel):
                     f"Confidence weights must sum to 100 (currently {total})"
                 )
 
+        return v
+
+    @validator("openai_model")
+    def validate_openai_model(cls, v):  # noqa: N805
+        if v is None:
+            return v
+        allowed_models = {"gpt-5.1", "gpt-5-mini", "gpt-5-nano"}
+        if v not in allowed_models:
+            raise ValueError(f"Model must be one of {', '.join(sorted(allowed_models))}")
+        return v
+
+    @validator("openai_reasoning_effort")
+    def validate_reasoning_effort(cls, v):  # noqa: N805
+        if v is None:
+            return v
+        allowed = {"low", "medium", "high"}
+        if v not in allowed:
+            raise ValueError(f"Reasoning effort must be one of {', '.join(sorted(allowed))}")
         return v
 
 
@@ -152,6 +190,19 @@ async def get_config(db: Session = Depends(get_db)):
         ),
         "confidence_weight_filename": db_config.get(
             "confidence_weight_filename", settings.confidence_weight_filename
+        ),
+        "openai_model": db_config.get("openai_model", settings.openai_model),
+        "openai_reasoning_effort": db_config.get(
+            "openai_reasoning_effort", settings.openai_reasoning_effort
+        ),
+        "ai_max_input_chars": db_config.get(
+            "ai_max_input_chars", settings.ai_max_input_chars
+        ),
+        "ai_prompt_caching_enabled": db_config.get(
+            "ai_prompt_caching_enabled", settings.ai_prompt_caching_enabled
+        ),
+        "openai_configured": bool(
+            db_config.get("openai_api_key", settings.openai_api_key)
         ),
         "minhash_num_perm": settings.minhash_num_perm,
         "lsh_num_bands": settings.lsh_num_bands,
