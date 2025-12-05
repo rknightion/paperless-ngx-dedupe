@@ -35,6 +35,12 @@ app.conf.update(
     broker_connection_retry_on_startup=True,
     task_default_retry_delay=60,
     task_max_retries=3,
+    broker_transport_options={
+        "visibility_timeout": 3600,
+        # Ensure broadcast control commands (ping, stats) reach workers on Redis
+        "fanout_prefix": True,
+        "fanout_patterns": True,
+    },
 )
 
 # Define queues with different priorities

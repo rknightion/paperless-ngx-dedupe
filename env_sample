@@ -29,33 +29,19 @@
 # Set your paperless-ngx instance URL here
 # PAPERLESS_DEDUPE_PAPERLESS_URL=http://your-paperless-instance:8000
 
-# Authentication - Choose ONE method:
-# Option 1: API Token (recommended - get from paperless-ngx admin)
+# Authentication (recommended: API Token from paperless-ngx admin)
 # PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN=your-api-token-here
 
-# Option 2: Username/Password (if API token not available)
-# PAPERLESS_DEDUPE_PAPERLESS_USERNAME=your-username
-# PAPERLESS_DEDUPE_PAPERLESS_PASSWORD=your-password
-# Note: Values saved in the UI will override these only if non-empty.
-
 # -----------------------------------------------------------------------------
-# Deduplication Settings (can be configured via Web UI)
-# -----------------------------------------------------------------------------
-# Similarity threshold for fuzzy matching (0-100, higher = stricter)
-# PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD=80
-
-# Maximum OCR text length to store per document (characters)
-# PAPERLESS_DEDUPE_MAX_OCR_LENGTH=10000
-
-# LSH similarity threshold (0.0-1.0, higher = stricter)
-# PAPERLESS_DEDUPE_LSH_THRESHOLD=0.5
+# Deduplication Settings
+# Configured only via the Web UI. Environment overrides are ignored by design.
 
 # -----------------------------------------------------------------------------
 # Security (IMPORTANT: Change this in production!)
 # -----------------------------------------------------------------------------
 # Generate a secure key: openssl rand -hex 32
 # For local development, you can use this default:
-# PAPERLESS_DEDUPE_SECRET_KEY=dev-secret-key-change-in-production
+# SECRET_KEY=dev-secret-key-change-in-production
 
 # For production (Docker), always set this:
 SECRET_KEY=change-me-in-production-use-a-long-random-string
@@ -96,15 +82,3 @@ OTEL_RESOURCE_ATTRIBUTES=service.namespace=paperless-ngx,deployment.environment=
 # FARO_SOURCEMAP_APP_NAME=paperless-dedupe
 # FARO_SOURCEMAP_APP_ID=231
 # FARO_SOURCEMAP_STACK_ID=1217581
-
-# -----------------------------------------------------------------------------
-# Advanced Settings (usually not needed)
-# -----------------------------------------------------------------------------
-# API rate limiting (requests per second)
-# PAPERLESS_DEDUPE_API_RATE_LIMIT=10
-
-# Pagination size for API requests
-# PAPERLESS_DEDUPE_API_PAGE_SIZE=100
-
-# Number of MinHash permutations (higher = more accurate but slower)
-# PAPERLESS_DEDUPE_MINHASH_NUM_PERM=128

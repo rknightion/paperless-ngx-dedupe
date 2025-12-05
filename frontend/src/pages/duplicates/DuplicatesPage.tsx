@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import { useAppDispatch, useDuplicateGroups } from '../../hooks/redux';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
@@ -85,14 +91,73 @@ export const DuplicatesPage: React.FC = () => {
     metadata: true,
   });
   const [fuzzyRatioFilter, setFuzzyRatioFilter] = useState(0.5);
+  const [selectedCorrespondent, setSelectedCorrespondent] = useState('');
+  const [selectedDocumentType, setSelectedDocumentType] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
+  const [minPages, setMinPages] = useState('');
+  const [maxPages, setMaxPages] = useState('');
+  const [minFileSizeMb, setMinFileSizeMb] = useState('');
+  const [maxFileSizeMb, setMaxFileSizeMb] = useState('');
   const [config, setConfig] = useState<any>(null);
   const [infoBoxExpanded, setInfoBoxExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [sortBy, setSortBy] = useState<'confidence' | 'created' | 'documents'>(
-    'confidence'
-  );
+  const [sortBy, setSortBy] = useState<
+    | 'confidence'
+    | 'created'
+    | 'documents'
+    | 'filename'
+    | 'file_size'
+    | 'page_count'
+    | 'correspondent'
+    | 'document_type'
+  >('confidence');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const minPagesValue = useMemo(
+    () => (minPages ? parseInt(minPages, 10) || undefined : undefined),
+    [minPages]
+  );
+  const maxPagesValue = useMemo(
+    () => (maxPages ? parseInt(maxPages, 10) || undefined : undefined),
+    [maxPages]
+  );
+  const minFileSizeBytes = useMemo(
+    () =>
+      minFileSizeMb
+        ? Math.max(parseFloat(minFileSizeMb) * 1024 * 1024, 0) || undefined
+        : undefined,
+    [minFileSizeMb]
+  );
+  const maxFileSizeBytes = useMemo(
+    () =>
+      maxFileSizeMb
+        ? Math.max(parseFloat(maxFileSizeMb) * 1024 * 1024, 0) || undefined
+        : undefined,
+    [maxFileSizeMb]
+  );
+  const metadataFacets = useMemo(() => {
+    const correspondents = new Set<string>();
+    const documentTypes = new Set<string>();
+    const tags = new Set<string>();
+
+    (groups || []).forEach((group) => {
+      group.documents.forEach((doc) => {
+        if (doc.correspondent) {
+          correspondents.add(doc.correspondent);
+        }
+        if (doc.document_type) {
+          documentTypes.add(doc.document_type);
+        }
+        (doc.tags || []).forEach((tag) => tags.add(tag));
+      });
+    });
+
+    return {
+      correspondents: Array.from(correspondents).sort(),
+      documentTypes: Array.from(documentTypes).sort(),
+      tags: Array.from(tags).sort(),
+    };
+  }, [groups]);
 
   // Keyboard shortcuts state
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
@@ -160,21 +225,110 @@ export const DuplicatesPage: React.FC = () => {
     console.log('Selected document:', documentId);
   };
 
+  const applyLocalFilters = useCallback(
+    (collection: typeof groups) => {
+      return (collection || []).filter((group) => {
+        const matchesSearch =
+          searchQuery === '' ||
+          group.documents.some((doc) =>
+            doc.title.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+
+        const matchesReviewed =
+          reviewedFilter === null || group.reviewed === reviewedFilter;
+
+        const matchesConfidence = group.confidence >= confidenceFilter;
+
+        const matchesCorrespondent =
+          !selectedCorrespondent ||
+          group.documents.some(
+            (doc) =>
+              doc.correspondent &&
+              doc.correspondent.toLowerCase() ===
+                selectedCorrespondent.toLowerCase()
+          );
+
+        const matchesDocumentType =
+          !selectedDocumentType ||
+          group.documents.some(
+            (doc) =>
+              doc.document_type &&
+              doc.document_type.toLowerCase() ===
+                selectedDocumentType.toLowerCase()
+          );
+
+        const matchesTag =
+          !selectedTag ||
+          group.documents.some((doc) =>
+            (doc.tags || []).some(
+              (tag) => tag.toLowerCase() === selectedTag.toLowerCase()
+            )
+          );
+
+        const matchesPages =
+          minPagesValue === undefined && maxPagesValue === undefined
+            ? true
+            : group.documents.some((doc) => {
+                const pages = doc.page_estimate;
+                if (pages === undefined || pages === null) {
+                  return false;
+                }
+                if (minPagesValue !== undefined && pages < minPagesValue) {
+                  return false;
+                }
+                if (maxPagesValue !== undefined && pages > maxPagesValue) {
+                  return false;
+                }
+                return true;
+              });
+
+        const matchesFileSize =
+          minFileSizeBytes === undefined && maxFileSizeBytes === undefined
+            ? true
+            : group.documents.some((doc) => {
+                const size =
+                  doc.original_file_size ??
+                  doc.archive_file_size;
+                if (size === undefined || size === null) {
+                  return false;
+                }
+                if (minFileSizeBytes !== undefined && size < minFileSizeBytes) {
+                  return false;
+                }
+                if (maxFileSizeBytes !== undefined && size > maxFileSizeBytes) {
+                  return false;
+                }
+                return true;
+              });
+
+        return (
+          matchesSearch &&
+          matchesReviewed &&
+          matchesConfidence &&
+          matchesCorrespondent &&
+          matchesDocumentType &&
+          matchesTag &&
+          matchesPages &&
+          matchesFileSize
+        );
+      });
+    },
+    [
+      confidenceFilter,
+      maxFileSizeBytes,
+      maxPagesValue,
+      minFileSizeBytes,
+      minPagesValue,
+      reviewedFilter,
+      searchQuery,
+      selectedCorrespondent,
+      selectedDocumentType,
+      selectedTag,
+    ]
+  );
+
   // Calculate filtered groups first to avoid using undefined paginatedGroups
-  const tempFilteredGroups = (groups || []).filter((group) => {
-    const matchesSearch =
-      searchQuery === '' ||
-      group.documents.some((doc) =>
-        doc.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
-    const matchesReviewed =
-      reviewedFilter === null || group.reviewed === reviewedFilter;
-
-    const matchesConfidence = group.confidence >= confidenceFilter;
-
-    return matchesSearch && matchesReviewed && matchesConfidence;
-  });
+  const tempFilteredGroups = applyLocalFilters(groups);
 
   // Calculate pagination for keyboard shortcuts
   const tempStartIndex = (currentPage - 1) * pageSize;
@@ -369,21 +523,7 @@ export const DuplicatesPage: React.FC = () => {
   );
 
   // Filter groups based on search and filters
-
-  const filteredGroups = (groups || []).filter((group) => {
-    const matchesSearch =
-      searchQuery === '' ||
-      group.documents.some((doc) =>
-        doc.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
-    const matchesReviewed =
-      reviewedFilter === null || group.reviewed === reviewedFilter;
-
-    const matchesConfidence = group.confidence >= confidenceFilter;
-
-    return matchesSearch && matchesReviewed && matchesConfidence;
-  });
+  const filteredGroups = applyLocalFilters(groups);
 
   // Calculate total pages based on filtered groups
   const totalPages = Math.ceil(filteredGroups.length / pageSize);
@@ -446,6 +586,11 @@ export const DuplicatesPage: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center space-x-2">
+            <Link to="/bulk-wizard">
+              <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
+                Launch Bulk Wizard
+              </Button>
+            </Link>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -585,6 +730,144 @@ export const DuplicatesPage: React.FC = () => {
                   }
                   className="w-full"
                 />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-4">
+              {/* Correspondent Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Correspondent</label>
+                <select
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                  value={selectedCorrespondent}
+                  onChange={(e) => setSelectedCorrespondent(e.target.value)}
+                >
+                  <option value="">All correspondents</option>
+                  {metadataFacets.correspondents.map((corr) => (
+                    <option key={corr} value={corr}>
+                      {corr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Document Type Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Document Type</label>
+                <select
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                  value={selectedDocumentType}
+                  onChange={(e) => setSelectedDocumentType(e.target.value)}
+                >
+                  <option value="">All types</option>
+                  {metadataFacets.documentTypes.map((docType) => (
+                    <option key={docType} value={docType}>
+                      {docType}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tag Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tag</label>
+                <select
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                  value={selectedTag}
+                  onChange={(e) => setSelectedTag(e.target.value)}
+                >
+                  <option value="">Any tag</option>
+                  {metadataFacets.tags.map((tag) => (
+                    <option key={tag} value={tag}>
+                      {tag}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Page Count Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Page Count (estimated)
+                </label>
+                <div className="flex space-x-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="Min"
+                    value={minPages}
+                    onChange={(e) => setMinPages(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="Max"
+                    value={maxPages}
+                    onChange={(e) => setMaxPages(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Based on OCR word count (350 words ≈ 1 page)
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* File Size Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">File Size (MB)</label>
+                <div className="flex space-x-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Min"
+                    value={minFileSizeMb}
+                    onChange={(e) => setMinFileSizeMb(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Max"
+                    value={maxFileSizeMb}
+                    onChange={(e) => setMaxFileSizeMb(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Sort By */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sort By</label>
+                <select
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                  value={sortBy}
+                  onChange={(e) =>
+                    setSortBy(e.target.value as typeof sortBy)
+                  }
+                >
+                  <option value="confidence">Confidence</option>
+                  <option value="created">Created Date</option>
+                  <option value="documents">Document Count</option>
+                  <option value="page_count">Page Count (est.)</option>
+                  <option value="file_size">File Size</option>
+                  <option value="correspondent">Correspondent</option>
+                  <option value="document_type">Document Type</option>
+                  <option value="filename">Filename</option>
+                </select>
+              </div>
+
+              {/* Sort Direction */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sort Direction</label>
+                <select
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                  value={sortDirection}
+                  onChange={(e) =>
+                    setSortDirection(e.target.value as 'asc' | 'desc')
+                  }
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
               </div>
             </div>
 
@@ -844,6 +1127,17 @@ export const DuplicatesPage: React.FC = () => {
                   {reviewedFilter ? 'Reviewed' : 'Unreviewed'}
                 </Badge>
               )}
+              {selectedCorrespondent && (
+                <Badge variant="outline">
+                  Correspondent: {selectedCorrespondent}
+                </Badge>
+              )}
+              {selectedDocumentType && (
+                <Badge variant="outline">
+                  Type: {selectedDocumentType}
+                </Badge>
+              )}
+              {selectedTag && <Badge variant="outline">Tag: {selectedTag}</Badge>}
               {confidenceFilter > 0.7 && (
                 <Badge variant="outline">
                   Min {Math.round(confidenceFilter * 100)}% confidence
@@ -859,6 +1153,18 @@ export const DuplicatesPage: React.FC = () => {
                 !confidenceWeights.metadata) && (
                 <Badge variant="outline">Custom weights</Badge>
               )}
+              {(minPagesValue !== undefined || maxPagesValue !== undefined) && (
+                <Badge variant="outline">
+                  Pages:{' '}
+                  {`${minPagesValue ?? '0'}-${maxPagesValue ?? 'max'}`}
+                </Badge>
+              )}
+              {(minFileSizeBytes !== undefined ||
+                maxFileSizeBytes !== undefined) && (
+                <Badge variant="outline">
+                  {`Size: ${Math.round((minFileSizeBytes ?? 0) / 1024 / 1024)}-${maxFileSizeBytes !== undefined ? Math.round(maxFileSizeBytes / 1024 / 1024) : 'max'} MB`}
+                </Badge>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -872,6 +1178,13 @@ export const DuplicatesPage: React.FC = () => {
                     fuzzy: true,
                     metadata: true,
                   });
+                  setSelectedCorrespondent('');
+                  setSelectedDocumentType('');
+                  setSelectedTag('');
+                  setMinPages('');
+                  setMaxPages('');
+                  setMinFileSizeMb('');
+                  setMaxFileSizeMb('');
                 }}
               >
                 Clear All

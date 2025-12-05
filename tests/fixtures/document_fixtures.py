@@ -15,7 +15,7 @@ def sample_invoice_documents():
             "paperless_id": 1,
             "title": "Invoice_2024_001.pdf",
             "fingerprint": "inv001_original",
-            "file_size": 124580,
+            "archive_file_size": 124580,
             "created_date": datetime(2024, 1, 15),
             "ocr_content": """
             INVOICE #INV-2024-001
@@ -45,7 +45,7 @@ def sample_invoice_documents():
             "paperless_id": 2,
             "title": "Invoice_2024_001_scanned.pdf",
             "fingerprint": "inv001_scanned",
-            "file_size": 128934,
+            "archive_file_size": 128934,
             "created_date": datetime(2024, 1, 15, 10, 30),
             "ocr_content": """
             INVOICE #INV-2O24-OOl
@@ -75,7 +75,7 @@ def sample_invoice_documents():
             "paperless_id": 3,
             "title": "Invoice_2024_002.pdf",
             "fingerprint": "inv002_original",
-            "file_size": 118420,
+            "archive_file_size": 118420,
             "created_date": datetime(2024, 2, 1),
             "ocr_content": """
             INVOICE #INV-2024-002
@@ -112,7 +112,7 @@ def sample_receipt_documents():
             "paperless_id": 10,
             "title": "coffee_receipt_20240115.jpg",
             "fingerprint": "receipt_coffee_hq",
-            "file_size": 45680,
+            "archive_file_size": 45680,
             "created_date": datetime(2024, 1, 15, 9, 30),
             "ocr_content": """
             BREW & BEANS COFFEE
@@ -142,7 +142,7 @@ def sample_receipt_documents():
             "paperless_id": 11,
             "title": "coffee_receipt_scan.pdf",
             "fingerprint": "receipt_coffee_lq",
-            "file_size": 48230,
+            "archive_file_size": 48230,
             "created_date": datetime(2024, 1, 15, 9, 35),
             "ocr_content": """
             BREW & BEANS COFFEE
@@ -172,7 +172,7 @@ def sample_receipt_documents():
             "paperless_id": 12,
             "title": "grocery_receipt_20240116.jpg",
             "fingerprint": "receipt_grocery",
-            "file_size": 67890,
+            "archive_file_size": 67890,
             "created_date": datetime(2024, 1, 16),
             "ocr_content": """
             FRESH MART GROCERY
@@ -207,7 +207,7 @@ def sample_contract_documents():
             "paperless_id": 20,
             "title": "service_agreement_acme.pdf",
             "fingerprint": "contract_acme_v1",
-            "file_size": 234567,
+            "archive_file_size": 234567,
             "created_date": datetime(2024, 1, 10),
             "ocr_content": """
             SERVICE AGREEMENT
@@ -248,7 +248,7 @@ def sample_contract_documents():
             "paperless_id": 21,
             "title": "service_agreement_acme_amended.pdf",
             "fingerprint": "contract_acme_v2",
-            "file_size": 238901,
+            "archive_file_size": 238901,
             "created_date": datetime(2024, 1, 15),
             "ocr_content": """
             SERVICE AGREEMENT (AMENDED)
@@ -293,7 +293,7 @@ def sample_contract_documents():
             "paperless_id": 22,
             "title": "service_agreement_beta_corp.pdf",
             "fingerprint": "contract_beta",
-            "file_size": 241234,
+            "archive_file_size": 241234,
             "created_date": datetime(2024, 2, 5),
             "ocr_content": """
             SERVICE AGREEMENT
@@ -341,7 +341,7 @@ def sample_mixed_documents():
             "paperless_id": 100,
             "title": "bank_statement_jan_2024.pdf",
             "fingerprint": "bank_stmt_jan",
-            "file_size": 156789,
+            "archive_file_size": 156789,
             "created_date": datetime(2024, 2, 1),
             "ocr_content": """
             FIRST NATIONAL BANK
@@ -372,7 +372,7 @@ def sample_mixed_documents():
             "paperless_id": 101,
             "title": "insurance_policy_auto.pdf",
             "fingerprint": "insurance_auto",
-            "file_size": 289345,
+            "archive_file_size": 289345,
             "created_date": datetime(2024, 1, 20),
             "ocr_content": """
             AUTO INSURANCE POLICY
@@ -403,7 +403,7 @@ def sample_mixed_documents():
             "paperless_id": 102,
             "title": "medical_bill_specialist.pdf",
             "fingerprint": "medical_specialist",
-            "file_size": 78901,
+            "archive_file_size": 78901,
             "created_date": datetime(2024, 1, 22),
             "ocr_content": """
             DOWNTOWN MEDICAL SPECIALISTS
@@ -454,7 +454,7 @@ def performance_test_documents():
                 "paperless_id": 1000 + i,
                 "title": f"perf_test_doc_{i:04d}.pdf",
                 "fingerprint": f"perf_{i:04d}",
-                "file_size": 1024 + (i % 500),
+                "archive_file_size": 1024 + (i % 500),
                 "created_date": datetime(2024, 1, 1) + timedelta(hours=i),
                 "ocr_content": content,
             }

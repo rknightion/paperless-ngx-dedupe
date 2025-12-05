@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react';
 import { documentsApi } from '../../services/api/documents';
 import { diffWords, diffLines, Change } from 'diff';
+import { RootState } from '../../store/store';
 
 interface Document {
   id: number;
@@ -41,8 +43,16 @@ interface Document {
   document_type?: string;
   tags?: string[];
   original_filename?: string;
-  file_size?: number;
+  archive_filename?: string;
+  original_file_size?: number;
+  archive_file_size?: number;
   archive_serial_number?: number;
+  similarity_to_primary?: {
+    overall: number;
+    jaccard_similarity: number;
+    fuzzy_text_ratio: number;
+    metadata_similarity: number;
+  };
 }
 
 interface DocumentComparisonModalProps {
@@ -71,8 +81,38 @@ export const DocumentComparisonModal: React.FC<
   );
   const [diffType, setDiffType] = useState<'words' | 'lines'>('lines');
   const [syncScroll, setSyncScroll] = useState(true);
+  const config = useSelector((state: RootState) => state.config.configuration);
+  const weights = {
+    jaccard: config?.confidence_weight_jaccard ?? 90,
+    fuzzy: config?.confidence_weight_fuzzy ?? 10,
+    metadata: config?.confidence_weight_metadata ?? 0,
+  };
+
+  const getConfidenceStyle = (score: number) => {
+    if (score >= 0.9) {
+      return {
+        variant: 'success' as const,
+        textClass: 'text-green-700',
+        barClass: 'bg-green-500',
+      };
+    }
+    if (score >= 0.7) {
+      return {
+        variant: 'warning' as const,
+        textClass: 'text-amber-700',
+        barClass: 'bg-yellow-500',
+      };
+    }
+    return {
+      variant: 'secondary' as const,
+      textClass: 'text-slate-700',
+      barClass: 'bg-slate-400',
+    };
+  };
 
   const selectedCompareDocument = compareDocuments[selectedCompareIndex];
+  const normalizeContent = (response: { full_text?: string; content?: string }) =>
+    (response.full_text || response.content || '').trim();
 
   // Fetch document content
   useEffect(() => {
@@ -88,13 +128,13 @@ export const DocumentComparisonModal: React.FC<
       const primaryResponse = await documentsApi.getDocumentContent(
         primaryDocument.id
       );
-      setPrimaryContent(primaryResponse.full_text || '');
+      setPrimaryContent(normalizeContent(primaryResponse));
 
       // Fetch compare document content
       const compareResponse = await documentsApi.getDocumentContent(
         selectedCompareDocument.id
       );
-      setCompareContent(compareResponse.full_text || '');
+      setCompareContent(normalizeContent(compareResponse));
     } catch (error) {
       console.error('Failed to fetch document content:', error);
       setPrimaryContent('Failed to load content');
@@ -137,6 +177,157 @@ export const DocumentComparisonModal: React.FC<
 
     return { additions, deletions, similarity };
   }, [diffResult, diffType]);
+
+  const formatFileSize = useCallback(
+    (value?: number) =>
+      value ? `${(value / 1024 / 1024).toFixed(2)} MB` : 'N/A',
+    []
+  );
+
+  const similarityDetails = useMemo(() => {
+    const similarity = selectedCompareDocument.similarity_to_primary;
+    const overall = similarity?.overall ?? confidence ?? 0;
+    const contentSimilarity =
+      similarity?.jaccard_similarity ?? diffStats.similarity / 100;
+    const fuzzySimilarity =
+      similarity?.fuzzy_text_ratio ?? diffStats.similarity / 100;
+    const metadataSimilarity = similarity?.metadata_similarity ?? 0;
+
+    return {
+      similarity,
+      overall,
+      contentSimilarity,
+      fuzzySimilarity,
+      metadataSimilarity,
+    };
+  }, [selectedCompareDocument, confidence, diffStats.similarity]);
+
+  const confidenceStyle = getConfidenceStyle(similarityDetails.overall);
+
+  const similarityMetrics = useMemo(
+    () => [
+      {
+        label: 'Overall Similarity',
+        value: similarityDetails.overall,
+        color: 'bg-indigo-500',
+        weight: 'Combined',
+      },
+      {
+        label: 'Content Similarity',
+        value: similarityDetails.contentSimilarity,
+        color: 'bg-blue-500',
+        weight: `${weights.jaccard}%`,
+      },
+      {
+        label: 'Text Fuzzy Match',
+        value: similarityDetails.fuzzySimilarity,
+        color: 'bg-green-500',
+        weight: `${weights.fuzzy}%`,
+      },
+      {
+        label: 'Metadata Match',
+        value: similarityDetails.metadataSimilarity,
+        color: 'bg-yellow-500',
+        weight: `${weights.metadata}%`,
+      },
+    ],
+    [similarityDetails, weights.fuzzy, weights.jaccard, weights.metadata]
+  );
+
+  const differenceReasons = useMemo(() => {
+    const reasons: string[] = [];
+    const archiveSizePrimary = primaryDocument.archive_file_size;
+    const archiveSizeCompare = selectedCompareDocument.archive_file_size;
+
+    const metadataFields: {
+      label: string;
+      primary?: string | number | null;
+      compare?: string | number | null;
+      formatter?: (value?: string | number | null) => string;
+    }[] = [
+      {
+        label: 'Filename',
+        primary: primaryDocument.original_filename,
+        compare: selectedCompareDocument.original_filename,
+      },
+      {
+        label: 'Archive filename',
+        primary: primaryDocument.archive_filename,
+        compare: selectedCompareDocument.archive_filename,
+      },
+      {
+        label: 'Correspondent',
+        primary: primaryDocument.correspondent,
+        compare: selectedCompareDocument.correspondent,
+      },
+      {
+        label: 'Type',
+        primary: primaryDocument.document_type,
+        compare: selectedCompareDocument.document_type,
+      },
+      {
+        label: 'Created date',
+        primary: primaryDocument.created_date,
+        compare: selectedCompareDocument.created_date,
+      },
+      {
+        label: 'Archive file size',
+        primary: archiveSizePrimary,
+        compare: archiveSizeCompare,
+        formatter: (value) =>
+          typeof value === 'number' ? formatFileSize(value) : value || 'N/A',
+      },
+      {
+        label: 'Original file size',
+        primary: primaryDocument.original_file_size,
+        compare: selectedCompareDocument.original_file_size,
+        formatter: (value) =>
+          typeof value === 'number' ? formatFileSize(value) : value || 'N/A',
+      },
+    ];
+
+    const mismatchedMetadata = metadataFields
+      .filter(({ primary, compare }) => {
+        if (primary === undefined && compare === undefined) return false;
+        if (primary === null && compare === null) return false;
+        return (primary ?? '') !== (compare ?? '');
+      })
+      .map(({ label, primary, compare, formatter }) => {
+        const format = formatter || ((val?: string | number | null) => val || 'N/A');
+        return `${label} (${format(primary)} vs ${format(compare)})`;
+      });
+
+    if (mismatchedMetadata.length) {
+      reasons.push(`Metadata differences: ${mismatchedMetadata.join(', ')}`);
+    } else if (similarityDetails.metadataSimilarity < 0.999) {
+      reasons.push('Metadata similarity is below 100% due to missing values.');
+    }
+
+    if (
+      similarityDetails.contentSimilarity < 0.999 ||
+      similarityDetails.fuzzySimilarity < 0.999 ||
+      diffStats.similarity < 99.9
+    ) {
+      reasons.push('Text or content differences detected between documents.');
+    }
+
+    if (similarityDetails.overall < 0.999 && reasons.length === 0) {
+      reasons.push(
+        'Overall confidence is slightly reduced by the configured weightings.'
+      );
+    }
+
+    return reasons;
+  }, [
+    primaryDocument,
+    selectedCompareDocument,
+    similarityDetails.metadataSimilarity,
+    similarityDetails.contentSimilarity,
+    similarityDetails.fuzzySimilarity,
+    similarityDetails.overall,
+    diffStats.similarity,
+    formatFileSize,
+  ]);
 
   // Render diff content
   const renderDiffContent = (changes: Change[]) => {
@@ -184,10 +375,21 @@ export const DocumentComparisonModal: React.FC<
         compare: selectedCompareDocument.original_filename,
       },
       {
-        label: 'File Size',
-        primary: primaryDocument.file_size,
-        compare: selectedCompareDocument.file_size,
-        format: (v: any) => (v ? `${(v / 1024 / 1024).toFixed(2)} MB` : 'N/A'),
+        label: 'Archive Filename',
+        primary: primaryDocument.archive_filename,
+        compare: selectedCompareDocument.archive_filename,
+      },
+      {
+        label: 'Archive File Size',
+        primary: primaryDocument.archive_file_size,
+        compare: selectedCompareDocument.archive_file_size,
+        format: formatFileSize,
+      },
+      {
+        label: 'Original File Size',
+        primary: primaryDocument.original_file_size,
+        compare: selectedCompareDocument.original_file_size,
+        format: formatFileSize,
       },
     ];
 
@@ -279,16 +481,8 @@ export const DocumentComparisonModal: React.FC<
           </div>
 
           <div className="flex items-center space-x-2">
-            <Badge
-              variant={
-                confidence >= 0.9
-                  ? 'destructive'
-                  : confidence >= 0.7
-                    ? 'warning'
-                    : 'secondary'
-              }
-            >
-              {Math.round(confidence * 100)}% Match
+            <Badge variant={confidenceStyle.variant} className="text-xs">
+              {Math.round(similarityDetails.overall * 100)}% Match
             </Badge>
             <Button
               variant="outline"
@@ -435,8 +629,8 @@ export const DocumentComparisonModal: React.FC<
 
           <TabsContent value="summary" className="mt-4">
             <div className="space-y-4">
-              <div className="border rounded-lg p-4">
-                <h3 className="font-medium mb-3 flex items-center">
+              <div className="border rounded-lg p-4 space-y-4">
+                <h3 className="font-medium flex items-center">
                   <Info className="h-4 w-4 mr-2" />
                   Comparison Summary
                 </h3>
@@ -445,8 +639,10 @@ export const DocumentComparisonModal: React.FC<
                     <p className="text-sm text-muted-foreground mb-1">
                       Overall Confidence
                     </p>
-                    <p className="text-2xl font-bold">
-                      {Math.round(confidence * 100)}%
+                    <p
+                      className={`text-2xl font-bold ${confidenceStyle.textClass}`}
+                    >
+                      {Math.round(similarityDetails.overall * 100)}%
                     </p>
                   </div>
                   <div>
@@ -454,10 +650,64 @@ export const DocumentComparisonModal: React.FC<
                       Content Similarity
                     </p>
                     <p className="text-2xl font-bold">
-                      {diffStats.similarity.toFixed(1)}%
+                      {(similarityDetails.contentSimilarity * 100).toFixed(1)}%
                     </p>
                   </div>
                 </div>
+
+                <div className="space-y-3">
+                  {similarityMetrics.map((metric) => {
+                    const width = Math.min(
+                      100,
+                      Math.max(0, (metric.value || 0) * 100)
+                    );
+                    return (
+                      <div key={metric.label} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <div
+                              className={`w-3 h-3 rounded-full ${metric.color}`}
+                              aria-hidden="true"
+                            />
+                            <span className="font-medium">{metric.label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({metric.weight})
+                            </span>
+                          </div>
+                          <span className="font-semibold">
+                            {width.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${metric.color}`}
+                            style={{ width: `${width}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-2">
+                <h4 className="font-medium flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-2 text-amber-600" />
+                  Why not 100%?
+                </h4>
+                {differenceReasons.length ? (
+                  <ul className="list-disc pl-5 text-sm space-y-1">
+                    {differenceReasons.map((reason, idx) => (
+                      <li key={`${reason}-${idx}`} className="text-muted-foreground">
+                        {reason}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No mismatches detected. Confidence is capped by weighting.
+                  </p>
+                )}
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

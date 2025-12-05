@@ -6,6 +6,7 @@ import { Layout } from './components/layout';
 import { DashboardPage } from './pages/dashboard';
 import { DocumentsPage } from './pages/documents';
 import { DuplicatesPage } from './pages/duplicates';
+import { BulkWizardPage } from './pages/bulk';
 import { SettingsPage } from './pages/settings';
 
 function App() {
@@ -17,6 +18,8 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/duplicates" element={<DuplicatesPage />} />
+            <Route path="/bulk-wizard" element={<BulkWizardPage />} />
+            <Route path="/duplicates/bulk-wizard" element={<BulkWizardPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </Layout>

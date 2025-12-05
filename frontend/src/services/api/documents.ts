@@ -6,6 +6,7 @@ import type {
   DocumentQueryParams,
   DuplicateGroup,
   ApiResponse,
+  DocumentPreview,
 } from './types';
 
 export const documentsApi = {
@@ -23,7 +24,25 @@ export const documentsApi = {
 
   // Get document OCR content
   async getDocumentContent(id: number): Promise<DocumentContent> {
-    return apiClient.get<DocumentContent>(`/documents/${id}/content`);
+    const response = await apiClient.get<
+      DocumentContent & { content?: string }
+    >(`/documents/${id}/content`);
+
+    // Normalize shape (API now returns both full_text and legacy "content")
+    const normalizedText = response.full_text || response.content || '';
+
+    return {
+      ...response,
+      full_text: normalizedText,
+      content: response.content ?? normalizedText,
+    };
+  },
+
+  // Get document preview/thumbnail
+  async getDocumentPreview(
+    id: number
+  ): Promise<DocumentPreview> {
+    return apiClient.get(`/documents/${id}/preview`);
   },
 
   // Get document duplicates

@@ -185,9 +185,14 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
         <span className="font-mono text-muted-foreground">
           #{document.paperless_id}
         </span>
-        {document.file_size && (
+        {(document.original_file_size || document.archive_file_size) && (
           <span className="text-xs text-muted-foreground">
-            {(document.file_size / 1024 / 1024).toFixed(2)} MB
+            {(
+              ((document.original_file_size || document.archive_file_size || 0) /
+                1024 /
+                1024)
+            ).toFixed(2)}{' '}
+            MB
           </span>
         )}
       </div>

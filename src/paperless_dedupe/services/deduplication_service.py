@@ -110,11 +110,16 @@ class DeduplicationService:
         # Metadata similarity - combine multiple factors
         metadata_scores = []
 
-        # File size similarity
-        if doc1.file_size and doc2.file_size:
-            size_ratio = float(min(doc1.file_size, doc2.file_size)) / float(
-                max(doc1.file_size, doc2.file_size)
-            )
+        # File size similarity (prefer archive size, then original, then legacy)
+        size1 = getattr(doc1, "original_file_size", None) or getattr(
+            doc1, "archive_file_size", None
+        )
+        size2 = getattr(doc2, "original_file_size", None) or getattr(
+            doc2, "archive_file_size", None
+        )
+
+        if size1 and size2:
+            size_ratio = float(min(size1, size2)) / float(max(size1, size2))
             metadata_scores.append(size_ratio)
 
         # Date similarity (if both have dates)

@@ -221,20 +221,50 @@ class PaperlessClient:
             logger.error(f"Failed to fetch metadata for document {document_id}: {e}")
             return {}
 
-    async def get_document_thumbnail(self, document_id: int) -> bytes:
+    async def get_document_thumbnail(self, document_id: int) -> tuple[bytes, str | None]:
         """Get document thumbnail."""
         try:
             thumbnail = await self.paperless.documents.thumbnail(document_id)
-            return thumbnail  # type: ignore[return-value]
+            content_type = getattr(thumbnail, "content_type", None)
+
+            # PyPaperless returns a DownloadedDocument with a content attribute
+            content = getattr(thumbnail, "content", None)
+            if content is None and hasattr(thumbnail, "load"):
+                await thumbnail.load()
+                content = getattr(thumbnail, "content", None)
+
+            if content is None and isinstance(thumbnail, (bytes, bytearray)):
+                content = bytes(thumbnail)
+
+            if content is None:
+                raise ValueError("Paperless-ngx returned an empty thumbnail payload")
+
+            return content, content_type
         except Exception as e:
             logger.error(f"Failed to fetch thumbnail {document_id}: {e}")
             raise
 
-    async def get_document_preview(self, document_id: int) -> bytes:
+    async def get_document_preview(
+        self, document_id: int
+    ) -> tuple[bytes, str | None]:
         """Get document preview."""
         try:
             preview = await self.paperless.documents.preview(document_id)
-            return preview  # type: ignore[return-value]
+            content_type = getattr(preview, "content_type", None)
+
+            # PyPaperless returns a DownloadedDocument with binary content in `.content`
+            content = getattr(preview, "content", None)
+            if content is None and hasattr(preview, "load"):
+                await preview.load()
+                content = getattr(preview, "content", None)
+
+            if content is None and isinstance(preview, (bytes, bytearray)):
+                content = bytes(preview)
+
+            if content is None:
+                raise ValueError("Paperless-ngx returned an empty preview payload")
+
+            return content, content_type
         except Exception as e:
             logger.error(f"Failed to fetch preview {document_id}: {e}")
             raise
@@ -531,6 +561,8 @@ class PaperlessClient:
             "document_type__name"
         )
         tags = raw_data.get("tags", doc.tags or [])
+        original_size = raw_data.get("original_size")
+        archive_size = raw_data.get("archive_size")
 
         return {
             "id": doc.id,
@@ -555,7 +587,8 @@ class PaperlessClient:
             or doc.archived_file_name,
             "owner": doc.owner,
             "fingerprint": checksum,
-            "file_size": raw_data.get("original_size") or raw_data.get("archive_size"),
+            "original_file_size": original_size,
+            "archive_file_size": archive_size,
             "notes": doc.notes or [],
             "custom_fields": [
                 {"field": cf.field, "value": cf.value}

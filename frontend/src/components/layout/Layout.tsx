@@ -6,6 +6,7 @@ import {
   FileText,
   Copy,
   Settings,
+  Sparkles,
   Menu,
   X,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Duplicates', href: '/duplicates', icon: Copy },
+  { name: 'Bulk Wizard', href: '/bulk-wizard', icon: Sparkles },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

@@ -242,6 +242,21 @@ async def _sync_documents_async(
                     else:
                         content_text = await client.get_document_content(paperless_id)
 
+                    original_size = doc_data.get("original_file_size")
+                    archive_size = doc_data.get("archive_file_size")
+                    meta = None
+                    if original_size is None or archive_size is None:
+                        try:
+                            meta = await client.get_document_metadata(paperless_id)
+                            original_size = meta.get("original_size")
+                            archive_size = meta.get("archive_size")
+                        except Exception as meta_err:
+                            logger.warning(
+                                "Could not fetch metadata for document %s: %s",
+                                paperless_id,
+                                meta_err,
+                            )
+
                     # Create or update document record
                     if existing_doc:
                         document = existing_doc
@@ -276,14 +291,17 @@ async def _sync_documents_async(
                     document.archive_filename = (
                         doc_data.get("archived_file_name")
                         or doc_data.get("archive_filename")
+                        or (meta.get("archive_media_filename") if meta else None)
                         or ""
                     )[:500]
                     document.original_filename = (
                         doc_data.get("original_file_name")
                         or doc_data.get("original_filename")
+                        or (meta.get("original_filename") if meta else None)
                         or ""
                     )[:500]
-                    document.file_size = doc_data.get("file_size")
+                    document.original_file_size = original_size
+                    document.archive_file_size = archive_size
                     document.created_date = parse_date_field(doc_data.get("created"))
                     document.added_date = parse_date_field(doc_data.get("added"))
                     document.modified_date = parse_date_field(doc_data.get("modified"))

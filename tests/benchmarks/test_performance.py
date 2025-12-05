@@ -41,7 +41,7 @@ class TestDeduplicationPerformance:
         for i in range(count):
             doc = Mock(spec=Document)
             doc.id = i + 1
-            doc.file_size = 1024 + (i % 1000)
+            doc.archive_file_size = 1024 + (i % 1000)
             documents.append(doc)
 
             # Create variations of base texts to simulate real documents
@@ -204,11 +204,11 @@ class TestDeduplicationPerformance:
         # Create test documents
         doc1 = Mock(spec=Document)
         doc1.id = 1
-        doc1.file_size = 1024
+        doc1.archive_file_size = 1024
 
         doc2 = Mock(spec=Document)
         doc2.id = 2
-        doc2.file_size = 1024
+        doc2.archive_file_size = 1024
 
         # Test texts of varying lengths
         text_lengths = [100, 500, 1000, 5000, 10000]
@@ -295,7 +295,7 @@ class TestDatabasePerformance:
                 paperless_id=1000 + i,
                 title=f"Perf Test Doc {i}",
                 fingerprint=f"perf_fp_{i}",
-                file_size=1024 + i,
+                archive_file_size=1024 + i,
             )
             documents.append(doc)
 

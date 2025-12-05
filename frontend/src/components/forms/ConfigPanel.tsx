@@ -35,6 +35,12 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import type { Configuration } from '../../services/api/types';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/Tooltip';
 
 interface ConfigPanelProps {
   className?: string;
@@ -198,7 +204,8 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
   }
 
   return (
-    <Card className={className}>
+    <TooltipProvider>
+      <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Settings className="h-5 w-5" />
@@ -386,9 +393,36 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="fuzzy_match_threshold">
-                Fuzzy Match Threshold ({formData.fuzzy_match_threshold || 85}%)
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="fuzzy_match_threshold">
+                  Overall Match Threshold ({formData.fuzzy_match_threshold || 85}
+                  %)
+                </Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-primary"
+                      aria-label="How the match threshold works"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm text-left">
+                    <p className="font-semibold mb-1">Weighted confidence</p>
+                    <p className="mb-1">
+                      This threshold uses the combined confidence score from the
+                      weights below: Jaccard (MinHash), Fuzzy Text Match, and
+                      optional Metadata. Groups are saved when the weighted
+                      score meets this threshold.
+                    </p>
+                    <p>
+                      Fuzzy text similarity under 50% is ignored unless the
+                      overall weighted score still clears the threshold.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div className="flex items-center space-x-4">
                 <Input
                   id="fuzzy_match_threshold"
@@ -409,9 +443,10 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Minimum threshold for storing duplicate groups. Groups with
-                fuzzy text similarity below 50% are never stored. Higher values
-                = fewer false positives but might miss some duplicates.
+                Minimum threshold for storing duplicate groups using the
+                weighted confidence score. Higher values reduce false positives
+                but can miss edge cases; lower values surface more candidates to
+                review.
               </p>
             </div>
 
@@ -423,19 +458,93 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
                     Enhanced Document Storage
                   </p>
                   <p className="text-blue-800 mt-1">
-                    Documents now store up to 500,000 characters of OCR text for
-                    improved accuracy. Confidence scores can be dynamically
-                    adjusted without rescanning documents.
+                    Documents store up to your configured OCR text limit
+                    (default 500,000 characters) for improved accuracy.
+                    Confidence scores can be dynamically adjusted without
+                    rescanning documents.
                   </p>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="max_ocr_length">Max OCR Text Stored</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-primary"
+                      aria-label="Maximum OCR text length help"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm text-left">
+                    <p className="font-semibold mb-1">Storage vs. accuracy</p>
+                    <p className="mb-1">
+                      Caps how many OCR characters are stored per document.
+                      Higher limits capture more context and improve matching on
+                      long documents but use more storage and sync bandwidth.
+                    </p>
+                    <p className="mb-0">
+                      Default: 500,000. Reduce for very large archives or slow
+                      storage; increase if long documents are being truncated.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Input
+                id="max_ocr_length"
+                type="number"
+                min={1000}
+                step={1000}
+                value={formData.max_ocr_length || 500000}
+                onChange={(e) =>
+                  handleFieldChange(
+                    'max_ocr_length',
+                    Math.max(1000, parseInt(e.target.value) || 0)
+                  )
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Maximum OCR characters stored per document. Higher values boost
+                duplicate detection on long documents; lower values save disk
+                and network usage.
+              </p>
             </div>
           </div>
 
           {showAdvanced && (
             <div className="grid grid-cols-2 gap-4 pt-4 border-t">
               <div className="space-y-2">
-                <Label htmlFor="lsh_threshold">LSH Threshold</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lsh_threshold">LSH Threshold</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-primary"
+                        aria-label="Locality-sensitive hashing help"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm text-left">
+                      <p className="font-semibold mb-1">
+                        Candidate search gate
+                      </p>
+                      <p className="mb-1">
+                        LSH uses MinHash fingerprints to decide which documents
+                        are similar enough to compare in detail. Lower values
+                        find more candidates (higher recall, more work); higher
+                        values compare fewer pairs (faster, but can miss near
+                        matches).
+                      </p>
+                      <p>Recommended range: 0.45-0.6 for OCR-heavy data.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="lsh_threshold"
                   type="number"
@@ -456,14 +565,39 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="minhash_num_perm">MinHash Permutations</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="minhash_num_perm">MinHash Permutations</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-primary"
+                        aria-label="MinHash permutations help"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm text-left">
+                      <p className="font-semibold mb-1">Fingerprint detail</p>
+                      <p className="mb-1">
+                        More permutations make the Jaccard estimate and LSH
+                        buckets more stable, improving accuracy on noisy OCR.
+                        Higher values use more memory and CPU during indexing.
+                      </p>
+                      <p className="mb-0">
+                        Default 192 favors accuracy; increase to 256 only if you
+                        still miss obvious duplicates.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="minhash_num_perm"
                   type="number"
                   min="64"
                   max="256"
                   step="64"
-                  value={formData.minhash_num_perm || 128}
+                  value={formData.minhash_num_perm || 192}
                   onChange={(e) =>
                     handleFieldChange(
                       'minhash_num_perm',
@@ -480,16 +614,64 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
 
           {/* Confidence Weights Configuration */}
           <div className="pt-4 border-t">
-            <h4 className="text-sm font-medium mb-3">
-              Confidence Score Weights
-            </h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium">Confidence Score Weights</h4>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-primary"
+                    aria-label="How weights affect scoring"
+                  >
+                    <Info className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-sm text-left">
+                  <p className="font-semibold mb-1">How the score is built</p>
+                  <p className="mb-1">
+                    The overall confidence is a weighted blend of these signals.
+                    All weights must total 100. The threshold above checks this
+                    combined score, not just a single metric.
+                  </p>
+                  <p className="mb-0">
+                    Adjust weights to favor stable text overlap (Jaccard),
+                    noisy OCR (Fuzzy), or metadata when text is missing.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <div className="space-y-4">
               {/* Jaccard Weight */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="weight_jaccard">
-                    Jaccard Similarity ({confidenceWeights.jaccard}%)
-                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="weight_jaccard">
+                      Jaccard Similarity ({confidenceWeights.jaccard}%)
+                    </Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-primary"
+                          aria-label="Jaccard similarity help"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm text-left">
+                        <p className="font-semibold mb-1">MinHash overlap</p>
+                        <p className="mb-1">
+                          Compares MinHash fingerprints of OCR text to measure
+                          true content overlap. Great for rescans or reordered
+                          pages with the same text.
+                        </p>
+                        <p className="mb-0">
+                          Used in the first-pass LSH search and in the weighted
+                          confidence score.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     MinHash content fingerprinting
                   </span>
@@ -529,9 +711,35 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               {/* Fuzzy Weight */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="weight_fuzzy">
-                    Fuzzy Text Match ({confidenceWeights.fuzzy}%)
-                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="weight_fuzzy">
+                      Fuzzy Text Match ({confidenceWeights.fuzzy}%)
+                    </Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-primary"
+                          aria-label="Fuzzy text match help"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm text-left">
+                        <p className="font-semibold mb-1">OCR-friendly match</p>
+                        <p className="mb-1">
+                          Uses a token sort ratio on the first 5,000 characters
+                          of OCR to handle typos, spacing, and ordering
+                          differences. Slower than Jaccard but resilient to
+                          noisy scans.
+                        </p>
+                        <p className="mb-0">
+                          Increase this weight for low-quality scans; decrease
+                          when text is clean and consistent.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     Handles OCR errors and variations
                   </span>
@@ -575,9 +783,34 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
               {/* Metadata Weight */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="weight_metadata">
-                    Metadata Match ({confidenceWeights.metadata}%)
-                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="weight_metadata">
+                      Metadata Match ({confidenceWeights.metadata}%)
+                    </Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-primary"
+                          aria-label="Metadata match help"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm text-left">
+                        <p className="font-semibold mb-1">Contextual signal</p>
+                        <p className="mb-1">
+                          Compares file size, dates, document types, and
+                          correspondents. Helpful when OCR text is missing or
+                          short, but high weights can create false positives if
+                          many files share similar metadata.
+                        </p>
+                        <p className="mb-0">
+                          Use sparingly; set to 0 to disable this factor.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     File size, dates, types, correspondents
                   </span>
@@ -715,7 +948,8 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
           </p>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </TooltipProvider>
   );
 };
 

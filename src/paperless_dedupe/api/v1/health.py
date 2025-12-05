@@ -240,10 +240,10 @@ def check_celery_health() -> ComponentHealth | None:
             return None
 
         # Get worker stats
-        inspector = celery_app.control.inspect()
+        inspector = celery_app.control.inspect(timeout=3.0)
+        pings = celery_app.control.ping(timeout=3.0) or []
         stats = inspector.stats()
         active = inspector.active()
-        pings = inspector.ping() or []
 
         worker_count = len(stats or pings)
         active_tasks = sum(len(tasks) for tasks in (active or {}).values()) if active else 0
@@ -272,7 +272,7 @@ def check_celery_health() -> ComponentHealth | None:
                 status="degraded",
                 details=details,
                 last_check=datetime.utcnow(),
-                message="No Celery workers responded to ping",
+                message="Celery broker reachable but no workers responded to ping; ensure workers allow remote control",
             )
 
         return ComponentHealth(

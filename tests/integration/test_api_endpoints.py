@@ -158,7 +158,7 @@ class TestDocumentsAPI:
                 "title": "Test Document 1",
                 "fingerprint": "abc123",
                 "content": "Document content 1",
-                "file_size": 1024,
+                "archive_file_size": 1024,
                 "created": "2024-01-01T00:00:00Z",
             },
             {
@@ -166,7 +166,7 @@ class TestDocumentsAPI:
                 "title": "Test Document 2",
                 "fingerprint": "def456",
                 "content": "Document content 2",
-                "file_size": 2048,
+                "archive_file_size": 2048,
                 "created": "2024-01-02T00:00:00Z",
             },
         ]

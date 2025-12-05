@@ -114,11 +114,11 @@ class TestDeduplicationService:
         # Create mock documents
         doc1 = Mock(spec=Document)
         doc1.id = 1
-        doc1.file_size = 1000
+        doc1.archive_file_size = 1000
 
         doc2 = Mock(spec=Document)
         doc2.id = 2
-        doc2.file_size = 1000
+        doc2.archive_file_size = 1000
 
         text = "This is identical document content for testing"
 
@@ -140,11 +140,11 @@ class TestDeduplicationService:
         """Test similarity scoring with very different file sizes"""
         doc1 = Mock(spec=Document)
         doc1.id = 1
-        doc1.file_size = 1000
+        doc1.archive_file_size = 1000
 
         doc2 = Mock(spec=Document)
         doc2.id = 2
-        doc2.file_size = 10000  # 10x larger
+        doc2.archive_file_size = 10000  # 10x larger
 
         text = "Same content but different file sizes"
 
@@ -166,11 +166,11 @@ class TestDeduplicationService:
         """Test similarity scoring without MinHashes"""
         doc1 = Mock(spec=Document)
         doc1.id = 1
-        doc1.file_size = 1000
+        doc1.archive_file_size = 1000
 
         doc2 = Mock(spec=Document)
         doc2.id = 2
-        doc2.file_size = 1000
+        doc2.archive_file_size = 1000
 
         text = "Content without MinHash data"
 
@@ -189,10 +189,10 @@ class TestDeduplicationService:
         """Quick mode should avoid fuzzy scoring and only use jaccard/metadata"""
         doc1 = Mock(spec=Document)
         doc1.id = 1
-        doc1.file_size = 1000
+        doc1.archive_file_size = 1000
         doc2 = Mock(spec=Document)
         doc2.id = 2
-        doc2.file_size = 1000
+        doc2.archive_file_size = 1000
 
         text = "This is identical content for checking quick mode"
         minhash1 = self.service.create_minhash(text)
@@ -318,7 +318,7 @@ class TestDeduplicationService:
         for i in range(2):
             doc = Mock(spec=Document)
             doc.id = i + 1
-            doc.file_size = 1000
+            doc.archive_file_size = 1000
             documents.append(doc)
             contents[doc.id] = (
                 "This is very similar document content for testing repeated " * 3
@@ -327,7 +327,7 @@ class TestDeduplicationService:
         # Add a different document
         doc3 = Mock(spec=Document)
         doc3.id = 3
-        doc3.file_size = 500
+        doc3.archive_file_size = 500
         documents.append(doc3)
         contents[3] = (
             "This is completely different content about cats and dogs with extra words "
@@ -355,7 +355,7 @@ class TestDeduplicationService:
         for i, topic in enumerate(topics):
             doc = Mock(spec=Document)
             doc.id = i + 1
-            doc.file_size = 1000
+            doc.archive_file_size = 1000
             documents.append(doc)
             contents[doc.id] = (
                 f"{topic} "
@@ -426,7 +426,7 @@ class TestDeduplicationServiceIntegration:
         # Original invoice
         doc1 = Mock(spec=Document)
         doc1.id = 1
-        doc1.file_size = 2048
+        doc1.archive_file_size = 2048
         documents.append(doc1)
         contents[1] = """
         INVOICE #INV-2024-001
@@ -444,7 +444,7 @@ class TestDeduplicationServiceIntegration:
         # Scanned copy with OCR variations
         doc2 = Mock(spec=Document)
         doc2.id = 2
-        doc2.file_size = 2052
+        doc2.archive_file_size = 2052
         documents.append(doc2)
         contents[2] = """
         INVOICE #INV-2024-OOl
@@ -462,7 +462,7 @@ class TestDeduplicationServiceIntegration:
         # Different invoice
         doc3 = Mock(spec=Document)
         doc3.id = 3
-        doc3.file_size = 1800
+        doc3.archive_file_size = 1800
         documents.append(doc3)
         contents[3] = """
         INVOICE #INV-2024-002
@@ -505,7 +505,7 @@ class TestDeduplicationServiceIntegration:
         # High quality scan
         doc1 = Mock(spec=Document)
         doc1.id = 1
-        doc1.file_size = 1024
+        doc1.archive_file_size = 1024
         documents.append(doc1)
         contents[1] = (
             "RECEIPT Coffee Shop 123 Main St Date: 2024-01-15 Time: 09:30 AM Cappuccino $4.50 Tax $0.36 Total $4.86"
@@ -514,7 +514,7 @@ class TestDeduplicationServiceIntegration:
         # Low quality scan with OCR errors
         doc2 = Mock(spec=Document)
         doc2.id = 2
-        doc2.file_size = 1028
+        doc2.archive_file_size = 1028
         documents.append(doc2)
         contents[2] = (
             "RECEIPT Coffee Shop l23 Main St Date: 2O24-Ol-l5 Time: O9:3O AM Cappuccino $4.5O Tax $O.36 Total $4.86"

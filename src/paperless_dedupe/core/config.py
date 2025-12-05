@@ -1,11 +1,17 @@
 import os
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from paperless_dedupe import __version__
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="PAPERLESS_DEDUPE_",
+        extra="allow",
+    )
+
     app_name: str = "Paperless Dedupe"
     version: str = __version__
     debug: bool = True
@@ -27,13 +33,11 @@ class Settings(BaseSettings):
     celery_result_expires: int = 86400  # Results expire after 1 day
 
     # Deduplication settings
-    minhash_num_perm: int = 128
+    minhash_num_perm: int = 192
     lsh_threshold: float = 0.5
     lsh_num_bands: int = 20
     fuzzy_match_threshold: int = 85
-    max_ocr_length: int = (
-        500000  # Fixed max characters to store per document (not user-configurable)
-    )
+    max_ocr_length: int = 500000  # Max OCR characters to store per document (UI adjustable)
     min_fuzzy_threshold: int = 50  # Minimum fuzzy threshold to store duplicate groups
     min_ocr_word_count: int = 20  # Minimum words in OCR to include in deduplication
     enable_fuzzy_matching: bool = True  # Enable expensive fuzzy text matching
@@ -64,11 +68,5 @@ class Settings(BaseSettings):
     # File storage
     data_dir: str = "./data"
     cache_dir: str = "./cache"
-
-    class Config:
-        env_file = ".env"
-        env_prefix = "PAPERLESS_DEDUPE_"
-        extra = "allow"  # Allow extra env vars like OTEL_ without interference
-
 
 settings = Settings()

@@ -13,15 +13,19 @@ export interface Document {
   content?: string;
   created_date?: string;
   last_processed?: string;
-  file_size?: number;
   file_type?: string;
   mime_type?: string;
   checksum?: string;
   archive_serial_number?: number;
   filename?: string;
+  archive_filename?: string;
   processing_status?: 'pending' | 'processing' | 'completed' | 'error';
   fingerprint?: string;
+  original_file_size?: number;
+  archive_file_size?: number;
   has_duplicates?: boolean;
+  word_count?: number;
+  page_estimate?: number;
   // Additional metadata fields
   correspondent?: string;
   document_type?: string;
@@ -42,7 +46,15 @@ export interface DocumentContent {
   id: number;
   document_id: number;
   full_text: string;
+  content?: string; // Legacy key from API
   language?: string;
+  word_count?: number;
+}
+
+export interface DocumentPreview {
+  preview: string;
+  content_type?: string;
+  paperless_id?: number;
 }
 
 export interface DocumentListResponse {
@@ -162,8 +174,19 @@ export interface DuplicateGroupQueryParams {
   page_size?: number;
   reviewed?: boolean;
   min_confidence?: number;
-  sort_by?: 'confidence' | 'created' | 'documents';
+  sort_by?:
+    | 'confidence'
+    | 'created'
+    | 'documents'
+    | 'filename'
+    | 'file_size'
+    | 'page_count'
+    | 'correspondent'
+    | 'document_type';
   sort_order?: 'asc' | 'desc';
+  tag?: string;
+  correspondent?: string;
+  document_type?: string;
   // Dynamic confidence weight parameters
   use_jaccard?: boolean;
   use_fuzzy?: boolean;

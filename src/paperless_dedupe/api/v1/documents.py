@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 from datetime import datetime
 
@@ -53,7 +54,8 @@ class DocumentResponse(BaseModel):
     id: int
     paperless_id: int
     title: str | None
-    file_size: int | None
+    original_file_size: int | None = None
+    archive_file_size: int | None = None
     processing_status: str
     has_duplicates: bool = False
     created_date: datetime | None = None
@@ -73,6 +75,17 @@ class DocumentListResponse(BaseModel):
     prev_cursor: str | None = None
     has_next: bool = False
     has_prev: bool = False
+
+
+class DocumentContentResponse(BaseModel):
+    id: int
+    document_id: int
+    full_text: str
+    content: str
+    word_count: int | None = None
+
+    class Config:
+        from_attributes = True
 
 
 class DocumentSync(BaseModel):
@@ -236,33 +249,32 @@ async def get_document_statistics(db: Session = Depends(get_db)):
         db.query(func.avg(func.length(DocumentContent.full_text))).scalar() or 0
     )
 
-    # Get total size (if stored)
-    total_size = db.query(func.sum(Document.file_size)).scalar() or 0
+    # Get total size (prefer archive/original when available)
+    size_expr = func.coalesce(Document.original_file_size, Document.archive_file_size)
+    total_size = db.query(func.sum(size_expr)).scalar() or 0
 
     # Size distribution (simplified since file_size might not be populated)
     small_docs = (
-        db.query(Document).filter(Document.file_size < 100 * 1024).count()
+        db.query(Document).filter(size_expr < 100 * 1024).count()
         if total_size > 0
         else 0
     )
     medium_docs = (
         db.query(Document)
-        .filter(Document.file_size >= 100 * 1024, Document.file_size < 1024 * 1024)
+        .filter(size_expr >= 100 * 1024, size_expr < 1024 * 1024)
         .count()
         if total_size > 0
         else 0
     )
     large_docs = (
         db.query(Document)
-        .filter(
-            Document.file_size >= 1024 * 1024, Document.file_size < 10 * 1024 * 1024
-        )
+        .filter(size_expr >= 1024 * 1024, size_expr < 10 * 1024 * 1024)
         .count()
         if total_size > 0
         else 0
     )
     xlarge_docs = (
-        db.query(Document).filter(Document.file_size >= 10 * 1024 * 1024).count()
+        db.query(Document).filter(size_expr >= 10 * 1024 * 1024).count()
         if total_size > 0
         else 0
     )
@@ -326,7 +338,7 @@ async def get_document(document_id: int, db: Session = Depends(get_db)):
     return doc_response
 
 
-@router.get("/{document_id}/content")
+@router.get("/{document_id}/content", response_model=DocumentContentResponse)
 async def get_document_content(document_id: int, db: Session = Depends(get_db)):
     """Get document OCR content"""
     # Get from database
@@ -339,7 +351,52 @@ async def get_document_content(document_id: int, db: Session = Depends(get_db)):
     if not content:
         raise HTTPException(status_code=404, detail="Document content not found")
 
-    return {"content": content.full_text}
+    return DocumentContentResponse(
+        id=content.id,
+        document_id=content.document_id,
+        full_text=content.full_text or "",
+        content=content.full_text or "",
+        word_count=content.word_count,
+    )
+
+
+@router.get("/{document_id}/preview")
+async def get_document_preview(document_id: int, db: Session = Depends(get_db)):
+    """Fetch a renderable preview from Paperless-NGX for hover/tooltips."""
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if not document.paperless_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Document is missing a Paperless-NGX identifier",
+        )
+
+    try:
+        # Load Paperless connection details
+        from paperless_dedupe.core.config_utils import get_current_paperless_config
+
+        client_settings = get_current_paperless_config(db)
+        async with PaperlessClient(**client_settings) as client:
+            preview_bytes, content_type = await client.get_document_preview(
+                document.paperless_id
+            )
+
+        encoded = base64.b64encode(preview_bytes).decode("utf-8")
+        return {
+            "preview": encoded,
+            "content_type": content_type or "image/png",
+            "paperless_id": document.paperless_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Failed to fetch preview for document %s: %s", document_id, exc)
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to fetch preview from Paperless-NGX",
+        ) from exc
 
 
 @router.get("/{document_id}/duplicates")
@@ -540,7 +597,8 @@ async def run_document_sync(
                 if existing:
                     # Update existing document
                     existing.title = pdoc.get("title", "")
-                    existing.file_size = pdoc.get("original_file_size")
+                    existing.original_file_size = pdoc.get("original_file_size")
+                    existing.archive_file_size = pdoc.get("archive_file_size")
                     existing.created_date = parse_date_field(pdoc.get("created"))
                     existing.correspondent = pdoc.get("correspondent_name")
                     existing.document_type = pdoc.get("document_type_name")
@@ -555,7 +613,8 @@ async def run_document_sync(
                     document = Document(
                         paperless_id=pdoc["id"],
                         title=pdoc.get("title", ""),
-                        file_size=pdoc.get("original_file_size"),
+                        original_file_size=pdoc.get("original_file_size"),
+                        archive_file_size=pdoc.get("archive_file_size"),
                         created_date=parse_date_field(pdoc.get("created")),
                         correspondent=pdoc.get("correspondent_name"),
                         document_type=pdoc.get("document_type_name"),

@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import type { DuplicateGroup } from '../../services/api/types';
 import { configApi } from '../../services/api/config';
+import { documentsApi } from '../../services/api/documents';
 import SimilarityIndicator from '../duplicates/SimilarityIndicator';
 import { DocumentComparisonModal } from '../duplicates/DocumentComparisonModal';
 
@@ -164,6 +165,8 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [previewCache, setPreviewCache] = useState<Record<number, string>>({});
+  const [previewLoading, setPreviewLoading] = useState<Record<number, boolean>>({});
 
   // Find the primary document in the group
   const primaryDocument =
@@ -231,7 +234,10 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
     title: doc.title,
     created: doc.created || doc.created_date,
     fileType: doc.file_type || 'pdf',
-    size: doc.archive_serial_number, // Using as placeholder for size
+    size:
+      doc.original_file_size ??
+      doc.archive_file_size ??
+      doc.archive_serial_number,
     paperlessId: doc.paperless_id || doc.id,
   });
 
@@ -294,6 +300,29 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
     }
   };
 
+  const prefetchPreview = async (documentId: number) => {
+    if (previewCache[documentId] || previewLoading[documentId]) {
+      return;
+    }
+    setPreviewLoading((prev) => ({ ...prev, [documentId]: true }));
+    try {
+      const response = await documentsApi.getDocumentPreview(documentId);
+      if (response?.preview) {
+        const dataUrl = `data:${response.content_type || 'image/png'};base64,${
+          response.preview
+        }`;
+        setPreviewCache((prev) => ({ ...prev, [documentId]: dataUrl }));
+      } else {
+        setPreviewCache((prev) => ({ ...prev, [documentId]: '' }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch preview', error);
+      setPreviewCache((prev) => ({ ...prev, [documentId]: '' }));
+    } finally {
+      setPreviewLoading((prev) => ({ ...prev, [documentId]: false }));
+    }
+  };
+
   return (
     <Card className={`transition-all hover:shadow-md ${className}`}>
       <CardHeader className="pb-3">
@@ -352,137 +381,165 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
             {group.documents.map((doc, index) => {
               const preview = getDocumentPreview(doc);
               return (
-                <div
-                  key={doc.id}
-                  className="relative flex items-center justify-between p-3 rounded-md border bg-background hover:bg-muted/50"
-                >
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
+                <Tooltip key={doc.id} delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="relative flex items-center justify-between p-3 rounded-md border bg-background hover:bg-muted/50"
+                      onMouseEnter={() => prefetchPreview(doc.id)}
+                    >
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium truncate">
+                              {preview.title}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openInPaperless(preview.paperlessId);
+                              }}
+                              title="Open in Paperless-ngx"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                            <span>ID: {preview.paperlessId}</span>
+                            {preview.fileType && (
+                              <span>{preview.fileType.toUpperCase()}</span>
+                            )}
+                            <span>{formatDate(preview.created)}</span>
+                            {doc.page_estimate && (
+                              <span>{doc.page_estimate}p est.</span>
+                            )}
+                          </div>
+                          {/* Additional metadata */}
+                          {(doc.correspondent ||
+                            doc.document_type ||
+                            (doc.tags && doc.tags.length > 0)) && (
+                            <div className="flex items-center flex-wrap gap-1 mt-1">
+                              {doc.correspondent && (
+                                <Badge variant="outline" className="text-xs py-0">
+                                  {doc.correspondent}
+                                </Badge>
+                              )}
+                              {doc.document_type && (
+                                <Badge variant="outline" className="text-xs py-0">
+                                  {doc.document_type}
+                                </Badge>
+                              )}
+                              {doc.tags &&
+                                doc.tags.map((tag: string) => (
+                                  <Badge
+                                    key={tag}
+                                    variant="secondary"
+                                    className="text-xs py-0"
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium truncate">
-                          {preview.title}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openInPaperless(preview.paperlessId);
-                          }}
-                          title="Open in Paperless-ngx"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                        <span>ID: {preview.paperlessId}</span>
-                        {preview.fileType && (
-                          <span>{preview.fileType.toUpperCase()}</span>
+                        {doc.is_primary && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="default"
+                                  className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help"
+                                >
+                                  Primary
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs bg-gray-900 text-white">
+                                <p className="font-semibold mb-1">
+                                  Primary Document
+                                </p>
+                                <p className="text-xs">
+                                  The primary document is automatically selected
+                                  based on these criteria (in order):
+                                </p>
+                                <ul className="text-xs mt-1 space-y-0.5">
+                                  <li>• Newest creation date</li>
+                                  <li>
+                                    • Most complete metadata (title,
+                                    correspondent, tags)
+                                  </li>
+                                  <li>• Longest OCR content</li>
+                                  <li>
+                                    • Highest Paperless ID (if all else equal)
+                                  </li>
+                                </ul>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
-                        <span>{formatDate(preview.created)}</span>
+                        {!doc.is_primary && doc.similarity_to_primary && (
+                          <SimilarityIndicator
+                            similarity={doc.similarity_to_primary}
+                            className="text-xs"
+                          />
+                        )}
                       </div>
-                      {/* Additional metadata */}
-                      {(doc.correspondent ||
-                        doc.document_type ||
-                        (doc.tags && doc.tags.length > 0)) && (
-                        <div className="flex items-center flex-wrap gap-1 mt-1">
-                          {doc.correspondent && (
-                            <Badge variant="outline" className="text-xs py-0">
-                              {doc.correspondent}
-                            </Badge>
-                          )}
-                          {doc.document_type && (
-                            <Badge variant="outline" className="text-xs py-0">
-                              {doc.document_type}
-                            </Badge>
-                          )}
-                          {doc.tags &&
-                            doc.tags.map((tag: string) => (
-                              <Badge
-                                key={tag}
-                                variant="secondary"
-                                className="text-xs py-0"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
+                      {!doc.is_primary && (
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFromGroup(doc.id);
+                            }}
+                            title="Remove from this group"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDocument(doc.id, preview.paperlessId);
+                            }}
+                            title="Delete from Paperless-ngx"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {doc.is_primary && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge
-                              variant="default"
-                              className="text-xs bg-blue-500 hover:bg-blue-600 cursor-help"
-                            >
-                              Primary
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-gray-900 text-white">
-                            <p className="font-semibold mb-1">
-                              Primary Document
-                            </p>
-                            <p className="text-xs">
-                              The primary document is automatically selected
-                              based on these criteria (in order):
-                            </p>
-                            <ul className="text-xs mt-1 space-y-0.5">
-                              <li>• Newest creation date</li>
-                              <li>
-                                • Most complete metadata (title, correspondent,
-                                tags)
-                              </li>
-                              <li>• Longest OCR content</li>
-                              <li>
-                                • Highest Paperless ID (if all else equal)
-                              </li>
-                            </ul>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    {!doc.is_primary && doc.similarity_to_primary && (
-                      <SimilarityIndicator
-                        similarity={doc.similarity_to_primary}
-                        className="text-xs"
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    align="start"
+                    className="max-w-xl p-2"
+                  >
+                    {previewLoading[doc.id] ? (
+                      <div className="text-xs text-muted-foreground">
+                        Loading preview from Paperless...
+                      </div>
+                    ) : previewCache[doc.id] ? (
+                      <img
+                        src={previewCache[doc.id]}
+                        alt="Document preview"
+                        className="rounded border max-h-[320px]"
                       />
+                    ) : (
+                      <div className="text-xs text-muted-foreground">
+                        Preview not available for this document.
+                      </div>
                     )}
-                  </div>
-                  {!doc.is_primary && (
-                    <div className="flex items-center space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFromGroup(doc.id);
-                        }}
-                        title="Remove from this group"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDocument(doc.id, preview.paperlessId);
-                        }}
-                        title="Delete from Paperless-ngx"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
           </div>

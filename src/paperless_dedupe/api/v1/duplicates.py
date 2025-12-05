@@ -1,9 +1,10 @@
 import logging
+import math
 import traceback
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from paperless_dedupe.models.database import (
     Document,
@@ -106,7 +107,10 @@ async def get_duplicate_groups(
     min_confidence: float = Query(0.0, ge=0.0, le=1.0),
     reviewed: bool | None = None,
     resolved: bool | None = None,
-    sort_by: str = Query("confidence", regex="^(confidence|created|documents)$"),
+    sort_by: str = Query(
+        "confidence",
+        regex="^(confidence|created|documents|filename|file_size|page_count|correspondent|document_type)$",
+    ),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
     # Dynamic confidence weights for filtering (optional)
     use_jaccard: bool = Query(True),
@@ -143,6 +147,23 @@ async def get_duplicate_groups(
         total_count = query.count()
 
         # Apply sorting
+        primary_member = None
+        primary_doc = None
+        if sort_by in {
+            "filename",
+            "file_size",
+            "page_count",
+            "correspondent",
+            "document_type",
+        }:
+            primary_member = aliased(DuplicateMember)
+            primary_doc = aliased(Document)
+            query = query.outerjoin(
+                primary_member,
+                (DuplicateGroup.id == primary_member.group_id)
+                & primary_member.is_primary,
+            ).outerjoin(primary_doc, primary_member.document_id == primary_doc.id)
+
         if sort_by == "confidence":
             order_col = DuplicateGroup.confidence_score
         elif sort_by == "created":
@@ -161,18 +182,22 @@ async def get_duplicate_groups(
             order_col = func.coalesce(
                 subquery.c.doc_count, 0
             )  # Handle NULLs from outer join
-        elif sort_by == "filename":
-            # Sort by primary document's filename
-            from sqlalchemy.orm import aliased
-
-            primary_member = aliased(DuplicateMember)
-            primary_doc = aliased(Document)
-            query = query.outerjoin(
-                primary_member,
-                (DuplicateGroup.id == primary_member.group_id)
-                & primary_member.is_primary,
-            ).outerjoin(primary_doc, primary_member.document_id == primary_doc.id)
+        elif sort_by == "filename" and primary_doc is not None:
             order_col = func.coalesce(primary_doc.original_filename, "")
+        elif sort_by == "file_size" and primary_doc is not None:
+            order_col = func.coalesce(
+                primary_doc.original_file_size, primary_doc.archive_file_size, 0
+            )
+        elif sort_by == "correspondent" and primary_doc is not None:
+            order_col = func.coalesce(primary_doc.correspondent, "")
+        elif sort_by == "document_type" and primary_doc is not None:
+            order_col = func.coalesce(primary_doc.document_type, "")
+        elif sort_by == "page_count" and primary_doc is not None:
+            content_alias = aliased(DocumentContent)
+            query = query.outerjoin(
+                content_alias, primary_doc.id == content_alias.document_id
+            )
+            order_col = func.coalesce(content_alias.word_count, 0)
         else:
             # Default to confidence
             order_col = DuplicateGroup.confidence_score
@@ -202,7 +227,8 @@ async def get_duplicate_groups(
             # Find primary document and load content for similarity calculations
             primary_doc = None
             primary_content = None
-            document_contents = {}
+            document_contents: dict[int, str] = {}
+            content_stats: dict[int, dict[str, int | None]] = {}
 
             for member in group.members:
                 if member.is_primary:
@@ -216,6 +242,9 @@ async def get_duplicate_groups(
                     if content_row:
                         primary_content = content_row.full_text
                         document_contents[primary_doc.id] = primary_content
+                        content_stats[primary_doc.id] = {
+                            "word_count": content_row.word_count
+                        }
                     break
 
             # Load content for all documents in the group for similarity calculations
@@ -228,6 +257,9 @@ async def get_duplicate_groups(
                     )
                     if content_row:
                         document_contents[member.document.id] = content_row.full_text
+                        content_stats[member.document.id] = {
+                            "word_count": content_row.word_count
+                        }
 
             documents = []
             for member in group.members:
@@ -243,6 +275,13 @@ async def get_duplicate_groups(
                     )
                     similarity_to_primary = similarity
 
+                word_count = (
+                    content_stats.get(member.document.id, {}).get("word_count")
+                )
+                page_estimate = (
+                    math.ceil(word_count / 350) if word_count and word_count > 0 else None
+                )
+
                 doc_data = {
                     "id": member.document.id,
                     "paperless_id": member.document.paperless_id,
@@ -257,8 +296,16 @@ async def get_duplicate_groups(
                     "document_type": member.document.document_type,
                     "tags": member.document.tags if member.document.tags else [],
                     "original_filename": member.document.original_filename,
-                    "file_size": member.document.file_size,
+                    "archive_filename": member.document.archive_filename,
+                    "original_file_size": getattr(
+                        member.document, "original_file_size", None
+                    ),
+                    "archive_file_size": getattr(
+                        member.document, "archive_file_size", None
+                    ),
                     "similarity_to_primary": similarity_to_primary,
+                    "word_count": word_count,
+                    "page_estimate": page_estimate,
                 }
                 documents.append(doc_data)
 
@@ -332,7 +379,8 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
     # Find primary document and load content for similarity calculations
     primary_doc = None
     primary_content = None
-    document_contents = {}
+    document_contents: dict[int, str] = {}
+    content_stats: dict[int, dict[str, int | None]] = {}
 
     for member in group.members:
         if member.is_primary:
@@ -346,6 +394,9 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
             if content_row:
                 primary_content = content_row.full_text
                 document_contents[primary_doc.id] = primary_content
+                content_stats[primary_doc.id] = {
+                    "word_count": content_row.word_count
+                }
             break
 
     # Load content for all documents in the group for similarity calculations
@@ -358,6 +409,9 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
             )
             if content_row:
                 document_contents[member.document.id] = content_row.full_text
+                content_stats[member.document.id] = {
+                    "word_count": content_row.word_count
+                }
 
     documents = []
     for member in group.members:
@@ -373,17 +427,23 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
             )
             similarity_to_primary = similarity
 
+        word_count = content_stats.get(member.document.id, {}).get("word_count")
+        page_estimate = (
+            math.ceil(word_count / 350) if word_count and word_count > 0 else None
+        )
+
         documents.append(
             {
                 "id": member.document.id,
                 "paperless_id": member.document.paperless_id,
                 "title": member.document.title,
                 "is_primary": member.is_primary,
-                "file_size": member.document.file_size,
                 "created_date": member.document.created_date.isoformat()
                 if member.document.created_date
                 else None,
                 "similarity_to_primary": similarity_to_primary,
+                "word_count": word_count,
+                "page_estimate": page_estimate,
             }
         )
 
@@ -471,8 +531,11 @@ async def get_duplicate_statistics(db: Session = Depends(get_db)):
     for group in groups:
         if len(group.members) > 1:
             for member in group.members:
-                if not member.is_primary and member.document.file_size:
-                    total_duplicate_size += member.document.file_size
+                size = getattr(member.document, "original_file_size", None) or getattr(
+                    member.document, "archive_file_size", None
+                )
+                if not member.is_primary and size:
+                    total_duplicate_size += size
 
     return {
         "total_groups": total_groups,
