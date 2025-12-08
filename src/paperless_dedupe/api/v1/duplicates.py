@@ -109,9 +109,9 @@ async def get_duplicate_groups(
     resolved: bool | None = None,
     sort_by: str = Query(
         "confidence",
-        regex="^(confidence|created|documents|filename|file_size|page_count|correspondent|document_type)$",
+        pattern="^(confidence|created|documents|filename|file_size|page_count|correspondent|document_type)$",
     ),
-    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     # Dynamic confidence weights for filtering (optional)
     use_jaccard: bool = Query(True),
     use_fuzzy: bool = Query(True),
