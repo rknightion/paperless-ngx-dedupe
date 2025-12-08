@@ -111,12 +111,15 @@ class DeduplicationService:
         metadata_scores = []
 
         # File size similarity (prefer archive size, then original, then legacy)
-        size1 = getattr(doc1, "original_file_size", None) or getattr(
-            doc1, "archive_file_size", None
-        )
-        size2 = getattr(doc2, "original_file_size", None) or getattr(
-            doc2, "archive_file_size", None
-        )
+        def _normalize_size(doc: Document) -> float | None:
+            for attr in ("original_file_size", "archive_file_size"):
+                value = getattr(doc, attr, None)
+                if isinstance(value, (int, float)) and value > 0:
+                    return float(value)
+            return None
+
+        size1 = _normalize_size(doc1)
+        size2 = _normalize_size(doc2)
 
         if size1 and size2:
             size_ratio = float(min(size1, size2)) / float(max(size1, size2))
