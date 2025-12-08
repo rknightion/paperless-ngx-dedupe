@@ -8,7 +8,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { aiApi } from '../../services/api/ai';
-import type { AIField, AIJob, AIResult, AIHealth } from '../../services/api/types';
+import type {
+  AIField,
+  AIJob,
+  AIResult,
+  AIHealth,
+} from '../../services/api/types';
 import {
   Badge,
   Button,
@@ -166,7 +171,10 @@ export const AIProcessingPage: React.FC = () => {
       const result = await aiApi.healthCheck();
       setHealth(result);
     } catch (err: any) {
-      setHealth({ healthy: false, message: err?.message || 'Health check failed' });
+      setHealth({
+        healthy: false,
+        message: err?.message || 'Health check failed',
+      });
     } finally {
       setHealthLoading(false);
     }
@@ -235,7 +243,8 @@ export const AIProcessingPage: React.FC = () => {
 
       {!openaiConfigured && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          OpenAI API key is not set. Configure it in Settings to enable AI processing.
+          OpenAI API key is not set. Configure it in Settings to enable AI
+          processing.
         </div>
       )}
 

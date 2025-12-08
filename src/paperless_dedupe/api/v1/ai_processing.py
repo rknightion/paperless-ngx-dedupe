@@ -9,8 +9,8 @@ from paperless_dedupe.core.config_utils import get_current_paperless_config
 from paperless_dedupe.models.database import (
     AIExtractionJob,
     AIExtractionResult,
-    Document,
     AppConfig,
+    Document,
     get_db,
 )
 from paperless_dedupe.services.ai_processing_service import AIProcessingService

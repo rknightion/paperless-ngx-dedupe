@@ -114,15 +114,6 @@ repos:
       - id: yamllint
 
     # YAML formatting
-
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1 # Keep updated
-    hooks:
-      - id: codespell
-        args:
-          - --skip="*.json,*.csv,.git,*.lock"
-          - --quiet-level=2
-
     # Validate GitHub Actions workflow files
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.35.0 # Keep updated

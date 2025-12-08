@@ -222,7 +222,7 @@ class AIProcessingService:
                 return item
             # Handle SDK objects with .text
             if hasattr(item, "text"):
-                text_val = getattr(item, "text")
+                text_val = item.text
                 if isinstance(text_val, list):
                     return "".join(_flatten_text(sub) for sub in text_val)
                 return str(text_val)
@@ -331,7 +331,9 @@ class AIProcessingService:
             if output_text:
                 parsed_json = json.loads(output_text)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Could not parse OpenAI response for document %s: %s", document.id, exc)
+            logger.warning(
+                "Could not parse OpenAI response for document %s: %s", document.id, exc
+            )
 
         if not parsed_json:
             return AIExtractionResult(
@@ -437,7 +439,9 @@ class AIProcessingService:
                 },
             )
         except Exception as exc:  # noqa: BLE001
-            logger.error("OpenAI async call failed for document %s: %s", document.id, exc)
+            logger.error(
+                "OpenAI async call failed for document %s: %s", document.id, exc
+            )
             return AIExtractionResult(
                 job_id=job.id,
                 document_id=document.id,

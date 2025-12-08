@@ -45,6 +45,36 @@ def parse_date_field(date_value):
     return None
 
 
+def metadata_has_changed(
+    existing_doc: Document,
+    correspondent_name: str | None,
+    document_type_name: str | None,
+    tags_list: list[str],
+) -> bool:
+    """Check if incoming metadata differs from the stored copy."""
+
+    def normalize(value):
+        return str(value).strip() if value is not None else ""
+
+    existing_tags = sorted(
+        normalize(tag) for tag in (existing_doc.tags or []) if normalize(tag)
+    )
+    incoming_tags = sorted(
+        normalize(tag) for tag in (tags_list or []) if normalize(tag)
+    )
+
+    if existing_tags != incoming_tags:
+        return True
+
+    if normalize(existing_doc.correspondent) != normalize(correspondent_name):
+        return True
+
+    if normalize(existing_doc.document_type) != normalize(document_type_name):
+        return True
+
+    return False
+
+
 async def _sync_documents_async(
     db: Session,
     client_settings: dict,
@@ -192,20 +222,7 @@ async def _sync_documents_async(
                             task_type="sync",
                         )
 
-                    # Check if document needs update
-                    existing_doc = existing_docs.get(paperless_id)
-                    if existing_doc and not force_refresh:
-                        # Check if document was modified
-                        modified_date = parse_date_field(doc_data.get("modified"))
-                        if modified_date and existing_doc.modified_date:
-                            # Ensure both dates are timezone-aware for comparison
-                            existing_date = existing_doc.modified_date
-                            if existing_date.tzinfo is None:
-                                existing_date = existing_date.replace(tzinfo=UTC)
-                            if modified_date <= existing_date:
-                                continue  # Skip unchanged document
-
-                    # Resolve metadata names
+                    # Resolve metadata names up front so we can detect changes
                     correspondent_name = doc_data.get("correspondent_name")
                     if (
                         not correspondent_name
@@ -244,9 +261,62 @@ async def _sync_documents_async(
                             mapped = tag_map.get(str(tag_id)) or tag_map.get(tag_id)
                             tags_list.append(mapped or str(tag_id))
 
+                    # Check if document needs update
+                    existing_doc = existing_docs.get(paperless_id)
+                    doc_modified_date = parse_date_field(doc_data.get("modified"))
+                    existing_modified_date = (
+                        existing_doc.modified_date if existing_doc else None
+                    )
+                    if existing_modified_date and existing_modified_date.tzinfo is None:
+                        existing_modified_date = existing_modified_date.replace(
+                            tzinfo=UTC
+                        )
+
+                    metadata_changed = (
+                        metadata_has_changed(
+                            existing_doc,
+                            correspondent_name,
+                            document_type_name,
+                            tags_list,
+                        )
+                        if existing_doc
+                        else False
+                    )
+
+                    if existing_doc and not force_refresh:
+                        # Skip only if unchanged and metadata hasn't drifted
+                        if (
+                            doc_modified_date
+                            and existing_modified_date
+                            and doc_modified_date <= existing_modified_date
+                            and not metadata_changed
+                        ):
+                            continue  # Skip unchanged document
+
                     # Fetch document content (reuse if already provided)
-                    if "content" in doc_data and doc_data.get("content") is not None:
+                    content_text: str | None = None
+                    existing_content = (
+                        existing_doc.content
+                        if existing_doc and existing_doc.content
+                        else None
+                    )
+                    has_inline_content = (
+                        "content" in doc_data and doc_data.get("content") is not None
+                    )
+                    metadata_only_update = (
+                        existing_doc
+                        and metadata_changed
+                        and not force_refresh
+                        and doc_modified_date
+                        and existing_modified_date
+                        and doc_modified_date <= existing_modified_date
+                    )
+
+                    if has_inline_content:
                         content_text = doc_data.get("content") or ""
+                    elif metadata_only_update and existing_content:
+                        # Metadata drifted but document itself hasn't changed; reuse cached OCR
+                        content_text = existing_content.full_text or ""
                     else:
                         content_text = await client.get_document_content(paperless_id)
 
@@ -319,7 +389,7 @@ async def _sync_documents_async(
                     document.archive_file_size = archive_size
                     document.created_date = parse_date_field(doc_data.get("created"))
                     document.added_date = parse_date_field(doc_data.get("added"))
-                    document.modified_date = parse_date_field(doc_data.get("modified"))
+                    document.modified_date = doc_modified_date
                     document.processing_status = "pending"
                     document.last_processed = datetime.now(UTC)
 
@@ -330,7 +400,7 @@ async def _sync_documents_async(
 
                     # Store document content when available
                     if content_text:
-                        doc_content = (
+                        doc_content = existing_content or (
                             db.query(DocumentContent)
                             .filter_by(document_id=document.id)
                             .first()
