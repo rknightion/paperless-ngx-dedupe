@@ -58,7 +58,7 @@ class TestDeduplicationService:
 
         assert minhash is not None
         assert isinstance(minhash, MinHash)
-        assert len(minhash.hashvalues) == 128  # Default num_perm
+        assert len(minhash.hashvalues) == settings.minhash_num_perm
 
     def test_create_minhash_short_text(self):
         """Test MinHash creation with text too short for shingles"""

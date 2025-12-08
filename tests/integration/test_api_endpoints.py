@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, Mock, AsyncMock
 import json
+from types import SimpleNamespace
 
 from paperless_dedupe.models.database import (
     Document,
@@ -9,6 +10,7 @@ from paperless_dedupe.models.database import (
     DuplicateGroup,
     DuplicateMember,
 )
+from paperless_dedupe.core.config import settings as app_settings
 
 
 class TestDocumentsAPI:
@@ -19,7 +21,12 @@ class TestDocumentsAPI:
         response = client.get("/api/v1/documents/")
         assert response.status_code == 200
         data = response.json()
-        assert data == []  # API returns a list directly
+        assert data["results"] == []
+        assert data["count"] == 0
+        assert data["next"] is None
+        assert data["previous"] is None
+        assert data["has_next"] is False
+        assert data["has_prev"] is False
 
     def test_list_documents_with_data(self, client, db_session):
         """Test listing documents with data in database"""
@@ -34,14 +41,16 @@ class TestDocumentsAPI:
         response = client.get("/api/v1/documents/")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 2  # API returns a list directly
+        assert data["count"] == 2
+        assert len(data["results"]) == 2  # API returns a paginated structure
 
         # Check document structure
-        doc = data[0]
+        doc = data["results"][0]
         assert "id" in doc
         assert "paperless_id" in doc
         assert "title" in doc
-        assert "fingerprint" in doc
+        assert "processing_status" in doc
+        assert doc["has_duplicates"] is False
 
     def test_list_documents_pagination(self, client, db_session):
         """Test document listing with pagination"""
@@ -59,13 +68,25 @@ class TestDocumentsAPI:
         response = client.get("/api/v1/documents/?limit=10&skip=0")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 10  # API returns a list directly
+        assert data["count"] == 15
+        assert len(data["results"]) == 10  # API returns a paginated structure
+        assert data["has_next"] is True
+        assert data["has_prev"] is False
+        assert data["next"] == "?skip=10&limit=10"
+        assert data["previous"] is None
+        assert data["next_cursor"] is not None
 
         # Test second page
         response = client.get("/api/v1/documents/?limit=10&skip=10")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 5  # API returns a list directly
+        assert data["count"] == 15
+        assert len(data["results"]) == 5  # API returns a paginated structure
+        assert data["has_next"] is False
+        assert data["has_prev"] is True
+        assert data["next"] is None
+        assert data["previous"] == "?skip=0&limit=10"
+        assert data["next_cursor"] is None
 
     def test_get_document_by_id(self, client, db_session):
         """Test getting a specific document by ID"""
@@ -176,11 +197,19 @@ class TestDocumentsAPI:
             side_effect=lambda doc_id: f"Content for document {doc_id}"
         )
 
-        response = client.post("/api/v1/documents/sync")
+        with patch(
+            "paperless_dedupe.api.v1.documents.celery_app.control.inspect"
+        ) as mock_inspect, patch(
+            "paperless_dedupe.worker.tasks.document_sync.sync_documents.apply_async"
+        ) as mock_apply_async:
+            mock_inspect.return_value.active.return_value = {}
+            mock_apply_async.return_value = SimpleNamespace(id="test-task")
+
+            response = client.post("/api/v1/documents/sync", json={})
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "completed"
-        assert data["synced_count"] >= 0  # Depends on implementation
+        assert data["status"] == "started"
+        assert data["task_id"] == "test-task"
 
 
 class TestDuplicatesAPI:
@@ -192,7 +221,9 @@ class TestDuplicatesAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["groups"] == []
-        assert data["total"] == 0
+        assert data["count"] == 0
+        assert data["page"] == 1
+        assert data["total_pages"] == 0
 
     def test_list_duplicate_groups_with_data(self, client, db_session):
         """Test listing duplicate groups with data"""
@@ -222,10 +253,10 @@ class TestDuplicatesAPI:
         assert response.status_code == 200
         data = response.json()
         assert len(data["groups"]) == 1
-        assert data["total"] == 1
+        assert data["count"] == 1
 
         group_data = data["groups"][0]
-        assert group_data["confidence_score"] == 0.85
+        assert pytest.approx(group_data["confidence"], rel=1e-3) == 0.85
         assert len(group_data["documents"]) == 2
 
     def test_get_duplicate_group_by_id(self, client, db_session):
@@ -252,7 +283,7 @@ class TestDuplicatesAPI:
         response = client.get(f"/api/v1/duplicates/groups/{group.id}")
         assert response.status_code == 200
         data = response.json()
-        assert data["confidence_score"] == 0.90
+        assert pytest.approx(data["confidence"], rel=1e-3) == 0.90
         assert len(data["documents"]) == 2
 
     def test_get_duplicate_group_not_found(self, client):
@@ -267,10 +298,14 @@ class TestDuplicatesAPI:
         db_session.add(group)
         db_session.commit()
 
-        response = client.post(f"/api/v1/duplicates/groups/{group.id}/review")
+        response = client.post(
+            f"/api/v1/duplicates/groups/{group.id}/review", json={}
+        )
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "reviewed"
+        assert data["status"] == "success"
+        assert data["reviewed"] is True
+        assert data["resolved"] is False
 
         # Verify in database
         db_session.refresh(group)
@@ -341,12 +376,13 @@ class TestDuplicatesAPI:
         assert response.status_code == 200
         data = response.json()
 
-        assert "total_documents" in data
-        assert "total_duplicate_groups" in data
-        assert "documents_in_groups" in data
-        assert "potential_savings" in data
-        assert data["total_documents"] == 10
-        assert data["total_duplicate_groups"] == 3
+        assert "total_groups" in data
+        assert "total_duplicates" in data
+        assert "potential_deletions" in data
+        assert "confidence_distribution" in data
+        assert data["total_groups"] == 3
+        assert data["total_duplicates"] == 6
+        assert data["potential_deletions"] == 3
 
 
 class TestProcessingAPI:
@@ -362,15 +398,22 @@ class TestProcessingAPI:
         assert "progress" in data
         assert "total" in data
 
-    @patch("paperless_dedupe.api.v1.processing.run_deduplication_analysis")
-    def test_start_analysis_success(self, mock_analysis, client, db_session):
+    def test_start_analysis_success(self, client, db_session):
         """Test starting deduplication analysis"""
         # Add a test document so we have something to process
         doc = Document(paperless_id=1, title="Test Doc", fingerprint="test123")
         db_session.add(doc)
         db_session.commit()
 
-        response = client.post("/api/v1/processing/analyze", json={})
+        with patch(
+            "paperless_dedupe.api.v1.processing.celery_app.control.inspect"
+        ) as mock_inspect, patch(
+            "paperless_dedupe.worker.tasks.deduplication.analyze_duplicates.apply_async"
+        ) as mock_apply_async:
+            mock_inspect.return_value.active.return_value = {}
+            mock_apply_async.return_value = SimpleNamespace(id="analysis-task")
+
+            response = client.post("/api/v1/processing/analyze", json={})
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "started"
@@ -378,7 +421,11 @@ class TestProcessingAPI:
 
     def test_start_analysis_no_documents(self, client):
         """Test starting analysis when no documents exist"""
-        response = client.post("/api/v1/processing/analyze", json={})
+        with patch(
+            "paperless_dedupe.api.v1.processing.celery_app.control.inspect"
+        ) as mock_inspect:
+            mock_inspect.return_value.active.return_value = {}
+            response = client.post("/api/v1/processing/analyze", json={})
         assert response.status_code == 400
         data = response.json()
         assert "No documents available" in data["detail"]
@@ -390,7 +437,16 @@ class TestProcessingAPI:
         db_session.add(doc)
         db_session.commit()
 
-        response = client.post("/api/v1/processing/analyze", json={"threshold": 0.7})
+        with patch(
+            "paperless_dedupe.api.v1.processing.celery_app.control.inspect"
+        ) as mock_inspect, patch(
+            "paperless_dedupe.worker.tasks.deduplication.analyze_duplicates.apply_async"
+        ) as mock_apply_async:
+            mock_inspect.return_value.active.return_value = {}
+            mock_apply_async.return_value = SimpleNamespace(id="analysis-task")
+            response = client.post(
+                "/api/v1/processing/analyze", json={"threshold": 0.7}
+            )
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "started"
@@ -401,7 +457,7 @@ class TestProcessingAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
-        assert "Cache cleared" in data["message"]
+        assert "Cache clearing" in data["message"]
 
 
 class TestConfigAPI:
@@ -430,7 +486,7 @@ class TestConfigAPI:
         response = client.put("/api/v1/config/", json=new_config)
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "updated"
+        assert data["status"] == "success"
 
         # Verify the configuration was updated
         response = client.get("/api/v1/config/")
@@ -450,32 +506,38 @@ class TestConfigAPI:
         response = client.put("/api/v1/config/", json=invalid_config)
         assert response.status_code == 422  # Validation error
 
-    @patch("paperless_dedupe.services.paperless_client.PaperlessClient")
+    @patch("paperless_dedupe.api.v1.config.PaperlessClient")
     async def test_test_connection_success(self, mock_client_class, client):
         """Test successful connection to paperless"""
-        mock_client = Mock()
-        mock_client_class.return_value = mock_client
+        mock_client = AsyncMock()
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
         mock_client.test_connection = AsyncMock(return_value=True)
+        mock_client.get_documents = AsyncMock(return_value={"count": 0})
+        mock_client_class.return_value = mock_client
 
         response = client.post("/api/v1/config/test-connection")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "success"
-        assert "Connection successful" in data["message"]
+        assert data["success"] is True
+        assert "connected" in data["message"].lower()
 
-    @patch("paperless_dedupe.services.paperless_client.PaperlessClient")
+    @patch("paperless_dedupe.api.v1.config.PaperlessClient")
     async def test_test_connection_failure(self, mock_client_class, client):
         """Test failed connection to paperless"""
-        mock_client = Mock()
-        mock_client_class.return_value = mock_client
+        mock_client = AsyncMock()
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
         mock_client.test_connection = AsyncMock(
             side_effect=Exception("Connection failed")
         )
+        mock_client_class.return_value = mock_client
 
         response = client.post("/api/v1/config/test-connection")
-        assert response.status_code == 400
+        assert response.status_code == 200
         data = response.json()
-        assert "Connection failed" in data["detail"]
+        assert data["success"] is False
+        assert "Connection failed" in data["message"]
 
     def test_reset_config(self, client):
         """Test resetting configuration to defaults"""
@@ -487,11 +549,12 @@ class TestConfigAPI:
         response = client.post("/api/v1/config/reset")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "reset"
+        assert data["status"] == "success"
 
         # Verify config was reset
         response = client.get("/api/v1/config/")
         assert response.status_code == 200
         data = response.json()
-        assert data["fuzzy_match_threshold"] == 80  # Default value
-        assert data["max_ocr_length"] == 10000  # Default value
+        default_settings = app_settings.__class__()  # type: ignore[call-arg]
+        assert data["fuzzy_match_threshold"] == default_settings.fuzzy_match_threshold
+        assert data["max_ocr_length"] == default_settings.max_ocr_length
