@@ -246,7 +246,9 @@ def check_celery_health() -> ComponentHealth | None:
         active = inspector.active()
 
         worker_count = len(stats or pings)
-        active_tasks = sum(len(tasks) for tasks in (active or {}).values()) if active else 0
+        active_tasks = (
+            sum(len(tasks) for tasks in (active or {}).values()) if active else 0
+        )
 
         # Get queue lengths
         queue_lengths = {}

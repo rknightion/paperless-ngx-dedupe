@@ -188,9 +188,9 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ index, style, data }) => {
         {(document.original_file_size || document.archive_file_size) && (
           <span className="text-xs text-muted-foreground">
             {(
-              ((document.original_file_size || document.archive_file_size || 0) /
-                1024 /
-                1024)
+              (document.original_file_size || document.archive_file_size || 0) /
+              1024 /
+              1024
             ).toFixed(2)}{' '}
             MB
           </span>

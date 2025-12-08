@@ -50,12 +50,6 @@ class AIProcessingService:
         if reasoning_effort not in {"low", "medium", "high"}:
             reasoning_effort = "medium"
 
-        prompt_caching = config_items.get(
-            "ai_prompt_caching_enabled", settings.ai_prompt_caching_enabled
-        )
-        if isinstance(prompt_caching, str):
-            prompt_caching = prompt_caching.lower() == "true"
-
         max_chars = config_items.get("ai_max_input_chars", settings.ai_max_input_chars)
         try:
             max_chars = int(max_chars)
@@ -66,7 +60,6 @@ class AIProcessingService:
             "api_key": api_key,
             "model": model,
             "reasoning_effort": reasoning_effort,
-            "prompt_caching": bool(prompt_caching),
             "max_input_chars": max_chars,
         }
 
@@ -172,13 +165,13 @@ class AIProcessingService:
         return (
             "You are an expert assistant that files scanned documents into paperless-ngx. "
             "Infer concise English metadata from OCR text and existing metadata. "
-            "Always answer in English and respect the JSON schema. "
+            "Respond ONLY with JSON matching the provided schema; do not add fields or prose. "
+            "If evidence is missing, set the value to null and use confidence <= 0.25. "
+            "Dates must be ISO YYYY-MM-DD or null; never invent dates. "
             "For correspondents, prefer the shortest, colloquial company or person name "
             "(e.g., 'Amazon' instead of 'Amazon EU SARL'). "
-            "Return at most five short tags that are actionable labels, not sentences. "
-            "Provide a best-guess document creation/issue date based on context if present; "
-            "use null when no grounded date exists. "
-            "Include confidence scores between 0 and 1 for every field."
+            "Return at most five short, English tags that are actionable labels, not sentences. "
+            "Prefer OCR evidence over conflicting existing metadata."
         )
 
     @staticmethod
@@ -203,8 +196,8 @@ class AIProcessingService:
             f"- Document type: {document.document_type or 'n/a'}\n"
             f"- Tags: {tags_value}\n"
             f"- Current created date: {created}\n\n"
-            "OCR text (truncated to fit token budget):\n"
-            f"{content_excerpt}"
+            "OCR text (truncated to fit token budget; use only text between <ocr>...</ocr>):\n"
+            f"<ocr>{content_excerpt}</ocr>"
         )
 
     def _parse_date(self, value: str | None):
@@ -286,40 +279,15 @@ class AIProcessingService:
         user_prompt = self._build_user_prompt(document, content_excerpt)
 
         messages: list[dict[str, Any]] = [
-            {
-                "role": "system",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": system_prompt,
-                        "cache_control": {"type": "ephemeral"}
-                        if ai_config["prompt_caching"]
-                        else None,
-                    }
-                ],
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": user_prompt,
-                        "cache_control": {"type": "ephemeral"}
-                        if ai_config["prompt_caching"]
-                        else None,
-                    }
-                ],
-            },
+            {"role": "system", "content": [{"type": "text", "text": system_prompt}]},
+            {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
         ]
 
-        # Clean up cache_control None entries to satisfy API schema
-        for message in messages:
-            cleaned_content = []
-            for part in message.get("content", []):
-                if part.get("cache_control") is None:
-                    part = {k: v for k, v in part.items() if k != "cache_control"}
-                cleaned_content.append(part)
-            message["content"] = cleaned_content
+        # Deterministic prompt cache key per prompt version, fields, and model
+        prompt_cache_key = (
+            f"paperless-dedupe:v1:model:{ai_config['model']}:fields:"
+            f"{','.join(sorted(requested_fields))}"
+        )
 
         client = OpenAI(api_key=ai_config["api_key"])
         try:
@@ -331,6 +299,7 @@ class AIProcessingService:
                     "type": "json_schema",
                     "json_schema": self._json_schema(),
                 },
+                prompt_cache_key=prompt_cache_key,
                 reasoning={"effort": ai_config["reasoning_effort"]},
                 metadata={
                     "job_id": job.id,
@@ -406,6 +375,16 @@ class AIProcessingService:
             requested_fields=requested_fields,
         )
 
+    def health_check(self, ai_config: dict[str, Any]) -> tuple[bool, str]:
+        """Free health check using model retrieval (no tokens billed)."""
+        client = OpenAI(api_key=ai_config["api_key"])
+        try:
+            client.models.retrieve(ai_config["model"])
+            return True, "OpenAI reachable and model available"
+        except Exception as exc:  # noqa: BLE001
+            logger.error("OpenAI health check failed: %s", exc)
+            return False, str(exc)
+
     async def process_document_async(
         self,
         job: AIExtractionJob,
@@ -430,39 +409,14 @@ class AIProcessingService:
         user_prompt = self._build_user_prompt(document, content_excerpt)
 
         messages: list[dict[str, Any]] = [
-            {
-                "role": "system",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": system_prompt,
-                        "cache_control": {"type": "ephemeral"}
-                        if ai_config["prompt_caching"]
-                        else None,
-                    }
-                ],
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": user_prompt,
-                        "cache_control": {"type": "ephemeral"}
-                        if ai_config["prompt_caching"]
-                        else None,
-                    }
-                ],
-            },
+            {"role": "system", "content": [{"type": "text", "text": system_prompt}]},
+            {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
         ]
 
-        for message in messages:
-            cleaned_content = []
-            for part in message.get("content", []):
-                if part.get("cache_control") is None:
-                    part = {k: v for k, v in part.items() if k != "cache_control"}
-                cleaned_content.append(part)
-            message["content"] = cleaned_content
+        prompt_cache_key = (
+            f"paperless-dedupe:v1:model:{ai_config['model']}:fields:"
+            f"{','.join(sorted(requested_fields))}"
+        )
 
         client = AsyncOpenAI(api_key=ai_config["api_key"])
         try:
@@ -474,6 +428,7 @@ class AIProcessingService:
                     "type": "json_schema",
                     "json_schema": self._json_schema(),
                 },
+                prompt_cache_key=prompt_cache_key,
                 reasoning={"effort": ai_config["reasoning_effort"]},
                 metadata={
                     "job_id": job.id,

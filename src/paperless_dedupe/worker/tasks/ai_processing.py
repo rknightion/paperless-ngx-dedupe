@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from celery import Task, current_task
+from celery import Task
 from sqlalchemy.orm import joinedload
 
 from paperless_dedupe.models.database import AIExtractionJob, Document
@@ -78,7 +78,9 @@ def run_ai_job(self, job_id: int) -> dict:
         db.commit()
 
         async def process_all():
-            semaphore = asyncio.Semaphore(3)  # conservative concurrency to stay under OpenAI rate limits
+            semaphore = asyncio.Semaphore(
+                3
+            )  # conservative concurrency to stay under OpenAI rate limits
             results: list = []
 
             async def handle_doc(doc):

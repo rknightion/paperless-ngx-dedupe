@@ -70,18 +70,13 @@ def get_current_config(db: Session) -> dict[str, Any]:
         "paperless_password": config_items.get(
             "paperless_password", settings.paperless_password
         ),
-        "openai_api_key": config_items.get(
-            "openai_api_key", settings.openai_api_key
-        ),
+        "openai_api_key": config_items.get("openai_api_key", settings.openai_api_key),
         "openai_model": config_items.get("openai_model", settings.openai_model),
         "openai_reasoning_effort": config_items.get(
             "openai_reasoning_effort", settings.openai_reasoning_effort
         ),
         "ai_max_input_chars": config_items.get(
             "ai_max_input_chars", settings.ai_max_input_chars
-        ),
-        "ai_prompt_caching_enabled": config_items.get(
-            "ai_prompt_caching_enabled", settings.ai_prompt_caching_enabled
         ),
         "fuzzy_match_threshold": config_items.get(
             "fuzzy_match_threshold", settings.fuzzy_match_threshold

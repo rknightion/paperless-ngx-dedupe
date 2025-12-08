@@ -111,8 +111,10 @@ export const DocumentComparisonModal: React.FC<
   };
 
   const selectedCompareDocument = compareDocuments[selectedCompareIndex];
-  const normalizeContent = (response: { full_text?: string; content?: string }) =>
-    (response.full_text || response.content || '').trim();
+  const normalizeContent = (response: {
+    full_text?: string;
+    content?: string;
+  }) => (response.full_text || response.content || '').trim();
 
   // Fetch document content
   useEffect(() => {
@@ -293,7 +295,8 @@ export const DocumentComparisonModal: React.FC<
         return (primary ?? '') !== (compare ?? '');
       })
       .map(({ label, primary, compare, formatter }) => {
-        const format = formatter || ((val?: string | number | null) => val || 'N/A');
+        const format =
+          formatter || ((val?: string | number | null) => val || 'N/A');
         return `${label} (${format(primary)} vs ${format(compare)})`;
       });
 
@@ -698,7 +701,10 @@ export const DocumentComparisonModal: React.FC<
                 {differenceReasons.length ? (
                   <ul className="list-disc pl-5 text-sm space-y-1">
                     {differenceReasons.map((reason, idx) => (
-                      <li key={`${reason}-${idx}`} className="text-muted-foreground">
+                      <li
+                        key={`${reason}-${idx}`}
+                        className="text-muted-foreground"
+                      >
                         {reason}
                       </li>
                     ))}

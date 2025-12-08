@@ -136,8 +136,9 @@ export interface Configuration {
   openai_model?: string;
   openai_reasoning_effort?: string;
   ai_max_input_chars?: number;
-  ai_prompt_caching_enabled?: boolean;
   openai_configured?: boolean;
+  openai_health_status?: string | null;
+  openai_health_checked_at?: string | null;
 }
 
 export interface TestConnectionResponse {
@@ -246,4 +247,10 @@ export interface AIResult {
   requested_fields?: AIField[];
   applied_at?: string | null;
   error?: string | null;
+}
+
+export interface AIHealth {
+  healthy: boolean;
+  message?: string | null;
+  checked_at?: string;
 }

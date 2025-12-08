@@ -275,11 +275,11 @@ async def get_duplicate_groups(
                     )
                     similarity_to_primary = similarity
 
-                word_count = (
-                    content_stats.get(member.document.id, {}).get("word_count")
-                )
+                word_count = content_stats.get(member.document.id, {}).get("word_count")
                 page_estimate = (
-                    math.ceil(word_count / 350) if word_count and word_count > 0 else None
+                    math.ceil(word_count / 350)
+                    if word_count and word_count > 0
+                    else None
                 )
 
                 doc_data = {
@@ -394,9 +394,7 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
             if content_row:
                 primary_content = content_row.full_text
                 document_contents[primary_doc.id] = primary_content
-                content_stats[primary_doc.id] = {
-                    "word_count": content_row.word_count
-                }
+                content_stats[primary_doc.id] = {"word_count": content_row.word_count}
             break
 
     # Load content for all documents in the group for similarity calculations

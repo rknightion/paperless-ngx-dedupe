@@ -190,14 +190,18 @@ class AIExtractionResult(Base):
     document_id = Column(
         Integer, ForeignKey("documents.id", ondelete="CASCADE"), index=True
     )
-    status = Column(String(30), default="pending_review")  # pending_review|applied|rejected|failed
+    status = Column(
+        String(30), default="pending_review"
+    )  # pending_review|applied|rejected|failed
     suggested_title = Column(String(500), nullable=True)
     title_confidence = Column(Float, nullable=True)
     suggested_correspondent = Column(String(200), nullable=True)
     correspondent_confidence = Column(Float, nullable=True)
     suggested_document_type = Column(String(200), nullable=True)
     document_type_confidence = Column(Float, nullable=True)
-    suggested_tags = Column(JSONType, nullable=True)  # list of {"value": str, "confidence": float}
+    suggested_tags = Column(
+        JSONType, nullable=True
+    )  # list of {"value": str, "confidence": float}
     tags_confidence = Column(Float, nullable=True)
     suggested_date = Column(DateTime, nullable=True)
     date_confidence = Column(Float, nullable=True)

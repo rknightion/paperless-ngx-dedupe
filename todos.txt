@@ -4,3 +4,4 @@
 [] Improve tag selection by fetching available tags from Paperless/DB (case-insensitive lookup); today tag filtering expects an exact match string.
 [] Track review decisions (accepted/rejected), mark jobs as fully applied, and surface Paperless update failures to the UI; consider field-level statuses.
 [] Run `alembic upgrade head` to apply migration b2c4f6f9c2a1 in deployed environments.
+[] Consider re-adding a structured health check using Responses when the SDK stabilizes; currently health check is minimal due to response_format incompatibility on latest SDK.

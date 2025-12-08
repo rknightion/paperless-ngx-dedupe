@@ -12,9 +12,7 @@ from paperless_dedupe.observability.tracing import (
 def test_setup_tracing_uses_expected_resource_attributes():
     exporter = InMemorySpanExporter()
 
-    tracer_provider = setup_tracing(
-        component="api", span_exporter=exporter, force=True
-    )
+    tracer_provider = setup_tracing(component="api", span_exporter=exporter, force=True)
     assert tracer_provider is not None
 
     attrs = tracer_provider.resource.attributes
@@ -26,9 +24,7 @@ def test_setup_tracing_uses_expected_resource_attributes():
 
 def test_instrument_fastapi_app_adds_otlp_middleware():
     exporter = InMemorySpanExporter()
-    tracer_provider = setup_tracing(
-        component="api", span_exporter=exporter, force=True
-    )
+    tracer_provider = setup_tracing(component="api", span_exporter=exporter, force=True)
     app = FastAPI()
 
     instrument_fastapi_app(app, tracer_provider=tracer_provider)

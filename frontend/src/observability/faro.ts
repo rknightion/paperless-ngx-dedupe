@@ -16,8 +16,7 @@ export function initializeFrontendObservability(): void {
     (import.meta.env?.VITE_FARO_ENABLED ?? 'true').toLowerCase() === 'true';
   const faroApiKey = import.meta.env?.VITE_FARO_API_KEY;
   const faroAppName = import.meta.env?.VITE_FARO_APP_NAME ?? 'paperless-dedupe';
-  const faroNamespace =
-    import.meta.env?.VITE_FARO_NAMESPACE ?? 'paperless-ngx';
+  const faroNamespace = import.meta.env?.VITE_FARO_NAMESPACE ?? 'paperless-ngx';
 
   if (!faroEnabled) {
     return;

@@ -6,6 +6,9 @@
 [![GitHub Release](https://img.shields.io/github/v/release/rknightion/paperless-ngx-dedupe)](https://github.com/rknightion/paperless-ngx-dedupe/releases)
 [![Python](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org)
 
+> **Warning**
+> This project is under heavy development. Until v1.0 is released, expect breaking changes, incomplete features, and potential data issues. Use at your own risk and always maintain backups of your Paperless-NGX data.
+
 A powerful document deduplication tool for [paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) that identifies duplicate documents using advanced fuzzy matching and MinHash/LSH algorithms, designed to handle large document collections efficiently.
 
 ## Features

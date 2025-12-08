@@ -1,2 +1,4 @@
-export { AIProcessingPage } from './AIProcessingPage';
+import AIProcessingPage from './AIProcessingPage';
+
+export { AIProcessingPage };
 export default AIProcessingPage;

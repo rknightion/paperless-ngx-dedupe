@@ -286,9 +286,7 @@ export const DuplicatesPage: React.FC = () => {
           minFileSizeBytes === undefined && maxFileSizeBytes === undefined
             ? true
             : group.documents.some((doc) => {
-                const size =
-                  doc.original_file_size ??
-                  doc.archive_file_size;
+                const size = doc.original_file_size ?? doc.archive_file_size;
                 if (size === undefined || size === null) {
                   return false;
                 }
@@ -587,7 +585,10 @@ export const DuplicatesPage: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2">
             <Link to="/bulk-wizard">
-              <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
+              <Button
+                size="sm"
+                className="bg-slate-900 text-white hover:bg-slate-800"
+              >
                 Launch Bulk Wizard
               </Button>
             </Link>
@@ -840,9 +841,7 @@ export const DuplicatesPage: React.FC = () => {
                 <select
                   className="w-full px-3 py-2 border border-input rounded-md bg-background"
                   value={sortBy}
-                  onChange={(e) =>
-                    setSortBy(e.target.value as typeof sortBy)
-                  }
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                 >
                   <option value="confidence">Confidence</option>
                   <option value="created">Created Date</option>
@@ -1133,11 +1132,11 @@ export const DuplicatesPage: React.FC = () => {
                 </Badge>
               )}
               {selectedDocumentType && (
-                <Badge variant="outline">
-                  Type: {selectedDocumentType}
-                </Badge>
+                <Badge variant="outline">Type: {selectedDocumentType}</Badge>
               )}
-              {selectedTag && <Badge variant="outline">Tag: {selectedTag}</Badge>}
+              {selectedTag && (
+                <Badge variant="outline">Tag: {selectedTag}</Badge>
+              )}
               {confidenceFilter > 0.7 && (
                 <Badge variant="outline">
                   Min {Math.round(confidenceFilter * 100)}% confidence
@@ -1155,14 +1154,19 @@ export const DuplicatesPage: React.FC = () => {
               )}
               {(minPagesValue !== undefined || maxPagesValue !== undefined) && (
                 <Badge variant="outline">
-                  Pages:{' '}
-                  {`${minPagesValue ?? '0'}-${maxPagesValue ?? 'max'}`}
+                  Pages: {`${minPagesValue ?? '0'}-${maxPagesValue ?? 'max'}`}
                 </Badge>
               )}
               {(minFileSizeBytes !== undefined ||
                 maxFileSizeBytes !== undefined) && (
                 <Badge variant="outline">
-                  {`Size: ${Math.round((minFileSizeBytes ?? 0) / 1024 / 1024)}-${maxFileSizeBytes !== undefined ? Math.round(maxFileSizeBytes / 1024 / 1024) : 'max'} MB`}
+                  {`Size: ${Math.round(
+                    (minFileSizeBytes ?? 0) / 1024 / 1024
+                  )}-${
+                    maxFileSizeBytes !== undefined
+                      ? Math.round(maxFileSizeBytes / 1024 / 1024)
+                      : 'max'
+                  } MB`}
                 </Badge>
               )}
               <Button

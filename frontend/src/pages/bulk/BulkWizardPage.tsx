@@ -36,9 +36,21 @@ interface WizardFilters {
 }
 
 const steps = [
-  { id: 1, title: 'Target Groups', description: 'Filter and pick the right duplicates' },
-  { id: 2, title: 'Bulk Action', description: 'Confirm what happens to non-primary docs' },
-  { id: 3, title: 'Review & Launch', description: 'Double-check impact and run' },
+  {
+    id: 1,
+    title: 'Target Groups',
+    description: 'Filter and pick the right duplicates',
+  },
+  {
+    id: 2,
+    title: 'Bulk Action',
+    description: 'Confirm what happens to non-primary docs',
+  },
+  {
+    id: 3,
+    title: 'Review & Launch',
+    description: 'Double-check impact and run',
+  },
 ];
 
 export const BulkWizardPage: React.FC = () => {
@@ -140,7 +152,8 @@ export const BulkWizardPage: React.FC = () => {
     );
     const deletions = selected.reduce(
       (acc, group) =>
-        acc + Math.max((group.documents?.length || 1) - (keepPrimary ? 1 : 0), 0),
+        acc +
+        Math.max((group.documents?.length || 1) - (keepPrimary ? 1 : 0), 0),
       0
     );
     return { groups: selected.length, documents, deletions };
@@ -190,8 +203,8 @@ export const BulkWizardPage: React.FC = () => {
               Resolve duplicates in guided steps
             </h1>
             <p className="text-slate-300 max-w-xl">
-              Filter the right groups, preview the impact, then delete non-primary
-              documents in one confident action.
+              Filter the right groups, preview the impact, then delete
+              non-primary documents in one confident action.
             </p>
             <div className="flex items-center gap-3 mt-4">
               <Badge variant="secondary" className="bg-white/10 text-white">
@@ -247,11 +260,15 @@ export const BulkWizardPage: React.FC = () => {
                 {isComplete ? (
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                 ) : (
-                  <Sparkles className={cn('h-4 w-4', isActive && 'text-cyan-500')} />
+                  <Sparkles
+                    className={cn('h-4 w-4', isActive && 'text-cyan-500')}
+                  />
                 )}
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {step.description}
+                </p>
               </CardContent>
             </Card>
           );
@@ -307,7 +324,10 @@ export const BulkWizardPage: React.FC = () => {
                 placeholder="Matches text"
                 value={filters.correspondent}
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, correspondent: e.target.value }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    correspondent: e.target.value,
+                  }))
                 }
               />
             </div>
@@ -317,7 +337,10 @@ export const BulkWizardPage: React.FC = () => {
                 placeholder="e.g. invoice"
                 value={filters.documentType}
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, documentType: e.target.value }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    documentType: e.target.value,
+                  }))
                 }
               />
             </div>
@@ -357,7 +380,8 @@ export const BulkWizardPage: React.FC = () => {
                   Select duplicate groups ({selectedGroups.length} chosen)
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Hover each row for metadata; primary docs stay, others are removed.
+                  Hover each row for metadata; primary docs stay, others are
+                  removed.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -375,8 +399,10 @@ export const BulkWizardPage: React.FC = () => {
                 {candidates.map((group) => {
                   const selected = selectedGroups.includes(group.id);
                   const deletions =
-                    Math.max((group.documents?.length || 1) - (keepPrimary ? 1 : 0), 0) ||
-                    0;
+                    Math.max(
+                      (group.documents?.length || 1) - (keepPrimary ? 1 : 0),
+                      0
+                    ) || 0;
                   return (
                     <div
                       key={group.id}
@@ -390,35 +416,43 @@ export const BulkWizardPage: React.FC = () => {
                         <div
                           className={cn(
                             'h-4 w-4 border rounded-sm',
-                            selected ? 'bg-cyan-500 border-cyan-500' : 'border-muted'
+                            selected
+                              ? 'bg-cyan-500 border-cyan-500'
+                              : 'border-muted'
                           )}
                         />
                         <div>
                           <p className="font-medium flex items-center gap-2">
                             <span>Group #{group.id}</span>
                             <Badge
-                              variant={getConfidenceBadgeVariant(group.confidence)}
+                              variant={getConfidenceBadgeVariant(
+                                group.confidence
+                              )}
                               className="text-xs"
                             >
                               {Math.round(group.confidence * 100)}% match
                             </Badge>
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {group.documents?.length || 0} document(s) •
-                            {' '}
+                            {group.documents?.length || 0} document(s) •{' '}
                             {group.documents
                               ?.map((d) => d.title)
                               .filter(Boolean)
                               .slice(0, 3)
                               .join(' • ')}
-                            {group.documents && group.documents.length > 3 ? ' …' : ''}
+                            {group.documents && group.documents.length > 3
+                              ? ' …'
+                              : ''}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 text-sm">
                         <Badge variant="outline">{deletions} to delete</Badge>
                         {group.reviewed && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          <Badge
+                            variant="secondary"
+                            className="bg-green-100 text-green-800"
+                          >
                             Reviewed
                           </Badge>
                         )}
@@ -436,8 +470,8 @@ export const BulkWizardPage: React.FC = () => {
 
                 {candidates.length === 0 && !loading && (
                   <div className="text-sm text-muted-foreground px-4 py-6">
-                    No groups found for these filters. Try reducing the confidence
-                    threshold or clearing tag filters.
+                    No groups found for these filters. Try reducing the
+                    confidence threshold or clearing tag filters.
                   </div>
                 )}
               </div>
@@ -484,8 +518,9 @@ export const BulkWizardPage: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  For each selected group, keep the primary (blue badge) and delete the
-                  others in Paperless-NGX. Groups will be marked resolved.
+                  For each selected group, keep the primary (blue badge) and
+                  delete the others in Paperless-NGX. Groups will be marked
+                  resolved.
                 </p>
                 <label className="flex items-center gap-2 text-sm text-foreground">
                   <input
@@ -532,8 +567,8 @@ export const BulkWizardPage: React.FC = () => {
                 </div>
                 <Progress value={selectionStats.groups ? 100 : 0} />
                 <p className="text-xs text-muted-foreground">
-                  Bulk actions are executed via the batch API. You can monitor operation
-                  status from the Batch Operations screen.
+                  Bulk actions are executed via the batch API. You can monitor
+                  operation status from the Batch Operations screen.
                 </p>
               </CardContent>
             </Card>
@@ -573,8 +608,9 @@ export const BulkWizardPage: React.FC = () => {
           <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
             <span>
-              This will delete non-primary documents in each selected group inside
-              Paperless-NGX. Ensure backups or test environments are in place.
+              This will delete non-primary documents in each selected group
+              inside Paperless-NGX. Ensure backups or test environments are in
+              place.
             </span>
           </div>
           <div className="grid md:grid-cols-3 gap-3 text-sm">
@@ -599,8 +635,9 @@ export const BulkWizardPage: React.FC = () => {
             <div className="flex items-center gap-2 text-sm text-green-700">
               <CheckCircle2 className="h-4 w-4" />
               <span>
-                Bulk resolve queued. Operation ID: <strong>{operationId}</strong>.
-                Track progress in Batch Operations.
+                Bulk resolve queued. Operation ID:{' '}
+                <strong>{operationId}</strong>. Track progress in Batch
+                Operations.
               </span>
             </div>
           )}

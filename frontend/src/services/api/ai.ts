@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { AIField, AIJob, AIResult } from './types';
+import type { AIField, AIJob, AIResult, AIHealth } from './types';
 
 export const aiApi = {
   async startJob(payload: {
@@ -35,6 +35,10 @@ export const aiApi = {
     remaining_pending: number;
   }> {
     return apiClient.post(`/ai/jobs/${jobId}/apply`, payload);
+  },
+
+  async healthCheck(): Promise<AIHealth> {
+    return apiClient.get('/ai/health');
   },
 };
 

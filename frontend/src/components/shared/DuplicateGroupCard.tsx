@@ -166,7 +166,9 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [previewCache, setPreviewCache] = useState<Record<number, string>>({});
-  const [previewLoading, setPreviewLoading] = useState<Record<number, boolean>>({});
+  const [previewLoading, setPreviewLoading] = useState<Record<number, boolean>>(
+    {}
+  );
 
   // Find the primary document in the group
   const primaryDocument =
@@ -423,12 +425,18 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                             (doc.tags && doc.tags.length > 0)) && (
                             <div className="flex items-center flex-wrap gap-1 mt-1">
                               {doc.correspondent && (
-                                <Badge variant="outline" className="text-xs py-0">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs py-0"
+                                >
                                   {doc.correspondent}
                                 </Badge>
                               )}
                               {doc.document_type && (
-                                <Badge variant="outline" className="text-xs py-0">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs py-0"
+                                >
                                   {doc.document_type}
                                 </Badge>
                               )}

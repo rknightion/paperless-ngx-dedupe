@@ -39,9 +39,7 @@ export const documentsApi = {
   },
 
   // Get document preview/thumbnail
-  async getDocumentPreview(
-    id: number
-  ): Promise<DocumentPreview> {
+  async getDocumentPreview(id: number): Promise<DocumentPreview> {
     return apiClient.get(`/documents/${id}/preview`);
   },
 

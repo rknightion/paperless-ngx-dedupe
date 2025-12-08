@@ -10,6 +10,7 @@ from paperless_dedupe.models.database import (
     AIExtractionJob,
     AIExtractionResult,
     Document,
+    AppConfig,
     get_db,
 )
 from paperless_dedupe.services.ai_processing_service import AIProcessingService
@@ -111,6 +112,12 @@ class AIResultItem(BaseModel):
     requested_fields: list[str] | None = None
     applied_at: datetime | None = None
     error: str | None = None
+
+
+class AIHealthResponse(BaseModel):
+    healthy: bool
+    message: str | None = None
+    checked_at: datetime
 
 
 @router.post("/jobs", response_model=AIJobSummary)
@@ -405,3 +412,31 @@ async def apply_ai_results(
         )
         .count(),
     }
+
+
+@router.get("/health", response_model=AIHealthResponse)
+async def check_openai_health(db: Session = Depends(get_db)):
+    """Validate OpenAI credentials/model once and store status."""
+    service = AIProcessingService(db)
+    try:
+        ai_settings = service._load_ai_settings()  # noqa: SLF001
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    healthy, message = service.health_check(ai_settings)
+    checked_at = datetime.now(UTC)
+
+    # Persist health status
+    def upsert(key: str, value: str):
+        config_item = db.query(AppConfig).filter(AppConfig.key == key).first()
+        if config_item:
+            config_item.value = value
+        else:
+            db.add(AppConfig(key=key, value=value))
+
+    upsert("openai_health_status", "healthy" if healthy else "unhealthy")
+    upsert("openai_health_checked_at", checked_at.isoformat())
+    upsert("openai_health_message", message or "")
+    db.commit()
+
+    return AIHealthResponse(healthy=healthy, message=message, checked_at=checked_at)

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from datetime import datetime
-from typing import Any, MutableMapping
+from typing import Any
 
 
 def _normalize_timestamp(value: Any | None) -> str | None:
@@ -60,7 +61,8 @@ def start_sync_status(task_id: str | None = None, started_at: Any | None = None)
     sync_status_state.update(
         {
             "is_syncing": True,
-            "started_at": _normalize_timestamp(started_at) or datetime.utcnow().isoformat(),
+            "started_at": _normalize_timestamp(started_at)
+            or datetime.utcnow().isoformat(),
             "task_id": task_id,
             "status": "processing",
         }
@@ -68,15 +70,14 @@ def start_sync_status(task_id: str | None = None, started_at: Any | None = None)
     return sync_status_state.copy()
 
 
-def start_processing_status(
-    task_id: str | None = None, started_at: Any | None = None
-):
+def start_processing_status(task_id: str | None = None, started_at: Any | None = None):
     """Reset and mark a processing task as started."""
     _reset(processing_status_state, _default_processing_status())
     processing_status_state.update(
         {
             "is_processing": True,
-            "started_at": _normalize_timestamp(started_at) or datetime.utcnow().isoformat(),
+            "started_at": _normalize_timestamp(started_at)
+            or datetime.utcnow().isoformat(),
             "task_id": task_id,
             "status": "processing",
         }
@@ -129,9 +130,7 @@ def merge_sync_status(update: dict[str, Any]) -> dict[str, Any]:
     if update.get("started_at"):
         sync_status_state["started_at"] = _normalize_timestamp(update["started_at"])
     if update.get("completed_at"):
-        sync_status_state["completed_at"] = _normalize_timestamp(
-            update["completed_at"]
-        )
+        sync_status_state["completed_at"] = _normalize_timestamp(update["completed_at"])
 
     _update_counts(sync_status_state, update)
 

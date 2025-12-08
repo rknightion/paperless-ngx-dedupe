@@ -145,7 +145,9 @@ async def _sync_documents_async(
                 "paperless.fetch_documents", attributes={"paperless.limit": limit or 0}
             ) as fetch_span:
                 all_documents = await client.get_all_documents(limit=limit)
-                fetch_span.set_attribute("paperless.documents.count", len(all_documents))
+                fetch_span.set_attribute(
+                    "paperless.documents.count", len(all_documents)
+                )
 
             total_documents = len(all_documents)
 
@@ -251,9 +253,8 @@ async def _sync_documents_async(
                     original_size = doc_data.get("original_file_size")
                     archive_size = doc_data.get("archive_file_size")
                     meta = None
-                    should_fetch_metadata = (
-                        settings.fetch_metadata_on_sync
-                        and (original_size is None or archive_size is None)
+                    should_fetch_metadata = settings.fetch_metadata_on_sync and (
+                        original_size is None or archive_size is None
                     )
                     if should_fetch_metadata:
                         try:
@@ -282,13 +283,17 @@ async def _sync_documents_async(
                         "fingerprint"
                     )
                     fingerprint_value = (
-                        str(fingerprint_raw).strip() if fingerprint_raw is not None else ""
+                        str(fingerprint_raw).strip()
+                        if fingerprint_raw is not None
+                        else ""
                     )
                     if not fingerprint_value:
                         fingerprint_value = f"paperless-{paperless_id}"
                     document.fingerprint = fingerprint_value[:64]
 
-                    content_hash = doc_data.get("checksum") or doc_data.get("fingerprint")
+                    content_hash = doc_data.get("checksum") or doc_data.get(
+                        "fingerprint"
+                    )
                     if not content_hash and content_text:
                         content_hash = hashlib.sha256(
                             content_text.encode("utf-8")
@@ -357,7 +362,8 @@ async def _sync_documents_async(
                 except Exception as e:
                     trace.get_current_span().record_exception(e)
                     logger.error(
-                        f"Error syncing document {paperless_id}: {str(e)}", exc_info=True
+                        f"Error syncing document {paperless_id}: {str(e)}",
+                        exc_info=True,
                     )
                     errors.append({"document_id": paperless_id, "error": str(e)})
                     db.rollback()

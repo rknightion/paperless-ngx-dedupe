@@ -175,18 +175,17 @@ const documentsSlice = createSlice({
         state.syncStatus?.completed_at ||
         new Date().toISOString();
 
-      const baseStatus =
-        state.syncStatus || {
-          is_syncing: false,
-          current_step: '',
-          progress: 0,
-          total: 0,
-          error: null,
-          documents_synced: 0,
-          documents_updated: 0,
-          started_at: null,
-          completed_at: null,
-        };
+      const baseStatus = state.syncStatus || {
+        is_syncing: false,
+        current_step: '',
+        progress: 0,
+        total: 0,
+        error: null,
+        documents_synced: 0,
+        documents_updated: 0,
+        started_at: null,
+        completed_at: null,
+      };
 
       state.syncStatus = {
         ...baseStatus,
@@ -196,7 +195,9 @@ const documentsSlice = createSlice({
         completed_at: completedAt,
       } as any;
 
-      const status = state.syncStatus as NonNullable<DocumentsState['syncStatus']>;
+      const status = state.syncStatus as NonNullable<
+        DocumentsState['syncStatus']
+      >;
       if (payload.documents_synced !== undefined) {
         status.documents_synced = payload.documents_synced;
       }

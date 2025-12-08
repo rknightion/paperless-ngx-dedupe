@@ -221,7 +221,9 @@ class PaperlessClient:
             logger.error(f"Failed to fetch metadata for document {document_id}: {e}")
             return {}
 
-    async def get_document_thumbnail(self, document_id: int) -> tuple[bytes, str | None]:
+    async def get_document_thumbnail(
+        self, document_id: int
+    ) -> tuple[bytes, str | None]:
         """Get document thumbnail."""
         try:
             thumbnail = await self.paperless.documents.thumbnail(document_id)
@@ -244,9 +246,7 @@ class PaperlessClient:
             logger.error(f"Failed to fetch thumbnail {document_id}: {e}")
             raise
 
-    async def get_document_preview(
-        self, document_id: int
-    ) -> tuple[bytes, str | None]:
+    async def get_document_preview(self, document_id: int) -> tuple[bytes, str | None]:
         """Get document preview."""
         try:
             preview = await self.paperless.documents.preview(document_id)

@@ -217,7 +217,9 @@ def analyze_duplicates(
                         },
                     )
 
-                    if broadcast_progress and i % 1000 == 0:  # Broadcast every 1000 docs
+                    if (
+                        broadcast_progress and i % 1000 == 0
+                    ):  # Broadcast every 1000 docs
                         asyncio.run(
                             broadcast_task_status(
                                 task_id=task_id,
@@ -358,7 +360,9 @@ def analyze_duplicates(
                         doc_id = doc.id if hasattr(doc, "id") else doc.get("id")
 
                         member = DuplicateMember(
-                            group_id=db_group.id, document_id=doc_id, is_primary=(i == 0)
+                            group_id=db_group.id,
+                            document_id=doc_id,
+                            is_primary=(i == 0),
                         )
                         self.db.add(member)
 

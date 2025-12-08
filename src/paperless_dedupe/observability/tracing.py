@@ -17,12 +17,12 @@ from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.sdk.resources import (
-    OTELResourceDetector,
-    Resource,
     SERVICE_INSTANCE_ID,
     SERVICE_NAME,
     SERVICE_NAMESPACE,
     SERVICE_VERSION,
+    OTELResourceDetector,
+    Resource,
 )
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
@@ -77,9 +77,7 @@ def _otlp_configured() -> bool:
     }:
         return False
 
-    otlp_env = any(
-        key.startswith("OTEL_EXPORTER_OTLP_") for key in os.environ.keys()
-    )
+    otlp_env = any(key.startswith("OTEL_EXPORTER_OTLP_") for key in os.environ.keys())
     return otlp_env or bool(traces_exporter)
 
 

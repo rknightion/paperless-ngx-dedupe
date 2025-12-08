@@ -20,7 +20,10 @@ function App() {
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/duplicates" element={<DuplicatesPage />} />
             <Route path="/bulk-wizard" element={<BulkWizardPage />} />
-            <Route path="/duplicates/bulk-wizard" element={<BulkWizardPage />} />
+            <Route
+              path="/duplicates/bulk-wizard"
+              element={<BulkWizardPage />}
+            />
             <Route path="/ai-processing" element={<AIProcessingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>

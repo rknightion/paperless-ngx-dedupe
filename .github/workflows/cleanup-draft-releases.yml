@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (show what would be deleted without actually deleting)'
+        description: "Dry run (show what would be deleted without actually deleting)"
         required: false
         type: boolean
         default: false
       keep_latest:
-        description: 'Number of latest draft releases to keep'
+        description: "Number of latest draft releases to keep"
         required: false
         type: string
-        default: '0'
+        default: "0"
 
 permissions:
   contents: write

@@ -76,9 +76,6 @@ class ConfigUpdate(BaseModel):
         le=100000,
         description="Maximum characters of document content sent to the LLM per document",
     )
-    ai_prompt_caching_enabled: bool | None = Field(
-        None, description="Enable OpenAI prompt caching to reduce costs"
-    )
 
     @validator("paperless_url")
     def validate_url(cls, v):  # noqa: N805
@@ -117,7 +114,9 @@ class ConfigUpdate(BaseModel):
             return v
         allowed_models = {"gpt-5.1", "gpt-5-mini", "gpt-5-nano"}
         if v not in allowed_models:
-            raise ValueError(f"Model must be one of {', '.join(sorted(allowed_models))}")
+            raise ValueError(
+                f"Model must be one of {', '.join(sorted(allowed_models))}"
+            )
         return v
 
     @validator("openai_reasoning_effort")
@@ -126,7 +125,9 @@ class ConfigUpdate(BaseModel):
             return v
         allowed = {"low", "medium", "high"}
         if v not in allowed:
-            raise ValueError(f"Reasoning effort must be one of {', '.join(sorted(allowed))}")
+            raise ValueError(
+                f"Reasoning effort must be one of {', '.join(sorted(allowed))}"
+            )
         return v
 
 
@@ -198,12 +199,11 @@ async def get_config(db: Session = Depends(get_db)):
         "ai_max_input_chars": db_config.get(
             "ai_max_input_chars", settings.ai_max_input_chars
         ),
-        "ai_prompt_caching_enabled": db_config.get(
-            "ai_prompt_caching_enabled", settings.ai_prompt_caching_enabled
-        ),
         "openai_configured": bool(
             db_config.get("openai_api_key", settings.openai_api_key)
         ),
+        "openai_health_status": db_config.get("openai_health_status"),
+        "openai_health_checked_at": db_config.get("openai_health_checked_at"),
         "minhash_num_perm": settings.minhash_num_perm,
         "lsh_num_bands": settings.lsh_num_bands,
         "api_rate_limit": settings.api_rate_limit,

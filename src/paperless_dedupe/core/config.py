@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     paperless_api_token: str | None = None
     paperless_username: str | None = None
     paperless_password: str | None = None
-    fetch_metadata_on_sync: bool = False  # Avoid expensive /metadata calls unless explicitly enabled
+    fetch_metadata_on_sync: bool = (
+        False  # Avoid expensive /metadata calls unless explicitly enabled
+    )
 
     # Database settings - PostgreSQL required
     database_url: str = (
@@ -38,7 +40,9 @@ class Settings(BaseSettings):
     lsh_threshold: float = 0.5
     lsh_num_bands: int = 20
     fuzzy_match_threshold: int = 85
-    max_ocr_length: int = 500000  # Max OCR characters to store per document (UI adjustable)
+    max_ocr_length: int = (
+        500000  # Max OCR characters to store per document (UI adjustable)
+    )
     min_fuzzy_threshold: int = 50  # Minimum fuzzy threshold to store duplicate groups
     min_ocr_word_count: int = 20  # Minimum words in OCR to include in deduplication
     enable_fuzzy_matching: bool = True  # Enable expensive fuzzy text matching
@@ -71,10 +75,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-5-mini"  # Allowed: gpt-5.1, gpt-5-mini, gpt-5-nano
     openai_reasoning_effort: str = "medium"  # low, medium, high
     ai_max_input_chars: int = 12000
-    ai_prompt_caching_enabled: bool = True
 
     # File storage
     data_dir: str = "./data"
     cache_dir: str = "./cache"
+
 
 settings = Settings()

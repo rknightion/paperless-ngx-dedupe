@@ -8,7 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { aiApi } from '../../services/api/ai';
-import type { AIField, AIJob, AIResult } from '../../services/api/types';
+import type { AIField, AIJob, AIResult, AIHealth } from '../../services/api/types';
 import {
   Badge,
   Button,
@@ -44,6 +44,8 @@ export const AIProcessingPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [health, setHealth] = useState<AIHealth | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const { configuration } = useConfig();
 
   const resolvedFields = useMemo(() => {
@@ -52,6 +54,7 @@ export const AIProcessingPage: React.FC = () => {
   }, [targetFields]);
 
   const paperlessUrl = configuration?.paperless_url;
+  const openaiConfigured = Boolean(configuration?.openai_configured);
 
   const toggleField = (field: AIField) => {
     setTargetFields((prev) => {
@@ -112,6 +115,12 @@ export const AIProcessingPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (configuration?.openai_configured) {
+      runHealthCheck();
+    }
+  }, [configuration?.openai_configured]);
+
+  useEffect(() => {
     if (!currentJob) return;
     const interval = setInterval(() => {
       if (currentJob && currentJob.status !== 'completed') {
@@ -147,6 +156,19 @@ export const AIProcessingPage: React.FC = () => {
       setError(err?.message || 'Failed to start AI processing');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runHealthCheck = async () => {
+    setHealthLoading(true);
+    setError(null);
+    try {
+      const result = await aiApi.healthCheck();
+      setHealth(result);
+    } catch (err: any) {
+      setHealth({ healthy: false, message: err?.message || 'Health check failed' });
+    } finally {
+      setHealthLoading(false);
     }
   };
 
@@ -209,11 +231,19 @@ export const AIProcessingPage: React.FC = () => {
             suggestions and apply them safely to paperless-ngx.
           </p>
         </div>
-        <Badge variant="outline" className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          Structured outputs + prompt caching
-        </Badge>
       </div>
+
+      {!openaiConfigured && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          OpenAI API key is not set. Configure it in Settings to enable AI processing.
+        </div>
+      )}
+
+      {openaiConfigured && health && !health.healthy && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          OpenAI configuration is not healthy. {health.message || ''}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md bg-red-50 border border-red-200 p-4 flex items-start gap-3">
@@ -260,9 +290,7 @@ export const AIProcessingPage: React.FC = () => {
                 <Checkbox
                   id="include_all"
                   checked={includeAll}
-                  onCheckedChange={(checked) =>
-                    setIncludeAll(Boolean(checked))
-                  }
+                  onChange={(e) => setIncludeAll(e.target.checked)}
                 />
                 <Label htmlFor="include_all" className="text-sm">
                   Process all documents
@@ -310,19 +338,43 @@ export const AIProcessingPage: React.FC = () => {
                 Uses structured outputs with confidence scores and up to five
                 concise tags per document. Responses are forced to English.
               </div>
-              <Button onClick={startJob} disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    Start processing
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={runHealthCheck}
+                  disabled={healthLoading || !openaiConfigured}
+                >
+                  {healthLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    'Verify OpenAI'
+                  )}
+                </Button>
+                <Button
+                  onClick={startJob}
+                  disabled={
+                    loading ||
+                    !openaiConfigured ||
+                    (health !== null && !health.healthy)
+                  }
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      Start processing
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -338,7 +390,9 @@ export const AIProcessingPage: React.FC = () => {
                   <span className="text-sm text-muted-foreground">Status</span>
                   <Badge
                     variant={
-                      currentJob.status === 'completed' ? 'secondary' : 'outline'
+                      currentJob.status === 'completed'
+                        ? 'secondary'
+                        : 'outline'
                     }
                   >
                     {currentJob.status}
@@ -421,11 +475,9 @@ export const AIProcessingPage: React.FC = () => {
                           selectedResultIds.length === results.length &&
                           results.length > 0
                         }
-                        onCheckedChange={(checked) =>
+                        onChange={(e) =>
                           setSelectedResultIds(
-                            Boolean(checked)
-                              ? results.map((r) => r.id)
-                              : []
+                            e.target.checked ? results.map((r) => r.id) : []
                           )
                         }
                       />
@@ -441,9 +493,9 @@ export const AIProcessingPage: React.FC = () => {
                       <td className="py-2 px-2">
                         <Checkbox
                           checked={selectedResultIds.includes(result.id)}
-                          onCheckedChange={(checked) =>
+                          onChange={(e) =>
                             setSelectedResultIds((prev) =>
-                              Boolean(checked)
+                              e.target.checked
                                 ? [...prev, result.id]
                                 : prev.filter((id) => id !== result.id)
                             )
@@ -455,7 +507,8 @@ export const AIProcessingPage: React.FC = () => {
                           {result.document_title || 'Untitled'}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {result.document_correspondent || 'Unknown correspondent'}
+                          {result.document_correspondent ||
+                            'Unknown correspondent'}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Tags: {(result.document_tags || []).join(', ') || '—'}
@@ -488,9 +541,7 @@ export const AIProcessingPage: React.FC = () => {
                           <span className="font-medium">Tags:</span>{' '}
                           {(result.suggested_tags || [])
                             .map((tag) =>
-                              typeof tag === 'string'
-                                ? tag
-                                : tag?.value || ''
+                              typeof tag === 'string' ? tag : tag?.value || ''
                             )
                             .filter(Boolean)
                             .join(', ') || '—'}{' '}
@@ -501,7 +552,9 @@ export const AIProcessingPage: React.FC = () => {
                         <div>
                           <span className="font-medium">Date:</span>{' '}
                           {result.suggested_date
-                            ? new Date(result.suggested_date).toLocaleDateString()
+                            ? new Date(
+                                result.suggested_date
+                              ).toLocaleDateString()
                             : '—'}{' '}
                           <span className="text-xs text-muted-foreground">
                             {formatConfidence(result.date_confidence)}
@@ -511,7 +564,9 @@ export const AIProcessingPage: React.FC = () => {
                       <td className="py-2 px-2">
                         <Badge
                           variant={
-                            result.status === 'applied' ? 'secondary' : 'outline'
+                            result.status === 'applied'
+                              ? 'secondary'
+                              : 'outline'
                           }
                         >
                           {result.status}
