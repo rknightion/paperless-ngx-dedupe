@@ -377,4 +377,9 @@ async def reset_config(db: Session = Depends(get_db)):
     db.query(AppConfig).delete()
     db.commit()
 
+    # Reset runtime settings to defaults (preserve env overrides)
+    default_settings = settings.__class__()  # type: ignore[call-arg]
+    for key, value in default_settings.model_dump().items():
+        setattr(settings, key, value)
+
     return {"status": "success", "message": "Configuration reset to defaults"}
