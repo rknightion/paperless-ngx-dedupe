@@ -5,7 +5,7 @@ from datetime import datetime
 
 from dateutil import parser as date_parser
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_serializer
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -61,9 +61,11 @@ class DocumentResponse(BaseModel):
     created_date: datetime | None = None
     last_processed: datetime | None = None
 
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("created_date", "last_processed")
+    def serialize_datetime(self, value: datetime | None):
+        return value.isoformat() if value else None
 
 
 class DocumentListResponse(BaseModel):
@@ -84,8 +86,7 @@ class DocumentContentResponse(BaseModel):
     content: str
     word_count: int | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentSync(BaseModel):
@@ -151,7 +152,7 @@ async def get_documents(
     # Check if documents have duplicates
     results = []
     for doc in documents:
-        doc_response = DocumentResponse.from_orm(doc)
+        doc_response = DocumentResponse.model_validate(doc, from_attributes=True)
         doc_response.has_duplicates = len(doc.duplicate_memberships) > 0
         results.append(doc_response)
 
@@ -333,7 +334,7 @@ async def get_document(document_id: int, db: Session = Depends(get_db)):
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    doc_response = DocumentResponse.from_orm(document)
+    doc_response = DocumentResponse.model_validate(document, from_attributes=True)
     doc_response.has_duplicates = len(document.duplicate_memberships) > 0
     return doc_response
 

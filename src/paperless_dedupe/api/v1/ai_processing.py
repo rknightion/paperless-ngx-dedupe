@@ -2,7 +2,7 @@ import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
 
 from paperless_dedupe.core.config_utils import get_current_paperless_config
@@ -35,8 +35,9 @@ class AIJobRequest(BaseModel):
         description="Fields to extract (title, correspondent, document_type, tags, date, all).",
     )
 
-    @validator("target_fields")
-    def validate_fields(cls, value):  # noqa: N805
+    @field_validator("target_fields")
+    @classmethod
+    def validate_fields(cls, value):
         allowed = set(DEFAULT_FIELDS + ["all"])
         invalid = [field for field in value if field not in allowed]
         if invalid:
@@ -61,8 +62,9 @@ class ApplyJobRequest(BaseModel):
         description="Optional subset of fields to apply. Defaults to the job's target fields.",
     )
 
-    @validator("fields")
-    def validate_fields(cls, value):  # noqa: N805
+    @field_validator("fields")
+    @classmethod
+    def validate_fields(cls, value):
         if value is None:
             return value
         allowed = set(DEFAULT_FIELDS + ["all"])
@@ -85,8 +87,7 @@ class AIJobSummary(BaseModel):
     completed_at: datetime | None = None
     error: str | None = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AIResultItem(BaseModel):
@@ -174,7 +175,7 @@ async def create_ai_job(request: AIJobRequest, db: Session = Depends(get_db)):
     task = run_ai_job.apply_async(kwargs={"job_id": job.id}, queue="ai")
     logger.info("Queued AI job %s (task %s)", job.id, task.id)
 
-    return AIJobSummary.from_orm(job)
+    return AIJobSummary.model_validate(job, from_attributes=True)
 
 
 @router.get("/jobs", response_model=list[AIJobSummary])
@@ -186,7 +187,7 @@ async def list_ai_jobs(db: Session = Depends(get_db)):
         .limit(25)
         .all()
     )
-    return [AIJobSummary.from_orm(job) for job in jobs]
+    return [AIJobSummary.model_validate(job, from_attributes=True) for job in jobs]
 
 
 @router.get("/jobs/{job_id}", response_model=AIJobSummary)
@@ -195,7 +196,7 @@ async def get_ai_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(AIExtractionJob).filter(AIExtractionJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return AIJobSummary.from_orm(job)
+    return AIJobSummary.model_validate(job, from_attributes=True)
 
 
 @router.get("/jobs/{job_id}/results")
@@ -248,7 +249,7 @@ async def get_ai_results(
             )
         )
 
-    return {"job": AIJobSummary.from_orm(job), "results": payload}
+    return {"job": AIJobSummary.model_validate(job, from_attributes=True), "results": payload}
 
 
 @router.post("/jobs/{job_id}/apply")

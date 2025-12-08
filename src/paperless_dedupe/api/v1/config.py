@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
@@ -77,8 +77,9 @@ class ConfigUpdate(BaseModel):
         description="Maximum characters of document content sent to the LLM per document",
     )
 
-    @validator("paperless_url")
-    def validate_url(cls, v):  # noqa: N805
+    @field_validator("paperless_url")
+    @classmethod
+    def validate_url(cls, v):
         if v is None:
             return v
         # Basic URL validation
@@ -87,8 +88,9 @@ class ConfigUpdate(BaseModel):
         # Remove trailing slashes for consistency
         return v.rstrip("/")
 
-    @validator("confidence_weight_filename")
-    def validate_weights(cls, v, values):  # noqa: N805
+    @field_validator("confidence_weight_filename")
+    @classmethod
+    def validate_weights(cls, v, info):
         """Validate that content-based weights sum to 100 if provided"""
         weights = []
         for key in [
@@ -96,8 +98,8 @@ class ConfigUpdate(BaseModel):
             "confidence_weight_fuzzy",
             "confidence_weight_metadata",
         ]:
-            if key in values and values[key] is not None:
-                weights.append(values[key])
+            if key in info.data and info.data[key] is not None:
+                weights.append(info.data[key])
 
         if weights and len(weights) == 3:  # All content weights provided
             total = sum(weights)
@@ -108,8 +110,9 @@ class ConfigUpdate(BaseModel):
 
         return v
 
-    @validator("openai_model")
-    def validate_openai_model(cls, v):  # noqa: N805
+    @field_validator("openai_model")
+    @classmethod
+    def validate_openai_model(cls, v):
         if v is None:
             return v
         allowed_models = {"gpt-5.1", "gpt-5-mini", "gpt-5-nano"}
@@ -119,8 +122,9 @@ class ConfigUpdate(BaseModel):
             )
         return v
 
-    @validator("openai_reasoning_effort")
-    def validate_reasoning_effort(cls, v):  # noqa: N805
+    @field_validator("openai_reasoning_effort")
+    @classmethod
+    def validate_reasoning_effort(cls, v):
         if v is None:
             return v
         allowed = {"low", "medium", "high"}
@@ -226,7 +230,7 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
     ]
 
     # Update each provided field
-    for field, value in config_update.dict(exclude_unset=True).items():
+    for field, value in config_update.model_dump(exclude_unset=True).items():
         if value is not None:
             # Convert value to string for storage
             str_value = str(value)
