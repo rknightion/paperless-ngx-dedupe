@@ -344,39 +344,6 @@ async def bulk_get_documents(
     return {"requested": len(document_ids), "found": len(results), "documents": results}
 
 
-@router.post("/duplicates/bulk-resolve")
-async def bulk_resolve_duplicates(
-    group_ids: list[str],
-    keep_primary: bool = True,
-    db: Session = Depends(get_db),
-):
-    """Bulk resolve multiple duplicate groups using Celery"""
-    if not group_ids:
-        raise HTTPException(status_code=400, detail="No group IDs provided")
-
-    if len(group_ids) > 100:
-        raise HTTPException(status_code=400, detail="Maximum 100 groups per request")
-
-    # Dispatch Celery task for bulk resolution
-    from paperless_dedupe.worker.tasks.batch_operations import resolve_duplicate_groups
-
-    task = resolve_duplicate_groups.apply_async(
-        kwargs={
-            "group_ids": group_ids,
-            "keep_primary": keep_primary,
-            "broadcast_progress": True,
-        },
-        queue="default",
-    )
-
-    return {
-        "status": "started",
-        "message": f"Resolving {len(group_ids)} duplicate groups",
-        "task_id": task.id,
-        "group_count": len(group_ids),
-    }
-
-
 @router.post("/documents/bulk-metadata-update")
 async def bulk_update_metadata(
     document_ids: list[int],
