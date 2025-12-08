@@ -218,6 +218,11 @@ async def get_duplicate_groups(
         for group in groups:
             # Recalculate confidence based on provided weights
             recalculated_confidence = group.recalculate_confidence(weights)
+            if recalculated_confidence == 0 and group.confidence_score not in (
+                None,
+                0,
+            ):
+                recalculated_confidence = float(group.confidence_score)
 
             # Skip if below minimum confidence after recalculation
             if recalculated_confidence < min_confidence:
