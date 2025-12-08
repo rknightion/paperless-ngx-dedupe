@@ -778,7 +778,7 @@ async def sync_documents(
     # Check if there's already a sync in progress
     active_tasks = celery_app.control.inspect().active()
     if active_tasks:
-        for worker, tasks in active_tasks.items():
+        for _worker, tasks in active_tasks.items():
             for task in tasks:
                 if "document_sync.sync_documents" in task.get("name", ""):
                     raise HTTPException(
@@ -788,7 +788,7 @@ async def sync_documents(
 
     # Check if analysis is in progress
     if active_tasks:
-        for worker, tasks in active_tasks.items():
+        for _worker, tasks in active_tasks.items():
             for task in tasks:
                 if "deduplication.analyze_duplicates" in task.get("name", ""):
                     raise HTTPException(

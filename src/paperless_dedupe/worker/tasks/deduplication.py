@@ -435,7 +435,7 @@ def analyze_duplicates(
             )
 
         # Retry the task
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
     def _update_progress(self, progress: int, total: int, broadcast: bool):
         """Update task progress and optionally broadcast via WebSocket"""

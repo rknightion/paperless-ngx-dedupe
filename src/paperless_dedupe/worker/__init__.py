@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, text
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.observability.tracing import setup_tracing
 from paperless_dedupe.worker.celery_app import app
+from paperless_dedupe.worker.tasks import batch_operations, deduplication, document_sync
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +74,5 @@ def setup_worker(sender, **kwargs):
             )
             time.sleep(3)
 
-
-# Import tasks to register them
-from paperless_dedupe.worker.tasks import batch_operations, deduplication, document_sync
 
 __all__ = ["app", "deduplication", "document_sync", "batch_operations"]

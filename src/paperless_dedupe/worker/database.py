@@ -62,5 +62,5 @@ def get_worker_db_engine():
 def get_worker_session():
     """Get a database session for workers"""
     engine = get_worker_db_engine()
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    return SessionLocal()
+    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return session_local()

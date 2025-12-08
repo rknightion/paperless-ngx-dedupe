@@ -88,6 +88,7 @@ async def broadcast_task_status(
 
 async def get_database_session():
     """Get a database session for async operations.
+
     This is a utility for tasks that need database access.
     """
     from sqlalchemy.ext.asyncio import (

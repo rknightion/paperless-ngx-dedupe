@@ -31,7 +31,7 @@ class PaginationCursor:
             return base64.urlsafe_b64encode(encrypted).decode("utf-8")
         except Exception as e:
             logger.error(f"Error encoding cursor: {e}")
-            raise ValueError("Failed to encode cursor")
+            raise ValueError("Failed to encode cursor") from e
 
     def decode(self, cursor: str) -> dict:
         """Decode cursor token into data"""
@@ -41,7 +41,7 @@ class PaginationCursor:
             return json.loads(decrypted.decode())
         except Exception as e:
             logger.error(f"Error decoding cursor: {e}")
-            raise ValueError("Invalid cursor token")
+            raise ValueError("Invalid cursor token") from e
 
 
 class CursorPaginatedResponse(BaseModel):

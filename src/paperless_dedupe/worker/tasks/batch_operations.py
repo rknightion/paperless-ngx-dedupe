@@ -139,7 +139,7 @@ def mark_duplicates_reviewed(
     except Exception as e:
         logger.error(f"Error in batch review task: {str(e)}")
         self.db.rollback()
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @app.task(
@@ -257,7 +257,7 @@ def resolve_duplicate_groups(
     except Exception as e:
         logger.error(f"Error in resolve groups task: {str(e)}")
         self.db.rollback()
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @app.task(
@@ -329,7 +329,7 @@ def tag_documents(
 
     except Exception as e:
         logger.error(f"Error in tag documents task: {str(e)}")
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
     async def _tag_documents_async(
         self,

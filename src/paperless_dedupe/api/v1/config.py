@@ -277,7 +277,7 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
         active_tasks = celery_app.control.inspect().active()
         analysis_in_progress = False
         if active_tasks:
-            for worker, tasks in active_tasks.items():
+            for _worker, tasks in active_tasks.items():
                 for task in tasks:
                     if "deduplication.analyze_duplicates" in task.get("name", ""):
                         analysis_in_progress = True

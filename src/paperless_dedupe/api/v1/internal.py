@@ -119,4 +119,4 @@ async def broadcast_task_update(update: TaskUpdate):
 
     except Exception as e:
         logger.error(f"Error broadcasting task update: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

@@ -383,9 +383,7 @@ async def apply_ai_results(
                     document.paperless_id, applied_tags
                 )
                 if tags_applied:
-                    document.tags = sorted(
-                        list(set((document.tags or []) + tags_to_merge))
-                    )
+                    document.tags = sorted(set((document.tags or []) + tags_to_merge))
 
             if (
                 (not update_payload and not applied_tags)

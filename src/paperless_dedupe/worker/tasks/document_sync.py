@@ -640,4 +640,4 @@ def sync_documents(
             )
 
         # Retry the task
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e

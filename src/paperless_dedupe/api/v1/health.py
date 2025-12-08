@@ -111,7 +111,7 @@ async def check_database_health(db: Session) -> ComponentHealth:
         start = time.time()
 
         # Test basic connectivity
-        result = db.execute(text("SELECT 1"))
+        db.execute(text("SELECT 1"))
 
         # Get database statistics
         stats = {}
@@ -144,7 +144,7 @@ async def check_database_health(db: Session) -> ComponentHealth:
             try:
                 active_conns = db.execute(conn_query).scalar()
                 stats["active_connections"] = active_conns
-            except:
+            except Exception:
                 # May not have permission to query pg_stat_activity
                 pass
 
@@ -260,7 +260,7 @@ def check_celery_health() -> ComponentHealth | None:
                 for queue_name in ["default", "high_priority", "low_priority"]:
                     queue_length = conn.default_channel.client.llen(queue_name)
                     queue_lengths[queue_name] = queue_length
-        except:
+        except Exception:
             pass
 
         details = {
