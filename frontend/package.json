@@ -21,7 +21,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@reduxjs/toolkit": "^2.8.2",
     "@tanstack/react-query": "^5.85.3",
-    "@types/diff": "^7.0.2",
+    "@types/diff": "^8.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "diff": "^8.0.2",
