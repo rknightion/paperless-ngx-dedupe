@@ -20,7 +20,7 @@ RUN if [ -f /app/.env ]; then set -a; . /app/.env; set +a; fi; \
 # =============================================================================
 # Backend Build Stage
 # =============================================================================
-FROM python:3.13-slim AS backend-builder
+FROM python:3.14-slim AS backend-builder
 
 # Install build dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -47,7 +47,7 @@ RUN uv pip install --system --no-cache -e .
 # =============================================================================
 # Backend Production Stage
 # =============================================================================
-FROM python:3.13-slim AS backend
+FROM python:3.14-slim AS backend
 
 # Install runtime dependencies in a single optimized layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
