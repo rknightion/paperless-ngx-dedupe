@@ -141,10 +141,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error running migrations: {e}")
         # Fallback to init_db if migrations fail
-        if not fresh_database:
-            logger.info("Falling back to init_db() for database initialization")
-            init_db()
-            logger.info("Database initialized using fallback method")
+        logger.info("Falling back to init_db() for database initialization")
+        init_db()
+        logger.info("Database initialized using fallback method")
 
     # Load saved configuration from database
     from paperless_dedupe.models.database import AppConfig, get_db

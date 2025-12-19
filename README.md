@@ -16,6 +16,7 @@ A powerful document deduplication tool for [paperless-ngx](https://github.com/pa
 - **Modern Web UI**: React TypeScript frontend with real-time updates
 - **Scalable Architecture**: Handles 13,000+ documents efficiently using MinHash/LSH algorithms
 - **Smart Deduplication**: Multi-factor similarity scoring with OCR-aware fuzzy matching
+- **AI Metadata Extraction (OpenAI)**: Suggests titles, correspondents, document types, tags, and dates with confidence scores
 - **High Performance**: PostgreSQL with optimized GIN indexes for JSON and full-text search
 - **Flexible Configuration**: Web-based configuration with connection testing
 - **Detailed Analytics**: Confidence scores and space-saving calculations
@@ -403,14 +404,24 @@ docker compose up -d
 
 ### Environment Variables
 
-| Variable                                 | Description                   | Default    |
-| ---------------------------------------- | ----------------------------- | ---------- |
-| `PAPERLESS_DEDUPE_DATABASE_URL`          | PostgreSQL connection string  | Required   |
-| `PAPERLESS_DEDUPE_REDIS_URL`             | Redis connection string       | Required   |
-| `PAPERLESS_DEDUPE_PAPERLESS_URL`         | Paperless-ngx URL             | Set via UI |
-| `PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN`   | API token                     | Set via UI |
-| `PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD` | Similarity threshold (50-100) | `85`       |
-| `PAPERLESS_DEDUPE_LOG_LEVEL`             | Logging level                 | `WARNING`  |
+| Variable                                      | Description                                             | Default      |
+| --------------------------------------------- | ------------------------------------------------------- | ------------ |
+| `PAPERLESS_DEDUPE_DATABASE_URL`               | PostgreSQL connection string                            | Required     |
+| `PAPERLESS_DEDUPE_REDIS_URL`                  | Redis connection string                                 | Required     |
+| `PAPERLESS_DEDUPE_PAPERLESS_URL`              | Paperless-ngx URL                                       | Set via UI   |
+| `PAPERLESS_DEDUPE_PAPERLESS_API_TOKEN`        | Paperless API token                                     | Set via UI   |
+| `PAPERLESS_DEDUPE_PAPERLESS_USERNAME`         | Paperless username (basic auth)                         | Set via UI   |
+| `PAPERLESS_DEDUPE_PAPERLESS_PASSWORD`         | Paperless password (basic auth)                         | Set via UI   |
+| `PAPERLESS_DEDUPE_FETCH_METADATA_ON_SYNC`     | Fetch per-document metadata during sync                 | `false`      |
+| `PAPERLESS_DEDUPE_OPENAI_API_KEY`             | OpenAI API key                                          | Set via UI   |
+| `PAPERLESS_DEDUPE_OPENAI_MODEL`               | OpenAI model (gpt-5.1, gpt-5-mini, gpt-5-nano)           | `gpt-5-mini` |
+| `PAPERLESS_DEDUPE_OPENAI_REASONING_EFFORT`    | Reasoning effort (low, medium, high)                    | `medium`     |
+| `PAPERLESS_DEDUPE_AI_MAX_INPUT_CHARS`         | Max OCR characters sent to OpenAI per document          | `12000`      |
+| `PAPERLESS_DEDUPE_FUZZY_MATCH_THRESHOLD`      | Weighted confidence threshold for storing groups (50-100) | `85`       |
+| `PAPERLESS_DEDUPE_LOG_LEVEL`                  | Logging level                                           | `WARNING`    |
+
+Most tuning parameters are managed in the Web UI and stored in the database,
+which overrides environment defaults. See `docs/configuration.md` for details.
 
 ### Using a Specific Version
 
@@ -431,17 +442,44 @@ docker compose up -d
 1. **Access the Web Interface**: Navigate to http://localhost:30002
 2. **Configure Connection**: Go to Settings to configure your Paperless-NGX API
 3. **Test Connection**: Use the "Test Connection" button to verify settings
-4. **Sync Documents**: Navigate to Documents and click "Sync from Paperless"
-5. **Run Analysis**: Go to Processing and start the deduplication analysis
+4. **Sync Documents**: Use the Document Sync card on the Dashboard
+5. **Run Analysis**: Use the Processing controls on the Dashboard to start analysis
 6. **Review Duplicates**: Check the Duplicates page for results
+7. **(Optional) AI Processing**: Add your OpenAI API key in Settings, then run a job from AI Processing
+
+### Documentation
+
+For deeper guidance and screenshots aligned to the current UI, see:
+- docs/index.md
+- docs/getting-started.md
+- docs/user-guide.md
+- docs/ai-processing.md
 
 ### Web Interface Features
 
 - **Dashboard**: Overview with statistics and system status
-- **Documents**: Virtual scrolling list for large document collections
+- **Documents**: Library statistics, OCR coverage, and Paperless organization insights
 - **Duplicates**: Visual duplicate group management with confidence scores
-- **Processing**: Real-time analysis control with progress tracking
+- **Bulk Wizard**: Guided bulk resolution of duplicate groups
+- **Processing controls**: Document sync plus real-time analysis control with progress tracking (Dashboard)
+- **AI Processing**: OpenAI-powered metadata suggestions with review + apply workflow
 - **Settings**: Connection configuration and system preferences
+
+### AI Metadata Extraction (OpenAI)
+
+Paperless Dedupe can use OpenAI to suggest document metadata (title, correspondent,
+document type, tags, and date) based on OCR text and existing metadata. This is the
+LLM-based categorization flow. Suggestions are stored for review and are **never
+applied automatically**.
+
+**Getting started:**
+1. Open **Settings -> AI Processing** and add your OpenAI API key.
+2. Choose a model and reasoning effort, and set a max OCR character limit.
+3. Go to **AI Processing**, select documents (tag or all), pick fields, and start a job.
+4. Review results and apply only the fields you want.
+
+> **Note**: OCR content is sent to OpenAI for processing. Use a key you control and
+> consider privacy and cost implications.
 
 ### Alternative: API Configuration
 
@@ -488,6 +526,12 @@ Interactive API documentation is available at http://localhost:30001/docs
   - `POST /api/v1/processing/analyze` - Start deduplication analysis
   - `GET /api/v1/processing/status` - Get processing status
 
+- **AI Processing**
+  - `POST /api/v1/ai/jobs` - Start an AI extraction job
+  - `GET /api/v1/ai/jobs/{id}/results` - List AI suggestions for a job
+  - `POST /api/v1/ai/jobs/{id}/apply` - Apply selected suggestions to Paperless
+  - `GET /api/v1/ai/health` - Validate OpenAI configuration
+
 ---
 
 ## How It Works
@@ -497,17 +541,17 @@ Interactive API documentation is available at http://localhost:30001/docs
 3. **LSH Indexing**: Builds locality-sensitive hash tables for fast similarity search
 4. **Fuzzy Matching**: Applies text similarity algorithms for refined scoring
 5. **Confidence Scoring**: Calculates weighted scores based on multiple factors:
-   - Jaccard similarity (40%)
-   - Fuzzy text ratio (30%)
-   - Metadata matching (20%)
-   - Filename similarity (10%)
+   - Jaccard similarity (90%)
+   - Fuzzy text ratio (10%)
+   - Metadata matching (0% by default; used as fallback when text is missing)
+   - Weights are configurable in Settings and must total 100%
 
 ## Performance
 
-- **Scalability**: O(n log n) complexity using LSH instead of O(n²)
-- **Memory Efficient**: ~50MB for 13K document metadata
+- **Scalability**: O(n log n) complexity using LSH instead of O(n^2)
+- **Memory Usage**: Scales with OCR length and MinHash settings; tune max OCR length for storage control
 - **Storage Strategy**: PostgreSQL database for concurrency, JSON support, and performance
-- **Processing Speed**: ~1000 documents/minute on modern hardware
+- **Processing Speed**: Typically ~100-150 documents/minute (varies with OCR length and settings)
 
 ---
 

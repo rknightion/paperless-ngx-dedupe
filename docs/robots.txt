@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Encourage indexing of documentation
+Allow: /getting-started/
+Allow: /user-guide/
+Allow: /ai-processing/
+Allow: /configuration/
+Allow: /troubleshooting/
+
+# Static assets
+Allow: /assets/
+Allow: /stylesheets/
+Allow: /javascripts/
+
+Sitemap: https://m7kni.io/paperless-ngx-dedupe/sitemap.xml
+Sitemap: https://m7kni.io/paperless-ngx-dedupe/sitemap.xml.gz

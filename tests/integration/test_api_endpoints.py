@@ -197,11 +197,14 @@ class TestDocumentsAPI:
             side_effect=lambda doc_id: f"Content for document {doc_id}"
         )
 
-        with patch(
-            "paperless_dedupe.api.v1.documents.celery_app.control.inspect"
-        ) as mock_inspect, patch(
-            "paperless_dedupe.worker.tasks.document_sync.sync_documents.apply_async"
-        ) as mock_apply_async:
+        with (
+            patch(
+                "paperless_dedupe.api.v1.documents.celery_app.control.inspect"
+            ) as mock_inspect,
+            patch(
+                "paperless_dedupe.worker.tasks.document_sync.sync_documents.apply_async"
+            ) as mock_apply_async,
+        ):
             mock_inspect.return_value.active.return_value = {}
             mock_apply_async.return_value = SimpleNamespace(id="test-task")
 
@@ -298,9 +301,7 @@ class TestDuplicatesAPI:
         db_session.add(group)
         db_session.commit()
 
-        response = client.post(
-            f"/api/v1/duplicates/groups/{group.id}/review", json={}
-        )
+        response = client.post(f"/api/v1/duplicates/groups/{group.id}/review", json={})
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
@@ -405,11 +406,14 @@ class TestProcessingAPI:
         db_session.add(doc)
         db_session.commit()
 
-        with patch(
-            "paperless_dedupe.api.v1.processing.celery_app.control.inspect"
-        ) as mock_inspect, patch(
-            "paperless_dedupe.worker.tasks.deduplication.analyze_duplicates.apply_async"
-        ) as mock_apply_async:
+        with (
+            patch(
+                "paperless_dedupe.api.v1.processing.celery_app.control.inspect"
+            ) as mock_inspect,
+            patch(
+                "paperless_dedupe.worker.tasks.deduplication.analyze_duplicates.apply_async"
+            ) as mock_apply_async,
+        ):
             mock_inspect.return_value.active.return_value = {}
             mock_apply_async.return_value = SimpleNamespace(id="analysis-task")
 
@@ -437,11 +441,14 @@ class TestProcessingAPI:
         db_session.add(doc)
         db_session.commit()
 
-        with patch(
-            "paperless_dedupe.api.v1.processing.celery_app.control.inspect"
-        ) as mock_inspect, patch(
-            "paperless_dedupe.worker.tasks.deduplication.analyze_duplicates.apply_async"
-        ) as mock_apply_async:
+        with (
+            patch(
+                "paperless_dedupe.api.v1.processing.celery_app.control.inspect"
+            ) as mock_inspect,
+            patch(
+                "paperless_dedupe.worker.tasks.deduplication.analyze_duplicates.apply_async"
+            ) as mock_apply_async,
+        ):
             mock_inspect.return_value.active.return_value = {}
             mock_apply_async.return_value = SimpleNamespace(id="analysis-task")
             response = client.post(

@@ -1,0 +1,285 @@
+/* Custom styles for Paperless-NGX Dedupe documentation */
+
+/* Hero section styling */
+.hero {
+  padding: 2rem 0;
+  text-align: center;
+  background: linear-gradient(135deg, var(--md-primary-fg-color--light) 0%, var(--md-primary-fg-color) 100%);
+  color: var(--md-primary-bg-color);
+  margin: -1.5rem -1.5rem 2rem -1.5rem;
+  border-radius: 0 0 1rem 1rem;
+}
+
+[data-md-color-scheme="slate"] .hero {
+  background: linear-gradient(135deg, var(--md-primary-fg-color) 0%, var(--md-primary-fg-color--dark) 100%);
+}
+
+.hero p {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.hero-badges {
+  margin: 1.5rem 0;
+}
+
+.hero-badges .md-button {
+  margin: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hero .md-button--primary {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.hero .md-button--primary:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hero .md-button--stretch {
+  min-width: 200px;
+  margin: 0.5rem 0.25rem;
+}
+
+/* Enhanced grid cards */
+.md-typeset .grid.cards > .card-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset .grid.cards > .card-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--md-primary-fg-color--light);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > .card-item:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Status badges */
+.md-typeset .admonition.new,
+.md-typeset details.new {
+  border-color: #22c55e;
+}
+
+.md-typeset .admonition.new > .admonition-title,
+.md-typeset details.new > .admonition-title {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+}
+
+.md-typeset .admonition.new > .admonition-title::before,
+.md-typeset details.new > .admonition-title::before {
+  background-color: #22c55e;
+  mask-image: var(--md-admonition-icon--note);
+}
+
+.md-typeset .admonition.deprecated,
+.md-typeset details.deprecated {
+  border-color: #f97316;
+}
+
+.md-typeset .admonition.deprecated > .admonition-title,
+.md-typeset details.deprecated > .admonition-title {
+  background-color: rgba(249, 115, 22, 0.1);
+  border-color: #f97316;
+}
+
+.md-typeset .admonition.deprecated > .admonition-title::before,
+.md-typeset details.deprecated > .admonition-title::before {
+  background-color: #f97316;
+  mask-image: var(--md-admonition-icon--warning);
+}
+
+/* Code block enhancements */
+.md-typeset .highlight .filename {
+  background-color: var(--md-code-bg-color);
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color--light);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  margin: 0;
+}
+
+/* Tables styling */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-default-fg-color--lightest);
+  font-weight: 700;
+}
+
+.md-typeset table:not([class]) tr:hover {
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+/* Tag styling */
+.md-tag {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 0.2rem;
+  padding: 0.1rem 0.3rem;
+  margin: 0.1rem;
+  display: inline-block;
+}
+
+/* Navigation breadcrumbs enhancement */
+.md-nav__title .md-nav__button img {
+  width: 24px;
+  height: 24px;
+}
+
+/* Responsive improvements */
+@media screen and (max-width: 76.1875em) {
+  .hero {
+    margin: -1rem -1rem 2rem -1rem;
+    padding: 1.5rem 1rem;
+  }
+
+  .hero .md-button--stretch {
+    display: block;
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+}
+
+/* Error page enhancements */
+.error-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.error-code {
+  font-family: var(--md-code-font);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.quick-link {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.quick-link:hover {
+  box-shadow: var(--md-shadow-z2);
+  border-color: var(--md-primary-fg-color);
+}
+
+.action-button {
+  font-family: var(--md-text-font);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--md-shadow-z1);
+}
+
+.action-button:hover {
+  box-shadow: var(--md-shadow-z2);
+}
+
+/* Dark theme adjustments for error pages */
+[data-md-color-scheme="slate"] .quick-link {
+  background: var(--md-code-bg-color);
+  border-color: var(--md-default-fg-color--lightest);
+}
+
+[data-md-color-scheme="slate"] .quick-link:hover {
+  background: var(--md-default-bg-color);
+  border-color: var(--md-primary-fg-color);
+}
+
+[data-md-color-scheme="slate"] .search-suggestion,
+[data-md-color-scheme="slate"] .status-info {
+  background: var(--md-code-bg-color);
+  border-left-color: var(--md-primary-fg-color);
+}
+
+/* Accessibility improvements */
+.error-container [role="button"],
+.error-container button,
+.error-container .action-button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Focus states */
+.action-button:focus,
+.quick-link:focus {
+  outline: 2px solid var(--md-primary-fg-color);
+  outline-offset: 2px;
+}
+
+/* Error page animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error-container > * {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.error-container > *:nth-child(2) { animation-delay: 0.1s; }
+.error-container > *:nth-child(3) { animation-delay: 0.2s; }
+.error-container > *:nth-child(4) { animation-delay: 0.3s; }
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .quick-link,
+  .action-button {
+    border-width: 2px;
+  }
+
+  .error-code {
+    text-shadow: none;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .error-container > *,
+  .quick-link,
+  .action-button {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .hero {
+    background: none !important;
+    color: var(--md-default-fg-color) !important;
+    margin: 0 !important;
+    padding: 1rem 0 !important;
+  }
+
+  .md-typeset .grid.cards > .card-item {
+    break-inside: avoid;
+    border: 1px solid #ccc;
+  }
+
+  /* Hide interactive elements on error pages when printing */
+  .error-actions,
+  .action-button {
+    display: none;
+  }
+}

@@ -249,7 +249,10 @@ async def get_ai_results(
             )
         )
 
-    return {"job": AIJobSummary.model_validate(job, from_attributes=True), "results": payload}
+    return {
+        "job": AIJobSummary.model_validate(job, from_attributes=True),
+        "results": payload,
+    }
 
 
 @router.post("/jobs/{job_id}/apply")

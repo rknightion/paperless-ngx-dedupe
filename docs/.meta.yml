@@ -1,0 +1,21 @@
+title: Paperless-NGX Dedupe Documentation
+description: Deduplication and AI metadata assistant for paperless-ngx
+
+# Global meta tags for all pages
+tags:
+  - paperless-ngx
+  - deduplication
+  - ocr
+  - openai
+  - metadata
+
+# Social media defaults
+image: assets/social-card.png
+twitter:
+  creator: "@rknightion"
+  site: "@rknightion"
+
+# SEO defaults
+robots: index,follow
+language: en
+canonical_base: https://m7kni.io/paperless-ngx-dedupe/

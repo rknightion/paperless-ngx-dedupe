@@ -1,0 +1,239 @@
+site_name: Paperless-NGX Dedupe
+site_description: Deduplication and AI metadata assistant for paperless-ngx with MinHash/LSH matching and OpenAI-powered suggestions
+site_url: https://m7kni.io/paperless-ngx-dedupe/
+site_author: Rob Knighton
+repo_name: rknightion/paperless-ngx-dedupe
+repo_url: https://github.com/rknightion/paperless-ngx-dedupe
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  custom_dir: docs/overrides
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to system preference
+  features:
+    # Navigation
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - navigation.path
+    # Search
+    - search.suggest
+    - search.highlight
+    - search.share
+    # Table of contents
+    - toc.follow
+    - toc.integrate
+    # Content
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - content.footnote.tooltips
+    - content.action.edit
+    - content.action.view
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+    logo: material/file-document-multiple-outline
+  favicon: assets/favicon.png
+
+plugins:
+  - privacy
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+      lang: en
+  - sitemap:
+      changefreq: weekly
+      priority: 0.75
+  - meta:
+      meta_file: '**/.meta.yml'
+  - tags
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+      htmlmin_opts:
+        remove_comments: true
+      cache_safe: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      custom_format: "%d. %B %Y"
+      timezone: UTC
+      locale: en
+      fallback_to_build_date: true
+      exclude:
+        - index.md
+  - git-committers:
+      repository: rknightion/paperless-ngx-dedupe
+      branch: main
+  - git-authors
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      slide_effect: slide
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
+      auto_caption: false
+      caption_position: bottom
+  - include-markdown
+
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      title: On this page
+      permalink_title: Anchor link to this section for reference
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.critic
+  - pymdownx.blocks.admonition:
+      types:
+      - new
+      - settings
+      - note
+      - abstract
+      - info
+      - tip
+      - success
+      - question
+      - warning
+      - failure
+      - danger
+      - bug
+      - example
+      - quote
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide: user-guide.md
+  - AI Processing: ai-processing.md
+  - Configuration: configuration.md
+  - Troubleshooting: troubleshooting.md
+
+extra:
+  social_image: assets/social-card.png
+  social_image_alt: Paperless-NGX Dedupe social preview card
+  twitter_site: "@rknightion"
+  twitter_creator: "@rknightion"
+  theme_color: "#f97316"
+  keywords:
+    - paperless-ngx
+    - deduplication
+    - ocr
+    - minhash
+    - lsh
+    - openai
+    - metadata
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rknightion/paperless-ngx-dedupe
+      name: GitHub Repository
+  version:
+    provider: mike
+    default: stable
+  status:
+    new: Recently added
+    deprecated: Deprecated
+  tags:
+    Paperless: paperless-ngx
+    Deduplication: deduplication
+    OCR: ocr
+    AI: ai
+    Configuration: config
+    Troubleshooting: troubleshooting
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+  - javascripts/extra.js
+  - javascripts/seo.js
+
+copyright: |
+  &copy; 2024-2025 <a href="https://github.com/rknightion"  target="_blank" rel="noopener">Rob Knighton</a> &nbsp;
+  <a href="#__consent">Change cookie settings</a>
+
+watch:
+  - docs/includes/
+
+not_in_nav: |
+  /includes/
+  /404.md

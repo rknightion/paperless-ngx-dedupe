@@ -383,9 +383,7 @@ async def bulk_update_metadata(
     except Exception as e:
         db.rollback()
         logger.error(f"Error in bulk metadata update: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Update failed: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}") from e
 
 
 @router.get("/operations", response_model=list[BatchOperationProgress])

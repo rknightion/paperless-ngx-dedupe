@@ -65,7 +65,7 @@ RUN useradd -m -u 1000 paperless && \
 WORKDIR /app
 
 # Copy installed packages from backend builder (single layer)
-COPY --from=backend-builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=backend-builder /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
 
 # Copy application code

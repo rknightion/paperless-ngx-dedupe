@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  {% set page_title = (page.meta.title or page.title or config.site_name) | striptags %}
+  {% set page_description = (page.meta.description or config.site_description or config.site_name) | striptags %}
+
+  {% if page and page.canonical_url %}
+    {% set canonical_url = page.canonical_url %}
+  {% elif page and page.url and config.site_url %}
+    {% set canonical_url = config.site_url.rstrip('/') ~ '/' ~ page.url %}
+  {% else %}
+    {% set canonical_url = config.site_url %}
+  {% endif %}
+
+  {% set social_image = page.meta.image or config.extra.social_image %}
+  {% if social_image and not social_image.startswith('http') %}
+    {% set social_image = (config.site_url.rstrip('/') ~ '/' ~ social_image.lstrip('/')) %}
+  {% endif %}
+
+  <meta name="description" content="{{ page_description }}">
+  {% if config.extra.keywords %}<meta name="keywords" content="{{ config.extra.keywords | join(', ') }}">{% endif %}
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  {% if config.site_author %}<meta name="author" content="{{ config.site_author }}">{% endif %}
+  {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ page_description }}">
+  {% if canonical_url %}<meta property="og:url" content="{{ canonical_url }}">{% endif %}
+  {% if config.site_name %}<meta property="og:site_name" content="{{ config.site_name }}">{% endif %}
+  {% if social_image %}<meta property="og:image" content="{{ social_image }}">{% endif %}
+  {% if config.extra.social_image_alt %}<meta property="og:image:alt" content="{{ config.extra.social_image_alt }}">{% endif %}
+  {% if config.extra.theme_color %}<meta name="theme-color" content="{{ config.extra.theme_color }}">{% endif %}
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title }}">
+  <meta name="twitter:description" content="{{ page_description }}">
+  {% if social_image %}<meta name="twitter:image" content="{{ social_image }}">{% endif %}
+  {% if config.extra.twitter_site %}<meta name="twitter:site" content="{{ config.extra.twitter_site }}">{% endif %}
+  {% if config.extra.twitter_creator %}<meta name="twitter:creator" content="{{ config.extra.twitter_creator }}">{% endif %}
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "{{ config.site_name }}",
+    "url": "{{ config.site_url }}",
+    "description": "{{ page_description }}",
+    "inLanguage": "en",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "{{ config.site_url }}?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+{% endblock %}
