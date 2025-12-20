@@ -76,7 +76,7 @@ plugins:
       changefreq: weekly
       priority: 0.75
   - meta:
-      meta_file: '**/.meta.yml'
+      meta_file: "**/.meta.yml"
   - tags
   - minify:
       minify_html: true
@@ -162,20 +162,20 @@ markdown_extensions:
   - pymdownx.critic
   - pymdownx.blocks.admonition:
       types:
-      - new
-      - settings
-      - note
-      - abstract
-      - info
-      - tip
-      - success
-      - question
-      - warning
-      - failure
-      - danger
-      - bug
-      - example
-      - quote
+        - new
+        - settings
+        - note
+        - abstract
+        - info
+        - tip
+        - success
+        - question
+        - warning
+        - failure
+        - danger
+        - bug
+        - example
+        - quote
 
 nav:
   - Home: index.md
@@ -229,8 +229,7 @@ extra_javascript:
   - javascripts/seo.js
 
 copyright: |
-  &copy; 2024-2025 <a href="https://github.com/rknightion"  target="_blank" rel="noopener">Rob Knighton</a> &nbsp;
-  <a href="#__consent">Change cookie settings</a>
+  <a href="https://m7kni.io" target="_blank" rel="noopener">m7kni.io</a>
 
 watch:
   - docs/includes/
