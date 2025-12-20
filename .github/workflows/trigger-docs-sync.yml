@@ -2,15 +2,18 @@ name: Trigger Documentation Sync
 
 on:
   push:
-    paths:
-      - 'docs/**'
-      - 'mkdocs.yml'
-      - 'wrangler.toml'
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency:
+  group: docs-sync-${{ github.repository }}
+  cancel-in-progress: true
 
 jobs:
   trigger-sync:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     steps:
       - name: Trigger documentation sync in parent repo
         uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4

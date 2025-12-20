@@ -10,6 +10,7 @@ theme:
   name: material
   language: en
   custom_dir: docs/overrides
+  variant: modern
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
