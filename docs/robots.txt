@@ -14,4 +14,3 @@ Allow: /stylesheets/
 Allow: /javascripts/
 
 Sitemap: https://m7kni.io/paperless-ngx-dedupe/sitemap.xml
-Sitemap: https://m7kni.io/paperless-ngx-dedupe/sitemap.xml.gz
