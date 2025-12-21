@@ -421,7 +421,7 @@ docker compose up -d
 | `PAPERLESS_DEDUPE_LOG_LEVEL`                  | Logging level                                           | `WARNING`    |
 
 Most tuning parameters are managed in the Web UI and stored in the database,
-which overrides environment defaults. See `docs/configuration.md` for details.
+which overrides environment defaults. See the [configuration docs](https://m7kni.io/paperless-ngx-dedupe/configuration/) for details.
 
 ### Using a Specific Version
 
@@ -450,10 +450,10 @@ docker compose up -d
 ### Documentation
 
 For deeper guidance and screenshots aligned to the current UI, see:
-- docs/index.md
-- docs/getting-started.md
-- docs/user-guide.md
-- docs/ai-processing.md
+- [Home](https://m7kni.io/paperless-ngx-dedupe/)
+- [Getting Started](https://m7kni.io/paperless-ngx-dedupe/getting-started/)
+- [User Guide](https://m7kni.io/paperless-ngx-dedupe/user-guide/)
+- [AI Processing](https://m7kni.io/paperless-ngx-dedupe/ai-processing/)
 
 ### Web Interface Features
 

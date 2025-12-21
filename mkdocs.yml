@@ -184,6 +184,7 @@ nav:
   - AI Processing: ai-processing.md
   - Configuration: configuration.md
   - Troubleshooting: troubleshooting.md
+  - Changelog: changelog.md
 
 extra:
   social_image: assets/social-card.png
