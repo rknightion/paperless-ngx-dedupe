@@ -1,8 +1,14 @@
-import type { ProcessingStatus } from '../api/types';
+import type {
+  ProcessingStatus,
+  AIJobUpdate,
+  BatchOperationUpdate,
+} from '../api/types';
 
 type WebSocketEventCallback = (data: any) => void;
 type ProcessingUpdateCallback = (status: ProcessingStatus) => void;
 type SyncUpdateCallback = (status: any) => void;
+type AIJobUpdateCallback = (status: AIJobUpdate) => void;
+type BatchUpdateCallback = (status: BatchOperationUpdate) => void;
 type ErrorCallback = (error: string) => void;
 
 interface WebSocketMessage {
@@ -113,6 +119,22 @@ class WebSocketClient {
         this.emit('sync_completed', message.data);
         break;
 
+      case 'ai_job_update':
+        this.emit('ai_job_update', message.data);
+        break;
+
+      case 'ai_job_completed':
+        this.emit('ai_job_completed', message.data);
+        break;
+
+      case 'batch_update':
+        this.emit('batch_update', message.data);
+        break;
+
+      case 'batch_completed':
+        this.emit('batch_completed', message.data);
+        break;
+
       case 'pong':
         // Pong received, connection is alive
         break;
@@ -187,6 +209,10 @@ class WebSocketClient {
   on(event: 'processing_update', callback: ProcessingUpdateCallback): void;
   on(event: 'sync_update', callback: SyncUpdateCallback): void;
   on(event: 'sync_completed', callback: (data: any) => void): void;
+  on(event: 'ai_job_update', callback: AIJobUpdateCallback): void;
+  on(event: 'ai_job_completed', callback: (data: AIJobUpdate) => void): void;
+  on(event: 'batch_update', callback: BatchUpdateCallback): void;
+  on(event: 'batch_completed', callback: BatchUpdateCallback): void;
   on(event: 'error', callback: ErrorCallback): void;
   on(event: 'processing_completed', callback: (data: any) => void): void;
   on(event: 'max_reconnect_attempts_reached', callback: () => void): void;
