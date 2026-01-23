@@ -1,15 +1,23 @@
 """Enhanced Paperless client using PyPaperless SDK."""
 
 import logging
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 import httpx
 from pypaperless import Paperless
 from pypaperless.models import Document
 
 from paperless_dedupe.core.config import settings
+from paperless_dedupe.utils.retry import (
+    RetryDecision,
+    extract_retry_after_seconds,
+    extract_status_code,
+    retry_async,
+)
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class PaperlessClient:
@@ -56,21 +64,68 @@ class PaperlessClient:
         else:
             raise ValueError("Either API token or username/password must be provided")
 
+    @staticmethod
+    def _classify_retry(exc: Exception, *, idempotent: bool = True) -> RetryDecision:
+        status_code = extract_status_code(exc)
+        retry_after = extract_retry_after_seconds(exc)
+        rate_limited = status_code == 429
+
+        if rate_limited:
+            return RetryDecision(
+                retryable=True,
+                rate_limited=True,
+                retry_after=retry_after,
+                status_code=status_code,
+            )
+
+        if not idempotent:
+            return RetryDecision(retryable=False, status_code=status_code)
+
+        if isinstance(exc, httpx.RequestError):
+            return RetryDecision(retryable=True, status_code=status_code)
+
+        if status_code is not None and status_code >= 500:
+            return RetryDecision(retryable=True, status_code=status_code)
+
+        return RetryDecision(retryable=False, status_code=status_code)
+
+    async def _call_with_retries(
+        self,
+        operation: str,
+        func: Callable[[], Awaitable[T]],
+        *,
+        idempotent: bool = True,
+    ) -> T:
+        max_delay = float(min(10.0, settings.api_timeout or 10))
+        return await retry_async(
+            operation,
+            func,
+            classify=lambda exc: self._classify_retry(exc, idempotent=idempotent),
+            service="paperless",
+            max_retries=settings.api_max_retries,
+            base_delay=0.5,
+            max_delay=max_delay,
+        )
+
     async def __aenter__(self):
         """Enter async context."""
         if not self.paperless:
             # Generate token from credentials if needed
-            self.token = await Paperless.generate_api_token(
-                self.base_url, self._username, self._password
+            self.token = await self._call_with_retries(
+                "paperless.generate_api_token",
+                lambda: Paperless.generate_api_token(
+                    self.base_url, self._username, self._password
+                ),
             )
             self.paperless = Paperless(self.base_url, self.token)  # type: ignore[abstract]
 
-        await self.paperless.initialize()
+        await self._call_with_retries("paperless.initialize", self.paperless.initialize)
 
         # Initialize custom fields cache for better field handling
         try:
-            self.paperless.cache.custom_fields = (
-                await self.paperless.custom_fields.as_dict()
+            self.paperless.cache.custom_fields = await self._call_with_retries(
+                "paperless.custom_fields.as_dict",
+                self.paperless.custom_fields.as_dict,
             )
         except Exception:
             # Custom fields might not be available
@@ -84,7 +139,7 @@ class PaperlessClient:
             await self.paperless.close()
 
     async def get_all_documents(
-        self, batch_callback=None, limit=None
+        self, batch_callback=None, limit=None, return_documents: bool = True
     ) -> list[dict[str, Any]]:
         """Get all documents from paperless with optimized pagination.
 
@@ -93,17 +148,19 @@ class PaperlessClient:
                            Called with list of documents every batch_size documents.
             limit: Optional maximum number of documents to fetch.
         """
-        documents = []
         batch_size = 200  # Process in batches for better memory efficiency
-        fetched_count = 0
 
-        try:
+        async def _fetch_all() -> list[dict[str, Any]]:
+            documents: list[dict[str, Any]] = []
+            fetched_count = 0
+
             # Use reduce with larger page size for faster fetching
             async with self.paperless.documents.reduce(page_size=batch_size) as reduced:
                 batch = []
                 async for doc in reduced:
                     doc_dict = self._document_to_dict(doc)
-                    documents.append(doc_dict)
+                    if return_documents:
+                        documents.append(doc_dict)
                     batch.append(doc_dict)
                     fetched_count += 1
 
@@ -122,9 +179,13 @@ class PaperlessClient:
                 if batch and batch_callback:
                     await batch_callback(batch)
 
-            logger.info(f"Fetched {len(documents)} documents total")
-            return documents
+            logger.info(f"Fetched {fetched_count} documents total")
+            return documents if return_documents else []
 
+        try:
+            return await self._call_with_retries(
+                "paperless.get_all_documents", _fetch_all
+            )
         except Exception as e:
             logger.error(f"Failed to fetch documents: {e}")
             raise
@@ -135,7 +196,7 @@ class PaperlessClient:
         """Get paginated list of documents."""
         page_size = page_size or settings.api_page_size
 
-        try:
+        async def _fetch_page() -> dict[str, Any]:
             # PyPaperless handles pagination internally
             # Collect documents for the specific page
             all_docs: list[dict[str, Any]] = []
@@ -160,13 +221,18 @@ class PaperlessClient:
                 "results": all_docs,
             }
 
+        try:
+            return await self._call_with_retries(
+                f"paperless.get_documents.page.{page}", _fetch_page
+            )
         except Exception as e:
             logger.error(f"Failed to fetch documents page {page}: {e}")
             raise
 
     async def get_total_document_count(self) -> int:
         """Lightweight call to fetch only the total document count."""
-        try:
+
+        async def _fetch_count() -> int:
             headers = {}
             if self.token:
                 headers["Authorization"] = f"Token {self.token}"
@@ -181,6 +247,11 @@ class PaperlessClient:
                 response.raise_for_status()
                 data = response.json()
                 return int(data.get("count") or 0)
+
+        try:
+            return await self._call_with_retries(
+                "paperless.get_total_document_count", _fetch_count
+            )
         except Exception as e:
             logger.error(f"Failed to fetch total document count: {e}")
             return 0
@@ -188,7 +259,10 @@ class PaperlessClient:
     async def get_document(self, document_id: int) -> dict[str, Any]:
         """Get single document details."""
         try:
-            doc = await self.paperless.documents(document_id)
+            doc = await self._call_with_retries(
+                f"paperless.get_document.{document_id}",
+                lambda: self.paperless.documents(document_id),
+            )
             return self._document_to_dict(doc)
         except Exception as e:
             logger.error(f"Failed to fetch document {document_id}: {e}")
@@ -197,7 +271,10 @@ class PaperlessClient:
     async def get_document_content(self, document_id: int) -> str:
         """Get document OCR content."""
         try:
-            doc = await self.paperless.documents(document_id)
+            doc = await self._call_with_retries(
+                f"paperless.get_document_content.{document_id}",
+                lambda: self.paperless.documents(document_id),
+            )
             return doc.content or ""
         except Exception as e:
             logger.error(f"Failed to fetch document content {document_id}: {e}")
@@ -206,7 +283,10 @@ class PaperlessClient:
     async def get_document_metadata(self, document_id: int) -> dict[str, Any]:
         """Get document metadata (checksums, sizes, filenames)."""
         try:
-            meta = await self.paperless.documents.metadata(document_id)
+            meta = await self._call_with_retries(
+                f"paperless.get_document_metadata.{document_id}",
+                lambda: self.paperless.documents.metadata(document_id),
+            )
             return {
                 "id": meta.id,
                 "original_checksum": getattr(meta, "original_checksum", None),
@@ -226,13 +306,19 @@ class PaperlessClient:
     ) -> tuple[bytes, str | None]:
         """Get document thumbnail."""
         try:
-            thumbnail = await self.paperless.documents.thumbnail(document_id)
+            thumbnail = await self._call_with_retries(
+                f"paperless.get_document_thumbnail.{document_id}",
+                lambda: self.paperless.documents.thumbnail(document_id),
+            )
             content_type = getattr(thumbnail, "content_type", None)
 
             # PyPaperless returns a DownloadedDocument with a content attribute
             content = getattr(thumbnail, "content", None)
             if content is None and hasattr(thumbnail, "load"):
-                await thumbnail.load()
+                await self._call_with_retries(
+                    f"paperless.get_document_thumbnail.load.{document_id}",
+                    thumbnail.load,
+                )
                 content = getattr(thumbnail, "content", None)
 
             if content is None and isinstance(thumbnail, (bytes, bytearray)):
@@ -249,13 +335,19 @@ class PaperlessClient:
     async def get_document_preview(self, document_id: int) -> tuple[bytes, str | None]:
         """Get document preview."""
         try:
-            preview = await self.paperless.documents.preview(document_id)
+            preview = await self._call_with_retries(
+                f"paperless.get_document_preview.{document_id}",
+                lambda: self.paperless.documents.preview(document_id),
+            )
             content_type = getattr(preview, "content_type", None)
 
             # PyPaperless returns a DownloadedDocument with binary content in `.content`
             content = getattr(preview, "content", None)
             if content is None and hasattr(preview, "load"):
-                await preview.load()
+                await self._call_with_retries(
+                    f"paperless.get_document_preview.load.{document_id}",
+                    preview.load,
+                )
                 content = getattr(preview, "content", None)
 
             if content is None and isinstance(preview, (bytes, bytearray)):
@@ -271,12 +363,16 @@ class PaperlessClient:
 
     async def test_connection(self) -> bool:
         """Test connection to paperless API."""
-        try:
+
+        async def _test() -> bool:
             # Try to fetch one document to test the connection
             async with self.paperless.documents.reduce(page_size=1) as reduced:
                 async for _ in reduced:
                     break
             return True
+
+        try:
+            return await self._call_with_retries("paperless.test_connection", _test)
         except Exception as e:
             logger.error(f"Failed to connect to paperless API: {e}")
             return False
@@ -284,8 +380,14 @@ class PaperlessClient:
     async def delete_document(self, document_id: int) -> bool:
         """Delete a document from paperless."""
         try:
-            doc = await self.paperless.documents(document_id)
-            return await doc.delete()
+            doc = await self._call_with_retries(
+                f"paperless.delete_document.fetch.{document_id}",
+                lambda: self.paperless.documents(document_id),
+            )
+            return await self._call_with_retries(
+                f"paperless.delete_document.delete.{document_id}",
+                doc.delete,
+            )
         except Exception as e:
             logger.error(f"Failed to delete document {document_id}: {e}")
             return False
@@ -293,10 +395,16 @@ class PaperlessClient:
     async def add_tags_to_document(self, document_id: int, tag_ids: list[int]) -> bool:
         """Add tags to a document."""
         try:
-            doc = await self.paperless.documents(document_id)
+            doc = await self._call_with_retries(
+                f"paperless.add_tags.fetch.{document_id}",
+                lambda: self.paperless.documents(document_id),
+            )
             current_tags = doc.tags or []
             doc.tags = list(set(current_tags + tag_ids))
-            return await doc.update()
+            return await self._call_with_retries(
+                f"paperless.add_tags.update.{document_id}",
+                doc.update,
+            )
         except Exception as e:
             logger.error(f"Failed to add tags to document {document_id}: {e}")
             return False
@@ -306,10 +414,16 @@ class PaperlessClient:
     ) -> bool:
         """Remove tags from a document."""
         try:
-            doc = await self.paperless.documents(document_id)
+            doc = await self._call_with_retries(
+                f"paperless.remove_tags.fetch.{document_id}",
+                lambda: self.paperless.documents(document_id),
+            )
             current_tags = doc.tags or []
             doc.tags = [tag for tag in current_tags if tag not in tag_ids]
-            return await doc.update()
+            return await self._call_with_retries(
+                f"paperless.remove_tags.update.{document_id}",
+                doc.update,
+            )
         except Exception as e:
             logger.error(f"Failed to remove tags from document {document_id}: {e}")
             return False
@@ -319,17 +433,24 @@ class PaperlessClient:
     ) -> bool:
         """Update document metadata."""
         try:
-            doc = await self.paperless.documents(document_id)
+            doc = await self._call_with_retries(
+                f"paperless.update_metadata.fetch.{document_id}",
+                lambda: self.paperless.documents(document_id),
+            )
             for key, value in metadata.items():
                 setattr(doc, key, value)
-            return await doc.update()
+            return await self._call_with_retries(
+                f"paperless.update_metadata.update.{document_id}",
+                doc.update,
+            )
         except Exception as e:
             logger.error(f"Failed to update metadata for document {document_id}: {e}")
             return False
 
     async def get_tags(self) -> list[dict[str, Any]]:
         """Get all available tags."""
-        try:
+
+        async def _fetch_tags() -> list[dict[str, Any]]:
             tags = []
             async for tag in self.paperless.tags:
                 tags.append(
@@ -347,6 +468,9 @@ class PaperlessClient:
                     }
                 )
             return tags
+
+        try:
+            return await self._call_with_retries("paperless.get_tags", _fetch_tags)
         except Exception as e:
             logger.error(f"Failed to get tags: {e}")
             return []
@@ -355,7 +479,11 @@ class PaperlessClient:
         """Create a new tag."""
         try:
             draft = self.paperless.tags.draft(name=name, color=color)
-            new_id = await draft.save()
+            new_id = await self._call_with_retries(
+                "paperless.create_tag",
+                draft.save,
+                idempotent=False,
+            )
             return int(new_id) if new_id is not None else None
         except Exception as e:
             logger.error(f"Failed to create tag {name}: {e}")
@@ -365,7 +493,11 @@ class PaperlessClient:
         """Create a new correspondent."""
         try:
             draft = self.paperless.correspondents.draft(name=name)
-            new_id = await draft.save()
+            new_id = await self._call_with_retries(
+                "paperless.create_correspondent",
+                draft.save,
+                idempotent=False,
+            )
             return int(new_id) if new_id is not None else None
         except Exception as e:
             logger.error(f"Failed to create correspondent {name}: {e}")
@@ -375,7 +507,11 @@ class PaperlessClient:
         """Create a new document type."""
         try:
             draft = self.paperless.document_types.draft(name=name)
-            new_id = await draft.save()
+            new_id = await self._call_with_retries(
+                "paperless.create_document_type",
+                draft.save,
+                idempotent=False,
+            )
             return int(new_id) if new_id is not None else None
         except Exception as e:
             logger.error(f"Failed to create document type {name}: {e}")
@@ -385,7 +521,8 @@ class PaperlessClient:
 
     async def get_correspondents(self) -> list[dict[str, Any]]:
         """Get all correspondents."""
-        try:
+
+        async def _fetch_correspondents() -> list[dict[str, Any]]:
             correspondents = []
             async for corr in self.paperless.correspondents:
                 correspondents.append(
@@ -405,13 +542,19 @@ class PaperlessClient:
                     }
                 )
             return correspondents
+
+        try:
+            return await self._call_with_retries(
+                "paperless.get_correspondents", _fetch_correspondents
+            )
         except Exception as e:
             logger.error(f"Failed to get correspondents: {e}")
             return []
 
     async def get_document_types(self) -> list[dict[str, Any]]:
         """Get all document types."""
-        try:
+
+        async def _fetch_document_types() -> list[dict[str, Any]]:
             types = []
             async for doc_type in self.paperless.document_types:
                 types.append(
@@ -428,13 +571,19 @@ class PaperlessClient:
                     }
                 )
             return types
+
+        try:
+            return await self._call_with_retries(
+                "paperless.get_document_types", _fetch_document_types
+            )
         except Exception as e:
             logger.error(f"Failed to get document types: {e}")
             return []
 
     async def get_storage_paths(self) -> list[dict[str, Any]]:
         """Get all storage paths."""
-        try:
+
+        async def _fetch_storage_paths() -> list[dict[str, Any]]:
             paths = []
             async for path in self.paperless.storage_paths:
                 paths.append(
@@ -452,13 +601,19 @@ class PaperlessClient:
                     }
                 )
             return paths
+
+        try:
+            return await self._call_with_retries(
+                "paperless.get_storage_paths", _fetch_storage_paths
+            )
         except Exception as e:
             logger.error(f"Failed to get storage paths: {e}")
             return []
 
     async def get_custom_fields(self) -> list[dict[str, Any]]:
         """Get all custom fields."""
-        try:
+
+        async def _fetch_custom_fields() -> list[dict[str, Any]]:
             fields = []
             async for field in self.paperless.custom_fields:
                 fields.append(
@@ -470,13 +625,19 @@ class PaperlessClient:
                     }
                 )
             return fields
+
+        try:
+            return await self._call_with_retries(
+                "paperless.get_custom_fields", _fetch_custom_fields
+            )
         except Exception as e:
             logger.error(f"Failed to get custom fields: {e}")
             return []
 
     async def search_documents(self, query: str) -> list[dict[str, Any]]:
         """Search for documents using query."""
-        try:
+
+        async def _search() -> list[dict[str, Any]]:
             documents = []
             async for doc in self.paperless.documents.search(query):
                 doc_dict = self._document_to_dict(doc)
@@ -484,13 +645,17 @@ class PaperlessClient:
                     doc_dict["search_score"] = doc.search_hit.score
                 documents.append(doc_dict)
             return documents
+
+        try:
+            return await self._call_with_retries("paperless.search_documents", _search)
         except Exception as e:
             logger.error(f"Failed to search documents: {e}")
             return []
 
     async def get_similar_documents(self, document_id: int) -> list[dict[str, Any]]:
         """Get documents similar to the given document."""
-        try:
+
+        async def _fetch_similar() -> list[dict[str, Any]]:
             similar = []
             async for doc in self.paperless.documents.more_like(document_id):
                 doc_dict = self._document_to_dict(doc)
@@ -498,13 +663,19 @@ class PaperlessClient:
                     doc_dict["similarity_score"] = doc.search_hit.score
                 similar.append(doc_dict)
             return similar
+
+        try:
+            return await self._call_with_retries(
+                f"paperless.get_similar_documents.{document_id}", _fetch_similar
+            )
         except Exception as e:
             logger.error(f"Failed to get similar documents: {e}")
             return []
 
     async def get_document_suggestions(self, document_id: int) -> dict[str, Any]:
         """Get classification suggestions for a document."""
-        try:
+
+        async def _fetch_suggestions() -> dict[str, Any]:
             suggestions = await self.paperless.documents.suggestions(document_id)
             return {
                 "correspondents": suggestions.correspondents or [],
@@ -513,6 +684,12 @@ class PaperlessClient:
                 "storage_paths": suggestions.storage_paths or [],
                 "dates": suggestions.dates or [],
             }
+
+        try:
+            return await self._call_with_retries(
+                f"paperless.get_document_suggestions.{document_id}",
+                _fetch_suggestions,
+            )
         except Exception as e:
             logger.error(f"Failed to get suggestions: {e}")
             return {}

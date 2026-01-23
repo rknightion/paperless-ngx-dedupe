@@ -15,6 +15,13 @@ from paperless_dedupe.models.database import (
     Document,
     DocumentContent,
 )
+from paperless_dedupe.utils.retry import (
+    RetryDecision,
+    extract_retry_after_seconds,
+    extract_status_code,
+    retry_async,
+    retry_sync,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +69,109 @@ class AIProcessingService:
             "reasoning_effort": reasoning_effort,
             "max_input_chars": max_chars,
         }
+
+    @staticmethod
+    def _classify_openai_error(exc: Exception) -> RetryDecision:
+        status_code = extract_status_code(exc)
+        retry_after = extract_retry_after_seconds(exc)
+        error_name = exc.__class__.__name__
+        rate_limited = status_code == 429 or error_name == "RateLimitError"
+
+        if rate_limited:
+            return RetryDecision(
+                retryable=True,
+                rate_limited=True,
+                retry_after=retry_after,
+                status_code=status_code,
+            )
+
+        if error_name in {"APITimeoutError", "APIConnectionError"}:
+            return RetryDecision(retryable=True, status_code=status_code)
+
+        if status_code is not None and status_code >= 500:
+            return RetryDecision(retryable=True, status_code=status_code)
+
+        return RetryDecision(retryable=False, status_code=status_code)
+
+    def _openai_request(
+        self,
+        client: OpenAI,
+        *,
+        messages: list[dict[str, Any]],
+        ai_config: dict[str, Any],
+        job: AIExtractionJob,
+        document: Document,
+        requested_fields: list[str],
+    ) -> Any:
+        max_delay = float(min(10.0, settings.api_timeout or 10))
+        prompt_cache_key = (
+            f"paperless-dedupe:v1:model:{ai_config['model']}:fields:"
+            f"{','.join(sorted(requested_fields))}"
+        )
+        return retry_sync(
+            "openai.responses.create",
+            lambda: client.responses.create(
+                model=ai_config["model"],
+                input=messages,
+                max_output_tokens=500,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": self._json_schema(),
+                },
+                prompt_cache_key=prompt_cache_key,
+                reasoning={"effort": ai_config["reasoning_effort"]},
+                metadata={
+                    "job_id": job.id,
+                    "document_id": document.paperless_id,
+                    "source": "paperless-dedupe",
+                },
+            ),
+            classify=self._classify_openai_error,
+            service="openai",
+            max_retries=settings.api_max_retries,
+            base_delay=0.5,
+            max_delay=max_delay,
+        )
+
+    async def _openai_request_async(
+        self,
+        client: AsyncOpenAI,
+        *,
+        messages: list[dict[str, Any]],
+        ai_config: dict[str, Any],
+        job: AIExtractionJob,
+        document: Document,
+        requested_fields: list[str],
+    ) -> Any:
+        max_delay = float(min(10.0, settings.api_timeout or 10))
+        prompt_cache_key = (
+            f"paperless-dedupe:v1:model:{ai_config['model']}:fields:"
+            f"{','.join(sorted(requested_fields))}"
+        )
+        return await retry_async(
+            "openai.responses.create",
+            lambda: client.responses.create(
+                model=ai_config["model"],
+                input=messages,
+                max_output_tokens=500,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": self._json_schema(),
+                },
+                prompt_cache_key=prompt_cache_key,
+                reasoning={"effort": ai_config["reasoning_effort"]},
+                metadata={
+                    "job_id": job.id,
+                    "document_id": document.paperless_id,
+                    "source": "paperless-dedupe",
+                },
+            ),
+            classify=self._classify_openai_error,
+            service="openai",
+            max_retries=settings.api_max_retries,
+            base_delay=0.5,
+            max_delay=max_delay,
+        )
 
     @staticmethod
     def _json_schema() -> dict[str, Any]:
@@ -283,29 +393,15 @@ class AIProcessingService:
             {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
         ]
 
-        # Deterministic prompt cache key per prompt version, fields, and model
-        prompt_cache_key = (
-            f"paperless-dedupe:v1:model:{ai_config['model']}:fields:"
-            f"{','.join(sorted(requested_fields))}"
-        )
-
         client = OpenAI(api_key=ai_config["api_key"])
         try:
-            response = client.responses.create(
-                model=ai_config["model"],
-                input=messages,
-                max_output_tokens=500,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": self._json_schema(),
-                },
-                prompt_cache_key=prompt_cache_key,
-                reasoning={"effort": ai_config["reasoning_effort"]},
-                metadata={
-                    "job_id": job.id,
-                    "document_id": document.paperless_id,
-                    "source": "paperless-dedupe",
-                },
+            response = self._openai_request(
+                client,
+                messages=messages,
+                ai_config=ai_config,
+                job=job,
+                document=document,
+                requested_fields=requested_fields,
             )
         except Exception as exc:  # noqa: BLE001
             logger.error("OpenAI call failed for document %s: %s", document.id, exc)
@@ -381,7 +477,16 @@ class AIProcessingService:
         """Free health check using model retrieval (no tokens billed)."""
         client = OpenAI(api_key=ai_config["api_key"])
         try:
-            client.models.retrieve(ai_config["model"])
+            max_delay = float(min(10.0, settings.api_timeout or 10))
+            retry_sync(
+                "openai.models.retrieve",
+                lambda: client.models.retrieve(ai_config["model"]),
+                classify=self._classify_openai_error,
+                service="openai",
+                max_retries=settings.api_max_retries,
+                base_delay=0.5,
+                max_delay=max_delay,
+            )
             return True, "OpenAI reachable and model available"
         except Exception as exc:  # noqa: BLE001
             logger.error("OpenAI health check failed: %s", exc)
@@ -415,28 +520,15 @@ class AIProcessingService:
             {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
         ]
 
-        prompt_cache_key = (
-            f"paperless-dedupe:v1:model:{ai_config['model']}:fields:"
-            f"{','.join(sorted(requested_fields))}"
-        )
-
         client = AsyncOpenAI(api_key=ai_config["api_key"])
         try:
-            response = await client.responses.create(
-                model=ai_config["model"],
-                input=messages,
-                max_output_tokens=500,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": self._json_schema(),
-                },
-                prompt_cache_key=prompt_cache_key,
-                reasoning={"effort": ai_config["reasoning_effort"]},
-                metadata={
-                    "job_id": job.id,
-                    "document_id": document.paperless_id,
-                    "source": "paperless-dedupe",
-                },
+            response = await self._openai_request_async(
+                client,
+                messages=messages,
+                ai_config=ai_config,
+                job=job,
+                document=document,
+                requested_fields=requested_fields,
             )
         except Exception as exc:  # noqa: BLE001
             logger.error(
