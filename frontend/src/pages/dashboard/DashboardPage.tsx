@@ -36,7 +36,7 @@ export const DashboardPage: React.FC = () => {
 
   // Load dashboard data
   useEffect(() => {
-    dispatch(fetchDocuments({ page_size: 1 })); // Just get the count
+    dispatch(fetchDocuments({ limit: 1 })); // Just get the count
     dispatch(fetchDuplicateStatistics());
   }, [dispatch]);
 
