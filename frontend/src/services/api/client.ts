@@ -38,6 +38,12 @@ class ApiClient {
           detail: `HTTP ${response.status}: ${response.statusText}`,
           status_code: response.status,
         }));
+        const hasFieldErrors =
+          !!errorData.field_errors &&
+          Object.keys(errorData.field_errors).length > 0;
+        if (hasFieldErrors) {
+          throw new Error(JSON.stringify(errorData));
+        }
         throw new Error(
           errorData.detail || `Request failed with status ${response.status}`
         );
@@ -93,6 +99,13 @@ class ApiClient {
   async put<T = any>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async patch<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
