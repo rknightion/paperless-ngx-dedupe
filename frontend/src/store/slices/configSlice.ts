@@ -177,8 +177,10 @@ const configSlice = createSlice({
           action.error.message || 'Failed to update configuration';
         try {
           const errorData = JSON.parse(errorMessage);
-          if (errorData.errors) {
-            state.validationErrors = errorData.errors;
+          if (errorData.field_errors) {
+            state.validationErrors = errorData.field_errors;
+          } else {
+            state.error = errorData.detail || errorMessage;
           }
         } catch {
           state.error = errorMessage;
