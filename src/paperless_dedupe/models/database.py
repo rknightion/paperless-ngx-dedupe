@@ -143,6 +143,25 @@ class DuplicateMember(Base):
     document = relationship("Document", back_populates="duplicate_memberships")
 
 
+class BatchOperation(Base):
+    __tablename__ = "batch_operations"
+
+    id = Column(String(100), primary_key=True)
+    operation = Column(String(50), nullable=False)
+    status = Column(String(30), nullable=False, default="pending")
+    message = Column(Text, nullable=True)
+    total_items = Column(Integer, default=0)
+    processed_items = Column(Integer, default=0)
+    failed_items = Column(Integer, default=0)
+    current_item = Column(Integer, default=0)
+    parameters = Column(JSONType, nullable=True)
+    errors = Column(JSONType, nullable=True)
+    task_id = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+
 class AppConfig(Base):
     __tablename__ = "app_config"
 
@@ -206,6 +225,8 @@ class AIExtractionResult(Base):
     date_confidence = Column(Float, nullable=True)
     raw_response = Column(JSONType, nullable=True)
     requested_fields = Column(JSONType, nullable=True)
+    field_decisions = Column(JSONType, nullable=True)
+    field_overrides = Column(JSONType, nullable=True)
     error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     applied_at = Column(DateTime, nullable=True)
