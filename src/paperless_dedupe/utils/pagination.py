@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import logging
 from datetime import datetime
@@ -15,13 +16,17 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
+def _derive_fernet_key(secret_key: str) -> bytes:
+    digest = hashlib.sha256(secret_key.encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest)
+
+
 class PaginationCursor:
     """Secure pagination cursor implementation using encrypted tokens"""
 
     def __init__(self):
         # Use secret key from settings for encryption
-        key = settings.secret_key[:32].encode().ljust(32, b"0")
-        self.cipher = Fernet(base64.urlsafe_b64encode(key))
+        self.cipher = Fernet(_derive_fernet_key(settings.secret_key))
 
     def encode(self, data: dict) -> str:
         """Encode cursor data into an encrypted token"""
