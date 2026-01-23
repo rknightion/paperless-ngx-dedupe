@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProgressTracker } from '../../components/shared';
 import { SyncProgress } from '../../components/sync/SyncProgress';
 import {
@@ -6,14 +6,87 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from '../../components/ui/Card';
-import { Activity, Info } from 'lucide-react';
+  Badge,
+} from '../../components/ui';
+import { Activity, Info, RefreshCw } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { processingApi } from '../../services/api/processing';
+import { useProcessingStatus } from '../../hooks/redux';
+import type { ProcessingHistoryResponse } from '../../services/api/types';
 
 export const ProcessingPage: React.FC = () => {
   const handleProcessingComplete = (results: any) => {
     console.log('Processing completed:', results);
     // Could show notification or redirect
   };
+  const { status } = useProcessingStatus();
+  const [history, setHistory] = useState<ProcessingHistoryResponse['runs']>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const data = await processingApi.getProcessingHistory();
+      setHistory(data.runs || []);
+    } catch (error: any) {
+      console.error('Failed to load processing history:', error);
+      setHistoryError('Failed to load processing history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  useEffect(() => {
+    if (
+      status.status &&
+      ['completed', 'failed', 'cancelled'].includes(status.status)
+    ) {
+      loadHistory();
+    }
+  }, [status.status, status.completed_at, loadHistory]);
+
+  const formatDuration = (
+    started?: string | null,
+    completed?: string | null
+  ) => {
+    if (!started || !completed) return '—';
+    const start = new Date(started).getTime();
+    const end = new Date(completed).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return '—';
+    const seconds = Math.round((end - start) / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remaining = seconds % 60;
+    if (minutes < 60) return `${minutes}m ${remaining}s`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
+
+  const renderStatusBadge = (value: string) => {
+    const normalized = value.toLowerCase();
+    const variant =
+      normalized === 'completed'
+        ? 'success'
+        : normalized === 'failed'
+          ? 'destructive'
+          : normalized === 'cancelled'
+            ? 'warning'
+            : 'secondary';
+    return (
+      <Badge variant={variant} className="text-xs">
+        {value.replace('_', ' ')}
+      </Badge>
+    );
+  };
+
+  const historyRows = useMemo(() => history.slice(0, 10), [history]);
 
   return (
     <div className="space-y-6">
@@ -34,6 +107,89 @@ export const ProcessingPage: React.FC = () => {
         showControls={true}
         onComplete={handleProcessingComplete}
       />
+
+      {/* Processing History */}
+      <Card>
+        <CardHeader className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <CardTitle>Processing History</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Recent deduplication runs with task metadata.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadHistory}
+            disabled={historyLoading}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {historyLoading ? (
+            <div className="text-sm text-muted-foreground">
+              Loading history…
+            </div>
+          ) : historyError ? (
+            <div className="text-sm text-red-600">{historyError}</div>
+          ) : historyRows.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              No processing runs yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b">
+                    <th className="py-2">Run</th>
+                    <th className="py-2">Status</th>
+                    <th className="py-2">Started</th>
+                    <th className="py-2">Duration</th>
+                    <th className="py-2 text-right">Docs</th>
+                    <th className="py-2 text-right">Groups</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyRows.map((run) => (
+                    <tr key={run.id} className="border-b last:border-b-0">
+                      <td className="py-2 pr-4">
+                        <div className="text-sm font-medium">
+                          {run.id.slice(-8)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {run.id}
+                        </div>
+                      </td>
+                      <td className="py-2">{renderStatusBadge(run.status)}</td>
+                      <td className="py-2">
+                        {run.started_at
+                          ? new Date(run.started_at).toLocaleString()
+                          : '—'}
+                      </td>
+                      <td className="py-2">
+                        {formatDuration(run.started_at, run.completed_at)}
+                      </td>
+                      <td className="py-2 text-right">
+                        {run.documents_processed.toLocaleString()}
+                      </td>
+                      <td className="py-2 text-right">
+                        {run.groups_found.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {historyRows.some((run) => run.error) && (
+            <div className="mt-4 text-xs text-muted-foreground">
+              Tip: failed runs include error details in the backend logs.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Information Card */}
       <Card>
