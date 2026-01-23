@@ -7,6 +7,7 @@ import type {
   DuplicateGroup,
   ApiResponse,
   DocumentPreview,
+  DocumentStatsResponse,
 } from './types';
 
 export const documentsApi = {
@@ -72,14 +73,8 @@ export const documentsApi = {
   },
 
   // Get document statistics (old endpoint - kept for compatibility)
-  async getDocumentStats(): Promise<{
-    total: number;
-    pending: number;
-    processing: number;
-    completed: number;
-    errors: number;
-  }> {
-    return apiClient.get('/documents/stats');
+  async getDocumentStats(): Promise<DocumentStatsResponse> {
+    return apiClient.get<DocumentStatsResponse>('/documents/stats');
   },
 
   // Get comprehensive document statistics
