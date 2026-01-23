@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '../ui';
+import { Button } from '../ui/Button';
 import { OperationProgress } from './OperationProgress';
 import {
   Activity,
@@ -10,6 +11,9 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { batchApi, OperationStatus } from '../../services/api/batch';
+import { wsClient } from '../../services/websocket';
+import { useProcessingStatus } from '../../hooks/redux';
+import type { BatchOperationUpdate } from '../../services/api/types';
 
 export const OperationsList: React.FC = () => {
   const [operations, setOperations] = useState<any[]>([]);
@@ -17,8 +21,9 @@ export const OperationsList: React.FC = () => {
   const [selectedOperation, setSelectedOperation] = useState<string | null>(
     null
   );
+  const { wsConnected } = useProcessingStatus();
 
-  const loadOperations = async () => {
+  const loadOperations = useCallback(async () => {
     setLoading(true);
     try {
       const ops = await batchApi.listOperations();
@@ -28,12 +33,55 @@ export const OperationsList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadOperations();
     // No polling needed - WebSocket will handle updates
+  }, [loadOperations]);
+
+  useEffect(() => {
+    const handleUpdate = (update: BatchOperationUpdate) => {
+      if (!update?.operation_id) return;
+      setOperations((prev) => {
+        const index = prev.findIndex(
+          (op) => op.operation_id === update.operation_id
+        );
+        const existing = index >= 0 ? prev[index] : null;
+        const merged = {
+          ...(existing || {}),
+          ...update,
+          message: update.message || existing?.message || 'Batch update',
+          errors: update.errors ?? existing?.errors ?? [],
+          results: update.results ?? existing?.results,
+        };
+
+        if (index >= 0) {
+          const next = [...prev];
+          next[index] = merged;
+          return next;
+        }
+
+        return [merged, ...prev];
+      });
+    };
+
+    wsClient.on('batch_update', handleUpdate);
+    wsClient.on('batch_completed', handleUpdate);
+
+    return () => {
+      wsClient.off('batch_update', handleUpdate);
+      wsClient.off('batch_completed', handleUpdate);
+    };
   }, []);
+
+  useEffect(() => {
+    if (wsConnected) return;
+    const interval = setInterval(() => {
+      loadOperations();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [wsConnected, loadOperations]);
 
   const getStatusIcon = (status: OperationStatus) => {
     switch (status) {
@@ -117,6 +165,20 @@ export const OperationsList: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Batch Operations</h2>
+          <p className="text-xs text-muted-foreground">
+            {wsConnected
+              ? 'Live updates connected.'
+              : 'Live updates unavailable. Polling every 5s.'}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={loadOperations}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
       {/* Active Operations */}
       {activeOperations.length > 0 && (
         <Card>
