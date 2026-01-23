@@ -1,7 +1,34 @@
-[] Validate the OpenAI Responses integration end-to-end and adjust response parsing if the SDK output shape differs; add tests around AIProcessingService.
-[] Expand the AI review UI to allow per-field accept/reject/edit and show document previews (thumbnails/content) instead of only applying whole rows.
-[] Emit websocket/task-status updates for AI jobs (or tighter polling) so the wizard shows live progress; worker currently just updates DB.
-[] Improve tag selection by fetching available tags from Paperless/DB (case-insensitive lookup); today tag filtering expects an exact match string.
-[] Track review decisions (accepted/rejected), mark jobs as fully applied, and surface Paperless update failures to the UI; consider field-level statuses.
-[] Run `alembic upgrade head` to apply migration b2c4f6f9c2a1 in deployed environments.
-[] Consider re-adding a structured health check using Responses when the SDK stabilizes; currently health check is minimal due to response_format incompatibility on latest SDK.
+## API Contract & Developer Experience
+- [x] Align frontend/backend config endpoints and responses: add `/config/defaults` + `/config/validate`, and return full configuration payloads from `/config/` update/reset.
+- [x] Normalize response field names (`paperless_version` vs `version`, cursor fields, status payloads) and generate TypeScript types from OpenAPI to avoid drift.
+- [x] Add missing endpoints used by the UI (`/processing/history`, `/documents/stats`) or update the UI to call existing routes (`/documents/statistics`).
+- [x] Decide on bulk duplicate routes (either keep `/batch/duplicates/*` or add `/duplicates/groups/bulk-*`) and remove dead paths in the client.
+- [x] Make error responses consistent across APIs (machine-readable `code`, `detail`, `field_errors`) and document pagination metadata.
+- [x] Expand `DocumentListResponse` types to include cursor pagination fields and adopt cursor-based pagination in the UI.
+
+## Backend Performance & Scalability
+- [x] Persist batch operations in the database and track via Celery task IDs instead of the in-memory `batch_operations` dict.
+- [x] Stream document sync using `get_all_documents` batch callbacks so large libraries don’t load entirely into memory.
+- [x] Use bulk inserts/updates for sync and duplicate group persistence to reduce transaction overhead.
+- [x] Store MinHash signatures + content hashes in DB and support incremental dedupe runs (new/changed documents only).
+- [x] Add indexes for hot queries: `duplicate_groups.reviewed/resolved`, `duplicate_members.group_id`, `documents.paperless_id` (already indexed), JSON tags GIN, and OCR full-text search tsvector.
+- [x] Eliminate N+1 queries in duplicate endpoints via `joinedload`/`selectinload` for members and content.
+- [x] Use server-side filters for duplicates (tag/correspondent/document_type/file size) to avoid client-side filtering on large datasets.
+- [x] Populate or remove unused fields (`normalized_text`, `minhash_signature`) and document the storage strategy.
+- [x] Remove deprecated in-process analysis/sync code paths once Celery is the single source of truth.
+
+## Reliability, Security & Ops
+- [x] Mask secrets in logs (Paperless token, passwords, OpenAI key) when loading config from DB.
+- [x] Validate `secret_key` length and use proper Fernet key derivation (avoid zero-padding).
+- [x] Add retries/backoff + rate-limit handling for Paperless and OpenAI calls; surface to health metrics.
+
+## AI Processing
+- [x] Emit AI job progress via WebSocket or persisted status so the UI can show live updates.
+- [x] Add per-field accept/reject/edit workflows with document preview thumbnails and OCR excerpts.
+- [x] Track AI apply failures per-document and expose retry actions in the UI.
+
+## Frontend UX
+- [x] Replace ad-hoc polling (AI jobs, batch operations) with WebSocket updates plus fallback polling.
+- [x] Add processing-history screens backed by persisted runs and task metadata.
+- [x] Cache document previews/OCR fetches on the client (or via a server cache if appropriate) to reduce API churn.
+- [x] Any other best practice UX/UI improvements that will improve the UI

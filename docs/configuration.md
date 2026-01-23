@@ -11,10 +11,12 @@ PostgreSQL and override environment defaults.
 ## Paperless-NGX connection
 
 Settings fields:
+
 - Paperless URL
 - API token (recommended) OR username/password
 
 Use Test Connection to validate credentials. This connection is required for:
+
 - Document sync
 - Applying AI metadata suggestions
 - Bulk delete / resolve operations
@@ -22,6 +24,7 @@ Use Test Connection to validate credentials. This connection is required for:
 ## Deduplication settings
 
 Core controls (Settings):
+
 - Overall match threshold (weighted confidence score, 50-100)
 - Max OCR text stored per document
 - LSH threshold (advanced)
@@ -29,20 +32,36 @@ Core controls (Settings):
 - Confidence weights (Jaccard, Fuzzy, Metadata)
 
 Notes:
+
 - Weights must sum to 100
 - Changing weights triggers a full re-analysis
 - Higher match thresholds reduce false positives but may miss near-duplicates
 
 Advanced / API-only settings (not exposed in UI):
+
 - enable_fuzzy_matching
 - fuzzy_match_sample_size
 - min_ocr_word_count
 
 These can be set via the config API if needed.
 
+## OCR storage strategy
+
+During sync, OCR text and derived fingerprints are stored to support incremental
+deduplication runs:
+
+- `document_content.full_text` stores OCR text truncated to the Max OCR length.
+- `document_content.normalized_text` stores a lowercased, whitespace-normalized
+  version of OCR text for stable hashing.
+- `documents.content_hash` stores the Paperless checksum when available, or a
+  SHA-256 hash of OCR text when not provided.
+- `documents.minhash_signature` stores a serialized MinHash signature used to
+  build the LSH index without reprocessing unchanged documents.
+
 ## AI Processing settings
 
 Settings fields:
+
 - OpenAI API key
 - Model: gpt-5.1, gpt-5-mini, gpt-5-nano
 - Reasoning effort: low, medium, high
@@ -52,7 +71,7 @@ AI settings are optional. Without an API key, AI Processing is disabled.
 
 ## Environment variables
 
-All env vars use the PAPERLESS_DEDUPE_ prefix. Common ones:
+All env vars use the PAPERLESS*DEDUPE* prefix. Common ones:
 
 - PAPERLESS_DEDUPE_DATABASE_URL
 - PAPERLESS_DEDUPE_REDIS_URL
