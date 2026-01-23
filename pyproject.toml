@@ -1,6 +1,6 @@
 [project]
 name = "paperless-dedupe"
-version = "0.1.0"
+version = "0.2.0"
 description = "Advanced document deduplication tool for paperless-ngx with fuzzy matching and web UI"
 readme = "README.md"
 license = {text = "Apache-2.0"}
