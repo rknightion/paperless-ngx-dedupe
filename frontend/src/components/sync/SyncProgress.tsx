@@ -43,6 +43,9 @@ export const SyncProgress: React.FC = () => {
 
   // Get sync status from Redux store
   const syncStatus = useAppSelector((state) => state.documents.syncStatus);
+  const pageSize = useAppSelector(
+    (state) => state.documents.pagination.pageSize
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -61,9 +64,9 @@ export const SyncProgress: React.FC = () => {
   useEffect(() => {
     // Refresh document list after sync completion
     if (syncStatus?.completed_at && !syncStatus?.is_syncing) {
-      dispatch(fetchDocuments({}));
+      dispatch(fetchDocuments({ limit: pageSize }));
     }
-  }, [syncStatus, dispatch]);
+  }, [syncStatus, dispatch, pageSize]);
 
   const handleStartSync = async () => {
     setIsLoading(true);
