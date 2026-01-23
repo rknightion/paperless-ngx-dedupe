@@ -1,5 +1,10 @@
 import { apiClient } from './client';
-import type { Configuration, TestConnectionResponse } from './types';
+import type {
+  Configuration,
+  ConfigurationResponse,
+  ConfigValidationResponse,
+  TestConnectionResponse,
+} from './types';
 
 export const configApi = {
   // Get current configuration
@@ -10,8 +15,8 @@ export const configApi = {
   // Update configuration
   async updateConfiguration(
     config: Partial<Configuration>
-  ): Promise<Configuration> {
-    return apiClient.put<Configuration>('/config/', config);
+  ): Promise<ConfigurationResponse> {
+    return apiClient.put<ConfigurationResponse>('/config/', config);
   },
 
   // Test paperless-ngx connection
@@ -28,8 +33,8 @@ export const configApi = {
   },
 
   // Reset configuration to defaults
-  async resetConfiguration(): Promise<Configuration> {
-    return apiClient.post<Configuration>('/config/reset');
+  async resetConfiguration(): Promise<ConfigurationResponse> {
+    return apiClient.post<ConfigurationResponse>('/config/reset');
   },
 
   // Get configuration schema/defaults
@@ -38,11 +43,10 @@ export const configApi = {
   },
 
   // Validate configuration
-  async validateConfiguration(config: Partial<Configuration>): Promise<{
-    valid: boolean;
-    errors: Record<string, string[]>;
-  }> {
-    return apiClient.post('/config/validate', config);
+  async validateConfiguration(
+    config: Partial<Configuration>
+  ): Promise<ConfigValidationResponse> {
+    return apiClient.post<ConfigValidationResponse>('/config/validate', config);
   },
 };
 
