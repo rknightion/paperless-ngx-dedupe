@@ -28,7 +28,7 @@ import {
   ArrowLeftRight,
   BarChart3,
 } from 'lucide-react';
-import { documentsApi } from '../../services/api/documents';
+import { documentCache } from '../../services/cache/documentCache';
 import { diffWords, diffLines, Change } from 'diff';
 import { RootState } from '../../store/store';
 
@@ -127,13 +127,13 @@ export const DocumentComparisonModal: React.FC<
     setLoading(true);
     try {
       // Fetch primary document content
-      const primaryResponse = await documentsApi.getDocumentContent(
+      const primaryResponse = await documentCache.getContent(
         primaryDocument.id
       );
       setPrimaryContent(normalizeContent(primaryResponse));
 
       // Fetch compare document content
-      const compareResponse = await documentsApi.getDocumentContent(
+      const compareResponse = await documentCache.getContent(
         selectedCompareDocument.id
       );
       setCompareContent(normalizeContent(compareResponse));
