@@ -8,6 +8,7 @@ import { DocumentsPage } from './pages/documents';
 import { DuplicatesPage } from './pages/duplicates';
 import { BulkWizardPage } from './pages/bulk';
 import { SettingsPage } from './pages/settings';
+import { ProcessingPage } from './pages/processing';
 import { AIProcessingPage } from './pages/ai';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
               element={<BulkWizardPage />}
             />
             <Route path="/ai-processing" element={<AIProcessingPage />} />
+            <Route path="/processing" element={<ProcessingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </Layout>
