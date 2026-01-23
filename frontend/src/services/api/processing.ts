@@ -4,6 +4,7 @@ import type {
   AnalyzeRequest,
   AnalyzeResponse,
   ApiResponse,
+  ProcessingHistoryResponse,
 } from './types';
 
 export const processingApi = {
@@ -28,18 +29,8 @@ export const processingApi = {
   },
 
   // Get processing history
-  async getProcessingHistory(): Promise<{
-    runs: Array<{
-      id: string;
-      started_at: string;
-      completed_at?: string;
-      status: 'completed' | 'failed' | 'cancelled';
-      documents_processed: number;
-      groups_found: number;
-      error?: string;
-    }>;
-  }> {
-    return apiClient.get('/processing/history');
+  async getProcessingHistory(): Promise<ProcessingHistoryResponse> {
+    return apiClient.get<ProcessingHistoryResponse>('/processing/history');
   },
 };
 
