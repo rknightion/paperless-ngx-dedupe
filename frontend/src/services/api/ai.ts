@@ -1,5 +1,13 @@
 import { apiClient } from './client';
-import type { AIField, AIJob, AIResult, AIHealth } from './types';
+import type {
+  AIField,
+  AIJob,
+  AIResult,
+  AIHealth,
+  AIFieldDecision,
+  AIFieldName,
+  AIFieldOverride,
+} from './types';
 
 export const aiApi = {
   async startJob(payload: {
@@ -27,14 +35,31 @@ export const aiApi = {
 
   async applyResults(
     jobId: number,
-    payload: { result_ids?: number[]; fields?: AIField[] }
+    payload: {
+      result_ids?: number[];
+      fields?: AIField[];
+      include_failed?: boolean;
+    }
   ): Promise<{
     status: string;
     applied: number;
     skipped: number[];
+    rejected?: number[];
+    failed?: Array<{ id: number; error?: string }>;
     remaining_pending: number;
   }> {
     return apiClient.post(`/ai/jobs/${jobId}/apply`, payload);
+  },
+
+  async updateResult(
+    resultId: number,
+    payload: {
+      field_decisions?: Partial<Record<AIFieldName, AIFieldDecision>>;
+      field_overrides?: Partial<Record<AIFieldName, AIFieldOverride>>;
+      status?: 'pending_review' | 'rejected';
+    }
+  ): Promise<AIResult> {
+    return apiClient.patch(`/ai/results/${resultId}`, payload);
   },
 
   async healthCheck(): Promise<AIHealth> {
