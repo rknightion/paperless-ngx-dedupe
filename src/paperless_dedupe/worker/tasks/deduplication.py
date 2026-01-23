@@ -149,18 +149,21 @@ def analyze_duplicates(
                     f"Cleared {deleted_groups} duplicate groups and {deleted_members} members"
                 )
 
-            # Get documents to process
-            query = self.db.query(Document)
+            # Get documents to process (pending only unless force rebuild)
+            pending_query = self.db.query(Document)
             if not force_rebuild:
-                query = query.filter(Document.processing_status == "pending")
+                pending_query = pending_query.filter(
+                    Document.processing_status == "pending"
+                )
             if limit:
-                query = query.limit(limit)
+                pending_query = pending_query.limit(limit)
 
-            documents = query.all()
-            total_docs = len(documents)
+            pending_documents = pending_query.all()
+            pending_ids = {doc.id for doc in pending_documents}
+            total_docs = len(pending_documents)
             task_span.set_attribute("dedupe.documents.total", total_docs)
 
-            if not documents:
+            if not pending_documents:
                 return {
                     "status": "completed",
                     "message": "No documents to process",
@@ -169,7 +172,27 @@ def analyze_duplicates(
                     "duration": 0,
                 }
 
-            logger.info(f"Processing {total_docs} documents for deduplication")
+            logger.info(
+                f"Processing {total_docs} documents for incremental deduplication"
+            )
+
+            # Remove existing duplicate groups that include pending documents
+            if not force_rebuild and pending_ids:
+                affected_group_ids = [
+                    group_id
+                    for (group_id,) in self.db.query(DuplicateMember.group_id)
+                    .filter(DuplicateMember.document_id.in_(pending_ids))
+                    .distinct()
+                    .all()
+                ]
+                if affected_group_ids:
+                    self.db.query(DuplicateMember).filter(
+                        DuplicateMember.group_id.in_(affected_group_ids)
+                    ).delete(synchronize_session=False)
+                    self.db.query(DuplicateGroup).filter(
+                        DuplicateGroup.id.in_(affected_group_ids)
+                    ).delete(synchronize_session=False)
+                    self.db.commit()
 
             # Update state with document count
             self.update_state(
@@ -194,9 +217,17 @@ def analyze_duplicates(
                     )
                 )
 
-            # Load document content in chunks
-            contents = {}
-            document_ids = [doc.id for doc in documents]
+            # Load document content in chunks for pending docs and docs missing signatures
+            contents: dict[int, str] = {}
+            all_documents = (
+                pending_documents if force_rebuild else self.db.query(Document).all()
+            )
+            content_needed_ids = {
+                doc.id
+                for doc in all_documents
+                if doc.id in pending_ids or not doc.minhash_signature
+            }
+            document_ids = list(content_needed_ids)
             chunk_size = 500
 
             with tracer.start_as_current_span(
@@ -211,28 +242,25 @@ def analyze_duplicates(
                     self.update_state(
                         state="PROGRESS",
                         meta={
-                            "current_step": f"Loading document content ({progress}/{total_docs})",
+                            "current_step": f"Loading document content ({progress}/{len(document_ids)})",
                             "progress": progress,
-                            "total": total_docs,
+                            "total": len(document_ids),
                         },
                     )
 
-                    if (
-                        broadcast_progress and i % 1000 == 0
-                    ):  # Broadcast every 1000 docs
+                    if broadcast_progress and i % 1000 == 0:
                         asyncio.run(
                             broadcast_task_status(
                                 task_id=task_id,
                                 status="processing",
                                 step="Loading document content",
                                 progress=progress,
-                                total=total_docs,
+                                total=len(document_ids),
                                 started_at=start_time,
                                 task_type="processing",
                             )
                         )
 
-                    # Query content for chunk
                     doc_contents = (
                         self.db.query(DocumentContent)
                         .filter(DocumentContent.document_id.in_(chunk_ids))
@@ -240,7 +268,6 @@ def analyze_duplicates(
                     )
 
                     for content in doc_contents:
-                        # Use full_text (populated by sync) instead of normalized_text (never populated)
                         if content.full_text:
                             contents[content.document_id] = content.full_text
 
@@ -302,10 +329,11 @@ def analyze_duplicates(
             with tracer.start_as_current_span("duplicate_analysis.compute_duplicates"):
                 duplicate_groups = asyncio.run(
                     dedup_service.find_duplicates(
-                        documents,
+                        all_documents,
                         contents,
                         threshold=threshold,
                         progress_callback=dedup_progress_callback,
+                        process_only_ids=pending_ids,
                     )
                 )
 
@@ -334,6 +362,8 @@ def analyze_duplicates(
 
             groups_created = 0
             with tracer.start_as_current_span("duplicate_analysis.persist_results"):
+                group_objects: list[DuplicateGroup] = []
+                member_objects: list[DuplicateMember] = []
                 for group in duplicate_groups:
                     # Extract component scores from the group data
                     component_scores = group.get("component_scores", {})
@@ -348,30 +378,55 @@ def analyze_duplicates(
                         filename_similarity=component_scores.get("filename"),
                         algorithm_version="2.0",
                     )
-                    self.db.add(db_group)
-                    self.db.flush()
+                    group_objects.append(db_group)
 
                     # Get document IDs from the group
                     # The service returns 'documents' which is a list of Document objects
                     documents_in_group = group.get("documents", [])
+                    if group_objects:
+                        for i, doc in enumerate(documents_in_group):
+                            doc_id = doc.id if hasattr(doc, "id") else doc.get("id")
+                            member_objects.append(
+                                DuplicateMember(
+                                    group=db_group,
+                                    document_id=doc_id,
+                                    is_primary=(i == 0),
+                                )
+                            )
 
-                    for i, doc in enumerate(documents_in_group):
-                        # Extract document ID - doc might be a Document object or dict
-                        doc_id = doc.id if hasattr(doc, "id") else doc.get("id")
+                if group_objects:
+                    self.db.bulk_save_objects(group_objects, return_defaults=True)
+                    if member_objects:
+                        for member in member_objects:
+                            if member.group_id is None and member.group is not None:
+                                member.group_id = member.group.id
+                        self.db.bulk_save_objects(member_objects)
+                    groups_created = len(group_objects)
 
-                        member = DuplicateMember(
-                            group_id=db_group.id,
-                            document_id=doc_id,
-                            is_primary=(i == 0),
-                        )
-                        self.db.add(member)
+                now = datetime.now(UTC)
+                signature_updates = dict(dedup_service.generated_signatures)
+                pending_updates = []
+                for doc_id in pending_ids:
+                    update = {
+                        "id": doc_id,
+                        "processing_status": "completed",
+                        "last_processed": now,
+                    }
+                    if doc_id in signature_updates:
+                        update["minhash_signature"] = signature_updates.pop(doc_id)
+                    pending_updates.append(update)
 
-                    groups_created += 1
+                if pending_updates:
+                    self.db.bulk_update_mappings(Document, pending_updates)
 
-                # Update document processing status
-                for doc in documents:
-                    doc.processing_status = "completed"
-                    doc.last_processed = datetime.now(UTC)
+                if signature_updates:
+                    self.db.bulk_update_mappings(
+                        Document,
+                        [
+                            {"id": doc_id, "minhash_signature": signature}
+                            for doc_id, signature in signature_updates.items()
+                        ],
+                    )
 
                 self.db.commit()
 
