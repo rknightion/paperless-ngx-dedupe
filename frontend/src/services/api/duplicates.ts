@@ -45,15 +45,9 @@ export const duplicatesApi = {
     groupIds: string[],
     reviewed: boolean = true
   ): Promise<ApiResponse> {
-    return apiClient.post<ApiResponse>('/duplicates/groups/bulk-review', {
+    return apiClient.post<ApiResponse>('/batch/duplicates/bulk-review', {
       group_ids: groupIds,
       reviewed,
-    });
-  },
-
-  async bulkDeleteGroups(groupIds: string[]): Promise<ApiResponse> {
-    return apiClient.post<ApiResponse>('/duplicates/groups/bulk-delete', {
-      group_ids: groupIds,
     });
   },
 };
