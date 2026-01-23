@@ -29,6 +29,8 @@ class TaskUpdate(BaseModel):
     started_at: str | None = None
     completed_at: str | None = None
     task_type: str | None = None
+    job_id: int | None = None
+    operation_id: str | None = None
 
 
 @router.post("/broadcast-task-update")
@@ -42,6 +44,10 @@ async def broadcast_task_update(update: TaskUpdate):
         # Determine message type with explicit task_type override
         if update.task_type == "sync":
             message_type = "sync_update"
+        elif update.task_type in {"ai", "ai_processing"}:
+            message_type = "ai_job_update"
+        elif update.task_type == "batch":
+            message_type = "batch_update"
         elif update.task_type in {"processing", "analysis", "deduplication"}:
             message_type = "processing_update"
         else:
@@ -58,6 +64,74 @@ async def broadcast_task_update(update: TaskUpdate):
                 or "duplicate" in step_lower
             ):
                 message_type = "processing_update"
+
+        if message_type == "batch_update":
+            status_value = update.status
+            if status_value == "processing":
+                status_value = "in_progress"
+
+            progress_value = update.progress or 0
+            total_value = update.total or 0
+            progress_percentage = (
+                (progress_value / total_value) * 100 if total_value else 0
+            )
+
+            result_payload: dict[str, Any] | None = None
+            if isinstance(update.result, dict):
+                result_payload = dict(update.result)
+            else:
+                result_payload = {}
+
+            if update.started_at and not result_payload.get("started_at"):
+                result_payload["started_at"] = update.started_at
+            if update.completed_at and not result_payload.get("completed_at"):
+                result_payload["completed_at"] = update.completed_at
+            if update.error and not result_payload.get("error"):
+                result_payload["error"] = update.error
+
+            if not result_payload:
+                result_payload = None
+
+            status_data = {
+                "operation_id": update.operation_id,
+                "task_id": update.task_id,
+                "status": status_value,
+                "progress_percentage": progress_percentage,
+                "current_item": progress_value,
+                "total_items": total_value,
+                "message": update.step or "",
+                "errors": [update.error] if update.error else [],
+                "results": result_payload,
+            }
+
+            await manager.send_batch_update(status_data)
+            if status_value in {"completed", "failed", "partially_completed"}:
+                await manager.send_batch_completion(status_data)
+            logger.debug(
+                f"Broadcasted {message_type} for {update.task_id}: {update.status}"
+            )
+            return {"status": "success", "message": "Update broadcast successfully"}
+
+        if message_type == "ai_job_update":
+            status_data = {
+                "job_id": update.job_id,
+                "task_id": update.task_id,
+                "status": update.status,
+                "processed_count": update.progress or 0,
+                "total_count": update.total or 0,
+                "error": update.error,
+                "started_at": update.started_at,
+                "completed_at": update.completed_at,
+                "step": update.step or "",
+            }
+
+            await manager.send_ai_update(status_data)
+            if update.status in {"completed", "failed"}:
+                await manager.send_ai_completion(status_data)
+            logger.debug(
+                f"Broadcasted {message_type} for {update.task_id}: {update.status}"
+            )
+            return {"status": "success", "message": "Update broadcast successfully"}
 
         # Build the status object matching what the frontend expects
         status_data = {
