@@ -1,10 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { documentsApi } from '../../services/api';
-import type {
-  Document,
-  DocumentListResponse as _DocumentListResponse,
-  DocumentQueryParams,
-} from '../../services/api/types';
+import type { Document, DocumentQueryParams } from '../../services/api/types';
 
 // Async thunks
 export const fetchDocuments = createAsyncThunk(
@@ -36,6 +32,10 @@ interface DocumentsState {
     count: number;
     next: string | null;
     previous: string | null;
+    nextCursor: string | null;
+    prevCursor: string | null;
+    hasNext: boolean;
+    hasPrev: boolean;
     currentPage: number;
     pageSize: number;
   };
@@ -73,6 +73,10 @@ const initialState: DocumentsState = {
     count: 0,
     next: null,
     previous: null,
+    nextCursor: null,
+    prevCursor: null,
+    hasNext: false,
+    hasPrev: false,
     currentPage: 1,
     pageSize: 25,
   },
@@ -221,10 +225,25 @@ const documentsSlice = createSlice({
       })
       .addCase(fetchDocuments.fulfilled, (state, action) => {
         state.loading.list = false;
-        state.documents = action.payload.results;
+        const requestedCursor =
+          (action.meta.arg as DocumentQueryParams | undefined)?.cursor || null;
+
+        if (requestedCursor) {
+          state.documents = [...state.documents, ...action.payload.results];
+        } else {
+          state.documents = action.payload.results;
+          state.pagination.currentPage = 1;
+        }
+
         state.pagination.count = action.payload.count;
         state.pagination.next = action.payload.next || null;
         state.pagination.previous = action.payload.previous || null;
+        state.pagination.nextCursor = action.payload.next_cursor || null;
+        state.pagination.prevCursor = action.payload.prev_cursor || null;
+        state.pagination.hasNext =
+          action.payload.has_next ?? Boolean(action.payload.next_cursor);
+        state.pagination.hasPrev =
+          action.payload.has_prev ?? Boolean(action.payload.prev_cursor);
       })
       .addCase(fetchDocuments.rejected, (state, action) => {
         state.loading.list = false;
