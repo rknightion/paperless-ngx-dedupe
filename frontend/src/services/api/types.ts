@@ -1,3 +1,5 @@
+import type { components } from './generated';
+
 // API Response Types
 export interface ApiResponse<T = any> {
   data?: T;
@@ -57,12 +59,15 @@ export interface DocumentPreview {
   paperless_id?: number;
 }
 
-export interface DocumentListResponse {
+export type DocumentListResponse = Omit<
+  components['schemas']['DocumentListResponse'],
+  'results'
+> & {
   results: Document[];
-  count: number;
-  next?: string;
-  previous?: string;
-}
+};
+
+export type DocumentStatsResponse =
+  components['schemas']['DocumentStatsResponse'];
 
 // Duplicate Types
 export interface DuplicateGroup {
@@ -105,6 +110,31 @@ export interface ProcessingStatus {
   started_at?: string;
   completed_at?: string;
   error?: string;
+  status?: string;
+  task_id?: string;
+  documents_processed?: number;
+  groups_found?: number;
+}
+
+export type ProcessingHistoryResponse =
+  components['schemas']['ProcessingHistoryResponse'];
+
+export interface BatchOperationUpdate {
+  operation_id?: string | null;
+  task_id?: string | null;
+  status: string;
+  progress_percentage: number;
+  current_item: number;
+  total_items: number;
+  message: string;
+  errors?: string[];
+  results?: {
+    processed?: number;
+    failed?: number;
+    started_at?: string | null;
+    completed_at?: string | null;
+    error?: string | null;
+  } | null;
 }
 
 export interface AnalyzeRequest {
@@ -120,42 +150,48 @@ export interface AnalyzeResponse {
 }
 
 // Configuration Types
-export interface Configuration {
-  paperless_url: string;
+export type ConfigurationResponse = components['schemas']['ConfigResponse'];
+
+export type Configuration = Omit<
+  ConfigurationResponse,
+  | 'status'
+  | 'message'
+  | 'updated_fields'
+  | 'weights_changed'
+  | 'reanalysis_triggered'
+  | 'task_id'
+> & {
   paperless_api_token?: string;
-  paperless_username?: string;
   paperless_password?: string;
   openai_api_key?: string;
-  fuzzy_match_threshold: number;
-  max_ocr_length: number;
-  lsh_threshold: number;
-  minhash_num_perm: number;
-  confidence_weight_jaccard?: number;
-  confidence_weight_fuzzy?: number;
-  confidence_weight_metadata?: number;
-  openai_model?: string;
-  openai_reasoning_effort?: string;
-  ai_max_input_chars?: number;
-  openai_configured?: boolean;
-  openai_health_status?: string | null;
-  openai_health_checked_at?: string | null;
-}
+};
 
-export interface TestConnectionResponse {
-  success: boolean;
-  message: string;
-  version?: string;
-}
+export type TestConnectionResponse =
+  components['schemas']['ConnectionTestResponse'];
+
+export type ConfigValidationResponse =
+  components['schemas']['ConfigValidationResponse'];
 
 // WebSocket Types
 export interface WebSocketMessage {
-  type: 'processing_update' | 'error' | 'completed';
-  data: ProcessingStatus | string;
+  type:
+    | 'processing_update'
+    | 'processing_completed'
+    | 'sync_update'
+    | 'sync_completed'
+    | 'ai_job_update'
+    | 'ai_job_completed'
+    | 'batch_update'
+    | 'batch_completed'
+    | 'error';
+  data: ProcessingStatus | AIJobUpdate | BatchOperationUpdate | string | any;
 }
 
 // API Error Types
 export interface ApiError {
+  code?: string;
   detail: string;
+  field_errors?: Record<string, string[]> | null;
   status_code?: number;
 }
 
@@ -169,10 +205,11 @@ export interface PaginatedResponse<T> {
 
 // Query parameters
 export interface DocumentQueryParams {
-  page?: number;
-  page_size?: number;
+  cursor?: string;
+  limit?: number;
   search?: string;
-  ordering?: string;
+  order_by?: string;
+  order_desc?: boolean;
   processing_status?: string;
 }
 
@@ -192,8 +229,11 @@ export interface DuplicateGroupQueryParams {
     | 'document_type';
   sort_order?: 'asc' | 'desc';
   tag?: string;
+  tags?: string[];
   correspondent?: string;
   document_type?: string;
+  min_file_size?: number;
+  max_file_size?: number;
   // Dynamic confidence weight parameters
   use_jaccard?: boolean;
   use_fuzzy?: boolean;
@@ -209,6 +249,12 @@ export type AIField =
   | 'tags'
   | 'date'
   | 'all';
+
+export type AIFieldName = Exclude<AIField, 'all'>;
+
+export type AIFieldDecision = 'accept' | 'reject' | 'edit' | 'pending';
+
+export type AIFieldOverride = string | string[] | null;
 
 export interface AIJob {
   id: number;
@@ -246,6 +292,8 @@ export interface AIResult {
   date_confidence?: number | null;
   requested_fields?: AIField[];
   applied_at?: string | null;
+  field_decisions?: Partial<Record<AIFieldName, AIFieldDecision>>;
+  field_overrides?: Partial<Record<AIFieldName, AIFieldOverride>>;
   error?: string | null;
 }
 
@@ -253,4 +301,16 @@ export interface AIHealth {
   healthy: boolean;
   message?: string | null;
   checked_at?: string;
+}
+
+export interface AIJobUpdate {
+  job_id?: number | null;
+  task_id?: string | null;
+  status: string;
+  processed_count: number;
+  total_count: number;
+  error?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  step?: string | null;
 }
