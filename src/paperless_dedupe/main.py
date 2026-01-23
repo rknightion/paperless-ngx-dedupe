@@ -3,7 +3,8 @@ import time
 import traceback
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -149,6 +150,18 @@ async def lifespan(app: FastAPI):
     from paperless_dedupe.models.database import AppConfig, get_db
 
     db = next(get_db())
+    sensitive_keys = {"paperless_api_token", "paperless_password", "openai_api_key"}
+
+    def mask_config_value(key, value):
+        value_str = "" if value is None else str(value)
+        if key in sensitive_keys:
+            if not value_str:
+                return ""
+            if len(value_str) <= 4:
+                return "***"
+            return f"{value_str[:2]}***{value_str[-2:]}"
+        return value_str[:50] + "..." if len(value_str) > 50 else value_str
+
     try:
         config_items = db.query(AppConfig).all()
         for item in config_items:
@@ -170,10 +183,7 @@ async def lifespan(app: FastAPI):
 
                 setattr(settings, item.key, value)
                 # Handle logging for different value types
-                value_str = str(value)
-                display_value = (
-                    value_str[:50] + "..." if len(value_str) > 50 else value_str
-                )
+                display_value = mask_config_value(item.key, value)
                 logger.info(f"Loaded config from database: {item.key}={display_value}")
     except Exception as e:
         logger.warning(f"Could not load config from database: {e}")
@@ -221,6 +231,48 @@ app.add_middleware(
 instrument_fastapi_app(app, tracer_provider=tracer_provider)
 
 
+def _format_field_errors(errors: list[dict]) -> dict[str, list[str]]:
+    field_errors: dict[str, list[str]] = {}
+    for err in errors:
+        loc = list(err.get("loc", []))
+        if loc and loc[0] in {"body", "query", "path", "header", "cookie"}:
+            loc = loc[1:]
+        field = ".".join(str(part) for part in loc) if loc else "non_field"
+        field_errors.setdefault(field, []).append(err.get("msg", "Invalid value"))
+    return field_errors
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    field_errors = _format_field_errors(exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={
+            "code": "validation_error",
+            "detail": "Request validation failed",
+            "field_errors": field_errors,
+        },
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    detail = exc.detail
+    code = f"http_{exc.status_code}"
+    field_errors = None
+    if isinstance(detail, dict):
+        code = detail.get("code", code)
+        field_errors = detail.get("field_errors")
+        detail = detail.get("detail", detail)
+    if not isinstance(detail, str):
+        detail = str(detail)
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"code": code, "detail": detail, "field_errors": field_errors},
+    )
+
+
 # Add global exception handler middleware
 @app.middleware("http")
 async def catch_exceptions_middleware(request: Request, call_next):
@@ -236,7 +288,12 @@ async def catch_exceptions_middleware(request: Request, call_next):
 
         # Return a proper error response
         return JSONResponse(
-            status_code=500, content={"detail": f"Internal server error: {str(exc)}"}
+            status_code=500,
+            content={
+                "code": "internal_error",
+                "detail": f"Internal server error: {str(exc)}",
+                "field_errors": None,
+            },
         )
 
 
@@ -249,7 +306,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.error(f"Traceback:\n{traceback.format_exc()}")
 
     return JSONResponse(
-        status_code=500, content={"detail": f"An unexpected error occurred: {str(exc)}"}
+        status_code=500,
+        content={
+            "code": "internal_error",
+            "detail": f"An unexpected error occurred: {str(exc)}",
+            "field_errors": None,
+        },
     )
 
 
