@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config_utils import get_current_paperless_config
 from paperless_dedupe.models.database import get_db
+from paperless_dedupe.observability.retry_metrics import snapshot_retry_metrics
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from paperless_dedupe.worker.celery_app import app as celery_app
 
@@ -353,6 +354,8 @@ async def get_health_metrics(db: Session = Depends(get_db)):
         "timestamp": datetime.utcnow().isoformat(),
         "uptime_seconds": time.time() - APP_START_TIME,
     }
+
+    metrics["external_service_retries"] = snapshot_retry_metrics()
 
     # Database metrics
     try:
