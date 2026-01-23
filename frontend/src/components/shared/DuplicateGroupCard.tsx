@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import type { DuplicateGroup } from '../../services/api/types';
 import { configApi } from '../../services/api/config';
-import { documentsApi } from '../../services/api/documents';
+import { documentCache } from '../../services/cache/documentCache';
 import SimilarityIndicator from '../duplicates/SimilarityIndicator';
 import { DocumentComparisonModal } from '../duplicates/DocumentComparisonModal';
 
@@ -306,17 +306,19 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
     if (previewCache[documentId] || previewLoading[documentId]) {
       return;
     }
+    const cached = documentCache.peekPreviewDataUrl(documentId);
+    if (cached) {
+      setPreviewCache((prev) => ({ ...prev, [documentId]: cached }));
+      return;
+    }
+
     setPreviewLoading((prev) => ({ ...prev, [documentId]: true }));
     try {
-      const response = await documentsApi.getDocumentPreview(documentId);
-      if (response?.preview) {
-        const dataUrl = `data:${response.content_type || 'image/png'};base64,${
-          response.preview
-        }`;
-        setPreviewCache((prev) => ({ ...prev, [documentId]: dataUrl }));
-      } else {
-        setPreviewCache((prev) => ({ ...prev, [documentId]: '' }));
-      }
+      const dataUrl = await documentCache.getPreviewDataUrl(documentId);
+      setPreviewCache((prev) => ({
+        ...prev,
+        [documentId]: dataUrl || '',
+      }));
     } catch (error) {
       console.error('Failed to fetch preview', error);
       setPreviewCache((prev) => ({ ...prev, [documentId]: '' }));
