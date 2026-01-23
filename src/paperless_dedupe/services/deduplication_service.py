@@ -26,6 +26,7 @@ class DeduplicationService:
             threshold=settings.lsh_threshold, num_perm=settings.minhash_num_perm
         )
         self.minhashes = {}
+        self.generated_signatures: dict[int, bytes] = {}
 
     def preprocess_text(self, text: str) -> str:
         """Preprocess text for deduplication"""
@@ -202,28 +203,42 @@ class DeduplicationService:
             threshold=settings.lsh_threshold, num_perm=settings.minhash_num_perm
         )
         self.minhashes = {}
+        self.generated_signatures = {}
 
         total_docs = len(documents)
         processed = 0
 
         for idx, doc in enumerate(documents):
-            if doc.id not in contents or not contents[doc.id]:
-                continue
+            minhash = None
+            content_text = contents.get(doc.id)
 
-            # Skip documents with too few words
-            word_count = len(contents[doc.id].split())
-            if word_count < settings.min_ocr_word_count:
-                logger.debug(
-                    f"Skipping document {doc.id} with only {word_count} words (min: {settings.min_ocr_word_count})"
-                )
-                continue
+            if doc.minhash_signature:
+                try:
+                    minhash = self.deserialize_minhash(doc.minhash_signature)
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to deserialize MinHash for document %s: %s",
+                        doc.id,
+                        exc,
+                    )
+                    minhash = None
+            elif content_text:
+                # Skip documents with too few words
+                word_count = len(content_text.split())
+                if word_count < settings.min_ocr_word_count:
+                    logger.debug(
+                        f"Skipping document {doc.id} with only {word_count} words (min: {settings.min_ocr_word_count})"
+                    )
+                    continue
 
-            minhash = self.create_minhash(contents[doc.id])
+                minhash = self.create_minhash(content_text)
+                if minhash:
+                    self.generated_signatures[doc.id] = self.serialize_minhash(minhash)
+
             if minhash:
                 self.minhashes[doc.id] = minhash
                 self.lsh_index.insert(f"doc_{doc.id}", minhash)
-
-            processed += 1
+                processed += 1
 
             # Report progress more frequently at the beginning, then less often
             # First 100: every document
@@ -256,29 +271,37 @@ class DeduplicationService:
         contents: dict[int, str],
         threshold: float = None,
         progress_callback: Callable | None = None,
+        process_only_ids: set[int] | None = None,
+        build_index: bool = True,
     ) -> list[dict]:
         """Find duplicate document groups"""
 
         threshold = threshold or (settings.fuzzy_match_threshold / 100.0)
 
         # Build LSH index with progress tracking
-        await self.build_lsh_index(documents, contents, progress_callback)
+        if build_index:
+            await self.build_lsh_index(documents, contents, progress_callback)
 
+        documents_to_process = (
+            [doc for doc in documents if doc.id in process_only_ids]
+            if process_only_ids
+            else documents
+        )
         logger.info(
-            f"Starting duplicate detection for {len(documents)} documents with threshold {threshold}"
+            f"Starting duplicate detection for {len(documents_to_process)} documents with threshold {threshold}"
         )
 
         # Find duplicate groups
         duplicate_groups = []
         processed = set()
-        total_docs = len(documents)
+        total_docs = len(documents_to_process)
         total_comparisons = 0
         candidates_found = 0
 
         # Create document lookup dict for O(1) access
         doc_lookup = {doc.id: doc for doc in documents}
 
-        for idx, doc in enumerate(documents):
+        for idx, doc in enumerate(documents_to_process):
             if doc.id in processed or doc.id not in self.minhashes:
                 continue
 
