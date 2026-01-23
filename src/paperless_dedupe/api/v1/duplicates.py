@@ -4,7 +4,7 @@ import traceback
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session, aliased, selectinload
 
 from paperless_dedupe.models.database import (
     Document,
@@ -107,6 +107,22 @@ async def get_duplicate_groups(
     min_confidence: float = Query(0.0, ge=0.0, le=1.0),
     reviewed: bool | None = None,
     resolved: bool | None = None,
+    tag: str | None = Query(None, description="Filter groups by a tag"),
+    tags: list[str] | None = Query(
+        None, description="Filter groups by tags (repeatable or comma-separated)"
+    ),
+    correspondent: str | None = Query(
+        None, description="Filter groups by correspondent"
+    ),
+    document_type: str | None = Query(
+        None, description="Filter groups by document type"
+    ),
+    min_file_size: int | None = Query(
+        None, ge=0, description="Filter groups by minimum file size in bytes"
+    ),
+    max_file_size: int | None = Query(
+        None, ge=0, description="Filter groups by maximum file size in bytes"
+    ),
     sort_by: str = Query(
         "confidence",
         pattern="^(confidence|created|documents|filename|file_size|page_count|correspondent|document_type)$",
@@ -124,7 +140,11 @@ async def get_duplicate_groups(
         logger.debug(
             f"Getting duplicate groups: page={page}, page_size={page_size}, sort_by={sort_by}, sort_order={sort_order}"
         )
-        query = db.query(DuplicateGroup)
+        query = db.query(DuplicateGroup).options(
+            selectinload(DuplicateGroup.members)
+            .selectinload(DuplicateMember.document)
+            .selectinload(Document.content)
+        )
 
         # Build confidence weights for dynamic recalculation
         weights = {
@@ -140,6 +160,50 @@ async def get_duplicate_groups(
             query = query.filter(DuplicateGroup.reviewed == reviewed)
         if resolved is not None:
             query = query.filter(DuplicateGroup.resolved == resolved)
+
+        # Apply server-side document filters (tags/correspondent/document_type/file size)
+        from sqlalchemy import and_, func
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        tag_values: list[str] = []
+        if tag:
+            tag_values.append(tag)
+        if tags:
+            for entry in tags:
+                if entry and "," in entry:
+                    tag_values.extend([part.strip() for part in entry.split(",")])
+                elif entry:
+                    tag_values.append(entry)
+        tag_values = [value for value in tag_values if value]
+
+        doc_filters = []
+        if tag_values:
+            tag_clauses = [
+                Document.tags.cast(JSONB).contains([value]) for value in tag_values
+            ]
+            doc_filters.append(and_(*tag_clauses))
+        if correspondent:
+            doc_filters.append(Document.correspondent == correspondent)
+        if document_type:
+            doc_filters.append(Document.document_type == document_type)
+        if min_file_size is not None or max_file_size is not None:
+            size_expr = func.coalesce(
+                Document.original_file_size, Document.archive_file_size, 0
+            )
+            if min_file_size is not None:
+                doc_filters.append(size_expr >= min_file_size)
+            if max_file_size is not None:
+                doc_filters.append(size_expr <= max_file_size)
+
+        if doc_filters:
+            matching_groups = (
+                db.query(DuplicateMember.group_id)
+                .join(Document, DuplicateMember.document_id == Document.id)
+                .filter(*doc_filters)
+                .distinct()
+                .subquery()
+            )
+            query = query.filter(DuplicateGroup.id.in_(matching_groups))
 
         # Get total count before any joins for sorting
         from sqlalchemy import func
@@ -236,35 +300,22 @@ async def get_duplicate_groups(
             content_stats: dict[int, dict[str, int | None]] = {}
 
             for member in group.members:
+                content_row = member.document.content
+                if content_row and content_row.full_text:
+                    document_contents[member.document.id] = content_row.full_text
+                    content_stats[member.document.id] = {
+                        "word_count": content_row.word_count
+                    }
+                else:
+                    content_stats[member.document.id] = {"word_count": None}
+
                 if member.is_primary:
                     primary_doc = member.document
-                    # Load primary document content
-                    content_row = (
-                        db.query(DocumentContent)
-                        .filter(DocumentContent.document_id == primary_doc.id)
-                        .first()
+                    primary_content = (
+                        content_row.full_text
+                        if content_row and content_row.full_text
+                        else None
                     )
-                    if content_row:
-                        primary_content = content_row.full_text
-                        document_contents[primary_doc.id] = primary_content
-                        content_stats[primary_doc.id] = {
-                            "word_count": content_row.word_count
-                        }
-                    break
-
-            # Load content for all documents in the group for similarity calculations
-            for member in group.members:
-                if member.document.id not in document_contents:
-                    content_row = (
-                        db.query(DocumentContent)
-                        .filter(DocumentContent.document_id == member.document.id)
-                        .first()
-                    )
-                    if content_row:
-                        document_contents[member.document.id] = content_row.full_text
-                        content_stats[member.document.id] = {
-                            "word_count": content_row.word_count
-                        }
 
             documents = []
             for member in group.members:
@@ -375,7 +426,16 @@ async def get_duplicate_groups(
 @router.get("/groups/{group_id}", response_model=DuplicateGroupResponse)
 async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
     """Get single duplicate group"""
-    group = db.query(DuplicateGroup).filter(DuplicateGroup.id == group_id).first()
+    group = (
+        db.query(DuplicateGroup)
+        .options(
+            selectinload(DuplicateGroup.members)
+            .selectinload(DuplicateMember.document)
+            .selectinload(Document.content)
+        )
+        .filter(DuplicateGroup.id == group_id)
+        .first()
+    )
     if not group:
         raise HTTPException(status_code=404, detail="Duplicate group not found")
 
@@ -388,33 +448,18 @@ async def get_duplicate_group(group_id: int, db: Session = Depends(get_db)):
     content_stats: dict[int, dict[str, int | None]] = {}
 
     for member in group.members:
+        content_row = member.document.content
+        if content_row and content_row.full_text:
+            document_contents[member.document.id] = content_row.full_text
+            content_stats[member.document.id] = {"word_count": content_row.word_count}
+        else:
+            content_stats[member.document.id] = {"word_count": None}
+
         if member.is_primary:
             primary_doc = member.document
-            # Load primary document content
-            content_row = (
-                db.query(DocumentContent)
-                .filter(DocumentContent.document_id == primary_doc.id)
-                .first()
+            primary_content = (
+                content_row.full_text if content_row and content_row.full_text else None
             )
-            if content_row:
-                primary_content = content_row.full_text
-                document_contents[primary_doc.id] = primary_content
-                content_stats[primary_doc.id] = {"word_count": content_row.word_count}
-            break
-
-    # Load content for all documents in the group for similarity calculations
-    for member in group.members:
-        if member.document.id not in document_contents:
-            content_row = (
-                db.query(DocumentContent)
-                .filter(DocumentContent.document_id == member.document.id)
-                .first()
-            )
-            if content_row:
-                document_contents[member.document.id] = content_row.full_text
-                content_stats[member.document.id] = {
-                    "word_count": content_row.word_count
-                }
 
     documents = []
     for member in group.members:
@@ -511,7 +556,13 @@ async def get_duplicate_statistics(db: Session = Depends(get_db)):
     resolved_groups = db.query(DuplicateGroup).filter(DuplicateGroup.resolved).count()
 
     # Get confidence distribution
-    groups = db.query(DuplicateGroup).all()
+    groups = (
+        db.query(DuplicateGroup)
+        .options(
+            selectinload(DuplicateGroup.members).selectinload(DuplicateMember.document)
+        )
+        .all()
+    )
     confidence_distribution = {
         "high": sum(1 for g in groups if g.confidence_score >= 0.8),
         "medium": sum(1 for g in groups if 0.5 <= g.confidence_score < 0.8),
