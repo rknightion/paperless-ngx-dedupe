@@ -18,6 +18,8 @@ async def broadcast_task_status(
     result: dict[str, Any] | None = None,
     websocket_url: str | None = None,
     task_type: str | None = None,
+    job_id: int | None = None,
+    operation_id: str | None = None,
     started_at: Any | None = None,
     completed_at: Any | None = None,
 ) -> None:
@@ -32,6 +34,9 @@ async def broadcast_task_status(
         error: Error message if task failed
         result: Task result data
         websocket_url: Base URL of the FastAPI server
+        task_type: Optional task category identifier
+        job_id: Optional job identifier (for AI jobs)
+        operation_id: Optional batch operation identifier
     """
     try:
         # Determine the WebSocket URL based on environment
@@ -55,6 +60,10 @@ async def broadcast_task_status(
             "result": result,
             "task_type": task_type,
         }
+        if job_id is not None:
+            update_data["job_id"] = job_id
+        if operation_id is not None:
+            update_data["operation_id"] = operation_id
 
         if started_at:
             if isinstance(started_at, datetime):
