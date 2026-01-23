@@ -128,6 +128,26 @@ class ConnectionManager:
         message = {"type": "sync_completed", "data": completion_data}
         await self.broadcast(message)
 
+    async def send_ai_update(self, ai_status: dict):
+        """Send AI processing job status update to all clients"""
+        message = {"type": "ai_job_update", "data": ai_status}
+        await self.broadcast(message)
+
+    async def send_ai_completion(self, completion_data: dict):
+        """Send AI processing completion message"""
+        message = {"type": "ai_job_completed", "data": completion_data}
+        await self.broadcast(message)
+
+    async def send_batch_update(self, batch_status: dict):
+        """Send batch operation status update to all clients"""
+        message = {"type": "batch_update", "data": batch_status}
+        await self.broadcast(message)
+
+    async def send_batch_completion(self, completion_data: dict):
+        """Send batch operation completion message"""
+        message = {"type": "batch_completed", "data": completion_data}
+        await self.broadcast(message)
+
     def get_connection_count(self) -> int:
         """Get number of active connections"""
         return len(self.active_connections)
@@ -275,3 +295,25 @@ async def broadcast_sync_update(sync_status: dict):
 async def broadcast_sync_completion(completion_data: dict):
     """Utility function to broadcast sync completion"""
     await manager.send_sync_completion(completion_data)
+
+
+# AI-specific broadcast functions
+async def broadcast_ai_update(ai_status: dict):
+    """Utility function to broadcast AI job updates"""
+    await manager.send_ai_update(ai_status)
+
+
+async def broadcast_ai_completion(completion_data: dict):
+    """Utility function to broadcast AI job completion"""
+    await manager.send_ai_completion(completion_data)
+
+
+# Batch-specific broadcast functions
+async def broadcast_batch_update(batch_status: dict):
+    """Utility function to broadcast batch operation updates"""
+    await manager.send_batch_update(batch_status)
+
+
+async def broadcast_batch_completion(completion_data: dict):
+    """Utility function to broadcast batch operation completion"""
+    await manager.send_batch_completion(completion_data)
