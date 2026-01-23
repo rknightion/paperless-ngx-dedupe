@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -8,19 +8,15 @@ import {
   Badge,
   Button,
 } from '../ui';
-import {
-  Loader2,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  X,
-  RefreshCw,
-} from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, AlertTriangle, X } from 'lucide-react';
 import {
   batchApi,
   OperationStatus,
   OperationType,
 } from '../../services/api/batch';
+import { wsClient } from '../../services/websocket';
+import { useProcessingStatus } from '../../hooks/redux';
+import type { BatchOperationUpdate } from '../../services/api/types';
 
 interface OperationProgressProps {
   operationId: string;
@@ -34,40 +30,80 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
   onClose,
 }) => {
   const [progress, setProgress] = useState<any>(null);
-  const [polling, setPolling] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { wsConnected } = useProcessingStatus();
+
+  const isTerminal =
+    progress &&
+    [
+      OperationStatus.COMPLETED,
+      OperationStatus.FAILED,
+      OperationStatus.PARTIALLY_COMPLETED,
+    ].includes(progress.status);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const status = await batchApi.getOperationStatus(operationId);
+      setProgress(status);
+
+      if (
+        status.status === OperationStatus.COMPLETED ||
+        status.status === OperationStatus.FAILED ||
+        status.status === OperationStatus.PARTIALLY_COMPLETED
+      ) {
+        if (onComplete) {
+          onComplete();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to get operation status:', err);
+      setError('Failed to get operation status');
+    }
+  }, [operationId, onComplete]);
 
   useEffect(() => {
-    if (!polling) return;
+    fetchStatus();
+  }, [fetchStatus]);
 
-    const pollStatus = async () => {
-      try {
-        const status = await batchApi.getOperationStatus(operationId);
-        setProgress(status);
+  useEffect(() => {
+    const handleUpdate = (update: BatchOperationUpdate) => {
+      if (!update?.operation_id || update.operation_id !== operationId) return;
 
-        // Stop polling if operation is complete
-        if (
-          status.status === OperationStatus.COMPLETED ||
-          status.status === OperationStatus.FAILED ||
-          status.status === OperationStatus.PARTIALLY_COMPLETED
-        ) {
-          setPolling(false);
-          if (onComplete) {
-            onComplete();
-          }
+      setProgress((prev: any) => ({
+        ...(prev || {}),
+        ...update,
+        errors: update.errors ?? prev?.errors ?? [],
+        results: update.results ?? prev?.results,
+        message: update.message || prev?.message,
+      }));
+
+      if (
+        update.status === OperationStatus.COMPLETED ||
+        update.status === OperationStatus.FAILED ||
+        update.status === OperationStatus.PARTIALLY_COMPLETED
+      ) {
+        if (onComplete) {
+          onComplete();
         }
-      } catch (err) {
-        console.error('Failed to get operation status:', err);
-        setError('Failed to get operation status');
-        setPolling(false);
       }
     };
 
-    // Initial poll to get current status
-    pollStatus();
+    wsClient.on('batch_update', handleUpdate);
+    wsClient.on('batch_completed', handleUpdate);
 
-    // No interval needed - WebSocket will handle updates
-  }, [operationId, polling, onComplete]);
+    return () => {
+      wsClient.off('batch_update', handleUpdate);
+      wsClient.off('batch_completed', handleUpdate);
+    };
+  }, [operationId, onComplete]);
+
+  useEffect(() => {
+    if (wsConnected || isTerminal) return;
+    const interval = setInterval(() => {
+      fetchStatus();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [wsConnected, isTerminal, fetchStatus]);
 
   const getStatusIcon = () => {
     if (!progress) return <Loader2 className="h-5 w-5 animate-spin" />;
@@ -108,7 +144,6 @@ export const OperationProgress: React.FC<OperationProgressProps> = ({
   const handleCancel = async () => {
     try {
       await batchApi.cancelOperation(operationId);
-      setPolling(false);
       if (onClose) {
         onClose();
       }
