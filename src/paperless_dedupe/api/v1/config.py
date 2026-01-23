@@ -1,7 +1,8 @@
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
@@ -138,84 +139,162 @@ class ConfigUpdate(BaseModel):
 class ConnectionTestResponse(BaseModel):
     success: bool
     message: str
-    paperless_version: str | None = None
+    version: str | None = None
 
 
-@router.get("/")
-async def get_config(db: Session = Depends(get_db)):
-    """Get current configuration"""
-    # Get config from database
-    db_config = {}
-    config_items = db.query(AppConfig).all()
-    for item in config_items:
-        # Convert stored text values back to appropriate types
-        value = item.value
-        if value is not None and isinstance(value, str):
-            # Try to convert to appropriate type
-            if value.lower() in ("true", "false"):
-                value = value.lower() == "true"
-            elif value.replace(".", "", 1).replace("-", "", 1).isdigit():
-                # It's a number
-                if "." in value:
-                    value = float(value)
-                else:
-                    value = int(value)
-            # Otherwise keep as string
-        db_config[item.key] = value
+class ConfigResponse(BaseModel):
+    paperless_url: str | None = None
+    paperless_username: str | None = None
+    paperless_api_configured: bool = False
+    fuzzy_match_threshold: int
+    max_ocr_length: int
+    min_ocr_word_count: int
+    lsh_threshold: float
+    enable_fuzzy_matching: bool
+    fuzzy_match_sample_size: int
+    confidence_weight_jaccard: int
+    confidence_weight_fuzzy: int
+    confidence_weight_metadata: int
+    confidence_weight_filename: int
+    openai_model: str | None = None
+    openai_reasoning_effort: str | None = None
+    ai_max_input_chars: int
+    openai_configured: bool = False
+    openai_health_status: str | None = None
+    openai_health_checked_at: str | None = None
+    minhash_num_perm: int
+    lsh_num_bands: int
+    api_rate_limit: int
+    api_page_size: int
+    status: str | None = None
+    message: str | None = None
+    updated_fields: list[str] | None = None
+    weights_changed: bool | None = None
+    reanalysis_triggered: bool | None = None
+    task_id: str | None = None
 
-    # Merge with settings
-    return {
-        "paperless_url": db_config.get("paperless_url", settings.paperless_url),
+
+class ConfigValidationResponse(BaseModel):
+    valid: bool
+    errors: dict[str, list[str]] = {}
+
+
+def _coerce_config_value(value: str | None) -> Any:
+    if value is None or not isinstance(value, str):
+        return value
+    if value.lower() in ("true", "false"):
+        return value.lower() == "true"
+    if value.replace(".", "", 1).replace("-", "", 1).isdigit():
+        return float(value) if "." in value else int(value)
+    return value
+
+
+def _load_db_config(db: Session) -> dict[str, Any]:
+    config_items: dict[str, Any] = {}
+    for item in db.query(AppConfig).all():
+        config_items[item.key] = _coerce_config_value(item.value)
+    return config_items
+
+
+def _build_config_response(
+    config_items: dict[str, Any],
+    base_settings,
+    meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    response = {
+        "paperless_url": config_items.get("paperless_url", base_settings.paperless_url),
+        "paperless_username": config_items.get(
+            "paperless_username", base_settings.paperless_username
+        ),
         "paperless_api_configured": bool(
-            db_config.get("paperless_api_token", settings.paperless_api_token)
+            config_items.get("paperless_api_token", base_settings.paperless_api_token)
             or (
-                db_config.get("paperless_username", settings.paperless_username)
-                and db_config.get("paperless_password", settings.paperless_password)
+                config_items.get("paperless_username", base_settings.paperless_username)
+                and config_items.get(
+                    "paperless_password", base_settings.paperless_password
+                )
             )
         ),
-        "fuzzy_match_threshold": db_config.get(
-            "fuzzy_match_threshold", settings.fuzzy_match_threshold
+        "fuzzy_match_threshold": config_items.get(
+            "fuzzy_match_threshold", base_settings.fuzzy_match_threshold
         ),
-        "max_ocr_length": db_config.get("max_ocr_length", settings.max_ocr_length),
-        "lsh_threshold": db_config.get("lsh_threshold", settings.lsh_threshold),
-        "enable_fuzzy_matching": db_config.get(
-            "enable_fuzzy_matching", settings.enable_fuzzy_matching
+        "max_ocr_length": config_items.get(
+            "max_ocr_length", base_settings.max_ocr_length
         ),
-        "fuzzy_match_sample_size": db_config.get(
-            "fuzzy_match_sample_size", settings.fuzzy_match_sample_size
+        "min_ocr_word_count": config_items.get(
+            "min_ocr_word_count", base_settings.min_ocr_word_count
         ),
-        "confidence_weight_jaccard": db_config.get(
-            "confidence_weight_jaccard", settings.confidence_weight_jaccard
+        "lsh_threshold": config_items.get("lsh_threshold", base_settings.lsh_threshold),
+        "enable_fuzzy_matching": config_items.get(
+            "enable_fuzzy_matching", base_settings.enable_fuzzy_matching
         ),
-        "confidence_weight_fuzzy": db_config.get(
-            "confidence_weight_fuzzy", settings.confidence_weight_fuzzy
+        "fuzzy_match_sample_size": config_items.get(
+            "fuzzy_match_sample_size", base_settings.fuzzy_match_sample_size
         ),
-        "confidence_weight_metadata": db_config.get(
-            "confidence_weight_metadata", settings.confidence_weight_metadata
+        "confidence_weight_jaccard": config_items.get(
+            "confidence_weight_jaccard", base_settings.confidence_weight_jaccard
         ),
-        "confidence_weight_filename": db_config.get(
-            "confidence_weight_filename", settings.confidence_weight_filename
+        "confidence_weight_fuzzy": config_items.get(
+            "confidence_weight_fuzzy", base_settings.confidence_weight_fuzzy
         ),
-        "openai_model": db_config.get("openai_model", settings.openai_model),
-        "openai_reasoning_effort": db_config.get(
-            "openai_reasoning_effort", settings.openai_reasoning_effort
+        "confidence_weight_metadata": config_items.get(
+            "confidence_weight_metadata", base_settings.confidence_weight_metadata
         ),
-        "ai_max_input_chars": db_config.get(
-            "ai_max_input_chars", settings.ai_max_input_chars
+        "confidence_weight_filename": config_items.get(
+            "confidence_weight_filename", base_settings.confidence_weight_filename
+        ),
+        "openai_model": config_items.get("openai_model", base_settings.openai_model),
+        "openai_reasoning_effort": config_items.get(
+            "openai_reasoning_effort", base_settings.openai_reasoning_effort
+        ),
+        "ai_max_input_chars": config_items.get(
+            "ai_max_input_chars", base_settings.ai_max_input_chars
         ),
         "openai_configured": bool(
-            db_config.get("openai_api_key", settings.openai_api_key)
+            config_items.get("openai_api_key", base_settings.openai_api_key)
         ),
-        "openai_health_status": db_config.get("openai_health_status"),
-        "openai_health_checked_at": db_config.get("openai_health_checked_at"),
-        "minhash_num_perm": settings.minhash_num_perm,
-        "lsh_num_bands": settings.lsh_num_bands,
-        "api_rate_limit": settings.api_rate_limit,
-        "api_page_size": settings.api_page_size,
+        "openai_health_status": config_items.get("openai_health_status"),
+        "openai_health_checked_at": config_items.get("openai_health_checked_at"),
+        "minhash_num_perm": base_settings.minhash_num_perm,
+        "lsh_num_bands": base_settings.lsh_num_bands,
+        "api_rate_limit": base_settings.api_rate_limit,
+        "api_page_size": base_settings.api_page_size,
     }
+    if meta:
+        response.update(meta)
+    return response
 
 
-@router.put("/")
+@router.get("/", response_model=ConfigResponse)
+async def get_config(db: Session = Depends(get_db)):
+    """Get current configuration"""
+    db_config = _load_db_config(db)
+    return _build_config_response(db_config, settings)
+
+
+@router.get("/defaults", response_model=ConfigResponse)
+async def get_config_defaults():
+    """Get default configuration from settings (no DB overrides)."""
+    default_settings = settings.__class__()  # type: ignore[call-arg]
+    return _build_config_response({}, default_settings)
+
+
+@router.post("/validate", response_model=ConfigValidationResponse)
+async def validate_config(payload: dict[str, Any]):
+    """Validate configuration payload without saving."""
+    try:
+        ConfigUpdate.model_validate(payload)
+        return ConfigValidationResponse(valid=True, errors={})
+    except ValidationError as exc:
+        errors: dict[str, list[str]] = {}
+        for err in exc.errors():
+            loc = [str(part) for part in err.get("loc", []) if part != "body"]
+            field = ".".join(loc) if loc else "non_field"
+            errors.setdefault(field, []).append(err.get("msg", "Invalid value"))
+        return ConfigValidationResponse(valid=False, errors=errors)
+
+
+@router.put("/", response_model=ConfigResponse)
 async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_db)):
     """Update configuration"""
     updated_fields = []
@@ -257,7 +336,7 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
 
     db.commit()
 
-    response = {
+    response_meta: dict[str, Any] = {
         "status": "success",
         "updated_fields": updated_fields,
         "message": f"Updated {len(updated_fields)} configuration fields",
@@ -267,7 +346,9 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
     # If weights changed, trigger re-analysis through worker
     if weights_changed:
         logger.info("Confidence weights changed, triggering re-analysis via worker")
-        response["message"] += ". Confidence weights changed - triggering re-analysis."
+        response_meta["message"] += (
+            ". Confidence weights changed - triggering re-analysis."
+        )
 
         # Dispatch Celery task for re-analysis
         from paperless_dedupe.worker.celery_app import app as celery_app
@@ -293,16 +374,17 @@ async def update_config(config_update: ConfigUpdate, db: Session = Depends(get_d
                 },
                 queue="deduplication",
             )
-            response["reanalysis_triggered"] = True
-            response["task_id"] = task.id
+            response_meta["reanalysis_triggered"] = True
+            response_meta["task_id"] = task.id
         else:
-            response["reanalysis_triggered"] = False
-            response["message"] += " (Analysis already in progress)"
+            response_meta["reanalysis_triggered"] = False
+            response_meta["message"] += " (Analysis already in progress)"
 
-    return response
+    db_config = _load_db_config(db)
+    return _build_config_response(db_config, settings, response_meta)
 
 
-@router.post("/test-connection")
+@router.post("/test-connection", response_model=ConnectionTestResponse)
 async def test_paperless_connection(
     test_config: ConfigUpdate | None = None, db: Session = Depends(get_db)
 ):
@@ -356,7 +438,7 @@ async def test_paperless_connection(
                 return ConnectionTestResponse(
                     success=True,
                     message="Successfully connected to paperless-ngx",
-                    paperless_version=version,
+                    version=version,
                 )
             else:
                 return ConnectionTestResponse(
@@ -370,7 +452,7 @@ async def test_paperless_connection(
         )
 
 
-@router.post("/reset")
+@router.post("/reset", response_model=ConfigResponse)
 async def reset_config(db: Session = Depends(get_db)):
     """Reset configuration to defaults"""
     # Delete all config items
@@ -382,4 +464,9 @@ async def reset_config(db: Session = Depends(get_db)):
     for key, value in default_settings.model_dump().items():
         setattr(settings, key, value)
 
-    return {"status": "success", "message": "Configuration reset to defaults"}
+    response_meta = {
+        "status": "success",
+        "message": "Configuration reset to defaults",
+    }
+
+    return _build_config_response({}, default_settings, response_meta)
