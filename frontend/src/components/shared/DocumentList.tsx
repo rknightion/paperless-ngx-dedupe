@@ -212,25 +212,30 @@ export const DocumentList: React.FC<DocumentListProps> = ({
 
   // Load documents on mount
   useEffect(() => {
-    dispatch(fetchDocuments());
-  }, [dispatch]);
+    dispatch(fetchDocuments({ limit: pagination.pageSize }));
+  }, [dispatch, pagination.pageSize]);
 
   // Handle search
   const handleSearch = useCallback(
     (query: string) => {
       dispatch(setSearchFilter(query));
-      dispatch(fetchDocuments({ search: query }));
+      dispatch(fetchDocuments({ search: query, limit: pagination.pageSize }));
     },
-    [dispatch]
+    [dispatch, pagination.pageSize]
   );
 
   // Handle status filter
   const handleStatusFilter = useCallback(
     (status: string) => {
       dispatch(setProcessingStatusFilter(status));
-      dispatch(fetchDocuments({ processing_status: status }));
+      dispatch(
+        fetchDocuments({
+          processing_status: status,
+          limit: pagination.pageSize,
+        })
+      );
     },
-    [dispatch]
+    [dispatch, pagination.pageSize]
   );
 
   // Handle sync documents
@@ -239,7 +244,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       await trackUserAction('sync_documents', async () => {
         await dispatch(syncDocuments()).unwrap();
         // Refresh the list after sync
-        dispatch(fetchDocuments());
+        dispatch(fetchDocuments({ limit: pagination.pageSize }));
       });
     } catch (error) {
       console.error('Failed to sync documents:', error);
@@ -424,12 +429,18 @@ export const DocumentList: React.FC<DocumentListProps> = ({
               Showing {documents.length} of {pagination.count.toLocaleString()}{' '}
               documents
             </p>
-            {pagination.count > documents.length && (
+            {pagination.hasNext && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  dispatch(fetchDocuments({ page: pagination.currentPage + 1 }))
+                  pagination.nextCursor &&
+                  dispatch(
+                    fetchDocuments({
+                      cursor: pagination.nextCursor,
+                      limit: pagination.pageSize,
+                    })
+                  )
                 }
                 disabled={loading}
               >
