@@ -9,6 +9,7 @@ from paperless_dedupe.models.database import AIExtractionJob, Document
 from paperless_dedupe.services.ai_processing_service import AIProcessingService
 from paperless_dedupe.worker.celery_app import app
 from paperless_dedupe.worker.database import get_worker_session
+from paperless_dedupe.worker.utils import broadcast_task_status
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ def run_ai_job(self, job_id: int) -> dict:
     job.started_at = datetime.now(UTC)
     job.error = None
     db.commit()
+    task_id = getattr(self.request, "id", None) or f"ai_job_{job.id}"
 
     target_fields = job.target_fields or [
         "title",
@@ -82,6 +84,18 @@ def run_ai_job(self, job_id: int) -> dict:
                 3
             )  # conservative concurrency to stay under OpenAI rate limits
             results: list = []
+            last_broadcast = 0
+
+            await broadcast_task_status(
+                task_id=task_id,
+                status="running",
+                step="AI processing",
+                progress=0,
+                total=job.total_count,
+                task_type="ai",
+                job_id=job.id,
+                started_at=job.started_at,
+            )
 
             async def handle_doc(doc):
                 async with semaphore:
@@ -110,6 +124,18 @@ def run_ai_job(self, job_id: int) -> dict:
                 job.processed_count = completed
                 if completed % 10 == 0:
                     db.commit()
+                if completed - last_broadcast >= 5 or completed == job.total_count:
+                    last_broadcast = completed
+                    await broadcast_task_status(
+                        task_id=task_id,
+                        status="running",
+                        step="AI processing",
+                        progress=completed,
+                        total=job.total_count,
+                        task_type="ai",
+                        job_id=job.id,
+                        started_at=job.started_at,
+                    )
             return results
 
         results = asyncio.run(process_all())
@@ -122,6 +148,20 @@ def run_ai_job(self, job_id: int) -> dict:
         job.completed_at = datetime.now(UTC)
         db.commit()
 
+        asyncio.run(
+            broadcast_task_status(
+                task_id=task_id,
+                status="completed",
+                step="AI processing completed",
+                progress=job.processed_count,
+                total=job.total_count,
+                task_type="ai",
+                job_id=job.id,
+                started_at=job.started_at,
+                completed_at=job.completed_at,
+            )
+        )
+
         return {
             "status": "completed",
             "job_id": job.id,
@@ -133,5 +173,19 @@ def run_ai_job(self, job_id: int) -> dict:
         job.error = str(exc)
         job.completed_at = datetime.now(UTC)
         db.commit()
+        asyncio.run(
+            broadcast_task_status(
+                task_id=task_id,
+                status="failed",
+                step="AI processing failed",
+                progress=job.processed_count,
+                total=job.total_count,
+                task_type="ai",
+                job_id=job.id,
+                started_at=job.started_at,
+                completed_at=job.completed_at,
+                error=str(exc),
+            )
+        )
         logger.error("AI job %s failed: %s", job.id, exc, exc_info=True)
         return {"status": "failed", "job_id": job.id, "error": str(exc)}
