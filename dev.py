@@ -51,7 +51,9 @@ class DevServer:
         env.setdefault(
             "PAPERLESS_DEDUPE_DATABASE_URL", "sqlite:///data/paperless_dedupe.db"
         )
-        env.setdefault("PAPERLESS_DEDUPE_SECRET_KEY", "dev-secret-key")
+        env.setdefault(
+            "PAPERLESS_DEDUPE_SECRET_KEY", "dev-secret-key-change-me-please-1234"
+        )
         env.setdefault("PAPERLESS_DEDUPE_LOG_LEVEL", "INFO")
 
         # OTEL resource attributes

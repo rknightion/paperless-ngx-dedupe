@@ -1,5 +1,6 @@
 import os
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from paperless_dedupe import __version__
@@ -66,7 +67,9 @@ class Settings(BaseSettings):
     api_timeout: int = 30
 
     # Security settings
-    secret_key: str = os.environ.get("SECRET_KEY", "change-me-in-production")
+    secret_key: str = os.environ.get(
+        "SECRET_KEY", "change-me-in-production-use-a-long-random-string"
+    )
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
@@ -79,6 +82,15 @@ class Settings(BaseSettings):
     # File storage
     data_dir: str = "./data"
     cache_dir: str = "./cache"
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, value: str) -> str:
+        if not isinstance(value, str):
+            raise ValueError("SECRET_KEY must be a string")
+        if len(value.encode("utf-8")) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
+        return value
 
 
 settings = Settings()

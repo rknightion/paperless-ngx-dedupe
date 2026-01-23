@@ -43,8 +43,8 @@
 # Security (IMPORTANT: Change this in production!)
 # -----------------------------------------------------------------------------
 # Generate a secure key: openssl rand -hex 32
-# For local development, you can use this default:
-# SECRET_KEY=dev-secret-key-change-in-production
+# For local development, you can use this default (32+ chars):
+# SECRET_KEY=dev-secret-key-change-in-production-1234
 
 # For production (Docker), always set this:
 SECRET_KEY=change-me-in-production-use-a-long-random-string

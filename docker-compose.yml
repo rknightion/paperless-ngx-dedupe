@@ -50,7 +50,7 @@ services:
     environment:
       PAPERLESS_DEDUPE_DATABASE_URL: postgresql://paperless_dedupe:paperless_dedupe@postgres:5432/paperless_dedupe
       PAPERLESS_DEDUPE_REDIS_URL: redis://redis:6379/0
-      PAPERLESS_DEDUPE_SECRET_KEY: ${SECRET_KEY:-dev-secret-key}
+      PAPERLESS_DEDUPE_SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-me-please-1234}
       PAPERLESS_DEDUPE_LOG_LEVEL: ${PAPERLESS_DEDUPE_LOG_LEVEL:-INFO}
     restart: unless-stopped
     # Use image default CMD (opentelemetry-instrument uvicorn) without live reload
