@@ -34,7 +34,10 @@ import {
   Info,
   AlertCircle,
 } from 'lucide-react';
-import type { Configuration } from '../../services/api/types';
+import type {
+  Configuration,
+  ConfigurationResponse,
+} from '../../services/api/types';
 import { Badge } from '../ui/Badge';
 import {
   Tooltip,
@@ -111,13 +114,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ className }) => {
         confidence_weight_metadata: confidenceWeights.metadata,
       };
 
-      const result = await dispatch(
+      const result: ConfigurationResponse = await dispatch(
         updateConfiguration(configWithWeights)
       ).unwrap();
       setWeightsChanged(false); // Reset after successful save
 
       // If weights were changed and re-analysis was triggered, show a message
-      if (result && (result as any).reanalysis_triggered) {
+      if (result && result.reanalysis_triggered) {
         setReanalysisMessage(
           'Configuration saved. Re-analysis has been triggered due to weight changes.'
         );
