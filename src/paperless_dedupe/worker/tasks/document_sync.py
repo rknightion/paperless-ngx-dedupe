@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import logging
+import time
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from paperless_dedupe.core.config import settings
 from paperless_dedupe.models.database import AppConfig, Document, DocumentContent
+from paperless_dedupe.services.deduplication_service import DeduplicationService
 from paperless_dedupe.services.paperless_client import PaperlessClient
 from paperless_dedupe.worker.celery_app import app
 from paperless_dedupe.worker.database import get_worker_session
@@ -87,7 +89,9 @@ async def _sync_documents_async(
     """Async implementation of document sync"""
     documents_synced = 0
     documents_updated = 0
-    errors = []
+    errors: list[dict[str, Any]] = []
+    processed_documents = 0
+    dedup_service = DeduplicationService()
 
     with tracer.start_as_current_span(
         "paperless.sync_documents",
@@ -170,277 +174,395 @@ async def _sync_documents_async(
             except Exception as e:
                 logger.warning(f"Could not preload document types: {e}")
 
-            # Get all document IDs from paperless
-            with tracer.start_as_current_span(
-                "paperless.fetch_documents", attributes={"paperless.limit": limit or 0}
-            ) as fetch_span:
-                all_documents = await client.get_all_documents(limit=limit)
-                fetch_span.set_attribute(
-                    "paperless.documents.count", len(all_documents)
-                )
-
-            total_documents = len(all_documents)
-
-            # Create mapping of existing documents
-            existing_docs = {doc.paperless_id: doc for doc in db.query(Document).all()}
-
             if not settings.fetch_metadata_on_sync:
                 logger.info(
                     "Skipping per-document /metadata requests for faster sync; "
                     "file sizes may be empty. Set PAPERLESS_DEDUPE_FETCH_METADATA_ON_SYNC=true to re-enable."
                 )
 
-            # Align broadcast total with actual documents fetched
-            if broadcast_progress:
-                await broadcast_task_status(
-                    task_id=task_id,
-                    status="processing",
-                    step=f"Syncing {total_documents} documents",
-                    progress=0,
-                    total=total_documents,
-                    started_at=started_at,
-                    task_type="sync",
-                )
+            last_broadcast_time = time.monotonic()
+            last_broadcast_progress = 0
 
-            # Process each document
-            for idx, doc_data in enumerate(all_documents):
-                try:
+            async def process_batch(batch_docs: list[dict[str, Any]]):
+                nonlocal documents_synced, documents_updated, processed_documents
+                nonlocal last_broadcast_time, last_broadcast_progress, total_documents
+
+                if not batch_docs:
+                    return
+
+                processed_documents += len(batch_docs)
+
+                if broadcast_progress:
+                    now = time.monotonic()
+                    total_for_progress = total_documents or processed_documents
+                    if (
+                        processed_documents - last_broadcast_progress >= 200
+                        or now - last_broadcast_time >= 1
+                    ):
+                        await broadcast_task_status(
+                            task_id=task_id,
+                            status="processing",
+                            step="Processing documents",
+                            progress=processed_documents,
+                            total=total_for_progress,
+                            started_at=started_at,
+                            task_type="sync",
+                        )
+                        last_broadcast_time = now
+                        last_broadcast_progress = processed_documents
+
+                paperless_ids = [
+                    doc.get("id") for doc in batch_docs if doc.get("id") is not None
+                ]
+                existing_docs: dict[int, Document] = {}
+                existing_contents: dict[int, DocumentContent] = {}
+
+                if paperless_ids:
+                    existing_docs = {
+                        doc.paperless_id: doc
+                        for doc in db.query(Document)
+                        .filter(Document.paperless_id.in_(paperless_ids))
+                        .all()
+                    }
+                    if existing_docs:
+                        content_rows = (
+                            db.query(DocumentContent)
+                            .filter(
+                                DocumentContent.document_id.in_(
+                                    [doc.id for doc in existing_docs.values()]
+                                )
+                            )
+                            .all()
+                        )
+                        existing_contents = {
+                            content.document_id: content for content in content_rows
+                        }
+
+                new_documents: list[Document] = []
+                new_content_payloads: list[tuple[Document, str, str, int]] = []
+                doc_update_mappings: list[dict[str, Any]] = []
+                content_update_mappings: list[dict[str, Any]] = []
+                content_inserts: list[DocumentContent] = []
+
+                for doc_data in batch_docs:
                     paperless_id = doc_data.get("id")
                     if paperless_id is None:
                         logger.warning("Skipping document without id: %s", doc_data)
                         continue
 
-                    # Update progress periodically
-                    if broadcast_progress and idx % 100 == 0:
-                        await broadcast_task_status(
-                            task_id=task_id,
-                            status="processing",
-                            step="Processing documents",
-                            progress=idx + 1,
-                            total=total_documents,
-                            started_at=started_at,
-                            task_type="sync",
-                        )
-
-                    # Resolve metadata names up front so we can detect changes
-                    correspondent_name = doc_data.get("correspondent_name")
-                    if (
-                        not correspondent_name
-                        and doc_data.get("correspondent") is not None
-                        and correspondent_map
-                    ):
-                        correspondent_name = correspondent_map.get(
-                            str(doc_data.get("correspondent"))
-                        ) or correspondent_map.get(doc_data.get("correspondent"))
-
-                    document_type_name = doc_data.get("document_type_name")
-                    if (
-                        not document_type_name
-                        and doc_data.get("document_type") is not None
-                        and document_type_map
-                    ):
-                        document_type_name = document_type_map.get(
-                            str(doc_data.get("document_type"))
-                        ) or document_type_map.get(doc_data.get("document_type"))
-
-                    # Resolve tag names, supporting both IDs and objects
-                    tags_list: list[str] = []
-                    tags_data = doc_data.get("tags") or []
-                    for tag in tags_data:
-                        name = None
-                        tag_id = None
-                        if isinstance(tag, dict):
-                            name = tag.get("name") or tag.get("label")
-                            tag_id = tag.get("id")
-                        else:
-                            tag_id = tag
-
-                        if name:
-                            tags_list.append(name)
-                        elif tag_id is not None:
-                            mapped = tag_map.get(str(tag_id)) or tag_map.get(tag_id)
-                            tags_list.append(mapped or str(tag_id))
-
-                    # Check if document needs update
-                    existing_doc = existing_docs.get(paperless_id)
-                    doc_modified_date = parse_date_field(doc_data.get("modified"))
-                    existing_modified_date = (
-                        existing_doc.modified_date if existing_doc else None
-                    )
-                    if existing_modified_date and existing_modified_date.tzinfo is None:
-                        existing_modified_date = existing_modified_date.replace(
-                            tzinfo=UTC
-                        )
-
-                    metadata_changed = (
-                        metadata_has_changed(
-                            existing_doc,
-                            correspondent_name,
-                            document_type_name,
-                            tags_list,
-                        )
-                        if existing_doc
-                        else False
-                    )
-
-                    if existing_doc and not force_refresh:
-                        # Skip only if unchanged and metadata hasn't drifted
+                    try:
+                        correspondent_name = doc_data.get("correspondent_name")
                         if (
-                            doc_modified_date
-                            and existing_modified_date
-                            and doc_modified_date <= existing_modified_date
-                            and not metadata_changed
+                            not correspondent_name
+                            and doc_data.get("correspondent") is not None
+                            and correspondent_map
                         ):
-                            continue  # Skip unchanged document
+                            correspondent_name = correspondent_map.get(
+                                str(doc_data.get("correspondent"))
+                            ) or correspondent_map.get(doc_data.get("correspondent"))
 
-                    # Fetch document content (reuse if already provided)
-                    content_text: str | None = None
-                    existing_content = (
-                        existing_doc.content
-                        if existing_doc and existing_doc.content
-                        else None
-                    )
-                    has_inline_content = (
-                        "content" in doc_data and doc_data.get("content") is not None
-                    )
-                    metadata_only_update = (
-                        existing_doc
-                        and metadata_changed
-                        and not force_refresh
-                        and doc_modified_date
-                        and existing_modified_date
-                        and doc_modified_date <= existing_modified_date
-                    )
+                        document_type_name = doc_data.get("document_type_name")
+                        if (
+                            not document_type_name
+                            and doc_data.get("document_type") is not None
+                            and document_type_map
+                        ):
+                            document_type_name = document_type_map.get(
+                                str(doc_data.get("document_type"))
+                            ) or document_type_map.get(doc_data.get("document_type"))
 
-                    if has_inline_content:
-                        content_text = doc_data.get("content") or ""
-                    elif metadata_only_update and existing_content:
-                        # Metadata drifted but document itself hasn't changed; reuse cached OCR
-                        content_text = existing_content.full_text or ""
-                    else:
-                        content_text = await client.get_document_content(paperless_id)
+                        tags_list: list[str] = []
+                        tags_data = doc_data.get("tags") or []
+                        for tag in tags_data:
+                            name = None
+                            tag_id = None
+                            if isinstance(tag, dict):
+                                name = tag.get("name") or tag.get("label")
+                                tag_id = tag.get("id")
+                            else:
+                                tag_id = tag
 
-                    original_size = doc_data.get("original_file_size")
-                    archive_size = doc_data.get("archive_file_size")
-                    meta = None
-                    should_fetch_metadata = settings.fetch_metadata_on_sync and (
-                        original_size is None or archive_size is None
-                    )
-                    if should_fetch_metadata:
-                        try:
-                            meta = await client.get_document_metadata(paperless_id)
-                            original_size = original_size or meta.get("original_size")
-                            archive_size = archive_size or meta.get("archive_size")
-                        except Exception as meta_err:
-                            logger.warning(
-                                "Could not fetch metadata for document %s: %s",
-                                paperless_id,
-                                meta_err,
+                            if name:
+                                tags_list.append(name)
+                            elif tag_id is not None:
+                                mapped = tag_map.get(str(tag_id)) or tag_map.get(tag_id)
+                                tags_list.append(mapped or str(tag_id))
+
+                        existing_doc = existing_docs.get(paperless_id)
+                        doc_modified_date = parse_date_field(doc_data.get("modified"))
+                        existing_modified_date = (
+                            existing_doc.modified_date if existing_doc else None
+                        )
+                        if (
+                            existing_modified_date
+                            and existing_modified_date.tzinfo is None
+                        ):
+                            existing_modified_date = existing_modified_date.replace(
+                                tzinfo=UTC
                             )
 
-                    # Create or update document record
-                    if existing_doc:
-                        document = existing_doc
-                        documents_updated += 1
-                    else:
-                        document = Document(paperless_id=paperless_id)
-                        documents_synced += 1
-
-                    # Update document fields
-                    document.title = doc_data.get("title", "")[:500]
-
-                    fingerprint_raw = doc_data.get("checksum") or doc_data.get(
-                        "fingerprint"
-                    )
-                    fingerprint_value = (
-                        str(fingerprint_raw).strip()
-                        if fingerprint_raw is not None
-                        else ""
-                    )
-                    if not fingerprint_value:
-                        fingerprint_value = f"paperless-{paperless_id}"
-                    document.fingerprint = fingerprint_value[:64]
-
-                    content_hash = doc_data.get("checksum") or doc_data.get(
-                        "fingerprint"
-                    )
-                    if not content_hash and content_text:
-                        content_hash = hashlib.sha256(
-                            content_text.encode("utf-8")
-                        ).hexdigest()
-                    document.content_hash = content_hash
-
-                    document.correspondent = (correspondent_name or "")[:200]
-                    document.document_type = (document_type_name or "")[:200]
-                    document.tags = tags_list
-                    document.archive_filename = (
-                        doc_data.get("archived_file_name")
-                        or doc_data.get("archive_filename")
-                        or (meta.get("archive_media_filename") if meta else None)
-                        or ""
-                    )[:500]
-                    document.original_filename = (
-                        doc_data.get("original_file_name")
-                        or doc_data.get("original_filename")
-                        or (meta.get("original_filename") if meta else None)
-                        or ""
-                    )[:500]
-                    document.original_file_size = original_size
-                    document.archive_file_size = archive_size
-                    document.created_date = parse_date_field(doc_data.get("created"))
-                    document.added_date = parse_date_field(doc_data.get("added"))
-                    document.modified_date = doc_modified_date
-                    document.processing_status = "pending"
-                    document.last_processed = datetime.now(UTC)
-
-                    if not existing_doc:
-                        db.add(document)
-
-                    db.flush()
-
-                    # Store document content when available
-                    if content_text:
-                        doc_content = existing_content or (
-                            db.query(DocumentContent)
-                            .filter_by(document_id=document.id)
-                            .first()
+                        metadata_changed = (
+                            metadata_has_changed(
+                                existing_doc,
+                                correspondent_name,
+                                document_type_name,
+                                tags_list,
+                            )
+                            if existing_doc
+                            else False
                         )
 
-                        if not doc_content:
-                            doc_content = DocumentContent(document_id=document.id)
+                        if existing_doc and not force_refresh:
+                            incoming_hash = doc_data.get("checksum") or doc_data.get(
+                                "fingerprint"
+                            )
+                            incoming_hash = (
+                                str(incoming_hash).strip()
+                                if incoming_hash is not None
+                                else None
+                            )
+                            hash_changed = (
+                                bool(incoming_hash)
+                                and existing_doc.content_hash
+                                and incoming_hash != existing_doc.content_hash
+                            )
+                            if (
+                                doc_modified_date
+                                and existing_modified_date
+                                and doc_modified_date <= existing_modified_date
+                                and not metadata_changed
+                                and not hash_changed
+                            ):
+                                continue
 
-                        # Truncate content if too long
-                        max_length = settings.max_ocr_length
-                        if len(content_text) > max_length:
-                            content_text = content_text[:max_length]
-
-                        doc_content.full_text = content_text
-                        doc_content.word_count = len(content_text.split())
-
-                        if not doc_content.id:
-                            db.add(doc_content)
-                    else:
-                        logger.warning(
-                            "Document %s has no OCR content; metadata stored only",
-                            paperless_id,
+                        content_text: str | None = None
+                        existing_content = (
+                            existing_contents.get(existing_doc.id)
+                            if existing_doc
+                            else None
+                        )
+                        has_inline_content = (
+                            "content" in doc_data
+                            and doc_data.get("content") is not None
+                        )
+                        metadata_only_update = (
+                            existing_doc
+                            and metadata_changed
+                            and not force_refresh
+                            and doc_modified_date
+                            and existing_modified_date
+                            and doc_modified_date <= existing_modified_date
                         )
 
-                    # Commit periodically
-                    if (idx + 1) % 100 == 0:
-                        db.commit()
+                        if has_inline_content:
+                            content_text = doc_data.get("content") or ""
+                        elif metadata_only_update and existing_content:
+                            content_text = existing_content.full_text or ""
+                        else:
+                            content_text = await client.get_document_content(
+                                paperless_id
+                            )
 
+                        original_size = doc_data.get("original_file_size")
+                        archive_size = doc_data.get("archive_file_size")
+                        meta = None
+                        should_fetch_metadata = settings.fetch_metadata_on_sync and (
+                            original_size is None or archive_size is None
+                        )
+                        if should_fetch_metadata:
+                            try:
+                                meta = await client.get_document_metadata(paperless_id)
+                                original_size = original_size or meta.get(
+                                    "original_size"
+                                )
+                                archive_size = archive_size or meta.get("archive_size")
+                            except Exception as meta_err:
+                                logger.warning(
+                                    "Could not fetch metadata for document %s: %s",
+                                    paperless_id,
+                                    meta_err,
+                                )
+
+                        fingerprint_raw = doc_data.get("checksum") or doc_data.get(
+                            "fingerprint"
+                        )
+                        fingerprint_value = (
+                            str(fingerprint_raw).strip()
+                            if fingerprint_raw is not None
+                            else ""
+                        )
+                        if not fingerprint_value:
+                            fingerprint_value = f"paperless-{paperless_id}"
+
+                        content_hash = doc_data.get("checksum") or doc_data.get(
+                            "fingerprint"
+                        )
+                        if not content_hash and content_text:
+                            content_hash = hashlib.sha256(
+                                content_text.encode("utf-8")
+                            ).hexdigest()
+
+                        truncated_text = None
+                        normalized_text = None
+                        word_count = None
+                        minhash_signature = None
+                        minhash_computed = False
+
+                        if content_text:
+                            max_length = settings.max_ocr_length
+                            truncated_text = (
+                                content_text[:max_length]
+                                if len(content_text) > max_length
+                                else content_text
+                            )
+                            normalized_text = dedup_service.preprocess_text(
+                                truncated_text
+                            )
+                            word_count = len(truncated_text.split())
+                            minhash_computed = True
+                            if word_count >= settings.min_ocr_word_count:
+                                minhash = dedup_service.create_minhash(truncated_text)
+                                minhash_signature = (
+                                    dedup_service.serialize_minhash(minhash)
+                                    if minhash
+                                    else None
+                                )
+
+                        now = datetime.now(UTC)
+                        document_payload: dict[str, Any] = {
+                            "paperless_id": paperless_id,
+                            "title": doc_data.get("title", "")[:500],
+                            "fingerprint": fingerprint_value[:64],
+                            "content_hash": content_hash,
+                            "correspondent": (correspondent_name or "")[:200],
+                            "document_type": (document_type_name or "")[:200],
+                            "tags": tags_list,
+                            "archive_filename": (
+                                doc_data.get("archived_file_name")
+                                or doc_data.get("archive_filename")
+                                or (
+                                    meta.get("archive_media_filename") if meta else None
+                                )
+                                or ""
+                            )[:500],
+                            "original_filename": (
+                                doc_data.get("original_file_name")
+                                or doc_data.get("original_filename")
+                                or (meta.get("original_filename") if meta else None)
+                                or ""
+                            )[:500],
+                            "original_file_size": original_size,
+                            "archive_file_size": archive_size,
+                            "created_date": parse_date_field(doc_data.get("created")),
+                            "added_date": parse_date_field(doc_data.get("added")),
+                            "modified_date": doc_modified_date,
+                            "processing_status": "pending",
+                            "last_processed": now,
+                        }
+
+                        if minhash_computed:
+                            document_payload["minhash_signature"] = minhash_signature
+
+                        if existing_doc:
+                            documents_updated += 1
+                            doc_update = {"id": existing_doc.id, **document_payload}
+                            doc_update_mappings.append(doc_update)
+                            doc_id = existing_doc.id
+                        else:
+                            document = Document(**document_payload)
+                            new_documents.append(document)
+                            documents_synced += 1
+                            doc_id = None
+
+                        if truncated_text:
+                            content_payload = {
+                                "full_text": truncated_text,
+                                "normalized_text": normalized_text,
+                                "word_count": word_count,
+                            }
+                            if doc_id is not None:
+                                existing_content = existing_contents.get(doc_id)
+                                if existing_content:
+                                    content_update_mappings.append(
+                                        {"id": existing_content.id, **content_payload}
+                                    )
+                                else:
+                                    content_inserts.append(
+                                        DocumentContent(
+                                            document_id=doc_id, **content_payload
+                                        )
+                                    )
+                            else:
+                                new_content_payloads.append(
+                                    (
+                                        document,
+                                        content_payload["full_text"],
+                                        content_payload["normalized_text"],
+                                        content_payload["word_count"],
+                                    )
+                                )
+                        else:
+                            logger.warning(
+                                "Document %s has no OCR content; metadata stored only",
+                                paperless_id,
+                            )
+
+                    except Exception as e:
+                        trace.get_current_span().record_exception(e)
+                        logger.error(
+                            f"Error syncing document {paperless_id}: {str(e)}",
+                            exc_info=True,
+                        )
+                        errors.append({"document_id": paperless_id, "error": str(e)})
+                        continue
+
+                try:
+                    if new_documents:
+                        db.bulk_save_objects(new_documents, return_defaults=True)
+
+                    if doc_update_mappings:
+                        db.bulk_update_mappings(Document, doc_update_mappings)
+
+                    if new_documents and new_content_payloads:
+                        for (
+                            doc,
+                            full_text,
+                            normalized_text,
+                            word_count,
+                        ) in new_content_payloads:
+                            content_inserts.append(
+                                DocumentContent(
+                                    document_id=doc.id,
+                                    full_text=full_text,
+                                    normalized_text=normalized_text,
+                                    word_count=word_count,
+                                )
+                            )
+
+                    if content_update_mappings:
+                        db.bulk_update_mappings(
+                            DocumentContent, content_update_mappings
+                        )
+
+                    if content_inserts:
+                        db.bulk_save_objects(content_inserts)
+
+                    db.commit()
                 except Exception as e:
-                    trace.get_current_span().record_exception(e)
-                    logger.error(
-                        f"Error syncing document {paperless_id}: {str(e)}",
-                        exc_info=True,
-                    )
-                    errors.append({"document_id": paperless_id, "error": str(e)})
                     db.rollback()
-                    continue
+                    logger.error(f"Batch commit failed: {str(e)}", exc_info=True)
+                    errors.append({"batch_error": str(e)})
 
-            # Final commit
-            db.commit()
+            # Stream documents in batches without holding full list in memory
+            with tracer.start_as_current_span(
+                "paperless.fetch_documents", attributes={"paperless.limit": limit or 0}
+            ):
+                await client.get_all_documents(
+                    limit=limit, batch_callback=process_batch, return_documents=False
+                )
+
+            if total_documents == 0:
+                total_documents = processed_documents
 
             # Cache latest Paperless statistics for the dashboard
             try:
@@ -483,13 +605,13 @@ async def _sync_documents_async(
             sync_span = trace.get_current_span()
             sync_span.set_attribute("paperless.documents.synced", documents_synced)
             sync_span.set_attribute("paperless.documents.updated", documents_updated)
-            sync_span.set_attribute("paperless.documents.total", total_documents)
+            sync_span.set_attribute("paperless.documents.total", processed_documents)
             sync_span.set_attribute("paperless.documents.errors", len(errors))
 
     return {
         "documents_synced": documents_synced,
         "documents_updated": documents_updated,
-        "total_documents": total_documents,
+        "total_documents": processed_documents,
         "errors": errors,
         "status": "completed" if len(errors) == 0 else "completed_with_errors",
     }
