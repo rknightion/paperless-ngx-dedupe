@@ -231,7 +231,7 @@ jobs:
           severity: "CRITICAL,HIGH"
 
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@5d4e8d1aca955e8d8589aabd499c5cae939e33c7 # v4
+        uses: github/codeql-action/upload-sarif@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2 # v4
         # Only upload SARIF for non-fork PRs and pushes (has permissions)
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         with:
