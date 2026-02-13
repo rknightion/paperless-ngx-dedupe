@@ -1,5 +1,11 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { createJob, JobAlreadyRunningError, JobType, launchWorker, getWorkerPath } from '@paperless-dedupe/core';
+import {
+  createJob,
+  JobAlreadyRunningError,
+  JobType,
+  launchWorker,
+  getWorkerPath,
+} from '@paperless-dedupe/core';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 

@@ -71,7 +71,11 @@ export {
 } from './paperless/schemas.js';
 
 export { PaperlessClient } from './paperless/client.js';
-export { PaperlessApiError, PaperlessAuthError, PaperlessConnectionError } from './paperless/errors.js';
+export {
+  PaperlessApiError,
+  PaperlessAuthError,
+  PaperlessConnectionError,
+} from './paperless/errors.js';
 
 // Jobs
 export {
@@ -117,10 +121,22 @@ export { UnionFind } from './dedup/union-find.js';
 export { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from './dedup/config.js';
 export { runAnalysis } from './dedup/analyze.js';
 export { DEFAULT_DEDUP_CONFIG, dedupConfigSchema, ALGORITHM_VERSION } from './dedup/types.js';
-export type { DedupConfig, SimilarityWeights, SimilarityResult, DocumentScoringData, AnalysisOptions, AnalysisResult, ScoringOptions } from './dedup/types.js';
+export type {
+  DedupConfig,
+  SimilarityWeights,
+  SimilarityResult,
+  DocumentScoringData,
+  AnalysisOptions,
+  AnalysisResult,
+  ScoringOptions,
+} from './dedup/types.js';
 
 // Queries
-export { paginationSchema, duplicateGroupFiltersSchema, documentFiltersSchema } from './queries/types.js';
+export {
+  paginationSchema,
+  duplicateGroupFiltersSchema,
+  documentFiltersSchema,
+} from './queries/types.js';
 export type {
   PaginationParams,
   PaginatedResult,
@@ -138,10 +154,16 @@ export type {
 } from './queries/types.js';
 export { parseTagsJson } from './queries/helpers.js';
 export { getDashboard } from './queries/dashboard.js';
-export { getDocuments, getDocument, getDocumentStats } from './queries/documents.js';
+export {
+  getDocuments,
+  getDocument,
+  getDocumentContent,
+  getDocumentStats,
+} from './queries/documents.js';
 export {
   getDuplicateGroups,
   getDuplicateGroup,
+  getDuplicateGroupLight,
   getDuplicateStats,
   setPrimaryDocument,
   markGroupReviewed,

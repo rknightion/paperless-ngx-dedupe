@@ -34,19 +34,33 @@ function createMockClient(docs: PaperlessDocument[]): PaperlessClient {
     },
     async getTags() {
       return [
-        { id: 1, name: 'Tag1', color: '#000', textColor: '#fff', isInboxTag: false, matchingAlgorithm: 0, match: '', documentCount: 0 },
-        { id: 2, name: 'Tag2', color: '#000', textColor: '#fff', isInboxTag: false, matchingAlgorithm: 0, match: '', documentCount: 0 },
+        {
+          id: 1,
+          name: 'Tag1',
+          color: '#000',
+          textColor: '#fff',
+          isInboxTag: false,
+          matchingAlgorithm: 0,
+          match: '',
+          documentCount: 0,
+        },
+        {
+          id: 2,
+          name: 'Tag2',
+          color: '#000',
+          textColor: '#fff',
+          isInboxTag: false,
+          matchingAlgorithm: 0,
+          match: '',
+          documentCount: 0,
+        },
       ];
     },
     async getCorrespondents() {
-      return [
-        { id: 1, name: 'Correspondent1', matchingAlgorithm: 0, match: '', documentCount: 0 },
-      ];
+      return [{ id: 1, name: 'Correspondent1', matchingAlgorithm: 0, match: '', documentCount: 0 }];
     },
     async getDocumentTypes() {
-      return [
-        { id: 1, name: 'Type1', matchingAlgorithm: 0, match: '', documentCount: 0 },
-      ];
+      return [{ id: 1, name: 'Type1', matchingAlgorithm: 0, match: '', documentCount: 0 }];
     },
   } as unknown as PaperlessClient;
 }
@@ -100,7 +114,9 @@ describe('syncDocuments', () => {
     await syncDocuments({ db, client }, { forceFullSync: true });
 
     // Modify doc
-    const modifiedDocs = [makePaperlessDoc(1, { title: 'Updated Title', modified: '2024-07-01T00:00:00Z' })];
+    const modifiedDocs = [
+      makePaperlessDoc(1, { title: 'Updated Title', modified: '2024-07-01T00:00:00Z' }),
+    ];
     const modifiedClient = createMockClient(modifiedDocs);
 
     // Second sync
@@ -146,11 +162,14 @@ describe('syncDocuments', () => {
     const client = createMockClient(docs);
     const progressCalls: Array<{ progress: number; message?: string }> = [];
 
-    await syncDocuments({ db, client }, {
-      onProgress: async (progress, message) => {
-        progressCalls.push({ progress, message });
+    await syncDocuments(
+      { db, client },
+      {
+        onProgress: async (progress, message) => {
+          progressCalls.push({ progress, message });
+        },
       },
-    });
+    );
 
     expect(progressCalls.length).toBeGreaterThan(0);
     // First call should be 0 (starting)

@@ -19,50 +19,102 @@ import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.
 
 function insertTestData(db: AppDatabase) {
   // Insert documents
-  db.insert(document).values([
-    { id: 'doc-1', paperlessId: 1, title: 'Invoice A', correspondent: 'Alice', documentType: 'Invoice', tagsJson: '["finance"]', createdDate: '2024-01-01', archiveFileSize: 1000, syncedAt: '2024-01-01T00:00:00Z' },
-    { id: 'doc-2', paperlessId: 2, title: 'Invoice B', correspondent: 'Alice', documentType: 'Invoice', tagsJson: '["finance","tax"]', createdDate: '2024-01-02', archiveFileSize: 2000, syncedAt: '2024-01-01T00:00:00Z' },
-    { id: 'doc-3', paperlessId: 3, title: 'Receipt C', correspondent: 'Bob', documentType: 'Receipt', tagsJson: '["expense"]', createdDate: '2024-02-01', archiveFileSize: 500, syncedAt: '2024-01-01T00:00:00Z' },
-    { id: 'doc-4', paperlessId: 4, title: 'Receipt D', correspondent: 'Bob', documentType: 'Receipt', tagsJson: null, createdDate: '2024-02-02', archiveFileSize: 600, syncedAt: '2024-01-01T00:00:00Z' },
-  ]).run();
+  db.insert(document)
+    .values([
+      {
+        id: 'doc-1',
+        paperlessId: 1,
+        title: 'Invoice A',
+        correspondent: 'Alice',
+        documentType: 'Invoice',
+        tagsJson: '["finance"]',
+        createdDate: '2024-01-01',
+        archiveFileSize: 1000,
+        syncedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'doc-2',
+        paperlessId: 2,
+        title: 'Invoice B',
+        correspondent: 'Alice',
+        documentType: 'Invoice',
+        tagsJson: '["finance","tax"]',
+        createdDate: '2024-01-02',
+        archiveFileSize: 2000,
+        syncedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'doc-3',
+        paperlessId: 3,
+        title: 'Receipt C',
+        correspondent: 'Bob',
+        documentType: 'Receipt',
+        tagsJson: '["expense"]',
+        createdDate: '2024-02-01',
+        archiveFileSize: 500,
+        syncedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'doc-4',
+        paperlessId: 4,
+        title: 'Receipt D',
+        correspondent: 'Bob',
+        documentType: 'Receipt',
+        tagsJson: null,
+        createdDate: '2024-02-02',
+        archiveFileSize: 600,
+        syncedAt: '2024-01-01T00:00:00Z',
+      },
+    ])
+    .run();
 
   // Insert content for doc-1 and doc-2
-  db.insert(documentContent).values([
-    { id: 'cnt-1', documentId: 'doc-1', fullText: 'Invoice text A', wordCount: 3 },
-    { id: 'cnt-2', documentId: 'doc-2', fullText: 'Invoice text B', wordCount: 3 },
-  ]).run();
+  db.insert(documentContent)
+    .values([
+      { id: 'cnt-1', documentId: 'doc-1', fullText: 'Invoice text A', wordCount: 3 },
+      { id: 'cnt-2', documentId: 'doc-2', fullText: 'Invoice text B', wordCount: 3 },
+    ])
+    .run();
 
   // Group 1: high confidence, unresolved (doc-1 primary, doc-2 non-primary)
-  db.insert(duplicateGroup).values({
-    id: 'grp-1',
-    confidenceScore: 0.95,
-    jaccardSimilarity: 0.9,
-    fuzzyTextRatio: 0.88,
-    metadataSimilarity: 0.85,
-    filenameSimilarity: 0.7,
-    algorithmVersion: 'v1',
-    createdAt: '2024-01-10T00:00:00Z',
-    updatedAt: '2024-01-10T00:00:00Z',
-  }).run();
+  db.insert(duplicateGroup)
+    .values({
+      id: 'grp-1',
+      confidenceScore: 0.95,
+      jaccardSimilarity: 0.9,
+      fuzzyTextRatio: 0.88,
+      metadataSimilarity: 0.85,
+      filenameSimilarity: 0.7,
+      algorithmVersion: 'v1',
+      createdAt: '2024-01-10T00:00:00Z',
+      updatedAt: '2024-01-10T00:00:00Z',
+    })
+    .run();
 
-  db.insert(duplicateMember).values([
-    { id: 'mem-1', groupId: 'grp-1', documentId: 'doc-1', isPrimary: true },
-    { id: 'mem-2', groupId: 'grp-1', documentId: 'doc-2', isPrimary: false },
-  ]).run();
+  db.insert(duplicateMember)
+    .values([
+      { id: 'mem-1', groupId: 'grp-1', documentId: 'doc-1', isPrimary: true },
+      { id: 'mem-2', groupId: 'grp-1', documentId: 'doc-2', isPrimary: false },
+    ])
+    .run();
 
   // Group 2: lower confidence, unresolved (doc-3, doc-4)
-  db.insert(duplicateGroup).values({
-    id: 'grp-2',
-    confidenceScore: 0.6,
-    algorithmVersion: 'v1',
-    createdAt: '2024-02-10T00:00:00Z',
-    updatedAt: '2024-02-10T00:00:00Z',
-  }).run();
+  db.insert(duplicateGroup)
+    .values({
+      id: 'grp-2',
+      confidenceScore: 0.6,
+      algorithmVersion: 'v1',
+      createdAt: '2024-02-10T00:00:00Z',
+      updatedAt: '2024-02-10T00:00:00Z',
+    })
+    .run();
 
-  db.insert(duplicateMember).values([
-    { id: 'mem-3', groupId: 'grp-2', documentId: 'doc-3', isPrimary: false },
-    { id: 'mem-4', groupId: 'grp-2', documentId: 'doc-4', isPrimary: false },
-  ]).run();
+  db.insert(duplicateMember)
+    .values([
+      { id: 'mem-3', groupId: 'grp-2', documentId: 'doc-3', isPrimary: false },
+      { id: 'mem-4', groupId: 'grp-2', documentId: 'doc-4', isPrimary: false },
+    ])
+    .run();
 }
 
 describe('getDuplicateGroups', () => {
@@ -75,14 +127,22 @@ describe('getDuplicateGroups', () => {
   });
 
   it('returns empty for empty database', () => {
-    const result = getDuplicateGroups(db, { sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
     expect(result.items).toEqual([]);
     expect(result.total).toBe(0);
   });
 
   it('returns groups with memberCount and primaryDocumentTitle', () => {
     insertTestData(db);
-    const result = getDuplicateGroups(db, { sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
 
     expect(result.items).toHaveLength(2);
     expect(result.total).toBe(2);
@@ -103,7 +163,11 @@ describe('getDuplicateGroups', () => {
 
   it('filters by minConfidence', () => {
     insertTestData(db);
-    const result = getDuplicateGroups(db, { minConfidence: 0.8, sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const result = getDuplicateGroups(
+      db,
+      { minConfidence: 0.8, sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0].id).toBe('grp-1');
@@ -111,7 +175,11 @@ describe('getDuplicateGroups', () => {
 
   it('filters by maxConfidence', () => {
     insertTestData(db);
-    const result = getDuplicateGroups(db, { maxConfidence: 0.7, sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const result = getDuplicateGroups(
+      db,
+      { maxConfidence: 0.7, sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0].id).toBe('grp-2');
@@ -121,11 +189,19 @@ describe('getDuplicateGroups', () => {
     insertTestData(db);
     markGroupReviewed(db, 'grp-1');
 
-    const reviewed = getDuplicateGroups(db, { reviewed: true, sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const reviewed = getDuplicateGroups(
+      db,
+      { reviewed: true, sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
     expect(reviewed.items).toHaveLength(1);
     expect(reviewed.items[0].id).toBe('grp-1');
 
-    const unreviewed = getDuplicateGroups(db, { reviewed: false, sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const unreviewed = getDuplicateGroups(
+      db,
+      { reviewed: false, sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
     expect(unreviewed.items).toHaveLength(1);
     expect(unreviewed.items[0].id).toBe('grp-2');
   });
@@ -134,28 +210,44 @@ describe('getDuplicateGroups', () => {
     insertTestData(db);
     markGroupResolved(db, 'grp-2');
 
-    const resolved = getDuplicateGroups(db, { resolved: true, sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const resolved = getDuplicateGroups(
+      db,
+      { resolved: true, sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
     expect(resolved.items).toHaveLength(1);
     expect(resolved.items[0].id).toBe('grp-2');
   });
 
   it('sorts by confidence desc (default)', () => {
     insertTestData(db);
-    const result = getDuplicateGroups(db, { sortBy: 'confidence', sortOrder: 'desc' }, { limit: 50, offset: 0 });
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
 
     expect(result.items[0].confidenceScore).toBeGreaterThan(result.items[1].confidenceScore);
   });
 
   it('sorts by confidence asc', () => {
     insertTestData(db);
-    const result = getDuplicateGroups(db, { sortBy: 'confidence', sortOrder: 'asc' }, { limit: 50, offset: 0 });
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'asc' },
+      { limit: 50, offset: 0 },
+    );
 
     expect(result.items[0].confidenceScore).toBeLessThan(result.items[1].confidenceScore);
   });
 
   it('sorts by created_at', () => {
     insertTestData(db);
-    const result = getDuplicateGroups(db, { sortBy: 'created_at', sortOrder: 'asc' }, { limit: 50, offset: 0 });
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'created_at', sortOrder: 'asc' },
+      { limit: 50, offset: 0 },
+    );
 
     expect(result.items[0].id).toBe('grp-1'); // earlier createdAt
     expect(result.items[1].id).toBe('grp-2');
@@ -163,8 +255,16 @@ describe('getDuplicateGroups', () => {
 
   it('paginates correctly', () => {
     insertTestData(db);
-    const page1 = getDuplicateGroups(db, { sortBy: 'confidence', sortOrder: 'desc' }, { limit: 1, offset: 0 });
-    const page2 = getDuplicateGroups(db, { sortBy: 'confidence', sortOrder: 'desc' }, { limit: 1, offset: 1 });
+    const page1 = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 1, offset: 0 },
+    );
+    const page2 = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 1, offset: 1 },
+    );
 
     expect(page1.items).toHaveLength(1);
     expect(page2.items).toHaveLength(1);
@@ -377,9 +477,11 @@ describe('deleteDuplicateGroup', () => {
     expect(getDuplicateGroup(db, 'grp-1')).toBeNull();
 
     // Members should be cascade-deleted
-    const members = db.select().from(duplicateMember).where(
-      eq(duplicateMember.groupId, 'grp-1')
-    ).all();
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, 'grp-1'))
+      .all();
     expect(members).toHaveLength(0);
   });
 

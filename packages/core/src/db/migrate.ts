@@ -67,10 +67,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   const applyStatements = sqlite.transaction(() => {
     for (const statement of statements) {
       // Convert CREATE TABLE to CREATE TABLE IF NOT EXISTS for idempotent migrations
-      const safeStatement = statement.replace(
-        /CREATE TABLE(?! IF NOT EXISTS)/gi,
-        'CREATE TABLE IF NOT EXISTS',
-      );
+      const safeStatement = statement
+        .replace(/CREATE TABLE(?! IF NOT EXISTS)/gi, 'CREATE TABLE IF NOT EXISTS')
+        .replace(/CREATE INDEX(?! IF NOT EXISTS)/gi, 'CREATE INDEX IF NOT EXISTS');
       sqlite.exec(safeStatement);
     }
 

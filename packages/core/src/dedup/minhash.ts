@@ -3,7 +3,7 @@
  */
 
 const MERSENNE_PRIME = (1n << 61n) - 1n;
-const MAX_HASH = 0xFFFFFFFF;
+const MAX_HASH = 0xffffffff;
 const HASH_SEED = 42;
 
 function mulberry32(seed: number): () => number {
@@ -42,8 +42,7 @@ export class MinHash {
       const bx = BigInt(x);
       for (let i = 0; i < this.numPermutations; i++) {
         const h = Number(
-          ((this.coeffA[i] * bx + this.coeffB[i]) % MERSENNE_PRIME) %
-            BigInt(MAX_HASH),
+          ((this.coeffA[i] * bx + this.coeffB[i]) % MERSENNE_PRIME) % BigInt(MAX_HASH),
         );
         if (h < this.signature[i]) {
           this.signature[i] = h;
@@ -81,11 +80,7 @@ export class MinHash {
   }
 
   serialize(): Buffer {
-    return Buffer.from(
-      this.signature.buffer,
-      this.signature.byteOffset,
-      this.signature.byteLength,
-    );
+    return Buffer.from(this.signature.buffer, this.signature.byteOffset, this.signature.byteLength);
   }
 
   static deserialize(buffer: Buffer, numPerm = 192): MinHash {

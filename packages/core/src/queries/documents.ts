@@ -42,11 +42,7 @@ export function getDocuments(
 ): PaginatedResult<DocumentSummary> {
   const where = buildDocumentWhere(filters);
 
-  const [{ value: total }] = db
-    .select({ value: count() })
-    .from(document)
-    .where(where)
-    .all();
+  const [{ value: total }] = db.select({ value: count() }).from(document).where(where).all();
 
   const rows = db
     .select()
@@ -74,10 +70,7 @@ export function getDocuments(
   return { items, total, limit: pagination.limit, offset: pagination.offset };
 }
 
-export function getDocument(
-  db: AppDatabase,
-  id: string,
-): DocumentDetail | null {
+export function getDocument(db: AppDatabase, id: string): DocumentDetail | null {
   const row = db.select().from(document).where(eq(document.id, id)).get();
   if (!row) return null;
 
@@ -135,12 +128,25 @@ export function getDocument(
   };
 }
 
+export function getDocumentContent(
+  db: AppDatabase,
+  documentId: string,
+): { fullText: string | null; wordCount: number | null } | null {
+  const row = db
+    .select({
+      fullText: documentContent.fullText,
+      wordCount: documentContent.wordCount,
+    })
+    .from(documentContent)
+    .where(eq(documentContent.documentId, documentId))
+    .get();
+
+  return row ?? null;
+}
+
 export function getDocumentStats(db: AppDatabase): DocumentStats {
   // 1. Total document count
-  const [{ value: totalDocuments }] = db
-    .select({ value: count() })
-    .from(document)
-    .all();
+  const [{ value: totalDocuments }] = db.select({ value: count() }).from(document).all();
 
   // 2. OCR coverage: count documents with/without content
   const [{ withContent }] = db
@@ -193,10 +199,7 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     .all() as { name: string; count: number }[];
 
   // 6. Tag distribution
-  const tagRows = db
-    .select({ tagsJson: document.tagsJson })
-    .from(document)
-    .all();
+  const tagRows = db.select({ tagsJson: document.tagsJson }).from(document).all();
 
   const tagCounts = new Map<string, number>();
   for (const row of tagRows) {

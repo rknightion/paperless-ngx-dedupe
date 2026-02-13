@@ -45,7 +45,10 @@ function openSqlite(path: string): Database.Database {
   return sqlite;
 }
 
-export function createDatabaseWithHandle(path: string): { db: AppDatabase; sqlite: Database.Database } {
+export function createDatabaseWithHandle(path: string): {
+  db: AppDatabase;
+  sqlite: Database.Database;
+} {
   const sqlite = openSqlite(path);
   const db = createDrizzle(sqlite);
   return { db, sqlite };

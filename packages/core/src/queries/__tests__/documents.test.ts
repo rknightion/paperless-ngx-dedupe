@@ -7,50 +7,52 @@ import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 
 function insertTestDocuments(db: AppDatabase) {
-  db.insert(document).values([
-    {
-      id: 'doc-1',
-      paperlessId: 1,
-      title: 'Invoice January',
-      correspondent: 'Alice',
-      documentType: 'Invoice',
-      tagsJson: '["finance","monthly"]',
-      createdDate: '2024-01-15',
-      addedDate: '2024-01-16',
-      processingStatus: 'completed',
-      originalFileSize: 1000,
-      archiveFileSize: 800,
-      syncedAt: '2024-01-16T00:00:00Z',
-    },
-    {
-      id: 'doc-2',
-      paperlessId: 2,
-      title: 'Receipt February',
-      correspondent: 'Bob',
-      documentType: 'Receipt',
-      tagsJson: '["finance"]',
-      createdDate: '2024-02-10',
-      addedDate: '2024-02-11',
-      processingStatus: 'completed',
-      originalFileSize: 500,
-      archiveFileSize: 400,
-      syncedAt: '2024-02-11T00:00:00Z',
-    },
-    {
-      id: 'doc-3',
-      paperlessId: 3,
-      title: 'Contract Draft',
-      correspondent: 'Alice',
-      documentType: 'Contract',
-      tagsJson: '["legal"]',
-      createdDate: '2024-03-01',
-      addedDate: '2024-03-02',
-      processingStatus: 'pending',
-      originalFileSize: 2000,
-      archiveFileSize: 1500,
-      syncedAt: '2024-03-02T00:00:00Z',
-    },
-  ]).run();
+  db.insert(document)
+    .values([
+      {
+        id: 'doc-1',
+        paperlessId: 1,
+        title: 'Invoice January',
+        correspondent: 'Alice',
+        documentType: 'Invoice',
+        tagsJson: '["finance","monthly"]',
+        createdDate: '2024-01-15',
+        addedDate: '2024-01-16',
+        processingStatus: 'completed',
+        originalFileSize: 1000,
+        archiveFileSize: 800,
+        syncedAt: '2024-01-16T00:00:00Z',
+      },
+      {
+        id: 'doc-2',
+        paperlessId: 2,
+        title: 'Receipt February',
+        correspondent: 'Bob',
+        documentType: 'Receipt',
+        tagsJson: '["finance"]',
+        createdDate: '2024-02-10',
+        addedDate: '2024-02-11',
+        processingStatus: 'completed',
+        originalFileSize: 500,
+        archiveFileSize: 400,
+        syncedAt: '2024-02-11T00:00:00Z',
+      },
+      {
+        id: 'doc-3',
+        paperlessId: 3,
+        title: 'Contract Draft',
+        correspondent: 'Alice',
+        documentType: 'Contract',
+        tagsJson: '["legal"]',
+        createdDate: '2024-03-01',
+        addedDate: '2024-03-02',
+        processingStatus: 'pending',
+        originalFileSize: 2000,
+        archiveFileSize: 1500,
+        syncedAt: '2024-03-02T00:00:00Z',
+      },
+    ])
+    .run();
 }
 
 describe('getDocuments', () => {
@@ -156,14 +158,16 @@ describe('getDocument', () => {
 
   it('returns document with content when content exists', () => {
     insertTestDocuments(db);
-    db.insert(documentContent).values({
-      id: 'content-1',
-      documentId: 'doc-1',
-      fullText: 'Full text of invoice',
-      normalizedText: 'full text of invoice',
-      wordCount: 5,
-      contentHash: 'abc123',
-    }).run();
+    db.insert(documentContent)
+      .values({
+        id: 'content-1',
+        documentId: 'doc-1',
+        fullText: 'Full text of invoice',
+        normalizedText: 'full text of invoice',
+        wordCount: 5,
+        contentHash: 'abc123',
+      })
+      .run();
 
     const result = getDocument(db, 'doc-1');
 
@@ -189,18 +193,22 @@ describe('getDocument', () => {
   it('returns groupMemberships when document is in duplicate groups', () => {
     insertTestDocuments(db);
 
-    db.insert(duplicateGroup).values({
-      id: 'grp-1',
-      confidenceScore: 0.92,
-      algorithmVersion: 'v1',
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }).run();
+    db.insert(duplicateGroup)
+      .values({
+        id: 'grp-1',
+        confidenceScore: 0.92,
+        algorithmVersion: 'v1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
 
-    db.insert(duplicateMember).values([
-      { id: 'mem-1', groupId: 'grp-1', documentId: 'doc-1', isPrimary: true },
-      { id: 'mem-2', groupId: 'grp-1', documentId: 'doc-2', isPrimary: false },
-    ]).run();
+    db.insert(duplicateMember)
+      .values([
+        { id: 'mem-1', groupId: 'grp-1', documentId: 'doc-1', isPrimary: true },
+        { id: 'mem-2', groupId: 'grp-1', documentId: 'doc-2', isPrimary: false },
+      ])
+      .run();
 
     const result = getDocument(db, 'doc-1');
 

@@ -12,10 +12,7 @@ export interface WorkerContext {
   taskData: unknown;
 }
 
-export type TaskFunction = (
-  ctx: WorkerContext,
-  onProgress: ProgressCallback,
-) => Promise<unknown>;
+export type TaskFunction = (ctx: WorkerContext, onProgress: ProgressCallback) => Promise<unknown>;
 
 export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   const { jobId, dbPath, taskData } = workerData as {

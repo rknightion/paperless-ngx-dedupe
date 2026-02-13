@@ -84,8 +84,12 @@ export async function syncDocuments(
     }
 
     // Report progress
-    const progressFraction = 0.1 + 0.85 * (result.totalFetched / Math.max(result.totalFetched + pageSize, 1));
-    await onProgress?.(Math.min(progressFraction, 0.95), `Synced ${result.totalFetched} documents (${result.inserted} new, ${result.updated} updated)`);
+    const progressFraction =
+      0.1 + 0.85 * (result.totalFetched / Math.max(result.totalFetched + pageSize, 1));
+    await onProgress?.(
+      Math.min(progressFraction, 0.95),
+      `Synced ${result.totalFetched} documents (${result.inserted} new, ${result.updated} updated)`,
+    );
 
     // Incremental sync cutoff: stop when oldest doc in batch is older than lastSyncAt
     if (!isFullSync && lastSyncAt && batch.length > 0) {
@@ -118,7 +122,10 @@ export async function syncDocuments(
     .run();
 
   result.durationMs = Date.now() - startTime;
-  await onProgress?.(1, `Sync complete: ${result.inserted} new, ${result.updated} updated, ${result.skipped} unchanged`);
+  await onProgress?.(
+    1,
+    `Sync complete: ${result.inserted} new, ${result.updated} updated, ${result.skipped} unchanged`,
+  );
 
   logger.info(
     { ...result },
@@ -136,24 +143,30 @@ async function fetchReferenceMaps(client: PaperlessClient): Promise<ReferenceMap
   ]);
 
   return {
-    tags: new Map(tags.map(t => [t.id, t.name])),
-    correspondents: new Map(correspondents.map(c => [c.id, c.name])),
-    documentTypes: new Map(documentTypes.map(d => [d.id, d.name])),
+    tags: new Map(tags.map((t) => [t.id, t.name])),
+    correspondents: new Map(correspondents.map((c) => [c.id, c.name])),
+    documentTypes: new Map(documentTypes.map((d) => [d.id, d.name])),
   };
 }
 
-function loadLocalDocuments(db: AppDatabase): Map<number, { id: string; fingerprint: string | null }> {
+function loadLocalDocuments(
+  db: AppDatabase,
+): Map<number, { id: string; fingerprint: string | null }> {
   const docs = db
-    .select({ id: document.id, paperlessId: document.paperlessId, fingerprint: document.fingerprint })
+    .select({
+      id: document.id,
+      paperlessId: document.paperlessId,
+      fingerprint: document.fingerprint,
+    })
     .from(document)
     .all();
 
-  return new Map(docs.map(d => [d.paperlessId, { id: d.id, fingerprint: d.fingerprint }]));
+  return new Map(docs.map((d) => [d.paperlessId, { id: d.id, fingerprint: d.fingerprint }]));
 }
 
 function resolveTagNames(tagIds: number[], refMaps: ReferenceMaps): string[] {
   return tagIds
-    .map(id => refMaps.tags.get(id))
+    .map((id) => refMaps.tags.get(id))
     .filter((name): name is string => name !== undefined)
     .sort();
 }
@@ -171,27 +184,37 @@ function insertDocument(
   const normalized = normalizeText(content);
 
   db.transaction((tx) => {
-    const docResult = tx.insert(document).values({
-      paperlessId: doc.id,
-      title: doc.title,
-      fingerprint,
-      correspondent: doc.correspondent !== null ? refMaps.correspondents.get(doc.correspondent) ?? null : null,
-      documentType: doc.documentType !== null ? refMaps.documentTypes.get(doc.documentType) ?? null : null,
-      tagsJson: JSON.stringify(tagNames),
-      createdDate: doc.created,
-      addedDate: doc.added,
-      modifiedDate: doc.modified,
-      processingStatus: 'pending',
-      syncedAt: now,
-    }).returning({ id: document.id }).get();
+    const docResult = tx
+      .insert(document)
+      .values({
+        paperlessId: doc.id,
+        title: doc.title,
+        fingerprint,
+        correspondent:
+          doc.correspondent !== null
+            ? (refMaps.correspondents.get(doc.correspondent) ?? null)
+            : null,
+        documentType:
+          doc.documentType !== null ? (refMaps.documentTypes.get(doc.documentType) ?? null) : null,
+        tagsJson: JSON.stringify(tagNames),
+        createdDate: doc.created,
+        addedDate: doc.added,
+        modifiedDate: doc.modified,
+        processingStatus: 'pending',
+        syncedAt: now,
+      })
+      .returning({ id: document.id })
+      .get();
 
-    tx.insert(documentContent).values({
-      documentId: docResult.id,
-      fullText: content,
-      normalizedText: normalized.normalizedText,
-      wordCount: normalized.wordCount,
-      contentHash: normalized.contentHash,
-    }).run();
+    tx.insert(documentContent)
+      .values({
+        documentId: docResult.id,
+        fullText: content,
+        normalizedText: normalized.normalizedText,
+        wordCount: normalized.wordCount,
+        contentHash: normalized.contentHash,
+      })
+      .run();
   });
 }
 
@@ -213,8 +236,12 @@ function updateDocument(
       .set({
         title: doc.title,
         fingerprint,
-        correspondent: doc.correspondent !== null ? refMaps.correspondents.get(doc.correspondent) ?? null : null,
-        documentType: doc.documentType !== null ? refMaps.documentTypes.get(doc.documentType) ?? null : null,
+        correspondent:
+          doc.correspondent !== null
+            ? (refMaps.correspondents.get(doc.correspondent) ?? null)
+            : null,
+        documentType:
+          doc.documentType !== null ? (refMaps.documentTypes.get(doc.documentType) ?? null) : null,
         tagsJson: JSON.stringify(tagNames),
         createdDate: doc.created,
         addedDate: doc.added,
@@ -243,13 +270,15 @@ function updateDocument(
         .where(eq(documentContent.documentId, localDocId))
         .run();
     } else {
-      tx.insert(documentContent).values({
-        documentId: localDocId,
-        fullText: content,
-        normalizedText: normalized.normalizedText,
-        wordCount: normalized.wordCount,
-        contentHash: normalized.contentHash,
-      }).run();
+      tx.insert(documentContent)
+        .values({
+          documentId: localDocId,
+          fullText: content,
+          normalizedText: normalized.normalizedText,
+          wordCount: normalized.wordCount,
+          contentHash: normalized.contentHash,
+        })
+        .run();
     }
   });
 }

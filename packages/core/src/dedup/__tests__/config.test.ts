@@ -2,11 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import {
-  getDedupConfig,
-  setDedupConfig,
-  recalculateConfidenceScores,
-} from '../config.js';
+import { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from '../config.js';
 import { DEFAULT_DEDUP_CONFIG } from '../types.js';
 import { duplicateGroup } from '../../schema/sqlite/duplicates.js';
 

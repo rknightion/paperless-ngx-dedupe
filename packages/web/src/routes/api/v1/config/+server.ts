@@ -40,5 +40,9 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     return apiSuccess(config);
   }
 
-  return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid request body. Provide either { key, value } or { settings }', batchResult.error.issues);
+  return apiError(
+    ErrorCode.VALIDATION_FAILED,
+    'Invalid request body. Provide either { key, value } or { settings }',
+    batchResult.error.issues,
+  );
 };

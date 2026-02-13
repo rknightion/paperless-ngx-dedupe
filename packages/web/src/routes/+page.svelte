@@ -199,8 +199,8 @@
 
 <div class="space-y-8">
   <div>
-    <h1 class="text-3xl font-bold text-ink">Dashboard</h1>
-    <p class="mt-1 text-muted">Overview of your document library and deduplication status.</p>
+    <h1 class="text-ink text-3xl font-bold">Dashboard</h1>
+    <p class="text-muted mt-1">Overview of your document library and deduplication status.</p>
   </div>
 
   <!-- Stat Cards -->
@@ -215,17 +215,17 @@
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <!-- Sync Controls -->
     <div class="panel">
-      <h2 class="text-lg font-semibold text-ink">Sync Documents</h2>
-      <p class="mt-1 text-sm text-muted">Pull latest documents from Paperless-NGX.</p>
+      <h2 class="text-ink text-lg font-semibold">Sync Documents</h2>
+      <p class="text-muted mt-1 text-sm">Pull latest documents from Paperless-NGX.</p>
       <div class="mt-4 flex items-center gap-4">
         <button
           onclick={startSync}
           disabled={isSyncing}
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {isSyncing ? 'Syncing...' : 'Sync Now'}
         </button>
-        <label class="flex items-center gap-2 text-sm text-muted">
+        <label class="text-muted flex items-center gap-2 text-sm">
           <input type="checkbox" bind:checked={syncForce} class="rounded" />
           Force Full Sync
         </label>
@@ -235,7 +235,7 @@
           <ProgressBar progress={syncProgress} message={syncMessage} />
         </div>
       {/if}
-      <div class="mt-3 text-xs text-muted">
+      <div class="text-muted mt-3 text-xs">
         Last sync: {formatDate(data.dashboard.lastSyncAt)}
         {#if data.dashboard.lastSyncDocumentCount != null}
           &middot; {data.dashboard.lastSyncDocumentCount} documents
@@ -245,17 +245,17 @@
 
     <!-- Analysis Controls -->
     <div class="panel">
-      <h2 class="text-lg font-semibold text-ink">Duplicate Analysis</h2>
-      <p class="mt-1 text-sm text-muted">Run deduplication analysis on synced documents.</p>
+      <h2 class="text-ink text-lg font-semibold">Duplicate Analysis</h2>
+      <p class="text-muted mt-1 text-sm">Run deduplication analysis on synced documents.</p>
       <div class="mt-4 flex items-center gap-4">
         <button
           onclick={startAnalysis}
           disabled={isAnalyzing}
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {isAnalyzing ? 'Analyzing...' : 'Run Analysis'}
         </button>
-        <label class="flex items-center gap-2 text-sm text-muted">
+        <label class="text-muted flex items-center gap-2 text-sm">
           <input type="checkbox" bind:checked={analysisForce} class="rounded" />
           Force Rebuild
         </label>
@@ -265,7 +265,7 @@
           <ProgressBar progress={analysisProgress} message={analysisMessage} />
         </div>
       {/if}
-      <div class="mt-3 text-xs text-muted">
+      <div class="text-muted mt-3 text-xs">
         Last analysis: {formatDate(data.dashboard.lastAnalysisAt)}
         {#if data.dashboard.totalDuplicateGroups != null}
           &middot; {data.dashboard.totalDuplicateGroups} groups found
@@ -277,7 +277,7 @@
   <!-- Recent Jobs -->
   {#if data.jobs.length > 0}
     <div class="panel">
-      <h2 class="mb-4 text-lg font-semibold text-ink">Recent Jobs</h2>
+      <h2 class="text-ink mb-4 text-lg font-semibold">Recent Jobs</h2>
       <div class="space-y-3">
         {#each data.jobs as j}
           <JobStatusCard
@@ -298,12 +298,12 @@
     <!-- Top Correspondents -->
     {#if data.dashboard.topCorrespondents.length > 0}
       <div class="panel">
-        <h2 class="mb-4 text-lg font-semibold text-ink">Top Duplicated Correspondents</h2>
+        <h2 class="text-ink mb-4 text-lg font-semibold">Top Duplicated Correspondents</h2>
         <ul class="space-y-2">
           {#each data.dashboard.topCorrespondents as c}
             <li class="flex items-center justify-between text-sm">
               <span class="text-ink">{c.correspondent}</span>
-              <span class="font-mono text-xs text-muted">{c.groupCount} groups</span>
+              <span class="text-muted font-mono text-xs">{c.groupCount} groups</span>
             </li>
           {/each}
         </ul>
@@ -313,7 +313,7 @@
     <!-- Confidence Distribution Chart -->
     {#if data.duplicateStats.confidenceDistribution.some((b) => b.count > 0)}
       <div class="panel">
-        <h2 class="mb-4 text-lg font-semibold text-ink">Confidence Distribution</h2>
+        <h2 class="text-ink mb-4 text-lg font-semibold">Confidence Distribution</h2>
         <EChart option={chartOption} height="250px" />
       </div>
     {/if}

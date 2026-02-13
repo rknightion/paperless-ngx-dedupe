@@ -14,11 +14,7 @@ export function fnv1a32(str: string): number {
   return hash >>> 0;
 }
 
-export function textToShingles(
-  text: string,
-  ngramSize = 3,
-  minWords = 20,
-): Set<number> | null {
+export function textToShingles(text: string, ngramSize = 3, minWords = 20): Set<number> | null {
   const words = text.split(/\s+/).filter((w) => w.length > 0);
   if (words.length < minWords) {
     return null;

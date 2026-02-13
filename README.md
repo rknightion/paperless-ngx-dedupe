@@ -43,16 +43,16 @@ docker compose up -d
 
 ## Configuration
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `PAPERLESS_URL` | Yes | — | Your Paperless-NGX instance URL |
-| `PAPERLESS_API_TOKEN` | Yes* | — | API token for authentication |
-| `PAPERLESS_USERNAME` | No | — | Alternative: username/password auth |
-| `PAPERLESS_PASSWORD` | No | — | Alternative: username/password auth |
-| `PORT` | No | `3000` | Server port |
-| `LOG_LEVEL` | No | `info` | `debug` / `info` / `warn` / `error` |
-| `CORS_ALLOW_ORIGIN` | No | — | CORS origin (empty = same-origin) |
-| `AUTO_MIGRATE` | No | `true` | Run DB migrations on startup |
+| Variable              | Required | Default | Description                         |
+| --------------------- | -------- | ------- | ----------------------------------- |
+| `PAPERLESS_URL`       | Yes      | —       | Your Paperless-NGX instance URL     |
+| `PAPERLESS_API_TOKEN` | Yes\*    | —       | API token for authentication        |
+| `PAPERLESS_USERNAME`  | No       | —       | Alternative: username/password auth |
+| `PAPERLESS_PASSWORD`  | No       | —       | Alternative: username/password auth |
+| `PORT`                | No       | `3000`  | Server port                         |
+| `LOG_LEVEL`           | No       | `info`  | `debug` / `info` / `warn` / `error` |
+| `CORS_ALLOW_ORIGIN`   | No       | —       | CORS origin (empty = same-origin)   |
+| `AUTO_MIGRATE`        | No       | `true`  | Run DB migrations on startup        |
 
 \* Either `PAPERLESS_API_TOKEN` or `PAPERLESS_USERNAME`/`PAPERLESS_PASSWORD` is required.
 
@@ -71,20 +71,20 @@ pnpm test       # Run tests
 
 All endpoints are under `/api/v1/`:
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/health` | GET | Health check |
-| `/ready` | GET | Readiness check |
-| `/sync` | POST | Trigger document sync |
-| `/sync/status` | GET | Sync status |
-| `/analysis` | POST | Run duplicate analysis |
-| `/analysis/status` | GET | Analysis status |
-| `/jobs` | GET | List jobs |
-| `/jobs/:id` | GET | Job details |
-| `/jobs/:id/progress` | GET | SSE progress stream |
-| `/jobs/:id/cancel` | POST | Cancel job |
-| `/config/test-connection` | POST | Test Paperless connection |
-| `/config/dedup` | GET/PUT | Dedup algorithm config |
+| Endpoint                  | Method  | Description               |
+| ------------------------- | ------- | ------------------------- |
+| `/health`                 | GET     | Health check              |
+| `/ready`                  | GET     | Readiness check           |
+| `/sync`                   | POST    | Trigger document sync     |
+| `/sync/status`            | GET     | Sync status               |
+| `/analysis`               | POST    | Run duplicate analysis    |
+| `/analysis/status`        | GET     | Analysis status           |
+| `/jobs`                   | GET     | List jobs                 |
+| `/jobs/:id`               | GET     | Job details               |
+| `/jobs/:id/progress`      | GET     | SSE progress stream       |
+| `/jobs/:id/cancel`        | POST    | Cancel job                |
+| `/config/test-connection` | POST    | Test Paperless connection |
+| `/config/dedup`           | GET/PUT | Dedup algorithm config    |
 
 ## How It Works
 

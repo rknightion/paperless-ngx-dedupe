@@ -13,7 +13,14 @@
   let isLoadingCount = $state(false);
 
   // Step 2
-  let groups = $state<Array<{ id: string; primaryDocumentTitle: string | null; confidenceScore: number; memberCount: number }>>([]);
+  let groups = $state<
+    Array<{
+      id: string;
+      primaryDocumentTitle: string | null;
+      confidenceScore: number;
+      memberCount: number;
+    }>
+  >([]);
   let groupsTotal = $state(0);
   let groupsOffset = $state(0);
   let excludedGroupIds = $state<Set<string>>(new Set());
@@ -29,7 +36,9 @@
   let isExecuting = $state(false);
   let executionProgress = $state(0);
   let executionMessage = $state('');
-  let executionResult = $state<{ success: boolean; processed: number; errors: string[] } | null>(null);
+  let executionResult = $state<{ success: boolean; processed: number; errors: string[] } | null>(
+    null,
+  );
 
   // ── Derived values ────────────────────────────────────────────────────
   let selectedCount = $derived(groupsTotal - excludedGroupIds.size);
@@ -71,7 +80,9 @@
   async function fetchMatchCount() {
     isLoadingCount = true;
     try {
-      const res = await fetch(`/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=1`);
+      const res = await fetch(
+        `/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=1`,
+      );
       const json = await res.json();
       matchCount = json.meta?.total ?? 0;
     } catch {
@@ -83,7 +94,9 @@
   async function fetchGroups() {
     isLoadingGroups = true;
     try {
-      const res = await fetch(`/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=10&offset=${groupsOffset}`);
+      const res = await fetch(
+        `/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=10&offset=${groupsOffset}`,
+      );
       const json = await res.json();
       groups = json.data ?? [];
       groupsTotal = json.meta?.total ?? 0;
@@ -156,7 +169,9 @@
     const limit = 100;
     while (true) {
       try {
-        const res = await fetch(`/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=${limit}&offset=${offset}`);
+        const res = await fetch(
+          `/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=${limit}&offset=${offset}`,
+        );
         const json = await res.json();
         const items = json.data ?? [];
         if (items.length === 0) break;
@@ -220,7 +235,8 @@
         return;
       }
     } else {
-      const endpoint = selectedAction === 'review' ? '/api/v1/batch/review' : '/api/v1/batch/resolve';
+      const endpoint =
+        selectedAction === 'review' ? '/api/v1/batch/review' : '/api/v1/batch/resolve';
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -229,7 +245,11 @@
         });
         if (res.ok) {
           const json = await res.json();
-          executionResult = { success: true, processed: json.data?.updated ?? allGroupIds.length, errors: [] };
+          executionResult = {
+            success: true,
+            processed: json.data?.updated ?? allGroupIds.length,
+            errors: [],
+          };
         } else {
           executionResult = { success: false, processed: 0, errors: ['Request failed'] };
         }
@@ -268,7 +288,7 @@
 
 <div class="space-y-6">
   <!-- Breadcrumb -->
-  <nav class="text-sm text-muted">
+  <nav class="text-muted text-sm">
     <a href="/duplicates" class="hover:text-accent">Duplicates</a>
     <span class="mx-1">/</span>
     <span class="text-ink">Bulk Operations Wizard</span>
@@ -286,7 +306,11 @@
       <div class="flex items-center gap-2">
         <div
           class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold
-            {isCurrent ? 'bg-accent text-white' : isCompleted ? 'bg-success text-white' : 'bg-soft text-muted'}"
+            {isCurrent
+            ? 'bg-accent text-white'
+            : isCompleted
+              ? 'bg-success text-white'
+              : 'bg-soft text-muted'}"
         >
           {#if isCompleted}
             &#10003;
@@ -303,16 +327,17 @@
 
   <!-- Step Content -->
   <div class="panel">
-
     <!-- Step 1: Filter -->
     {#if step === 1}
-      <h2 class="text-xl font-semibold text-ink">Set Confidence Threshold</h2>
+      <h2 class="text-ink text-xl font-semibold">Set Confidence Threshold</h2>
 
       <div class="mt-6 space-y-6">
         <div>
           <div class="flex items-center justify-between">
-            <label for="threshold-range" class="text-sm font-medium text-ink">Minimum Confidence</label>
-            <span class="text-lg font-semibold text-accent">{threshold}%</span>
+            <label for="threshold-range" class="text-ink text-sm font-medium"
+              >Minimum Confidence</label
+            >
+            <span class="text-accent text-lg font-semibold">{threshold}%</span>
           </div>
           <input
             id="threshold-range"
@@ -321,9 +346,9 @@
             max="100"
             step="1"
             bind:value={threshold}
-            class="mt-2 w-full accent-accent"
+            class="accent-accent mt-2 w-full"
           />
-          <div class="mt-1 flex justify-between text-xs text-muted">
+          <div class="text-muted mt-1 flex justify-between text-xs">
             <span>50%</span>
             <span>100%</span>
           </div>
@@ -331,11 +356,11 @@
 
         <EChart option={chartOption} height="250px" />
 
-        <div class="text-sm text-muted">
+        <div class="text-muted text-sm">
           {#if isLoadingCount}
             Loading matching groups...
           {:else if matchCount !== null}
-            <span class="font-semibold text-ink">{matchCount}</span> unresolved groups match this threshold
+            <span class="text-ink font-semibold">{matchCount}</span> unresolved groups match this threshold
           {/if}
         </div>
       </div>
@@ -344,58 +369,58 @@
         <button
           onclick={handleNext}
           disabled={!canProceedStep1}
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Next
         </button>
       </div>
 
-    <!-- Step 2: Review Groups -->
+      <!-- Step 2: Review Groups -->
     {:else if step === 2}
-      <h2 class="text-xl font-semibold text-ink">Review Matching Groups</h2>
+      <h2 class="text-ink text-xl font-semibold">Review Matching Groups</h2>
 
-      <div class="mt-4 text-sm text-muted">
-        Selected: <span class="font-semibold text-ink">{selectedCount}</span> of {groupsTotal}
+      <div class="text-muted mt-4 text-sm">
+        Selected: <span class="text-ink font-semibold">{selectedCount}</span> of {groupsTotal}
       </div>
 
       {#if isLoadingGroups}
-        <div class="mt-6 text-sm text-muted">Loading groups...</div>
+        <div class="text-muted mt-6 text-sm">Loading groups...</div>
       {:else}
         <div class="mt-4 space-y-2">
           {#each groups as group}
-            <div class="flex items-center gap-3 rounded-lg border border-soft px-4 py-3">
+            <div class="border-soft flex items-center gap-3 rounded-lg border px-4 py-3">
               <input
                 type="checkbox"
                 checked={!excludedGroupIds.has(group.id)}
                 onchange={() => toggleGroup(group.id)}
                 class="rounded"
               />
-              <span class="flex-1 truncate text-sm text-ink">
+              <span class="text-ink flex-1 truncate text-sm">
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </span>
               <ConfidenceBadge score={group.confidenceScore} />
-              <span class="text-xs text-muted">{group.memberCount} docs</span>
+              <span class="text-muted text-xs">{group.memberCount} docs</span>
             </div>
           {/each}
         </div>
 
         {#if groupsTotal > 10}
           <div class="mt-4 flex items-center justify-between">
-            <span class="text-sm text-muted">
+            <span class="text-muted text-sm">
               Showing {groupsOffset + 1}-{Math.min(groupsOffset + 10, groupsTotal)} of {groupsTotal}
             </span>
             <div class="flex gap-2">
               <button
                 onclick={prevPage}
                 disabled={groupsOffset === 0}
-                class="rounded-lg border border-soft px-3 py-1.5 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
               >
                 Previous
               </button>
               <button
                 onclick={nextPage}
                 disabled={groupsOffset + 10 >= groupsTotal}
-                class="rounded-lg border border-soft px-3 py-1.5 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
               >
                 Next
               </button>
@@ -407,59 +432,84 @@
       <div class="mt-8 flex justify-between">
         <button
           onclick={handleBack}
-          class="rounded-lg border border-soft px-4 py-2 text-sm font-medium text-ink hover:bg-canvas"
+          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
         >
           Back
         </button>
         <button
           onclick={handleNext}
           disabled={selectedCount === 0}
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Next
         </button>
       </div>
 
-    <!-- Step 3: Select Action -->
+      <!-- Step 3: Select Action -->
     {:else if step === 3}
-      <h2 class="text-xl font-semibold text-ink">Choose Action</h2>
+      <h2 class="text-ink text-xl font-semibold">Choose Action</h2>
 
       <div class="mt-6 space-y-3">
         <button
           onclick={() => (selectedAction = 'review')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'review' ? 'border-accent bg-accent-light' : 'border-soft hover:border-accent'}"
+          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'review'
+            ? 'border-accent bg-accent-light'
+            : 'border-soft hover:border-accent'}"
         >
           <div class="flex items-center gap-3">
-            <input type="radio" name="action" checked={selectedAction === 'review'} class="accent-accent" />
+            <input
+              type="radio"
+              name="action"
+              checked={selectedAction === 'review'}
+              class="accent-accent"
+            />
             <div>
-              <div class="font-medium text-ink">Mark All as Reviewed</div>
-              <div class="text-sm text-muted">Mark matching groups as reviewed without making changes</div>
+              <div class="text-ink font-medium">Mark All as Reviewed</div>
+              <div class="text-muted text-sm">
+                Mark matching groups as reviewed without making changes
+              </div>
             </div>
           </div>
         </button>
 
         <button
           onclick={() => (selectedAction = 'resolve')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'resolve' ? 'border-accent bg-accent-light' : 'border-soft hover:border-accent'}"
+          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'resolve'
+            ? 'border-accent bg-accent-light'
+            : 'border-soft hover:border-accent'}"
         >
           <div class="flex items-center gap-3">
-            <input type="radio" name="action" checked={selectedAction === 'resolve'} class="accent-accent" />
+            <input
+              type="radio"
+              name="action"
+              checked={selectedAction === 'resolve'}
+              class="accent-accent"
+            />
             <div>
-              <div class="font-medium text-ink">Resolve All</div>
-              <div class="text-sm text-muted">Mark matching groups as fully resolved</div>
+              <div class="text-ink font-medium">Resolve All</div>
+              <div class="text-muted text-sm">Mark matching groups as fully resolved</div>
             </div>
           </div>
         </button>
 
         <button
           onclick={() => (selectedAction = 'delete')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'delete' ? 'border-ember bg-ember-light' : 'border-soft hover:border-ember'}"
+          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'delete'
+            ? 'border-ember bg-ember-light'
+            : 'border-soft hover:border-ember'}"
         >
           <div class="flex items-center gap-3">
-            <input type="radio" name="action" checked={selectedAction === 'delete'} class="accent-ember" />
+            <input
+              type="radio"
+              name="action"
+              checked={selectedAction === 'delete'}
+              class="accent-ember"
+            />
             <div>
-              <div class="font-medium text-ink">Delete Non-Primary Documents</div>
-              <div class="text-sm text-ember">Permanently delete non-primary documents from Paperless-NGX. This cannot be undone.</div>
+              <div class="text-ink font-medium">Delete Non-Primary Documents</div>
+              <div class="text-ember text-sm">
+                Permanently delete non-primary documents from Paperless-NGX. This cannot be undone.
+              </div>
             </div>
           </div>
         </button>
@@ -468,56 +518,58 @@
       <div class="mt-8 flex justify-between">
         <button
           onclick={handleBack}
-          class="rounded-lg border border-soft px-4 py-2 text-sm font-medium text-ink hover:bg-canvas"
+          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
         >
           Back
         </button>
         <button
           onclick={handleNext}
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
         >
           Next
         </button>
       </div>
 
-    <!-- Step 4: Confirm -->
+      <!-- Step 4: Confirm -->
     {:else if step === 4}
-      <h2 class="text-xl font-semibold text-ink">Confirm Action</h2>
+      <h2 class="text-ink text-xl font-semibold">Confirm Action</h2>
 
       <div class="mt-6 space-y-4">
-        <div class="rounded-lg border border-soft bg-canvas px-4 py-3">
+        <div class="border-soft bg-canvas rounded-lg border px-4 py-3">
           <dl class="space-y-2 text-sm">
             <div class="flex justify-between">
               <dt class="text-muted">Action</dt>
-              <dd class="font-medium text-ink">
-                {selectedAction === 'review' ? 'Mark as Reviewed' : selectedAction === 'resolve' ? 'Resolve All' : 'Delete Non-Primary Documents'}
+              <dd class="text-ink font-medium">
+                {selectedAction === 'review'
+                  ? 'Mark as Reviewed'
+                  : selectedAction === 'resolve'
+                    ? 'Resolve All'
+                    : 'Delete Non-Primary Documents'}
               </dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-muted">Affected groups</dt>
-              <dd class="font-medium text-ink">{selectedCount}</dd>
+              <dd class="text-ink font-medium">{selectedCount}</dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-muted">Confidence threshold</dt>
-              <dd class="font-medium text-ink">{threshold}%+</dd>
+              <dd class="text-ink font-medium">{threshold}%+</dd>
             </div>
           </dl>
         </div>
 
         {#if selectedAction === 'delete'}
-          <div class="rounded-lg border-2 border-ember bg-ember-light px-4 py-3 text-sm text-ember">
+          <div class="border-ember bg-ember-light text-ember rounded-lg border-2 px-4 py-3 text-sm">
             Deleted documents cannot be recovered from Paperless-NGX.
           </div>
         {/if}
 
         <div class="space-y-3">
           <label class="flex items-start gap-3">
-            <input
-              type="checkbox"
-              bind:checked={confirmChecks.understand}
-              class="mt-0.5 rounded"
-            />
-            <span class="text-sm text-ink">I understand this action affects {selectedCount} groups</span>
+            <input type="checkbox" bind:checked={confirmChecks.understand} class="mt-0.5 rounded" />
+            <span class="text-ink text-sm"
+              >I understand this action affects {selectedCount} groups</span
+            >
           </label>
 
           {#if selectedAction === 'delete'}
@@ -527,7 +579,9 @@
                 bind:checked={confirmChecks.irreversible}
                 class="mt-0.5 rounded"
               />
-              <span class="text-sm text-ink">I understand deleted documents cannot be recovered</span>
+              <span class="text-ink text-sm"
+                >I understand deleted documents cannot be recovered</span
+              >
             </label>
           {/if}
         </div>
@@ -536,7 +590,7 @@
       <div class="mt-8 flex justify-between">
         <button
           onclick={handleBack}
-          class="rounded-lg border border-soft px-4 py-2 text-sm font-medium text-ink hover:bg-canvas"
+          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
         >
           Back
         </button>
@@ -544,32 +598,38 @@
           onclick={handleNext}
           disabled={!canProceedStep4}
           class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50
-            {selectedAction === 'delete' ? 'bg-ember hover:opacity-90' : 'bg-accent hover:bg-accent-hover'}"
+            {selectedAction === 'delete'
+            ? 'bg-ember hover:opacity-90'
+            : 'bg-accent hover:bg-accent-hover'}"
         >
           Execute
         </button>
       </div>
 
-    <!-- Step 5: Execute -->
+      <!-- Step 5: Execute -->
     {:else if step === 5}
-      <h2 class="text-xl font-semibold text-ink">Executing...</h2>
+      <h2 class="text-ink text-xl font-semibold">Executing...</h2>
 
       <div class="mt-6">
         <ProgressBar progress={executionProgress} message={executionMessage} />
       </div>
 
-    <!-- Step 6: Results -->
+      <!-- Step 6: Results -->
     {:else if step === 6}
       {#if executionResult?.success}
-        <h2 class="text-xl font-semibold text-success">Operation Complete</h2>
+        <h2 class="text-success text-xl font-semibold">Operation Complete</h2>
 
-        <div class="mt-6 rounded-lg border border-success bg-success-light px-4 py-4 text-sm text-success">
+        <div
+          class="border-success bg-success-light text-success mt-6 rounded-lg border px-4 py-4 text-sm"
+        >
           <span class="font-semibold">{executionResult.processed}</span> groups processed successfully.
         </div>
       {:else}
-        <h2 class="text-xl font-semibold text-ember">Operation Failed</h2>
+        <h2 class="text-ember text-xl font-semibold">Operation Failed</h2>
 
-        <div class="mt-6 rounded-lg border border-ember bg-ember-light px-4 py-4 text-sm text-ember">
+        <div
+          class="border-ember bg-ember-light text-ember mt-6 rounded-lg border px-4 py-4 text-sm"
+        >
           {#each executionResult?.errors ?? ['Unknown error'] as error}
             <p>{error}</p>
           {/each}
@@ -579,13 +639,13 @@
       <div class="mt-8 flex gap-3">
         <button
           onclick={() => goto('/duplicates')}
-          class="rounded-lg border border-soft px-4 py-2 text-sm font-medium text-ink hover:bg-canvas"
+          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
         >
           Back to Duplicates
         </button>
         <button
           onclick={resetWizard}
-          class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
         >
           Run Another Batch
         </button>

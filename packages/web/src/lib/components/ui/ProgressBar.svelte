@@ -13,11 +13,11 @@
 <div class="w-full">
   <div class="mb-1 flex items-center justify-between text-sm">
     <span class="text-muted">{message}</span>
-    <span class="font-mono text-xs font-medium text-ink">{pct}%</span>
+    <span class="text-ink font-mono text-xs font-medium">{pct}%</span>
   </div>
-  <div class="h-2.5 w-full overflow-hidden rounded-full bg-soft">
+  <div class="bg-soft h-2.5 w-full overflow-hidden rounded-full">
     <div
-      class="h-full rounded-full bg-accent {animated ? 'transition-all duration-300 ease-out' : ''}"
+      class="bg-accent h-full rounded-full {animated ? 'transition-all duration-300 ease-out' : ''}"
       style="width: {pct}%"
     ></div>
   </div>

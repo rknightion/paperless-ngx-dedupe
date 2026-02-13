@@ -91,7 +91,7 @@
   <button
     onclick={toggleReview}
     disabled={isUpdating}
-    class="rounded-lg border border-soft px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-50"
+    class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
   >
     {reviewed ? 'Unmark Reviewed' : 'Mark Reviewed'}
   </button>
@@ -100,29 +100,33 @@
     <button
       onclick={markResolved}
       disabled={isUpdating}
-      class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+      class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
     >
       Resolve Group
     </button>
   {/if}
 
   <button
-    onclick={() => { showDeleteConfirm = true; }}
+    onclick={() => {
+      showDeleteConfirm = true;
+    }}
     disabled={isUpdating || memberCount < 2}
-    class="rounded-lg bg-ember px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+    class="bg-ember rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
   >
     Delete Non-Primary
   </button>
 
   {#if deleteProgress}
-    <div class="flex items-center gap-2 text-sm text-muted">
-      <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent"></span>
+    <div class="text-muted flex items-center gap-2 text-sm">
+      <span
+        class="border-accent inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+      ></span>
       {deleteProgress.message || `${Math.round(deleteProgress.progress * 100)}%`}
     </div>
   {/if}
 
   {#if error}
-    <span class="text-sm text-ember">{error}</span>
+    <span class="text-ember text-sm">{error}</span>
   {/if}
 </div>
 
@@ -133,5 +137,7 @@
   confirmLabel="Delete Documents"
   variant="ember"
   onconfirm={deleteNonPrimary}
-  oncancel={() => { showDeleteConfirm = false; }}
+  oncancel={() => {
+    showDeleteConfirm = false;
+  }}
 />

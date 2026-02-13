@@ -161,8 +161,7 @@ export const paperlessConfigSchema = z
     maxRetries: z.number().optional(),
   })
   .refine((data) => data.token || (data.username && data.password), {
-    message:
-      'Either token or both username and password must be provided',
+    message: 'Either token or both username and password must be provided',
     path: ['token'],
   });
 
@@ -176,11 +175,10 @@ export function toPaperlessConfig(appConfig: AppConfig): PaperlessConfig {
 }
 
 export function paginatedResponseSchema<T extends ZodType>(itemSchema: T) {
-  return z
-    .object({
-      count: z.number(),
-      next: z.string().nullable().default(null),
-      previous: z.string().nullable().default(null),
-      results: z.array(itemSchema),
-    });
+  return z.object({
+    count: z.number(),
+    next: z.string().nullable().default(null),
+    previous: z.string().nullable().default(null),
+    results: z.array(itemSchema),
+  });
 }

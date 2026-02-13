@@ -21,10 +21,7 @@ export function setConfig(db: AppDatabase, key: string, value: string): void {
     .run();
 }
 
-export function setConfigBatch(
-  db: AppDatabase,
-  settings: Record<string, string>,
-): void {
+export function setConfigBatch(db: AppDatabase, settings: Record<string, string>): void {
   const now = new Date().toISOString();
   db.transaction((tx) => {
     for (const [key, value] of Object.entries(settings)) {

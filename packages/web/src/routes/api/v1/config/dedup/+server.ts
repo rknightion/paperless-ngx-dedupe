@@ -15,10 +15,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 export const PUT: RequestHandler = async ({ request, locals }) => {
   const contentType = request.headers.get('content-type');
   if (!contentType?.includes('application/json')) {
-    return apiError(
-      ErrorCode.VALIDATION_FAILED,
-      'Content-Type must be application/json',
-    );
+    return apiError(ErrorCode.VALIDATION_FAILED, 'Content-Type must be application/json');
   }
 
   let body: unknown;

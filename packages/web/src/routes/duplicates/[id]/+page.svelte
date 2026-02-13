@@ -20,9 +20,7 @@
   let secondaryMembers = $derived(
     data.group.members.filter((m) => m.memberId !== primaryMember.memberId),
   );
-  let selectedSecondary = $derived(
-    secondaryMembers[selectedSecondaryIndex] || secondaryMembers[0],
-  );
+  let selectedSecondary = $derived(secondaryMembers[selectedSecondaryIndex] || secondaryMembers[0]);
 
   let groupStatus = $derived(
     data.group.resolved ? 'resolved' : data.group.reviewed ? 'reviewed' : 'pending',
@@ -56,20 +54,20 @@
 
 <div class="space-y-6">
   <!-- Breadcrumb -->
-  <a href="/duplicates" class="inline-block text-sm text-accent hover:text-accent-hover">
+  <a href="/duplicates" class="text-accent hover:text-accent-hover inline-block text-sm">
     &larr; Back to Duplicates
   </a>
 
   <!-- Group header -->
   <div>
     <div class="flex flex-wrap items-center gap-3">
-      <h1 class="text-2xl font-bold text-ink">
+      <h1 class="text-ink text-2xl font-bold">
         {primaryMember?.title || 'Untitled Group'}
       </h1>
       <ConfidenceBadge score={data.group.confidenceScore} />
       <StatusBadge status={groupStatus} />
     </div>
-    <p class="mt-1 text-sm text-muted">
+    <p class="text-muted mt-1 text-sm">
       Algorithm v{data.group.algorithmVersion}
       &middot; Created {new Date(data.group.createdAt).toLocaleDateString()}
       &middot; <span class="font-mono">{data.group.id.slice(0, 8)}&hellip;</span>
@@ -98,15 +96,15 @@
   <!-- Members table -->
   <div class="panel">
     <div class="mb-4 flex items-center gap-3">
-      <h3 class="text-base font-semibold text-ink">Members</h3>
-      <span class="rounded-full bg-canvas px-2.5 py-0.5 text-xs font-semibold text-muted">
+      <h3 class="text-ink text-base font-semibold">Members</h3>
+      <span class="bg-canvas text-muted rounded-full px-2.5 py-0.5 text-xs font-semibold">
         {data.group.members.length}
       </span>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-soft text-left text-xs text-muted">
+          <tr class="border-soft text-muted border-b text-left text-xs">
             <th class="pb-2 pr-4 font-medium">Title</th>
             <th class="pb-2 pr-4 font-medium">Correspondent</th>
             <th class="pb-2 pr-4 font-medium">Role</th>
@@ -116,19 +114,21 @@
         </thead>
         <tbody>
           {#each data.group.members as member}
-            <tr class="border-b border-soft last:border-0">
-              <td class="py-2.5 pr-4 font-medium text-ink">{member.title}</td>
-              <td class="py-2.5 pr-4 text-muted">{member.correspondent ?? '-'}</td>
+            <tr class="border-soft border-b last:border-0">
+              <td class="text-ink py-2.5 pr-4 font-medium">{member.title}</td>
+              <td class="text-muted py-2.5 pr-4">{member.correspondent ?? '-'}</td>
               <td class="py-2.5 pr-4">
                 {#if member.isPrimary}
-                  <span class="rounded-full bg-accent-light px-2 py-0.5 text-xs font-medium text-accent">
+                  <span
+                    class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium"
+                  >
                     Primary
                   </span>
                 {:else}
                   <span class="text-muted">-</span>
                 {/if}
               </td>
-              <td class="py-2.5 pr-4 font-mono text-xs text-muted">
+              <td class="text-muted py-2.5 pr-4 font-mono text-xs">
                 {formatBytes(member.originalFileSize)}
               </td>
               <td class="py-2.5">
@@ -137,7 +137,7 @@
                     <button
                       onclick={() => setPrimary(member.documentId)}
                       disabled={isSettingPrimary}
-                      class="rounded-lg border border-soft px-3 py-1 text-xs font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                      class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1 text-xs font-medium disabled:opacity-50"
                     >
                       {isSettingPrimary ? 'Setting...' : 'Set as Primary'}
                     </button>
@@ -163,19 +163,20 @@
   <!-- Document comparison -->
   {#if selectedSecondary}
     <div class="space-y-4">
-      <h3 class="text-base font-semibold text-ink">Document Comparison</h3>
+      <h3 class="text-ink text-base font-semibold">Document Comparison</h3>
 
       {#if secondaryMembers.length > 1}
         {#if secondaryMembers.length <= 4}
           <div class="flex gap-1">
             {#each secondaryMembers as sec, i}
               <button
-                onclick={() => { selectedSecondaryIndex = i; }}
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {
-                  selectedSecondaryIndex === i
-                    ? 'bg-accent text-white'
-                    : 'border border-soft text-muted hover:bg-canvas'
-                }"
+                onclick={() => {
+                  selectedSecondaryIndex = i;
+                }}
+                class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {selectedSecondaryIndex ===
+                i
+                  ? 'bg-accent text-white'
+                  : 'border-soft text-muted hover:bg-canvas border'}"
               >
                 {sec.title.length > 30 ? sec.title.slice(0, 30) + '...' : sec.title}
               </button>
@@ -184,8 +185,10 @@
         {:else}
           <select
             value={selectedSecondaryIndex}
-            onchange={(e) => { selectedSecondaryIndex = Number((e.target as HTMLSelectElement).value); }}
-            class="rounded-lg border border-soft bg-surface px-3 py-2 text-sm text-ink"
+            onchange={(e) => {
+              selectedSecondaryIndex = Number((e.target as HTMLSelectElement).value);
+            }}
+            class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm"
           >
             {#each secondaryMembers as sec, i}
               <option value={i}>{sec.title}</option>
@@ -200,10 +203,15 @@
         paperlessUrl={data.paperlessUrl}
       />
 
-      <TextDiff
-        textA={primaryMember.content?.fullText ?? null}
-        textB={selectedSecondary.content?.fullText ?? null}
-      />
+      {#key `${primaryMember.documentId}-${selectedSecondary.documentId}`}
+        <TextDiff
+          groupId={data.group.id}
+          docAId={primaryMember.documentId}
+          docBId={selectedSecondary.documentId}
+          docAWordCount={primaryMember.content?.wordCount ?? null}
+          docBWordCount={selectedSecondary.content?.wordCount ?? null}
+        />
+      {/key}
     </div>
   {/if}
 </div>

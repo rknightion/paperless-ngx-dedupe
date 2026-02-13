@@ -3,6 +3,16 @@ import { parseConfig, initLogger, createLogger } from '@paperless-dedupe/core';
 import type { Handle } from '@sveltejs/kit';
 import { getDatabase } from '$lib/server/db';
 
+// Graceful shutdown handlers
+if (typeof process !== 'undefined') {
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, () => {
+      console.log(`Received ${signal}, shutting down gracefully...`);
+      setTimeout(() => process.exit(1), 25_000).unref(); // safety net inside Docker's 30s stop_grace_period
+    });
+  }
+}
+
 // Singleton initialization
 let config: ReturnType<typeof parseConfig> | undefined;
 let initialized = false;

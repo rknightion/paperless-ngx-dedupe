@@ -37,10 +37,7 @@ export function getDedupConfig(db: AppDatabase): DedupConfig {
   return dedupConfigSchema.parse(raw) as DedupConfig;
 }
 
-export function setDedupConfig(
-  db: AppDatabase,
-  config: Partial<DedupConfig>,
-): DedupConfig {
+export function setDedupConfig(db: AppDatabase, config: Partial<DedupConfig>): DedupConfig {
   const existing = getDedupConfig(db);
   const merged = { ...existing, ...config };
   const validated = dedupConfigSchema.parse(merged) as DedupConfig;
@@ -70,10 +67,7 @@ export function setDedupConfig(
   return validated;
 }
 
-export function recalculateConfidenceScores(
-  db: AppDatabase,
-  config: DedupConfig,
-): number {
+export function recalculateConfidenceScores(db: AppDatabase, config: DedupConfig): number {
   const groups = db.select().from(duplicateGroup).all();
 
   if (groups.length === 0) return 0;
@@ -107,8 +101,7 @@ export function recalculateConfidenceScores(
         }
       }
 
-      const confidenceScore =
-        activeWeightSum > 0 ? weightedSum / activeWeightSum : 0;
+      const confidenceScore = activeWeightSum > 0 ? weightedSum / activeWeightSum : 0;
 
       tx.update(duplicateGroup)
         .set({ confidenceScore, updatedAt: now })

@@ -15,7 +15,9 @@
     red: 'bg-ember-light text-ember',
   } as const;
 
-  let color = $derived(score >= 0.95 ? colorMap.green : score >= 0.85 ? colorMap.yellow : colorMap.red);
+  let color = $derived(
+    score >= 0.95 ? colorMap.green : score >= 0.85 ? colorMap.yellow : colorMap.red,
+  );
 </script>
 
 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {color}">

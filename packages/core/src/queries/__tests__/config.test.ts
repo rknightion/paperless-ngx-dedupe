@@ -102,7 +102,7 @@ describe('setConfigBatch', () => {
     setConfig(db, 'lang', 'en');
 
     setConfigBatch(db, {
-      theme: 'light',    // update existing
+      theme: 'light', // update existing
       new_key: 'new_val', // insert new
     });
 

@@ -108,11 +108,7 @@ describe('runAnalysis pipeline', () => {
     // Primary should be the one with lowest paperlessId
     const primary = members.find((m) => m.isPrimary);
     expect(primary).toBeDefined();
-    const primaryDoc = db
-      .select()
-      .from(document)
-      .where(eq(document.id, primary!.documentId))
-      .get();
+    const primaryDoc = db.select().from(document).where(eq(document.id, primary!.documentId)).get();
     expect(primaryDoc?.paperlessId).toBe(1);
   });
 
@@ -145,7 +141,10 @@ describe('runAnalysis pipeline', () => {
 
   it('should not group very different documents', async () => {
     const textA = generateText('the quick brown fox jumps over the lazy dog near the river', 10);
-    const textB = generateText('quantum physics explains the fundamental nature of particles and waves', 10);
+    const textB = generateText(
+      'quantum physics explains the fundamental nature of particles and waves',
+      10,
+    );
 
     seedDocument(db, 1, 'Fox Story', textA);
     seedDocument(db, 2, 'Physics Paper', textB);
@@ -172,7 +171,12 @@ describe('runAnalysis pipeline', () => {
     expect(result1.signaturesReused).toBe(0);
 
     // Add a new pending document
-    seedDocument(db, 3, 'Doc 3', generateText('completely different document about space travel exploration', 10));
+    seedDocument(
+      db,
+      3,
+      'Doc 3',
+      generateText('completely different document about space travel exploration', 10),
+    );
 
     // Second run (incremental - only pending docs)
     const result2 = await runAnalysis(db);
@@ -209,11 +213,7 @@ describe('runAnalysis pipeline', () => {
     const primary = members.find((m) => m.isPrimary);
     expect(primary).toBeDefined();
 
-    const primaryDoc = db
-      .select()
-      .from(document)
-      .where(eq(document.id, primary!.documentId))
-      .get();
+    const primaryDoc = db.select().from(document).where(eq(document.id, primary!.documentId)).get();
     expect(primaryDoc?.paperlessId).toBe(2);
   });
 

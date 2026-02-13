@@ -19,14 +19,12 @@
   // Derived helpers
   let hasFilters = $derived(
     $page.url.searchParams.has('reviewed') ||
-    $page.url.searchParams.has('resolved') ||
-    $page.url.searchParams.has('minConfidence') ||
-    $page.url.searchParams.has('maxConfidence'),
+      $page.url.searchParams.has('resolved') ||
+      $page.url.searchParams.has('minConfidence') ||
+      $page.url.searchParams.has('maxConfidence'),
   );
 
-  let allSelected = $derived(
-    data.groups.length > 0 && selectedIds.size === data.groups.length,
-  );
+  let allSelected = $derived(data.groups.length > 0 && selectedIds.size === data.groups.length);
 
   let currentStatus = $derived(() => {
     const reviewed = $page.url.searchParams.get('reviewed');
@@ -175,14 +173,14 @@
   <!-- Page Header -->
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <h1 class="text-3xl font-bold text-ink">Duplicate Groups</h1>
-      <span class="rounded-full bg-accent-light px-2.5 py-0.5 text-xs font-semibold text-accent">
+      <h1 class="text-ink text-3xl font-bold">Duplicate Groups</h1>
+      <span class="bg-accent-light text-accent rounded-full px-2.5 py-0.5 text-xs font-semibold">
         {data.total}
       </span>
     </div>
     <a
       href="/duplicates/wizard"
-      class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+      class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
     >
       Bulk Operations Wizard
     </a>
@@ -203,12 +201,12 @@
   <div class="panel">
     <div class="flex flex-wrap items-end gap-4">
       <div>
-        <label for="status-filter" class="block text-sm font-medium text-ink">Status</label>
+        <label for="status-filter" class="text-ink block text-sm font-medium">Status</label>
         <select
           id="status-filter"
           onchange={handleStatusChange}
           value={currentStatus()}
-          class="mt-1 rounded-lg border border-soft bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
         >
           <option value="all">All</option>
           <option value="unreviewed">Unreviewed</option>
@@ -218,41 +216,47 @@
       </div>
 
       <div>
-        <label for="min-confidence" class="block text-sm font-medium text-ink">Min Confidence</label>
+        <label for="min-confidence" class="text-ink block text-sm font-medium">Min Confidence</label
+        >
         <input
           id="min-confidence"
           type="number"
           min="0"
           max="100"
           placeholder="0"
-          value={$page.url.searchParams.get('minConfidence') ? Math.round(Number($page.url.searchParams.get('minConfidence')) * 100) : ''}
+          value={$page.url.searchParams.get('minConfidence')
+            ? Math.round(Number($page.url.searchParams.get('minConfidence')) * 100)
+            : ''}
           onchange={handleMinConfidence}
-          class="mt-1 w-24 rounded-lg border border-soft bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
         />
       </div>
 
       <div>
-        <label for="max-confidence" class="block text-sm font-medium text-ink">Max Confidence</label>
+        <label for="max-confidence" class="text-ink block text-sm font-medium">Max Confidence</label
+        >
         <input
           id="max-confidence"
           type="number"
           min="0"
           max="100"
           placeholder="100"
-          value={$page.url.searchParams.get('maxConfidence') ? Math.round(Number($page.url.searchParams.get('maxConfidence')) * 100) : ''}
+          value={$page.url.searchParams.get('maxConfidence')
+            ? Math.round(Number($page.url.searchParams.get('maxConfidence')) * 100)
+            : ''}
           onchange={handleMaxConfidence}
-          class="mt-1 w-24 rounded-lg border border-soft bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
         />
       </div>
 
       <div>
-        <label for="sort-by" class="block text-sm font-medium text-ink">Sort By</label>
+        <label for="sort-by" class="text-ink block text-sm font-medium">Sort By</label>
         <div class="mt-1 flex gap-1">
           <select
             id="sort-by"
             onchange={handleSortChange}
             value={$page.url.searchParams.get('sortBy') ?? 'confidence'}
-            class="rounded-lg border border-soft bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
           >
             <option value="confidence">Confidence</option>
             <option value="created_at">Created</option>
@@ -260,7 +264,7 @@
           </select>
           <button
             onclick={toggleSortOrder}
-            class="rounded-lg border border-soft px-2 py-2 text-sm text-ink hover:bg-canvas"
+            class="border-soft text-ink hover:bg-canvas rounded-lg border px-2 py-2 text-sm"
             title="Toggle sort order"
           >
             {($page.url.searchParams.get('sortOrder') ?? 'desc') === 'desc' ? '↓' : '↑'}
@@ -272,33 +276,32 @@
 
   <!-- Bulk Actions Bar -->
   {#if selectedIds.size > 0}
-    <div class="flex flex-wrap items-center gap-3 rounded-lg border border-accent bg-accent-light px-4 py-3">
-      <span class="text-sm font-medium text-ink">{selectedIds.size} selected</span>
+    <div
+      class="border-accent bg-accent-light flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
+    >
+      <span class="text-ink text-sm font-medium">{selectedIds.size} selected</span>
       <button
         onclick={markReviewed}
         disabled={isSubmitting}
-        class="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+        class="bg-accent hover:bg-accent-hover rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
       >
         Mark Reviewed
       </button>
       <button
         onclick={resolveSelected}
         disabled={isSubmitting}
-        class="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+        class="bg-accent hover:bg-accent-hover rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
       >
         Resolve Selected
       </button>
       <button
         onclick={() => (showDeleteConfirm = true)}
         disabled={isSubmitting}
-        class="rounded-lg bg-ember px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+        class="bg-ember rounded-lg px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
       >
         Delete Non-Primary
       </button>
-      <button
-        onclick={() => (selectedIds = new Set())}
-        class="text-sm text-muted hover:text-ink"
-      >
+      <button onclick={() => (selectedIds = new Set())} class="text-muted hover:text-ink text-sm">
         Clear selection
       </button>
     </div>
@@ -306,10 +309,10 @@
 
   <!-- Data Table -->
   {#if data.total > 0}
-    <div class="overflow-x-auto rounded-lg border border-soft">
+    <div class="border-soft overflow-x-auto rounded-lg border">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-soft bg-canvas text-left">
+          <tr class="border-soft bg-canvas border-b text-left">
             <th class="px-4 py-3">
               <input
                 type="checkbox"
@@ -318,16 +321,16 @@
                 class="rounded"
               />
             </th>
-            <th class="px-4 py-3 font-medium text-muted">Primary Doc Title</th>
-            <th class="px-4 py-3 font-medium text-muted">Members</th>
-            <th class="px-4 py-3 font-medium text-muted">Confidence</th>
-            <th class="px-4 py-3 font-medium text-muted">Status</th>
+            <th class="text-muted px-4 py-3 font-medium">Primary Doc Title</th>
+            <th class="text-muted px-4 py-3 font-medium">Members</th>
+            <th class="text-muted px-4 py-3 font-medium">Confidence</th>
+            <th class="text-muted px-4 py-3 font-medium">Status</th>
           </tr>
         </thead>
         <tbody>
           {#each data.groups as group, i}
             <tr
-              class="cursor-pointer border-b border-soft hover:bg-canvas {i % 2 === 0
+              class="border-soft hover:bg-canvas cursor-pointer border-b {i % 2 === 0
                 ? 'bg-surface'
                 : 'bg-canvas'}"
               onclick={() => goto(`/duplicates/${group.id}`)}
@@ -341,10 +344,10 @@
                   class="rounded"
                 />
               </td>
-              <td class="max-w-xs truncate px-4 py-3 text-ink">
+              <td class="text-ink max-w-xs truncate px-4 py-3">
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </td>
-              <td class="px-4 py-3 text-ink">
+              <td class="text-ink px-4 py-3">
                 {group.memberCount}
               </td>
               <td class="px-4 py-3">
@@ -363,28 +366,28 @@
 
     <!-- Pagination -->
     <div class="flex flex-wrap items-center justify-between gap-4">
-      <span class="text-sm text-muted">
+      <span class="text-muted text-sm">
         Showing {showingFrom}-{showingTo} of {data.total}
       </span>
       <div class="flex items-center gap-3">
         <button
           onclick={() => goToPage(data.offset - data.limit)}
           disabled={data.offset === 0}
-          class="rounded-lg border border-soft px-3 py-1.5 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-50"
+          class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Previous
         </button>
         <button
           onclick={() => goToPage(data.offset + data.limit)}
           disabled={data.offset + data.limit >= data.total}
-          class="rounded-lg border border-soft px-3 py-1.5 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-50"
+          class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Next
         </button>
         <select
           onchange={changePageSize}
           value={String(data.limit)}
-          class="rounded-lg border border-soft bg-surface px-2 py-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
         >
           <option value="10">10</option>
           <option value="25">25</option>
@@ -398,7 +401,7 @@
       <p class="text-muted">No groups match your filters.</p>
       <button
         onclick={clearFilters}
-        class="mt-3 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+        class="bg-accent hover:bg-accent-hover mt-3 rounded-lg px-4 py-2 text-sm font-medium text-white"
       >
         Clear filters
       </button>

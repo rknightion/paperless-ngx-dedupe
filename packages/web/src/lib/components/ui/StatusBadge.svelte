@@ -19,6 +19,8 @@
   let classes = $derived(statusClasses[status] ?? 'bg-gray-100 text-gray-600');
 </script>
 
-<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize {classes}">
+<span
+  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize {classes}"
+>
   {status}
 </span>

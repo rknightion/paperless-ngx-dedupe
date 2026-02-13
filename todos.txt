@@ -182,47 +182,64 @@ Additional completed work:
 
 
 ================================================================================
-PHASE 8: POLISH & PRODUCTION
+PHASE 8a: POLISH & PRODUCTION PRIORITIES  ✅ COMPLETED
 ================================================================================
 
-[ ] End-to-end Playwright test suite
-    [ ] Install Playwright, configure in packages/web/
-    [ ] Test sync workflow (mock Paperless API)
-    [ ] Test duplicate review workflow
-    [ ] Test settings page
-    [ ] Test bulk operations wizard
-[ ] CI/CD pipeline (GitHub Actions)
-    [ ] Lint + format check
-    [ ] Type check (svelte-check + tsc)
-    [ ] Unit tests (vitest)
-    [ ] E2E tests (playwright)
-    [ ] Docker build verification
-    [ ] Automated release tagging
+[x] End-to-end Playwright test suite
+    [x] Install Playwright, configure in packages/web/
+    [x] Test sync workflow (mock Paperless API)
+    [x] Test duplicate review workflow
+    [x] Test settings page
+    [x] Test bulk operations wizard
+
+[x] CI/CD pipeline (GitHub Actions)
+    [x] Lint + format check
+    [x] Type check (svelte-check + tsc)
+    [x] Unit tests (vitest)
+    [x] E2E tests (playwright) (including setting up a paperless-ngx instance. See paperless-ngx repo for how they setup tests for guidance/inspiration)
+    [x] Docker build verification
+    [x] Automated release tagging
+
+[x] Docker optimization
+    [x] Minimize image size (multi-stage, .dockerignore)
+    [x] Non-root user in container
+    [x] Graceful shutdown handling
+
+[x] Performance optimization
+    [x] Virtual scrolling for long document/group lists (Skipped — duplicates list already paginated, max 50 rows, no benefit)
+    [x] Lazy loading for OCR text in comparison views
+    [x] Efficient pagination (cursor-based if needed for large datasets) (Deferred — offset/limit works fine at expected scale)
+
+================================================================================
+PHASE 8b: POLISH & PRODUCTION SECONDARIES
+================================================================================
+[ ] Data export
+    [ ] Export duplicate report as CSV
+    [ ] Export configuration as JSON (backup/restore)
+
 [ ] Comprehensive error pages (404, 500)
+
 [ ] Mobile-responsive layout
     [ ] Responsive sidebar (collapsible on mobile)
     [ ] Duplicate comparison stacks vertically on small screens
     [ ] Table columns hide/show based on breakpoint
+
+================================================================================
+PHASE 8C: POLISH & PRODUCTION TIERTIES
+================================================================================
+[ ] User documentation
+    [ ] README with setup guide, configuration reference, API guide
+    [ ] Troubleshooting guide (common issues, Paperless connectivity, etc.)
+
+================================================================================
+PHASE 10: EXTRAS
+================================================================================
+
 [ ] Accessibility audit (WCAG 2.1 AA)
     [ ] Semantic HTML elements
     [ ] Keyboard navigation for all interactive elements
     [ ] Screen reader support for confidence scores and status badges
     [ ] Focus management in modals and wizards
-[ ] Performance optimization
-    [ ] Virtual scrolling for long document/group lists
-    [ ] Lazy loading for OCR text in comparison views
-    [ ] Efficient pagination (cursor-based if needed for large datasets)
-[ ] Data export
-    [ ] Export duplicate report as CSV
-    [ ] Export configuration as JSON (backup/restore)
-[ ] User documentation
-    [ ] README with setup guide, configuration reference, API guide
-    [ ] Troubleshooting guide (common issues, Paperless connectivity, etc.)
-[ ] Docker optimization
-    [ ] Minimize image size (multi-stage, .dockerignore)
-    [ ] Non-root user in container
-    [ ] Graceful shutdown handling
-
 
 ================================================================================
 PHASE 9: Additional Features
@@ -273,4 +290,4 @@ FUTURE IDEAS (UNSCHEDULED)
 CLAUDE SHOULD IGNORE BELOW THIS LINE!
 
 prompt text (already at start of instruction)
-Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement Phase 7. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed and ensure this initial prompt is included on any plan produced so it is not lost during context compaction.
+Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement Phase 8a. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed and ensure this initial prompt is included on any plan produced so it is not lost during context compaction.

@@ -10,20 +10,14 @@ import type {
   ScoringOptions,
 } from './types.js';
 
-function computeFileSizeRatio(
-  size1: number | null,
-  size2: number | null,
-): number | null {
+function computeFileSizeRatio(size1: number | null, size2: number | null): number | null {
   if (size1 == null || size2 == null || size1 === 0 || size2 === 0) {
     return null;
   }
   return Math.min(size1, size2) / Math.max(size1, size2);
 }
 
-function computeDateProximity(
-  date1: string | null,
-  date2: string | null,
-): number | null {
+function computeDateProximity(date1: string | null, date2: string | null): number | null {
   if (date1 == null || date2 == null) {
     return null;
   }
@@ -37,32 +31,20 @@ function computeDateProximity(
   return 1.0 - (diffDays - 30) / (365 - 30);
 }
 
-function computeTypeMatch(
-  type1: string | null,
-  type2: string | null,
-): number | null {
+function computeTypeMatch(type1: string | null, type2: string | null): number | null {
   if (type1 == null || type2 == null) return null;
   return type1 === type2 ? 1.0 : 0.0;
 }
 
-function computeCorrespondentMatch(
-  corr1: string | null,
-  corr2: string | null,
-): number | null {
+function computeCorrespondentMatch(corr1: string | null, corr2: string | null): number | null {
   if (corr1 == null || corr2 == null) return null;
   return corr1 === corr2 ? 1.0 : 0.0;
 }
 
-function computeMetadataScore(
-  doc1: DocumentScoringData,
-  doc2: DocumentScoringData,
-): number {
+function computeMetadataScore(doc1: DocumentScoringData, doc2: DocumentScoringData): number {
   const components: number[] = [];
 
-  const sizeRatio = computeFileSizeRatio(
-    doc1.originalFileSize,
-    doc2.originalFileSize,
-  );
+  const sizeRatio = computeFileSizeRatio(doc1.originalFileSize, doc2.originalFileSize);
   if (sizeRatio != null) components.push(sizeRatio);
 
   const dateProximity = computeDateProximity(doc1.createdDate, doc2.createdDate);
@@ -71,10 +53,7 @@ function computeMetadataScore(
   const typeMatch = computeTypeMatch(doc1.documentType, doc2.documentType);
   if (typeMatch != null) components.push(typeMatch);
 
-  const corrMatch = computeCorrespondentMatch(
-    doc1.correspondent,
-    doc2.correspondent,
-  );
+  const corrMatch = computeCorrespondentMatch(doc1.correspondent, doc2.correspondent);
   if (corrMatch != null) components.push(corrMatch);
 
   if (components.length === 0) return 0;
@@ -107,20 +86,15 @@ export function computeSimilarityScore(
   const filenameScore = tokenSortRatio(doc1.title, doc2.title);
 
   const components: { score: number; weight: number }[] = [];
-  if (weights.jaccard > 0)
-    components.push({ score: jaccardSimilarity, weight: weights.jaccard });
-  if (weights.fuzzy > 0)
-    components.push({ score: fuzzyScore, weight: weights.fuzzy });
-  if (weights.metadata > 0)
-    components.push({ score: metadataScore, weight: weights.metadata });
-  if (weights.filename > 0)
-    components.push({ score: filenameScore, weight: weights.filename });
+  if (weights.jaccard > 0) components.push({ score: jaccardSimilarity, weight: weights.jaccard });
+  if (weights.fuzzy > 0) components.push({ score: fuzzyScore, weight: weights.fuzzy });
+  if (weights.metadata > 0) components.push({ score: metadataScore, weight: weights.metadata });
+  if (weights.filename > 0) components.push({ score: filenameScore, weight: weights.filename });
 
   let overall = 0;
   if (components.length > 0) {
     const totalWeight = components.reduce((sum, c) => sum + c.weight, 0);
-    overall =
-      components.reduce((sum, c) => sum + c.score * c.weight, 0) / totalWeight;
+    overall = components.reduce((sum, c) => sum + c.score * c.weight, 0) / totalWeight;
   }
 
   return {

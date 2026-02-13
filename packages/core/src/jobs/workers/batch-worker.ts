@@ -30,7 +30,10 @@ runWorkerTask(async (ctx, onProgress) => {
 
   for (let i = 0; i < groupIds.length; i++) {
     const groupId = groupIds[i];
-    await onProgress(Math.round((i / groupIds.length) * 100), `Processing group ${i + 1} of ${groupIds.length}`);
+    await onProgress(
+      Math.round((i / groupIds.length) * 100),
+      `Processing group ${i + 1} of ${groupIds.length}`,
+    );
 
     // Get non-primary members for this group
     const members = ctx.db

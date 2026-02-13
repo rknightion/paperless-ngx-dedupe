@@ -26,16 +26,19 @@
 
 <div class="panel flex items-start gap-4">
   {#if icon}
-    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-light text-accent">
+    <div
+      class="bg-accent-light text-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+    >
       {@render icon()}
     </div>
   {/if}
   <div class="min-w-0 flex-1">
-    <p class="text-sm text-muted">{label}</p>
-    <p class="mt-1 text-2xl font-semibold text-ink">{value}</p>
+    <p class="text-muted text-sm">{label}</p>
+    <p class="text-ink mt-1 text-2xl font-semibold">{value}</p>
     {#if trend && trendLabel}
       <p class="mt-1 text-xs {trendColors[trend]}">
-        {trendArrows[trend]} {trendLabel}
+        {trendArrows[trend]}
+        {trendLabel}
       </p>
     {/if}
   </div>

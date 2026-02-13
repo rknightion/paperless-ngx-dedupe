@@ -47,18 +47,20 @@
 <dialog
   bind:this={dialog}
   onkeydown={handleKeydown}
-  onclick={(e) => { if (e.target === dialog) oncancel(); }}
-  class="m-auto max-w-md rounded-xl border border-soft bg-surface p-0 shadow-lg backdrop:bg-black/40"
+  onclick={(e) => {
+    if (e.target === dialog) oncancel();
+  }}
+  class="border-soft bg-surface m-auto max-w-md rounded-xl border p-0 shadow-lg backdrop:bg-black/40"
   aria-labelledby="confirm-dialog-title"
   aria-describedby="confirm-dialog-message"
 >
   <div class="p-6">
-    <h2 id="confirm-dialog-title" class="text-lg font-semibold text-ink">{title}</h2>
-    <p id="confirm-dialog-message" class="mt-2 text-sm text-muted">{message}</p>
+    <h2 id="confirm-dialog-title" class="text-ink text-lg font-semibold">{title}</h2>
+    <p id="confirm-dialog-message" class="text-muted mt-2 text-sm">{message}</p>
     <div class="mt-6 flex justify-end gap-3">
       <button
         onclick={oncancel}
-        class="rounded-lg border border-soft px-4 py-2 text-sm font-medium text-ink hover:bg-canvas"
+        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
       >
         Cancel
       </button>

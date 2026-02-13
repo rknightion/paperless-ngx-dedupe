@@ -79,17 +79,15 @@ export async function runAnalysis(
   const allDocIds = new Set(allDocs.map((d) => d.id));
 
   // Docs to process: pending-only or all if force
-  const docsToProcess = force
-    ? allDocs
-    : allDocs.filter((d) => d.processingStatus === 'pending');
+  const docsToProcess = force ? allDocs : allDocs.filter((d) => d.processingStatus === 'pending');
 
   const docsToProcessIds = new Set(docsToProcess.map((d) => d.id));
 
-  logger.info(
-    { total: allDocs.length, toProcess: docsToProcess.length },
-    'Documents loaded',
+  logger.info({ total: allDocs.length, toProcess: docsToProcess.length }, 'Documents loaded');
+  await onProgress?.(
+    0.05,
+    `Loaded ${allDocs.length} documents, ${docsToProcess.length} to process`,
   );
-  await onProgress?.(0.05, `Loaded ${allDocs.length} documents, ${docsToProcess.length} to process`);
 
   // Stage 3: Generate MinHash signatures
   let sigGenerated = 0;
@@ -147,11 +145,7 @@ export async function runAnalysis(
       continue;
     }
 
-    const shingles = textToShingles(
-      content.normalizedText,
-      config.ngramSize,
-      config.minWords,
-    );
+    const shingles = textToShingles(content.normalizedText, config.ngramSize, config.minWords);
     if (!shingles) {
       continue;
     }
@@ -194,14 +188,11 @@ export async function runAnalysis(
   result.signaturesReused = sigReused;
   result.documentsAnalyzed = processedDocIds.length;
 
-  logger.info(
-    { generated: sigGenerated, reused: sigReused },
-    'Signatures processed',
-  );
-  await onProgress?.(0.40, `Signatures: ${sigGenerated} generated, ${sigReused} reused`);
+  logger.info({ generated: sigGenerated, reused: sigReused }, 'Signatures processed');
+  await onProgress?.(0.4, `Signatures: ${sigGenerated} generated, ${sigReused} reused`);
 
   // Stage 4: Build LSH index from ALL signatures
-  await onProgress?.(0.40, 'Building LSH index...');
+  await onProgress?.(0.4, 'Building LSH index...');
 
   const allSignatureRows = db
     .select({
@@ -228,10 +219,10 @@ export async function runAnalysis(
   }
 
   logger.info({ indexedSignatures: signatureMap.size }, 'LSH index built');
-  await onProgress?.(0.50, `LSH index built with ${signatureMap.size} signatures`);
+  await onProgress?.(0.5, `LSH index built with ${signatureMap.size} signatures`);
 
   // Stage 5: Find candidate pairs
-  await onProgress?.(0.50, 'Finding candidate pairs...');
+  await onProgress?.(0.5, 'Finding candidate pairs...');
 
   const searchDocIds = force
     ? [...allDocIds]
@@ -275,10 +266,8 @@ export async function runAnalysis(
   };
 
   // Pre-filter candidates by jaccard threshold
-  const jaccardPreFilter = (config.similarityThreshold) * 0.8;
-  const filteredPairs = [...candidatePairs.values()].filter(
-    (p) => p.jaccard >= jaccardPreFilter,
-  );
+  const jaccardPreFilter = config.similarityThreshold * 0.8;
+  const filteredPairs = [...candidatePairs.values()].filter((p) => p.jaccard >= jaccardPreFilter);
 
   // Collect all document IDs needed for scoring
   const scoringDocIds = new Set<string>();
@@ -351,13 +340,9 @@ export async function runAnalysis(
 
     if (!doc1 || !doc2) continue;
 
-    const similarity = computeSimilarityScore(
-      doc1,
-      doc2,
-      pair.jaccard,
-      weights,
-      { fuzzySampleSize: config.fuzzySampleSize },
-    );
+    const similarity = computeSimilarityScore(doc1, doc2, pair.jaccard, weights, {
+      fuzzySampleSize: config.fuzzySampleSize,
+    });
 
     if (similarity.overall >= config.similarityThreshold) {
       scoredPairs.push({
@@ -375,10 +360,10 @@ export async function runAnalysis(
 
   result.candidatePairsScored = scoredPairs.length;
   logger.info({ scoredPairs: scoredPairs.length }, 'Pairs scored');
-  await onProgress?.(0.80, `Scored ${scoredPairs.length} pairs above threshold`);
+  await onProgress?.(0.8, `Scored ${scoredPairs.length} pairs above threshold`);
 
   // Stage 7: Form groups via union-find
-  await onProgress?.(0.80, 'Forming duplicate groups...');
+  await onProgress?.(0.8, 'Forming duplicate groups...');
 
   const uf = new UnionFind<string>();
 
@@ -420,12 +405,12 @@ export async function runAnalysis(
   }
 
   // Load existing groups to match by member set
-  const existingGroups = db
-    .select()
-    .from(duplicateGroup)
-    .all();
+  const existingGroups = db.select().from(duplicateGroup).all();
 
-  const existingGroupMembers = new Map<string, { groupId: string; memberIds: Set<string>; reviewed: boolean; resolved: boolean }>();
+  const existingGroupMembers = new Map<
+    string,
+    { groupId: string; memberIds: Set<string>; reviewed: boolean; resolved: boolean }
+  >();
   for (const group of existingGroups) {
     const members = db
       .select({ documentId: duplicateMember.documentId })
@@ -539,12 +524,8 @@ export async function runAnalysis(
       if (group.reviewed || group.resolved) continue;
 
       // Delete members first (cascade should handle, but be explicit)
-      tx.delete(duplicateMember)
-        .where(eq(duplicateMember.groupId, group.id))
-        .run();
-      tx.delete(duplicateGroup)
-        .where(eq(duplicateGroup.id, group.id))
-        .run();
+      tx.delete(duplicateMember).where(eq(duplicateMember.groupId, group.id)).run();
+      tx.delete(duplicateGroup).where(eq(duplicateGroup.id, group.id)).run();
 
       result.groupsRemoved++;
     }
@@ -554,7 +535,10 @@ export async function runAnalysis(
     { created: result.groupsCreated, updated: result.groupsUpdated, removed: result.groupsRemoved },
     'Groups written',
   );
-  await onProgress?.(0.95, `Groups: ${result.groupsCreated} created, ${result.groupsUpdated} updated, ${result.groupsRemoved} removed`);
+  await onProgress?.(
+    0.95,
+    `Groups: ${result.groupsCreated} created, ${result.groupsUpdated} updated, ${result.groupsRemoved} removed`,
+  );
 
   // Stage 9: Update processing status and sync state
   await onProgress?.(0.95, 'Updating processing status...');
@@ -569,10 +553,7 @@ export async function runAnalysis(
   }
 
   // Count total duplicate groups
-  const groupCountResult = db
-    .select({ value: count() })
-    .from(duplicateGroup)
-    .get();
+  const groupCountResult = db.select({ value: count() }).from(duplicateGroup).get();
   const totalDuplicateGroups = groupCountResult?.value ?? 0;
 
   const now = new Date().toISOString();

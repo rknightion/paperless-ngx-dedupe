@@ -1,5 +1,9 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { getDuplicateGroups, paginationSchema, duplicateGroupFiltersSchema } from '@paperless-dedupe/core';
+import {
+  getDuplicateGroups,
+  paginationSchema,
+  duplicateGroupFiltersSchema,
+} from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -9,7 +13,11 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   });
 
   if (!paginationResult.success) {
-    return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid pagination parameters', paginationResult.error.issues);
+    return apiError(
+      ErrorCode.VALIDATION_FAILED,
+      'Invalid pagination parameters',
+      paginationResult.error.issues,
+    );
   }
 
   const filtersResult = duplicateGroupFiltersSchema.safeParse({
@@ -22,9 +30,17 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   });
 
   if (!filtersResult.success) {
-    return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid filter parameters', filtersResult.error.issues);
+    return apiError(
+      ErrorCode.VALIDATION_FAILED,
+      'Invalid filter parameters',
+      filtersResult.error.issues,
+    );
   }
 
   const result = getDuplicateGroups(locals.db, filtersResult.data, paginationResult.data);
-  return apiSuccess(result.items, { total: result.total, limit: result.limit, offset: result.offset });
+  return apiSuccess(result.items, {
+    total: result.total,
+    limit: result.limit,
+    offset: result.offset,
+  });
 };

@@ -33,7 +33,7 @@ export class PaperlessClient {
     this.baseUrl = config.url.replace(/\/+$/, '');
 
     this.headers = {
-      'Accept': 'application/json; version=9',
+      Accept: 'application/json; version=9',
     };
     if (config.token) {
       this.headers['Authorization'] = `Token ${config.token}`;
@@ -48,7 +48,7 @@ export class PaperlessClient {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private buildUrl(path: string): string {
@@ -138,7 +138,12 @@ export class PaperlessClient {
       if (attempt < this.maxRetries) {
         const backoff = Math.min(2 ** attempt * 1000 + Math.random() * 1000, 30000);
         this.logger.warn(
-          { attempt: attempt + 1, maxRetries: this.maxRetries, statusCode: response.status, backoffMs: Math.round(backoff) },
+          {
+            attempt: attempt + 1,
+            maxRetries: this.maxRetries,
+            statusCode: response.status,
+            backoffMs: Math.round(backoff),
+          },
           'Server error, retrying request',
         );
         await this.sleep(backoff);
@@ -170,9 +175,7 @@ export class PaperlessClient {
       const statsJson = await statsResponse.json();
       paperlessStatisticsSchema.parse(statsJson);
 
-      const docsResponse = await this.fetchWithRetry(
-        this.buildUrl('/api/documents/?page_size=1'),
-      );
+      const docsResponse = await this.fetchWithRetry(this.buildUrl('/api/documents/?page_size=1'));
       const docsJson = await docsResponse.json();
       const paginated = paginatedResponseSchema(paperlessDocumentSchema).parse(docsJson);
 
@@ -208,9 +211,7 @@ export class PaperlessClient {
     while (hasNext) {
       this.logger.debug({ page, pageSize, ordering }, 'Fetching documents page');
       const response = await this.fetchWithRetry(
-        this.buildUrl(
-          `/api/documents/?page=${page}&page_size=${pageSize}&ordering=${ordering}`,
-        ),
+        this.buildUrl(`/api/documents/?page=${page}&page_size=${pageSize}&ordering=${ordering}`),
       );
       const json = await response.json();
       const parsed = schema.parse(json);
@@ -230,9 +231,7 @@ export class PaperlessClient {
   }
 
   async getDocumentMetadata(id: number): Promise<DocumentMetadata> {
-    const response = await this.fetchWithRetry(
-      this.buildUrl(`/api/documents/${id}/metadata/`),
-    );
+    const response = await this.fetchWithRetry(this.buildUrl(`/api/documents/${id}/metadata/`));
     const json = await response.json();
     return documentMetadataSchema.parse(json);
   }

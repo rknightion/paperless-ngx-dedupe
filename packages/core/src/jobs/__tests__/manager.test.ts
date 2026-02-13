@@ -2,7 +2,16 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import { createJob, getJob, listJobs, updateJobProgress, completeJob, failJob, cancelJob, JobAlreadyRunningError } from '../manager.js';
+import {
+  createJob,
+  getJob,
+  listJobs,
+  updateJobProgress,
+  completeJob,
+  failJob,
+  cancelJob,
+  JobAlreadyRunningError,
+} from '../manager.js';
 import { JobType, JobStatus } from '../../types/enums.js';
 import { job as jobTable } from '../../schema/sqlite/jobs.js';
 import { eq } from 'drizzle-orm';
@@ -92,7 +101,10 @@ describe('Job Manager', () => {
       const id1 = createJob(db, JobType.SYNC);
       completeJob(db, id1);
       // Ensure different createdAt by manually setting an earlier timestamp
-      db.update(jobTable).set({ createdAt: '2024-01-01T00:00:00.000Z' }).where(eq(jobTable.id, id1)).run();
+      db.update(jobTable)
+        .set({ createdAt: '2024-01-01T00:00:00.000Z' })
+        .where(eq(jobTable.id, id1))
+        .run();
       const id2 = createJob(db, JobType.ANALYSIS);
       const jobs = listJobs(db);
       expect(jobs).toHaveLength(2);

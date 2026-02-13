@@ -33,10 +33,10 @@
   };
 </script>
 
-<div class="flex items-center gap-4 rounded-lg border border-soft bg-surface px-4 py-3">
+<div class="border-soft bg-surface flex items-center gap-4 rounded-lg border px-4 py-3">
   <div class="min-w-0 flex-1">
     <div class="flex items-center gap-2">
-      <span class="text-sm font-medium text-ink">{typeLabels[type] ?? type}</span>
+      <span class="text-ink text-sm font-medium">{typeLabels[type] ?? type}</span>
       <StatusBadge {status} />
     </div>
     {#if status === 'running' && progress !== undefined}
@@ -46,6 +46,6 @@
     {/if}
   </div>
   {#if duration}
-    <span class="shrink-0 text-xs font-mono text-muted">{duration}</span>
+    <span class="text-muted shrink-0 font-mono text-xs">{duration}</span>
   {/if}
 </div>

@@ -216,7 +216,9 @@ describe('PaperlessClient', () => {
       const dateStr = futureDate.toUTCString();
 
       mockFetch
-        .mockResolvedValueOnce(mockResponse({ error: 'rate limited' }, 429, { 'Retry-After': dateStr }))
+        .mockResolvedValueOnce(
+          mockResponse({ error: 'rate limited' }, 429, { 'Retry-After': dateStr }),
+        )
         .mockResolvedValueOnce(mockResponse({ ok: true }));
 
       await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
@@ -354,14 +356,16 @@ describe('PaperlessClient', () => {
 
       mockFetch
         .mockResolvedValueOnce(
-          mockResponse(makePaginatedResponse([doc1], 'http://localhost:8000/api/documents/?page=2', 3)),
+          mockResponse(
+            makePaginatedResponse([doc1], 'http://localhost:8000/api/documents/?page=2', 3),
+          ),
         )
         .mockResolvedValueOnce(
-          mockResponse(makePaginatedResponse([doc2], 'http://localhost:8000/api/documents/?page=3', 3)),
+          mockResponse(
+            makePaginatedResponse([doc2], 'http://localhost:8000/api/documents/?page=3', 3),
+          ),
         )
-        .mockResolvedValueOnce(
-          mockResponse(makePaginatedResponse([doc3], null, 3)),
-        );
+        .mockResolvedValueOnce(mockResponse(makePaginatedResponse([doc3], null, 3)));
 
       const pages: any[][] = [];
       for await (const page of client.getDocuments({ pageSize: 1 })) {
@@ -379,9 +383,7 @@ describe('PaperlessClient', () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
 
       const doc = makeSnakeCaseDocument({ id: 1 });
-      mockFetch.mockResolvedValueOnce(
-        mockResponse(makePaginatedResponse([doc], null, 1)),
-      );
+      mockFetch.mockResolvedValueOnce(mockResponse(makePaginatedResponse([doc], null, 1)));
 
       const pages: any[][] = [];
       for await (const page of client.getDocuments()) {
@@ -396,9 +398,7 @@ describe('PaperlessClient', () => {
     it('should yield empty array for zero results', async () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
 
-      mockFetch.mockResolvedValueOnce(
-        mockResponse(makePaginatedResponse([], null, 0)),
-      );
+      mockFetch.mockResolvedValueOnce(mockResponse(makePaginatedResponse([], null, 0)));
 
       const pages: any[][] = [];
       for await (const page of client.getDocuments()) {
@@ -496,9 +496,7 @@ describe('PaperlessClient', () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000/', token: 'tok' });
       mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
 
-      await (client as any).fetchWithRetry(
-        (client as any).buildUrl('/api/documents/'),
-      );
+      await (client as any).fetchWithRetry((client as any).buildUrl('/api/documents/'));
 
       const [calledUrl] = mockFetch.mock.calls[0];
       expect(calledUrl).toBe('http://localhost:8000/api/documents/');
@@ -508,9 +506,7 @@ describe('PaperlessClient', () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
       mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
 
-      await (client as any).fetchWithRetry(
-        (client as any).buildUrl('/api/documents/'),
-      );
+      await (client as any).fetchWithRetry((client as any).buildUrl('/api/documents/'));
 
       const [calledUrl] = mockFetch.mock.calls[0];
       expect(calledUrl).toBe('http://localhost:8000/api/documents/');
@@ -520,9 +516,7 @@ describe('PaperlessClient', () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000///', token: 'tok' });
       mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
 
-      await (client as any).fetchWithRetry(
-        (client as any).buildUrl('/api/documents/'),
-      );
+      await (client as any).fetchWithRetry((client as any).buildUrl('/api/documents/'));
 
       const [calledUrl] = mockFetch.mock.calls[0];
       expect(calledUrl).toBe('http://localhost:8000/api/documents/');
@@ -531,8 +525,12 @@ describe('PaperlessClient', () => {
     it('should correctly join base URL with API paths', () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000/', token: 'tok' });
 
-      expect((client as any).buildUrl('/api/documents/')).toBe('http://localhost:8000/api/documents/');
-      expect((client as any).buildUrl('api/documents/')).toBe('http://localhost:8000/api/documents/');
+      expect((client as any).buildUrl('/api/documents/')).toBe(
+        'http://localhost:8000/api/documents/',
+      );
+      expect((client as any).buildUrl('api/documents/')).toBe(
+        'http://localhost:8000/api/documents/',
+      );
     });
   });
 
@@ -599,16 +597,32 @@ describe('PaperlessClient', () => {
     it('should fetch all pages and concatenate results via getTags', async () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
 
-      const tag1 = { id: 1, name: 'Tag1', color: '#fff', text_color: '#000', is_inbox_tag: false, matching_algorithm: 0, match: '', document_count: 5 };
-      const tag2 = { id: 2, name: 'Tag2', color: '#aaa', text_color: '#111', is_inbox_tag: true, matching_algorithm: 1, match: 'inbox', document_count: 3 };
+      const tag1 = {
+        id: 1,
+        name: 'Tag1',
+        color: '#fff',
+        text_color: '#000',
+        is_inbox_tag: false,
+        matching_algorithm: 0,
+        match: '',
+        document_count: 5,
+      };
+      const tag2 = {
+        id: 2,
+        name: 'Tag2',
+        color: '#aaa',
+        text_color: '#111',
+        is_inbox_tag: true,
+        matching_algorithm: 1,
+        match: 'inbox',
+        document_count: 3,
+      };
 
       mockFetch
         .mockResolvedValueOnce(
           mockResponse(makePaginatedResponse([tag1], 'http://localhost:8000/api/tags/?page=2', 2)),
         )
-        .mockResolvedValueOnce(
-          mockResponse(makePaginatedResponse([tag2], null, 2)),
-        );
+        .mockResolvedValueOnce(mockResponse(makePaginatedResponse([tag2], null, 2)));
 
       const tags = await client.getTags();
 
@@ -621,10 +635,14 @@ describe('PaperlessClient', () => {
     it('should handle single page via getCorrespondents', async () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
 
-      const corr = { id: 1, name: 'Acme Corp', matching_algorithm: 0, match: '', document_count: 10 };
-      mockFetch.mockResolvedValueOnce(
-        mockResponse(makePaginatedResponse([corr], null, 1)),
-      );
+      const corr = {
+        id: 1,
+        name: 'Acme Corp',
+        matching_algorithm: 0,
+        match: '',
+        document_count: 10,
+      };
+      mockFetch.mockResolvedValueOnce(mockResponse(makePaginatedResponse([corr], null, 1)));
 
       const correspondents = await client.getCorrespondents();
 
@@ -636,10 +654,14 @@ describe('PaperlessClient', () => {
     it('should transform snake_case to camelCase via getDocumentTypes', async () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
 
-      const docType = { id: 1, name: 'Invoice', matching_algorithm: 2, match: 'invoice', document_count: 15 };
-      mockFetch.mockResolvedValueOnce(
-        mockResponse(makePaginatedResponse([docType], null, 1)),
-      );
+      const docType = {
+        id: 1,
+        name: 'Invoice',
+        matching_algorithm: 2,
+        match: 'invoice',
+        document_count: 15,
+      };
+      mockFetch.mockResolvedValueOnce(mockResponse(makePaginatedResponse([docType], null, 1)));
 
       const types = await client.getDocumentTypes();
 

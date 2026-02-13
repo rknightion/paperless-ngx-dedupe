@@ -61,12 +61,7 @@ describe('computeSimilarityScore', () => {
         filename: 0,
       };
 
-      const result = computeSimilarityScore(
-        doc1,
-        doc2,
-        0.8,
-        weightsNoFilename,
-      );
+      const result = computeSimilarityScore(doc1, doc2, 0.8, weightsNoFilename);
       // Filename component should still be computed but not affect overall
       expect(result.filename).toBeDefined();
       // The overall should only be based on jaccard, fuzzy, metadata

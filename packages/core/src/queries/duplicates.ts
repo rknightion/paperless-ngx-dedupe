@@ -43,11 +43,7 @@ export function getDuplicateGroups(
 ): PaginatedResult<DuplicateGroupSummary> {
   const where = buildGroupWhere(filters);
 
-  const [{ value: total }] = db
-    .select({ value: count() })
-    .from(duplicateGroup)
-    .where(where)
-    .all();
+  const [{ value: total }] = db.select({ value: count() }).from(duplicateGroup).where(where).all();
 
   const orderCol =
     filters.sortBy === 'created_at'
@@ -93,12 +89,7 @@ export function getDuplicateGroups(
     })
     .from(duplicateMember)
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
-    .where(
-      and(
-        inArray(duplicateMember.groupId, groupIds),
-        eq(duplicateMember.isPrimary, true),
-      ),
-    )
+    .where(and(inArray(duplicateMember.groupId, groupIds), eq(duplicateMember.isPrimary, true)))
     .all();
 
   const titleMap = new Map(primaryDocs.map((pd) => [pd.groupId, pd.title]));
@@ -119,15 +110,8 @@ export function getDuplicateGroups(
 
 // ── Detail query ────────────────────────────────────────────────────────
 
-export function getDuplicateGroup(
-  db: AppDatabase,
-  id: string,
-): DuplicateGroupDetail | null {
-  const group = db
-    .select()
-    .from(duplicateGroup)
-    .where(eq(duplicateGroup.id, id))
-    .get();
+export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDetail | null {
+  const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, id)).get();
 
   if (!group) return null;
 
@@ -178,9 +162,83 @@ export function getDuplicateGroup(
       createdDate: m.createdDate,
       originalFileSize: m.originalFileSize,
       archiveFileSize: m.archiveFileSize,
-      content: content
-        ? { fullText: content.fullText, wordCount: content.wordCount }
-        : null,
+      content: content ? { fullText: content.fullText, wordCount: content.wordCount } : null,
+    };
+  });
+
+  return {
+    id: group.id,
+    confidenceScore: group.confidenceScore,
+    jaccardSimilarity: group.jaccardSimilarity,
+    fuzzyTextRatio: group.fuzzyTextRatio,
+    metadataSimilarity: group.metadataSimilarity,
+    filenameSimilarity: group.filenameSimilarity,
+    algorithmVersion: group.algorithmVersion,
+    reviewed: group.reviewed ?? false,
+    resolved: group.resolved ?? false,
+    createdAt: group.createdAt,
+    updatedAt: group.updatedAt,
+    members,
+  };
+}
+
+// ── Light detail query (no fullText) ─────────────────────────────────────
+
+export function getDuplicateGroupLight(db: AppDatabase, id: string): DuplicateGroupDetail | null {
+  const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, id)).get();
+
+  if (!group) return null;
+
+  const memberRows = db
+    .select({
+      memberId: duplicateMember.id,
+      documentId: duplicateMember.documentId,
+      isPrimary: duplicateMember.isPrimary,
+      paperlessId: document.paperlessId,
+      title: document.title,
+      correspondent: document.correspondent,
+      documentType: document.documentType,
+      tagsJson: document.tagsJson,
+      createdDate: document.createdDate,
+      originalFileSize: document.originalFileSize,
+      archiveFileSize: document.archiveFileSize,
+    })
+    .from(duplicateMember)
+    .innerJoin(document, eq(duplicateMember.documentId, document.id))
+    .where(eq(duplicateMember.groupId, id))
+    .all();
+
+  // Only load wordCount, not fullText
+  const memberDocIds = memberRows.map((m) => m.documentId);
+  const contentRows =
+    memberDocIds.length > 0
+      ? db
+          .select({
+            documentId: documentContent.documentId,
+            wordCount: documentContent.wordCount,
+          })
+          .from(documentContent)
+          .where(inArray(documentContent.documentId, memberDocIds))
+          .all()
+      : [];
+
+  const contentMap = new Map(contentRows.map((c) => [c.documentId, c]));
+
+  const members: DuplicateGroupMember[] = memberRows.map((m) => {
+    const content = contentMap.get(m.documentId);
+    return {
+      memberId: m.memberId,
+      documentId: m.documentId,
+      isPrimary: m.isPrimary ?? false,
+      paperlessId: m.paperlessId,
+      title: m.title,
+      correspondent: m.correspondent,
+      documentType: m.documentType,
+      tags: parseTagsJson(m.tagsJson),
+      createdDate: m.createdDate,
+      originalFileSize: m.originalFileSize,
+      archiveFileSize: m.archiveFileSize,
+      content: content ? { fullText: null, wordCount: content.wordCount } : null,
     };
   });
 
@@ -252,9 +310,7 @@ export function getDuplicateStats(db: AppDatabase): DuplicateStats {
     '95-100': '95-100%',
   };
 
-  const bucketCountMap = new Map(
-    buckets.map((b) => [bucketKeyMap[b.bucket] ?? b.bucket, b.count]),
-  );
+  const bucketCountMap = new Map(buckets.map((b) => [bucketKeyMap[b.bucket] ?? b.bucket, b.count]));
 
   const confidenceDistribution: ConfidenceBucket[] = bucketDefs.map((def) => ({
     ...def,
@@ -288,11 +344,7 @@ export function getDuplicateStats(db: AppDatabase): DuplicateStats {
 
 // ── Mutations ───────────────────────────────────────────────────────────
 
-export function setPrimaryDocument(
-  db: AppDatabase,
-  groupId: string,
-  documentId: string,
-): boolean {
+export function setPrimaryDocument(db: AppDatabase, groupId: string, documentId: string): boolean {
   const group = db
     .select({ id: duplicateGroup.id })
     .from(duplicateGroup)
@@ -305,12 +357,7 @@ export function setPrimaryDocument(
   const member = db
     .select({ id: duplicateMember.id })
     .from(duplicateMember)
-    .where(
-      and(
-        eq(duplicateMember.groupId, groupId),
-        eq(duplicateMember.documentId, documentId),
-      ),
-    )
+    .where(and(eq(duplicateMember.groupId, groupId), eq(duplicateMember.documentId, documentId)))
     .get();
 
   if (!member) return false;
@@ -324,12 +371,7 @@ export function setPrimaryDocument(
 
     tx.update(duplicateMember)
       .set({ isPrimary: true })
-      .where(
-        and(
-          eq(duplicateMember.groupId, groupId),
-          eq(duplicateMember.documentId, documentId),
-        ),
-      )
+      .where(and(eq(duplicateMember.groupId, groupId), eq(duplicateMember.documentId, documentId)))
       .run();
 
     tx.update(duplicateGroup)
@@ -363,10 +405,7 @@ export function markGroupResolved(db: AppDatabase, groupId: string): boolean {
 
 export function deleteDuplicateGroup(db: AppDatabase, groupId: string): boolean {
   // Members are cascade-deleted via FK constraint
-  const result = db
-    .delete(duplicateGroup)
-    .where(eq(duplicateGroup.id, groupId))
-    .run();
+  const result = db.delete(duplicateGroup).where(eq(duplicateGroup.id, groupId)).run();
 
   return result.changes > 0;
 }
@@ -383,10 +422,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
-export function batchMarkReviewed(
-  db: AppDatabase,
-  groupIds: string[],
-): { updated: number } {
+export function batchMarkReviewed(db: AppDatabase, groupIds: string[]): { updated: number } {
   let updated = 0;
   const now = new Date().toISOString();
 
@@ -402,10 +438,7 @@ export function batchMarkReviewed(
   return { updated };
 }
 
-export function batchMarkResolved(
-  db: AppDatabase,
-  groupIds: string[],
-): { updated: number } {
+export function batchMarkResolved(db: AppDatabase, groupIds: string[]): { updated: number } {
   let updated = 0;
   const now = new Date().toISOString();
 

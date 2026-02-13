@@ -9,7 +9,11 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   });
 
   if (!paginationResult.success) {
-    return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid pagination parameters', paginationResult.error.issues);
+    return apiError(
+      ErrorCode.VALIDATION_FAILED,
+      'Invalid pagination parameters',
+      paginationResult.error.issues,
+    );
   }
 
   const filtersResult = documentFiltersSchema.safeParse({
@@ -21,9 +25,17 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   });
 
   if (!filtersResult.success) {
-    return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid filter parameters', filtersResult.error.issues);
+    return apiError(
+      ErrorCode.VALIDATION_FAILED,
+      'Invalid filter parameters',
+      filtersResult.error.issues,
+    );
   }
 
   const result = getDocuments(locals.db, filtersResult.data, paginationResult.data);
-  return apiSuccess(result.items, { total: result.total, limit: result.limit, offset: result.offset });
+  return apiSuccess(result.items, {
+    total: result.total,
+    limit: result.limit,
+    offset: result.offset,
+  });
 };

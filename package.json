@@ -15,7 +15,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "pnpm --filter @paperless-dedupe/core test"
+    "test": "pnpm --filter @paperless-dedupe/core test",
+    "test:e2e": "pnpm --filter @paperless-dedupe/web test:e2e"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

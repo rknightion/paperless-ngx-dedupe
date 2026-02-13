@@ -79,9 +79,7 @@ describe('MinHash', () => {
     const restored = MinHash.deserialize(buf, 192);
 
     // Jaccard with itself via deserialized copy should be 1.0
-    expect(
-      MinHash.jaccardFromArrays(mh.signature, restored.signature),
-    ).toBe(1.0);
+    expect(MinHash.jaccardFromArrays(mh.signature, restored.signature)).toBe(1.0);
   });
 
   describe('jaccardFromArrays', () => {
@@ -95,19 +93,14 @@ describe('MinHash', () => {
       mhB.update(setB);
 
       const instanceResult = mhA.jaccard(mhB);
-      const staticResult = MinHash.jaccardFromArrays(
-        mhA.signature,
-        mhB.signature,
-      );
+      const staticResult = MinHash.jaccardFromArrays(mhA.signature, mhB.signature);
       expect(staticResult).toBe(instanceResult);
     });
 
     it('throws on mismatched array lengths', () => {
       const a = new Uint32Array(64);
       const b = new Uint32Array(128);
-      expect(() => MinHash.jaccardFromArrays(a, b)).toThrow(
-        'Mismatched array lengths',
-      );
+      expect(() => MinHash.jaccardFromArrays(a, b)).toThrow('Mismatched array lengths');
     });
   });
 });

@@ -24,12 +24,7 @@ export function createJob(db: AppDatabase, type: JobType): string {
   const existing = db
     .select({ id: job.id })
     .from(job)
-    .where(
-      and(
-        eq(job.type, type),
-        or(eq(job.status, 'running'), eq(job.status, 'pending'))
-      )
-    )
+    .where(and(eq(job.type, type), or(eq(job.status, 'running'), eq(job.status, 'pending'))))
     .get();
 
   if (existing) {
@@ -51,11 +46,7 @@ export function createJob(db: AppDatabase, type: JobType): string {
 }
 
 export function getJob(db: AppDatabase, id: string): Job | null {
-  const result = db
-    .select()
-    .from(job)
-    .where(eq(job.id, id))
-    .get();
+  const result = db.select().from(job).where(eq(job.id, id)).get();
 
   return result ?? null;
 }
@@ -85,7 +76,7 @@ export function updateJobProgress(
   db: AppDatabase,
   id: string,
   progress: number,
-  message?: string
+  message?: string,
 ): void {
   const clamped = Math.max(0, Math.min(1, progress));
 
@@ -98,11 +89,7 @@ export function updateJobProgress(
     .run();
 }
 
-export function completeJob(
-  db: AppDatabase,
-  id: string,
-  result?: unknown
-): void {
+export function completeJob(db: AppDatabase, id: string, result?: unknown): void {
   db.update(job)
     .set({
       status: 'completed',
@@ -114,11 +101,7 @@ export function completeJob(
     .run();
 }
 
-export function failJob(
-  db: AppDatabase,
-  id: string,
-  error: string
-): void {
+export function failJob(db: AppDatabase, id: string, error: string): void {
   db.update(job)
     .set({
       status: 'failed',
@@ -130,11 +113,7 @@ export function failJob(
 }
 
 export function cancelJob(db: AppDatabase, id: string): boolean {
-  const existing = db
-    .select({ status: job.status })
-    .from(job)
-    .where(eq(job.id, id))
-    .get();
+  const existing = db.select({ status: job.status }).from(job).where(eq(job.id, id)).get();
 
   if (!existing) {
     return false;

@@ -8,10 +8,7 @@ import type { DashboardData } from './types.js';
 
 export function getDashboard(db: AppDatabase): DashboardData {
   // Total documents
-  const [{ value: totalDocuments }] = db
-    .select({ value: count() })
-    .from(document)
-    .all();
+  const [{ value: totalDocuments }] = db.select({ value: count() }).from(document).all();
 
   // Unresolved duplicate groups
   const [{ value: unresolvedGroups }] = db
@@ -26,9 +23,7 @@ export function getDashboard(db: AppDatabase): DashboardData {
     .from(duplicateMember)
     .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
-    .where(
-      sql`${duplicateMember.isPrimary} = 0 AND ${duplicateGroup.resolved} = 0`,
-    )
+    .where(sql`${duplicateMember.isPrimary} = 0 AND ${duplicateGroup.resolved} = 0`)
     .all();
 
   // Pending analysis

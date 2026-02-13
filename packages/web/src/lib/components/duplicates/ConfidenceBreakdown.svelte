@@ -52,25 +52,29 @@
     },
     yAxis: {
       type: 'category',
-      data: components.map((c) => {
-        const label = c.name;
-        return c.weight !== undefined ? `${label} (${c.weight}%)` : label;
-      }).reverse(),
+      data: components
+        .map((c) => {
+          const label = c.name;
+          return c.weight !== undefined ? `${label} (${c.weight}%)` : label;
+        })
+        .reverse(),
       axisLabel: { fontSize: 11, width: 140, overflow: 'truncate' },
     },
     series: [
       {
         type: 'bar',
-        data: components.map((c) => ({
-          value: c.score ?? -0.01,
-          itemStyle: { color: scoreColor(c.score) },
-          label: {
-            show: true,
-            position: 'right',
-            formatter: () => c.score !== null ? `${Math.round(c.score * 100)}%` : 'N/A',
-            fontSize: 11,
-          },
-        })).reverse(),
+        data: components
+          .map((c) => ({
+            value: c.score ?? -0.01,
+            itemStyle: { color: scoreColor(c.score) },
+            label: {
+              show: true,
+              position: 'right',
+              formatter: () => (c.score !== null ? `${Math.round(c.score * 100)}%` : 'N/A'),
+              fontSize: 11,
+            },
+          }))
+          .reverse(),
         barMaxWidth: 28,
       },
     ],
@@ -80,7 +84,7 @@
 
 <div class="panel">
   <div class="mb-4 flex items-center gap-3">
-    <h3 class="text-base font-semibold text-ink">Confidence Breakdown</h3>
+    <h3 class="text-ink text-base font-semibold">Confidence Breakdown</h3>
     <ConfidenceBadge score={overallScore} />
   </div>
   <EChart option={chartOption} height="180px" />

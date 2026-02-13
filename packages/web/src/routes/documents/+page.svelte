@@ -84,18 +84,22 @@
 
 <div class="space-y-8">
   <div>
-    <h1 class="text-3xl font-bold text-ink">Documents</h1>
-    <p class="mt-1 text-muted">Library statistics and document overview.</p>
+    <h1 class="text-ink text-3xl font-bold">Documents</h1>
+    <p class="text-muted mt-1">Library statistics and document overview.</p>
   </div>
 
   <!-- Summary Cards -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()} />
     <div class="panel">
-      <p class="text-sm text-muted">OCR Coverage</p>
-      <p class="mt-1 text-2xl font-semibold text-ink">{data.stats.ocrCoverage.percentage}%</p>
+      <p class="text-muted text-sm">OCR Coverage</p>
+      <p class="text-ink mt-1 text-2xl font-semibold">{data.stats.ocrCoverage.percentage}%</p>
       <div class="mt-2">
-        <ProgressBar progress={data.stats.ocrCoverage.percentage / 100} message="{data.stats.ocrCoverage.withContent} of {data.stats.totalDocuments} documents" animated={false} />
+        <ProgressBar
+          progress={data.stats.ocrCoverage.percentage / 100}
+          message="{data.stats.ocrCoverage.withContent} of {data.stats.totalDocuments} documents"
+          animated={false}
+        />
       </div>
     </div>
     <StatCard
@@ -112,7 +116,7 @@
     <!-- Correspondent Distribution -->
     {#if data.stats.correspondentDistribution.length > 0}
       <div class="panel">
-        <h2 class="mb-4 text-lg font-semibold text-ink">Top Correspondents</h2>
+        <h2 class="text-ink mb-4 text-lg font-semibold">Top Correspondents</h2>
         <EChart
           option={correspondentOption}
           height={`${Math.max(250, data.stats.correspondentDistribution.length * 28)}px`}
@@ -123,7 +127,7 @@
     <!-- Document Type Distribution -->
     {#if data.stats.documentTypeDistribution.length > 0}
       <div class="panel">
-        <h2 class="mb-4 text-lg font-semibold text-ink">Document Types</h2>
+        <h2 class="text-ink mb-4 text-lg font-semibold">Document Types</h2>
         <EChart option={docTypeOption} height="300px" />
       </div>
     {/if}
@@ -132,7 +136,7 @@
   <!-- Tag Frequency -->
   {#if data.stats.tagDistribution.length > 0}
     <div class="panel">
-      <h2 class="mb-4 text-lg font-semibold text-ink">Tag Frequency</h2>
+      <h2 class="text-ink mb-4 text-lg font-semibold">Tag Frequency</h2>
       <EChart option={tagOption} height="350px" />
     </div>
   {/if}
@@ -140,14 +144,14 @@
   <!-- External Link -->
   <div class="panel flex items-center justify-between">
     <div>
-      <h2 class="text-lg font-semibold text-ink">Manage Documents</h2>
-      <p class="mt-1 text-sm text-muted">Open Paperless-NGX to manage individual documents.</p>
+      <h2 class="text-ink text-lg font-semibold">Manage Documents</h2>
+      <p class="text-muted mt-1 text-sm">Open Paperless-NGX to manage individual documents.</p>
     </div>
     <a
       href="{data.paperlessUrl}/documents/"
       target="_blank"
       rel="noopener noreferrer"
-      class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+      class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
     >
       Open Paperless-NGX
     </a>
