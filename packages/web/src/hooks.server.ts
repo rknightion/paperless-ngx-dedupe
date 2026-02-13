@@ -1,0 +1,86 @@
+import { sequence } from '@sveltejs/kit/hooks';
+import { parseConfig, initLogger, createLogger } from '@paperless-dedupe/core';
+import type { Handle } from '@sveltejs/kit';
+import { getDatabase } from '$lib/server/db';
+
+// Singleton initialization
+let config: ReturnType<typeof parseConfig> | undefined;
+let initialized = false;
+
+function ensureInitialized() {
+  if (initialized) return;
+  config = parseConfig(process.env as Record<string, string | undefined>);
+  initLogger(config.LOG_LEVEL);
+  initialized = true;
+}
+
+const handleCors: Handle = async ({ event, resolve }) => {
+  // Only apply CORS to API routes
+  if (!event.url.pathname.startsWith('/api/')) {
+    return resolve(event);
+  }
+
+  ensureInitialized();
+  const allowOrigin = config!.CORS_ALLOW_ORIGIN;
+
+  // Handle preflight
+  if (event.request.method === 'OPTIONS') {
+    const headers: Record<string, string> = {
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    };
+
+    if (allowOrigin === '*') {
+      headers['Access-Control-Allow-Origin'] = '*';
+    } else if (allowOrigin) {
+      headers['Access-Control-Allow-Origin'] = allowOrigin;
+      headers['Vary'] = 'Origin';
+    }
+
+    return new Response(null, { status: 204, headers });
+  }
+
+  const response = await resolve(event);
+
+  // No CORS headers for empty origin (same-origin only)
+  if (!allowOrigin) return response;
+
+  // Clone response to avoid immutable header issues
+  const newResponse = new Response(response.body, response);
+  if (allowOrigin === '*') {
+    newResponse.headers.set('Access-Control-Allow-Origin', '*');
+  } else {
+    newResponse.headers.set('Access-Control-Allow-Origin', allowOrigin);
+    newResponse.headers.append('Vary', 'Origin');
+  }
+
+  return newResponse;
+};
+
+const handleRequest: Handle = async ({ event, resolve }) => {
+  ensureInitialized();
+
+  const logger = createLogger('http');
+  event.locals.config = config!;
+  event.locals.logger = logger;
+  event.locals.db = await getDatabase(config!);
+
+  const start = performance.now();
+  const response = await resolve(event);
+  const duration = Math.round(performance.now() - start);
+
+  logger.info(
+    {
+      method: event.request.method,
+      path: event.url.pathname,
+      status: response.status,
+      duration,
+    },
+    `${event.request.method} ${event.url.pathname} ${response.status} ${duration}ms`,
+  );
+
+  return response;
+};
+
+export const handle = sequence(handleCors, handleRequest);

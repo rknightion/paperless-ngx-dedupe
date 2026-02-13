@@ -1,0 +1,629 @@
+================================================================================
+Paperless-Dedupe — Implementation Roadmap
+================================================================================
+
+This file tracks the full implementation timeline for the Paperless-Dedupe app,
+a TypeScript rewrite of paperless-ngx-dedupe. It identifies and manages duplicate
+documents within Paperless-NGX document management systems using MinHash/LSH for
+efficient O(n log n) duplicate detection at scale (13,000+ documents).
+
+Future LLM sessions should read this file to understand what's been done and
+what comes next.
+It should represent the current status of the project and you must keep this
+document up to date at all times.
+
+Whenever you complete a task in this list you must mark it as completed with a
+x in the box.
+When an entire phase is completed mark the phase as completed in the phase
+heading.
+The user will move the completed tasks to todos-completed.txt (do not consume
+this document unless you require historical context on why something was done)
+
+Whenever designing or implementing features or functionality or bug fixes the
+below ADRs must be respected and complied with.
+
+================================================================================
+ARCHITECTURE DECISIONS
+================================================================================
+
+AD-001: TypeScript full-stack with SvelteKit
+  - Single language across backend and frontend
+  - SvelteKit 2 serves both API routes and UI from one process
+  - adapter-node for Docker deployment
+  - Svelte 5 runes for reactive UI components
+  - Node.js >= 22 required
+
+AD-002: Drizzle ORM with dialect-switching pattern
+  - SQLite (better-sqlite3) as default/reference storage
+  - Postgres support planned via parallel schema definitions (Phase 8)
+  - Schema-as-code with Drizzle table definitions
+  - DDL staleness detection with SHA-256 hash comparison
+
+AD-003: pnpm monorepo with two packages
+  - @paperless-dedupe/core: pure TS library (no web deps)
+    - Deduplication engine, Paperless client, database schema, queries
+    - Framework-agnostic, enabling future CLI tools and external clients
+  - @paperless-dedupe/web: SvelteKit application
+    - UI pages, API routes, SSE endpoints, hooks
+  - Core can be imported by future CLI tools or SDK packages
+
+AD-004: Single Docker container by default
+  - SQLite volume mount for data persistence (no external database needed)
+  - Optional Postgres sidecar via compose override
+  - Multi-stage build for small image size
+  - Health checks via /api/v1/health and /api/v1/ready
+
+AD-005: Zod for runtime validation at system boundaries
+  - Environment variable parsing and validation at startup
+  - API request body/query parameter validation
+  - Configuration object shapes
+  - Response type narrowing
+  - No Ajv needed — we have no external JSON Schema to validate against
+
+AD-006: API-first design for external client support
+  - SvelteKit API routes are the canonical interface for all data operations
+  - All /api/v1/* routes MUST return JSON and work for any HTTP client
+  - The full container (including frontend) is the deployment unit — external
+    clients connect to the same running instance
+  - CORS must be configurable so cross-origin clients can call the API
+  - All API routes must have consistent error response shapes and proper HTTP
+    status codes
+  - API versioning via URL prefix (/api/v1/)
+  - SvelteKit page load functions (+page.server.ts) should call the same query
+    logic that API routes use, ensuring feature parity between the UI and
+    external consumers. Shared query functions live in @paperless-dedupe/core
+
+AD-007: MinHash/LSH implemented in pure TypeScript
+  - The deduplication engine is implemented entirely in @paperless-dedupe/core
+    with no native dependencies beyond better-sqlite3
+  - MinHash uses deterministic hash functions seeded from a fixed PRNG for
+    reproducible signatures: h_i(x) = (a_i * x + b_i) mod p
+  - 3-gram word shingles for text tokenization
+  - LSH band-based indexing for O(n log n) candidate pair discovery
+  - Configurable permutations (default 192) and LSH bands (default 20)
+  - Signatures serialized as Uint32Array → Buffer for compact database storage
+  - This avoids any dependency on Python's datasketch or WASM bindings
+
+AD-008: worker_threads + SQLite job table for background processing
+  - No Redis or Celery dependency — single container deployment
+  - A `job` table in SQLite serves as the persistent job queue
+  - Long-running operations (sync, analysis, batch ops) run in Node.js
+    worker_threads to avoid blocking the main SvelteKit event loop
+  - The main thread creates job records, spawns workers, and reads progress
+  - Workers update job.progress and job.status directly in the database
+  - SQLite WAL mode enables concurrent reads from main thread while worker
+    writes progress updates
+  - Only one job of each type runs at a time (enforced by status check)
+
+AD-009: Server-Sent Events for real-time progress
+  - SSE is simpler than WebSocket and unidirectional (server → client), which
+    is exactly what we need for progress updates
+  - SvelteKit supports SSE natively via streaming responses
+  - The client subscribes to GET /api/v1/jobs/:jobId/progress
+  - The server polls the job table and streams progress updates
+  - Falls back gracefully: UI can also poll GET /api/v1/jobs/:jobId for status
+
+AD-010: Pino for structured logging
+  - Pino provides fast, structured JSON logging with minimal overhead
+  - Configurable log level via LOG_LEVEL environment variable
+  - Child loggers for component-specific context (e.g. pino.child({ module: 'sync' }))
+  - No OpenTelemetry tracing or metrics — keep it simple
+  - Request logging via pino-http middleware in hooks.server.ts
+
+
+================================================================================
+PHASE 4: DEDUPLICATION ENGINE [COMPLETED]
+================================================================================
+
+The core deduplication algorithm implemented in pure TypeScript. This is the
+heart of the application — it uses MinHash/LSH for O(n log n) duplicate
+detection with multi-factor similarity scoring.
+
+[x] MinHash implementation (AD-007)
+    [x] packages/core/src/dedup/minhash.ts
+        - MinHash class:
+            constructor(numPermutations: number = 192)
+            Generates deterministic hash function coefficients using a seeded
+            PRNG (e.g. mulberry32 or xoshiro128) for reproducibility
+            Hash function form: h_i(x) = ((a_i * x + b_i) % MERSENNE_PRIME) % numPermutations
+            where MERSENNE_PRIME = 2^61 - 1 (use BigInt for accuracy)
+        - update(shingles: Set<number>): void
+            For each hash function, compute min hash across all shingle hashes
+            Maintains the signature as a Uint32Array of length numPermutations
+        - jaccard(other: MinHash): number
+            Estimate Jaccard similarity as fraction of matching signature elements
+        - serialize(): Buffer
+            Convert Uint32Array to Buffer for database storage
+        - static deserialize(buffer: Buffer, numPerm: number): MinHash
+            Reconstruct MinHash from stored buffer
+
+    [x] Shingle generation (packages/core/src/dedup/shingles.ts)
+        - textToShingles(text: string, ngramSize: number = 3): Set<number>
+            1. Split normalized text into words (on whitespace)
+            2. Generate overlapping n-grams of words: ["the cat sat", "cat sat on", ...]
+            3. Hash each n-gram string to a 32-bit integer (use a fast hash like
+               FNV-1a or xxHash — implement FNV-1a inline, it's ~10 lines)
+            4. Return set of hash values
+        - Documents with fewer than configurable min words (default 20) should
+          be skipped (insufficient content for meaningful comparison)
+
+[x] LSH implementation (AD-007)
+    [x] packages/core/src/dedup/lsh.ts
+        - LSHIndex class:
+            constructor(threshold: number = 0.5, numBands: number = 20)
+            Calculate rows per band: r = numPermutations / numBands
+            Threshold approximation: (1/b)^(1/r) ≈ configured threshold
+        - insert(docId: string, signature: Uint32Array): void
+            For each band, hash the band's rows to a bucket key
+            Store docId in that bucket
+        - getCandidates(signature: Uint32Array): Set<string>
+            For each band, find the bucket and collect all document IDs
+            Return union of all matching document IDs across bands
+        - clear(): void
+            Reset all buckets for fresh analysis
+        - Use a Map<string, Set<string>> per band for bucket storage
+          Band hash: concatenate band row values and hash with FNV-1a
+
+[x] Fuzzy text matching
+    [x] packages/core/src/dedup/fuzzy.ts
+        - tokenSortRatio(text1: string, text2: string): number
+            1. Tokenize both strings (split on whitespace)
+            2. Sort tokens alphabetically
+            3. Rejoin with single space
+            4. Compute Levenshtein ratio: 1 - (distance / max(len1, len2))
+            5. Return value in [0, 1]
+        - Install fastest-levenshtein for the distance computation
+        - sampleText(text: string, maxChars: number = 5000): string
+            Take first maxChars of text for fuzzy comparison
+            (full text comparison is too expensive for Levenshtein)
+
+[x] Multi-factor similarity scoring
+    [x] packages/core/src/dedup/scoring.ts
+        - SimilarityWeights type:
+            { jaccard: number, fuzzy: number, metadata: number, filename: number }
+            All weights are 0-100, must sum to 100
+        - computeSimilarityScore(doc1, doc2, weights, options): SimilarityResult
+            Compute each component:
+            1. Jaccard similarity — from MinHash signatures (already computed)
+            2. Fuzzy text ratio — tokenSortRatio on sampled OCR text
+            3. Metadata similarity — average of:
+               - File size ratio: min(size1, size2) / max(size1, size2)
+               - Date proximity: 1.0 if within 30 days, decays to 0
+               - Document type match: 1.0 if same, 0.0 if different
+               - Correspondent match: 1.0 if same, 0.0 if different
+            4. Filename similarity — tokenSortRatio on document titles
+            Return { overall, jaccard, fuzzy, metadata, filename } all [0, 1]
+        - Apply weighted average: overall = Σ(score × weight) / Σ(weights)
+          Only include components with non-zero weight
+        - Quick-mode scoring: Jaccard only, used to filter candidates before
+          computing expensive fuzzy/metadata scores
+
+[x] Deduplication analysis pipeline
+    [x] packages/core/src/dedup/analyze.ts — orchestrator function
+        The analysis pipeline performs these steps:
+        1. Load configuration (weights, thresholds, permutations, bands)
+        2. Load all documents with processing_status='pending' or all if forced
+        3. Generate MinHash signatures for documents without signatures:
+           a. Load normalized_text from document_content
+           b. Generate shingles via textToShingles()
+           c. Create MinHash, call update(shingles)
+           d. Serialize and store in document_signature table
+           e. Report progress: "Computing signatures: X/Y"
+        4. Build LSH index from ALL document signatures (not just pending)
+        5. Find candidate pairs via LSH:
+           For each document, get candidates from LSH index
+           Filter to pairs not already in a duplicate_group
+        6. Score candidate pairs:
+           a. Quick-mode: compute Jaccard similarity
+              Skip pair if Jaccard < 80% of final threshold
+           b. Full scoring: compute all weighted components
+              Skip pair if overall score < configured threshold (default 0.85)
+           c. Report progress: "Scoring candidates: X/Y pairs"
+        7. Form duplicate groups from passing pairs:
+           - If doc A matches doc B and doc B matches doc C, merge into one group
+           - Use union-find (disjoint set) algorithm for efficient merging
+           - Primary document: first document added to group (lowest paperless_id)
+           - Store component scores averaged across group members
+        8. Write results to duplicate_group and duplicate_member tables
+           - Delete stale groups where members no longer meet threshold
+           - Preserve reviewed/resolved status on existing groups
+        9. Update document processing_status to 'completed'
+        10. Update sync_state.total_duplicate_groups
+    [x] Incremental analysis
+        - By default, only process documents with processing_status='pending'
+        - Reuse cached MinHash signatures from document_signature table
+        - Support force_rebuild parameter to recompute all signatures and
+          re-analyze all documents from scratch
+    [x] Dynamic threshold recalculation
+        - When weights change (via settings), recalculate confidence scores
+          for existing groups WITHOUT re-running full deduplication
+        - Store component scores separately so weighted average can be
+          recomputed on-the-fly
+
+[x] Analysis API endpoints
+    [x] POST /api/v1/analysis — trigger deduplication analysis job
+        - Accept optional { force?: boolean } to force full rebuild
+        - Return 409 if analysis job already running
+        - Return job ID for progress tracking
+    [x] GET /api/v1/analysis/status — analysis state (last run, group count)
+
+[x] Configuration endpoints for dedup parameters
+    [x] GET /api/v1/config/dedup — current dedup settings
+    [x] PUT /api/v1/config/dedup — update dedup settings
+        Settings (stored in app_config table, override env defaults):
+        - fuzzy_match_threshold: 50-100 (default 85)
+        - max_ocr_length: max chars stored per doc (default 500000)
+        - min_ocr_word_count: min words to include (default 20)
+        - minhash_num_perm: MinHash permutations (default 192)
+        - lsh_threshold: LSH bucket threshold (default 0.5)
+        - lsh_num_bands: LSH bands (default 20)
+        - enable_fuzzy_matching: boolean (default true)
+        - fuzzy_match_sample_size: chars for fuzzy comparison (default 5000)
+        - confidence_weight_jaccard: 0-100 (default 90)
+        - confidence_weight_fuzzy: 0-100 (default 10)
+        - confidence_weight_metadata: 0-100 (default 0)
+        - confidence_weight_filename: 0-100 (default 0)
+        Validate weights sum to 100
+
+[x] Unit tests
+    [x] MinHash: deterministic signatures, Jaccard estimation accuracy
+    [x] Shingles: correct n-gram generation, hash consistency
+    [x] LSH: candidate retrieval, threshold behavior
+    [x] Fuzzy: tokenSortRatio correctness, text sampling
+    [x] Scoring: weighted average calculation, component independence
+    [x] Analysis: group formation with union-find, incremental behavior
+    [x] Integration: full pipeline from text → signatures → candidates → groups
+
+
+================================================================================
+PHASE 5: QUERY LAYER & API ENDPOINTS
+================================================================================
+
+All query functions live in @paperless-dedupe/core (packages/core/src/queries/)
+as pure functions that accept db: AppDatabase. Both page load functions
+(+page.server.ts) and API routes (+server.ts) call the same logic, ensuring
+feature parity per AD-006. Pagination via Zod-validated limit/offset params.
+
+[ ] Shared types and helpers
+    [ ] packages/core/src/queries/types.ts
+        - PaginationParams (Zod schema: limit 1-100 default 50, offset >= 0)
+        - PaginatedResult<T> interface (items, total, limit, offset)
+        - Domain-specific filter schemas:
+            duplicateGroupFilters: minConfidence, maxConfidence, reviewed,
+              resolved, sortBy (confidence|created_at), sortOrder (asc|desc)
+            documentFilters: correspondent, documentType, tag,
+              processingStatus, search (title substring)
+    [ ] packages/core/src/queries/helpers.ts
+        - paginate(query, params) helper for Drizzle
+        - parseJsonColumn(value) for tags_json parsing
+
+[ ] Dashboard queries (packages/core/src/queries/dashboard.ts)
+    [ ] getDashboard(db) → DashboardData
+        - Total document count
+        - Total duplicate groups (unresolved)
+        - Storage savings estimate (sum of archive_file_size for non-primary
+          members of unresolved groups)
+        - Documents pending analysis
+        - Last sync date and document count
+        - Last analysis date and group count
+        - Top duplicated correspondents (correspondents with most duplicate groups)
+    [ ] GET /api/v1/dashboard — returns all dashboard data in one call
+
+[ ] Document queries (packages/core/src/queries/documents.ts)
+    [ ] getDocuments(db, filters, pagination) → PaginatedResult<DocumentSummary>
+        - List documents with metadata (no OCR text in list view)
+        - Filter by correspondent, document_type, tag, processing_status
+        - Search by title substring
+    [ ] getDocument(db, id) → DocumentDetail | null
+        - Full document with OCR text, word count, content hash
+        - Include duplicate group memberships
+    [ ] GET /api/v1/documents — paginated document list
+    [ ] GET /api/v1/documents/:id — document detail
+
+[ ] Duplicate group queries (packages/core/src/queries/duplicates.ts)
+    [ ] getDuplicateGroups(db, filters, pagination) → PaginatedResult<DuplicateGroupSummary>
+        - Group with member count, primary document title, confidence score
+        - Filter by confidence range, reviewed/resolved status
+        - Sort by confidence (desc by default) or created_at
+    [ ] getDuplicateGroup(db, id) → DuplicateGroupDetail | null
+        - Full group with all members, their documents, and component scores
+        - Include OCR text for each member (for side-by-side comparison)
+    [ ] getDuplicateStats(db) → DuplicateStats
+        - Total groups, reviewed count, resolved count
+        - Confidence distribution histogram (buckets: 85-90, 90-95, 95-100)
+        - Top correspondents with duplicates
+    [ ] GET /api/v1/duplicates — paginated duplicate group list
+    [ ] GET /api/v1/duplicates/:id — duplicate group detail with member docs
+    [ ] GET /api/v1/duplicates/stats — duplicate statistics
+
+[ ] Duplicate group actions
+    [ ] PUT /api/v1/duplicates/:id/primary — set primary document in group
+        - Accept { documentId: string }
+        - Update is_primary flags within the group
+    [ ] PUT /api/v1/duplicates/:id/review — mark group as reviewed
+    [ ] PUT /api/v1/duplicates/:id/resolve — mark group as resolved
+    [ ] DELETE /api/v1/duplicates/:id — delete a duplicate group
+        (removes the group record, does NOT delete documents)
+
+[ ] Batch operations
+    [ ] POST /api/v1/batch/review — mark multiple groups as reviewed
+        - Accept { groupIds: string[] }
+    [ ] POST /api/v1/batch/resolve — mark multiple groups as resolved
+        - Accept { groupIds: string[] }
+    [ ] POST /api/v1/batch/delete-non-primary — delete non-primary documents
+        - Accept { groupIds: string[] }
+        - Creates a batch_operation job
+        - Worker iterates groups, calls PaperlessClient.deleteDocument() for
+          each non-primary member
+        - Marks groups as resolved after successful deletion
+        - Records results in job.result_json (deleted count, errors)
+        - THIS IS A DESTRUCTIVE OPERATION: require confirmation parameter
+          { groupIds: [...], confirm: true }
+
+[ ] Configuration queries (packages/core/src/queries/config.ts)
+    [ ] getConfig(db) → Record<string, string>
+        - Read all app_config rows as key-value pairs
+    [ ] setConfig(db, key, value) → void
+        - Upsert app_config row
+    [ ] GET /api/v1/config — all configuration values
+    [ ] PUT /api/v1/config — update configuration values
+        - Accept { key: string, value: string } or { settings: Record<string, string> }
+
+[ ] Unit tests for all query functions
+    [ ] Dashboard query tests
+    [ ] Document list/detail query tests
+    [ ] Duplicate group query tests with filtering and pagination
+    [ ] Config read/write tests
+    [ ] Batch operation validation tests
+
+
+================================================================================
+PHASE 6: UI — DASHBOARD & SETTINGS
+================================================================================
+
+[ ] Design system and theme tokens
+    [ ] Define a named color palette in Tailwind config (semantic names):
+        - canvas: page background (warm neutral)
+        - ink: primary text color (near-black)
+        - accent: interactive elements, active states (blue/teal family)
+        - ember: alerts, warnings, destructive actions (orange/red family)
+        - soft: subtle borders, dividers, muted backgrounds
+        - surface: card/panel backgrounds (white or very light)
+        - muted: secondary text, placeholder text
+        - success: positive actions, resolved states (green family)
+    [ ] Typography
+        - Clean sans-serif for UI (Inter via @fontsource/inter-variable)
+        - Monospace for IDs and hashes (JetBrains Mono via @fontsource/jetbrains-mono-variable)
+        - Configure in Tailwind via fontFamily extension
+    [ ] Reusable CSS utility classes and Svelte components:
+        - .panel (card with consistent padding, border, radius, shadow)
+        - ConfidenceBadge: color-coded confidence score (green >95, yellow >85, red <85)
+        - StatusBadge: reviewed/resolved/pending states
+        - ProgressBar: job progress visualization
+    [ ] Document the design system in Tailwind config comments
+
+[ ] Dashboard page (packages/web/src/routes/+page.svelte)
+    [ ] +page.server.ts loads via getDashboard() from @paperless-dedupe/core
+    [ ] Summary stat cards:
+        - Total documents synced
+        - Duplicate groups found (unresolved)
+        - Estimated storage savings
+        - Documents pending analysis
+    [ ] Sync controls:
+        - "Sync Now" button → POST /api/v1/sync
+        - "Force Full Sync" option
+        - Progress bar with SSE connection during sync
+        - Last sync timestamp and document count
+    [ ] Analysis controls:
+        - "Run Analysis" button → POST /api/v1/analysis
+        - "Force Rebuild" option
+        - Progress bar with SSE connection during analysis
+        - Last analysis timestamp and results summary
+    [ ] Recent job history (last 5 jobs with status and duration)
+    [ ] Quick stats: top duplicated correspondents, confidence distribution
+
+[ ] Settings page (packages/web/src/routes/settings/+page.svelte)
+    [ ] Paperless-NGX connection settings
+        - URL, API token (masked input), or username/password
+        - "Test Connection" button → POST /api/v1/config/test-connection
+        - Display connection status (connected/disconnected, version, doc count)
+    [ ] Deduplication parameters
+        - Confidence threshold slider (50-100, default 85)
+        - Weight sliders for each component (must sum to 100):
+          Jaccard, Fuzzy, Metadata, Filename
+        - MinHash permutations (advanced, default 192)
+        - LSH bands (advanced, default 20)
+        - Fuzzy matching toggle and sample size
+        - Min OCR word count
+        - Max OCR length
+    [ ] System information
+        - Database dialect and path
+        - Total documents, duplicate groups
+        - Database file size (SQLite)
+        - Application version
+
+[ ] Documents page (packages/web/src/routes/documents/+page.svelte)
+    [ ] Library statistics overview (not individual document list)
+        - Total documents, OCR coverage, processing status breakdown
+        - Correspondent distribution chart
+        - Document type distribution chart
+        - Tag cloud or tag frequency chart
+    [ ] Link to Paperless-NGX for individual document management
+
+[ ] Shared UI components
+    [ ] ProgressBar.svelte — animated progress with percentage and message
+    [ ] JobStatusCard.svelte — compact job display (type, status, duration)
+    [ ] ConfidenceBadge.svelte — color-coded score display
+    [ ] StatCard.svelte — KPI card with label, value, optional trend
+    [ ] EChart.svelte — ECharts wrapper component (install echarts)
+
+
+================================================================================
+PHASE 7: UI — DUPLICATE MANAGEMENT
+================================================================================
+
+The primary user-facing feature: viewing, comparing, and resolving duplicate
+document groups. This is where users spend most of their time.
+
+[ ] Duplicate groups list (packages/web/src/routes/duplicates/+page.svelte)
+    [ ] Paginated table of duplicate groups (DataTable via TanStack Svelte Table)
+    [ ] Columns: primary doc title, member count, confidence score, status
+    [ ] Filters:
+        - Confidence range (min/max sliders)
+        - Status: all, unreviewed, reviewed, resolved
+        - Correspondent filter
+        - Document type filter
+    [ ] Sort by confidence (desc), created date, member count
+    [ ] Bulk selection with checkboxes
+    [ ] Bulk actions bar (appears when items selected):
+        - "Mark Reviewed" → POST /api/v1/batch/review
+        - "Resolve Selected" → POST /api/v1/batch/resolve
+        - "Delete Non-Primary" → POST /api/v1/batch/delete-non-primary
+          (with confirmation dialog warning about irreversibility)
+    [ ] Click row to navigate to group detail
+
+[ ] Duplicate group detail (packages/web/src/routes/duplicates/[id]/+page.svelte)
+    [ ] Group header: confidence score, algorithm version, created date
+    [ ] Confidence score breakdown chart:
+        - Visual bar/radar chart showing Jaccard, Fuzzy, Metadata, Filename
+          component scores and their weights
+    [ ] Side-by-side document comparison:
+        - Two-column layout showing primary vs selected secondary document
+        - Document metadata: title, correspondent, type, tags, dates, file size
+        - OCR text diff view (highlight differences)
+        - Switch between secondary documents via tabs or dropdown
+    [ ] Member management:
+        - List all group members with "primary" badge on current primary
+        - "Set as Primary" button on each non-primary member
+        - Link to document in Paperless-NGX (opens in new tab)
+    [ ] Action buttons:
+        - "Mark as Reviewed" / "Unmark Reviewed"
+        - "Resolve Group" (marks as resolved, keeps documents)
+        - "Delete Non-Primary Documents" (destructive, with confirmation)
+          Calls Paperless API to delete, then marks group as resolved
+
+[ ] Bulk operations wizard (packages/web/src/routes/duplicates/wizard/+page.svelte)
+    [ ] Step-by-step guided flow for resolving high-confidence groups:
+        Step 1: Filter — select confidence threshold (e.g. 95%+)
+                Show count of matching unresolved groups
+        Step 2: Review — paginated list of matching groups with quick preview
+                User can exclude individual groups from batch
+        Step 3: Action — choose: "Mark all as reviewed", "Resolve all",
+                or "Delete non-primary documents"
+        Step 4: Confirm — summary of what will happen, require explicit confirm
+        Step 5: Execute — progress bar showing batch operation status
+        Step 6: Results — summary of completed/failed operations
+
+[ ] Shared components for duplicate management
+    [ ] DocumentCompare.svelte — side-by-side document metadata comparison
+    [ ] TextDiff.svelte — visual text diff highlighting
+    [ ] ConfidenceBreakdown.svelte — component score visualization
+    [ ] GroupActionBar.svelte — action buttons for a single group
+
+
+================================================================================
+PHASE 8: POSTGRES SUPPORT
+================================================================================
+
+[ ] Create parallel Drizzle schema (packages/core/src/schema/pg/)
+    [ ] Mirror all SQLite table definitions with Postgres types
+        - TEXT → text(), INTEGER → integer(), REAL → real()
+        - BLOB → bytea for minhash_signature
+        - JSON columns use jsonb type for better indexing
+    [ ] Postgres-specific indexes (GIN indexes on tags_json)
+[ ] Dialect-switching database factory
+    [ ] Extend createDatabase() to accept dialect parameter
+    [ ] Return appropriate Drizzle instance based on DATABASE_DIALECT config
+    [ ] Postgres via drizzle-orm/node-postgres (pg driver)
+[ ] Postgres-specific migration runner
+[ ] Test full pipeline against Postgres
+    [ ] Sync, analysis, queries, batch operations
+[ ] Update Docker compose for production Postgres usage
+    [ ] Separate service for Postgres 17
+    [ ] Volume for persistent Postgres data
+    [ ] Environment variable template
+
+
+================================================================================
+PHASE 9: POLISH & PRODUCTION
+================================================================================
+
+[ ] End-to-end Playwright test suite
+    [ ] Install Playwright, configure in packages/web/
+    [ ] Test sync workflow (mock Paperless API)
+    [ ] Test duplicate review workflow
+    [ ] Test settings page
+    [ ] Test bulk operations wizard
+[ ] CI/CD pipeline (GitHub Actions)
+    [ ] Lint + format check
+    [ ] Type check (svelte-check + tsc)
+    [ ] Unit tests (vitest)
+    [ ] E2E tests (playwright)
+    [ ] Docker build verification
+    [ ] Automated release tagging
+[ ] Comprehensive error pages (404, 500)
+[ ] Mobile-responsive layout
+    [ ] Responsive sidebar (collapsible on mobile)
+    [ ] Duplicate comparison stacks vertically on small screens
+    [ ] Table columns hide/show based on breakpoint
+[ ] Accessibility audit (WCAG 2.1 AA)
+    [ ] Semantic HTML elements
+    [ ] Keyboard navigation for all interactive elements
+    [ ] Screen reader support for confidence scores and status badges
+    [ ] Focus management in modals and wizards
+[ ] Performance optimization
+    [ ] Virtual scrolling for long document/group lists
+    [ ] Lazy loading for OCR text in comparison views
+    [ ] Efficient pagination (cursor-based if needed for large datasets)
+[ ] Data export
+    [ ] Export duplicate report as CSV
+    [ ] Export configuration as JSON (backup/restore)
+[ ] User documentation
+    [ ] README with setup guide, configuration reference, API guide
+    [ ] Troubleshooting guide (common issues, Paperless connectivity, etc.)
+[ ] Docker optimization
+    [ ] Minimize image size (multi-stage, .dockerignore)
+    [ ] Non-root user in container
+    [ ] Graceful shutdown handling
+
+
+================================================================================
+FUTURE IDEAS (UNSCHEDULED)
+================================================================================
+
+- AI metadata extraction using Vercel AI SDK
+  Provider-agnostic: OpenAI, Anthropic, Ollama, etc.
+  Suggest titles, correspondents, document types, tags, dates
+  Per-field confidence scores, review-before-apply workflow
+  This is a key future feature — defer until core dedup is solid
+
+- CLI tool for running sync and analysis from command line
+  (this is a key motivator for @paperless-dedupe/core being framework-independent)
+
+- OpenTelemetry integration
+  Tracing for sync/analysis pipelines, request spans, DB query spans
+  Only if debugging production issues becomes painful
+
+- Notification system (webhook on new duplicates found)
+  POST to configurable URL when analysis completes with new groups
+
+- Plugin system for custom scoring algorithms
+  Allow users to register custom similarity functions alongside built-ins
+
+- Mobile app consuming the API (AD-006 ensures API is ready for this)
+
+- Client SDK package (@paperless-dedupe/sdk)
+  Lightweight TypeScript HTTP client wrapping all /api/v1/* endpoints
+  Type-safe request/response types shared with the API's Zod schemas
+
+- Configurable document retention policies
+  Auto-archive resolved duplicate groups after N days
+  Compact old job records
+
+- Multi-instance support
+  Manage duplicates across multiple Paperless-NGX instances
+  Cross-instance duplicate detection
+
+- Similarity visualization
+  Graph/network view showing document clusters by similarity
+  Interactive: click nodes to see document details, edges show scores

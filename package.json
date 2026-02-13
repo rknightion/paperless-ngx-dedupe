@@ -1,0 +1,38 @@
+{
+  "name": "paperless-dedupe",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.29.2",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.15.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @paperless-dedupe/web dev",
+    "build": "pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/web build",
+    "check": "pnpm --filter @paperless-dedupe/core check && pnpm --filter @paperless-dedupe/web check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "test": "pnpm --filter @paperless-dedupe/core test"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-svelte": "^3.0.0",
+    "globals": "^16.0.0",
+    "prettier": "~3.6.2",
+    "prettier-plugin-svelte": "^3.4.0",
+    "prettier-plugin-tailwindcss": "^0.6.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^4.0.18"
+  }
+}

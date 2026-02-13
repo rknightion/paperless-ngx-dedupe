@@ -1,0 +1,361 @@
+This is a historical archive of completed todos. 
+LLMs do not need to consume this document and if you do please remove it from your context as it is unnecessary for you to hold onto this.
+
+
+================================================================================
+PHASE 1: SCAFFOLDING [COMPLETED]
+================================================================================
+
+[x] Initialize pnpm monorepo
+    [x] Create root package.json with workspaces config
+    [x] Create pnpm-workspace.yaml pointing to packages/*
+    [x] Create root tsconfig.json (ES2022 target, strict mode, paths)
+    [x] Node.js >= 22, pnpm >= 9.15
+
+[x] Scaffold @paperless-dedupe/core package
+    [x] packages/core/package.json (name: @paperless-dedupe/core, type: module)
+    [x] packages/core/tsconfig.json extending root
+    [x] packages/core/src/index.ts (barrel export)
+
+    [x] Drizzle SQLite schema for all tables
+        [x] packages/core/src/schema/sqlite/documents.ts
+            - document table:
+                id TEXT PK (nanoid), paperless_id INTEGER UNIQUE NOT NULL,
+                title TEXT NOT NULL, fingerprint TEXT (Paperless checksum),
+                correspondent TEXT, document_type TEXT, tags_json TEXT (JSON array),
+                created_date TEXT, added_date TEXT, modified_date TEXT,
+                original_file_size INTEGER, archive_file_size INTEGER,
+                processing_status TEXT DEFAULT 'pending' (pending|completed),
+                synced_at TEXT NOT NULL
+            - document_content table:
+                id TEXT PK, document_id TEXT FK→document UNIQUE NOT NULL,
+                full_text TEXT, normalized_text TEXT, word_count INTEGER DEFAULT 0,
+                content_hash TEXT (SHA-256 of normalized text)
+            - document_signature table:
+                id TEXT PK, document_id TEXT FK→document UNIQUE NOT NULL,
+                minhash_signature BLOB (serialized Uint32Array),
+                algorithm_version TEXT NOT NULL, num_permutations INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+        [x] packages/core/src/schema/sqlite/duplicates.ts
+            - duplicate_group table:
+                id TEXT PK, confidence_score REAL NOT NULL (0.0-1.0),
+                jaccard_similarity REAL, fuzzy_text_ratio REAL,
+                metadata_similarity REAL, filename_similarity REAL,
+                algorithm_version TEXT NOT NULL,
+                reviewed INTEGER DEFAULT 0, resolved INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            - duplicate_member table:
+                id TEXT PK, group_id TEXT FK→duplicate_group ON DELETE CASCADE,
+                document_id TEXT FK→document,
+                is_primary INTEGER DEFAULT 0,
+                UNIQUE(group_id, document_id)
+        [x] packages/core/src/schema/sqlite/jobs.ts
+            - job table:
+                id TEXT PK, type TEXT NOT NULL (sync|analysis|batch_operation),
+                status TEXT DEFAULT 'pending' (pending|running|completed|failed|cancelled),
+                progress REAL DEFAULT 0 (0.0-1.0), progress_message TEXT,
+                started_at TEXT, completed_at TEXT, error_message TEXT,
+                result_json TEXT (JSON), created_at TEXT NOT NULL
+        [x] packages/core/src/schema/sqlite/app.ts
+            - app_config table:
+                key TEXT PK, value TEXT NOT NULL, updated_at TEXT NOT NULL
+            - sync_state table:
+                id TEXT PK DEFAULT 'singleton', last_sync_at TEXT,
+                last_sync_document_count INTEGER, last_analysis_at TEXT,
+                total_documents INTEGER DEFAULT 0,
+                total_duplicate_groups INTEGER DEFAULT 0
+    [x] Drizzle relations declarations
+        - packages/core/src/schema/relations.ts
+        - document 1→1 document_content, document 1→1 document_signature
+        - document 1→many duplicate_member
+        - duplicate_group 1→many duplicate_member
+    [x] Database client factory
+        - packages/core/src/db/client.ts
+        - createDatabase(url) returning typed AppDatabase (Drizzle instance)
+        - SQLite WAL mode enabled by default for concurrent access
+        - DDL staleness detection via SHA-256 hash of schema SQL
+    [x] Database migration runner
+        - packages/core/src/db/migrate.ts
+        - Apply DDL on first run, detect schema changes on subsequent runs
+        - Match ctview pattern: compare hash of current DDL vs stored hash
+    [x] TypeScript types
+        - packages/core/src/types/enums.ts
+            ProcessingStatus, JobType, JobStatus, DuplicateResolution
+        - packages/core/src/schema/types.ts
+            Drizzle Row/Insert types exported via $inferSelect/$inferInsert
+
+[x] Scaffold @paperless-dedupe/web package
+    [x] SvelteKit with adapter-node
+        - packages/web/package.json
+        - packages/web/svelte.config.js (adapter-node)
+        - packages/web/vite.config.ts
+        - packages/web/tsconfig.json
+    [x] Tailwind CSS 4 setup (basic, design system comes in Phase 6)
+    [x] App shell layout (sidebar + content area)
+        - packages/web/src/routes/+layout.svelte
+        - Navigation: Dashboard, Documents, Duplicates, Settings
+    [x] Dashboard page placeholder
+        - packages/web/src/routes/+page.svelte
+    [x] Placeholder routes for all sections
+        - /documents, /duplicates, /settings
+    [x] hooks.server.ts
+        - Database initialization (singleton via $lib/server/db.ts)
+        - Config initialization (singleton via $lib/server/config.ts)
+        - Attach db and config to event.locals
+    [x] app.d.ts with typed locals (db: AppDatabase, config: AppConfig)
+
+[x] Docker setup
+    [x] Multi-stage Dockerfile (packages/web is the entrypoint)
+    [x] docker-compose.yml (SQLite default, volume mount for data)
+    [x] docker-compose.postgres.yml (Postgres override, for Phase 8)
+    [x] Health check configuration
+
+[x] Create todos.txt (this file)
+
+
+================================================================================
+PHASE 1B: DEVELOPER TOOLING & API FOUNDATION [COMPLETED]
+================================================================================
+
+This phase establishes code quality tooling and API infrastructure that all
+subsequent phases depend on. It should be completed before Phase 2.
+
+[x] Code quality tooling
+    [x] ESLint configuration
+        - Install eslint + @typescript-eslint/parser + @typescript-eslint/eslint-plugin
+        - Use flat config format (eslint.config.js) as this is the modern standard
+        - Enable recommended + typescript-eslint recommended rules
+        - Enforce consistent type imports (type keyword for type-only imports)
+        - Configure for both .ts and .svelte files (eslint-plugin-svelte)
+        - Root config shared across both packages
+    [x] Prettier configuration
+        - Install prettier + prettier-plugin-svelte + prettier-plugin-tailwindcss
+        - Create .prettierrc.json in project root
+        - Recommended: semicolons, single quotes, trailing commas, 100-char width
+        - Ensure Prettier and ESLint do not conflict (eslint-config-prettier)
+    [x] Add lint/format scripts to root package.json
+        - "lint": runs ESLint across all packages
+        - "lint:fix": auto-fix ESLint issues
+        - "format": check formatting with Prettier
+        - "format:fix": apply Prettier formatting
+    [x] EditorConfig (.editorconfig) for cross-editor consistency
+
+[x] Zod configuration and startup validation (AD-005)
+    [x] Add zod dependency to @paperless-dedupe/core
+    [x] Create config schema (packages/core/src/config.ts)
+        - DATABASE_DIALECT: z.enum(['sqlite', 'postgres']).default('sqlite')
+        - DATABASE_URL: z.string() with sensible default for sqlite
+        - PAPERLESS_URL: z.string().url() (required — the Paperless-NGX instance)
+        - PAPERLESS_API_TOKEN: z.string().optional()
+        - PAPERLESS_USERNAME: z.string().optional()
+        - PAPERLESS_PASSWORD: z.string().optional()
+        - PORT: z.coerce.number().default(3000)
+        - LOG_LEVEL: z.enum(['debug','info','warn','error']).default('info')
+        - CORS_ALLOW_ORIGIN: z.string().default('') (empty = same-origin only)
+        - AUTO_MIGRATE: z.string().default('true').transform(v => v === 'true')
+        - Validate at least one auth method: token OR username+password
+    [x] Validate config at application startup in hooks.server.ts
+    [x] Export parsed config type for use across the app
+    [x] Fail fast with clear error messages if required env vars are missing
+    [x] Create .env.example template
+
+[x] CORS configuration for external API clients (AD-006)
+    [x] Read CORS_ALLOW_ORIGIN from validated config
+    [x] Implement CORS handling in hooks.server.ts
+        - Set Access-Control-Allow-Origin header on all /api/* responses
+        - Handle OPTIONS preflight requests for /api/* routes
+        - Set Access-Control-Allow-Methods (GET, POST, PUT, DELETE, OPTIONS)
+        - Set Access-Control-Allow-Headers (Content-Type, Authorization)
+        - When empty, do not add CORS headers (same-origin only, safe default)
+        - When set to '*', allow all origins
+        - When set to a specific origin, allow only that origin
+
+[x] Structured API error responses (AD-006)
+    [x] Define a standard error response shape used by ALL API routes:
+        {
+          "error": {
+            "code": "VALIDATION_FAILED",
+            "message": "Human-readable description",
+            "details": [...optional array of specific issues...]
+          }
+        }
+    [x] Define standard success response envelope:
+        {
+          "data": { ...the actual response payload... },
+          "meta": { ...optional pagination, timing, etc... }
+        }
+    [x] Create a shared API response helper (packages/web/src/lib/server/api.ts)
+        - apiSuccess(data, meta?, status?) → JSON response with envelope
+        - apiError(code, message, details?, status?) → JSON error response
+        - Common error codes: VALIDATION_FAILED, NOT_FOUND, UNAUTHORIZED,
+          CONFLICT, INTERNAL_ERROR, JOB_ALREADY_RUNNING, NOT_READY
+    [x] Ensure all API routes return Content-Type: application/json
+
+[x] Health and readiness endpoints
+    [x] GET /api/v1/health — lightweight liveness probe (no DB check)
+    [x] GET /api/v1/ready
+        - Check database connectivity (SELECT 1)
+        - Check Paperless-NGX reachability (HEAD request to configured URL)
+        - Return { "data": { "status": "ready", "checks": {...} } } on success
+        - Return 503 with error details if any check fails
+    [x] Update Docker healthcheck to use /api/v1/ready
+
+[x] Pino logging setup (AD-010)
+    [x] Install pino and pino-pretty (dev dependency for readable local logs)
+    [x] Create logger factory in packages/core/src/logger.ts
+        - Accept log level from config
+        - Export createLogger(name) for child loggers
+    [x] Integrate pino-http in hooks.server.ts for request logging
+    [x] Use structured logging throughout (no console.log/warn/error)
+
+================================================================================
+PHASE 2: PAPERLESS-NGX CLIENT
+================================================================================
+
+A full TypeScript HTTP client for the Paperless-NGX REST API, living in
+@paperless-dedupe/core so it can be reused by future CLI tools.
+
+[x] Paperless client implementation
+    [x] packages/core/src/paperless/client.ts
+        - PaperlessClient class with constructor(config: PaperlessConfig)
+        - Authentication: token-based (Authorization: Token xxx) or basic auth
+        - Base URL configuration with trailing slash normalization
+        - All methods return typed responses
+    [x] Core methods:
+        - testConnection(): Promise<{ version: string; documentsCount: number }>
+            Hit GET /api/ to verify connectivity and auth
+        - getDocuments(options?): AsyncGenerator<PaperlessDocument[]>
+            Paginated fetching via GET /api/documents/
+            Yield batches for memory-efficient processing
+            Support filtering by modified date for incremental sync
+        - getDocumentContent(id: number): Promise<string>
+            GET /api/documents/{id}/content/ (returns OCR text)
+        - getDocumentMetadata(id: number): Promise<DocumentMetadata>
+            GET /api/documents/{id}/metadata/ (file sizes, checksums)
+        - getTags(): Promise<Tag[]>
+        - getCorrespondents(): Promise<Correspondent[]>
+        - getDocumentTypes(): Promise<DocumentType[]>
+        - getStatistics(): Promise<PaperlessStats>
+        - deleteDocument(id: number): Promise<void>
+            DELETE /api/documents/{id}/ (used by batch operations)
+    [x] Retry logic with exponential backoff and jitter
+        - Configurable max retries (default: 3)
+        - Respect 429 rate limit responses (use Retry-After header)
+        - Retry on 5xx errors and network failures
+        - Do NOT retry on 4xx client errors (except 429)
+    [x] Request timeout handling (configurable, default 30s)
+    [x] Paperless types
+        - packages/core/src/paperless/types.ts
+        - PaperlessDocument, DocumentMetadata, Tag, Correspondent,
+          DocumentType, PaperlessStats, PaperlessConfig
+        - Map Paperless API snake_case responses to camelCase TypeScript types
+
+[x] Connection testing endpoint
+    [x] POST /api/v1/config/test-connection
+        - Accept { url, token?, username?, password? } in request body
+        - Attempt connection with provided credentials
+        - Return success with Paperless version and document count
+        - Return structured error on failure (auth failed, unreachable, etc.)
+
+[x] Unit tests
+    [x] Test retry logic with mock HTTP responses
+    [x] Test authentication header generation (token vs basic)
+    [x] Test pagination handling (multi-page document fetch)
+    [x] Test error classification (retryable vs non-retryable)
+    [x] Test URL normalization (trailing slashes, path joining)
+
+
+
+================================================================================
+PHASE 3: SYNC & JOB INFRASTRUCTURE
+================================================================================
+
+This phase builds the background job system and document sync pipeline. After
+this phase, documents from Paperless-NGX are stored locally with normalized
+text ready for deduplication.
+
+[x] Background job infrastructure (AD-008)
+    [x] Job manager (packages/core/src/jobs/manager.ts)
+        - createJob(type, db): Create job record, return job ID
+        - getJob(id, db): Read job status and progress
+        - listJobs(filters, db): List jobs with filtering by type/status
+        - cancelJob(id, db): Set status to 'cancelled'
+        - Enforce single-running-job-per-type constraint
+          (reject if another job of same type has status 'running')
+    [x] Worker thread wrapper (packages/core/src/jobs/worker.ts)
+        - Generic worker thread launcher that:
+            1. Receives job ID and database URL via workerData
+            2. Opens its own database connection in the worker thread
+            3. Updates job.status to 'running', sets started_at
+            4. Calls the task function with a progress callback
+            5. On success: sets status='completed', result_json, completed_at
+            6. On failure: sets status='failed', error_message, completed_at
+            7. On cancellation: checks job.status periodically, exits cleanly
+        - Progress callback: (progress: number, message?: string) => void
+          Updates job.progress and job.progress_message in database
+    [x] Worker scripts for each job type:
+        - packages/core/src/jobs/workers/sync-worker.ts
+        - packages/core/src/jobs/workers/analysis-worker.ts
+        - packages/core/src/jobs/workers/batch-worker.ts
+
+[x] SSE progress endpoint (AD-009)
+    [x] GET /api/v1/jobs/:jobId/progress
+        - Streaming response using SvelteKit's native streaming
+        - Poll job table every 500ms, emit SSE events:
+            event: progress
+            data: { "progress": 0.45, "message": "Syncing documents..." }
+        - Send event: complete when job finishes (status completed|failed)
+        - Close stream on client disconnect or job completion
+    [x] GET /api/v1/jobs/:jobId — standard REST endpoint for polling fallback
+    [x] GET /api/v1/jobs — list recent jobs (last 50, filterable by type)
+
+[x] Document sync pipeline
+    [x] Sync task function (packages/core/src/sync/sync-documents.ts)
+        The sync task performs these steps:
+        1. Fetch reference data from Paperless (tags, correspondents, doc types)
+           Store as lookup maps for resolving IDs to names
+        2. Fetch all documents from Paperless in batches (page_size=100)
+           Use the async generator from PaperlessClient
+        3. For each batch, compare against local database:
+           - New documents (paperless_id not in local DB): insert
+           - Modified documents (fingerprint changed): update
+           - Unchanged documents: skip
+        4. For new/modified documents, fetch OCR content:
+           - Call getDocumentContent(id) for each
+           - Truncate to configurable max length (default 500,000 chars)
+           - Store full_text in document_content table
+        5. Normalize text for each new/modified document:
+           - Lowercase
+           - Collapse whitespace (multiple spaces/newlines → single space)
+           - Trim
+           - Store as normalized_text
+           - Compute word_count
+           - Compute content_hash (SHA-256 of normalized_text)
+        6. Mark documents as processing_status='pending' (ready for analysis)
+        7. Update sync_state with results
+    [x] Incremental sync support
+        - Track last_sync_at in sync_state table
+        - On subsequent syncs, use Paperless API ordering=-modified to fetch
+          most recently modified documents first
+        - Stop fetching when we hit documents older than last_sync_at
+          (optimization: avoids re-fetching entire library)
+        - Support force_full_sync parameter to bypass incremental logic
+    [x] Batch size and concurrency configuration
+        - OCR content fetch parallelism (default 5 concurrent requests)
+        - Configurable via app_config: sync_batch_size, sync_concurrency
+
+[x] Sync API endpoints
+    [x] POST /api/v1/sync — trigger a document sync job
+        - Accept optional { force?: boolean } to force full sync
+        - Return 409 if a sync job is already running
+        - Return job ID for progress tracking
+    [x] GET /api/v1/sync/status — get current sync state
+        - Last sync time, document counts, whether sync is running
+
+[x] Unit tests
+    [x] Test job lifecycle (create → running → completed/failed)
+    [x] Test single-job-per-type constraint
+    [x] Test sync logic with mock Paperless responses
+    [x] Test incremental sync detection (new/modified/unchanged)
+    [x] Test text normalization (whitespace, case, hashing)
+    [x] Test progress callback updates

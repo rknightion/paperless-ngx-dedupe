@@ -1,0 +1,24 @@
+# Placeholder for Phase 8 — PostgreSQL support
+#
+# services:
+#   postgres:
+#     image: postgres:17
+#     environment:
+#       POSTGRES_USER: paperless_dedupe
+#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+#       POSTGRES_DB: paperless_dedupe
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres-data:/var/lib/postgresql/data
+#     restart: unless-stopped
+#
+#   app:
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#     environment:
+#       DATABASE_URL: postgresql://paperless_dedupe:${POSTGRES_PASSWORD:-changeme}@postgres:5432/paperless_dedupe
+#
+# volumes:
+#   postgres-data:

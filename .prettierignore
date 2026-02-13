@@ -1,0 +1,7 @@
+node_modules
+.svelte-kit
+build
+dist
+pnpm-lock.yaml
+.pnpm-store
+.claude
