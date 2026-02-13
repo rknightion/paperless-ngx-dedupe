@@ -26,7 +26,7 @@ test.describe('Settings Page', () => {
     await page.goto('/settings');
 
     // Connection section
-    await expect(page.getByText('Paperless-NGX Connection')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Paperless-NGX Connection' })).toBeVisible();
 
     // URL field
     await expect(page.locator('#paperless-url')).toBeVisible();
@@ -43,7 +43,7 @@ test.describe('Settings Page', () => {
     await page.goto('/settings');
 
     await expect(page.getByRole('button', { name: 'Test Connection' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
   });
 
   test('token show/hide toggle works', async ({ page }) => {
@@ -53,18 +53,18 @@ test.describe('Settings Page', () => {
     await expect(tokenInput).toHaveAttribute('type', 'password');
 
     // Click Show button
-    await page.getByRole('button', { name: 'Show' }).click();
+    await page.getByRole('button', { name: 'Show', exact: true }).click();
     await expect(tokenInput).toHaveAttribute('type', 'text');
 
     // Click Hide button
-    await page.getByRole('button', { name: 'Hide' }).click();
+    await page.getByRole('button', { name: 'Hide', exact: true }).click();
     await expect(tokenInput).toHaveAttribute('type', 'password');
   });
 
   test('dedup parameters section renders', async ({ page }) => {
     await page.goto('/settings');
 
-    await expect(page.getByText('Deduplication Parameters')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Deduplication Parameters' })).toBeVisible();
 
     // Similarity threshold slider
     await expect(page.locator('#threshold')).toBeVisible();

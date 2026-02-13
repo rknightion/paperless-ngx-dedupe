@@ -17,7 +17,7 @@ test.describe('Bulk Operations Wizard', () => {
   test('breadcrumb navigation is present', async ({ page }) => {
     await page.goto('/duplicates/wizard');
 
-    await expect(page.getByRole('link', { name: 'Duplicates' })).toBeVisible();
+    await expect(page.locator('main').getByRole('link', { name: 'Duplicates' })).toBeVisible();
     await expect(page.getByText('Bulk Operations Wizard').last()).toBeVisible();
   });
 
@@ -130,7 +130,9 @@ test.describe('Bulk Operations Wizard', () => {
     await expect(page.getByText('Choose Action')).toBeVisible();
     await expect(page.getByText('Mark All as Reviewed')).toBeVisible();
     await expect(page.getByText('Resolve All')).toBeVisible();
-    await expect(page.getByText('Delete Non-Primary Documents')).toBeVisible();
+    await expect(
+      page.locator('div.font-medium', { hasText: 'Delete Non-Primary Documents' }),
+    ).toBeVisible();
   });
 
   test('step 4: confirmation checkboxes required', async ({ page }) => {

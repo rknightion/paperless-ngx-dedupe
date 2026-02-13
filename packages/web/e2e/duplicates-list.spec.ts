@@ -23,9 +23,9 @@ test.describe('Duplicates List Page', () => {
     await expect(table).toBeVisible();
 
     // Should have table headers
-    await expect(page.getByText('Primary Doc Title')).toBeVisible();
-    await expect(page.getByText('Members')).toBeVisible();
-    await expect(page.getByText('Confidence')).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Primary Doc Title' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Members' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Confidence' })).toBeVisible();
 
     // Should have rows for seeded groups
     const rows = table.locator('tbody tr');
