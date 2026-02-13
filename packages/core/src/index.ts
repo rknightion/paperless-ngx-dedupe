@@ -171,5 +171,11 @@ export {
   deleteDuplicateGroup,
   batchMarkReviewed,
   batchMarkResolved,
+  buildGroupWhere,
 } from './queries/duplicates.js';
 export { getConfig, setConfig, setConfigBatch } from './queries/config.js';
+
+// Export
+export { getDuplicateGroupsForExport, formatDuplicatesCsv } from './export/csv.js';
+export { exportConfig, importConfig } from './export/config.js';
+export type { DuplicateExportRow, ConfigBackup } from './export/types.js';
