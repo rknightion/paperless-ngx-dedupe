@@ -24,7 +24,7 @@
   {/if}
 
   <aside
-    class="bg-sidebar fixed left-0 top-0 z-40 flex h-full w-64 flex-col text-white transition-transform duration-200 ease-in-out {sidebarOpen
+    class="bg-sidebar fixed top-0 left-0 z-40 flex h-full w-64 flex-col text-white transition-transform duration-200 ease-in-out {sidebarOpen
       ? 'translate-x-0'
       : '-translate-x-full'} md:translate-x-0"
   >

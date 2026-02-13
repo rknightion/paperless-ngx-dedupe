@@ -80,10 +80,7 @@ export function subscribeToJobProgress(
     } catch (err: unknown) {
       if (!controller.signal.aborted) {
         callbacks.onError?.(
-          new PaperlessDedupeNetworkError(
-            err instanceof Error ? err.message : 'Stream error',
-            err,
-          ),
+          new PaperlessDedupeNetworkError(err instanceof Error ? err.message : 'Stream error', err),
         );
       }
     }

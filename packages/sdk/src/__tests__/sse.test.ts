@@ -127,11 +127,7 @@ describe('subscribeToJobProgress', () => {
     const events = 'event:progress\ndata:{"progress":0.5}\n\n';
     const mockFetch = createMockSSEFetch(events);
 
-    const subscription = subscribeToJobProgress(
-      'job-1',
-      {},
-      makeHttpOptions(mockFetch),
-    );
+    const subscription = subscribeToJobProgress('job-1', {}, makeHttpOptions(mockFetch));
 
     expect(subscription).toHaveProperty('unsubscribe');
     expect(typeof subscription.unsubscribe).toBe('function');
