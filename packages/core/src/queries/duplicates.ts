@@ -13,11 +13,17 @@ import type {
   ConfidenceBucket,
   PaginatedResult,
   PaginationParams,
+  SimilarityGraphFilters,
+  GraphNode,
+  GraphEdge,
+  SimilarityGraphData,
 } from './types.js';
 
 // ── List queries ────────────────────────────────────────────────────────
 
-export function buildGroupWhere(filters: DuplicateGroupFilters) {
+export function buildGroupWhere(
+  filters: Pick<DuplicateGroupFilters, 'minConfidence' | 'maxConfidence' | 'reviewed' | 'resolved'>,
+) {
   const conditions = [];
 
   if (filters.minConfidence !== undefined) {
@@ -340,6 +346,123 @@ export function getDuplicateStats(db: AppDatabase): DuplicateStats {
     confidenceDistribution,
     topCorrespondents,
   };
+}
+
+// ── Similarity graph query ───────────────────────────────────────────────
+
+export function getSimilarityGraph(
+  db: AppDatabase,
+  filters: SimilarityGraphFilters,
+): SimilarityGraphData {
+  const where = buildGroupWhere(filters);
+
+  // Count total matching groups
+  const [{ value: totalGroupsMatched }] = db
+    .select({ value: count() })
+    .from(duplicateGroup)
+    .where(where)
+    .all();
+
+  // Fetch top N groups by confidence desc
+  const groups = db
+    .select()
+    .from(duplicateGroup)
+    .where(where)
+    .orderBy(desc(duplicateGroup.confidenceScore))
+    .limit(filters.maxGroups)
+    .all();
+
+  if (groups.length === 0) {
+    return { nodes: [], edges: [], totalGroupsMatched, groupsIncluded: 0 };
+  }
+
+  const groupIds = groups.map((g) => g.id);
+  const groupMap = new Map(groups.map((g) => [g.id, g]));
+
+  // Fetch all members for those groups
+  const memberRows = db
+    .select({
+      groupId: duplicateMember.groupId,
+      documentId: duplicateMember.documentId,
+    })
+    .from(duplicateMember)
+    .where(inArray(duplicateMember.groupId, groupIds))
+    .all();
+
+  // Collect unique document IDs
+  const docIds = [...new Set(memberRows.map((m) => m.documentId))];
+
+  // Fetch document metadata
+  const docRows =
+    docIds.length > 0
+      ? db
+          .select({
+            id: document.id,
+            paperlessId: document.paperlessId,
+            title: document.title,
+            correspondent: document.correspondent,
+            documentType: document.documentType,
+          })
+          .from(document)
+          .where(inArray(document.id, docIds))
+          .all()
+      : [];
+
+  const docMap = new Map(docRows.map((d) => [d.id, d]));
+
+  // Build members-by-group lookup
+  const membersByGroup = new Map<string, string[]>();
+  for (const m of memberRows) {
+    const list = membersByGroup.get(m.groupId);
+    if (list) {
+      list.push(m.documentId);
+    } else {
+      membersByGroup.set(m.groupId, [m.documentId]);
+    }
+  }
+
+  // Count how many groups each document appears in
+  const groupCountByDoc = new Map<string, number>();
+  for (const m of memberRows) {
+    groupCountByDoc.set(m.documentId, (groupCountByDoc.get(m.documentId) ?? 0) + 1);
+  }
+
+  // Build nodes from unique documents
+  const nodes: GraphNode[] = docIds
+    .map((id) => {
+      const doc = docMap.get(id);
+      if (!doc) return null;
+      return {
+        id: doc.id,
+        paperlessId: doc.paperlessId,
+        title: doc.title,
+        correspondent: doc.correspondent,
+        documentType: doc.documentType,
+        groupCount: groupCountByDoc.get(id) ?? 1,
+      };
+    })
+    .filter((n): n is GraphNode => n !== null);
+
+  // Build edges: for each group with 2+ members, create pairwise edges
+  const edges: GraphEdge[] = [];
+  for (const [groupId, members] of membersByGroup) {
+    if (members.length < 2) continue;
+    const g = groupMap.get(groupId)!;
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        edges.push({
+          source: members[i],
+          target: members[j],
+          groupId,
+          confidenceScore: g.confidenceScore,
+          reviewed: g.reviewed ?? false,
+          resolved: g.resolved ?? false,
+        });
+      }
+    }
+  }
+
+  return { nodes, edges, totalGroupsMatched, groupsIncluded: groups.length };
 }
 
 // ── Mutations ───────────────────────────────────────────────────────────

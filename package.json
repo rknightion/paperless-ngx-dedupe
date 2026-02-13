@@ -10,13 +10,14 @@
   },
   "scripts": {
     "dev": "pnpm --filter @paperless-dedupe/web dev",
-    "build": "pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/web build",
-    "check": "pnpm --filter @paperless-dedupe/core check && pnpm --filter @paperless-dedupe/web check",
+    "build": "pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/sdk build && pnpm --filter @paperless-dedupe/cli build && pnpm --filter @paperless-dedupe/web build",
+    "check": "pnpm --filter @paperless-dedupe/core check && pnpm --filter @paperless-dedupe/sdk check && pnpm --filter @paperless-dedupe/cli check && pnpm --filter @paperless-dedupe/web check",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "pnpm --filter @paperless-dedupe/core test",
+    "test": "pnpm --filter @paperless-dedupe/core test && pnpm --filter @paperless-dedupe/sdk test",
+    "cli": "node --import tsx/esm packages/cli/src/bin.ts",
     "test:e2e": "pnpm --filter @paperless-dedupe/web test:e2e"
   },
   "pnpm": {
