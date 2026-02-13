@@ -118,3 +118,36 @@ export { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from './d
 export { runAnalysis } from './dedup/analyze.js';
 export { DEFAULT_DEDUP_CONFIG, dedupConfigSchema, ALGORITHM_VERSION } from './dedup/types.js';
 export type { DedupConfig, SimilarityWeights, SimilarityResult, DocumentScoringData, AnalysisOptions, AnalysisResult, ScoringOptions } from './dedup/types.js';
+
+// Queries
+export { paginationSchema, duplicateGroupFiltersSchema, documentFiltersSchema } from './queries/types.js';
+export type {
+  PaginationParams,
+  PaginatedResult,
+  DocumentFilters,
+  DuplicateGroupFilters,
+  DocumentSummary,
+  DocumentDetail,
+  DuplicateGroupSummary,
+  DuplicateGroupDetail,
+  DuplicateGroupMember,
+  DuplicateStats,
+  ConfidenceBucket,
+  DashboardData,
+  DocumentStats,
+} from './queries/types.js';
+export { parseTagsJson } from './queries/helpers.js';
+export { getDashboard } from './queries/dashboard.js';
+export { getDocuments, getDocument, getDocumentStats } from './queries/documents.js';
+export {
+  getDuplicateGroups,
+  getDuplicateGroup,
+  getDuplicateStats,
+  setPrimaryDocument,
+  markGroupReviewed,
+  markGroupResolved,
+  deleteDuplicateGroup,
+  batchMarkReviewed,
+  batchMarkResolved,
+} from './queries/duplicates.js';
+export { getConfig, setConfig, setConfigBatch } from './queries/config.js';

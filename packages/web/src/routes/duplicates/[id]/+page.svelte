@@ -1,0 +1,209 @@
+<script lang="ts">
+  import { invalidateAll } from '$app/navigation';
+  import {
+    ConfidenceBadge,
+    StatusBadge,
+    ConfidenceBreakdown,
+    DocumentCompare,
+    TextDiff,
+    GroupActionBar,
+  } from '$lib/components';
+
+  let { data } = $props();
+
+  let selectedSecondaryIndex = $state(0);
+  let isSettingPrimary = $state(false);
+
+  let primaryMember = $derived(
+    data.group.members.find((m) => m.isPrimary) || data.group.members[0],
+  );
+  let secondaryMembers = $derived(
+    data.group.members.filter((m) => m.memberId !== primaryMember.memberId),
+  );
+  let selectedSecondary = $derived(
+    secondaryMembers[selectedSecondaryIndex] || secondaryMembers[0],
+  );
+
+  let groupStatus = $derived(
+    data.group.resolved ? 'resolved' : data.group.reviewed ? 'reviewed' : 'pending',
+  );
+
+  function formatBytes(bytes: number | null): string {
+    if (bytes === null || bytes === 0) return '-';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+  }
+
+  async function setPrimary(documentId: string) {
+    isSettingPrimary = true;
+    try {
+      await fetch(`/api/v1/duplicates/${data.group.id}/primary`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId }),
+      });
+      invalidateAll();
+    } finally {
+      isSettingPrimary = false;
+    }
+  }
+</script>
+
+<svelte:head>
+  <title>{primaryMember?.title ?? 'Duplicate Group'} - Paperless Dedupe</title>
+</svelte:head>
+
+<div class="space-y-6">
+  <!-- Breadcrumb -->
+  <a href="/duplicates" class="inline-block text-sm text-accent hover:text-accent-hover">
+    &larr; Back to Duplicates
+  </a>
+
+  <!-- Group header -->
+  <div>
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="text-2xl font-bold text-ink">
+        {primaryMember?.title || 'Untitled Group'}
+      </h1>
+      <ConfidenceBadge score={data.group.confidenceScore} />
+      <StatusBadge status={groupStatus} />
+    </div>
+    <p class="mt-1 text-sm text-muted">
+      Algorithm v{data.group.algorithmVersion}
+      &middot; Created {new Date(data.group.createdAt).toLocaleDateString()}
+      &middot; <span class="font-mono">{data.group.id.slice(0, 8)}&hellip;</span>
+    </p>
+  </div>
+
+  <!-- Action bar -->
+  <GroupActionBar
+    groupId={data.group.id}
+    reviewed={data.group.reviewed}
+    resolved={data.group.resolved}
+    memberCount={data.group.members.length}
+    onaction={() => invalidateAll()}
+  />
+
+  <!-- Confidence breakdown -->
+  <ConfidenceBreakdown
+    overallScore={data.group.confidenceScore}
+    jaccardSimilarity={data.group.jaccardSimilarity}
+    fuzzyTextRatio={data.group.fuzzyTextRatio}
+    metadataSimilarity={data.group.metadataSimilarity}
+    filenameSimilarity={data.group.filenameSimilarity}
+    weights={data.weights}
+  />
+
+  <!-- Members table -->
+  <div class="panel">
+    <div class="mb-4 flex items-center gap-3">
+      <h3 class="text-base font-semibold text-ink">Members</h3>
+      <span class="rounded-full bg-canvas px-2.5 py-0.5 text-xs font-semibold text-muted">
+        {data.group.members.length}
+      </span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-soft text-left text-xs text-muted">
+            <th class="pb-2 pr-4 font-medium">Title</th>
+            <th class="pb-2 pr-4 font-medium">Correspondent</th>
+            <th class="pb-2 pr-4 font-medium">Role</th>
+            <th class="pb-2 pr-4 font-medium">File Size</th>
+            <th class="pb-2 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each data.group.members as member}
+            <tr class="border-b border-soft last:border-0">
+              <td class="py-2.5 pr-4 font-medium text-ink">{member.title}</td>
+              <td class="py-2.5 pr-4 text-muted">{member.correspondent ?? '-'}</td>
+              <td class="py-2.5 pr-4">
+                {#if member.isPrimary}
+                  <span class="rounded-full bg-accent-light px-2 py-0.5 text-xs font-medium text-accent">
+                    Primary
+                  </span>
+                {:else}
+                  <span class="text-muted">-</span>
+                {/if}
+              </td>
+              <td class="py-2.5 pr-4 font-mono text-xs text-muted">
+                {formatBytes(member.originalFileSize)}
+              </td>
+              <td class="py-2.5">
+                <div class="flex items-center gap-2">
+                  {#if !member.isPrimary}
+                    <button
+                      onclick={() => setPrimary(member.documentId)}
+                      disabled={isSettingPrimary}
+                      class="rounded-lg border border-soft px-3 py-1 text-xs font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                    >
+                      {isSettingPrimary ? 'Setting...' : 'Set as Primary'}
+                    </button>
+                  {/if}
+                  <a
+                    href="{data.paperlessUrl}/documents/{member.paperlessId}/details"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-accent hover:text-accent-hover"
+                    title="Open in Paperless-NGX"
+                  >
+                    &#8599;
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Document comparison -->
+  {#if selectedSecondary}
+    <div class="space-y-4">
+      <h3 class="text-base font-semibold text-ink">Document Comparison</h3>
+
+      {#if secondaryMembers.length > 1}
+        {#if secondaryMembers.length <= 4}
+          <div class="flex gap-1">
+            {#each secondaryMembers as sec, i}
+              <button
+                onclick={() => { selectedSecondaryIndex = i; }}
+                class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {
+                  selectedSecondaryIndex === i
+                    ? 'bg-accent text-white'
+                    : 'border border-soft text-muted hover:bg-canvas'
+                }"
+              >
+                {sec.title.length > 30 ? sec.title.slice(0, 30) + '...' : sec.title}
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <select
+            value={selectedSecondaryIndex}
+            onchange={(e) => { selectedSecondaryIndex = Number((e.target as HTMLSelectElement).value); }}
+            class="rounded-lg border border-soft bg-surface px-3 py-2 text-sm text-ink"
+          >
+            {#each secondaryMembers as sec, i}
+              <option value={i}>{sec.title}</option>
+            {/each}
+          </select>
+        {/if}
+      {/if}
+
+      <DocumentCompare
+        primary={primaryMember}
+        secondary={selectedSecondary}
+        paperlessUrl={data.paperlessUrl}
+      />
+
+      <TextDiff
+        textA={primaryMember.content?.fullText ?? null}
+        textB={selectedSecondary.content?.fullText ?? null}
+      />
+    </div>
+  {/if}
+</div>

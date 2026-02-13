@@ -1,1 +1,45 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* ─── Design System ─────────────────────────────────────────────────────
+ * Semantic color tokens using oklch for perceptual uniformity.
+ * All interactive elements use accent (teal family).
+ * Destructive actions use ember (red family).
+ * Status colors: success (green), accent (blue/teal), ember (red).
+ * ──────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --color-canvas: oklch(0.97 0.005 90);
+  --color-ink: oklch(0.2 0.02 260);
+  --color-accent: oklch(0.55 0.15 195);
+  --color-accent-light: oklch(0.92 0.04 195);
+  --color-accent-hover: oklch(0.48 0.15 195);
+  --color-ember: oklch(0.55 0.2 25);
+  --color-ember-light: oklch(0.92 0.05 25);
+  --color-soft: oklch(0.88 0.01 260);
+  --color-surface: oklch(1 0 0);
+  --color-muted: oklch(0.55 0.015 260);
+  --color-success: oklch(0.55 0.15 155);
+  --color-success-light: oklch(0.92 0.04 155);
+  --color-sidebar: oklch(0.22 0.02 260);
+  --color-sidebar-hover: oklch(0.3 0.02 260);
+
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@utility panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-soft);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-sm);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+  }
+}

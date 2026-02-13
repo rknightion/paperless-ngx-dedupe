@@ -1,6 +1,155 @@
+<script lang="ts">
+  import { StatCard, EChart, ProgressBar } from '$lib/components';
+  import type { EChartsOption } from 'echarts';
+
+  let { data } = $props();
+
+  function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+  }
+
+  // Correspondent distribution bar chart
+  let correspondentOption: EChartsOption = $derived({
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'value',
+    },
+    yAxis: {
+      type: 'category',
+      data: data.stats.correspondentDistribution.map((c) => c.name).reverse(),
+      axisLabel: { fontSize: 11, width: 120, overflow: 'truncate' },
+    },
+    series: [
+      {
+        type: 'bar',
+        data: data.stats.correspondentDistribution.map((c) => c.count).reverse(),
+        itemStyle: { color: 'oklch(0.55 0.15 195)' },
+        barMaxWidth: 24,
+      },
+    ],
+    grid: { left: 140, right: 20, top: 10, bottom: 30 },
+  });
+
+  // Document type donut chart
+  let docTypeOption: EChartsOption = $derived({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        data: data.stats.documentTypeDistribution.map((d) => ({
+          name: d.name,
+          value: d.count,
+        })),
+        label: { fontSize: 11 },
+        emphasis: {
+          itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.2)' },
+        },
+      },
+    ],
+  });
+
+  // Tag treemap
+  let tagOption: EChartsOption = $derived({
+    tooltip: { formatter: '{b}: {c} documents' },
+    series: [
+      {
+        type: 'treemap',
+        data: data.stats.tagDistribution.map((t) => ({
+          name: t.name,
+          value: t.count,
+        })),
+        breadcrumb: { show: false },
+        label: { fontSize: 11 },
+        levels: [
+          {
+            itemStyle: {
+              borderColor: '#fff',
+              borderWidth: 2,
+              gapWidth: 2,
+            },
+          },
+        ],
+      },
+    ],
+  });
+</script>
+
 <svelte:head>
   <title>Documents - Paperless Dedupe</title>
 </svelte:head>
 
-<h1 class="text-3xl font-bold">Documents</h1>
-<p class="mt-2 text-gray-600">View and manage synced documents.</p>
+<div class="space-y-8">
+  <div>
+    <h1 class="text-3xl font-bold text-ink">Documents</h1>
+    <p class="mt-1 text-muted">Library statistics and document overview.</p>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()} />
+    <div class="panel">
+      <p class="text-sm text-muted">OCR Coverage</p>
+      <p class="mt-1 text-2xl font-semibold text-ink">{data.stats.ocrCoverage.percentage}%</p>
+      <div class="mt-2">
+        <ProgressBar progress={data.stats.ocrCoverage.percentage / 100} message="{data.stats.ocrCoverage.withContent} of {data.stats.totalDocuments} documents" animated={false} />
+      </div>
+    </div>
+    <StatCard
+      label="Processing"
+      value="{data.stats.processingStatus.completed} / {data.stats.totalDocuments}"
+      trendLabel="{data.stats.processingStatus.pending} pending"
+      trend={data.stats.processingStatus.pending > 0 ? 'neutral' : 'up'}
+    />
+    <StatCard label="Avg Word Count" value={data.stats.averageWordCount.toLocaleString()} />
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <!-- Correspondent Distribution -->
+    {#if data.stats.correspondentDistribution.length > 0}
+      <div class="panel">
+        <h2 class="mb-4 text-lg font-semibold text-ink">Top Correspondents</h2>
+        <EChart
+          option={correspondentOption}
+          height={`${Math.max(250, data.stats.correspondentDistribution.length * 28)}px`}
+        />
+      </div>
+    {/if}
+
+    <!-- Document Type Distribution -->
+    {#if data.stats.documentTypeDistribution.length > 0}
+      <div class="panel">
+        <h2 class="mb-4 text-lg font-semibold text-ink">Document Types</h2>
+        <EChart option={docTypeOption} height="300px" />
+      </div>
+    {/if}
+  </div>
+
+  <!-- Tag Frequency -->
+  {#if data.stats.tagDistribution.length > 0}
+    <div class="panel">
+      <h2 class="mb-4 text-lg font-semibold text-ink">Tag Frequency</h2>
+      <EChart option={tagOption} height="350px" />
+    </div>
+  {/if}
+
+  <!-- External Link -->
+  <div class="panel flex items-center justify-between">
+    <div>
+      <h2 class="text-lg font-semibold text-ink">Manage Documents</h2>
+      <p class="mt-1 text-sm text-muted">Open Paperless-NGX to manage individual documents.</p>
+    </div>
+    <a
+      href="{data.paperlessUrl}/documents/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+    >
+      Open Paperless-NGX
+    </a>
+  </div>
+</div>
