@@ -105,10 +105,10 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-soft text-muted border-b text-left text-xs">
-            <th class="pb-2 pr-4 font-medium">Title</th>
-            <th class="hidden pb-2 pr-4 font-medium sm:table-cell">Correspondent</th>
-            <th class="pb-2 pr-4 font-medium">Role</th>
-            <th class="hidden pb-2 pr-4 font-medium md:table-cell">File Size</th>
+            <th class="pr-4 pb-2 font-medium">Title</th>
+            <th class="hidden pr-4 pb-2 font-medium sm:table-cell">Correspondent</th>
+            <th class="pr-4 pb-2 font-medium">Role</th>
+            <th class="hidden pr-4 pb-2 font-medium md:table-cell">File Size</th>
             <th class="pb-2 font-medium">Actions</th>
           </tr>
         </thead>

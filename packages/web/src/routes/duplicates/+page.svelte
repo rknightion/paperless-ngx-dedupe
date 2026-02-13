@@ -231,7 +231,7 @@
           id="status-filter"
           onchange={handleStatusChange}
           value={currentStatus()}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         >
           <option value="all">All</option>
           <option value="unreviewed">Unreviewed</option>
@@ -253,7 +253,7 @@
             ? Math.round(Number($page.url.searchParams.get('minConfidence')) * 100)
             : ''}
           onchange={handleMinConfidence}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
 
@@ -270,7 +270,7 @@
             ? Math.round(Number($page.url.searchParams.get('maxConfidence')) * 100)
             : ''}
           onchange={handleMaxConfidence}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
 
@@ -281,7 +281,7 @@
             id="sort-by"
             onchange={handleSortChange}
             value={$page.url.searchParams.get('sortBy') ?? 'confidence'}
-            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
           >
             <option value="confidence">Confidence</option>
             <option value="created_at">Created</option>
@@ -412,7 +412,7 @@
         <select
           onchange={changePageSize}
           value={String(data.limit)}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1.5 text-sm focus:ring-1 focus:outline-none"
         >
           <option value="10">10</option>
           <option value="25">25</option>

@@ -8,11 +8,11 @@ function mockFetch(data: unknown, meta?: unknown, status = 200) {
     ok: status >= 200 && status < 300,
     status,
     statusText: status === 200 ? 'OK' : 'Error',
-    json: vi.fn().mockResolvedValue(
-      status >= 200 && status < 300
-        ? { data, ...(meta ? { meta } : {}) }
-        : { error: data },
-    ),
+    json: vi
+      .fn()
+      .mockResolvedValue(
+        status >= 200 && status < 300 ? { data, ...(meta ? { meta } : {}) } : { error: data },
+      ),
     headers: new Headers(),
     body: null,
     redirected: false,
@@ -45,10 +45,7 @@ describe('PaperlessDedupeClient', () => {
 
       const result = await client.health();
       expect(result).toEqual({ status: 'ok' });
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/v1/health',
-        expect.any(Object),
-      );
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/v1/health', expect.any(Object));
     });
   });
 
@@ -109,10 +106,7 @@ describe('PaperlessDedupeClient', () => {
       const client = createClient(fetch);
 
       await client.listDocuments({ limit: 10, search: 'invoice', correspondent: 'Acme' });
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('limit=10'),
-        expect.any(Object),
-      );
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('limit=10'), expect.any(Object));
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('search=invoice'),
         expect.any(Object),
@@ -507,10 +501,7 @@ describe('PaperlessDedupeClient', () => {
       });
 
       await client.health();
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/v1/health',
-        expect.any(Object),
-      );
+      expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/v1/health', expect.any(Object));
     });
   });
 });

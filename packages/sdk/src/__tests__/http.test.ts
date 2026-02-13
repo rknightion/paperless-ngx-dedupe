@@ -65,10 +65,7 @@ describe('request', () => {
       json: vi.fn().mockResolvedValue({ data: { status: 'ok' } }),
     });
 
-    const result = await request<{ status: string }>(
-      '/api/v1/health',
-      makeHttpOptions(mockFetch),
-    );
+    const result = await request<{ status: string }>('/api/v1/health', makeHttpOptions(mockFetch));
 
     expect(result).toEqual({ data: { status: 'ok' } });
     expect(mockFetch).toHaveBeenCalledWith(
@@ -110,9 +107,9 @@ describe('request', () => {
         .mockResolvedValue({ error: { code: 'NOT_FOUND', message: 'Document not found' } }),
     });
 
-    await expect(
-      request('/api/v1/documents/missing', makeHttpOptions(mockFetch)),
-    ).rejects.toThrow(PaperlessDedupeApiError);
+    await expect(request('/api/v1/documents/missing', makeHttpOptions(mockFetch))).rejects.toThrow(
+      PaperlessDedupeApiError,
+    );
 
     try {
       await request('/api/v1/documents/missing', makeHttpOptions(mockFetch));

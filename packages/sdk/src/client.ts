@@ -97,18 +97,12 @@ export class PaperlessDedupeClient {
     params?: PaginationParams & DuplicateGroupFilters,
   ): Promise<{ data: DuplicateGroupSummary[]; meta: PaginationMeta }> {
     const qs = buildQueryString({ ...params });
-    const res = await request<DuplicateGroupSummary[]>(
-      `/api/v1/duplicates${qs}`,
-      this.httpOptions,
-    );
+    const res = await request<DuplicateGroupSummary[]>(`/api/v1/duplicates${qs}`, this.httpOptions);
     return { data: res.data, meta: res.meta! };
   }
 
   async getDuplicate(id: string): Promise<DuplicateGroupDetail> {
-    const res = await request<DuplicateGroupDetail>(
-      `/api/v1/duplicates/${id}`,
-      this.httpOptions,
-    );
+    const res = await request<DuplicateGroupDetail>(`/api/v1/duplicates/${id}`, this.httpOptions);
     return res.data;
   }
 
@@ -177,10 +171,7 @@ export class PaperlessDedupeClient {
     return res.data;
   }
 
-  async batchDeleteNonPrimary(
-    groupIds: string[],
-    confirm: boolean,
-  ): Promise<BatchDeleteResult> {
+  async batchDeleteNonPrimary(groupIds: string[], confirm: boolean): Promise<BatchDeleteResult> {
     const res = await request<BatchDeleteResult>(
       '/api/v1/batch/delete-non-primary',
       this.httpOptions,
@@ -248,10 +239,7 @@ export class PaperlessDedupeClient {
 
   async exportDuplicatesCsv(params?: DuplicateGroupFilters): Promise<string> {
     const qs = buildQueryString({ ...params });
-    const response = await requestRaw(
-      `/api/v1/export/duplicates.csv${qs}`,
-      this.httpOptions,
-    );
+    const response = await requestRaw(`/api/v1/export/duplicates.csv${qs}`, this.httpOptions);
     return response.text();
   }
 

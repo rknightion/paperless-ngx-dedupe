@@ -196,7 +196,7 @@
           type="url"
           bind:value={paperlessUrl}
           placeholder="https://paperless.example.com"
-          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
       <div class="sm:col-span-2">
@@ -207,12 +207,12 @@
             type={showToken ? 'text' : 'password'}
             bind:value={apiToken}
             placeholder="Enter API token"
-            class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 pr-20 text-sm focus:outline-none focus:ring-1"
+            class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 pr-20 text-sm focus:ring-1 focus:outline-none"
           />
           <button
             type="button"
             onclick={() => (showToken = !showToken)}
-            class="text-muted hover:text-ink absolute right-2 top-1/2 -translate-y-1/2 text-xs"
+            class="text-muted hover:text-ink absolute top-1/2 right-2 -translate-y-1/2 text-xs"
           >
             {showToken ? 'Hide' : 'Show'}
           </button>
@@ -225,7 +225,7 @@
           type="text"
           bind:value={username}
           placeholder="Username"
-          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
       <div>
@@ -235,7 +235,7 @@
           type="password"
           bind:value={password}
           placeholder="Password"
-          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
     </div>
@@ -370,7 +370,7 @@
               min="16"
               max="1024"
               bind:value={numPermutations}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -381,7 +381,7 @@
               min="1"
               max="100"
               bind:value={numBands}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -392,7 +392,7 @@
               min="1"
               max="10"
               bind:value={ngramSize}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -403,7 +403,7 @@
               min="1"
               max="1000"
               bind:value={minWords}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -414,7 +414,7 @@
               min="100"
               max="100000"
               bind:value={fuzzySampleSize}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div class="flex items-end">
