@@ -380,7 +380,9 @@
       {:else}
         <div class="mt-4 space-y-2">
           {#each groups as group (group.id)}
-            <div class="border-soft flex items-center gap-3 rounded-lg border px-4 py-3">
+            <div
+              class="border-soft flex items-center gap-3 rounded-lg border px-3 py-2 sm:px-4 sm:py-3"
+            >
               <input
                 type="checkbox"
                 checked={!excludedGroupIds.has(group.id)}
@@ -391,7 +393,9 @@
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </span>
               <ConfidenceBadge score={group.confidenceScore} />
-              <span class="text-muted text-xs">{group.memberCount} docs</span>
+              <span class="text-muted text-xs"
+                ><span class="hidden sm:inline">{group.memberCount} </span>docs</span
+              >
             </div>
           {/each}
         </div>
