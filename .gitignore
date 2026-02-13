@@ -21,3 +21,5 @@ test-results/
 playwright-report/
 blob-report/
 data/e2e-test.db*
+
+.claude/
