@@ -17,7 +17,7 @@ import type {
 
 // ── List queries ────────────────────────────────────────────────────────
 
-function buildGroupWhere(filters: DuplicateGroupFilters) {
+export function buildGroupWhere(filters: DuplicateGroupFilters) {
   const conditions = [];
 
   if (filters.minConfidence !== undefined) {
