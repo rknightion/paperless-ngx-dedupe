@@ -5,6 +5,8 @@ WORKDIR /app
 
 RUN corepack enable
 
+ENV CI=true
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json ./packages/core/
 COPY packages/web/package.json ./packages/web/

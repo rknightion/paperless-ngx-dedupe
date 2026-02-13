@@ -279,7 +279,7 @@
     <div class="panel">
       <h2 class="text-ink mb-4 text-lg font-semibold">Recent Jobs</h2>
       <div class="space-y-3">
-        {#each data.jobs as j}
+        {#each data.jobs as j (j.id)}
           <JobStatusCard
             type={j.type}
             status={j.status ?? 'pending'}
@@ -300,7 +300,7 @@
       <div class="panel">
         <h2 class="text-ink mb-4 text-lg font-semibold">Top Duplicated Correspondents</h2>
         <ul class="space-y-2">
-          {#each data.dashboard.topCorrespondents as c}
+          {#each data.dashboard.topCorrespondents as c (c.correspondent)}
             <li class="flex items-center justify-between text-sm">
               <span class="text-ink">{c.correspondent}</span>
               <span class="text-muted font-mono text-xs">{c.groupCount} groups</span>

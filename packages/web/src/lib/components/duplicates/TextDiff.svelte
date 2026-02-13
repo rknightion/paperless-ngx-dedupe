@@ -129,7 +129,7 @@
       </p>
     {/if}
     <pre
-      class="bg-canvas max-h-96 overflow-auto rounded-lg p-4 font-mono text-xs leading-relaxed"><!-- svelte-ignore require-each-key -->{#each diffs as [op, text]}{#if op === -1}<span
+      class="bg-canvas max-h-96 overflow-auto rounded-lg p-4 font-mono text-xs leading-relaxed">{#each diffs as [op, text], i (i)}{#if op === -1}<span
             class="bg-ember-light text-ember line-through">{text}</span
           >{:else if op === 1}<span class="bg-success-light text-success">{text}</span
           >{:else}{text}{/if}{/each}</pre>

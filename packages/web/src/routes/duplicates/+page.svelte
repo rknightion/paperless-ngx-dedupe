@@ -12,7 +12,7 @@
 
   // Reset selection when data changes (e.g. after filter/pagination change)
   $effect(() => {
-    data.groups;
+    void data.groups;
     selectedIds = new Set();
   });
 
@@ -40,9 +40,14 @@
 
   // Filter helpers
   function applyFilters(updates: Record<string, string>) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
     for (const [key, value] of Object.entries(updates)) {
-      value ? params.set(key, value) : params.delete(key);
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
     }
     params.delete('offset');
     goto(`?${params.toString()}`, { replaceState: true });
@@ -59,12 +64,14 @@
     } else if (value === 'unreviewed') {
       applyFilters({ reviewed: 'false', resolved: 'false' });
     } else if (value === 'reviewed') {
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity
       const params = new URLSearchParams($page.url.searchParams);
       params.set('reviewed', 'true');
       params.delete('resolved');
       params.delete('offset');
       goto(`?${params.toString()}`, { replaceState: true });
     } else if (value === 'resolved') {
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity
       const params = new URLSearchParams($page.url.searchParams);
       params.set('resolved', 'true');
       params.delete('reviewed');
@@ -103,6 +110,7 @@
   }
 
   function toggleSelect(id: string) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const next = new Set(selectedIds);
     if (next.has(id)) {
       next.delete(id);
@@ -151,6 +159,7 @@
 
   // Pagination
   function goToPage(newOffset: number) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
     params.set('offset', String(newOffset));
     goto(`?${params.toString()}`, { replaceState: true });
@@ -158,6 +167,7 @@
 
   function changePageSize(e: Event) {
     const value = (e.target as HTMLSelectElement).value;
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
     params.set('limit', value);
     params.delete('offset');
@@ -328,7 +338,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each data.groups as group, i}
+          {#each data.groups as group, i (group.id)}
             <tr
               class="border-soft hover:bg-canvas cursor-pointer border-b {i % 2 === 0
                 ? 'bg-surface'

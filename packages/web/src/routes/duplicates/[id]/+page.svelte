@@ -113,7 +113,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each data.group.members as member}
+          {#each data.group.members as member (member.documentId)}
             <tr class="border-soft border-b last:border-0">
               <td class="text-ink py-2.5 pr-4 font-medium">{member.title}</td>
               <td class="text-muted py-2.5 pr-4">{member.correspondent ?? '-'}</td>
@@ -168,7 +168,7 @@
       {#if secondaryMembers.length > 1}
         {#if secondaryMembers.length <= 4}
           <div class="flex gap-1">
-            {#each secondaryMembers as sec, i}
+            {#each secondaryMembers as sec, i (sec.documentId)}
               <button
                 onclick={() => {
                   selectedSecondaryIndex = i;
@@ -190,7 +190,7 @@
             }}
             class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm"
           >
-            {#each secondaryMembers as sec, i}
+            {#each secondaryMembers as sec, i (sec.documentId)}
               <option value={i}>{sec.title}</option>
             {/each}
           </select>

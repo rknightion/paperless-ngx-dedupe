@@ -101,7 +101,7 @@
       </a>
     </div>
     <dl class="space-y-2">
-      {#each fields as field}
+      {#each fields as field (field.label)}
         <div class="border-soft flex justify-between border-b py-1.5 text-sm last:border-0">
           <dt class="text-muted">{field.label}</dt>
           <dd class="text-ink font-medium">{field.primaryValue}</dd>
@@ -110,7 +110,7 @@
     </dl>
     {#if primary.tags.length > 0}
       <div class="mt-3 flex flex-wrap gap-1.5">
-        {#each primary.tags as tag}
+        {#each primary.tags as tag (tag)}
           <span class="bg-canvas text-muted rounded-full px-2 py-0.5 text-xs">{tag}</span>
         {/each}
       </div>
@@ -132,7 +132,7 @@
       </a>
     </div>
     <dl class="space-y-2">
-      {#each fields as field}
+      {#each fields as field (field.label)}
         <div
           class="border-soft flex justify-between border-b py-1.5 text-sm last:border-0 {field.isDifferent
             ? 'rounded bg-amber-50'
@@ -145,7 +145,7 @@
     </dl>
     {#if secondary.tags.length > 0}
       <div class="mt-3 flex flex-wrap gap-1.5">
-        {#each secondary.tags as tag}
+        {#each secondary.tags as tag (tag)}
           <span
             class="bg-canvas text-muted rounded-full px-2 py-0.5 text-xs {!primary.tags.includes(
               tag,

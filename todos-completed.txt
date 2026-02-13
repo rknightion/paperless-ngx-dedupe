@@ -705,3 +705,103 @@ PHASE 6: UI — DASHBOARD & SETTINGS  [COMPLETED]
     [x] ConfidenceBadge.svelte — color-coded score display
     [x] StatCard.svelte — KPI card with label, value, optional trend
     [x] EChart.svelte — ECharts wrapper component (install echarts)
+
+
+
+================================================================================
+PHASE 7: UI — DUPLICATE MANAGEMENT  ✅ COMPLETED
+================================================================================
+
+The primary user-facing feature: viewing, comparing, and resolving duplicate
+document groups. This is where users spend most of their time.
+
+[x] Duplicate groups list (packages/web/src/routes/duplicates/+page.svelte)
+    [x] Paginated HTML table of duplicate groups (custom, not TanStack — poor Svelte 5 runes support)
+    [x] Columns: primary doc title, member count, confidence score, status
+    [x] Filters:
+        - Confidence range (min/max number inputs)
+        - Status: all, unreviewed, reviewed, resolved
+        - Correspondent filter (deferred — requires schema/query changes)
+        - Document type filter (deferred — requires schema/query changes)
+    [x] Sort by confidence (desc), created date, member count
+    [x] Bulk selection with checkboxes
+    [x] Bulk actions bar (appears when items selected):
+        - "Mark Reviewed" → POST /api/v1/batch/review
+        - "Resolve Selected" → POST /api/v1/batch/resolve
+        - "Delete Non-Primary" → POST /api/v1/batch/delete-non-primary
+          (with confirmation dialog warning about irreversibility)
+    [x] Click row to navigate to group detail
+
+[x] Duplicate group detail (packages/web/src/routes/duplicates/[id]/+page.svelte)
+    [x] Group header: confidence score, algorithm version, created date
+    [x] Confidence score breakdown chart:
+        - ECharts horizontal bar chart showing Jaccard, Fuzzy, Metadata, Filename
+          component scores and their weights
+    [x] Side-by-side document comparison:
+        - Two-column layout showing primary vs selected secondary document
+        - Document metadata: title, correspondent, type, tags, dates, file size
+        - OCR text diff view (diff-match-patch, highlight differences)
+        - Switch between secondary documents via tabs or dropdown
+    [x] Member management:
+        - List all group members with "primary" badge on current primary
+        - "Set as Primary" button on each non-primary member
+        - Link to document in Paperless-NGX (opens in new tab)
+    [x] Action buttons:
+        - "Mark as Reviewed" / "Unmark Reviewed"
+        - "Resolve Group" (marks as resolved, keeps documents)
+        - "Delete Non-Primary Documents" (destructive, with confirmation)
+          Calls Paperless API to delete, then marks group as resolved
+
+[x] Bulk operations wizard (packages/web/src/routes/duplicates/wizard/+page.svelte)
+    [x] Step-by-step guided flow for resolving high-confidence groups:
+        Step 1: Filter — select confidence threshold (e.g. 95%+)
+                Show count of matching unresolved groups
+        Step 2: Review — paginated list of matching groups with quick preview
+                User can exclude individual groups from batch
+        Step 3: Action — choose: "Mark all as reviewed", "Resolve all",
+                or "Delete non-primary documents"
+        Step 4: Confirm — summary of what will happen, require explicit confirm
+        Step 5: Execute — progress bar showing batch operation status
+        Step 6: Results — summary of completed/failed operations
+
+[x] Shared components for duplicate management
+    [x] DocumentCompare.svelte — side-by-side document metadata comparison
+    [x] TextDiff.svelte — visual text diff highlighting (diff-match-patch)
+    [x] ConfidenceBreakdown.svelte — component score visualization (ECharts horizontal bars)
+    [x] GroupActionBar.svelte — action buttons for a single group
+
+Additional completed work:
+    [x] ConfirmDialog.svelte — native <dialog> modal for confirmation prompts
+    [x] member_count sort added to core duplicateGroupFiltersSchema
+    [x] Sidebar active state fixed for sub-routes (startsWith prefix matching)
+    [x] URL-based filter/pagination state (bookmarkable, browser back/forward)
+
+
+================================================================================
+PHASE 8a: POLISH & PRODUCTION PRIORITIES  ✅ COMPLETED
+================================================================================
+
+[x] End-to-end Playwright test suite
+    [x] Install Playwright, configure in packages/web/
+    [x] Test sync workflow (mock Paperless API)
+    [x] Test duplicate review workflow
+    [x] Test settings page
+    [x] Test bulk operations wizard
+
+[x] CI/CD pipeline (GitHub Actions)
+    [x] Lint + format check
+    [x] Type check (svelte-check + tsc)
+    [x] Unit tests (vitest)
+    [x] E2E tests (playwright) (including setting up a paperless-ngx instance. See paperless-ngx repo for how they setup tests for guidance/inspiration)
+    [x] Docker build verification
+    [x] Automated release tagging
+
+[x] Docker optimization
+    [x] Minimize image size (multi-stage, .dockerignore)
+    [x] Non-root user in container
+    [x] Graceful shutdown handling
+
+[x] Performance optimization
+    [x] Virtual scrolling for long document/group lists (Skipped — duplicates list already paginated, max 50 rows, no benefit)
+    [x] Lazy loading for OCR text in comparison views
+    [x] Efficient pagination (cursor-based if needed for large datasets) (Deferred — offset/limit works fine at expected scale)

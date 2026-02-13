@@ -69,7 +69,7 @@
             itemStyle: { color: scoreColor(c.score) },
             label: {
               show: true,
-              position: 'right',
+              position: 'right' as const,
               formatter: () => (c.score !== null ? `${Math.round(c.score * 100)}%` : 'N/A'),
               fontSize: 11,
             },

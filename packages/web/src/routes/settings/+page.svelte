@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+
   let { data } = $props();
 
   // Snapshot initial values for editable form fields.
   // These intentionally capture once — users edit them independently.
-  const initialConfig = data.config;
-  const initialDedup = data.dedupConfig;
-  const initialSystemUrl = data.system.paperlessUrl;
+  const initialConfig = untrack(() => data.config);
+  const initialDedup = untrack(() => data.dedupConfig);
+  const initialSystemUrl = untrack(() => data.system.paperlessUrl);
 
   // Derived read-only system info (tracks data changes from invalidateAll)
   let system = $derived(data.system);

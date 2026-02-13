@@ -33,7 +33,6 @@
   let confirmChecks = $state({ understand: false, irreversible: false });
 
   // Step 5-6
-  let isExecuting = $state(false);
   let executionProgress = $state(0);
   let executionMessage = $state('');
   let executionResult = $state<{ success: boolean; processed: number; errors: string[] } | null>(
@@ -149,6 +148,7 @@
   }
 
   function toggleGroup(id: string) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const next = new Set(excludedGroupIds);
     if (next.has(id)) {
       next.delete(id);
@@ -160,7 +160,6 @@
 
   // ── Execution ─────────────────────────────────────────────────────────
   async function execute() {
-    isExecuting = true;
     executionProgress = 0;
     executionMessage = 'Gathering group IDs...';
 
@@ -184,7 +183,6 @@
         if (offset >= (json.meta?.total ?? 0)) break;
       } catch {
         executionResult = { success: false, processed: 0, errors: ['Failed to fetch group IDs'] };
-        isExecuting = false;
         step = 6;
         return;
       }
@@ -211,12 +209,10 @@
               },
               onComplete: () => {
                 executionResult = { success: true, processed: allGroupIds.length, errors: [] };
-                isExecuting = false;
                 step = 6;
               },
               onError: () => {
                 executionResult = { success: false, processed: 0, errors: ['Job failed'] };
-                isExecuting = false;
                 step = 6;
               },
             });
@@ -224,13 +220,11 @@
           }
         } else {
           executionResult = { success: false, processed: 0, errors: ['Request failed'] };
-          isExecuting = false;
           step = 6;
           return;
         }
       } catch {
         executionResult = { success: false, processed: 0, errors: ['Request failed'] };
-        isExecuting = false;
         step = 6;
         return;
       }
@@ -258,7 +252,6 @@
       }
     }
 
-    isExecuting = false;
     step = 6;
   }
 
@@ -275,7 +268,6 @@
     isLoadingGroups = false;
     selectedAction = 'review';
     confirmChecks = { understand: false, irreversible: false };
-    isExecuting = false;
     executionProgress = 0;
     executionMessage = '';
     executionResult = null;
@@ -296,7 +288,7 @@
 
   <!-- Step Indicator -->
   <div class="flex items-center gap-2">
-    {#each stepLabels as label, i}
+    {#each stepLabels as label, i (i)}
       {@const stepNum = i + 1}
       {@const isCompleted = step > stepNum}
       {@const isCurrent = step === stepNum}
@@ -387,7 +379,7 @@
         <div class="text-muted mt-6 text-sm">Loading groups...</div>
       {:else}
         <div class="mt-4 space-y-2">
-          {#each groups as group}
+          {#each groups as group (group.id)}
             <div class="border-soft flex items-center gap-3 rounded-lg border px-4 py-3">
               <input
                 type="checkbox"
@@ -630,7 +622,7 @@
         <div
           class="border-ember bg-ember-light text-ember mt-6 rounded-lg border px-4 py-4 text-sm"
         >
-          {#each executionResult?.errors ?? ['Unknown error'] as error}
+          {#each executionResult?.errors ?? ['Unknown error'] as error, i (i)}
             <p>{error}</p>
           {/each}
         </div>
