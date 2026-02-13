@@ -420,10 +420,6 @@
     <h2 class="text-ink text-lg font-semibold">System Information</h2>
     <dl class="mt-4 grid gap-3 sm:grid-cols-2">
       <div>
-        <dt class="text-muted text-sm">Database Dialect</dt>
-        <dd class="text-ink mt-0.5 text-sm font-medium">{system.databaseDialect}</dd>
-      </div>
-      <div>
         <dt class="text-muted text-sm">Database Path</dt>
         <dd class="text-ink mt-0.5 truncate font-mono text-sm">{system.databaseUrl}</dd>
       </div>

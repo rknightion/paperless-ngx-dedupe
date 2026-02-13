@@ -10,7 +10,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     config,
     dedupConfig,
     system: {
-      databaseDialect: locals.config.DATABASE_DIALECT,
       databaseUrl: locals.config.DATABASE_URL,
       paperlessUrl: locals.config.PAPERLESS_URL,
       totalDocuments: dashboard.totalDocuments,

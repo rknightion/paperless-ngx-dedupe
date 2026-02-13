@@ -35,7 +35,6 @@ AD-001: TypeScript full-stack with SvelteKit
 
 AD-002: Drizzle ORM with dialect-switching pattern
   - SQLite (better-sqlite3) as default/reference storage
-  - Postgres support planned via parallel schema definitions (Phase 8)
   - Schema-as-code with Drizzle table definitions
   - DDL staleness detection with SHA-256 hash comparison
 
@@ -49,7 +48,6 @@ AD-003: pnpm monorepo with two packages
 
 AD-004: Single Docker container by default
   - SQLite volume mount for data persistence (no external database needed)
-  - Optional Postgres sidecar via compose override
   - Multi-stage build for small image size
   - Health checks via /api/v1/health and /api/v1/ready
 
