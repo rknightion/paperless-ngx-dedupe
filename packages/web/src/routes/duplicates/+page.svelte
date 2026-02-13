@@ -341,9 +341,9 @@
               />
             </th>
             <th class="text-muted px-4 py-3 font-medium">Primary Doc Title</th>
-            <th class="text-muted px-4 py-3 font-medium">Members</th>
+            <th class="text-muted hidden px-4 py-3 font-medium md:table-cell">Members</th>
             <th class="text-muted px-4 py-3 font-medium">Confidence</th>
-            <th class="text-muted px-4 py-3 font-medium">Status</th>
+            <th class="text-muted hidden px-4 py-3 font-medium sm:table-cell">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -366,13 +366,13 @@
               <td class="text-ink max-w-xs truncate px-4 py-3">
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </td>
-              <td class="text-ink px-4 py-3">
+              <td class="text-ink hidden px-4 py-3 md:table-cell">
                 {group.memberCount}
               </td>
               <td class="px-4 py-3">
                 <ConfidenceBadge score={group.confidenceScore} />
               </td>
-              <td class="px-4 py-3">
+              <td class="hidden px-4 py-3 sm:table-cell">
                 <StatusBadge
                   status={group.resolved ? 'resolved' : group.reviewed ? 'reviewed' : 'pending'}
                 />
