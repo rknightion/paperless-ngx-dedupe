@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 const configSchema = z
   .object({
-    DATABASE_DIALECT: z.enum(['sqlite', 'postgres']).default('sqlite'),
     DATABASE_URL: z.string().default('./data/paperless-dedupe.db'),
     PAPERLESS_URL: z.string().url('PAPERLESS_URL must be a valid URL'),
     PAPERLESS_API_TOKEN: z.string().optional(),

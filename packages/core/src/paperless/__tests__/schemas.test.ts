@@ -257,7 +257,6 @@ describe('config schema validation', () => {
 describe('toPaperlessConfig bridge function', () => {
   it('maps AppConfig fields to PaperlessConfig correctly', () => {
     const appConfig = {
-      DATABASE_DIALECT: 'sqlite' as const,
       DATABASE_URL: './data/test.db',
       PAPERLESS_URL: 'https://paperless.example.com',
       PAPERLESS_API_TOKEN: 'my-token',
@@ -277,7 +276,6 @@ describe('toPaperlessConfig bridge function', () => {
 
   it('handles undefined optional fields', () => {
     const appConfig = {
-      DATABASE_DIALECT: 'sqlite' as const,
       DATABASE_URL: './data/test.db',
       PAPERLESS_URL: 'https://paperless.example.com',
       PAPERLESS_API_TOKEN: undefined,
