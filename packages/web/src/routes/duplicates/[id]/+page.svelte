@@ -106,9 +106,9 @@
         <thead>
           <tr class="border-soft text-muted border-b text-left text-xs">
             <th class="pb-2 pr-4 font-medium">Title</th>
-            <th class="pb-2 pr-4 font-medium">Correspondent</th>
+            <th class="hidden pb-2 pr-4 font-medium sm:table-cell">Correspondent</th>
             <th class="pb-2 pr-4 font-medium">Role</th>
-            <th class="pb-2 pr-4 font-medium">File Size</th>
+            <th class="hidden pb-2 pr-4 font-medium md:table-cell">File Size</th>
             <th class="pb-2 font-medium">Actions</th>
           </tr>
         </thead>
@@ -116,7 +116,9 @@
           {#each data.group.members as member (member.documentId)}
             <tr class="border-soft border-b last:border-0">
               <td class="text-ink py-2.5 pr-4 font-medium">{member.title}</td>
-              <td class="text-muted py-2.5 pr-4">{member.correspondent ?? '-'}</td>
+              <td class="text-muted hidden py-2.5 pr-4 sm:table-cell"
+                >{member.correspondent ?? '-'}</td
+              >
               <td class="py-2.5 pr-4">
                 {#if member.isPrimary}
                   <span
@@ -128,7 +130,7 @@
                   <span class="text-muted">-</span>
                 {/if}
               </td>
-              <td class="text-muted py-2.5 pr-4 font-mono text-xs">
+              <td class="text-muted hidden py-2.5 pr-4 font-mono text-xs md:table-cell">
                 {formatBytes(member.originalFileSize)}
               </td>
               <td class="py-2.5">
