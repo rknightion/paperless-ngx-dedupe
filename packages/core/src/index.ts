@@ -136,6 +136,7 @@ export {
   paginationSchema,
   duplicateGroupFiltersSchema,
   documentFiltersSchema,
+  similarityGraphFiltersSchema,
 } from './queries/types.js';
 export type {
   PaginationParams,
@@ -151,6 +152,10 @@ export type {
   ConfidenceBucket,
   DashboardData,
   DocumentStats,
+  SimilarityGraphFilters,
+  GraphNode,
+  GraphEdge,
+  SimilarityGraphData,
 } from './queries/types.js';
 export { parseTagsJson } from './queries/helpers.js';
 export { getDashboard } from './queries/dashboard.js';
@@ -165,6 +170,7 @@ export {
   getDuplicateGroup,
   getDuplicateGroupLight,
   getDuplicateStats,
+  getSimilarityGraph,
   setPrimaryDocument,
   markGroupReviewed,
   markGroupResolved,

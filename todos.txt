@@ -109,51 +109,27 @@ AD-010: Pino for structured logging
   - Request logging via pino-http middleware in hooks.server.ts
 
 
-================================================================================
-PHASE 8b: POLISH & PRODUCTION SECONDARIES [COMPLETED]
-================================================================================
-[x] Data export
-    [x] Export duplicate report as CSV
-    [x] Export configuration as JSON (backup/restore)
-
-[x] Comprehensive error pages (404, 500)
-
-[x] Mobile-responsive layout
-    [x] Responsive sidebar (collapsible on mobile)
-    [x] Duplicate comparison stacks vertically on small screens
-    [x] Table columns hide/show based on breakpoint
 
 ================================================================================
-PHASE 8C: POLISH & PRODUCTION TIERTIES [COMPLETED]
-================================================================================
-[x] User documentation
-    [x] README with setup guide, configuration reference, API guide
-    [x] Troubleshooting guide (common issues, Paperless connectivity, etc.)
-
-================================================================================
-PHASE 10: EXTRAS
+PHASE 9: Additional Features [COMPLETED]
 ================================================================================
 
-[ ] Accessibility audit (WCAG 2.1 AA)
-    [ ] Semantic HTML elements
-    [ ] Keyboard navigation for all interactive elements
-    [ ] Screen reader support for confidence scores and status badges
-    [ ] Focus management in modals and wizards
-
-================================================================================
-PHASE 9: Additional Features
-================================================================================
-
-- Similarity visualization
+- [x] Similarity visualization
   Graph/network view showing document clusters by similarity
   Interactive: click nodes to see document details, edges show scores
+  Implemented: getSimilarityGraph() query, /api/v1/duplicates/graph endpoint,
+  /duplicates/graph page with ECharts force-directed graph, onChartReady prop
 
-- CLI tool for running sync and analysis from command line
+- [x] CLI tool for running sync and analysis from command line
   (this is a key motivator for @paperless-dedupe/core being framework-independent)
+  Implemented: packages/cli with commander.js, commands: sync, analyze, status,
+  config show/set, export duplicates/config. Global opts: --db, --env-file, --json
 
-- Client SDK package (@paperless-dedupe/sdk)
+- [x] Client SDK package (@paperless-dedupe/sdk)
   Lightweight TypeScript HTTP client wrapping all /api/v1/* endpoints
   Type-safe request/response types shared with the API's Zod schemas
+  Implemented: packages/sdk with zero runtime deps, PaperlessDedupeClient class,
+  SSE support, custom fetch injection, 57 tests passing
 
 
 ================================================================================
@@ -189,4 +165,4 @@ FUTURE IDEAS (UNSCHEDULED)
 CLAUDE SHOULD IGNORE BELOW THIS LINE!
 
 prompt text (already at start of instruction)
-Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement Phase 8a. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed and ensure this initial prompt is included on any plan produced so it is not lost during context compaction.
+Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement Phase 9. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed and ensure this initial prompt is included on any plan produced so it is not lost during context compaction.

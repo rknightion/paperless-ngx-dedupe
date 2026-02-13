@@ -7,6 +7,7 @@ import {
   getDuplicateGroups,
   getDuplicateGroup,
   getDuplicateStats,
+  getSimilarityGraph,
   setPrimaryDocument,
   markGroupReviewed,
   markGroupResolved,
@@ -535,5 +536,125 @@ describe('batchMarkResolved', () => {
   it('returns correct updated count for non-existent IDs', () => {
     const { updated } = batchMarkResolved(db, ['grp-2', 'fake-id']);
     expect(updated).toBe(1);
+  });
+});
+
+describe('getSimilarityGraph', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+  });
+
+  it('returns empty graph for empty database', () => {
+    const result = getSimilarityGraph(db, { maxGroups: 100 });
+    expect(result.nodes).toEqual([]);
+    expect(result.edges).toEqual([]);
+    expect(result.totalGroupsMatched).toBe(0);
+    expect(result.groupsIncluded).toBe(0);
+  });
+
+  it('returns nodes and edges for groups with members', () => {
+    insertTestData(db);
+    const result = getSimilarityGraph(db, { maxGroups: 100 });
+
+    expect(result.totalGroupsMatched).toBe(2);
+    expect(result.groupsIncluded).toBe(2);
+
+    // 4 unique documents across 2 groups
+    expect(result.nodes).toHaveLength(4);
+
+    // Each group has 2 members => 1 edge per group = 2 edges
+    expect(result.edges).toHaveLength(2);
+
+    // Verify edge confidence scores
+    const highEdge = result.edges.find((e) => e.groupId === 'grp-1');
+    expect(highEdge).toBeDefined();
+    expect(highEdge!.confidenceScore).toBe(0.95);
+    expect(highEdge!.reviewed).toBe(false);
+    expect(highEdge!.resolved).toBe(false);
+  });
+
+  it('respects maxGroups limit', () => {
+    insertTestData(db);
+    const result = getSimilarityGraph(db, { maxGroups: 1 });
+
+    expect(result.totalGroupsMatched).toBe(2);
+    expect(result.groupsIncluded).toBe(1);
+
+    // Only grp-1 (highest confidence) included
+    expect(result.edges).toHaveLength(1);
+    expect(result.edges[0].groupId).toBe('grp-1');
+
+    // Only doc-1 and doc-2 (members of grp-1)
+    expect(result.nodes).toHaveLength(2);
+  });
+
+  it('filters by minConfidence', () => {
+    insertTestData(db);
+    const result = getSimilarityGraph(db, { minConfidence: 0.8, maxGroups: 100 });
+
+    expect(result.totalGroupsMatched).toBe(1);
+    expect(result.groupsIncluded).toBe(1);
+    expect(result.edges[0].groupId).toBe('grp-1');
+  });
+
+  it('filters by reviewed status', () => {
+    insertTestData(db);
+    markGroupReviewed(db, 'grp-1');
+
+    const result = getSimilarityGraph(db, { reviewed: true, maxGroups: 100 });
+
+    expect(result.totalGroupsMatched).toBe(1);
+    expect(result.groupsIncluded).toBe(1);
+    expect(result.edges[0].groupId).toBe('grp-1');
+  });
+
+  it('computes groupCount per node', () => {
+    insertTestData(db);
+
+    // Add doc-1 to grp-2 as well so it appears in 2 groups
+    db.insert(duplicateMember)
+      .values({ id: 'mem-extra', groupId: 'grp-2', documentId: 'doc-1', isPrimary: false })
+      .run();
+
+    const result = getSimilarityGraph(db, { maxGroups: 100 });
+
+    const doc1Node = result.nodes.find((n) => n.id === 'doc-1');
+    expect(doc1Node).toBeDefined();
+    expect(doc1Node!.groupCount).toBe(2);
+
+    // doc-2 still in only 1 group
+    const doc2Node = result.nodes.find((n) => n.id === 'doc-2');
+    expect(doc2Node!.groupCount).toBe(1);
+  });
+
+  it('generates pairwise edges for groups with 3+ members', () => {
+    insertTestData(db);
+
+    // Add doc-3 to grp-1 (now has 3 members)
+    db.insert(duplicateMember)
+      .values({ id: 'mem-5', groupId: 'grp-1', documentId: 'doc-3', isPrimary: false })
+      .run();
+
+    const result = getSimilarityGraph(db, { maxGroups: 100 });
+
+    // grp-1 has 3 members => C(3,2)=3 edges, grp-2 has 2 members => 1 edge = 4 total
+    const grp1Edges = result.edges.filter((e) => e.groupId === 'grp-1');
+    expect(grp1Edges).toHaveLength(3);
+  });
+
+  it('includes node metadata', () => {
+    insertTestData(db);
+    const result = getSimilarityGraph(db, { maxGroups: 100 });
+
+    const doc1Node = result.nodes.find((n) => n.id === 'doc-1');
+    expect(doc1Node).toBeDefined();
+    expect(doc1Node!.paperlessId).toBe(1);
+    expect(doc1Node!.title).toBe('Invoice A');
+    expect(doc1Node!.correspondent).toBe('Alice');
+    expect(doc1Node!.documentType).toBe('Invoice');
   });
 });

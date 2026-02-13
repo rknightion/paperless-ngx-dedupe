@@ -190,6 +190,12 @@
     </div>
     <div class="flex items-center gap-2">
       <a
+        href="/duplicates/graph"
+        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
+      >
+        Similarity Graph
+      </a>
+      <a
         href="/api/v1/export/duplicates.csv?{$page.url.searchParams.toString()}"
         download
         class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"

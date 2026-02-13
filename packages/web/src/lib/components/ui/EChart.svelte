@@ -6,9 +6,10 @@
     option: EChartsOption;
     height?: string;
     class?: string;
+    onChartReady?: (chart: ECharts) => void;
   }
 
-  let { option, height = '300px', class: className = '' }: Props = $props();
+  let { option, height = '300px', class: className = '', onChartReady }: Props = $props();
 
   let container: HTMLDivElement;
   let chart: ECharts | undefined;
@@ -20,6 +21,7 @@
       if (!container) return;
       chart = echarts.init(container);
       chart.setOption(option);
+      onChartReady?.(chart);
 
       resizeObserver = new ResizeObserver(() => {
         chart?.resize();

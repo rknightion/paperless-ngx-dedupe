@@ -164,3 +164,46 @@ export interface DocumentStats {
   totalStorageBytes: number;
   averageWordCount: number;
 }
+
+// ── Similarity Graph ────────────────────────────────────────────────────
+
+export const similarityGraphFiltersSchema = z.object({
+  minConfidence: z.coerce.number().min(0).max(1).optional(),
+  maxConfidence: z.coerce.number().min(0).max(1).optional(),
+  reviewed: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
+  resolved: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
+  maxGroups: z.coerce.number().int().min(1).max(500).default(100),
+});
+
+export type SimilarityGraphFilters = z.infer<typeof similarityGraphFiltersSchema>;
+
+export interface GraphNode {
+  id: string;
+  paperlessId: number;
+  title: string;
+  correspondent: string | null;
+  documentType: string | null;
+  groupCount: number;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  groupId: string;
+  confidenceScore: number;
+  reviewed: boolean;
+  resolved: boolean;
+}
+
+export interface SimilarityGraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  totalGroupsMatched: number;
+  groupsIncluded: number;
+}
