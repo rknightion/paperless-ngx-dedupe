@@ -181,19 +181,28 @@
 
 <div class="space-y-6">
   <!-- Page Header -->
-  <div class="flex items-center justify-between">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
       <h1 class="text-ink text-3xl font-bold">Duplicate Groups</h1>
       <span class="bg-accent-light text-accent rounded-full px-2.5 py-0.5 text-xs font-semibold">
         {data.total}
       </span>
     </div>
-    <a
-      href="/duplicates/wizard"
-      class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
-    >
-      Bulk Operations Wizard
-    </a>
+    <div class="flex items-center gap-2">
+      <a
+        href="/api/v1/export/duplicates.csv?{$page.url.searchParams.toString()}"
+        download
+        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
+      >
+        Export CSV
+      </a>
+      <a
+        href="/duplicates/wizard"
+        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
+      >
+        Bulk Operations Wizard
+      </a>
+    </div>
   </div>
 
   <!-- Action Feedback -->
