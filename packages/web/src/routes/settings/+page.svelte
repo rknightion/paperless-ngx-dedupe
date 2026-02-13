@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { invalidateAll } from '$app/navigation';
 
   let { data } = $props();
 
@@ -37,6 +38,11 @@
   let showAdvanced = $state(false);
   let isSavingDedup = $state(false);
   let dedupSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Backup & Restore
+  let importFile: File | null = $state(null);
+  let isImporting = $state(false);
+  let importStatus: { type: 'success' | 'error'; message: string } | null = $state(null);
 
   let weightSum = $derived(weightJaccard + weightFuzzy + weightMetadata + weightFilename);
   let weightsValid = $derived(weightSum === 100);
@@ -97,6 +103,36 @@
       connectionStatus = { type: 'error', message: 'Save failed' };
     }
     isSavingConnection = false;
+  }
+
+  async function handleImport() {
+    if (!importFile) return;
+    isImporting = true;
+    importStatus = null;
+    try {
+      const text = await importFile.text();
+      const json = JSON.parse(text);
+      const res = await fetch('/api/v1/import/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(json),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        const d = result.data;
+        importStatus = {
+          type: 'success',
+          message: `Imported ${d.appConfigKeys} config keys${d.dedupConfigUpdated ? ' and dedup settings' : ''}`,
+        };
+        importFile = null;
+        await invalidateAll();
+      } else {
+        importStatus = { type: 'error', message: result.error?.message ?? 'Import failed' };
+      }
+    } catch {
+      importStatus = { type: 'error', message: 'Failed to read or parse file' };
+    }
+    isImporting = false;
   }
 
   async function saveDedupConfig() {
@@ -436,5 +472,59 @@
         </dd>
       </div>
     </dl>
+  </div>
+
+  <!-- Backup & Restore -->
+  <div class="panel">
+    <h2 class="text-ink text-lg font-semibold">Backup & Restore</h2>
+    <div class="mt-4 space-y-4">
+      <div>
+        <h3 class="text-ink text-sm font-medium">Export Configuration</h3>
+        <p class="text-muted mt-1 text-xs">
+          Download a backup of all settings and dedup parameters.
+        </p>
+        <a
+          href="/api/v1/export/config.json"
+          download
+          class="border-soft text-ink hover:bg-canvas mt-2 inline-block rounded-lg border px-4 py-2 text-sm font-medium"
+        >
+          Download Backup
+        </a>
+      </div>
+      <div class="border-soft border-t pt-4">
+        <h3 class="text-ink text-sm font-medium">Import Configuration</h3>
+        <p class="text-muted mt-1 text-xs">
+          Restore settings from a previously exported backup file.
+        </p>
+        <div class="mt-2 flex items-center gap-3">
+          <input
+            type="file"
+            accept=".json"
+            onchange={(e) => {
+              const target = e.target as HTMLInputElement;
+              importFile = target.files?.[0] ?? null;
+              importStatus = null;
+            }}
+            class="text-ink file:border-soft file:text-ink file:hover:bg-canvas text-sm file:mr-3 file:rounded-lg file:border file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:font-medium"
+          />
+          <button
+            onclick={handleImport}
+            disabled={!importFile || isImporting}
+            class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {isImporting ? 'Importing...' : 'Import'}
+          </button>
+        </div>
+      </div>
+    </div>
+    {#if importStatus}
+      <div
+        class="mt-3 rounded-lg px-3 py-2 text-sm {importStatus.type === 'success'
+          ? 'bg-success-light text-success'
+          : 'bg-ember-light text-ember'}"
+      >
+        {importStatus.message}
+      </div>
+    {/if}
   </div>
 </div>
