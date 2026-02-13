@@ -135,7 +135,7 @@
   {/if}
 
   <!-- External Link -->
-  <div class="panel flex items-center justify-between">
+  <div class="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h2 class="text-ink text-lg font-semibold">Manage Documents</h2>
       <p class="text-muted mt-1 text-sm">Open Paperless-NGX to manage individual documents.</p>
