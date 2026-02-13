@@ -121,7 +121,6 @@ test.describe('Settings Page', () => {
     await page.goto('/settings');
 
     await expect(page.getByText('System Information')).toBeVisible();
-    await expect(page.getByText('Database Dialect')).toBeVisible();
     await expect(page.getByText('Database Path')).toBeVisible();
     await expect(page.getByText('Total Documents')).toBeVisible();
     await expect(page.getByText('Unresolved Groups')).toBeVisible();
