@@ -17,6 +17,9 @@ data/
 *.log
 .claudit/
 
+# Zensical docs build output
+site/
+
 test-results/
 playwright-report/
 blob-report/

@@ -1,3 +1,8 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Paperless-Dedupe — connection, sync, analysis, database, Docker, and performance
+---
+
 # Troubleshooting
 
 ## Paperless-NGX Connection Issues

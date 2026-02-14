@@ -1,3 +1,8 @@
+---
+title: API Reference
+description: Complete REST API documentation for Paperless-Dedupe with curl examples
+---
+
 # API Reference
 
 All endpoints are served under the base path `/api/v1/`.

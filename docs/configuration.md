@@ -1,3 +1,8 @@
+---
+title: Configuration
+description: Environment variables, authentication methods, and dedup algorithm settings for Paperless-Dedupe
+---
+
 # Configuration Reference
 
 Paperless-Dedupe is configured through environment variables (set in your `.env` file or Docker Compose) and runtime deduplication settings (adjustable via the web UI or API).
