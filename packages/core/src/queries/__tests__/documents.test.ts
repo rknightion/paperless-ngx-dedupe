@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import { getDocuments, getDocument } from '../documents.js';
+import { getDocuments, getDocument, getDocumentStats } from '../documents.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 
@@ -230,5 +230,335 @@ describe('getDocument', () => {
 
     expect(result).not.toBeNull();
     expect(result!.groupMemberships).toEqual([]);
+  });
+});
+
+describe('getDocumentStats', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+  });
+
+  it('returns sensible defaults for empty database', () => {
+    const stats = getDocumentStats(db);
+
+    expect(stats.totalDocuments).toBe(0);
+    expect(stats.ocrCoverage).toEqual({ withContent: 0, withoutContent: 0, percentage: 0 });
+    expect(stats.processingStatus).toEqual({ pending: 0, completed: 0 });
+    expect(stats.correspondentDistribution).toEqual([]);
+    expect(stats.documentTypeDistribution).toEqual([]);
+    expect(stats.tagDistribution).toEqual([]);
+    expect(stats.totalStorageBytes).toBe(0);
+    expect(stats.averageWordCount).toBe(0);
+    expect(stats.documentsOverTime).toEqual([]);
+    expect(stats.fileSizeDistribution).toEqual([
+      { bucket: '< 100 KB', count: 0 },
+      { bucket: '100 KB - 1 MB', count: 0 },
+      { bucket: '1 - 10 MB', count: 0 },
+      { bucket: '10 - 50 MB', count: 0 },
+      { bucket: '50+ MB', count: 0 },
+    ]);
+    expect(stats.wordCountDistribution).toEqual([
+      { bucket: '0 - 100', count: 0 },
+      { bucket: '100 - 500', count: 0 },
+      { bucket: '500 - 1K', count: 0 },
+      { bucket: '1K - 5K', count: 0 },
+      { bucket: '5K - 10K', count: 0 },
+      { bucket: '10K+', count: 0 },
+    ]);
+    expect(stats.unclassified).toEqual({
+      noCorrespondent: 0,
+      noDocumentType: 0,
+      noTags: 0,
+    });
+    expect(stats.duplicateInvolvement).toEqual({
+      documentsInGroups: 0,
+      percentage: 0,
+    });
+    expect(stats.largestDocuments).toEqual([]);
+  });
+
+  it('returns correct documentsOverTime grouped by month ascending', () => {
+    insertTestDocuments(db);
+    const stats = getDocumentStats(db);
+
+    expect(stats.documentsOverTime).toEqual([
+      { month: '2024-01', count: 1 },
+      { month: '2024-02', count: 1 },
+      { month: '2024-03', count: 1 },
+    ]);
+  });
+
+  it('groups multiple documents in the same month', () => {
+    db.insert(document)
+      .values([
+        {
+          id: 'a1',
+          paperlessId: 10,
+          title: 'Doc A',
+          addedDate: '2024-05-01',
+          syncedAt: '2024-05-01T00:00:00Z',
+        },
+        {
+          id: 'a2',
+          paperlessId: 11,
+          title: 'Doc B',
+          addedDate: '2024-05-15',
+          syncedAt: '2024-05-15T00:00:00Z',
+        },
+      ])
+      .run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.documentsOverTime).toEqual([{ month: '2024-05', count: 2 }]);
+  });
+
+  it('puts documents in correct file size buckets', () => {
+    db.insert(document)
+      .values([
+        {
+          id: 's1',
+          paperlessId: 20,
+          title: 'Tiny',
+          archiveFileSize: 50_000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 's2',
+          paperlessId: 21,
+          title: 'Small',
+          archiveFileSize: 500_000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 's3',
+          paperlessId: 22,
+          title: 'Medium',
+          archiveFileSize: 5_000_000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 's4',
+          paperlessId: 23,
+          title: 'Large',
+          archiveFileSize: 20_000_000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 's5',
+          paperlessId: 24,
+          title: 'Huge',
+          archiveFileSize: 100_000_000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+      ])
+      .run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.fileSizeDistribution).toEqual([
+      { bucket: '< 100 KB', count: 1 },
+      { bucket: '100 KB - 1 MB', count: 1 },
+      { bucket: '1 - 10 MB', count: 1 },
+      { bucket: '10 - 50 MB', count: 1 },
+      { bucket: '50+ MB', count: 1 },
+    ]);
+  });
+
+  it('puts content in correct word count buckets', () => {
+    db.insert(document)
+      .values([
+        { id: 'w1', paperlessId: 30, title: 'A', syncedAt: '2024-01-01T00:00:00Z' },
+        { id: 'w2', paperlessId: 31, title: 'B', syncedAt: '2024-01-01T00:00:00Z' },
+        { id: 'w3', paperlessId: 32, title: 'C', syncedAt: '2024-01-01T00:00:00Z' },
+      ])
+      .run();
+    db.insert(documentContent)
+      .values([
+        { id: 'wc1', documentId: 'w1', wordCount: 50 },
+        { id: 'wc2', documentId: 'w2', wordCount: 250 },
+        { id: 'wc3', documentId: 'w3', wordCount: 7500 },
+      ])
+      .run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.wordCountDistribution).toEqual([
+      { bucket: '0 - 100', count: 1 },
+      { bucket: '100 - 500', count: 1 },
+      { bucket: '500 - 1K', count: 0 },
+      { bucket: '1K - 5K', count: 0 },
+      { bucket: '5K - 10K', count: 1 },
+      { bucket: '10K+', count: 0 },
+    ]);
+  });
+
+  it('counts unclassified documents correctly', () => {
+    db.insert(document)
+      .values([
+        {
+          id: 'u1',
+          paperlessId: 40,
+          title: 'No Correspondent',
+          correspondent: null,
+          documentType: 'Invoice',
+          tagsJson: '["tag1"]',
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'u2',
+          paperlessId: 41,
+          title: 'No Type',
+          correspondent: 'Alice',
+          documentType: null,
+          tagsJson: '["tag1"]',
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'u3',
+          paperlessId: 42,
+          title: 'No Tags',
+          correspondent: 'Bob',
+          documentType: 'Receipt',
+          tagsJson: '[]',
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'u4',
+          paperlessId: 43,
+          title: 'Null Tags',
+          correspondent: 'Bob',
+          documentType: 'Receipt',
+          tagsJson: null,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'u5',
+          paperlessId: 44,
+          title: 'Fully Classified',
+          correspondent: 'Alice',
+          documentType: 'Invoice',
+          tagsJson: '["finance"]',
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+      ])
+      .run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.unclassified.noCorrespondent).toBe(1);
+    expect(stats.unclassified.noDocumentType).toBe(1);
+    expect(stats.unclassified.noTags).toBe(2);
+  });
+
+  it('calculates duplicate involvement correctly', () => {
+    insertTestDocuments(db);
+
+    db.insert(duplicateGroup)
+      .values({
+        id: 'grp-1',
+        confidenceScore: 0.9,
+        algorithmVersion: 'v1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+
+    db.insert(duplicateMember)
+      .values([
+        { id: 'dm-1', groupId: 'grp-1', documentId: 'doc-1', isPrimary: true },
+        { id: 'dm-2', groupId: 'grp-1', documentId: 'doc-2', isPrimary: false },
+      ])
+      .run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.duplicateInvolvement.documentsInGroups).toBe(2);
+    expect(stats.duplicateInvolvement.percentage).toBe(67); // 2/3 = 66.7 -> 67
+  });
+
+  it('counts distinct documents for duplicate involvement', () => {
+    insertTestDocuments(db);
+
+    // doc-1 appears in two groups — should only be counted once
+    db.insert(duplicateGroup)
+      .values([
+        {
+          id: 'grp-a',
+          confidenceScore: 0.9,
+          algorithmVersion: 'v1',
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'grp-b',
+          confidenceScore: 0.8,
+          algorithmVersion: 'v1',
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+        },
+      ])
+      .run();
+
+    db.insert(duplicateMember)
+      .values([
+        { id: 'dm-a1', groupId: 'grp-a', documentId: 'doc-1', isPrimary: true },
+        { id: 'dm-a2', groupId: 'grp-a', documentId: 'doc-2', isPrimary: false },
+        { id: 'dm-b1', groupId: 'grp-b', documentId: 'doc-1', isPrimary: true },
+        { id: 'dm-b2', groupId: 'grp-b', documentId: 'doc-3', isPrimary: false },
+      ])
+      .run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.duplicateInvolvement.documentsInGroups).toBe(3); // doc-1, doc-2, doc-3
+    expect(stats.duplicateInvolvement.percentage).toBe(100);
+  });
+
+  it('returns largest documents ordered by size descending', () => {
+    db.insert(document)
+      .values([
+        {
+          id: 'lg1',
+          paperlessId: 50,
+          title: 'Small File',
+          archiveFileSize: 1000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'lg2',
+          paperlessId: 51,
+          title: 'Large File',
+          archiveFileSize: 50_000_000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'lg3',
+          paperlessId: 52,
+          title: 'Medium File',
+          archiveFileSize: 5_000_000,
+          syncedAt: '2024-01-01T00:00:00Z',
+        },
+      ])
+      .run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.largestDocuments).toHaveLength(3);
+    expect(stats.largestDocuments[0].title).toBe('Large File');
+    expect(stats.largestDocuments[1].title).toBe('Medium File');
+    expect(stats.largestDocuments[2].title).toBe('Small File');
+  });
+
+  it('limits largest documents to 10', () => {
+    const docs = Array.from({ length: 15 }, (_, i) => ({
+      id: `bulk-${i}`,
+      paperlessId: 100 + i,
+      title: `Doc ${i}`,
+      archiveFileSize: (i + 1) * 1000,
+      syncedAt: '2024-01-01T00:00:00Z',
+    }));
+    db.insert(document).values(docs).run();
+
+    const stats = getDocumentStats(db);
+    expect(stats.largestDocuments).toHaveLength(10);
+    expect(stats.largestDocuments[0].archiveFileSize).toBe(15_000);
   });
 });

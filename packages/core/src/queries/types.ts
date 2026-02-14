@@ -163,6 +163,18 @@ export interface DocumentStats {
   tagDistribution: { name: string; count: number }[];
   totalStorageBytes: number;
   averageWordCount: number;
+  documentsOverTime: { month: string; count: number }[];
+  fileSizeDistribution: { bucket: string; count: number }[];
+  wordCountDistribution: { bucket: string; count: number }[];
+  unclassified: { noCorrespondent: number; noDocumentType: number; noTags: number };
+  duplicateInvolvement: { documentsInGroups: number; percentage: number };
+  largestDocuments: {
+    id: string;
+    paperlessId: number;
+    title: string;
+    correspondent: string | null;
+    archiveFileSize: number;
+  }[];
 }
 
 // ── Similarity Graph ────────────────────────────────────────────────────
