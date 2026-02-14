@@ -7,17 +7,19 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 export type WorkerName = 'sync-worker' | 'analysis-worker' | 'batch-worker';
 
 export function getWorkerPath(name: WorkerName): string {
-  // Try .ts first (dev mode with tsx)
-  const tsPath = join(currentDir, 'workers', `${name}.ts`);
-  if (existsSync(tsPath)) {
-    return tsPath;
+  const candidates = [
+    // Relative to this file: works when core is used directly (tsc output, CLI, tests)
+    join(currentDir, 'workers', `${name}.js`),
+    // Production Docker: pre-compiled core dist copied into /app/core/
+    // (SvelteKit bundles this module into chunks, breaking import.meta.url-relative paths)
+    join(process.cwd(), 'core', 'jobs', 'workers', `${name}.js`),
+    // Dev mode: .ts source (fails at runtime, handled by worker-launcher crash recovery)
+    join(currentDir, 'workers', `${name}.ts`),
+  ];
+
+  for (const path of candidates) {
+    if (existsSync(path)) return path;
   }
 
-  // Fall back to .js (production build)
-  const jsPath = join(currentDir, 'workers', `${name}.js`);
-  if (existsSync(jsPath)) {
-    return jsPath;
-  }
-
-  throw new Error(`Worker script not found: ${name} (tried ${tsPath} and ${jsPath})`);
+  throw new Error(`Worker script not found: ${name} (tried: ${candidates.join(', ')})`);
 }
