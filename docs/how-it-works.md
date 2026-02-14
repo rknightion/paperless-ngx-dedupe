@@ -1,3 +1,8 @@
+---
+title: How It Works
+description: The MinHash/LSH deduplication pipeline — shingling, signatures, candidate detection, scoring, and clustering
+---
+
 # How It Works
 
 Paperless-Dedupe uses a multi-stage pipeline to identify duplicate documents efficiently. This page explains each stage in plain terms.
@@ -9,6 +14,21 @@ The pipeline works in three broad phases:
 1. **Sync** documents from Paperless-NGX and prepare their text
 2. **Index** documents using probabilistic data structures (MinHash + LSH) to find candidate pairs without comparing every document to every other
 3. **Score and group** candidates using multiple similarity dimensions, then cluster them for review
+
+```mermaid
+flowchart LR
+    A[Sync] --> B[Shingle]
+    B --> C[MinHash]
+    C --> D[LSH]
+    D --> E[Score]
+    E --> F[Cluster]
+    style A fill:#e8eaf6,stroke:#3f51b5
+    style B fill:#e8eaf6,stroke:#3f51b5
+    style C fill:#e8eaf6,stroke:#3f51b5
+    style D fill:#e8eaf6,stroke:#3f51b5
+    style E fill:#e8eaf6,stroke:#3f51b5
+    style F fill:#e8eaf6,stroke:#3f51b5
+```
 
 ## Step 1: Document Sync
 
@@ -33,7 +53,13 @@ With the default `ngramSize` of 3, the sentence "the quick brown fox jumps" prod
 - "quick brown fox"
 - "brown fox jumps"
 
-Each document becomes a **set of shingles**. Two documents that share many shingles have similar content. The shingle set is the foundation for all subsequent steps.
+Each document becomes a **set of shingles**. Two documents that share many shingles have similar content, measured by the Jaccard similarity:
+
+\[
+J(A, B) = \frac{|A \cap B|}{|A \cup B|}
+\]
+
+The shingle set is the foundation for all subsequent steps.
 
 Documents with fewer words than `minWords` (default: 20) are skipped because short documents produce too few shingles for reliable comparison.
 
@@ -118,3 +144,8 @@ Groups are presented in the web UI for review, sorted by confidence.
 | 192          | 32    | 6         | ~45%                      |
 | 128          | 16    | 8         | ~55%                      |
 | 256          | 32    | 8         | ~55%                      |
+
+## See Also
+
+- [Architecture](architecture.md) -- monorepo structure, data flow diagrams, and database schema
+- [Configuration](configuration.md) -- all algorithm parameters with ranges and defaults
