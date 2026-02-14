@@ -70,6 +70,67 @@
       },
     ],
   });
+
+  // Documents over time area chart
+  let documentsOverTimeOption: EChartsOption = $derived({
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.stats.documentsOverTime.map((d) => d.month),
+      axisLabel: { fontSize: 11 },
+    },
+    yAxis: { type: 'value', name: 'Documents' },
+    series: [
+      {
+        type: 'line',
+        data: data.stats.documentsOverTime.map((d) => d.count),
+        areaStyle: { opacity: 0.3 },
+        smooth: true,
+        itemStyle: { color: 'oklch(0.55 0.15 195)' },
+      },
+    ],
+    grid: { left: 50, right: 20, top: 30, bottom: 40 },
+  });
+
+  // File size distribution bar chart
+  let fileSizeOption: EChartsOption = $derived({
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.stats.fileSizeDistribution.map((d) => d.bucket),
+      axisLabel: { fontSize: 11 },
+    },
+    yAxis: { type: 'value', name: 'Documents' },
+    series: [
+      {
+        type: 'bar',
+        data: data.stats.fileSizeDistribution.map((d) => d.count),
+        itemStyle: { color: 'oklch(0.55 0.15 195)' },
+        barMaxWidth: 40,
+      },
+    ],
+    grid: { left: 50, right: 20, top: 30, bottom: 40 },
+  });
+
+  // Word count distribution bar chart
+  let wordCountOption: EChartsOption = $derived({
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.stats.wordCountDistribution.map((d) => d.bucket),
+      axisLabel: { fontSize: 11 },
+    },
+    yAxis: { type: 'value', name: 'Documents' },
+    series: [
+      {
+        type: 'bar',
+        data: data.stats.wordCountDistribution.map((d) => d.count),
+        itemStyle: { color: 'oklch(0.55 0.15 155)' },
+        barMaxWidth: 40,
+      },
+    ],
+    grid: { left: 50, right: 20, top: 30, bottom: 40 },
+  });
 </script>
 
 <svelte:head>
@@ -83,8 +144,9 @@
   </div>
 
   <!-- Summary Cards -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()} />
+    <StatCard label="Total Storage" value={formatBytes(data.stats.totalStorageBytes)} />
     <div class="panel">
       <p class="text-muted text-sm">OCR Coverage</p>
       <p class="text-ink mt-1 text-2xl font-semibold">{data.stats.ocrCoverage.percentage}%</p>
@@ -103,11 +165,42 @@
       trend={data.stats.processingStatus.pending > 0 ? 'neutral' : 'up'}
     />
     <StatCard label="Avg Word Count" value={data.stats.averageWordCount.toLocaleString()} />
+    <StatCard
+      label="Duplicate Involvement"
+      value="{data.stats.duplicateInvolvement.percentage}%"
+      trendLabel="{data.stats.duplicateInvolvement.documentsInGroups} of {data.stats
+        .totalDocuments} documents"
+      trend={data.stats.duplicateInvolvement.percentage > 0 ? 'neutral' : 'up'}
+    />
   </div>
 
-  <!-- Charts -->
+  <!-- Documents Over Time -->
+  {#if data.stats.documentsOverTime.length > 0}
+    <div class="panel">
+      <h2 class="text-ink mb-4 text-lg font-semibold">Documents Over Time</h2>
+      <EChart option={documentsOverTimeOption} height="300px" />
+    </div>
+  {/if}
+
+  <!-- File Size + Word Count Distribution -->
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <!-- Correspondent Distribution -->
+    {#if data.stats.fileSizeDistribution.some((d) => d.count > 0)}
+      <div class="panel">
+        <h2 class="text-ink mb-4 text-lg font-semibold">File Size Distribution</h2>
+        <EChart option={fileSizeOption} height="250px" />
+      </div>
+    {/if}
+
+    {#if data.stats.wordCountDistribution.some((d) => d.count > 0)}
+      <div class="panel">
+        <h2 class="text-ink mb-4 text-lg font-semibold">Word Count Distribution</h2>
+        <EChart option={wordCountOption} height="250px" />
+      </div>
+    {/if}
+  </div>
+
+  <!-- Correspondent + Document Type Distribution -->
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     {#if data.stats.correspondentDistribution.length > 0}
       <div class="panel">
         <h2 class="text-ink mb-4 text-lg font-semibold">Top Correspondents</h2>
@@ -118,7 +211,6 @@
       </div>
     {/if}
 
-    <!-- Document Type Distribution -->
     {#if data.stats.documentTypeDistribution.length > 0}
       <div class="panel">
         <h2 class="text-ink mb-4 text-lg font-semibold">Document Types</h2>
@@ -132,6 +224,63 @@
     <div class="panel">
       <h2 class="text-ink mb-4 text-lg font-semibold">Tag Frequency</h2>
       <EChart option={tagOption} height="350px" />
+    </div>
+  {/if}
+
+  <!-- Data Quality -->
+  {#if data.stats.unclassified.noCorrespondent > 0 || data.stats.unclassified.noDocumentType > 0 || data.stats.unclassified.noTags > 0}
+    <div class="panel">
+      <h2 class="text-ink mb-4 text-lg font-semibold">Data Quality</h2>
+      <p class="text-muted mb-3 text-sm">Documents missing classification metadata.</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="bg-canvas rounded-lg p-3 text-center">
+          <p class="text-ink text-2xl font-semibold">
+            {data.stats.unclassified.noCorrespondent}
+          </p>
+          <p class="text-muted text-xs">No Correspondent</p>
+        </div>
+        <div class="bg-canvas rounded-lg p-3 text-center">
+          <p class="text-ink text-2xl font-semibold">
+            {data.stats.unclassified.noDocumentType}
+          </p>
+          <p class="text-muted text-xs">No Document Type</p>
+        </div>
+        <div class="bg-canvas rounded-lg p-3 text-center">
+          <p class="text-ink text-2xl font-semibold">
+            {data.stats.unclassified.noTags}
+          </p>
+          <p class="text-muted text-xs">No Tags</p>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Largest Documents -->
+  {#if data.stats.largestDocuments.length > 0}
+    <div class="panel">
+      <h2 class="text-ink mb-4 text-lg font-semibold">Largest Documents</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-soft border-b text-left">
+              <th class="text-muted pb-2 font-medium">Title</th>
+              <th class="text-muted pb-2 font-medium">Correspondent</th>
+              <th class="text-muted pb-2 text-right font-medium">Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each data.stats.largestDocuments as doc (doc.id)}
+              <tr class="border-soft border-b last:border-0">
+                <td class="text-ink py-2 font-medium">{doc.title}</td>
+                <td class="text-muted py-2">{doc.correspondent ?? '-'}</td>
+                <td class="text-muted py-2 text-right font-mono text-xs">
+                  {formatBytes(doc.archiveFileSize)}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
     </div>
   {/if}
 
