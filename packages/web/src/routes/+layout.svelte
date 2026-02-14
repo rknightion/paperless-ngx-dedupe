@@ -48,7 +48,7 @@
         href="/"
         class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url
           .pathname === '/'
-          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
+          ? 'border-accent bg-sidebar-hover border-l-2 pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Dashboard
@@ -58,7 +58,7 @@
         class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url.pathname.startsWith(
           '/documents',
         )
-          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
+          ? 'border-accent bg-sidebar-hover border-l-2 pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Documents
@@ -68,7 +68,7 @@
         class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url.pathname.startsWith(
           '/duplicates',
         )
-          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
+          ? 'border-accent bg-sidebar-hover border-l-2 pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Duplicates
@@ -78,7 +78,7 @@
         class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url.pathname.startsWith(
           '/settings',
         )
-          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
+          ? 'border-accent bg-sidebar-hover border-l-2 pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Settings

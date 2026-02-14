@@ -20,7 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm build && pnpm preview --port 4173',
+    command:
+      'pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/web build && pnpm preview --port 4173',
     port: 4173,
     reuseExistingServer: !process.env.CI,
     env: {

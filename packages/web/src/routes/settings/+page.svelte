@@ -314,17 +314,15 @@
             class="accent-accent mt-1 w-full"
           />
           <details class="mt-1.5">
-            <summary
-              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
-            >
+            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
               How does this work?
             </summary>
             <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
               Jaccard similarity estimates how much two documents share the same word sequences
               (n-grams). It works by comparing compact fingerprints (MinHash signatures) rather than
               raw text, making it fast even for large documents.
-              <strong class="text-ink">Higher weight</strong> means structural text overlap matters more
-              for the overall confidence score.
+              <strong class="text-ink">Higher weight</strong> means structural text overlap matters
+              more for the overall confidence score.
               <br /><br />
               <strong class="text-ink">Best for:</strong> catching near-identical documents, OCR re-scans,
               or minor edits. A value of 0 disables this factor entirely.
@@ -347,9 +345,7 @@
             class="accent-accent mt-1 w-full"
           />
           <details class="mt-1.5">
-            <summary
-              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
-            >
+            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
               How does this work?
             </summary>
             <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
@@ -357,8 +353,8 @@
               words in each document, then measures the edit distance between the sorted strings.
               This makes it resilient to paragraph reordering. It operates on a sample of the text
               (controlled by Fuzzy Sample Size in advanced settings).
-              <strong class="text-ink">Higher weight</strong> means character-level text similarity matters
-              more.
+              <strong class="text-ink">Higher weight</strong> means character-level text similarity
+              matters more.
               <br /><br />
               <strong class="text-ink">Best for:</strong> catching documents with reworded sentences,
               different formatting, or OCR errors.
@@ -381,9 +377,7 @@
             class="accent-accent mt-1 w-full"
           />
           <details class="mt-1.5">
-            <summary
-              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
-            >
+            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
               How does this work?
             </summary>
             <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
@@ -414,9 +408,7 @@
             class="accent-accent mt-1 w-full"
           />
           <details class="mt-1.5">
-            <summary
-              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
-            >
+            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
               How does this work?
             </summary>
             <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
