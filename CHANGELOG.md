@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.3.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.3.0...v0.3.1) (2026-02-14)
+
+
+### Features
+
+* **core:** Expose detailed duplicate similarity scores ([df6ef58](https://github.com/rknightion/paperless-ngx-dedupe/commit/df6ef58f5b4c89222c8e41938701d22bf49bb989))
+* **core:** Implement comprehensive document statistics ([7074ff2](https://github.com/rknightion/paperless-ngx-dedupe/commit/7074ff284756f63ebde4a5b1e8f1561fdecb5147))
+* **web:** Add duplicate group preview modal and score breakdown ([6cfbe36](https://github.com/rknightion/paperless-ngx-dedupe/commit/6cfbe3691409df62179720984bcad0b47d7f030b))
+* **web:** Enhance Dashboard with new document statistics ([e066b3f](https://github.com/rknightion/paperless-ngx-dedupe/commit/e066b3ff002e15ddaa6fe2192c7080d12f4a56ca))
+* **web:** Improve duplicates page with filters and explanations ([5003e01](https://github.com/rknightion/paperless-ngx-dedupe/commit/5003e01a9f98b4ee65f420de08a07d2d38c58bea))
+
+
+### Bug Fixes
+
+* **web:** Adjust Tooltip component positioning ([e952544](https://github.com/rknightion/paperless-ngx-dedupe/commit/e952544b0fee568ed6db2e58c82b6fc4bdab0f5b))
+
+
+### Miscellaneous
+
+* **ci:** Optimize Docker build caching ([a79327a](https://github.com/rknightion/paperless-ngx-dedupe/commit/a79327a158f18781e37aed9dbb9a13b50a63b46b))
+* **docker:** Improve Dockerfile and .dockerignore ([ca4630c](https://github.com/rknightion/paperless-ngx-dedupe/commit/ca4630cbfe613f03503b15669e261660f7703611))
+* Update actions/checkout version ([ed07b42](https://github.com/rknightion/paperless-ngx-dedupe/commit/ed07b4221b6554b8bf0bf8260d7166114fc00fe5))
+* **web:** Centralize byte formatting utility ([64aa8f0](https://github.com/rknightion/paperless-ngx-dedupe/commit/64aa8f06f1794fc51688c35077e3dfdaf9bd21cc))
+* **web:** Minor UI refinements and build config ([42987c2](https://github.com/rknightion/paperless-ngx-dedupe/commit/42987c2401602087a04a96ade141e1864bbd5008))
+
+
+### Documentation
+
+* **readme:** update quickstart and documentation links ([c7239c8](https://github.com/rknightion/paperless-ngx-dedupe/commit/c7239c82a1d8d5ddc22464e43f45581aa7081a48))
+
 ## [0.3.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.2.0...v0.3.0) (2026-02-14)
 
 
