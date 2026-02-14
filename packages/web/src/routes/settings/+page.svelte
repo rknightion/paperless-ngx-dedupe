@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
+  import { InfoIcon } from '$lib/components';
 
   let { data } = $props();
 
@@ -296,11 +297,14 @@
           Sum: {weightSum}/100
         </span>
       </div>
-      <div class="mt-3 grid gap-4 sm:grid-cols-2">
+      <div class="mt-3 grid gap-6 sm:grid-cols-2">
         <div>
           <label for="w-jaccard" class="text-muted block text-sm">
             Jaccard: <span class="text-ink font-mono font-medium">{weightJaccard}</span>
           </label>
+          <p class="text-muted mt-0.5 text-xs">
+            Measures structural overlap between document word patterns using MinHash fingerprints.
+          </p>
           <input
             id="w-jaccard"
             type="range"
@@ -309,11 +313,31 @@
             bind:value={weightJaccard}
             class="accent-accent mt-1 w-full"
           />
+          <details class="mt-1.5">
+            <summary
+              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
+            >
+              How does this work?
+            </summary>
+            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
+              Jaccard similarity estimates how much two documents share the same word sequences
+              (n-grams). It works by comparing compact fingerprints (MinHash signatures) rather than
+              raw text, making it fast even for large documents.
+              <strong class="text-ink">Higher weight</strong> means structural text overlap matters more
+              for the overall confidence score.
+              <br /><br />
+              <strong class="text-ink">Best for:</strong> catching near-identical documents, OCR re-scans,
+              or minor edits. A value of 0 disables this factor entirely.
+            </div>
+          </details>
         </div>
         <div>
           <label for="w-fuzzy" class="text-muted block text-sm">
             Fuzzy: <span class="text-ink font-mono font-medium">{weightFuzzy}</span>
           </label>
+          <p class="text-muted mt-0.5 text-xs">
+            Compares document text using character-level edit distance after sorting words.
+          </p>
           <input
             id="w-fuzzy"
             type="range"
@@ -322,11 +346,32 @@
             bind:value={weightFuzzy}
             class="accent-accent mt-1 w-full"
           />
+          <details class="mt-1.5">
+            <summary
+              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
+            >
+              How does this work?
+            </summary>
+            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
+              Fuzzy text matching uses a token-sort Levenshtein ratio: it alphabetically sorts all
+              words in each document, then measures the edit distance between the sorted strings.
+              This makes it resilient to paragraph reordering. It operates on a sample of the text
+              (controlled by Fuzzy Sample Size in advanced settings).
+              <strong class="text-ink">Higher weight</strong> means character-level text similarity matters
+              more.
+              <br /><br />
+              <strong class="text-ink">Best for:</strong> catching documents with reworded sentences,
+              different formatting, or OCR errors.
+            </div>
+          </details>
         </div>
         <div>
           <label for="w-metadata" class="text-muted block text-sm">
             Metadata: <span class="text-ink font-mono font-medium">{weightMetadata}</span>
           </label>
+          <p class="text-muted mt-0.5 text-xs">
+            Compares file size, creation date, document type, and correspondent.
+          </p>
           <input
             id="w-metadata"
             type="range"
@@ -335,11 +380,31 @@
             bind:value={weightMetadata}
             class="accent-accent mt-1 w-full"
           />
+          <details class="mt-1.5">
+            <summary
+              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
+            >
+              How does this work?
+            </summary>
+            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
+              Metadata similarity is an average of four sub-scores: file size ratio (how close the
+              byte sizes are), date proximity (documents created within 30 days score 1.0, over a
+              year apart score 0.0), document type match (exact match = 1.0), and correspondent
+              match (exact match = 1.0). Missing metadata fields are excluded from the average.
+              <strong class="text-ink">Higher weight</strong> means document metadata matters more.
+              <br /><br />
+              <strong class="text-ink">Best for:</strong> environments where documents are well-tagged
+              and dates are reliable.
+            </div>
+          </details>
         </div>
         <div>
           <label for="w-filename" class="text-muted block text-sm">
             Filename: <span class="text-ink font-mono font-medium">{weightFilename}</span>
           </label>
+          <p class="text-muted mt-0.5 text-xs">
+            Compares document titles using fuzzy string matching.
+          </p>
           <input
             id="w-filename"
             type="range"
@@ -348,6 +413,22 @@
             bind:value={weightFilename}
             class="accent-accent mt-1 w-full"
           />
+          <details class="mt-1.5">
+            <summary
+              class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium"
+            >
+              How does this work?
+            </summary>
+            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
+              Filename similarity applies the same token-sort Levenshtein ratio used by fuzzy text
+              matching, but on the document titles instead of the full content. This catches files
+              that were renamed slightly (e.g., "Invoice_2024.pdf" vs "Invoice 2024 copy.pdf").
+              <strong class="text-ink">Higher weight</strong> means title similarity matters more.
+              <br /><br />
+              <strong class="text-ink">Best for:</strong> environments where filenames are descriptive
+              and consistently named.
+            </div>
+          </details>
         </div>
       </div>
     </div>
@@ -363,7 +444,13 @@
       {#if showAdvanced}
         <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label for="num-perms" class="text-muted block text-sm">Permutations</label>
+            <label for="num-perms" class="text-muted flex items-center gap-1.5 text-sm">
+              Permutations
+              <InfoIcon
+                text="Number of hash functions in the MinHash signature. More permutations = more accurate Jaccard estimates but slower processing. Must evenly divide by LSH Bands. Default: 192."
+                position="top"
+              />
+            </label>
             <input
               id="num-perms"
               type="number"
@@ -374,7 +461,13 @@
             />
           </div>
           <div>
-            <label for="num-bands" class="text-muted block text-sm">LSH Bands</label>
+            <label for="num-bands" class="text-muted flex items-center gap-1.5 text-sm">
+              LSH Bands
+              <InfoIcon
+                text="Number of bands for Locality-Sensitive Hashing. More bands = more candidate pairs found (higher recall) but more comparisons to score. Must evenly divide Permutations. Default: 20."
+                position="top"
+              />
+            </label>
             <input
               id="num-bands"
               type="number"
@@ -385,7 +478,13 @@
             />
           </div>
           <div>
-            <label for="ngram-size" class="text-muted block text-sm">N-gram Size</label>
+            <label for="ngram-size" class="text-muted flex items-center gap-1.5 text-sm">
+              N-gram Size
+              <InfoIcon
+                text="Number of consecutive words per shingle. Smaller values (2) catch short overlapping phrases; larger values (4–5) require longer matching sequences. Default: 3."
+                position="top"
+              />
+            </label>
             <input
               id="ngram-size"
               type="number"
@@ -396,7 +495,13 @@
             />
           </div>
           <div>
-            <label for="min-words" class="text-muted block text-sm">Min Words</label>
+            <label for="min-words" class="text-muted flex items-center gap-1.5 text-sm">
+              Min Words
+              <InfoIcon
+                text="Documents with fewer words than this are skipped during fingerprinting. Prevents false matches on very short documents like cover pages. Default: 20."
+                position="top"
+              />
+            </label>
             <input
               id="min-words"
               type="number"
@@ -407,7 +512,13 @@
             />
           </div>
           <div>
-            <label for="fuzzy-sample" class="text-muted block text-sm">Fuzzy Sample Size</label>
+            <label for="fuzzy-sample" class="text-muted flex items-center gap-1.5 text-sm">
+              Fuzzy Sample Size
+              <InfoIcon
+                text="Maximum number of characters sampled from each document for fuzzy text comparison. Higher values are more accurate but slower. Default: 5,000."
+                position="top"
+              />
+            </label>
             <input
               id="fuzzy-sample"
               type="number"
@@ -421,6 +532,10 @@
             <label class="text-muted flex items-center gap-2 text-sm">
               <input type="checkbox" bind:checked={autoAnalyze} class="rounded" />
               Auto-analyze after sync
+              <InfoIcon
+                text="When enabled, duplicate analysis runs automatically after each document sync completes. Disable to run analysis manually from the Dashboard."
+                position="top"
+              />
             </label>
           </div>
         </div>
