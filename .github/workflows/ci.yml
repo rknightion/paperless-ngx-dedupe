@@ -110,7 +110,9 @@ jobs:
           push: false
           load: true
           tags: paperless-dedupe:ci-test
-          cache-from: type=gha,scope=build-verify
+          cache-from: |
+            type=gha,scope=build-verify
+            type=gha,scope=build-linux-amd64
           cache-to: type=gha,scope=build-verify,mode=max
 
       - name: Verify container starts and is healthy
@@ -175,7 +177,9 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+          cache-from: |
+            type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+            type=gha,scope=build-verify
           cache-to: type=gha,scope=build-${{ env.PLATFORM_PAIR }},mode=max
 
       - name: Export digest
