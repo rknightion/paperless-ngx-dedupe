@@ -29,7 +29,10 @@
       : '-translate-x-full'} md:translate-x-0"
   >
     <div class="flex items-center justify-between p-6">
-      <h1 class="text-xl font-bold">Paperless Dedupe</h1>
+      <a href="/" class="flex items-center gap-3">
+        <img src="/logo-icon.png" alt="" class="h-9 w-9 rounded-lg" />
+        <span class="text-lg font-bold text-white">Paperless Dedupe</span>
+      </a>
       <button
         class="text-white/70 hover:text-white md:hidden"
         onclick={() => (sidebarOpen = false)}
@@ -43,38 +46,39 @@
     <nav class="flex flex-col gap-1 px-3">
       <a
         href="/"
-        class="rounded-md px-3 py-2 text-sm font-medium text-white {$page.url.pathname === '/'
-          ? 'bg-sidebar-hover'
+        class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url
+          .pathname === '/'
+          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Dashboard
       </a>
       <a
         href="/documents"
-        class="rounded-md px-3 py-2 text-sm font-medium text-white {$page.url.pathname.startsWith(
+        class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url.pathname.startsWith(
           '/documents',
         )
-          ? 'bg-sidebar-hover'
+          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Documents
       </a>
       <a
         href="/duplicates"
-        class="rounded-md px-3 py-2 text-sm font-medium text-white {$page.url.pathname.startsWith(
+        class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url.pathname.startsWith(
           '/duplicates',
         )
-          ? 'bg-sidebar-hover'
+          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Duplicates
       </a>
       <a
         href="/settings"
-        class="rounded-md px-3 py-2 text-sm font-medium text-white {$page.url.pathname.startsWith(
+        class="rounded-md px-3 py-2 text-sm font-medium text-white transition-colors {$page.url.pathname.startsWith(
           '/settings',
         )
-          ? 'bg-sidebar-hover'
+          ? 'border-accent border-l-2 bg-sidebar-hover pl-2.5'
           : 'hover:bg-sidebar-hover'}"
       >
         Settings

@@ -33,7 +33,7 @@
   background-color: var(--color-surface);
   border: 1px solid var(--color-soft);
   border-radius: var(--radius-xl);
-  padding: var(--spacing-6);
+  padding: var(--spacing-8);
   box-shadow: var(--shadow-sm);
 }
 
@@ -41,5 +41,24 @@
   html {
     font-family: var(--font-sans);
     color: var(--color-ink);
+  }
+
+  details > summary {
+    list-style: none;
+  }
+
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  details > summary::before {
+    content: '\25B8';
+    display: inline-block;
+    margin-right: 0.35em;
+    transition: transform 0.15s ease;
+  }
+
+  details[open] > summary::before {
+    transform: rotate(90deg);
   }
 }
