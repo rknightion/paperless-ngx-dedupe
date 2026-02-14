@@ -10,6 +10,7 @@ import {
   completeJob,
   failJob,
   cancelJob,
+  recoverStaleJobs,
   JobAlreadyRunningError,
 } from '../manager.js';
 import { JobType, JobStatus } from '../../types/enums.js';
@@ -177,6 +178,72 @@ describe('Job Manager', () => {
       expect(job!.status).toBe('failed');
       expect(job!.errorMessage).toBe('Something went wrong');
       expect(job!.completedAt).toBeTruthy();
+    });
+  });
+
+  describe('recoverStaleJobs', () => {
+    it('should mark running jobs as failed', () => {
+      const id = createJob(db, JobType.SYNC);
+      db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, id)).run();
+
+      const recovered = recoverStaleJobs(db);
+      expect(recovered).toBe(1);
+
+      const j = getJob(db, id);
+      expect(j!.status).toBe('failed');
+      expect(j!.errorMessage).toBe('Job interrupted by application restart');
+      expect(j!.completedAt).toBeTruthy();
+    });
+
+    it('should mark pending jobs as failed', () => {
+      const id = createJob(db, JobType.SYNC);
+
+      const recovered = recoverStaleJobs(db);
+      expect(recovered).toBe(1);
+
+      const j = getJob(db, id);
+      expect(j!.status).toBe('failed');
+    });
+
+    it('should recover multiple stale jobs across types', () => {
+      const syncId = createJob(db, JobType.SYNC);
+      const analysisId = createJob(db, JobType.ANALYSIS);
+      db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, syncId)).run();
+
+      const recovered = recoverStaleJobs(db);
+      expect(recovered).toBe(2);
+
+      expect(getJob(db, syncId)!.status).toBe('failed');
+      expect(getJob(db, analysisId)!.status).toBe('failed');
+    });
+
+    it('should not touch completed or failed jobs', () => {
+      const id1 = createJob(db, JobType.SYNC);
+      completeJob(db, id1);
+      const id2 = createJob(db, JobType.ANALYSIS);
+      failJob(db, id2, 'previous error');
+
+      const recovered = recoverStaleJobs(db);
+      expect(recovered).toBe(0);
+
+      expect(getJob(db, id1)!.status).toBe('completed');
+      expect(getJob(db, id2)!.status).toBe('failed');
+      expect(getJob(db, id2)!.errorMessage).toBe('previous error');
+    });
+
+    it('should return 0 when no stale jobs exist', () => {
+      expect(recoverStaleJobs(db)).toBe(0);
+    });
+
+    it('should allow creating new jobs after recovery', () => {
+      const id1 = createJob(db, JobType.SYNC);
+      db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, id1)).run();
+
+      recoverStaleJobs(db);
+
+      const id2 = createJob(db, JobType.SYNC);
+      expect(id2).toBeTruthy();
+      expect(getJob(db, id2)!.status).toBe('pending');
     });
   });
 
