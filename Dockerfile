@@ -39,6 +39,9 @@ COPY --from=build /app/deployed/node_modules ./node_modules
 COPY --from=build /app/packages/web/build ./build
 COPY --from=build /app/package.json ./
 
+# Copy pre-compiled core package (worker threads run outside SvelteKit's bundle)
+COPY --from=build /app/packages/core/dist ./core
+
 # Create non-root user and data directory
 RUN addgroup --system --gid 1001 appgroup && \
     adduser --system --uid 1001 --ingroup appgroup appuser && \
