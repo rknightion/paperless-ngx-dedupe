@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { StatCard, JobStatusCard, EChart, ProgressBar } from '$lib/components';
+  import { formatBytes } from '$lib/utils/format';
   import { connectJobSSE } from '$lib/sse';
   import type { EChartsOption } from 'echarts';
 
@@ -19,13 +20,6 @@
   let analysisMessage = $state('');
   let analysisForce = $state(false);
   let analysisSSE: { close: () => void } | null = null;
-
-  function formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-  }
 
   function formatDate(iso: string | null): string {
     if (!iso) return 'Never';

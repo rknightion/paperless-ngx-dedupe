@@ -8,6 +8,7 @@
     TextDiff,
     GroupActionBar,
   } from '$lib/components';
+  import { formatBytes } from '$lib/utils/format';
 
   let { data } = $props();
 
@@ -25,13 +26,6 @@
   let groupStatus = $derived(
     data.group.resolved ? 'resolved' : data.group.reviewed ? 'reviewed' : 'pending',
   );
-
-  function formatBytes(bytes: number | null): string {
-    if (bytes === null || bytes === 0) return '-';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-  }
 
   async function setPrimary(documentId: string) {
     isSettingPrimary = true;
@@ -131,7 +125,7 @@
                 {/if}
               </td>
               <td class="text-muted hidden py-2.5 pr-4 font-mono text-xs md:table-cell">
-                {formatBytes(member.originalFileSize)}
+                {member.originalFileSize ? formatBytes(member.originalFileSize) : '-'}
               </td>
               <td class="py-2.5">
                 <div class="flex items-center gap-2">

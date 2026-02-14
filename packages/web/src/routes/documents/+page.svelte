@@ -1,5 +1,6 @@
 <script lang="ts">
   import { StatCard, EChart, ProgressBar } from '$lib/components';
+  import { formatBytes } from '$lib/utils/format';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();

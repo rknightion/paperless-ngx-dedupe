@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
+  import { formatBytes } from '$lib/utils/format';
 
   interface Props {
     primary: DuplicateGroupMember;
@@ -8,13 +9,6 @@
   }
 
   let { primary, secondary, paperlessUrl }: Props = $props();
-
-  function formatBytes(bytes: number | null): string {
-    if (bytes === null || bytes === 0) return '-';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-  }
 
   function formatDate(date: string | null): string {
     if (!date) return '-';
@@ -61,14 +55,14 @@
     },
     {
       label: 'Original File Size',
-      primaryValue: formatBytes(primary.originalFileSize),
-      secondaryValue: formatBytes(secondary.originalFileSize),
+      primaryValue: primary.originalFileSize ? formatBytes(primary.originalFileSize) : '-',
+      secondaryValue: secondary.originalFileSize ? formatBytes(secondary.originalFileSize) : '-',
       isDifferent: differs(primary.originalFileSize, secondary.originalFileSize),
     },
     {
       label: 'Archive File Size',
-      primaryValue: formatBytes(primary.archiveFileSize),
-      secondaryValue: formatBytes(secondary.archiveFileSize),
+      primaryValue: primary.archiveFileSize ? formatBytes(primary.archiveFileSize) : '-',
+      secondaryValue: secondary.archiveFileSize ? formatBytes(secondary.archiveFileSize) : '-',
       isDifferent: differs(primary.archiveFileSize, secondary.archiveFileSize),
     },
     {
