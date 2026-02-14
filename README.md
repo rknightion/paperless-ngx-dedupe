@@ -50,6 +50,8 @@ pnpm lint             # Lint
 pnpm test             # Run tests
 ```
 
+> **Note:** Background jobs (sync, analysis, batch delete) use worker threads that run outside Vite as raw Node.js processes. These do not work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `docker compose up` for local development to test the full workflow.
+
 ## License
 
 [GNU General Public License v3](LICENSE)
