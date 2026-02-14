@@ -1,8 +1,5 @@
 # Paperless-Dedupe
 
-> [!CAUTION]
-> **This project is in early development and is NOT ready for use.** Features are incomplete, APIs will change, and data loss may occur. Do not use this in production or against a Paperless-NGX instance you care about.
-
 A document deduplication companion for [Paperless-NGX](https://github.com/paperless-ngx/paperless-ngx). It syncs your documents, identifies duplicates using MinHash/LSH algorithms, and provides a web UI to review and resolve them.
 
 ## Features
@@ -18,26 +15,36 @@ A document deduplication companion for [Paperless-NGX](https://github.com/paperl
 
 ## Quick Start
 
-```bash
-# Create a .env file with your Paperless-NGX connection details
-cp .env.example .env
-# Edit .env -- set PAPERLESS_URL and PAPERLESS_API_TOKEN
+**1. Create a `.env` file** with your Paperless-NGX connection details:
 
-# Start the application
-docker compose up -d
-
-# Open http://localhost:3000
+```env
+PAPERLESS_URL=http://your-paperless-instance:8000
+PAPERLESS_API_TOKEN=your-api-token-here
 ```
 
-See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
+You can authenticate with an API token (recommended) or username/password. See [Configuration](https://m7kni.io/paperless-ngx-dedupe/configuration/) for all options.
+
+**2. Start the container:**
+
+```bash
+docker compose up -d
+```
+
+**3. Open [http://localhost:3000](http://localhost:3000)** and go to **Settings > Test Connection** to verify connectivity.
+
+**4. Sync and analyze.** From the dashboard, click **Sync** to pull your documents, then **Analyze** to detect duplicates. Both run as background jobs with real-time progress.
+
+**5. Review duplicates** at `/duplicates` -- compare documents side-by-side and resolve them.
+
+See the [Getting Started Guide](https://m7kni.io/paperless-ngx-dedupe/getting-started/) for a full walkthrough.
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.md) -- installation, first run walkthrough, upgrading
-- [Configuration](docs/configuration.md) -- environment variables, algorithm tuning, Docker setup
-- [API Reference](docs/api-reference.md) -- complete REST API with curl examples
-- [How It Works](docs/how-it-works.md) -- the deduplication pipeline explained
-- [Troubleshooting](docs/troubleshooting.md) -- common issues and solutions
+- [Getting Started](https://m7kni.io/paperless-ngx-dedupe/getting-started/) -- installation, first run walkthrough, upgrading
+- [Configuration](https://m7kni.io/paperless-ngx-dedupe/configuration/) -- environment variables, algorithm tuning, Docker setup
+- [API Reference](https://m7kni.io/paperless-ngx-dedupe/api-reference/) -- complete REST API with curl examples
+- [How It Works](https://m7kni.io/paperless-ngx-dedupe/how-it-works/) -- the deduplication pipeline explained
+- [Troubleshooting](https://m7kni.io/paperless-ngx-dedupe/troubleshooting/) -- common issues and solutions
 
 ## Development
 
