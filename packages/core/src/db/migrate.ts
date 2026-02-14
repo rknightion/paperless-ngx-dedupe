@@ -69,7 +69,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
       // Convert CREATE TABLE to CREATE TABLE IF NOT EXISTS for idempotent migrations
       const safeStatement = statement
         .replace(/CREATE TABLE(?! IF NOT EXISTS)/gi, 'CREATE TABLE IF NOT EXISTS')
-        .replace(/CREATE INDEX(?! IF NOT EXISTS)/gi, 'CREATE INDEX IF NOT EXISTS');
+        .replace(/CREATE( UNIQUE)? INDEX(?! IF NOT EXISTS)/gi, 'CREATE$1 INDEX IF NOT EXISTS');
       sqlite.exec(safeStatement);
     }
 
