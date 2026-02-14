@@ -20,10 +20,19 @@ FROM deps AS build
 
 COPY . .
 
-RUN pnpm build
+RUN pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/web build
 
 # Create standalone deployment with flat node_modules (no pnpm symlinks)
 RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
+
+# Bundle CLI into a single file (resolves TS source + all non-native deps)
+RUN pnpm dlx esbuild packages/cli/src/bin.ts \
+  --bundle --platform=node --format=esm \
+  --outfile=/app/cli-bundle/paperless-dedupe.mjs \
+  --external:better-sqlite3 \
+  --external:pino \
+  --external:pino-pretty \
+  --banner:js='import{createRequire as _cr}from"module";const require=_cr(import.meta.url);'
 
 # Stage 3: Production runtime
 FROM node:22-slim AS production
@@ -42,11 +51,19 @@ COPY --from=build /app/package.json ./
 # Copy pre-compiled core package (worker threads run outside SvelteKit's bundle)
 COPY --from=build /app/packages/core/dist ./core
 
+# Copy bundled CLI (uses node_modules for native deps like better-sqlite3)
+COPY --from=build /app/cli-bundle/paperless-dedupe.mjs ./cli/paperless-dedupe.mjs
+
 # Create non-root user and data directory
 RUN addgroup --system --gid 1001 appgroup && \
     adduser --system --uid 1001 --ingroup appgroup appuser && \
     mkdir -p /app/data && \
-    chown -R appuser:appgroup /app
+    chown -R appuser:appgroup /app && \
+    printf '#!/bin/sh\nexec node /app/cli/paperless-dedupe.mjs "$@"\n' > /usr/local/bin/paperless-dedupe && \
+    chmod +x /usr/local/bin/paperless-dedupe
+
+LABEL org.opencontainers.image.source="https://github.com/rknightion/paperless-ngx-dedupe"
+LABEL org.opencontainers.image.description="Document deduplication companion for Paperless-NGX"
 
 ENV NODE_ENV=production
 
