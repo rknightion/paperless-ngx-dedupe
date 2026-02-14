@@ -1,4 +1,9 @@
-import { createDatabaseWithHandle, migrateDatabase } from '@paperless-dedupe/core';
+import {
+  createDatabaseWithHandle,
+  migrateDatabase,
+  recoverStaleJobs,
+  createLogger,
+} from '@paperless-dedupe/core';
 import type { AppDatabase } from '@paperless-dedupe/core';
 import type { AppConfig } from '@paperless-dedupe/core';
 
@@ -9,6 +14,13 @@ export async function getDatabase(config: AppConfig): Promise<AppDatabase> {
 
   const { db, sqlite } = createDatabaseWithHandle(config.DATABASE_URL);
   await migrateDatabase(sqlite);
+
+  const recovered = recoverStaleJobs(db);
+  if (recovered > 0) {
+    const logger = createLogger('startup');
+    logger.info({ recovered }, `Recovered ${recovered} stale job(s) from previous run`);
+  }
+
   cachedDb = db;
   return db;
 }

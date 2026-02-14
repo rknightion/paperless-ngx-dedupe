@@ -86,6 +86,7 @@ export {
   completeJob,
   failJob,
   cancelJob,
+  recoverStaleJobs,
   JobAlreadyRunningError,
 } from './jobs/manager.js';
 export type { JobFilters } from './jobs/manager.js';
