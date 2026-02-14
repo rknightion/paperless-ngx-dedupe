@@ -1,4 +1,4 @@
-import { and, avg, count, desc, eq, isNotNull, isNull, like, sql, sum } from 'drizzle-orm';
+import { and, asc, avg, count, desc, eq, isNotNull, isNull, like, sql, sum } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
@@ -226,6 +226,137 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     .from(documentContent)
     .all();
 
+  // 9. Documents added per month
+  const documentsOverTime = db
+    .select({
+      month: sql<string>`strftime('%Y-%m', ${document.addedDate})`.as('month'),
+      count: count(),
+    })
+    .from(document)
+    .where(isNotNull(document.addedDate))
+    .groupBy(sql`strftime('%Y-%m', ${document.addedDate})`)
+    .orderBy(asc(sql`strftime('%Y-%m', ${document.addedDate})`))
+    .all() as { month: string; count: number }[];
+
+  // 10. File size distribution (archive file size buckets)
+  const fileSizeRows = db
+    .select({
+      bucket: sql<string>`CASE
+        WHEN ${document.archiveFileSize} < 102400 THEN '< 100 KB'
+        WHEN ${document.archiveFileSize} < 1048576 THEN '100 KB - 1 MB'
+        WHEN ${document.archiveFileSize} < 10485760 THEN '1 - 10 MB'
+        WHEN ${document.archiveFileSize} < 52428800 THEN '10 - 50 MB'
+        ELSE '50+ MB'
+      END`.as('bucket'),
+      count: count(),
+    })
+    .from(document)
+    .where(isNotNull(document.archiveFileSize))
+    .groupBy(
+      sql`CASE
+        WHEN ${document.archiveFileSize} < 102400 THEN '< 100 KB'
+        WHEN ${document.archiveFileSize} < 1048576 THEN '100 KB - 1 MB'
+        WHEN ${document.archiveFileSize} < 10485760 THEN '1 - 10 MB'
+        WHEN ${document.archiveFileSize} < 52428800 THEN '10 - 50 MB'
+        ELSE '50+ MB'
+      END`,
+    )
+    .all() as { bucket: string; count: number }[];
+
+  const fileSizeBucketLabels = ['< 100 KB', '100 KB - 1 MB', '1 - 10 MB', '10 - 50 MB', '50+ MB'];
+  const fileSizeMap = new Map(fileSizeRows.map((r) => [r.bucket, r.count]));
+  const fileSizeDistribution = fileSizeBucketLabels.map((label) => ({
+    bucket: label,
+    count: fileSizeMap.get(label) ?? 0,
+  }));
+
+  // 11. Word count distribution
+  const wordCountRows = db
+    .select({
+      bucket: sql<string>`CASE
+        WHEN ${documentContent.wordCount} < 100 THEN '0 - 100'
+        WHEN ${documentContent.wordCount} < 500 THEN '100 - 500'
+        WHEN ${documentContent.wordCount} < 1000 THEN '500 - 1K'
+        WHEN ${documentContent.wordCount} < 5000 THEN '1K - 5K'
+        WHEN ${documentContent.wordCount} < 10000 THEN '5K - 10K'
+        ELSE '10K+'
+      END`.as('bucket'),
+      count: count(),
+    })
+    .from(documentContent)
+    .where(isNotNull(documentContent.wordCount))
+    .groupBy(
+      sql`CASE
+        WHEN ${documentContent.wordCount} < 100 THEN '0 - 100'
+        WHEN ${documentContent.wordCount} < 500 THEN '100 - 500'
+        WHEN ${documentContent.wordCount} < 1000 THEN '500 - 1K'
+        WHEN ${documentContent.wordCount} < 5000 THEN '1K - 5K'
+        WHEN ${documentContent.wordCount} < 10000 THEN '5K - 10K'
+        ELSE '10K+'
+      END`,
+    )
+    .all() as { bucket: string; count: number }[];
+
+  const wordCountBucketLabels = ['0 - 100', '100 - 500', '500 - 1K', '1K - 5K', '5K - 10K', '10K+'];
+  const wordCountMap = new Map(wordCountRows.map((r) => [r.bucket, r.count]));
+  const wordCountDistribution = wordCountBucketLabels.map((label) => ({
+    bucket: label,
+    count: wordCountMap.get(label) ?? 0,
+  }));
+
+  // 12. Unclassified documents
+  const [{ noCorrespondent }] = db
+    .select({ noCorrespondent: count() })
+    .from(document)
+    .where(isNull(document.correspondent))
+    .all();
+
+  const [{ noDocumentType }] = db
+    .select({ noDocumentType: count() })
+    .from(document)
+    .where(isNull(document.documentType))
+    .all();
+
+  const [{ noTags }] = db
+    .select({ noTags: count() })
+    .from(document)
+    .where(
+      sql`${document.tagsJson} IS NULL OR ${document.tagsJson} = '' OR ${document.tagsJson} = '[]'`,
+    )
+    .all();
+
+  // 13. Duplicate involvement
+  const [{ documentsInGroups }] = db
+    .select({
+      documentsInGroups: sql<number>`COUNT(DISTINCT ${duplicateMember.documentId})`,
+    })
+    .from(duplicateMember)
+    .all();
+
+  const dupPercentage =
+    totalDocuments > 0 ? Math.round((Number(documentsInGroups) / totalDocuments) * 100) : 0;
+
+  // 14. Largest documents (top 10 by archive file size)
+  const largestDocuments = db
+    .select({
+      id: document.id,
+      paperlessId: document.paperlessId,
+      title: document.title,
+      correspondent: document.correspondent,
+      archiveFileSize: document.archiveFileSize,
+    })
+    .from(document)
+    .where(isNotNull(document.archiveFileSize))
+    .orderBy(desc(document.archiveFileSize))
+    .limit(10)
+    .all() as {
+    id: string;
+    paperlessId: number;
+    title: string;
+    correspondent: string | null;
+    archiveFileSize: number;
+  }[];
+
   return {
     totalDocuments,
     ocrCoverage: {
@@ -242,5 +373,14 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     tagDistribution,
     totalStorageBytes: Number(totalStorageBytes),
     averageWordCount: Math.round(Number(averageWordCount)),
+    documentsOverTime,
+    fileSizeDistribution,
+    wordCountDistribution,
+    unclassified: { noCorrespondent, noDocumentType, noTags },
+    duplicateInvolvement: {
+      documentsInGroups: Number(documentsInGroups),
+      percentage: dupPercentage,
+    },
+    largestDocuments,
   };
 }
