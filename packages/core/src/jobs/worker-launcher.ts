@@ -1,5 +1,7 @@
 import { Worker } from 'node:worker_threads';
 import { createLogger } from '../logger.js';
+import { createDatabase } from '../db/client.js';
+import { failJob } from './manager.js';
 
 export interface LaunchWorkerOptions {
   jobId: string;
@@ -20,15 +22,12 @@ export function launchWorker(options: LaunchWorkerOptions): WorkerHandle {
 
   const workerData = { jobId, dbPath, taskData };
 
-  // For .ts files (dev mode), add tsx loader
-  const execArgv: string[] = [];
-  if (workerScriptPath.endsWith('.ts')) {
-    execArgv.push('--import', 'tsx/esm');
-  }
-
+  // Worker threads run outside Vite as raw Node.js processes. In dev mode (.ts files),
+  // they fail because Node.js can't resolve the .js extension imports used throughout
+  // the codebase (moduleResolution: "bundler" convention). Use Docker for local development.
+  // In production, tsc compiles to .js in dist/ and workers load normally.
   const worker = new Worker(workerScriptPath, {
     workerData,
-    execArgv,
   });
 
   const done = new Promise<void>((resolve, reject) => {
@@ -45,6 +44,18 @@ export function launchWorker(options: LaunchWorkerOptions): WorkerHandle {
       logger.error({ jobId, error: err.message }, 'Worker error');
       reject(err);
     });
+  });
+
+  // Mark job as failed if the worker crashes before it can update its own status
+  done.catch((err) => {
+    try {
+      const db = createDatabase(dbPath);
+      const message = err instanceof Error ? err.message : String(err);
+      failJob(db, jobId, `Worker crashed: ${message}`);
+      logger.info({ jobId }, 'Marked crashed worker job as failed');
+    } catch (e) {
+      logger.error({ jobId, error: e }, 'Failed to mark crashed job as failed');
+    }
   });
 
   logger.info({ jobId, workerScriptPath }, 'Worker launched');
