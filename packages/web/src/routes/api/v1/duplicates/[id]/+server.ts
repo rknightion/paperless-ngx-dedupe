@@ -1,9 +1,16 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { getDuplicateGroup, deleteDuplicateGroup } from '@paperless-dedupe/core';
+import {
+  getDuplicateGroup,
+  getDuplicateGroupLight,
+  deleteDuplicateGroup,
+} from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ params, locals }) => {
-  const group = getDuplicateGroup(locals.db, params.id);
+export const GET: RequestHandler = async ({ params, url, locals }) => {
+  const light = url.searchParams.get('light') === 'true';
+  const group = light
+    ? getDuplicateGroupLight(locals.db, params.id)
+    : getDuplicateGroup(locals.db, params.id);
 
   if (!group) {
     return apiError(ErrorCode.NOT_FOUND, `Duplicate group not found: ${params.id}`);

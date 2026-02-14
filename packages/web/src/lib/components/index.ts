@@ -10,4 +10,7 @@ export { default as DocumentCompare } from './duplicates/DocumentCompare.svelte'
 export { default as TextDiff } from './duplicates/TextDiff.svelte';
 export { default as GroupActionBar } from './duplicates/GroupActionBar.svelte';
 export { default as Tooltip } from './ui/Tooltip.svelte';
+export { default as RichTooltip } from './ui/RichTooltip.svelte';
 export { default as InfoIcon } from './ui/InfoIcon.svelte';
+export { default as ConfidenceTooltipContent } from './duplicates/ConfidenceTooltipContent.svelte';
+export { default as GroupPreviewModal } from './duplicates/GroupPreviewModal.svelte';
