@@ -103,6 +103,10 @@ export function getDuplicateGroups(
   const items: DuplicateGroupSummary[] = groups.map((g) => ({
     id: g.id,
     confidenceScore: g.confidenceScore,
+    jaccardSimilarity: g.jaccardSimilarity,
+    fuzzyTextRatio: g.fuzzyTextRatio,
+    metadataSimilarity: g.metadataSimilarity,
+    filenameSimilarity: g.filenameSimilarity,
     reviewed: g.reviewed ?? false,
     resolved: g.resolved ?? false,
     memberCount: countMap.get(g.id) ?? 0,

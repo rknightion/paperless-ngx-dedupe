@@ -85,6 +85,10 @@ export interface DocumentDetail extends DocumentSummary {
 export interface DuplicateGroupSummary {
   id: string;
   confidenceScore: number;
+  jaccardSimilarity: number | null;
+  fuzzyTextRatio: number | null;
+  metadataSimilarity: number | null;
+  filenameSimilarity: number | null;
   reviewed: boolean;
   resolved: boolean;
   memberCount: number;
