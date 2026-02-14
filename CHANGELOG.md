@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.3.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.2.0...v0.3.0) (2026-02-14)
+
+
+### Features
+
+* Add application static assets ([0e3e832](https://github.com/rknightion/paperless-ngx-dedupe/commit/0e3e8324851853a3e4cc006cf3a193a6bc893dc8))
+* Configure Docker and worker path for core package deployment ([3fe238a](https://github.com/rknightion/paperless-ngx-dedupe/commit/3fe238a81b50a8a83bdd14028dbe9f60d1ca7dcd))
+* **db:** ensure database directory exists on startup ([0e3210c](https://github.com/rknightion/paperless-ngx-dedupe/commit/0e3210ccfd94cef86004c0752007a78232ed5560))
+* Enhance settings page with detailed explanations and info tooltips ([7504c17](https://github.com/rknightion/paperless-ngx-dedupe/commit/7504c171adede033ccc142f12d4b1ca1848cec5c))
+* Improve global layout and navigation styling ([889cfe2](https://github.com/rknightion/paperless-ngx-dedupe/commit/889cfe2b40f4030ff3241e6dcd14f3430dafb60e))
+* Introduce Tooltip and InfoIcon UI components ([a0d149d](https://github.com/rknightion/paperless-ngx-dedupe/commit/a0d149d636edbf4748750583b13d9ccdf2337eff))
+* **jobs:** implement stale job recovery on startup ([f221d55](https://github.com/rknightion/paperless-ngx-dedupe/commit/f221d5590dc74bfdb3cf4a4cbf643e918b7df695))
+* **web:** integrate stale job recovery into web server startup ([fb920a7](https://github.com/rknightion/paperless-ngx-dedupe/commit/fb920a73a008109c6f0e960ebdb3d2de0beeebfd))
+
+
+### Bug Fixes
+
+* **db:** improve migration idempotency for unique indexes ([3d58658](https://github.com/rknightion/paperless-ngx-dedupe/commit/3d586582acb4b275080a1bd63e5b84fa99a68266))
+* **worker:** handle worker crashes and clarify dev setup ([a07f8d5](https://github.com/rknightion/paperless-ngx-dedupe/commit/a07f8d5fdee132c959f11e8f8c4157e02273aa2e))
+
+
+### Miscellaneous
+
+* **deps:** bump toolchain deps, add utilities, tweak CSS ([e6b8aa0](https://github.com/rknightion/paperless-ngx-dedupe/commit/e6b8aa0ffec5e40bd2a6291d12d22b37098a29ff))
+* **deps:** update github artifact actions ([#135](https://github.com/rknightion/paperless-ngx-dedupe/issues/135)) ([af2a72a](https://github.com/rknightion/paperless-ngx-dedupe/commit/af2a72a360dd2b0dff1c0c916995d1252dc36962))
+* **deps:** update globals to 17.3.0 ([4e46621](https://github.com/rknightion/paperless-ngx-dedupe/commit/4e466210e09069aefff5c334f928e2697966c0fc))
+* Exclude docs and site directories from linting and formatting ([1164698](https://github.com/rknightion/paperless-ngx-dedupe/commit/1164698e757fe66231fd7e316b1fa869fd02db10))
+* fix ([a0f5e82](https://github.com/rknightion/paperless-ngx-dedupe/commit/a0f5e82107f31c37f4fc50229006127b969051b6))
+
+
+### Documentation
+
+* added docs ([f0c78c2](https://github.com/rknightion/paperless-ngx-dedupe/commit/f0c78c2bb267b789d72dba9e45246cb9d2daf93b))
+
+
+### Tests
+
+* **jobs:** add unit tests for stale job recovery ([02ca27f](https://github.com/rknightion/paperless-ngx-dedupe/commit/02ca27f9424dde1a2af83de9f91bf209be8c8783))
+
 ## [0.2.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.1.0...v0.2.0) (2026-02-13)
 
 
