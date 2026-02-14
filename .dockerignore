@@ -22,4 +22,6 @@ docker-compose*.yml
 .prettierrc.json
 eslint.config.js
 data
+docs
+zensical.toml
 .claudit
