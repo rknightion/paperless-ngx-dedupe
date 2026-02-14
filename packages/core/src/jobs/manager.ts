@@ -112,6 +112,20 @@ export function failJob(db: AppDatabase, id: string, error: string): void {
     .run();
 }
 
+export function recoverStaleJobs(db: AppDatabase): number {
+  const result = db
+    .update(job)
+    .set({
+      status: 'failed',
+      errorMessage: 'Job interrupted by application restart',
+      completedAt: new Date().toISOString(),
+    })
+    .where(or(eq(job.status, 'running'), eq(job.status, 'pending')))
+    .run();
+
+  return result.changes;
+}
+
 export function cancelJob(db: AppDatabase, id: string): boolean {
   const existing = db.select({ status: job.status }).from(job).where(eq(job.id, id)).get();
 
