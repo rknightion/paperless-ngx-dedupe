@@ -28,5 +28,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     limit: result.limit,
     offset: result.offset,
     filters,
+    paperlessUrl: locals.config.PAPERLESS_URL,
   };
 };

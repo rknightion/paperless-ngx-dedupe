@@ -1,7 +1,14 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto, invalidateAll } from '$app/navigation';
-  import { ConfidenceBadge, StatusBadge, ConfirmDialog } from '$lib/components';
+  import {
+    ConfidenceBadge,
+    StatusBadge,
+    ConfirmDialog,
+    RichTooltip,
+    ConfidenceTooltipContent,
+    GroupPreviewModal,
+  } from '$lib/components';
 
   let { data } = $props();
 
@@ -9,6 +16,24 @@
   let isSubmitting = $state(false);
   let actionFeedback: { type: 'success' | 'error'; message: string } | null = $state(null);
   let showDeleteConfirm = $state(false);
+  let previewGroupId: string | null = $state(null);
+  let previewGroupTitle = $state('');
+  let previewConfidenceScore = $state(0);
+
+  function openPreview(group: (typeof data.groups)[0]) {
+    previewGroupId = group.id;
+    previewGroupTitle = group.primaryDocumentTitle ?? 'Untitled';
+    previewConfidenceScore = group.confidenceScore;
+  }
+
+  function timeAgo(iso: string): string {
+    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return new Date(iso).toLocaleDateString();
+  }
 
   // Reset selection when data changes (e.g. after filter/pagination change)
   $effect(() => {
@@ -373,15 +398,37 @@
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </td>
               <td class="text-ink hidden px-4 py-3 md:table-cell">
-                {group.memberCount}
+                <button
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    openPreview(group);
+                  }}
+                  class="text-accent hover:text-accent-hover font-medium underline decoration-dotted underline-offset-2"
+                  title="Preview members"
+                >
+                  {group.memberCount}
+                </button>
               </td>
               <td class="px-4 py-3">
-                <ConfidenceBadge score={group.confidenceScore} />
+                <RichTooltip position="left">
+                  <ConfidenceBadge score={group.confidenceScore} />
+                  {#snippet content()}
+                    <ConfidenceTooltipContent
+                      jaccardSimilarity={group.jaccardSimilarity}
+                      fuzzyTextRatio={group.fuzzyTextRatio}
+                      metadataSimilarity={group.metadataSimilarity}
+                      filenameSimilarity={group.filenameSimilarity}
+                    />
+                  {/snippet}
+                </RichTooltip>
               </td>
               <td class="hidden px-4 py-3 sm:table-cell">
                 <StatusBadge
                   status={group.resolved ? 'resolved' : group.reviewed ? 'reviewed' : 'pending'}
                 />
+              </td>
+              <td class="text-muted hidden px-4 py-3 text-xs lg:table-cell" title={group.updatedAt}>
+                {timeAgo(group.updatedAt)}
               </td>
             </tr>
           {/each}
@@ -449,3 +496,17 @@
   onconfirm={deleteNonPrimary}
   oncancel={() => (showDeleteConfirm = false)}
 />
+
+<!-- Group Preview Modal -->
+{#if previewGroupId}
+  <GroupPreviewModal
+    open={previewGroupId !== null}
+    groupId={previewGroupId}
+    groupTitle={previewGroupTitle}
+    confidenceScore={previewConfidenceScore}
+    paperlessUrl={data.paperlessUrl}
+    onclose={() => {
+      previewGroupId = null;
+    }}
+  />
+{/if}
