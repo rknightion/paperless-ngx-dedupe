@@ -27,8 +27,8 @@ importers:
         specifier: ^3.15.0
         version: 3.15.0(eslint@10.0.0(jiti@2.6.1))(svelte@5.51.0)
       globals:
-        specifier: ^16.5.0
-        version: 16.5.0
+        specifier: ^17.3.0
+        version: 17.3.0
       prettier:
         specifier: ~3.8.1
         version: 3.8.1
@@ -1594,6 +1594,10 @@ packages:
 
   globals@16.5.0:
     resolution: {integrity: sha512-c/c15i26VrJ4IRt5Z89DnIzCGDn9EcebibhAOjw5ibqEHsE1wLUgkPn9RDmNcUKyU87GeaL633nyJ+pplFR2ZQ==}
+    engines: {node: '>=18'}
+
+  globals@17.3.0:
+    resolution: {integrity: sha512-yMqGUQVVCkD4tqjOJf3TnrvaaHDMYp4VlUSObbkIiuCPe/ofdMBFIAcBbCSRFWOnos6qRiTVStDwqPLUclaxIw==}
     engines: {node: '>=18'}
 
   graceful-fs@4.2.11:
@@ -3462,6 +3466,8 @@ snapshots:
       is-glob: 4.0.3
 
   globals@16.5.0: {}
+
+  globals@17.3.0: {}
 
   graceful-fs@4.2.11: {}
 
