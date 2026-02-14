@@ -236,6 +236,62 @@
     </div>
   </div>
 
+  <!-- How does this work? -->
+  <details class="panel">
+    <summary class="text-accent hover:text-accent-hover cursor-pointer text-sm font-medium">
+      How does duplicate detection work?
+    </summary>
+    <div class="text-muted mt-3 space-y-3 text-sm leading-relaxed">
+      <p>
+        Paperless Dedupe identifies potential duplicates using a multi-stage pipeline that compares
+        documents across four similarity dimensions:
+      </p>
+      <dl
+        class="border-soft grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 rounded-lg border p-3 text-xs"
+      >
+        <dt class="text-ink font-semibold">Jaccard (Shingles)</dt>
+        <dd>
+          Compares word sequences using compact MinHash signatures. Best for catching near-identical
+          documents and OCR re-scans.
+        </dd>
+        <dt class="text-ink font-semibold">Fuzzy Text</dt>
+        <dd>
+          Measures character-level edit distance after sorting words. Catches documents with minor
+          wording differences or typos.
+        </dd>
+        <dt class="text-ink font-semibold">Metadata</dt>
+        <dd>
+          Compares correspondent, document type, tags, and dates. Useful when OCR text varies but
+          document metadata is consistent.
+        </dd>
+        <dt class="text-ink font-semibold">Filename</dt>
+        <dd>
+          Compares original filenames for structural similarity. Helps when files were uploaded
+          multiple times with similar names.
+        </dd>
+      </dl>
+      <p>
+        These four scores are combined into an overall
+        <strong class="text-ink">confidence score</strong>
+        using configurable weights (adjustable in
+        <a href="/settings" class="text-accent hover:text-accent-hover underline">Settings</a>).
+        Hover over any confidence badge to see the breakdown.
+      </p>
+      <p>
+        <strong class="text-ink">Workflow:</strong> Review groups by clicking a row to compare
+        documents side-by-side. Mark groups as
+        <em>Reviewed</em>
+        after checking them, or
+        <em>Resolved</em>
+        once you have taken action (e.g., deleted a duplicate in Paperless-NGX). Use the
+        <a href="/duplicates/wizard" class="text-accent hover:text-accent-hover underline">
+          Bulk Operations Wizard
+        </a>
+        for batch processing.
+      </p>
+    </div>
+  </details>
+
   <!-- Action Feedback -->
   {#if actionFeedback}
     <div
@@ -324,6 +380,49 @@
     </div>
   </div>
 
+  <!-- Active Filter Chips -->
+  {#if hasFilters}
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-muted text-xs">Active filters:</span>
+      {#if $page.url.searchParams.get('reviewed') || $page.url.searchParams.get('resolved')}
+        <span
+          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+        >
+          Status: {currentStatus()}
+          <button
+            onclick={() => applyFilters({ reviewed: '', resolved: '' })}
+            class="hover:text-accent-hover">&times;</button
+          >
+        </span>
+      {/if}
+      {#if $page.url.searchParams.get('minConfidence')}
+        <span
+          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+        >
+          Min: {Math.round(Number($page.url.searchParams.get('minConfidence')) * 100)}%
+          <button
+            onclick={() => applyFilters({ minConfidence: '' })}
+            class="hover:text-accent-hover">&times;</button
+          >
+        </span>
+      {/if}
+      {#if $page.url.searchParams.get('maxConfidence')}
+        <span
+          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+        >
+          Max: {Math.round(Number($page.url.searchParams.get('maxConfidence')) * 100)}%
+          <button
+            onclick={() => applyFilters({ maxConfidence: '' })}
+            class="hover:text-accent-hover">&times;</button
+          >
+        </span>
+      {/if}
+      <button onclick={clearFilters} class="text-muted hover:text-ink text-xs underline">
+        Clear all
+      </button>
+    </div>
+  {/if}
+
   <!-- Bulk Actions Bar -->
   {#if selectedIds.size > 0}
     <div
@@ -375,6 +474,7 @@
             <th class="text-muted hidden px-4 py-3 font-medium md:table-cell">Members</th>
             <th class="text-muted px-4 py-3 font-medium">Confidence</th>
             <th class="text-muted hidden px-4 py-3 font-medium sm:table-cell">Status</th>
+            <th class="text-muted hidden px-4 py-3 font-medium lg:table-cell">Updated</th>
           </tr>
         </thead>
         <tbody>
