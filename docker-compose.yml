@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    image: ghcr.io/rknightion/paperless-ngx-dedupe:latest
     ports:
       - '${PORT:-3000}:3000'
     volumes:
