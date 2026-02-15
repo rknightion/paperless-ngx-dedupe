@@ -57,9 +57,10 @@ test.describe('Duplicates List Page', () => {
 
     // Check filter options exist
     await expect(statusFilter.locator('option[value="all"]')).toHaveText('All');
-    await expect(statusFilter.locator('option[value="unreviewed"]')).toHaveText('Unreviewed');
-    await expect(statusFilter.locator('option[value="reviewed"]')).toHaveText('Reviewed');
-    await expect(statusFilter.locator('option[value="resolved"]')).toHaveText('Resolved');
+    await expect(statusFilter.locator('option[value="pending"]')).toHaveText('Pending');
+    await expect(statusFilter.locator('option[value="false_positive"]')).toHaveText('False Positive');
+    await expect(statusFilter.locator('option[value="ignored"]')).toHaveText('Ignored');
+    await expect(statusFilter.locator('option[value="deleted"]')).toHaveText('Deleted');
   });
 
   test('sort controls exist', async ({ page }) => {
@@ -88,8 +89,8 @@ test.describe('Duplicates List Page', () => {
 
     // Bulk action bar should appear
     await expect(page.getByText('1 selected')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Mark Reviewed' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Resolve Selected' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Not Duplicates' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Keep All' })).toBeVisible();
 
     // Uncheck
     await firstCheckbox.uncheck();

@@ -20,7 +20,7 @@ describe('getDashboard', () => {
     const result = getDashboard(db);
 
     expect(result.totalDocuments).toBe(0);
-    expect(result.unresolvedGroups).toBe(0);
+    expect(result.pendingGroups).toBe(0);
     expect(result.storageSavingsBytes).toBe(0);
     expect(result.pendingAnalysis).toBe(0);
     expect(result.lastSyncAt).toBeNull();
@@ -64,7 +64,7 @@ describe('getDashboard', () => {
       ])
       .run();
 
-    // Insert an unresolved duplicate group
+    // Insert a pending duplicate group
     db.insert(duplicateGroup)
       .values({
         id: 'grp-1',
@@ -75,19 +75,19 @@ describe('getDashboard', () => {
       })
       .run();
 
-    // Insert a resolved duplicate group
+    // Insert a deleted duplicate group
     db.insert(duplicateGroup)
       .values({
         id: 'grp-2',
         confidenceScore: 0.8,
         algorithmVersion: 'v1',
-        resolved: true,
+        status: 'deleted',
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
       })
       .run();
 
-    // Members for unresolved group: doc-1 is primary, doc-2 is non-primary
+    // Members for pending group: doc-1 is primary, doc-2 is non-primary
     db.insert(duplicateMember)
       .values([
         { id: 'mem-1', groupId: 'grp-1', documentId: 'doc-1', isPrimary: true },
@@ -110,8 +110,8 @@ describe('getDashboard', () => {
     const result = getDashboard(db);
 
     expect(result.totalDocuments).toBe(3);
-    expect(result.unresolvedGroups).toBe(1);
-    // Storage savings = archiveFileSize of non-primary members in unresolved groups = doc-2's 2000
+    expect(result.pendingGroups).toBe(1);
+    // Storage savings = archiveFileSize of non-primary members in pending groups = doc-2's 2000
     expect(result.storageSavingsBytes).toBe(2000);
     expect(result.pendingAnalysis).toBe(1);
     expect(result.lastSyncAt).toBe('2024-06-01T12:00:00Z');

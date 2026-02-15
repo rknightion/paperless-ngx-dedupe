@@ -218,8 +218,7 @@ describe('getDocument', () => {
       groupId: 'grp-1',
       confidenceScore: 0.92,
       isPrimary: true,
-      reviewed: false,
-      resolved: false,
+      status: 'pending',
     });
   });
 

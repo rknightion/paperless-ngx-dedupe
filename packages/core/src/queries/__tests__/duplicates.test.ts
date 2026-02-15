@@ -9,11 +9,9 @@ import {
   getDuplicateStats,
   getSimilarityGraph,
   setPrimaryDocument,
-  markGroupReviewed,
-  markGroupResolved,
+  setGroupStatus,
   deleteDuplicateGroup,
-  batchMarkReviewed,
-  batchMarkResolved,
+  batchSetStatus,
 } from '../duplicates.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
@@ -77,7 +75,7 @@ function insertTestData(db: AppDatabase) {
     ])
     .run();
 
-  // Group 1: high confidence, unresolved (doc-1 primary, doc-2 non-primary)
+  // Group 1: high confidence, pending (doc-1 primary, doc-2 non-primary)
   db.insert(duplicateGroup)
     .values({
       id: 'grp-1',
@@ -99,7 +97,7 @@ function insertTestData(db: AppDatabase) {
     ])
     .run();
 
-  // Group 2: lower confidence, unresolved (doc-3, doc-4)
+  // Group 2: lower confidence, pending (doc-3, doc-4)
   db.insert(duplicateGroup)
     .values({
       id: 'grp-2',
@@ -186,38 +184,37 @@ describe('getDuplicateGroups', () => {
     expect(result.items[0].id).toBe('grp-2');
   });
 
-  it('filters by reviewed', () => {
+  it('filters by status', () => {
     insertTestData(db);
-    markGroupReviewed(db, 'grp-1');
+    setGroupStatus(db, 'grp-1', 'ignored');
 
-    const reviewed = getDuplicateGroups(
+    const ignored = getDuplicateGroups(
       db,
-      { reviewed: true, sortBy: 'confidence', sortOrder: 'desc' },
+      { status: ['ignored'], sortBy: 'confidence', sortOrder: 'desc' },
       { limit: 50, offset: 0 },
     );
-    expect(reviewed.items).toHaveLength(1);
-    expect(reviewed.items[0].id).toBe('grp-1');
+    expect(ignored.items).toHaveLength(1);
+    expect(ignored.items[0].id).toBe('grp-1');
 
-    const unreviewed = getDuplicateGroups(
+    const pending = getDuplicateGroups(
       db,
-      { reviewed: false, sortBy: 'confidence', sortOrder: 'desc' },
+      { status: ['pending'], sortBy: 'confidence', sortOrder: 'desc' },
       { limit: 50, offset: 0 },
     );
-    expect(unreviewed.items).toHaveLength(1);
-    expect(unreviewed.items[0].id).toBe('grp-2');
+    expect(pending.items).toHaveLength(1);
+    expect(pending.items[0].id).toBe('grp-2');
   });
 
-  it('filters by resolved', () => {
+  it('filters by multiple statuses', () => {
     insertTestData(db);
-    markGroupResolved(db, 'grp-2');
+    setGroupStatus(db, 'grp-1', 'deleted');
 
-    const resolved = getDuplicateGroups(
+    const result = getDuplicateGroups(
       db,
-      { resolved: true, sortBy: 'confidence', sortOrder: 'desc' },
+      { status: ['pending', 'deleted'], sortBy: 'confidence', sortOrder: 'desc' },
       { limit: 50, offset: 0 },
     );
-    expect(resolved.items).toHaveLength(1);
-    expect(resolved.items[0].id).toBe('grp-2');
+    expect(result.items).toHaveLength(2);
   });
 
   it('sorts by confidence desc (default)', () => {
@@ -298,8 +295,7 @@ describe('getDuplicateGroup', () => {
     expect(result!.jaccardSimilarity).toBe(0.9);
     expect(result!.fuzzyTextRatio).toBe(0.88);
     expect(result!.algorithmVersion).toBe('v1');
-    expect(result!.reviewed).toBe(false);
-    expect(result!.resolved).toBe(false);
+    expect(result!.status).toBe('pending');
     expect(result!.members).toHaveLength(2);
 
     const primary = result!.members.find((m) => m.isPrimary);
@@ -343,9 +339,10 @@ describe('getDuplicateStats', () => {
     const stats = getDuplicateStats(db);
 
     expect(stats.totalGroups).toBe(0);
-    expect(stats.reviewedGroups).toBe(0);
-    expect(stats.resolvedGroups).toBe(0);
-    expect(stats.unresolvedGroups).toBe(0);
+    expect(stats.pendingGroups).toBe(0);
+    expect(stats.falsePositiveGroups).toBe(0);
+    expect(stats.ignoredGroups).toBe(0);
+    expect(stats.deletedGroups).toBe(0);
     expect(stats.topCorrespondents).toEqual([]);
     expect(stats.confidenceDistribution).toHaveLength(6);
     expect(stats.confidenceDistribution.every((b) => b.count === 0)).toBe(true);
@@ -353,14 +350,14 @@ describe('getDuplicateStats', () => {
 
   it('returns correct totals and histogram buckets', () => {
     insertTestData(db);
-    markGroupReviewed(db, 'grp-1');
+    setGroupStatus(db, 'grp-1', 'ignored');
 
     const stats = getDuplicateStats(db);
 
     expect(stats.totalGroups).toBe(2);
-    expect(stats.reviewedGroups).toBe(1);
-    expect(stats.resolvedGroups).toBe(0);
-    expect(stats.unresolvedGroups).toBe(2);
+    expect(stats.pendingGroups).toBe(1);
+    expect(stats.ignoredGroups).toBe(1);
+    expect(stats.deletedGroups).toBe(0);
 
     // grp-1 at 0.95 -> "95-100%" bucket
     const bucket95 = stats.confidenceDistribution.find((b) => b.label === '95-100%');
@@ -415,7 +412,7 @@ describe('setPrimaryDocument', () => {
   });
 });
 
-describe('markGroupReviewed', () => {
+describe('setGroupStatus', () => {
   let db: AppDatabase;
 
   beforeEach(async () => {
@@ -425,39 +422,24 @@ describe('markGroupReviewed', () => {
     insertTestData(db);
   });
 
-  it('marks a group as reviewed', () => {
-    const result = markGroupReviewed(db, 'grp-1');
+  it('sets group status to ignored', () => {
+    const result = setGroupStatus(db, 'grp-1', 'ignored');
     expect(result).toBe(true);
 
     const group = getDuplicateGroup(db, 'grp-1');
-    expect(group!.reviewed).toBe(true);
+    expect(group!.status).toBe('ignored');
   });
 
-  it('returns false for missing group', () => {
-    expect(markGroupReviewed(db, 'nonexistent')).toBe(false);
-  });
-});
-
-describe('markGroupResolved', () => {
-  let db: AppDatabase;
-
-  beforeEach(async () => {
-    const handle = createDatabaseWithHandle(':memory:');
-    db = handle.db;
-    await migrateDatabase(handle.sqlite);
-    insertTestData(db);
-  });
-
-  it('marks a group as resolved', () => {
-    const result = markGroupResolved(db, 'grp-1');
+  it('sets group status to deleted', () => {
+    const result = setGroupStatus(db, 'grp-1', 'deleted');
     expect(result).toBe(true);
 
     const group = getDuplicateGroup(db, 'grp-1');
-    expect(group!.resolved).toBe(true);
+    expect(group!.status).toBe('deleted');
   });
 
   it('returns false for missing group', () => {
-    expect(markGroupResolved(db, 'nonexistent')).toBe(false);
+    expect(setGroupStatus(db, 'nonexistent', 'ignored')).toBe(false);
   });
 });
 
@@ -491,7 +473,7 @@ describe('deleteDuplicateGroup', () => {
   });
 });
 
-describe('batchMarkReviewed', () => {
+describe('batchSetStatus', () => {
   let db: AppDatabase;
 
   beforeEach(async () => {
@@ -501,40 +483,24 @@ describe('batchMarkReviewed', () => {
     insertTestData(db);
   });
 
-  it('marks multiple groups as reviewed', () => {
-    const { updated } = batchMarkReviewed(db, ['grp-1', 'grp-2']);
+  it('batch sets status to ignored', () => {
+    const { updated } = batchSetStatus(db, ['grp-1', 'grp-2'], 'ignored');
     expect(updated).toBe(2);
 
-    expect(getDuplicateGroup(db, 'grp-1')!.reviewed).toBe(true);
-    expect(getDuplicateGroup(db, 'grp-2')!.reviewed).toBe(true);
+    expect(getDuplicateGroup(db, 'grp-1')!.status).toBe('ignored');
+    expect(getDuplicateGroup(db, 'grp-2')!.status).toBe('ignored');
+  });
+
+  it('batch sets status to deleted', () => {
+    const { updated } = batchSetStatus(db, ['grp-1', 'grp-2'], 'deleted');
+    expect(updated).toBe(2);
+
+    expect(getDuplicateGroup(db, 'grp-1')!.status).toBe('deleted');
+    expect(getDuplicateGroup(db, 'grp-2')!.status).toBe('deleted');
   });
 
   it('returns correct updated count for non-existent IDs', () => {
-    const { updated } = batchMarkReviewed(db, ['grp-1', 'nonexistent']);
-    expect(updated).toBe(1);
-  });
-});
-
-describe('batchMarkResolved', () => {
-  let db: AppDatabase;
-
-  beforeEach(async () => {
-    const handle = createDatabaseWithHandle(':memory:');
-    db = handle.db;
-    await migrateDatabase(handle.sqlite);
-    insertTestData(db);
-  });
-
-  it('marks multiple groups as resolved', () => {
-    const { updated } = batchMarkResolved(db, ['grp-1', 'grp-2']);
-    expect(updated).toBe(2);
-
-    expect(getDuplicateGroup(db, 'grp-1')!.resolved).toBe(true);
-    expect(getDuplicateGroup(db, 'grp-2')!.resolved).toBe(true);
-  });
-
-  it('returns correct updated count for non-existent IDs', () => {
-    const { updated } = batchMarkResolved(db, ['grp-2', 'fake-id']);
+    const { updated } = batchSetStatus(db, ['grp-1', 'nonexistent'], 'ignored');
     expect(updated).toBe(1);
   });
 });
@@ -573,8 +539,7 @@ describe('getSimilarityGraph', () => {
     const highEdge = result.edges.find((e) => e.groupId === 'grp-1');
     expect(highEdge).toBeDefined();
     expect(highEdge!.confidenceScore).toBe(0.95);
-    expect(highEdge!.reviewed).toBe(false);
-    expect(highEdge!.resolved).toBe(false);
+    expect(highEdge!.status).toBe('pending');
   });
 
   it('respects maxGroups limit', () => {
@@ -601,11 +566,11 @@ describe('getSimilarityGraph', () => {
     expect(result.edges[0].groupId).toBe('grp-1');
   });
 
-  it('filters by reviewed status', () => {
+  it('filters by status', () => {
     insertTestData(db);
-    markGroupReviewed(db, 'grp-1');
+    setGroupStatus(db, 'grp-1', 'ignored');
 
-    const result = getSimilarityGraph(db, { reviewed: true, maxGroups: 100 });
+    const result = getSimilarityGraph(db, { status: ['ignored'], maxGroups: 100 });
 
     expect(result.totalGroupsMatched).toBe(1);
     expect(result.groupsIncluded).toBe(1);

@@ -166,7 +166,7 @@ describe('PaperlessDedupeClient', () => {
 
       const result = await client.listDuplicates({
         minConfidence: 0.8,
-        reviewed: false,
+        status: 'pending',
         sortBy: 'confidence',
       });
       expect(result.data).toEqual(groups);
@@ -231,28 +231,18 @@ describe('PaperlessDedupeClient', () => {
     });
   });
 
-  describe('markReviewed()', () => {
-    it('sends POST to mark reviewed', async () => {
-      const fetch = mockFetch({ id: 'g-1', reviewed: true });
+  describe('setGroupStatus()', () => {
+    it('sends PUT to set status', async () => {
+      const fetch = mockFetch({ groupId: 'g-1', status: 'false_positive' });
       const client = createClient(fetch);
 
-      await client.markReviewed('g-1');
+      await client.setGroupStatus('g-1', 'false_positive');
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/v1/duplicates/g-1/reviewed',
-        expect.objectContaining({ method: 'POST' }),
-      );
-    });
-  });
-
-  describe('markResolved()', () => {
-    it('sends POST to mark resolved', async () => {
-      const fetch = mockFetch({ id: 'g-1', resolved: true });
-      const client = createClient(fetch);
-
-      await client.markResolved('g-1');
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/v1/duplicates/g-1/resolved',
-        expect.objectContaining({ method: 'POST' }),
+        'http://localhost:3000/api/v1/duplicates/g-1/status',
+        expect.objectContaining({
+          method: 'PUT',
+          body: '{"status":"false_positive"}',
+        }),
       );
     });
   });
@@ -272,29 +262,19 @@ describe('PaperlessDedupeClient', () => {
 
   // ── Batch Operations ───────────────────────────────────────────────
 
-  describe('batchReview()', () => {
-    it('sends POST with groupIds', async () => {
+  describe('batchSetStatus()', () => {
+    it('sends POST with groupIds and status', async () => {
       const fetch = mockFetch({ processed: 3 });
       const client = createClient(fetch);
 
-      const result = await client.batchReview(['g-1', 'g-2', 'g-3']);
+      const result = await client.batchSetStatus(['g-1', 'g-2', 'g-3'], 'false_positive');
       expect(result).toEqual({ processed: 3 });
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/v1/batch/review',
+        'http://localhost:3000/api/v1/batch/status',
         expect.objectContaining({
-          body: '{"groupIds":["g-1","g-2","g-3"]}',
+          body: '{"groupIds":["g-1","g-2","g-3"],"status":"false_positive"}',
         }),
       );
-    });
-  });
-
-  describe('batchResolve()', () => {
-    it('sends POST with groupIds', async () => {
-      const fetch = mockFetch({ processed: 2 });
-      const client = createClient(fetch);
-
-      const result = await client.batchResolve(['g-1', 'g-2']);
-      expect(result).toEqual({ processed: 2 });
     });
   });
 
@@ -318,7 +298,7 @@ describe('PaperlessDedupeClient', () => {
 
   describe('getDashboard()', () => {
     it('returns dashboard data', async () => {
-      const dashboard = { totalDocuments: 500, unresolvedGroups: 10 };
+      const dashboard = { totalDocuments: 500, pendingGroups: 10 };
       const fetch = mockFetch(dashboard);
       const client = createClient(fetch);
 

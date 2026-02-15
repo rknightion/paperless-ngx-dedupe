@@ -103,7 +103,7 @@ describe('formatDuplicatesCsv', () => {
     expect(lines[0]).toBe(
       '\uFEFF' +
         'group_id,confidence_score,jaccard_similarity,fuzzy_text_ratio,' +
-        'metadata_similarity,filename_similarity,group_reviewed,group_resolved,' +
+        'metadata_similarity,filename_similarity,group_status,' +
         'is_primary,paperless_id,title,correspondent,document_type,tags,' +
         'created_date,original_file_size,word_count,group_created_at',
     );
@@ -120,8 +120,7 @@ describe('formatDuplicatesCsv', () => {
       fuzzyTextRatio: 0.88,
       metadataSimilarity: 0.85,
       filenameSimilarity: 0.7,
-      groupReviewed: false,
-      groupResolved: false,
+      groupStatus: 'pending',
       isPrimary: true,
       paperlessId: 1,
       title: 'Invoice A',
@@ -140,7 +139,8 @@ describe('formatDuplicatesCsv', () => {
 
     const dataLine = lines[1];
     expect(dataLine).toBe(
-      'grp-1,0.95,0.9,0.88,0.85,0.7,false,false,true,1,Invoice A,Alice,Invoice,' +
+      'grp-1,0.95,0.9,0.88,0.85,0.7,pending,' +
+        'true,1,Invoice A,Alice,Invoice,' +
         'finance|tax,2024-01-01,1000,3,2024-01-10T00:00:00Z',
     );
   });
@@ -153,8 +153,7 @@ describe('formatDuplicatesCsv', () => {
       fuzzyTextRatio: null,
       metadataSimilarity: null,
       filenameSimilarity: null,
-      groupReviewed: false,
-      groupResolved: false,
+      groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
       title: 'Invoice, with comma',
@@ -179,8 +178,7 @@ describe('formatDuplicatesCsv', () => {
       fuzzyTextRatio: null,
       metadataSimilarity: null,
       filenameSimilarity: null,
-      groupReviewed: false,
-      groupResolved: false,
+      groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
       title: 'Invoice "Special"',
@@ -205,8 +203,7 @@ describe('formatDuplicatesCsv', () => {
       fuzzyTextRatio: null,
       metadataSimilarity: null,
       filenameSimilarity: null,
-      groupReviewed: false,
-      groupResolved: false,
+      groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
       title: 'Test',
@@ -231,8 +228,7 @@ describe('formatDuplicatesCsv', () => {
       fuzzyTextRatio: null,
       metadataSimilarity: null,
       filenameSimilarity: null,
-      groupReviewed: false,
-      groupResolved: false,
+      groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
       title: 'Test',
@@ -254,7 +250,7 @@ describe('formatDuplicatesCsv', () => {
     expect(dataLine).toContain('Test,,');
   });
 
-  it('renders booleans as true/false', () => {
+  it('renders booleans as true/false and status as string', () => {
     const row: DuplicateExportRow = {
       groupId: 'grp-1',
       confidenceScore: 0.5,
@@ -262,8 +258,7 @@ describe('formatDuplicatesCsv', () => {
       fuzzyTextRatio: null,
       metadataSimilarity: null,
       filenameSimilarity: null,
-      groupReviewed: true,
-      groupResolved: true,
+      groupStatus: 'deleted',
       isPrimary: true,
       paperlessId: 1,
       title: 'Test',
@@ -279,7 +274,7 @@ describe('formatDuplicatesCsv', () => {
     const csv = formatDuplicatesCsv([row]);
     const lines = csv.split('\r\n');
     const dataLine = lines[1];
-    expect(dataLine).toContain('true,true,true');
+    expect(dataLine).toContain('deleted,true');
   });
 
   it('uses CRLF line endings', () => {

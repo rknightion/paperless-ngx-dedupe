@@ -53,8 +53,8 @@ describe('buildQueryString', () => {
   });
 
   it('handles boolean values', () => {
-    const result = buildQueryString({ reviewed: true, resolved: false });
-    expect(result).toBe('?reviewed=true&resolved=false');
+    const result = buildQueryString({ autoAnalyze: true, confirm: false });
+    expect(result).toBe('?autoAnalyze=true&confirm=false');
   });
 });
 
