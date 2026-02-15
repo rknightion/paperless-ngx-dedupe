@@ -8,9 +8,6 @@ image: assets/social-card.png
 
 **Intelligent document deduplication for Paperless-NGX**
 
-!!! warning "Early Development"
-    Paperless-Dedupe is in early development and is **not production-ready**. Features are incomplete, APIs will change, and data loss may occur. Do not use this against a Paperless-NGX instance you care about without backups.
-
 ## Features
 
 ### :material-magnify-scan: Intelligent Detection
