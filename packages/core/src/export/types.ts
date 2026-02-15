@@ -7,8 +7,7 @@ export interface DuplicateExportRow {
   fuzzyTextRatio: number | null;
   metadataSimilarity: number | null;
   filenameSimilarity: number | null;
-  groupReviewed: boolean;
-  groupResolved: boolean;
+  groupStatus: string;
   isPrimary: boolean;
   paperlessId: number;
   title: string;
