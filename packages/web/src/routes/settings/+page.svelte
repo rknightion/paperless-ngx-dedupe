@@ -573,7 +573,7 @@
         </dd>
       </div>
       <div>
-        <dt class="text-muted text-sm">Unresolved Groups</dt>
+        <dt class="text-muted text-sm">Pending Groups</dt>
         <dd class="text-ink mt-0.5 text-sm font-medium">
           {system.duplicateGroups.toLocaleString()}
         </dd>
