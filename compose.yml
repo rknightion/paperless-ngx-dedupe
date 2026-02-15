@@ -4,7 +4,7 @@ services:
     ports:
       - '${PORT:-3000}:3000'
     volumes:
-      - app-data:/app/data
+      - ./docker-data:/app/data
     env_file:
       - .env
     restart: unless-stopped
@@ -15,5 +15,3 @@ services:
     security_opt:
       - no-new-privileges:true
 
-volumes:
-  app-data:
