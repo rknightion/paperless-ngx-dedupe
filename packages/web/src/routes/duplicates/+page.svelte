@@ -8,6 +8,7 @@
     RichTooltip,
     ConfidenceTooltipContent,
     GroupPreviewModal,
+    RecycleBinPrompt,
   } from '$lib/components';
 
   let { data } = $props();
@@ -16,6 +17,7 @@
   let isSubmitting = $state(false);
   let actionFeedback: { type: 'success' | 'error'; message: string } | null = $state(null);
   let showDeleteConfirm = $state(false);
+  let showRecycleBinPrompt = $state(false);
   let previewGroupId: string | null = $state(null);
   let previewGroupTitle = $state('');
   let previewConfidenceScore = $state(0);
@@ -146,9 +148,10 @@
   }
 
   // Batch actions
-  async function batchAction(url: string, body: Record<string, unknown>) {
+  async function batchAction(url: string, body: Record<string, unknown>): Promise<boolean> {
     isSubmitting = true;
     actionFeedback = null;
+    let success = false;
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -160,6 +163,7 @@
         actionFeedback = { type: 'success', message: json.message ?? 'Action completed' };
         selectedIds = new Set();
         await invalidateAll();
+        success = true;
       } else {
         actionFeedback = { type: 'error', message: json.error?.message ?? 'Action failed' };
       }
@@ -167,6 +171,7 @@
       actionFeedback = { type: 'error', message: 'Request failed' };
     }
     isSubmitting = false;
+    return success;
   }
 
   function markReviewed() {
@@ -177,9 +182,15 @@
     batchAction('/api/v1/batch/resolve', { groupIds: [...selectedIds] });
   }
 
-  function deleteNonPrimary() {
+  async function deleteNonPrimary() {
     showDeleteConfirm = false;
-    batchAction('/api/v1/batch/delete-non-primary', { groupIds: [...selectedIds], confirm: true });
+    const success = await batchAction('/api/v1/batch/delete-non-primary', {
+      groupIds: [...selectedIds],
+      confirm: true,
+    });
+    if (success) {
+      showRecycleBinPrompt = true;
+    }
   }
 
   // Pagination
@@ -291,6 +302,11 @@
       </p>
     </div>
   </details>
+
+  <p class="text-muted text-sm">
+    When documents are deleted through this app, Paperless-NGX moves them to its recycle bin rather
+    than permanently deleting them.
+  </p>
 
   <!-- Action Feedback -->
   {#if actionFeedback}
@@ -590,12 +606,26 @@
 <ConfirmDialog
   open={showDeleteConfirm}
   title="Delete Non-Primary Documents"
-  message="This will permanently delete non-primary documents from the selected groups in Paperless-NGX. This action cannot be undone."
+  message="This will delete non-primary documents from the selected groups in Paperless-NGX. Documents are moved to the Paperless-NGX recycle bin and can be restored from there."
   confirmLabel="Delete"
   variant="ember"
   onconfirm={deleteNonPrimary}
   oncancel={() => (showDeleteConfirm = false)}
 />
+
+<!-- Recycle Bin Prompt Dialog -->
+{#if showRecycleBinPrompt}
+  <dialog
+    open
+    onclick={(e) => {
+      if (e.target === e.currentTarget) showRecycleBinPrompt = false;
+    }}
+    class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
+  >
+    <h2 class="text-ink text-lg font-semibold">Delete Complete</h2>
+    <RecycleBinPrompt onclose={() => (showRecycleBinPrompt = false)} />
+  </dialog>
+{/if}
 
 <!-- Group Preview Modal -->
 {#if previewGroupId}
