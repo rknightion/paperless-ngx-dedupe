@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:22-slim AS deps
+FROM node:24-slim AS deps
 
 WORKDIR /app
 
@@ -35,7 +35,7 @@ RUN pnpm dlx esbuild packages/cli/src/bin.ts \
   --banner:js='import{createRequire as _cr}from"module";const require=_cr(import.meta.url);'
 
 # Stage 3: Production runtime
-FROM node:22-slim AS production
+FROM node:24-slim AS production
 
 WORKDIR /app
 
