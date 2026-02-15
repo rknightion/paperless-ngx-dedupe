@@ -3,6 +3,7 @@ import { and, asc, avg, count, desc, eq, isNotNull, isNull, like, sql, sum } fro
 import type { AppDatabase } from '../db/client.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
+import { syncState } from '../schema/sqlite/app.js';
 import { parseTagsJson } from './helpers.js';
 import type {
   DocumentFilters,
@@ -142,6 +143,38 @@ export function getDocumentContent(
     .get();
 
   return row ?? null;
+}
+
+export function incrementUsageStats(
+  db: AppDatabase,
+  increments: {
+    groupsResolved?: number;
+    documentsDeleted?: number;
+    storageBytesReclaimed?: number;
+    groupsReviewed?: number;
+  },
+): void {
+  const sets: Record<string, unknown> = {};
+
+  if (increments.groupsResolved) {
+    sets.cumulativeGroupsResolved = sql`coalesce(${syncState.cumulativeGroupsResolved}, 0) + ${increments.groupsResolved}`;
+  }
+  if (increments.documentsDeleted) {
+    sets.cumulativeDocumentsDeleted = sql`coalesce(${syncState.cumulativeDocumentsDeleted}, 0) + ${increments.documentsDeleted}`;
+  }
+  if (increments.storageBytesReclaimed) {
+    sets.cumulativeStorageBytesReclaimed = sql`coalesce(${syncState.cumulativeStorageBytesReclaimed}, 0) + ${increments.storageBytesReclaimed}`;
+  }
+  if (increments.groupsReviewed) {
+    sets.cumulativeGroupsReviewed = sql`coalesce(${syncState.cumulativeGroupsReviewed}, 0) + ${increments.groupsReviewed}`;
+  }
+
+  if (Object.keys(sets).length === 0) return;
+
+  db.insert(syncState)
+    .values({ id: 'singleton' })
+    .onConflictDoUpdate({ target: syncState.id, set: sets })
+    .run();
 }
 
 export function getDocumentStats(db: AppDatabase): DocumentStats {
