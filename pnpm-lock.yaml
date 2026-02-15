@@ -54,8 +54,8 @@ importers:
         specifier: ^12.0.0
         version: 12.6.2
       commander:
-        specifier: ^13.0.0
-        version: 13.1.0
+        specifier: ^14.0.0
+        version: 14.0.3
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1
@@ -1245,9 +1245,9 @@ packages:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
-  commander@13.1.0:
-    resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
-    engines: {node: '>=18'}
+  commander@14.0.3:
+    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
+    engines: {node: '>=20'}
 
   commondir@1.0.1:
     resolution: {integrity: sha512-W9pAhw0ja1Edb5GVdIF1mjZw/ASI0AlShXM83UUGe2DVr5TdAPEA1OA8m/g8zWp9x6On7gqufY+FatDbC3MDQg==}
@@ -3140,7 +3140,7 @@ snapshots:
 
   clsx@2.1.1: {}
 
-  commander@13.1.0: {}
+  commander@14.0.3: {}
 
   commondir@1.0.1: {}
 
