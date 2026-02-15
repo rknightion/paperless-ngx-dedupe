@@ -11,9 +11,6 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
 
   // Dynamic imports to avoid loading heavy SDK packages when telemetry is disabled
   const { NodeSDK } = await import('@opentelemetry/sdk-node');
-  const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-proto');
-  const { OTLPMetricExporter } = await import('@opentelemetry/exporter-metrics-otlp-proto');
-  const { PeriodicExportingMetricReader } = await import('@opentelemetry/sdk-metrics');
   const { resourceFromAttributes } = await import('@opentelemetry/resources');
   const { ATTR_SERVICE_NAME } = await import('@opentelemetry/semantic-conventions');
   const { UndiciInstrumentation } = await import('@opentelemetry/instrumentation-undici');
@@ -24,13 +21,7 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
       'worker.name': workerName,
       'worker.type': 'worker_thread',
     }),
-    traceExporter: new OTLPTraceExporter(),
-    metricReaders: [
-      new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter(),
-        exportIntervalMillis: 60_000,
-      }),
-    ],
+    // No explicit exporters — SDK reads OTEL_TRACES_EXPORTER, OTEL_METRICS_EXPORTER, etc.
     instrumentations: [new UndiciInstrumentation()],
   });
 

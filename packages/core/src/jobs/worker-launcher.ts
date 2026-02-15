@@ -30,6 +30,7 @@ export function launchWorker(options: LaunchWorkerOptions): WorkerHandle {
   // In production, tsc compiles to .js in dist/ and workers load normally.
   const worker = new Worker(workerScriptPath, {
     workerData,
+    execArgv: [], // Prevent inheriting --require ./telemetry.cjs; workers use initWorkerTelemetry()
   });
 
   const done = new Promise<void>((resolve, reject) => {
