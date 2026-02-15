@@ -62,7 +62,7 @@ export interface PaperlessDocumentType {
 
 export interface PaperlessStatistics {
   documentsTotal: number;
-  documentsInbox: number;
+  documentsInbox: number | null;
   inboxTag: number | null;
   documentFileTypeCount: Array<{ mimeType: string; count: number }>;
   characterCount: number;

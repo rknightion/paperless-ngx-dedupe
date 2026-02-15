@@ -71,8 +71,7 @@ const sdk = new NodeSDK({
     [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
   }),
   traceExporter,
-  metricReader: metricReaders.length === 1 ? metricReaders[0] : undefined,
-  metricReaders: metricReaders.length > 1 ? metricReaders : undefined,
+  metricReaders,
   instrumentations,
 });
 
