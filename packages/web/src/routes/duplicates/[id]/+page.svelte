@@ -24,9 +24,7 @@
   );
   let selectedSecondary = $derived(secondaryMembers[selectedSecondaryIndex] || secondaryMembers[0]);
 
-  let groupStatus = $derived(
-    data.group.resolved ? 'resolved' : data.group.reviewed ? 'reviewed' : 'pending',
-  );
+  let groupStatus = $derived(data.group.status);
 
   async function setPrimary(documentId: string) {
     isSettingPrimary = true;
@@ -72,8 +70,7 @@
   <!-- Action bar -->
   <GroupActionBar
     groupId={data.group.id}
-    reviewed={data.group.reviewed}
-    resolved={data.group.resolved}
+    status={data.group.status}
     memberCount={data.group.members.length}
     onaction={() => invalidateAll()}
   />

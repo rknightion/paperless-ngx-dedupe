@@ -5,13 +5,12 @@
 
   interface Props {
     groupId: string;
-    reviewed: boolean;
-    resolved: boolean;
+    status: string;
     memberCount: number;
     onaction?: () => void;
   }
 
-  let { groupId, reviewed, resolved, memberCount, onaction }: Props = $props();
+  let { groupId, status, memberCount, onaction }: Props = $props();
 
   let isUpdating = $state(false);
   let error = $state<string | null>(null);
@@ -19,26 +18,16 @@
   let deleteProgress = $state<{ progress: number; message: string } | null>(null);
   let showRecycleBinPrompt = $state(false);
 
-  async function toggleReview() {
+  async function setStatus(newStatus: string) {
     isUpdating = true;
     error = null;
     try {
-      const res = await fetch(`/api/v1/duplicates/${groupId}/review`, { method: 'PUT' });
-      if (!res.ok) throw new Error('Failed to update review status');
-      onaction?.();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Unknown error';
-    } finally {
-      isUpdating = false;
-    }
-  }
-
-  async function markResolved() {
-    isUpdating = true;
-    error = null;
-    try {
-      const res = await fetch(`/api/v1/duplicates/${groupId}/resolve`, { method: 'PUT' });
-      if (!res.ok) throw new Error('Failed to resolve group');
+      const res = await fetch(`/api/v1/duplicates/${groupId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
       onaction?.();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Unknown error';
@@ -90,33 +79,41 @@
 </script>
 
 <div class="panel flex flex-wrap items-center gap-3">
-  <button
-    onclick={toggleReview}
-    disabled={isUpdating}
-    class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
-  >
-    {reviewed ? 'Unmark Reviewed' : 'Mark Reviewed'}
-  </button>
-
-  {#if !resolved}
+  {#if status === 'pending'}
     <button
-      onclick={markResolved}
+      onclick={() => setStatus('false_positive')}
+      disabled={isUpdating}
+      class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
+    >
+      Not a Duplicate
+    </button>
+
+    <button
+      onclick={() => setStatus('ignored')}
       disabled={isUpdating}
       class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
     >
-      Resolve Group
+      Keep All
+    </button>
+
+    <button
+      onclick={() => {
+        showDeleteConfirm = true;
+      }}
+      disabled={isUpdating || memberCount < 2}
+      class="bg-ember rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+    >
+      Delete Duplicates
+    </button>
+  {:else}
+    <button
+      onclick={() => setStatus('pending')}
+      disabled={isUpdating}
+      class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
+    >
+      Reopen
     </button>
   {/if}
-
-  <button
-    onclick={() => {
-      showDeleteConfirm = true;
-    }}
-    disabled={isUpdating || memberCount < 2}
-    class="bg-ember rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-  >
-    Delete Non-Primary
-  </button>
 
   {#if deleteProgress}
     <div class="text-muted flex items-center gap-2 text-sm">
