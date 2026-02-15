@@ -390,6 +390,15 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     archiveFileSize: number;
   }[];
 
+  // 15. Cumulative usage stats
+  const syncRow = db.select().from(syncState).where(eq(syncState.id, 'singleton')).get();
+  const usageStats = {
+    cumulativeGroupsResolved: syncRow?.cumulativeGroupsResolved ?? 0,
+    cumulativeDocumentsDeleted: syncRow?.cumulativeDocumentsDeleted ?? 0,
+    cumulativeStorageBytesReclaimed: syncRow?.cumulativeStorageBytesReclaimed ?? 0,
+    cumulativeGroupsReviewed: syncRow?.cumulativeGroupsReviewed ?? 0,
+  };
+
   return {
     totalDocuments,
     ocrCoverage: {
@@ -415,5 +424,6 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
       percentage: dupPercentage,
     },
     largestDocuments,
+    usageStats,
   };
 }

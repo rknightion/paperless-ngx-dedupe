@@ -179,6 +179,12 @@ export interface DocumentStats {
     correspondent: string | null;
     archiveFileSize: number;
   }[];
+  usageStats: {
+    cumulativeGroupsResolved: number;
+    cumulativeDocumentsDeleted: number;
+    cumulativeStorageBytesReclaimed: number;
+    cumulativeGroupsReviewed: number;
+  };
 }
 
 // ── Similarity Graph ────────────────────────────────────────────────────
