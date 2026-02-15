@@ -231,8 +231,8 @@
     </summary>
     <div class="text-muted mt-3 space-y-3 text-sm leading-relaxed">
       <p>
-        Paperless NGX Dedupe identifies potential duplicates using a multi-stage pipeline that compares
-        documents across four similarity dimensions:
+        Paperless NGX Dedupe identifies potential duplicates using a multi-stage pipeline that
+        compares documents across four similarity dimensions:
       </p>
       <dl
         class="border-soft grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 rounded-lg border p-3 text-xs"
