@@ -24,13 +24,9 @@ export interface PaginatedResult<T> {
 export const duplicateGroupFiltersSchema = z.object({
   minConfidence: z.coerce.number().min(0).max(1).optional(),
   maxConfidence: z.coerce.number().min(0).max(1).optional(),
-  reviewed: z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .optional(),
-  resolved: z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
+  status: z
+    .string()
+    .transform((v) => v.split(',').filter((s) => GROUP_STATUS_VALUES.includes(s as GroupStatus)))
     .optional(),
   sortBy: z.enum(['confidence', 'created_at', 'member_count']).default('confidence'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
@@ -80,8 +76,7 @@ export interface DocumentDetail extends DocumentSummary {
     groupId: string;
     confidenceScore: number;
     isPrimary: boolean;
-    reviewed: boolean;
-    resolved: boolean;
+    status: string;
   }[];
 }
 
@@ -92,8 +87,7 @@ export interface DuplicateGroupSummary {
   fuzzyTextRatio: number | null;
   metadataSimilarity: number | null;
   filenameSimilarity: number | null;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
   memberCount: number;
   primaryDocumentTitle: string | null;
   createdAt: string;
@@ -126,8 +120,7 @@ export interface DuplicateGroupDetail {
   metadataSimilarity: number | null;
   filenameSimilarity: number | null;
   algorithmVersion: string;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
   createdAt: string;
   updatedAt: string;
   members: DuplicateGroupMember[];
@@ -142,16 +135,17 @@ export interface ConfidenceBucket {
 
 export interface DuplicateStats {
   totalGroups: number;
-  reviewedGroups: number;
-  resolvedGroups: number;
-  unresolvedGroups: number;
+  pendingGroups: number;
+  falsePositiveGroups: number;
+  ignoredGroups: number;
+  deletedGroups: number;
   confidenceDistribution: ConfidenceBucket[];
   topCorrespondents: { correspondent: string; groupCount: number }[];
 }
 
 export interface DashboardData {
   totalDocuments: number;
-  unresolvedGroups: number;
+  pendingGroups: number;
   storageSavingsBytes: number;
   pendingAnalysis: number;
   lastSyncAt: string | null;
@@ -183,10 +177,9 @@ export interface DocumentStats {
     archiveFileSize: number;
   }[];
   usageStats: {
-    cumulativeGroupsResolved: number;
+    cumulativeGroupsActioned: number;
     cumulativeDocumentsDeleted: number;
     cumulativeStorageBytesReclaimed: number;
-    cumulativeGroupsReviewed: number;
   };
 }
 
@@ -195,13 +188,9 @@ export interface DocumentStats {
 export const similarityGraphFiltersSchema = z.object({
   minConfidence: z.coerce.number().min(0).max(1).optional(),
   maxConfidence: z.coerce.number().min(0).max(1).optional(),
-  reviewed: z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .optional(),
-  resolved: z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
+  status: z
+    .string()
+    .transform((v) => v.split(',').filter((s) => GROUP_STATUS_VALUES.includes(s as GroupStatus)))
     .optional(),
   maxGroups: z.coerce.number().int().min(1).max(500).default(100),
 });
@@ -222,8 +211,7 @@ export interface GraphEdge {
   target: string;
   groupId: string;
   confidenceScore: number;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
 }
 
 export interface SimilarityGraphData {
