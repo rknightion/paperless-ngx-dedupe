@@ -25,5 +25,7 @@ playwright-report/
 coverage/
 blob-report/
 data/e2e-test.db*
-
+docker-data/
 .claude/
+
+.env2
