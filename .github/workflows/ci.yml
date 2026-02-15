@@ -56,8 +56,8 @@ jobs:
 
       - name: Run unit tests with coverage
         run: |
-          pnpm --filter @paperless-dedupe/core test -- --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
-          pnpm --filter @paperless-dedupe/sdk test -- --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
+          pnpm --filter @paperless-dedupe/core exec vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
+          pnpm --filter @paperless-dedupe/sdk exec vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
 
       - name: Upload test results
         if: ${{ !cancelled() }}
