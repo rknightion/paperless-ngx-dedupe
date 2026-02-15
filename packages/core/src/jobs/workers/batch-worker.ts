@@ -71,7 +71,12 @@ runWorkerTask(async (ctx, onProgress) => {
     }
 
     if (groupSuccess) {
-      ctx.db.delete(duplicateGroup).where(eq(duplicateGroup.id, groupId)).run();
+      // Mark group as deleted instead of removing it (preserves history)
+      ctx.db
+        .update(duplicateGroup)
+        .set({ status: 'deleted', updatedAt: new Date().toISOString() })
+        .where(eq(duplicateGroup.id, groupId))
+        .run();
       deletedGroups++;
     }
   }
