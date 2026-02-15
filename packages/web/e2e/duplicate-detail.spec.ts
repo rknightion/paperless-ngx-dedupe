@@ -40,13 +40,14 @@ test.describe('Duplicate Detail Page', () => {
     await expect(page.getByText(/Algorithm v/)).toBeVisible();
   });
 
-  test('action bar renders with review/resolve buttons', async ({ page }) => {
+  test('action bar renders with status action buttons', async ({ page }) => {
     const groupId = seed.groupIds[0];
     await page.goto(`/duplicates/${groupId}`);
 
-    // GroupActionBar should render action buttons
-    // The first group is unreviewed/unresolved, so both buttons should be available
-    await expect(page.getByRole('button', { name: /Review/i })).toBeVisible();
+    // GroupActionBar should render action buttons for pending groups
+    await expect(page.getByRole('button', { name: 'Not a Duplicate' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Keep All' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete Duplicates' })).toBeVisible();
   });
 
   test('members table lists all members', async ({ page }) => {
@@ -63,8 +64,8 @@ test.describe('Duplicate Detail Page', () => {
     await expect(membersTable.getByText('Role')).toBeVisible();
     await expect(membersTable.getByText('File Size')).toBeVisible();
 
-    // Should show primary badge for primary member
-    await expect(page.getByText('Primary').first()).toBeVisible();
+    // Should show primary badge for primary member (scoped to table to avoid matching ConfirmDialog)
+    await expect(page.locator('table').getByText('Primary').first()).toBeVisible();
   });
 
   test('set primary button visible for non-primary members', async ({ page }) => {

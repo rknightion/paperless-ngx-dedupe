@@ -20,7 +20,7 @@ test.describe('Dashboard', () => {
 
     // Stat cards should display
     await expect(page.getByText('Total Documents')).toBeVisible();
-    await expect(page.getByText('Unresolved Groups')).toBeVisible();
+    await expect(page.getByText('Pending Groups')).toBeVisible();
     await expect(page.getByText('Storage Savings')).toBeVisible();
     await expect(page.getByText('Pending Analysis')).toBeVisible();
   });
