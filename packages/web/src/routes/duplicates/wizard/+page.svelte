@@ -1,6 +1,13 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { ConfidenceBadge, EChart, ProgressBar } from '$lib/components';
+  import {
+    ConfidenceBadge,
+    EChart,
+    ProgressBar,
+    RichTooltip,
+    ConfidenceTooltipContent,
+    RecycleBinPrompt,
+  } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import type { EChartsOption } from 'echarts';
 
@@ -19,6 +26,10 @@
       primaryDocumentTitle: string | null;
       confidenceScore: number;
       memberCount: number;
+      jaccardSimilarity: number | null;
+      fuzzyTextRatio: number | null;
+      metadataSimilarity: number | null;
+      filenameSimilarity: number | null;
     }>
   >([]);
   let groupsTotal = $state(0);
@@ -38,6 +49,7 @@
   let executionResult = $state<{ success: boolean; processed: number; errors: string[] } | null>(
     null,
   );
+  let showRecycleBinSection = $state(false);
 
   // ── Derived values ────────────────────────────────────────────────────
   let selectedCount = $derived(groupsTotal - excludedGroupIds.size);
@@ -209,6 +221,7 @@
               },
               onComplete: () => {
                 executionResult = { success: true, processed: allGroupIds.length, errors: [] };
+                showRecycleBinSection = true;
                 step = 6;
               },
               onError: () => {
@@ -271,6 +284,7 @@
     executionProgress = 0;
     executionMessage = '';
     executionResult = null;
+    showRecycleBinSection = false;
   }
 </script>
 
@@ -392,7 +406,17 @@
               <span class="text-ink flex-1 truncate text-sm">
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </span>
-              <ConfidenceBadge score={group.confidenceScore} />
+              <RichTooltip position="left">
+                <ConfidenceBadge score={group.confidenceScore} />
+                {#snippet content()}
+                  <ConfidenceTooltipContent
+                    jaccardSimilarity={group.jaccardSimilarity}
+                    fuzzyTextRatio={group.fuzzyTextRatio}
+                    metadataSimilarity={group.metadataSimilarity}
+                    filenameSimilarity={group.filenameSimilarity}
+                  />
+                {/snippet}
+              </RichTooltip>
               <span class="text-muted text-xs"
                 ><span class="hidden sm:inline">{group.memberCount} </span>docs</span
               >
@@ -504,7 +528,8 @@
             <div>
               <div class="text-ink font-medium">Delete Non-Primary Documents</div>
               <div class="text-ember text-sm">
-                Permanently delete non-primary documents from Paperless-NGX. This cannot be undone.
+                Delete non-primary documents from Paperless-NGX. Documents are moved to the recycle
+                bin.
               </div>
             </div>
           </div>
@@ -556,7 +581,8 @@
 
         {#if selectedAction === 'delete'}
           <div class="border-ember bg-ember-light text-ember rounded-lg border-2 px-4 py-3 text-sm">
-            Deleted documents cannot be recovered from Paperless-NGX.
+            Deleted documents will be moved to the Paperless-NGX recycle bin. You can empty the
+            recycle bin after the operation completes.
           </div>
         {/if}
 
@@ -576,7 +602,7 @@
                 class="mt-0.5 rounded"
               />
               <span class="text-ink text-sm"
-                >I understand deleted documents cannot be recovered</span
+                >I understand deleted documents will be moved to the Paperless-NGX recycle bin</span
               >
             </label>
           {/if}
@@ -620,6 +646,10 @@
         >
           <span class="font-semibold">{executionResult.processed}</span> groups processed successfully.
         </div>
+
+        {#if showRecycleBinSection && selectedAction === 'delete'}
+          <RecycleBinPrompt />
+        {/if}
       {:else}
         <h2 class="text-ember text-xl font-semibold">Operation Failed</h2>
 
