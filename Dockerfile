@@ -54,6 +54,9 @@ COPY --from=build /app/packages/core/dist ./core
 # Copy bundled CLI (uses node_modules for native deps like better-sqlite3)
 COPY --from=build /app/cli-bundle/paperless-dedupe.mjs ./cli/paperless-dedupe.mjs
 
+# Copy OTEL preload script (loaded via --require when OTEL_ENABLED=true)
+COPY --from=build /app/packages/web/telemetry.cjs ./telemetry.cjs
+
 # Create non-root user and data directory
 RUN addgroup --system --gid 1001 appgroup && \
     adduser --system --uid 1001 --ingroup appgroup appuser && \
@@ -74,4 +77,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://localhost:3000/api/v1/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
 
 ENTRYPOINT ["tini", "--"]
-CMD ["node", "build"]
+CMD ["node", "--require", "./telemetry.cjs", "build"]

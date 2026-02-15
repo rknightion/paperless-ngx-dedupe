@@ -2,6 +2,7 @@ import { Worker } from 'node:worker_threads';
 import { createLogger } from '../logger.js';
 import { createDatabase } from '../db/client.js';
 import { failJob } from './manager.js';
+import { serializeTraceContext } from '../telemetry/worker.js';
 
 export interface LaunchWorkerOptions {
   jobId: string;
@@ -20,7 +21,8 @@ export function launchWorker(options: LaunchWorkerOptions): WorkerHandle {
   const logger = createLogger('worker-launcher');
   const { jobId, dbPath, workerScriptPath, taskData } = options;
 
-  const workerData = { jobId, dbPath, taskData };
+  const traceContext = serializeTraceContext();
+  const workerData = { jobId, dbPath, taskData, traceContext };
 
   // Worker threads run outside Vite as raw Node.js processes. In dev mode (.ts files),
   // they fail because Node.js can't resolve the .js extension imports used throughout
