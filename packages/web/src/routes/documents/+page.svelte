@@ -174,6 +174,32 @@
     />
   </div>
 
+  <!-- Deduplication Activity -->
+  {#if data.stats.usageStats.cumulativeGroupsResolved > 0 || data.stats.usageStats.cumulativeDocumentsDeleted > 0 || data.stats.usageStats.cumulativeGroupsReviewed > 0}
+    <div>
+      <h2 class="text-ink text-lg font-semibold">Deduplication Activity</h2>
+      <p class="text-muted mt-1 mb-3 text-sm">Cumulative totals across all deduplication sessions.</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Groups Resolved"
+          value={data.stats.usageStats.cumulativeGroupsResolved.toLocaleString()}
+        />
+        <StatCard
+          label="Groups Reviewed"
+          value={data.stats.usageStats.cumulativeGroupsReviewed.toLocaleString()}
+        />
+        <StatCard
+          label="Documents Deleted"
+          value={data.stats.usageStats.cumulativeDocumentsDeleted.toLocaleString()}
+        />
+        <StatCard
+          label="Storage Reclaimed"
+          value={formatBytes(data.stats.usageStats.cumulativeStorageBytesReclaimed)}
+        />
+      </div>
+    </div>
+  {/if}
+
   <!-- Documents Over Time -->
   {#if data.stats.documentsOverTime.length > 0}
     <div class="panel">
