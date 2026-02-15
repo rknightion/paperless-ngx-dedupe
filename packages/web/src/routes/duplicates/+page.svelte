@@ -382,9 +382,8 @@
           class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
         >
           Status: {currentStatus()}
-          <button
-            onclick={() => applyFilters({ status: '' })}
-            class="hover:text-accent-hover">&times;</button
+          <button onclick={() => applyFilters({ status: '' })} class="hover:text-accent-hover"
+            >&times;</button
           >
         </span>
       {/if}
