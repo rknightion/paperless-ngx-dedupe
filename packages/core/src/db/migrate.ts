@@ -50,6 +50,12 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
     )
   `);
 
+  // Pre-DDL migration: convert reviewed/resolved booleans to status enum
+  migrateGroupStatus(sqlite);
+
+  // Pre-DDL migration: consolidate cumulative usage stats columns
+  migrateUsageStats(sqlite);
+
   const { statements, snapshot } = await generateDDL();
   const currentHash = computeHash(snapshot);
 
@@ -95,4 +101,60 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   });
 
   applyStatements();
+}
+
+// ── Pre-DDL Migrations ──────────────────────────────────────────────────
+
+function tableHasColumn(sqlite: Database.Database, table: string, column: string): boolean {
+  const cols = sqlite.prepare(`PRAGMA table_info('${table}')`).all() as { name: string }[];
+  return cols.some((c) => c.name === column);
+}
+
+/**
+ * Migrate duplicate_group from reviewed/resolved booleans to single status column.
+ * Maps: resolved=1 → 'deleted', reviewed=1 → 'ignored', else → 'pending'
+ */
+function migrateGroupStatus(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'duplicate_group', 'reviewed')) return;
+  if (tableHasColumn(sqlite, 'duplicate_group', 'status')) return;
+
+  sqlite.transaction(() => {
+    sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'`);
+
+    sqlite.exec(`
+      UPDATE duplicate_group SET status = CASE
+        WHEN resolved = 1 THEN 'deleted'
+        WHEN reviewed = 1 THEN 'ignored'
+        ELSE 'pending'
+      END
+    `);
+
+    sqlite.exec(`ALTER TABLE duplicate_group DROP COLUMN reviewed`);
+    sqlite.exec(`ALTER TABLE duplicate_group DROP COLUMN resolved`);
+
+    sqlite.exec(`DROP INDEX IF EXISTS idx_dg_status`);
+    sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_dg_status ON duplicate_group(status)`);
+  })();
+}
+
+/**
+ * Consolidate cumulative_groups_resolved + cumulative_groups_reviewed into cumulative_groups_actioned.
+ */
+function migrateUsageStats(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'sync_state', 'cumulative_groups_resolved')) return;
+  if (tableHasColumn(sqlite, 'sync_state', 'cumulative_groups_actioned')) return;
+
+  sqlite.transaction(() => {
+    sqlite.exec(
+      `ALTER TABLE sync_state ADD COLUMN cumulative_groups_actioned INTEGER DEFAULT 0`,
+    );
+
+    sqlite.exec(`
+      UPDATE sync_state SET cumulative_groups_actioned =
+        COALESCE(cumulative_groups_resolved, 0) + COALESCE(cumulative_groups_reviewed, 0)
+    `);
+
+    sqlite.exec(`ALTER TABLE sync_state DROP COLUMN cumulative_groups_resolved`);
+    sqlite.exec(`ALTER TABLE sync_state DROP COLUMN cumulative_groups_reviewed`);
+  })();
 }
