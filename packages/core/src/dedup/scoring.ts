@@ -17,47 +17,8 @@ function computeFileSizeRatio(size1: number | null, size2: number | null): numbe
   return Math.min(size1, size2) / Math.max(size1, size2);
 }
 
-function computeDateProximity(date1: string | null, date2: string | null): number | null {
-  if (date1 == null || date2 == null) {
-    return null;
-  }
-  const d1 = new Date(date1).getTime();
-  const d2 = new Date(date2).getTime();
-  if (isNaN(d1) || isNaN(d2)) return null;
-
-  const diffDays = Math.abs(d1 - d2) / (1000 * 60 * 60 * 24);
-  if (diffDays <= 30) return 1.0;
-  if (diffDays >= 365) return 0.0;
-  return 1.0 - (diffDays - 30) / (365 - 30);
-}
-
-function computeTypeMatch(type1: string | null, type2: string | null): number | null {
-  if (type1 == null || type2 == null) return null;
-  return type1 === type2 ? 1.0 : 0.0;
-}
-
-function computeCorrespondentMatch(corr1: string | null, corr2: string | null): number | null {
-  if (corr1 == null || corr2 == null) return null;
-  return corr1 === corr2 ? 1.0 : 0.0;
-}
-
 function computeMetadataScore(doc1: DocumentScoringData, doc2: DocumentScoringData): number {
-  const components: number[] = [];
-
-  const sizeRatio = computeFileSizeRatio(doc1.originalFileSize, doc2.originalFileSize);
-  if (sizeRatio != null) components.push(sizeRatio);
-
-  const dateProximity = computeDateProximity(doc1.createdDate, doc2.createdDate);
-  if (dateProximity != null) components.push(dateProximity);
-
-  const typeMatch = computeTypeMatch(doc1.documentType, doc2.documentType);
-  if (typeMatch != null) components.push(typeMatch);
-
-  const corrMatch = computeCorrespondentMatch(doc1.correspondent, doc2.correspondent);
-  if (corrMatch != null) components.push(corrMatch);
-
-  if (components.length === 0) return 0;
-  return components.reduce((sum, v) => sum + v, 0) / components.length;
+  return computeFileSizeRatio(doc1.originalFileSize, doc2.originalFileSize) ?? 0;
 }
 
 export function computeSimilarityScore(
