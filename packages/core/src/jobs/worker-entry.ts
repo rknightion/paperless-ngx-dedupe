@@ -6,6 +6,7 @@ import { createLogger } from '../logger.js';
 import {
   initWorkerTelemetry,
   shutdownWorkerTelemetry,
+  flushWorkerTelemetry,
   extractTraceContext,
 } from '../telemetry/worker.js';
 import { withSpan } from '../telemetry/spans.js';
@@ -53,18 +54,27 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   logger.info({ jobId }, 'Worker task started');
 
   let lastCancelCheck = Date.now();
+  let lastFlushTime = Date.now();
+  const FLUSH_INTERVAL_MS = 30_000;
 
   const onProgress: ProgressCallback = async (progress: number, message?: string) => {
     updateJobProgress(db, jobId, progress, message);
 
-    // Check for cancellation every 2 seconds
     const now = Date.now();
+
+    // Check for cancellation every 2 seconds
     if (now - lastCancelCheck >= 2000) {
       lastCancelCheck = now;
       const currentJob = getJob(db, jobId);
       if (currentJob?.status === 'cancelled') {
         throw new CancellationError('Job was cancelled');
       }
+    }
+
+    // Periodic telemetry flush to prevent span/metric accumulation
+    if (now - lastFlushTime >= FLUSH_INTERVAL_MS) {
+      lastFlushTime = now;
+      await flushWorkerTelemetry();
     }
   };
 
