@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ConfirmDialog } from '$lib/components';
+  import { goto } from '$app/navigation';
+  import { ConfirmDialog, RecycleBinPrompt } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
 
   interface Props {
@@ -16,6 +17,7 @@
   let error = $state<string | null>(null);
   let showDeleteConfirm = $state(false);
   let deleteProgress = $state<{ progress: number; message: string } | null>(null);
+  let showRecycleBinPrompt = $state(false);
 
   async function toggleReview() {
     isUpdating = true;
@@ -68,7 +70,7 @@
           onComplete: () => {
             deleteProgress = null;
             isUpdating = false;
-            onaction?.();
+            showRecycleBinPrompt = true;
           },
           onError: () => {
             deleteProgress = null;
@@ -133,7 +135,7 @@
 <ConfirmDialog
   open={showDeleteConfirm}
   title="Delete Non-Primary Documents"
-  message="This will permanently delete all non-primary documents in this group from Paperless-NGX. This action cannot be undone."
+  message="This will delete all non-primary documents in this group from Paperless-NGX. Documents are moved to the Paperless-NGX recycle bin and can be restored from there."
   confirmLabel="Delete Documents"
   variant="ember"
   onconfirm={deleteNonPrimary}
@@ -141,3 +143,16 @@
     showDeleteConfirm = false;
   }}
 />
+
+{#if showRecycleBinPrompt}
+  <dialog
+    open
+    onclick={(e) => {
+      if (e.target === e.currentTarget) goto('/duplicates');
+    }}
+    class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
+  >
+    <h2 class="text-ink text-lg font-semibold">Delete Complete</h2>
+    <RecycleBinPrompt onclose={() => goto('/duplicates')} />
+  </dialog>
+{/if}
