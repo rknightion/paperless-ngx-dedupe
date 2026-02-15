@@ -106,7 +106,7 @@ For contributing or local development:
 git clone https://github.com/rknightion/paperless-ngx-dedupe.git
 cd paperless-ngx-dedupe
 
-# Install dependencies (requires pnpm and Node.js 22+)
+# Install dependencies (requires pnpm and Node.js 24+)
 pnpm install
 
 # Copy environment configuration

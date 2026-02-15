@@ -9,7 +9,7 @@ This guide covers setting up a local development environment, running tests, and
 
 ## Prerequisites
 
-- **Node.js** 22 or later
+- **Node.js** 24 or later
 - **pnpm** 9.15 or later
 - **Git**
 
