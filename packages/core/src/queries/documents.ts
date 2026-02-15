@@ -88,8 +88,7 @@ export function getDocument(db: AppDatabase, id: string): DocumentDetail | null 
       groupId: duplicateMember.groupId,
       confidenceScore: duplicateGroup.confidenceScore,
       isPrimary: duplicateMember.isPrimary,
-      reviewed: duplicateGroup.reviewed,
-      resolved: duplicateGroup.resolved,
+      status: duplicateGroup.status,
     })
     .from(duplicateMember)
     .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
@@ -123,8 +122,7 @@ export function getDocument(db: AppDatabase, id: string): DocumentDetail | null 
       groupId: m.groupId,
       confidenceScore: m.confidenceScore,
       isPrimary: m.isPrimary ?? false,
-      reviewed: m.reviewed ?? false,
-      resolved: m.resolved ?? false,
+      status: m.status,
     })),
   };
 }
@@ -148,25 +146,21 @@ export function getDocumentContent(
 export function incrementUsageStats(
   db: AppDatabase,
   increments: {
-    groupsResolved?: number;
+    groupsActioned?: number;
     documentsDeleted?: number;
     storageBytesReclaimed?: number;
-    groupsReviewed?: number;
   },
 ): void {
   const sets: Record<string, unknown> = {};
 
-  if (increments.groupsResolved) {
-    sets.cumulativeGroupsResolved = sql`coalesce(${syncState.cumulativeGroupsResolved}, 0) + ${increments.groupsResolved}`;
+  if (increments.groupsActioned) {
+    sets.cumulativeGroupsActioned = sql`coalesce(${syncState.cumulativeGroupsActioned}, 0) + ${increments.groupsActioned}`;
   }
   if (increments.documentsDeleted) {
     sets.cumulativeDocumentsDeleted = sql`coalesce(${syncState.cumulativeDocumentsDeleted}, 0) + ${increments.documentsDeleted}`;
   }
   if (increments.storageBytesReclaimed) {
     sets.cumulativeStorageBytesReclaimed = sql`coalesce(${syncState.cumulativeStorageBytesReclaimed}, 0) + ${increments.storageBytesReclaimed}`;
-  }
-  if (increments.groupsReviewed) {
-    sets.cumulativeGroupsReviewed = sql`coalesce(${syncState.cumulativeGroupsReviewed}, 0) + ${increments.groupsReviewed}`;
   }
 
   if (Object.keys(sets).length === 0) return;
@@ -393,10 +387,9 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
   // 15. Cumulative usage stats
   const syncRow = db.select().from(syncState).where(eq(syncState.id, 'singleton')).get();
   const usageStats = {
-    cumulativeGroupsResolved: syncRow?.cumulativeGroupsResolved ?? 0,
+    cumulativeGroupsActioned: syncRow?.cumulativeGroupsActioned ?? 0,
     cumulativeDocumentsDeleted: syncRow?.cumulativeDocumentsDeleted ?? 0,
     cumulativeStorageBytesReclaimed: syncRow?.cumulativeStorageBytesReclaimed ?? 0,
-    cumulativeGroupsReviewed: syncRow?.cumulativeGroupsReviewed ?? 0,
   };
 
   return {

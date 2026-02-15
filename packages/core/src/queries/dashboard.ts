@@ -10,20 +10,20 @@ export function getDashboard(db: AppDatabase): DashboardData {
   // Total documents
   const [{ value: totalDocuments }] = db.select({ value: count() }).from(document).all();
 
-  // Unresolved duplicate groups
-  const [{ value: unresolvedGroups }] = db
+  // Pending duplicate groups
+  const [{ value: pendingGroups }] = db
     .select({ value: count() })
     .from(duplicateGroup)
-    .where(eq(duplicateGroup.resolved, false))
+    .where(eq(duplicateGroup.status, 'pending'))
     .all();
 
-  // Storage savings: sum of archive_file_size for non-primary members of unresolved groups
+  // Storage savings: sum of archive_file_size for non-primary members of pending groups
   const [{ value: storageSavingsBytes }] = db
     .select({ value: sum(document.archiveFileSize) })
     .from(duplicateMember)
     .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
-    .where(sql`${duplicateMember.isPrimary} = 0 AND ${duplicateGroup.resolved} = 0`)
+    .where(sql`${duplicateMember.isPrimary} = 0 AND ${duplicateGroup.status} = 'pending'`)
     .all();
 
   // Pending analysis
@@ -45,7 +45,7 @@ export function getDashboard(db: AppDatabase): DashboardData {
     .from(duplicateMember)
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
     .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
-    .where(sql`${document.correspondent} IS NOT NULL AND ${duplicateGroup.resolved} = 0`)
+    .where(sql`${document.correspondent} IS NOT NULL AND ${duplicateGroup.status} = 'pending'`)
     .groupBy(document.correspondent)
     .orderBy(sql`COUNT(DISTINCT ${duplicateMember.groupId}) DESC`)
     .limit(10)
@@ -53,7 +53,7 @@ export function getDashboard(db: AppDatabase): DashboardData {
 
   return {
     totalDocuments,
-    unresolvedGroups,
+    pendingGroups,
     storageSavingsBytes: Number(storageSavingsBytes) || 0,
     pendingAnalysis,
     lastSyncAt: syncRow?.lastSyncAt ?? null,
