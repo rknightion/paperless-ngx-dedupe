@@ -8,7 +8,7 @@ import type { Logger as DrizzleLogger } from 'drizzle-orm';
 export class OtelDrizzleLogger implements DrizzleLogger {
   logQuery(query: string, _params: unknown[]): void {
     const activeSpan = trace.getActiveSpan();
-    if (!activeSpan) return;
+    if (!activeSpan || !activeSpan.isRecording()) return;
 
     const operation = query.trimStart().split(/\s/)[0]?.toUpperCase() ?? 'UNKNOWN';
 
