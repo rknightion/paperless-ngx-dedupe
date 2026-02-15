@@ -84,7 +84,7 @@ jobs:
 
       - name: Integration test report
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@b082adf0eced0765477756c2a610396589b8c637 # v2
         with:
           name: Integration Tests (${{ matrix.paperless-tag }})
           path: packages/core/test-results/integration-junit.xml
