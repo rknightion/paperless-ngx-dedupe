@@ -58,7 +58,9 @@ test.describe('Duplicates List Page', () => {
     // Check filter options exist
     await expect(statusFilter.locator('option[value="all"]')).toHaveText('All');
     await expect(statusFilter.locator('option[value="pending"]')).toHaveText('Pending');
-    await expect(statusFilter.locator('option[value="false_positive"]')).toHaveText('False Positive');
+    await expect(statusFilter.locator('option[value="false_positive"]')).toHaveText(
+      'False Positive',
+    );
     await expect(statusFilter.locator('option[value="ignored"]')).toHaveText('Ignored');
     await expect(statusFilter.locator('option[value="deleted"]')).toHaveText('Deleted');
   });

@@ -63,7 +63,7 @@ test.describe('Bulk Operations Wizard', () => {
     await page.waitForTimeout(500);
 
     // Should show the match count text
-    await expect(page.getByText(/unresolved groups match this threshold/)).toBeVisible();
+    await expect(page.getByText(/pending groups match this threshold/)).toBeVisible();
   });
 
   test('step 1: next button is disabled when no matches', async ({ page }) => {
@@ -128,8 +128,8 @@ test.describe('Bulk Operations Wizard', () => {
 
     // Step 3 should show action options
     await expect(page.getByText('Choose Action')).toBeVisible();
-    await expect(page.getByText('Mark All as Reviewed')).toBeVisible();
-    await expect(page.getByText('Resolve All')).toBeVisible();
+    await expect(page.getByText('Dismiss All')).toBeVisible();
+    await expect(page.getByText('Ignore All')).toBeVisible();
     await expect(
       page.locator('div.font-medium', { hasText: 'Delete Non-Primary Documents' }),
     ).toBeVisible();

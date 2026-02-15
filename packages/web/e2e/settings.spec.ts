@@ -123,6 +123,6 @@ test.describe('Settings Page', () => {
     await expect(page.getByText('System Information')).toBeVisible();
     await expect(page.getByText('Database Path')).toBeVisible();
     await expect(page.getByText('Total Documents')).toBeVisible();
-    await expect(page.getByText('Unresolved Groups')).toBeVisible();
+    await expect(page.getByText('Pending Groups')).toBeVisible();
   });
 });
