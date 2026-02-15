@@ -510,11 +510,7 @@ export function setPrimaryDocument(db: AppDatabase, groupId: string, documentId:
   return true;
 }
 
-export function setGroupStatus(
-  db: AppDatabase,
-  groupId: string,
-  status: GroupStatus,
-): boolean {
+export function setGroupStatus(db: AppDatabase, groupId: string, status: GroupStatus): boolean {
   const group = db
     .select({ id: duplicateGroup.id, status: duplicateGroup.status })
     .from(duplicateGroup)

@@ -145,9 +145,7 @@ function migrateUsageStats(sqlite: Database.Database): void {
   if (tableHasColumn(sqlite, 'sync_state', 'cumulative_groups_actioned')) return;
 
   sqlite.transaction(() => {
-    sqlite.exec(
-      `ALTER TABLE sync_state ADD COLUMN cumulative_groups_actioned INTEGER DEFAULT 0`,
-    );
+    sqlite.exec(`ALTER TABLE sync_state ADD COLUMN cumulative_groups_actioned INTEGER DEFAULT 0`);
 
     sqlite.exec(`
       UPDATE sync_state SET cumulative_groups_actioned =

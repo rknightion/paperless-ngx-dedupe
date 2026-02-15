@@ -129,7 +129,10 @@ export class PaperlessDedupeClient {
     return res.data;
   }
 
-  async setGroupStatus(groupId: string, status: string): Promise<{ groupId: string; status: string }> {
+  async setGroupStatus(
+    groupId: string,
+    status: string,
+  ): Promise<{ groupId: string; status: string }> {
     const res = await request<{ groupId: string; status: string }>(
       `/api/v1/duplicates/${groupId}/status`,
       this.httpOptions,
