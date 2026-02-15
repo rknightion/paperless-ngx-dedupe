@@ -3,7 +3,7 @@ import {
   getDedupConfig,
   setDedupConfig,
   recalculateConfidenceScores,
-  dedupConfigSchema,
+  dedupConfigBaseSchema,
 } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
@@ -26,7 +26,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   }
 
   // Validate partial config
-  const partialSchema = dedupConfigSchema.innerType().partial();
+  const partialSchema = dedupConfigBaseSchema.partial();
   const parseResult = partialSchema.safeParse(body);
 
   if (!parseResult.success) {

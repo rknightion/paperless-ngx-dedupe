@@ -8,7 +8,7 @@ import type { ConfigBackup } from './types.js';
 
 const configBackupSchema = z.object({
   version: z.string().refine((v) => v.startsWith('1.'), {
-    message: 'Unsupported backup version',
+    error: 'Unsupported backup version',
   }),
   exportedAt: z.string(),
   appConfig: z.record(z.string(), z.string()),

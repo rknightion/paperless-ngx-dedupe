@@ -153,7 +153,7 @@ export const connectionTestResultSchema = z
 
 export const paperlessConfigSchema = z
   .object({
-    url: z.string().url(),
+    url: z.url(),
     token: z.string().optional(),
     username: z.string().optional(),
     password: z.string().optional(),
@@ -161,7 +161,7 @@ export const paperlessConfigSchema = z
     maxRetries: z.number().optional(),
   })
   .refine((data) => data.token || (data.username && data.password), {
-    message: 'Either token or both username and password must be provided',
+    error: 'Either token or both username and password must be provided',
     path: ['token'],
   });
 
