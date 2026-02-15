@@ -23,10 +23,7 @@ export interface DocumentScoringData {
   id: string;
   title: string;
   normalizedText: string;
-  correspondent: string | null;
-  documentType: string | null;
   originalFileSize: number | null;
-  createdDate: string | null;
 }
 
 export interface DedupConfig {
@@ -114,10 +111,7 @@ export interface DocumentForScoring {
   id: string;
   title: string;
   normalizedText: string;
-  correspondent: string | null;
-  documentType: string | null;
   originalFileSize: number | null;
-  createdDate: string | null;
 }
 
 export interface ScoringOptions {
