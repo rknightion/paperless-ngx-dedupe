@@ -37,9 +37,10 @@
   let nodeMap = $derived(new Map(data.graph.nodes.map((n) => [n.id, n])));
 
   function edgeColor(e: GraphEdge): string {
-    if (e.resolved) return '#22c55e'; // green
-    if (e.reviewed) return '#f59e0b'; // amber
-    return '#6366f1'; // blue/indigo
+    if (e.status === 'deleted') return '#22c55e'; // green
+    if (e.status === 'ignored') return '#3b82f6'; // blue
+    if (e.status === 'false_positive') return '#9ca3af'; // gray
+    return '#6366f1'; // indigo (pending)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,7 +62,13 @@
           const d = params.data as { meta: GraphEdge };
           const source = nodeMap.get(d.meta.source);
           const target = nodeMap.get(d.meta.target);
-          const status = d.meta.resolved ? 'Resolved' : d.meta.reviewed ? 'Reviewed' : 'Pending';
+          const statusLabels: Record<string, string> = {
+            pending: 'Pending',
+            false_positive: 'False Positive',
+            ignored: 'Ignored',
+            deleted: 'Deleted',
+          };
+          const status = statusLabels[d.meta.status] ?? d.meta.status;
           return [
             `<strong>${(d.meta.confidenceScore * 100).toFixed(0)}% confidence</strong>`,
             `${source?.title ?? '?'} &harr; ${target?.title ?? '?'}`,
@@ -164,32 +171,11 @@
 
   function handleStatusChange(e: Event) {
     const value = (e.target as HTMLSelectElement).value;
-    if (value === 'all') {
-      applyFilters({ reviewed: '', resolved: '' });
-    } else if (value === 'pending') {
-      applyFilters({ reviewed: 'false', resolved: 'false' });
-    } else if (value === 'reviewed') {
-      // eslint-disable-next-line svelte/prefer-svelte-reactivity
-      const params = new URLSearchParams($page.url.searchParams);
-      params.set('reviewed', 'true');
-      params.delete('resolved');
-      goto(`?${params.toString()}`, { replaceState: true });
-    } else if (value === 'resolved') {
-      // eslint-disable-next-line svelte/prefer-svelte-reactivity
-      const params = new URLSearchParams($page.url.searchParams);
-      params.set('resolved', 'true');
-      params.delete('reviewed');
-      goto(`?${params.toString()}`, { replaceState: true });
-    }
+    applyFilters({ status: value === 'all' ? '' : value });
   }
 
   let currentStatus = $derived(() => {
-    const reviewed = $page.url.searchParams.get('reviewed');
-    const resolved = $page.url.searchParams.get('resolved');
-    if (resolved === 'true') return 'resolved';
-    if (reviewed === 'true') return 'reviewed';
-    if (reviewed === 'false' && resolved === 'false') return 'pending';
-    return 'all';
+    return $page.url.searchParams.get('status') ?? 'all';
   });
 </script>
 
@@ -264,8 +250,9 @@
         >
           <option value="all">All</option>
           <option value="pending">Pending</option>
-          <option value="reviewed">Reviewed</option>
-          <option value="resolved">Resolved</option>
+          <option value="false_positive">False Positive</option>
+          <option value="ignored">Ignored</option>
+          <option value="deleted">Deleted</option>
         </select>
       </div>
     </div>
@@ -333,12 +320,10 @@
               </div>
               <div>
                 <dt class="text-muted">Status</dt>
-                <dd class="text-ink">
-                  {selectedEdge.resolved
-                    ? 'Resolved'
-                    : selectedEdge.reviewed
-                      ? 'Reviewed'
-                      : 'Pending'}
+                <dd class="text-ink capitalize">
+                  {selectedEdge.status === 'false_positive'
+                    ? 'False Positive'
+                    : selectedEdge.status}
                 </dd>
               </div>
             </dl>
@@ -375,12 +360,16 @@
           <span class="text-ink">Pending</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="inline-block h-0.5 w-4 rounded" style="background: #f59e0b"></span>
-          <span class="text-ink">Reviewed</span>
+          <span class="inline-block h-0.5 w-4 rounded" style="background: #9ca3af"></span>
+          <span class="text-ink">False Positive</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="inline-block h-0.5 w-4 rounded" style="background: #3b82f6"></span>
+          <span class="text-ink">Ignored</span>
         </div>
         <div class="flex items-center gap-1.5">
           <span class="inline-block h-0.5 w-4 rounded" style="background: #22c55e"></span>
-          <span class="text-ink">Resolved</span>
+          <span class="text-ink">Deleted</span>
         </div>
       </div>
       <div class="space-y-1">
