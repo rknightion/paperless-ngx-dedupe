@@ -71,15 +71,18 @@ jobs:
           done
 
           # Phase 2: Wait for Paperless-NGX API
+          # Note: /api/ returns 302 redirect to /api/schema/view/, so accept 2xx/3xx
           echo ""
           echo "Phase 2: Waiting for Paperless-NGX API..."
           for i in $(seq 1 90); do
-            HTTP_CODE=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:8000/api/ 2>/dev/null || echo "000")
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "  Paperless-NGX is ready after ${i}s (HTTP $HTTP_CODE)"
-              echo "::endgroup::"
-              exit 0
-            fi
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/ 2>/dev/null) || true
+            case "$HTTP_CODE" in
+              2??|3??)
+                echo "  Paperless-NGX is ready after ${i}s (HTTP $HTTP_CODE)"
+                echo "::endgroup::"
+                exit 0
+                ;;
+            esac
             # Print progress every 15 seconds
             if [ $((i % 15)) -eq 0 ]; then
               echo "  Still waiting... (${i}s, last HTTP code: $HTTP_CODE)"
