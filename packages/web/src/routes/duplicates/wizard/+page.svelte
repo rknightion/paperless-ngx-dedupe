@@ -38,7 +38,7 @@
   let isLoadingGroups = $state(false);
 
   // Step 3
-  let selectedAction = $state<'review' | 'resolve' | 'delete'>('review');
+  let selectedAction = $state<'false_positive' | 'ignored' | 'delete'>('false_positive');
 
   // Step 4
   let confirmChecks = $state({ understand: false, irreversible: false });
@@ -92,7 +92,7 @@
     isLoadingCount = true;
     try {
       const res = await fetch(
-        `/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=1`,
+        `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=1`,
       );
       const json = await res.json();
       matchCount = json.meta?.total ?? 0;
@@ -106,7 +106,7 @@
     isLoadingGroups = true;
     try {
       const res = await fetch(
-        `/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=10&offset=${groupsOffset}`,
+        `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=10&offset=${groupsOffset}`,
       );
       const json = await res.json();
       groups = json.data ?? [];
@@ -181,7 +181,7 @@
     while (true) {
       try {
         const res = await fetch(
-          `/api/v1/duplicates?minConfidence=${threshold / 100}&resolved=false&limit=${limit}&offset=${offset}`,
+          `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=${limit}&offset=${offset}`,
         );
         const json = await res.json();
         const items = json.data ?? [];
@@ -242,13 +242,11 @@
         return;
       }
     } else {
-      const endpoint =
-        selectedAction === 'review' ? '/api/v1/batch/review' : '/api/v1/batch/resolve';
       try {
-        const res = await fetch(endpoint, {
+        const res = await fetch('/api/v1/batch/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ groupIds: allGroupIds }),
+          body: JSON.stringify({ groupIds: allGroupIds, status: selectedAction }),
         });
         if (res.ok) {
           const json = await res.json();
@@ -279,7 +277,7 @@
     groupsOffset = 0;
     excludedGroupIds = new Set();
     isLoadingGroups = false;
-    selectedAction = 'review';
+    selectedAction = 'false_positive';
     confirmChecks = { understand: false, irreversible: false };
     executionProgress = 0;
     executionMessage = '';
@@ -366,7 +364,7 @@
           {#if isLoadingCount}
             Loading matching groups...
           {:else if matchCount !== null}
-            <span class="text-ink font-semibold">{matchCount}</span> unresolved groups match this threshold
+            <span class="text-ink font-semibold">{matchCount}</span> pending groups match this threshold
           {/if}
         </div>
       </div>
@@ -471,8 +469,8 @@
 
       <div class="mt-6 space-y-3">
         <button
-          onclick={() => (selectedAction = 'review')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'review'
+          onclick={() => (selectedAction = 'false_positive')}
+          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'false_positive'
             ? 'border-accent bg-accent-light'
             : 'border-soft hover:border-accent'}"
         >
@@ -480,21 +478,21 @@
             <input
               type="radio"
               name="action"
-              checked={selectedAction === 'review'}
+              checked={selectedAction === 'false_positive'}
               class="accent-accent"
             />
             <div>
-              <div class="text-ink font-medium">Mark All as Reviewed</div>
+              <div class="text-ink font-medium">Dismiss All</div>
               <div class="text-muted text-sm">
-                Mark matching groups as reviewed without making changes
+                Mark matching groups as false positives (not actually duplicates)
               </div>
             </div>
           </div>
         </button>
 
         <button
-          onclick={() => (selectedAction = 'resolve')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'resolve'
+          onclick={() => (selectedAction = 'ignored')}
+          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'ignored'
             ? 'border-accent bg-accent-light'
             : 'border-soft hover:border-accent'}"
         >
@@ -502,12 +500,14 @@
             <input
               type="radio"
               name="action"
-              checked={selectedAction === 'resolve'}
+              checked={selectedAction === 'ignored'}
               class="accent-accent"
             />
             <div>
-              <div class="text-ink font-medium">Resolve All</div>
-              <div class="text-muted text-sm">Mark matching groups as fully resolved</div>
+              <div class="text-ink font-medium">Ignore All</div>
+              <div class="text-muted text-sm">
+                Real duplicates, but keep all copies without making changes
+              </div>
             </div>
           </div>
         </button>
@@ -561,10 +561,10 @@
             <div class="flex justify-between">
               <dt class="text-muted">Action</dt>
               <dd class="text-ink font-medium">
-                {selectedAction === 'review'
-                  ? 'Mark as Reviewed'
-                  : selectedAction === 'resolve'
-                    ? 'Resolve All'
+                {selectedAction === 'false_positive'
+                  ? 'Dismiss as False Positives'
+                  : selectedAction === 'ignored'
+                    ? 'Ignore All (Keep Copies)'
                     : 'Delete Non-Primary Documents'}
               </dd>
             </div>
