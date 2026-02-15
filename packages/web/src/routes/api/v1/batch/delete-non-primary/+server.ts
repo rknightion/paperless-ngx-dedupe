@@ -5,7 +5,9 @@ import {
   JobType,
   launchWorker,
   getWorkerPath,
+  duplicateGroup,
 } from '@paperless-dedupe/core';
+import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
@@ -25,6 +27,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const result = bodySchema.safeParse(body);
   if (!result.success) {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid request body', result.error.issues);
+  }
+
+  // Guard: only allow deletion of groups in 'pending' status
+  const groups = locals.db
+    .select({ id: duplicateGroup.id, status: duplicateGroup.status })
+    .from(duplicateGroup)
+    .where(inArray(duplicateGroup.id, result.data.groupIds))
+    .all();
+
+  const nonPending = groups.filter((g) => g.status !== 'pending');
+  if (nonPending.length > 0) {
+    return apiError(
+      ErrorCode.VALIDATION_FAILED,
+      `All groups must be in 'pending' status before deletion. Found ${nonPending.length} group(s) with non-pending status.`,
+    );
   }
 
   let jobId: string;
