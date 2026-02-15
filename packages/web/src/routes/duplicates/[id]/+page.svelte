@@ -7,6 +7,7 @@
     DocumentCompare,
     TextDiff,
     GroupActionBar,
+    DocumentVisualCompare,
   } from '$lib/components';
   import { formatBytes } from '$lib/utils/format';
 
@@ -207,6 +208,11 @@
           docAWordCount={primaryMember.content?.wordCount ?? null}
           docBWordCount={selectedSecondary.content?.wordCount ?? null}
         />
+      {/key}
+
+      <h3 class="text-ink text-base font-semibold">Visual Comparison</h3>
+      {#key `${primaryMember.documentId}-${selectedSecondary.documentId}`}
+        <DocumentVisualCompare primary={primaryMember} secondary={selectedSecondary} />
       {/key}
     </div>
   {/if}
