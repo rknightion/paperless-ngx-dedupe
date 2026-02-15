@@ -49,18 +49,58 @@ jobs:
 
       - name: Wait for Paperless-NGX health
         run: |
+          echo "::group::Service startup"
           echo "Waiting for Paperless-NGX to become healthy..."
-          for i in $(seq 1 120); do
-            if curl -sf http://localhost:8000/api/ > /dev/null 2>&1; then
-              echo "Paperless-NGX is ready after ${i}s"
+          echo "Configuration: SQLite mode, Redis broker"
+          echo ""
+
+          # Phase 1: Wait for Redis (should be fast, ~5-10s)
+          echo "Phase 1: Waiting for Redis..."
+          for i in $(seq 1 30); do
+            if docker compose -f .github/integration/docker-compose.yml exec -T broker redis-cli ping 2>/dev/null | grep -q PONG; then
+              echo "  Redis is ready after ${i}s"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "::endgroup::"
+              echo "::error::Redis failed to start within 30s"
+              docker compose -f .github/integration/docker-compose.yml logs broker
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # Phase 2: Wait for Paperless-NGX API
+          echo ""
+          echo "Phase 2: Waiting for Paperless-NGX API..."
+          for i in $(seq 1 90); do
+            HTTP_CODE=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:8000/api/ 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "  Paperless-NGX is ready after ${i}s (HTTP $HTTP_CODE)"
+              echo "::endgroup::"
               exit 0
             fi
-            sleep 2
+            # Print progress every 15 seconds
+            if [ $((i % 15)) -eq 0 ]; then
+              echo "  Still waiting... (${i}s, last HTTP code: $HTTP_CODE)"
+              docker compose -f .github/integration/docker-compose.yml ps --format "table {{.Name}}\t{{.Status}}"
+            fi
+            sleep 1
           done
-          echo "Paperless-NGX failed to start"
-          docker compose -f .github/integration/docker-compose.yml logs paperless
+
+          echo "::endgroup::"
+          echo "::error::Paperless-NGX failed to become healthy within 90s"
+          echo ""
+          echo "=== Container Status ==="
+          docker compose -f .github/integration/docker-compose.yml ps
+          echo ""
+          echo "=== Paperless-NGX Logs (last 100 lines) ==="
+          docker compose -f .github/integration/docker-compose.yml logs --tail=100 paperless
+          echo ""
+          echo "=== Redis Logs ==="
+          docker compose -f .github/integration/docker-compose.yml logs broker
           exit 1
-        timeout-minutes: 5
+        timeout-minutes: 3
 
       - name: Run integration tests
         env:
@@ -90,16 +130,23 @@ jobs:
           path: packages/core/test-results/integration-junit.xml
           reporter: java-junit
 
-      - name: Collect Paperless-NGX logs on failure
+      - name: Collect all service logs on failure
         if: failure()
-        run: docker compose -f .github/integration/docker-compose.yml logs paperless > paperless-logs.txt 2>&1
+        run: |
+          echo "=== Docker Compose Status ==="
+          docker compose -f .github/integration/docker-compose.yml ps
+          echo ""
+          mkdir -p integration-logs
+          docker compose -f .github/integration/docker-compose.yml logs paperless > integration-logs/paperless.log 2>&1
+          docker compose -f .github/integration/docker-compose.yml logs broker > integration-logs/redis.log 2>&1
+          docker compose -f .github/integration/docker-compose.yml ps --format json > integration-logs/container-status.json 2>&1
 
-      - name: Upload Paperless-NGX logs on failure
+      - name: Upload service logs on failure
         if: failure()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: paperless-logs-${{ matrix.paperless-tag }}
-          path: paperless-logs.txt
+          name: integration-logs-${{ matrix.paperless-tag }}
+          path: integration-logs/
           retention-days: 7
 
       - name: Cleanup

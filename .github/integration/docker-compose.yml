@@ -1,47 +1,51 @@
 services:
   broker:
-    image: redis:7
+    image: docker.io/library/redis:8
     restart: unless-stopped
     volumes:
       - redis-data:/data
-
-  db:
-    image: postgres:18
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: paperless
-      POSTGRES_USER: paperless
-      POSTGRES_PASSWORD: paperless
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:${PAPERLESS_TAG:-latest}
     restart: unless-stopped
     depends_on:
-      - db
-      - broker
+      broker:
+        condition: service_healthy
     ports:
       - '8000:8000'
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
     environment:
+      # Core configuration — SQLite mode (no PAPERLESS_DBHOST = SQLite default)
       PAPERLESS_REDIS: redis://broker:6379
-      PAPERLESS_DBHOST: db
-      PAPERLESS_DBNAME: paperless
-      PAPERLESS_DBUSER: paperless
-      PAPERLESS_DBPASS: paperless
+      PAPERLESS_SECRET_KEY: integration-test-secret-key
       PAPERLESS_ADMIN_USER: admin
       PAPERLESS_ADMIN_PASSWORD: admin
       PAPERLESS_URL: http://localhost:8000
+      # CI optimizations
+      PAPERLESS_CI_TEST: 1
+      PAPERLESS_DISABLE_DBHANDLER: 'true'
+      # Minimize resource usage for CI
       PAPERLESS_OCR_LANGUAGE: eng
       PAPERLESS_CONSUMER_POLLING: 0
       PAPERLESS_OCR_SKIP_ARCHIVE_FILE: always
+      PAPERLESS_TASK_WORKERS: 1
+      PAPERLESS_THREADS_PER_WORKER: 1
     healthcheck:
       test: ['CMD', 'curl', '-sf', 'http://localhost:8000/api/']
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 60s
+      start_period: 30s
 
 volumes:
   redis-data:
-  pgdata:
+  paperless-data:
+  paperless-media:

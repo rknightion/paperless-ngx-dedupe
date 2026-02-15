@@ -172,15 +172,15 @@ jobs:
       - name: Core coverage summary
         uses: davelosert/vitest-coverage-report-action@15b5b41bb7d36796d89f4bf482b09529c53f3446 # v2
         with:
-          json-summary-path: coverage/packages/core/coverage/coverage-summary.json
-          json-final-path: coverage/packages/core/coverage/coverage-final.json
+          json-summary-path: coverage/core/coverage/coverage-summary.json
+          json-final-path: coverage/core/coverage/coverage-final.json
           name: Core Package Coverage
 
       - name: SDK coverage summary
         uses: davelosert/vitest-coverage-report-action@15b5b41bb7d36796d89f4bf482b09529c53f3446 # v2
         with:
-          json-summary-path: coverage/packages/sdk/coverage/coverage-summary.json
-          json-final-path: coverage/packages/sdk/coverage/coverage-final.json
+          json-summary-path: coverage/sdk/coverage/coverage-summary.json
+          json-final-path: coverage/sdk/coverage/coverage-final.json
           name: SDK Package Coverage
 
   docker-build-verify:
