@@ -409,7 +409,7 @@ export async function runAnalysis(
 
   const existingGroupMembers = new Map<
     string,
-    { groupId: string; memberIds: Set<string>; reviewed: boolean; resolved: boolean }
+    { groupId: string; memberIds: Set<string>; status: string }
   >();
   for (const group of existingGroups) {
     const members = db
@@ -422,8 +422,7 @@ export async function runAnalysis(
     existingGroupMembers.set(memberKey, {
       groupId: group.id,
       memberIds,
-      reviewed: group.reviewed ?? false,
-      resolved: group.resolved ?? false,
+      status: group.status,
     });
   }
 
@@ -464,7 +463,7 @@ export async function runAnalysis(
       const existing = existingGroupMembers.get(memberKey);
 
       if (existing) {
-        // Update existing group scores (preserve reviewed/resolved)
+        // Update existing group scores (preserve user-set status)
         activeExistingGroupIds.add(existing.groupId);
 
         tx.update(duplicateGroup)
@@ -518,10 +517,10 @@ export async function runAnalysis(
       }
     }
 
-    // Delete stale groups that are unreviewed AND unresolved
+    // Delete stale groups that are still pending (preserve user-actioned groups)
     for (const group of existingGroups) {
       if (activeExistingGroupIds.has(group.id)) continue;
-      if (group.reviewed || group.resolved) continue;
+      if (group.status !== 'pending') continue;
 
       // Delete members first (cascade should handle, but be explicit)
       tx.delete(duplicateMember).where(eq(duplicateMember.groupId, group.id)).run();
