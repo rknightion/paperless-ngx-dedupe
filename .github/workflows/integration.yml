@@ -113,9 +113,7 @@ jobs:
           INTEGRATION_ADMIN_PASSWORD: 'admin'
         run: >-
           pnpm --filter @paperless-dedupe/core exec vitest run
-          'src/**/integration/**/*.integration.test.ts'
-          --reporter=default --reporter=junit
-          --outputFile.junit=./test-results/integration-junit.xml
+          --config vitest.integration.config.ts
 
       - name: Upload integration test results
         if: ${{ !cancelled() }}
