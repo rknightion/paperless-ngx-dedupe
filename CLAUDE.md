@@ -47,7 +47,7 @@ pnpm format:fix       # Prettier auto-fix
 
 1. **Sync:** POST `/api/v1/sync` → spawns worker thread → `syncDocuments()` fetches from Paperless API → normalizes text, computes fingerprints → persists to DB
 2. **Analysis:** POST `/api/v1/analysis` → spawns worker thread → `runAnalysis()` runs 10-stage pipeline (signatures → LSH candidates → scoring → union-find clustering → group formation)
-3. **Review:** UI at `/duplicates` → side-by-side comparison with OCR diff → mark reviewed/resolved/set primary via API
+3. **Review:** UI at `/duplicates` → side-by-side comparison with OCR diff → set status (false positive/ignored/deleted), set primary via API
 
 ### Database Tables
 
