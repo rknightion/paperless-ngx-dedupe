@@ -22,6 +22,7 @@ site/
 
 test-results/
 playwright-report/
+coverage/
 blob-report/
 data/e2e-test.db*
 
