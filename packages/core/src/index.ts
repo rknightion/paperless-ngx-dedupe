@@ -209,6 +209,7 @@ export {
   OtelDrizzleLogger,
   initWorkerTelemetry,
   shutdownWorkerTelemetry,
+  flushWorkerTelemetry,
   serializeTraceContext,
   extractTraceContext,
 } from './telemetry/index.js';

@@ -21,6 +21,7 @@ export { OtelDrizzleLogger } from './drizzle-logger.js';
 export {
   initWorkerTelemetry,
   shutdownWorkerTelemetry,
+  flushWorkerTelemetry,
   serializeTraceContext,
   extractTraceContext,
 } from './worker.js';
