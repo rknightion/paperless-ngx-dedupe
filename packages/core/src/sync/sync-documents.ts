@@ -13,6 +13,7 @@ import type { AppDatabase } from '../db/client.js';
 
 const DEFAULT_PAGE_SIZE = 100;
 const DEFAULT_MAX_OCR_LENGTH = 500_000;
+const METADATA_CONCURRENCY = 5;
 
 export async function syncDocuments(
   deps: SyncDependencies,
@@ -55,6 +56,9 @@ export async function syncDocuments(
     syncType,
   };
 
+  // Track docs that need metadata fetching (paperlessId → local doc ID)
+  const docsNeedingMetadata: { paperlessId: number; localId: string }[] = [];
+
   let shouldStop = false;
 
   for await (const batch of client.getDocuments({ ordering: '-modified', pageSize })) {
@@ -69,11 +73,13 @@ export async function syncDocuments(
 
         if (!localDoc) {
           // New document - insert
-          insertDocument(db, doc, fingerprint, refMaps, maxOcrLength);
+          const localId = insertDocument(db, doc, fingerprint, refMaps, maxOcrLength);
+          docsNeedingMetadata.push({ paperlessId: doc.id, localId });
           result.inserted++;
         } else if (localDoc.fingerprint !== fingerprint) {
           // Modified - update
           updateDocument(db, localDoc.id, doc, fingerprint, refMaps, maxOcrLength);
+          docsNeedingMetadata.push({ paperlessId: doc.id, localId: localDoc.id });
           result.updated++;
         } else {
           // Unchanged - skip
@@ -89,9 +95,9 @@ export async function syncDocuments(
 
     // Report progress
     const progressFraction =
-      0.1 + 0.85 * (result.totalFetched / Math.max(result.totalFetched + pageSize, 1));
+      0.1 + 0.75 * (result.totalFetched / Math.max(result.totalFetched + pageSize, 1));
     await onProgress?.(
-      Math.min(progressFraction, 0.95),
+      Math.min(progressFraction, 0.85),
       `Synced ${result.totalFetched} documents (${result.inserted} new, ${result.updated} updated)`,
     );
 
@@ -104,7 +110,62 @@ export async function syncDocuments(
     }
   }
 
-  // 5. Update sync state
+  // 5. Fetch file size metadata for inserted/updated documents
+  if (docsNeedingMetadata.length > 0) {
+    await onProgress?.(0.85, `Fetching metadata for ${docsNeedingMetadata.length} documents...`);
+    let metadataFetched = 0;
+
+    // Process with controlled concurrency
+    const queue = [...docsNeedingMetadata];
+    const inFlight: Promise<void>[] = [];
+
+    for (const item of queue) {
+      const task = (async () => {
+        try {
+          const metadata = await client.getDocumentMetadata(item.paperlessId);
+          db.update(document)
+            .set({
+              originalFileSize: metadata.originalSize,
+              archiveFileSize: metadata.archiveSize,
+            })
+            .where(eq(document.id, item.localId))
+            .run();
+        } catch (error) {
+          logger.warn(
+            { paperlessId: item.paperlessId, error: String(error) },
+            'Failed to fetch document metadata',
+          );
+        }
+        metadataFetched++;
+        if (metadataFetched % 20 === 0) {
+          await onProgress?.(
+            0.85 + 0.1 * (metadataFetched / docsNeedingMetadata.length),
+            `Fetching metadata: ${metadataFetched}/${docsNeedingMetadata.length}`,
+          );
+        }
+      })();
+
+      inFlight.push(task);
+
+      if (inFlight.length >= METADATA_CONCURRENCY) {
+        await Promise.race(inFlight);
+        // Remove settled promises
+        for (let i = inFlight.length - 1; i >= 0; i--) {
+          const settled = await Promise.race([
+            inFlight[i].then(() => true),
+            Promise.resolve(false),
+          ]);
+          if (settled) inFlight.splice(i, 1);
+        }
+      }
+    }
+
+    await Promise.all(inFlight);
+    logger.info({ metadataFetched: docsNeedingMetadata.length }, 'Metadata fetch complete');
+    await onProgress?.(0.95, `Fetched metadata for ${docsNeedingMetadata.length} documents`);
+  }
+
+  // 6. Update sync state
   const now = new Date().toISOString();
   const totalDocsCount = db.select().from(document).all().length;
 
@@ -191,13 +252,13 @@ function insertDocument(
   fingerprint: string,
   refMaps: ReferenceMaps,
   maxOcrLength: number,
-): void {
+): string {
   const now = new Date().toISOString();
   const tagNames = resolveTagNames(doc.tags, refMaps);
   const content = doc.content.slice(0, maxOcrLength);
   const normalized = normalizeText(content);
 
-  db.transaction((tx) => {
+  return db.transaction((tx) => {
     const docResult = tx
       .insert(document)
       .values({
@@ -229,6 +290,8 @@ function insertDocument(
         contentHash: normalized.contentHash,
       })
       .run();
+
+    return docResult.id;
   });
 }
 

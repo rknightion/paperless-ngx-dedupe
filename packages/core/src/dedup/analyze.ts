@@ -271,6 +271,7 @@ export async function runAnalysis(
   await onProgress?.(0.55, `Found ${candidatePairs.size} candidate pairs`);
 
   // Stage 6: Score candidates
+  const scoringStart = Date.now();
   await onProgress?.(0.55, 'Scoring candidate pairs...');
 
   const weights: SimilarityWeights = {
@@ -301,10 +302,7 @@ export async function runAnalysis(
       .select({
         id: document.id,
         title: document.title,
-        correspondent: document.correspondent,
-        documentType: document.documentType,
         originalFileSize: document.originalFileSize,
-        createdDate: document.createdDate,
       })
       .from(document)
       .where(inArray(document.id, batch))
@@ -315,10 +313,7 @@ export async function runAnalysis(
         id: row.id,
         title: row.title,
         normalizedText: '',
-        correspondent: row.correspondent,
-        documentType: row.documentType,
         originalFileSize: row.originalFileSize,
-        createdDate: row.createdDate,
       });
     }
   }
