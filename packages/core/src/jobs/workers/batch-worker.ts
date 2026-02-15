@@ -4,6 +4,7 @@ import { duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { duplicateGroup } from '../../schema/sqlite/duplicates.js';
 import { document } from '../../schema/sqlite/documents.js';
 import { eq, and } from 'drizzle-orm';
+import { incrementUsageStats } from '../../queries/documents.js';
 
 interface BatchTaskData {
   groupIds: string[];
@@ -25,7 +26,8 @@ runWorkerTask(async (ctx, onProgress) => {
   const { groupIds } = taskData;
 
   let deletedDocuments = 0;
-  let resolvedGroups = 0;
+  let deletedGroups = 0;
+  let totalBytesReclaimed = 0;
   const errors: BatchError[] = [];
 
   for (let i = 0; i < groupIds.length; i++) {
@@ -43,6 +45,7 @@ runWorkerTask(async (ctx, onProgress) => {
         isPrimary: duplicateMember.isPrimary,
         paperlessId: document.paperlessId,
         title: document.title,
+        archiveFileSize: document.archiveFileSize,
       })
       .from(duplicateMember)
       .innerJoin(document, eq(duplicateMember.documentId, document.id))
@@ -55,6 +58,7 @@ runWorkerTask(async (ctx, onProgress) => {
       try {
         await client.deleteDocument(member.paperlessId);
         deletedDocuments++;
+        totalBytesReclaimed += member.archiveFileSize ?? 0;
       } catch (error) {
         groupSuccess = false;
         errors.push({
@@ -67,16 +71,19 @@ runWorkerTask(async (ctx, onProgress) => {
     }
 
     if (groupSuccess) {
-      ctx.db
-        .update(duplicateGroup)
-        .set({ resolved: true, updatedAt: new Date().toISOString() })
-        .where(eq(duplicateGroup.id, groupId))
-        .run();
-      resolvedGroups++;
+      ctx.db.delete(duplicateGroup).where(eq(duplicateGroup.id, groupId)).run();
+      deletedGroups++;
     }
+  }
+
+  if (deletedDocuments > 0) {
+    incrementUsageStats(ctx.db, {
+      documentsDeleted: deletedDocuments,
+      storageBytesReclaimed: totalBytesReclaimed,
+    });
   }
 
   await onProgress(100, 'Batch operation complete');
 
-  return { deletedDocuments, resolvedGroups, errors };
+  return { deletedDocuments, deletedGroups, totalBytesReclaimed, errors };
 });
