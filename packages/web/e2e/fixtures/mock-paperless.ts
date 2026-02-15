@@ -131,7 +131,7 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
       documents_total: state.documents.length,
       documents_inbox: 2,
       inbox_tag: 1,
-      document_file_type_counts: [{ mime_type: 'application/pdf', count: state.documents.length }],
+      document_file_type_count: [{ mime_type: 'application/pdf', count: state.documents.length }],
       character_count: 50000,
     });
   }
