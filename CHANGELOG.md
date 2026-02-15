@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.4.0...v0.5.0) (2026-02-15)
+
+
+### Features
+
+* **jobs:** implement periodic telemetry flushing in workers ([b6fb843](https://github.com/rknightion/paperless-ngx-dedupe/commit/b6fb843320dcbe8c387ec944ad52bc88c9a808e2))
+* **telemetry:** add worker telemetry flush functionality ([1a6c00d](https://github.com/rknightion/paperless-ngx-dedupe/commit/1a6c00d6d943d460532c63a6bc6f55eb91a313e1))
+
+
+### Refactoring
+
+* rebrand from Paperless-Dedupe to Paperless NGX Dedupe ([4b68560](https://github.com/rknightion/paperless-ngx-dedupe/commit/4b68560c98893c9f929bf26d139db14bd2568b72))
+
+
+### Performance
+
+* **jobs:** add memory limits to worker processes ([1bf39af](https://github.com/rknightion/paperless-ngx-dedupe/commit/1bf39aff650e607078f3ec4b2b898ef5cd8d88a6))
+* **telemetry:** configure span limits and remove auto-instrumentation ([cdfa97c](https://github.com/rknightion/paperless-ngx-dedupe/commit/cdfa97cb58622f6065a263a04e21a02ebbce2d63))
+* **telemetry:** optimize span recording checks ([c1293f9](https://github.com/rknightion/paperless-ngx-dedupe/commit/c1293f9a99bcb89ce418f1959ed11ec75c82926a))
+
 ## [0.4.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.3.1...v0.4.0) (2026-02-15)
 
 
