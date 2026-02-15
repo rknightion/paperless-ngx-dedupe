@@ -1,0 +1,107 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      paperless_tags:
+        description: 'Comma-separated Paperless-NGX tags to test'
+        default: 'latest,dev'
+        type: string
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    permissions:
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        paperless-tag: ${{ fromJSON(format('[{0}]', inputs.paperless_tags || '"latest","dev"')) }}
+    continue-on-error: ${{ matrix.paperless-tag == 'dev' }}
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build core package
+        run: pnpm --filter @paperless-dedupe/core build
+
+      - name: Start Paperless-NGX (${{ matrix.paperless-tag }})
+        env:
+          PAPERLESS_TAG: ${{ matrix.paperless-tag }}
+        run: docker compose -f .github/integration/docker-compose.yml up -d
+
+      - name: Wait for Paperless-NGX health
+        run: |
+          echo "Waiting for Paperless-NGX to become healthy..."
+          for i in $(seq 1 120); do
+            if curl -sf http://localhost:8000/api/ > /dev/null 2>&1; then
+              echo "Paperless-NGX is ready after ${i}s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Paperless-NGX failed to start"
+          docker compose -f .github/integration/docker-compose.yml logs paperless
+          exit 1
+        timeout-minutes: 5
+
+      - name: Run integration tests
+        env:
+          INTEGRATION_TEST: '1'
+          INTEGRATION_PAPERLESS_URL: 'http://localhost:8000'
+          INTEGRATION_ADMIN_USER: 'admin'
+          INTEGRATION_ADMIN_PASSWORD: 'admin'
+        run: >-
+          pnpm --filter @paperless-dedupe/core exec vitest run
+          --include 'src/**/integration/**/*.integration.test.ts'
+          --reporter=default --reporter=junit
+          --outputFile.junit=./test-results/integration-junit.xml
+
+      - name: Upload integration test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: integration-results-${{ matrix.paperless-tag }}
+          path: packages/core/test-results/integration-junit.xml
+          retention-days: 7
+
+      - name: Integration test report
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v2
+        with:
+          name: Integration Tests (${{ matrix.paperless-tag }})
+          path: packages/core/test-results/integration-junit.xml
+          reporter: java-junit
+
+      - name: Collect Paperless-NGX logs on failure
+        if: failure()
+        run: docker compose -f .github/integration/docker-compose.yml logs paperless > paperless-logs.txt 2>&1
+
+      - name: Upload Paperless-NGX logs on failure
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: paperless-logs-${{ matrix.paperless-tag }}
+          path: paperless-logs.txt
+          retention-days: 7
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f .github/integration/docker-compose.yml down -v

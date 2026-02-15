@@ -48,14 +48,50 @@ jobs:
   unit-tests:
     needs: install
     runs-on: ubuntu-24.04
+    permissions:
+      checks: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: ./.github/actions/setup-node-pnpm
-      - run: pnpm test
+
+      - name: Run unit tests with coverage
+        run: |
+          pnpm --filter @paperless-dedupe/core test -- --coverage
+          pnpm --filter @paperless-dedupe/sdk test -- --coverage
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: unit-test-results
+          path: |
+            packages/core/test-results/junit.xml
+            packages/sdk/test-results/junit.xml
+          retention-days: 7
+
+      - name: Upload coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: coverage-reports
+          path: |
+            packages/core/coverage/
+            packages/sdk/coverage/
+          retention-days: 7
+
+      - name: Unit test report
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v2
+        with:
+          name: Unit Test Results
+          path: packages/*/test-results/junit.xml
+          reporter: java-junit
 
   e2e-tests:
     needs: install
     runs-on: ubuntu-24.04
+    permissions:
+      checks: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: ./.github/actions/setup-node-pnpm
@@ -93,7 +129,52 @@ jobs:
         with:
           name: playwright-report
           path: packages/web/playwright-report/
-          retention-days: 30
+          retention-days: 7
+
+      - name: Upload E2E test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: e2e-test-results
+          path: packages/web/test-results/junit.xml
+          retention-days: 7
+
+      - name: E2E test report
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v2
+        with:
+          name: E2E Test Results
+          path: packages/web/test-results/junit.xml
+          reporter: java-junit
+
+  coverage-summary:
+    needs: unit-tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: coverage-reports
+          path: coverage
+
+      - name: Core coverage summary
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: coverage/packages/core/coverage/coverage-summary.json
+          json-final-path: coverage/packages/core/coverage/coverage-final.json
+          name: Core Package Coverage
+
+      - name: SDK coverage summary
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: coverage/packages/sdk/coverage/coverage-summary.json
+          json-final-path: coverage/packages/sdk/coverage/coverage-final.json
+          name: SDK Package Coverage
 
   docker-build-verify:
     runs-on: ubuntu-24.04
