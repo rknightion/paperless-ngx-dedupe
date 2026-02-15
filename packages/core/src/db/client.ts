@@ -14,6 +14,7 @@ import {
   duplicateGroupRelations,
   duplicateMemberRelations,
 } from '../schema/relations.js';
+import { OtelDrizzleLogger } from '../telemetry/drizzle-logger.js';
 
 const schema = {
   document,
@@ -31,8 +32,11 @@ const schema = {
   duplicateMemberRelations,
 };
 
+// Shared logger instance — only adds span events when an active OTEL span exists
+const otelLogger = new OtelDrizzleLogger();
+
 function createDrizzle(sqlite: Database.Database) {
-  return drizzle(sqlite, { schema });
+  return drizzle(sqlite, { schema, logger: otelLogger });
 }
 
 export type AppDatabase = ReturnType<typeof createDrizzle>;

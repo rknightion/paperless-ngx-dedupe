@@ -5,6 +5,7 @@ import type { AppDatabase } from '../db/client.js';
 import { job } from '../schema/sqlite/jobs.js';
 import type { Job } from '../schema/types.js';
 import type { JobType, JobStatus } from '../types/enums.js';
+import { jobsTotal } from '../telemetry/metrics.js';
 
 export class JobAlreadyRunningError extends Error {
   constructor(type: string) {
@@ -90,6 +91,7 @@ export function updateJobProgress(
 }
 
 export function completeJob(db: AppDatabase, id: string, result?: unknown): void {
+  const existing = db.select({ type: job.type }).from(job).where(eq(job.id, id)).get();
   db.update(job)
     .set({
       status: 'completed',
@@ -99,9 +101,11 @@ export function completeJob(db: AppDatabase, id: string, result?: unknown): void
     })
     .where(eq(job.id, id))
     .run();
+  if (existing?.type) jobsTotal().add(1, { type: existing.type, outcome: 'completed' });
 }
 
 export function failJob(db: AppDatabase, id: string, error: string): void {
+  const existing = db.select({ type: job.type }).from(job).where(eq(job.id, id)).get();
   db.update(job)
     .set({
       status: 'failed',
@@ -110,6 +114,7 @@ export function failJob(db: AppDatabase, id: string, error: string): void {
     })
     .where(eq(job.id, id))
     .run();
+  if (existing?.type) jobsTotal().add(1, { type: existing.type, outcome: 'failed' });
 }
 
 export function recoverStaleJobs(db: AppDatabase): number {
@@ -138,6 +143,7 @@ export function cancelJob(db: AppDatabase, id: string): boolean {
     return false;
   }
 
+  const jobRow = db.select({ type: job.type }).from(job).where(eq(job.id, id)).get();
   db.update(job)
     .set({
       status: 'cancelled',
@@ -145,6 +151,7 @@ export function cancelJob(db: AppDatabase, id: string): boolean {
     })
     .where(eq(job.id, id))
     .run();
+  if (jobRow?.type) jobsTotal().add(1, { type: jobRow.type, outcome: 'cancelled' });
 
   return true;
 }

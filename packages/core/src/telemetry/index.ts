@@ -1,0 +1,26 @@
+// Span helpers
+export { getTracer, withSpan, withSpanSync } from './spans.js';
+
+// Metric instruments
+export {
+  syncDocumentsTotal,
+  syncRunsTotal,
+  analysisRunsTotal,
+  jobsTotal,
+  paperlessRequestsTotal,
+  syncDuration,
+  analysisDuration,
+  analysisStageDuration,
+  registerObservableGauges,
+} from './metrics.js';
+
+// Database instrumentation
+export { OtelDrizzleLogger } from './drizzle-logger.js';
+
+// Worker thread telemetry
+export {
+  initWorkerTelemetry,
+  shutdownWorkerTelemetry,
+  serializeTraceContext,
+  extractTraceContext,
+} from './worker.js';

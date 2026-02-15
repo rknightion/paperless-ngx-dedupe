@@ -1,7 +1,14 @@
 import { workerData } from 'node:worker_threads';
+import { context } from '@opentelemetry/api';
 import { createDatabase } from '../db/client.js';
 import { updateJobProgress, completeJob, failJob, getJob } from './manager.js';
 import { createLogger } from '../logger.js';
+import {
+  initWorkerTelemetry,
+  shutdownWorkerTelemetry,
+  extractTraceContext,
+} from '../telemetry/worker.js';
+import { withSpan } from '../telemetry/spans.js';
 import type { AppDatabase } from '../db/client.js';
 
 export type ProgressCallback = (progress: number, message?: string) => Promise<void>;
@@ -15,11 +22,18 @@ export interface WorkerContext {
 export type TaskFunction = (ctx: WorkerContext, onProgress: ProgressCallback) => Promise<unknown>;
 
 export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
-  const { jobId, dbPath, taskData } = workerData as {
+  const { jobId, dbPath, taskData, traceContext } = workerData as {
     jobId: string;
     dbPath: string;
     taskData?: unknown;
+    traceContext?: Record<string, string>;
   };
+
+  // Initialize OTEL in this worker thread (no-op if OTEL_ENABLED !== 'true')
+  await initWorkerTelemetry(`worker-${jobId.slice(0, 8)}`);
+
+  // Restore parent trace context from the HTTP request that spawned this job
+  const parentContext = extractTraceContext(traceContext);
 
   const logger = createLogger('worker');
   const db = createDatabase(dbPath);
@@ -55,18 +69,24 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   };
 
   try {
-    const result = await taskFn({ db, jobId, taskData }, onProgress);
-    completeJob(db, jobId, result);
-    logger.info({ jobId }, 'Worker task completed successfully');
+    // Run task within the parent trace context so spans are linked
+    await context.with(parentContext, async () => {
+      await withSpan('dedupe.worker.task', { 'job.id': jobId }, async () => {
+        const result = await taskFn({ db, jobId, taskData }, onProgress);
+        completeJob(db, jobId, result);
+        logger.info({ jobId }, 'Worker task completed successfully');
+      });
+    });
   } catch (error) {
     if (error instanceof CancellationError) {
       logger.info({ jobId }, 'Worker task cancelled');
-      // Job is already marked as cancelled, just exit cleanly
       return;
     }
     const errorMessage = error instanceof Error ? error.message : String(error);
     failJob(db, jobId, errorMessage);
     logger.error({ jobId, error: errorMessage }, 'Worker task failed');
+  } finally {
+    await shutdownWorkerTelemetry();
   }
 }
 

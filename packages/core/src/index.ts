@@ -192,6 +192,27 @@ export {
 } from './queries/duplicates.js';
 export { getConfig, setConfig, setConfigBatch } from './queries/config.js';
 
+// Telemetry
+export {
+  getTracer,
+  withSpan,
+  withSpanSync,
+  syncDocumentsTotal,
+  syncRunsTotal,
+  analysisRunsTotal,
+  jobsTotal,
+  paperlessRequestsTotal,
+  syncDuration,
+  analysisDuration,
+  analysisStageDuration,
+  registerObservableGauges,
+  OtelDrizzleLogger,
+  initWorkerTelemetry,
+  shutdownWorkerTelemetry,
+  serializeTraceContext,
+  extractTraceContext,
+} from './telemetry/index.js';
+
 // Export
 export { getDuplicateGroupsForExport, formatDuplicatesCsv } from './export/csv.js';
 export { exportConfig, importConfig } from './export/config.js';
