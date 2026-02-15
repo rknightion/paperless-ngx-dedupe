@@ -40,6 +40,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['**/*.cjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     ignores: ['**/node_modules/', '**/.svelte-kit/', '**/build/', '**/dist/', 'docs/', 'site/'],
   },
 );
