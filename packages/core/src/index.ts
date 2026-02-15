@@ -30,7 +30,7 @@ export type {
   NewAppConfigRow,
   NewSyncState,
 } from './schema/types.js';
-export { ProcessingStatus, JobType, JobStatus, DuplicateResolution } from './types/enums.js';
+export { ProcessingStatus, JobType, JobStatus, GroupStatus, GROUP_STATUS_VALUES } from './types/enums.js';
 export type { AppConfig } from './config.js';
 
 // Database

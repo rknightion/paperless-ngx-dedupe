@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import type { GroupStatus } from '../types/enums.js';
+import { GROUP_STATUS_VALUES } from '../types/enums.js';
+
 // ── Pagination ──────────────────────────────────────────────────────────
 
 export const paginationSchema = z.object({
