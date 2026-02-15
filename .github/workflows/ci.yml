@@ -56,8 +56,8 @@ jobs:
 
       - name: Run unit tests with coverage
         run: |
-          pnpm --filter @paperless-dedupe/core test -- --coverage
-          pnpm --filter @paperless-dedupe/sdk test -- --coverage
+          pnpm --filter @paperless-dedupe/core test -- --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
+          pnpm --filter @paperless-dedupe/sdk test -- --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
 
       - name: Upload test results
         if: ${{ !cancelled() }}
@@ -86,6 +86,7 @@ jobs:
           name: Unit Test Results
           path: packages/*/test-results/junit.xml
           reporter: java-junit
+          fail-on-error: 'false'
 
   e2e-tests:
     needs: install
@@ -118,6 +119,11 @@ jobs:
         run: npx playwright install-deps chromium
         working-directory: packages/web
 
+      - name: Build packages
+        run: |
+          pnpm --filter @paperless-dedupe/core build
+          pnpm --filter @paperless-dedupe/web build
+
       - name: Run E2E tests
         run: pnpm test:e2e
         env:
@@ -146,6 +152,7 @@ jobs:
           name: E2E Test Results
           path: packages/web/test-results/junit.xml
           reporter: java-junit
+          fail-on-error: 'false'
 
   coverage-summary:
     needs: unit-tests
