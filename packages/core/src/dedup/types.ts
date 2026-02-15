@@ -41,16 +41,16 @@ export interface DedupConfig {
 }
 
 export const dedupConfigBaseSchema = z.object({
-  numPermutations: z.number().int().min(16).max(1024).default(192),
-  numBands: z.number().int().min(1).max(100).default(20),
+  numPermutations: z.number().int().min(16).max(1024).default(256),
+  numBands: z.number().int().min(1).max(100).default(32),
   ngramSize: z.number().int().min(1).max(10).default(3),
   minWords: z.number().int().min(1).max(1000).default(20),
   similarityThreshold: z.number().min(0).max(1).default(0.75),
-  confidenceWeightJaccard: z.number().int().min(0).max(100).default(40),
-  confidenceWeightFuzzy: z.number().int().min(0).max(100).default(30),
-  confidenceWeightMetadata: z.number().int().min(0).max(100).default(15),
-  confidenceWeightFilename: z.number().int().min(0).max(100).default(15),
-  fuzzySampleSize: z.number().int().min(100).max(100000).default(5000),
+  confidenceWeightJaccard: z.number().int().min(0).max(100).default(45),
+  confidenceWeightFuzzy: z.number().int().min(0).max(100).default(40),
+  confidenceWeightMetadata: z.number().int().min(0).max(100).default(10),
+  confidenceWeightFilename: z.number().int().min(0).max(100).default(5),
+  fuzzySampleSize: z.number().int().min(100).max(100000).default(10000),
   autoAnalyze: z.boolean().default(true),
 });
 
@@ -61,20 +61,20 @@ export const dedupConfigSchema = dedupConfigBaseSchema.refine(
       data.confidenceWeightMetadata +
       data.confidenceWeightFilename ===
     100,
-  { error: 'Confidence weights must sum to 100' },
+  { message: 'Confidence weights must sum to 100' },
 );
 
 export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
-  numPermutations: 192,
-  numBands: 20,
+  numPermutations: 256,
+  numBands: 32,
   ngramSize: 3,
   minWords: 20,
   similarityThreshold: 0.75,
-  confidenceWeightJaccard: 40,
-  confidenceWeightFuzzy: 30,
-  confidenceWeightMetadata: 15,
-  confidenceWeightFilename: 15,
-  fuzzySampleSize: 5000,
+  confidenceWeightJaccard: 45,
+  confidenceWeightFuzzy: 40,
+  confidenceWeightMetadata: 10,
+  confidenceWeightFilename: 5,
+  fuzzySampleSize: 10000,
   autoAnalyze: true,
 };
 
