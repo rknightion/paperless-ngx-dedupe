@@ -77,4 +77,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://localhost:3000/api/v1/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
 
 ENTRYPOINT ["tini", "--", "/docker-entrypoint.sh"]
-CMD ["node", "--require", "./telemetry.cjs", "build"]
+CMD ["node", "--disable-warning=DEP0040", "--require", "./telemetry.cjs", "build"]

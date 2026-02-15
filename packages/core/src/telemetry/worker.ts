@@ -25,10 +25,12 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
       'worker.type': 'worker_thread',
     }),
     traceExporter: new OTLPTraceExporter(),
-    metricReader: new PeriodicExportingMetricReader({
-      exporter: new OTLPMetricExporter(),
-      exportIntervalMillis: 60_000,
-    }),
+    metricReaders: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter(),
+        exportIntervalMillis: 60_000,
+      }),
+    ],
     instrumentations: [new UndiciInstrumentation()],
   });
 

@@ -112,7 +112,7 @@ export const paperlessDocumentTypeSchema = z
 export const paperlessStatisticsSchema = z
   .object({
     documents_total: z.number(),
-    documents_inbox: z.number(),
+    documents_inbox: z.number().nullable().default(null),
     inbox_tag: z.number().nullable().default(null),
     document_file_type_count: z
       .array(
