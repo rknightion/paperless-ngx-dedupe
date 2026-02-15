@@ -31,6 +31,8 @@
     >
       {@render icon()}
     </div>
+  {:else}
+    <div class="bg-accent h-10 w-0.5 shrink-0 rounded-full"></div>
   {/if}
   <div class="min-w-0 flex-1">
     <p class="text-muted text-sm">{label}</p>

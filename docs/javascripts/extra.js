@@ -1,4 +1,4 @@
-/* Custom JavaScript for Paperless-Dedupe documentation */
+/* Custom JavaScript for Paperless NGX Dedupe documentation */
 
 // Enhanced search functionality
 document.addEventListener('DOMContentLoaded', function() {

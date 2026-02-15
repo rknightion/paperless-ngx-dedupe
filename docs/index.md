@@ -1,10 +1,10 @@
 ---
-title: Paperless-Dedupe Documentation
+title: Paperless NGX Dedupe Documentation
 description: Document deduplication companion for Paperless-NGX using MinHash/LSH algorithms
 image: assets/social-card.png
 ---
 
-# Paperless-Dedupe
+# Paperless NGX Dedupe
 
 **Intelligent document deduplication for Paperless-NGX**
 
@@ -37,7 +37,7 @@ cp .env.example .env
 docker compose up -d
 
 # 3. Open the web UI
-open http://localhost:3000
+# http://localhost:3000
 
 # 4. Sync → Analyze → Review duplicates
 ```
@@ -86,7 +86,7 @@ See the [Getting Started Guide](getting-started.md) for a full walkthrough.
 
     ---
 
-    TypeScript client library for programmatic access to the Paperless-Dedupe API
+    TypeScript client library for programmatic access to the Paperless NGX Dedupe API
 
     [:octicons-arrow-right-24: SDK docs](sdk-reference.md)
 

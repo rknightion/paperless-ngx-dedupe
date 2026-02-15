@@ -10,6 +10,7 @@
     DocumentVisualCompare,
   } from '$lib/components';
   import { formatBytes } from '$lib/utils/format';
+  import { ArrowLeft, ExternalLink } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -42,19 +43,22 @@
 </script>
 
 <svelte:head>
-  <title>{primaryMember?.title ?? 'Duplicate Group'} - Paperless Dedupe</title>
+  <title>{primaryMember?.title ?? 'Duplicate Group'} - Paperless NGX Dedupe</title>
 </svelte:head>
 
 <div class="space-y-6">
   <!-- Breadcrumb -->
-  <a href="/duplicates" class="text-accent hover:text-accent-hover inline-block text-sm">
-    &larr; Back to Duplicates
+  <a
+    href="/duplicates"
+    class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm"
+  >
+    <ArrowLeft class="h-4 w-4" /> Back to Duplicates
   </a>
 
   <!-- Group header -->
   <div>
     <div class="flex flex-wrap items-center gap-3">
-      <h1 class="text-ink text-2xl font-bold">
+      <h1 class="text-ink text-2xl font-semibold tracking-tight">
         {primaryMember?.title || 'Untitled Group'}
       </h1>
       <ConfidenceBadge score={data.group.confidenceScore} />
@@ -75,6 +79,12 @@
     onaction={() => invalidateAll()}
   />
 
+  <!-- Confidence section divider -->
+  <div class="flex items-center gap-4">
+    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Confidence</span>
+    <div class="divider flex-1"></div>
+  </div>
+
   <!-- Confidence breakdown -->
   <ConfidenceBreakdown
     overallScore={data.group.confidenceScore}
@@ -84,6 +94,12 @@
     filenameSimilarity={data.group.filenameSimilarity}
     weights={data.weights}
   />
+
+  <!-- Members section divider -->
+  <div class="flex items-center gap-4">
+    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Members</span>
+    <div class="divider flex-1"></div>
+  </div>
 
   <!-- Members table -->
   <div class="panel">
@@ -143,7 +159,7 @@
                     class="text-accent hover:text-accent-hover"
                     title="Open in Paperless-NGX"
                   >
-                    &#8599;
+                    <ExternalLink class="h-4 w-4" />
                   </a>
                 </div>
               </td>
@@ -157,6 +173,12 @@
   <!-- Document comparison -->
   {#if selectedSecondary}
     <div class="space-y-4">
+      <!-- Comparison section divider -->
+      <div class="flex items-center gap-4">
+        <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Comparison</span>
+        <div class="divider flex-1"></div>
+      </div>
+
       <h3 class="text-ink text-base font-semibold">Document Comparison</h3>
 
       {#if secondaryMembers.length > 1}

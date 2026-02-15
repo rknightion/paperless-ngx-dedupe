@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { InfoIcon } from '$lib/components';
+  import { Link, SlidersHorizontal, Info, Archive } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -177,18 +178,42 @@
 </script>
 
 <svelte:head>
-  <title>Settings - Paperless Dedupe</title>
+  <title>Settings - Paperless NGX Dedupe</title>
 </svelte:head>
 
 <div class="space-y-8">
-  <div>
-    <h1 class="text-ink text-3xl font-bold">Settings</h1>
+  <header class="space-y-1">
+    <h1 class="text-ink text-2xl font-semibold tracking-tight">Settings</h1>
     <p class="text-muted mt-1">Configure Paperless-NGX connection and deduplication parameters.</p>
-  </div>
+  </header>
+
+  <!-- Sticky Mini-Nav -->
+  <nav
+    class="bg-canvas/80 sticky top-0 z-10 -mx-4 flex gap-1 rounded-lg px-4 py-2 backdrop-blur-sm sm:-mx-6 md:-mx-8"
+  >
+    <a
+      href="#connection"
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">Connection</a
+    >
+    <a href="#dedup" class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
+      >Dedup Parameters</a
+    >
+    <a
+      href="#system"
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">System</a
+    >
+    <a
+      href="#backup"
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">Backup</a
+    >
+  </nav>
 
   <!-- Paperless-NGX Connection -->
-  <div class="panel">
-    <h2 class="text-ink text-lg font-semibold">Paperless-NGX Connection</h2>
+  <div class="panel" id="connection">
+    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+      <Link class="text-accent h-5 w-5" />
+      Paperless-NGX Connection
+    </h2>
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <div class="sm:col-span-2">
         <label for="paperless-url" class="text-ink block text-sm font-medium">URL</label>
@@ -246,7 +271,16 @@
         disabled={isTesting || !paperlessUrl}
         class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
-        {isTesting ? 'Testing...' : 'Test Connection'}
+        {#if isTesting}
+          <span class="flex items-center gap-2">
+            <span
+              class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+            ></span>
+            Testing...
+          </span>
+        {:else}
+          Test Connection
+        {/if}
       </button>
       <button
         onclick={saveConnection}
@@ -268,8 +302,11 @@
   </div>
 
   <!-- Dedup Parameters -->
-  <div class="panel">
-    <h2 class="text-ink text-lg font-semibold">Deduplication Parameters</h2>
+  <div class="panel" id="dedup">
+    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+      <SlidersHorizontal class="text-accent h-5 w-5" />
+      Deduplication Parameters
+    </h2>
 
     <!-- Similarity Threshold -->
     <div class="mt-4">
@@ -423,6 +460,54 @@
           </details>
         </div>
       </div>
+
+      <!-- Weight Budget Bar -->
+      <div class="mt-4">
+        <div class="flex h-3 overflow-hidden rounded-full">
+          <div
+            class="transition-all duration-200"
+            style="width: {weightJaccard}%; background: oklch(0.55 0.15 195);"
+            title="Jaccard: {weightJaccard}"
+          ></div>
+          <div
+            class="transition-all duration-200"
+            style="width: {weightFuzzy}%; background: oklch(0.6 0.16 155);"
+            title="Fuzzy: {weightFuzzy}"
+          ></div>
+          <div
+            class="transition-all duration-200"
+            style="width: {weightMetadata}%; background: oklch(0.65 0.14 265);"
+            title="Metadata: {weightMetadata}"
+          ></div>
+          <div
+            class="transition-all duration-200"
+            style="width: {weightFilename}%; background: oklch(0.7 0.15 85);"
+            title="Filename: {weightFilename}"
+          ></div>
+        </div>
+        <div class="text-muted mt-1.5 flex gap-4 text-xs">
+          <span class="flex items-center gap-1"
+            ><span
+              class="inline-block h-2 w-2 rounded-full"
+              style="background: oklch(0.55 0.15 195)"
+            ></span> Jaccard</span
+          >
+          <span class="flex items-center gap-1"
+            ><span class="inline-block h-2 w-2 rounded-full" style="background: oklch(0.6 0.16 155)"
+            ></span> Fuzzy</span
+          >
+          <span class="flex items-center gap-1"
+            ><span
+              class="inline-block h-2 w-2 rounded-full"
+              style="background: oklch(0.65 0.14 265)"
+            ></span> Metadata</span
+          >
+          <span class="flex items-center gap-1"
+            ><span class="inline-block h-2 w-2 rounded-full" style="background: oklch(0.7 0.15 85)"
+            ></span> Filename</span
+          >
+        </div>
+      </div>
     </div>
 
     <!-- Advanced Section -->
@@ -559,8 +644,11 @@
   </div>
 
   <!-- System Information -->
-  <div class="panel">
-    <h2 class="text-ink text-lg font-semibold">System Information</h2>
+  <div class="panel" id="system">
+    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+      <Info class="text-accent h-5 w-5" />
+      System Information
+    </h2>
     <dl class="mt-4 grid gap-3 sm:grid-cols-2">
       <div>
         <dt class="text-muted text-sm">Database Path</dt>
@@ -582,8 +670,11 @@
   </div>
 
   <!-- Backup & Restore -->
-  <div class="panel">
-    <h2 class="text-ink text-lg font-semibold">Backup & Restore</h2>
+  <div class="panel" id="backup">
+    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+      <Archive class="text-accent h-5 w-5" />
+      Backup & Restore
+    </h2>
     <div class="mt-4 space-y-4">
       <div>
         <h3 class="text-ink text-sm font-medium">Export Configuration</h3>

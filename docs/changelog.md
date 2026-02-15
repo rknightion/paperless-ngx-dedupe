@@ -1,6 +1,6 @@
 ---
 title: Changelog
-description: Release history for Paperless-Dedupe
+description: Release history for Paperless NGX Dedupe
 ---
 
 # Changelog

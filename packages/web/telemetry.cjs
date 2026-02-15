@@ -38,6 +38,16 @@ const sdk = new NodeSDK({
 });
 
 sdk.start();
+
+// Force RITM hooks to fire for built-in modules that were loaded during SDK
+// initialization (before hooks were registered). The SDK transitively requires
+// http/https via its OTLP exporter deps, caching them before instrumentation
+// hooks are set up. Re-requiring them triggers the patched Module.prototype.require,
+// which calls instrumentation-http's onRequire → wraps http.Server.prototype.emit
+// for incoming request spans. The prototype mutation persists for ESM imports too.
+require('http');
+require('https');
+
 globalThis.__otelSdk = sdk;
 
 // Flush telemetry on shutdown (cooperates with the app's 25s safety net)

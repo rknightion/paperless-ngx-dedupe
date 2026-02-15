@@ -1,11 +1,11 @@
 ---
 title: Architecture
-description: Technical architecture of the Paperless-Dedupe monorepo — packages, data flow, database schema, and worker threads
+description: Technical architecture of the Paperless NGX Dedupe monorepo — packages, data flow, database schema, and worker threads
 ---
 
 # Architecture
 
-Paperless-Dedupe is a pnpm monorepo with four packages that separate concerns cleanly between business logic, web interface, programmatic access, and CLI tooling.
+Paperless NGX Dedupe is a pnpm monorepo with four packages that separate concerns cleanly between business logic, web interface, programmatic access, and CLI tooling.
 
 ## Monorepo Overview
 
@@ -59,7 +59,7 @@ SvelteKit 2 application (Svelte 5 runes) that serves both the web UI and the RES
 
 **Key areas:**
 
-- `routes/api/v1/` -- 40+ REST API endpoints matching the [API Reference](api-reference.md)
+- `routes/api/v1/` -- REST API endpoints matching the [API Reference](api-reference.md)
 - `routes/` -- UI pages: dashboard, documents, duplicates (with detail, graph, and wizard views), settings
 - `lib/components/` -- Reusable Svelte components (DocumentCompare, TextDiff, etc.)
 - `lib/server/` -- Server-side utilities (database connection, API helpers)
@@ -89,7 +89,7 @@ Command-line interface using Commander.js. Imports `core` directly (no web serve
 | **Database** | SQLite + Drizzle ORM | Single-file database, no external dependency, excellent for single-container deployment |
 | **Background Jobs** | `worker_threads` + SQLite job queue | No Redis needed. One job per type at a time prevents resource contention |
 | **Real-time Progress** | Server-Sent Events (SSE) | Simpler than WebSockets for unidirectional progress streams |
-| **Dedup Algorithms** | Pure TypeScript MinHash/LSH | No native dependencies beyond `better-sqlite3`. 192 permutations, 20 bands default |
+| **Dedup Algorithms** | Pure TypeScript MinHash/LSH | No native dependencies beyond `better-sqlite3`. Defaults: 256 permutations, 32 bands |
 | **Validation** | Zod | TypeScript-first schemas for env config and API requests |
 | **Logging** | Pino | Fast structured JSON logging |
 | **Styling** | Tailwind CSS 4 | Utility-first CSS via Vite plugin |
@@ -136,11 +136,11 @@ sequenceDiagram
     W->>W: Create word n-gram sets
 
     Note over W: Stage 2: MinHash signatures
-    W->>W: Compute 192 hash permutations per doc
+    W->>W: Compute 256 hash permutations per doc
     W->>DB: Store signatures
 
     Note over W: Stage 3: LSH candidate detection
-    W->>W: Band hashing (20 bands)
+    W->>W: Band hashing (32 bands)
     W->>W: Bucket collision → candidate pairs
 
     Note over W: Stage 4: Multi-dimensional scoring
@@ -161,10 +161,9 @@ sequenceDiagram
 flowchart LR
     List["Duplicate List<br/><small>sorted by confidence</small>"] --> Detail["Detail View<br/><small>side-by-side diff</small>"]
     Detail --> Primary["Set Primary<br/><small>document to keep</small>"]
-    Detail --> Review["Mark Reviewed"]
-    Primary --> Resolve["Mark Resolved"]
-    Review --> Resolve
-    Resolve --> Batch["Batch Delete<br/><small>remove non-primary</small>"]
+    Detail --> FalsePositive["Set Status<br/><small>false_positive</small>"]
+    Detail --> Ignored["Set Status<br/><small>ignored</small>"]
+    Primary --> Batch["Batch Delete<br/><small>remove non-primary</small>"]
     Batch --> Paperless["Paperless-NGX<br/><small>documents deleted</small>"]
 
     style Batch fill:#ffcdd2,stroke:#f44336
@@ -229,18 +228,28 @@ erDiagram
         text id PK
         text type
         text status
-        int progress
+        real progress
         text progressMessage
+        text startedAt
+        text completedAt
+        text errorMessage
+        text resultJson
+        text createdAt
     }
 
     appConfig {
         text key PK
         text value
+        text updatedAt
     }
 
     syncState {
-        text key PK
-        text value
+        text id PK
+        text lastSyncAt
+        int lastSyncDocumentCount
+        text lastAnalysisAt
+        int totalDocuments
+        int totalDuplicateGroups
     }
 ```
 
@@ -249,14 +258,14 @@ erDiagram
 Background jobs run in Node.js `worker_threads` to avoid blocking the main event loop:
 
 - **Job Manager** (`packages/core/src/jobs/manager.ts`): Creates job records in SQLite, spawns worker threads, monitors completion
-- **Worker Launcher** (`packages/core/src/jobs/worker-launcher.ts`): Generic worker spawning with message passing
+- **Worker Launcher** (`packages/core/src/jobs/worker-launcher.ts`): Generic worker spawning and crash handling
 - **Workers** (`packages/core/src/jobs/workers/`): Specialized workers for sync, analysis, and batch operations
 
 **Constraints:**
 
 - Only **one job per type** can run at a time (enforced by the job queue)
-- Workers communicate progress via `parentPort.postMessage()`
-- The API streams progress to clients via SSE at `/api/v1/jobs/:id/progress`
+- Workers persist progress to the `job` table
+- The API polls that job state and streams it via SSE at `/api/v1/jobs/:jobId/progress`
 - Stale jobs (from crashed workers) are recovered on startup
 
 ## API Layer
@@ -265,18 +274,36 @@ The REST API is implemented as SvelteKit server routes at `packages/web/src/rout
 
 ```
 api/v1/
-├── health/         # GET - basic health check
-├── ready/          # GET - deep readiness check
-├── dashboard/      # GET - summary statistics
-├── sync/           # POST - trigger sync, GET status
-├── analysis/       # POST - trigger analysis, GET status
-├── jobs/           # GET list, GET :id, GET :id/progress (SSE), POST :id/cancel
-├── config/         # GET/PUT config, GET/PUT dedup config, POST test-connection
-├── documents/      # GET list, GET :id, GET stats
-├── duplicates/     # GET list, GET :id, GET stats, DELETE, PUT review/resolve/primary
-├── batch/          # POST review, POST resolve, POST delete-non-primary
-├── export/         # GET duplicates.csv, GET config.json
-└── import/         # POST config
+├── health/                    # GET
+├── ready/                     # GET
+├── dashboard/                 # GET
+├── sync/                      # POST
+├── sync/status/               # GET
+├── analysis/                  # POST
+├── analysis/status/           # GET
+├── jobs/                      # GET
+├── jobs/:jobId                # GET
+├── jobs/:jobId/progress       # GET (SSE)
+├── jobs/:jobId/cancel         # POST
+├── config/                    # GET, PUT
+├── config/dedup               # GET, PUT
+├── config/test-connection     # POST
+├── documents/                 # GET
+├── documents/:id              # GET
+├── documents/stats            # GET
+├── duplicates/                # GET
+├── duplicates/:id             # GET, DELETE
+├── duplicates/:id/content     # GET
+├── duplicates/:id/status      # PUT
+├── duplicates/:id/primary     # PUT
+├── duplicates/stats           # GET
+├── duplicates/graph           # GET
+├── batch/status               # POST
+├── batch/delete-non-primary   # POST
+├── export/duplicates.csv      # GET
+├── export/config.json         # GET
+├── import/config              # POST
+└── paperless/*                # Proxy/helper endpoints used by the UI
 ```
 
 All endpoints follow a consistent response envelope pattern documented in the [API Reference](api-reference.md#conventions).

@@ -5,7 +5,7 @@ description: The MinHash/LSH deduplication pipeline — shingling, signatures, c
 
 # How It Works
 
-Paperless-Dedupe uses a multi-stage pipeline to identify duplicate documents efficiently. This page explains each stage in plain terms.
+Paperless NGX Dedupe uses a multi-stage pipeline to identify duplicate documents efficiently. This page explains each stage in plain terms.
 
 ## Overview
 
@@ -32,7 +32,7 @@ flowchart LR
 
 ## Step 1: Document Sync
 
-When you trigger a sync, Paperless-Dedupe fetches documents from your Paperless-NGX instance via its REST API.
+When you trigger a sync, Paperless NGX Dedupe fetches documents from your Paperless-NGX instance via its REST API.
 
 For each document, the sync process:
 
@@ -67,7 +67,7 @@ Documents with fewer words than `minWords` (default: 20) are skipped because sho
 
 Comparing shingle sets directly is expensive -- each set can contain thousands of entries, and comparing every pair of documents would be O(n^2).
 
-MinHash compresses each shingle set into a compact fixed-size **signature** (a list of 192 numbers by default, controlled by `numPermutations`). The key property is:
+MinHash compresses each shingle set into a compact fixed-size **signature** (a list of 256 numbers by default, controlled by `numPermutations`). The key property is:
 
 > The probability that two MinHash signatures agree at any position equals the Jaccard similarity of the original shingle sets.
 
@@ -77,7 +77,7 @@ This means we can estimate how similar two documents are by comparing their shor
 
 Even with compact signatures, comparing every pair of documents is still O(n^2). LSH solves this by only comparing documents that are **likely** to be similar.
 
-The technique works by dividing each signature into **bands** (default: 20). Each band is a short segment of the signature. Documents are placed into hash buckets based on each band. Two documents that land in the same bucket for _any_ band become a **candidate pair**.
+The technique works by dividing each signature into **bands** (default: 32). Each band is a short segment of the signature. Documents are placed into hash buckets based on each band. Two documents that land in the same bucket for _any_ band become a **candidate pair**.
 
 The band/row structure creates an S-curve probability threshold:
 
@@ -85,19 +85,19 @@ The band/row structure creates an S-curve probability threshold:
 - Pairs with low similarity are almost certain to be filtered out
 - The transition region depends on the number of bands and rows per band
 
-With 192 permutations and 20 bands, the effective threshold for candidate detection is around 50-60% Jaccard similarity. The `similarityThreshold` parameter (default: 0.75) then filters scored pairs to a higher bar.
+With 256 permutations and 32 bands, the effective candidate funnel is tuned for moderate recall before the final `similarityThreshold` filter (default: 0.75) removes weaker matches.
 
 ## Step 5: Similarity Scoring
 
 Each candidate pair from LSH is scored across four dimensions:
 
-1. **Jaccard Similarity** (default weight: 40%) -- Set overlap of shingle sets, estimated from MinHash signatures. Measures how much text content the two documents share.
+1. **Jaccard Similarity** (default weight: 45%) -- Set overlap of shingle sets, estimated from MinHash signatures. Measures how much text content the two documents share.
 
-2. **Fuzzy Text Similarity** (default weight: 30%) -- Edit-distance-based ratio computed on a character sample of the normalized text (controlled by `fuzzySampleSize`). Catches cases where documents have similar content but different word order or minor variations.
+2. **Fuzzy Text Similarity** (default weight: 40%) -- Edit-distance-based ratio computed on a character sample of the normalized text (controlled by `fuzzySampleSize`). Catches cases where documents have similar content but different word order or minor variations.
 
-3. **Metadata Similarity** (default weight: 15%) -- Compares correspondent, document type, creation date, and file size. Documents from the same source with similar dates are more likely to be duplicates.
+3. **Metadata Similarity** (default weight: 10%) -- Compares correspondent, document type, creation date, and file size. Documents from the same source with similar dates are more likely to be duplicates.
 
-4. **Filename Similarity** (default weight: 15%) -- String similarity between document titles. Useful for catching re-uploads or scans with auto-generated names.
+4. **Filename Similarity** (default weight: 5%) -- String similarity between document titles. Useful for catching re-uploads or scans with auto-generated names.
 
 The overall confidence score is the weighted combination of all four dimensions. Pairs scoring below `similarityThreshold` (default: 0.75) are discarded.
 
@@ -138,12 +138,12 @@ Groups are presented in the web UI for review, sorted by confidence.
 
 `numPermutations` must be evenly divisible by `numBands`. The number of rows per band is `numPermutations / numBands`. More rows per band means a higher effective LSH threshold (fewer candidates, higher precision). More bands means a lower effective threshold (more candidates, higher recall).
 
-| Permutations | Bands | Rows/Band | Approximate LSH Threshold |
-| ------------ | ----- | --------- | ------------------------- |
-| 192          | 20    | ~10       | ~55%                      |
-| 192          | 32    | 6         | ~45%                      |
-| 128          | 16    | 8         | ~55%                      |
-| 256          | 32    | 8         | ~55%                      |
+| Permutations | Bands | Rows/Band | Effect |
+| ------------ | ----- | --------- | ------ |
+| 256          | 32    | 8         | Default balance of recall/precision |
+| 256          | 16    | 16        | Fewer candidates, higher precision |
+| 128          | 16    | 8         | Faster, with less stable estimates |
+| 512          | 32    | 16        | More stable estimates, higher CPU |
 
 ## See Also
 

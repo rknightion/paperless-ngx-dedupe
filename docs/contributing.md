@@ -1,11 +1,11 @@
 ---
 title: Contributing
-description: How to contribute to the Paperless-Dedupe project
+description: How to contribute to the Paperless NGX Dedupe project
 ---
 
 # Contributing
 
-Thank you for considering contributing to Paperless-Dedupe! This guide covers the process for reporting bugs, suggesting features, and submitting code changes.
+Thank you for considering contributing to Paperless NGX Dedupe! This guide covers the process for reporting bugs, suggesting features, and submitting code changes.
 
 ## Ways to Contribute
 

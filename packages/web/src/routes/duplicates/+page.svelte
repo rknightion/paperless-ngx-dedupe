@@ -10,6 +10,7 @@
     GroupPreviewModal,
     RecycleBinPrompt,
   } from '$lib/components';
+  import { Network, Download, Wand2, ArrowDown, ArrowUp } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -188,14 +189,14 @@
 </script>
 
 <svelte:head>
-  <title>Duplicates - Paperless Dedupe</title>
+  <title>Duplicates - Paperless NGX Dedupe</title>
 </svelte:head>
 
 <div class="space-y-6">
   <!-- Page Header -->
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
-      <h1 class="text-ink text-3xl font-bold">Duplicate Groups</h1>
+      <h1 class="text-ink text-2xl font-semibold tracking-tight">Duplicate Groups</h1>
       <span class="bg-accent-light text-accent rounded-full px-2.5 py-0.5 text-xs font-semibold">
         {data.total}
       </span>
@@ -203,22 +204,22 @@
     <div class="flex items-center gap-2">
       <a
         href="/duplicates/graph"
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
+        class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
       >
-        Similarity Graph
+        <Network class="h-4 w-4" />Similarity Graph
       </a>
       <a
         href="/api/v1/export/duplicates.csv?{$page.url.searchParams.toString()}"
         download
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
+        class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
       >
-        Export CSV
+        <Download class="h-4 w-4" />Export CSV
       </a>
       <a
         href="/duplicates/wizard"
-        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
+        class="bg-accent hover:bg-accent-hover flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white"
       >
-        Bulk Operations Wizard
+        <Wand2 class="h-4 w-4" />Bulk Operations Wizard
       </a>
     </div>
   </div>
@@ -230,7 +231,7 @@
     </summary>
     <div class="text-muted mt-3 space-y-3 text-sm leading-relaxed">
       <p>
-        Paperless Dedupe identifies potential duplicates using a multi-stage pipeline that compares
+        Paperless NGX Dedupe identifies potential duplicates using a multi-stage pipeline that compares
         documents across four similarity dimensions:
       </p>
       <dl
@@ -297,7 +298,7 @@
 
   <!-- Filter Bar -->
   <div class="panel">
-    <div class="flex flex-wrap items-end gap-4">
+    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
       <div>
         <label for="status-filter" class="text-ink block text-sm font-medium">Status</label>
         <select
@@ -366,7 +367,11 @@
             class="border-soft text-ink hover:bg-canvas rounded-lg border px-2 py-2 text-sm"
             title="Toggle sort order"
           >
-            {($page.url.searchParams.get('sortOrder') ?? 'desc') === 'desc' ? '↓' : '↑'}
+            {#if ($page.url.searchParams.get('sortOrder') ?? 'desc') === 'desc'}
+              <ArrowDown class="h-4 w-4" />
+            {:else}
+              <ArrowUp class="h-4 w-4" />
+            {/if}
           </button>
         </div>
       </div>
@@ -418,7 +423,7 @@
   <!-- Bulk Actions Bar -->
   {#if selectedIds.size > 0}
     <div
-      class="border-accent bg-accent-light flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
+      class="border-accent bg-accent-light sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
     >
       <span class="text-ink text-sm font-medium">{selectedIds.size} selected</span>
       <button
@@ -472,7 +477,9 @@
         <tbody>
           {#each data.groups as group, i (group.id)}
             <tr
-              class="border-soft hover:bg-canvas cursor-pointer border-b {i % 2 === 0
+              class="border-soft hover:bg-accent-subtle cursor-pointer border-b transition-colors duration-150 {i %
+                2 ===
+              0
                 ? 'bg-surface'
                 : 'bg-canvas'}"
               onclick={() => goto(`/duplicates/${group.id}`)}
@@ -531,6 +538,9 @@
       <span class="text-muted text-sm">
         Showing {showingFrom}-{showingTo} of {data.total}
       </span>
+      <span class="text-muted text-sm">
+        Page {Math.floor(data.offset / data.limit) + 1} of {Math.ceil(data.total / data.limit)}
+      </span>
       <div class="flex items-center gap-3">
         <button
           onclick={() => goToPage(data.offset - data.limit)}
@@ -559,8 +569,18 @@
     </div>
   {:else if hasFilters}
     <!-- Empty state with filters -->
-    <div class="panel py-12 text-center">
-      <p class="text-muted">No groups match your filters.</p>
+    <div class="panel py-16 text-center">
+      <svg
+        class="text-muted mx-auto h-12 w-12"
+        fill="none"
+        viewBox="0 0 48 48"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <circle cx="20" cy="20" r="14" />
+        <path stroke-linecap="round" d="M30 30l10 10" />
+      </svg>
+      <p class="text-muted mt-4">No groups match your filters.</p>
       <button
         onclick={clearFilters}
         class="bg-accent hover:bg-accent-hover mt-3 rounded-lg px-4 py-2 text-sm font-medium text-white"
@@ -570,8 +590,18 @@
     </div>
   {:else}
     <!-- Empty state, no data -->
-    <div class="panel py-12 text-center">
-      <p class="text-muted">No duplicates found yet. Run analysis from the Dashboard.</p>
+    <div class="panel py-16 text-center">
+      <svg
+        class="text-muted mx-auto h-12 w-12"
+        fill="none"
+        viewBox="0 0 48 48"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <rect x="8" y="6" width="24" height="30" rx="3" />
+        <path stroke-linecap="round" d="M16 20l4 4 8-8" />
+      </svg>
+      <p class="text-muted mt-4">No duplicates found yet. Run analysis from the Dashboard.</p>
     </div>
   {/if}
 </div>

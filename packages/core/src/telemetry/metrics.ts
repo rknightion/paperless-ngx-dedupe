@@ -1,6 +1,6 @@
 import { metrics, type Counter, type Histogram } from '@opentelemetry/api';
 
-const METER_NAME = 'paperless-dedupe';
+const METER_NAME = 'paperless-ngx-dedupe';
 
 function getMeter() {
   return metrics.getMeter(METER_NAME);
@@ -10,35 +10,35 @@ function getMeter() {
 
 let _syncDocumentsTotal: Counter | undefined;
 export function syncDocumentsTotal(): Counter {
-  return (_syncDocumentsTotal ??= getMeter().createCounter('dedupe.sync.documents_total', {
+  return (_syncDocumentsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.sync.documents_total', {
     description: 'Total documents processed during sync operations',
   }));
 }
 
 let _syncRunsTotal: Counter | undefined;
 export function syncRunsTotal(): Counter {
-  return (_syncRunsTotal ??= getMeter().createCounter('dedupe.sync.runs_total', {
+  return (_syncRunsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.sync.runs_total', {
     description: 'Total sync runs',
   }));
 }
 
 let _analysisRunsTotal: Counter | undefined;
 export function analysisRunsTotal(): Counter {
-  return (_analysisRunsTotal ??= getMeter().createCounter('dedupe.analysis.runs_total', {
+  return (_analysisRunsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.analysis.runs_total', {
     description: 'Total analysis runs',
   }));
 }
 
 let _jobsTotal: Counter | undefined;
 export function jobsTotal(): Counter {
-  return (_jobsTotal ??= getMeter().createCounter('dedupe.jobs_total', {
+  return (_jobsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.jobs_total', {
     description: 'Total jobs by type and outcome',
   }));
 }
 
 let _paperlessRequestsTotal: Counter | undefined;
 export function paperlessRequestsTotal(): Counter {
-  return (_paperlessRequestsTotal ??= getMeter().createCounter('dedupe.paperless.requests_total', {
+  return (_paperlessRequestsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.paperless.requests_total', {
     description: 'Total HTTP requests to Paperless-NGX API',
   }));
 }
@@ -47,7 +47,7 @@ export function paperlessRequestsTotal(): Counter {
 
 let _syncDuration: Histogram | undefined;
 export function syncDuration(): Histogram {
-  return (_syncDuration ??= getMeter().createHistogram('dedupe.sync.duration_seconds', {
+  return (_syncDuration ??= getMeter().createHistogram('paperless_ngx_dedupe.sync.duration_seconds', {
     description: 'Duration of sync operations in seconds',
     unit: 's',
   }));
@@ -55,7 +55,7 @@ export function syncDuration(): Histogram {
 
 let _analysisDuration: Histogram | undefined;
 export function analysisDuration(): Histogram {
-  return (_analysisDuration ??= getMeter().createHistogram('dedupe.analysis.duration_seconds', {
+  return (_analysisDuration ??= getMeter().createHistogram('paperless_ngx_dedupe.analysis.duration_seconds', {
     description: 'Duration of analysis operations in seconds',
     unit: 's',
   }));
@@ -64,7 +64,7 @@ export function analysisDuration(): Histogram {
 let _analysisStageDuration: Histogram | undefined;
 export function analysisStageDuration(): Histogram {
   return (_analysisStageDuration ??= getMeter().createHistogram(
-    'dedupe.analysis.stage.duration_seconds',
+    'paperless_ngx_dedupe.analysis.stage.duration_seconds',
     {
       description: 'Duration of individual analysis pipeline stages in seconds',
       unit: 's',
@@ -88,7 +88,7 @@ export function registerObservableGauges(
   const meter = getMeter();
 
   meter
-    .createObservableGauge('dedupe.documents_count', {
+    .createObservableGauge('paperless_ngx_dedupe.documents_count', {
       description: 'Total number of synced documents',
     })
     .addCallback((result) => {
@@ -96,7 +96,7 @@ export function registerObservableGauges(
     });
 
   meter
-    .createObservableGauge('dedupe.duplicates.unresolved_count', {
+    .createObservableGauge('paperless_ngx_dedupe.duplicates.unresolved_count', {
       description: 'Number of unresolved duplicate groups',
     })
     .addCallback((result) => {
@@ -104,7 +104,7 @@ export function registerObservableGauges(
     });
 
   meter
-    .createObservableGauge('dedupe.jobs.active_count', {
+    .createObservableGauge('paperless_ngx_dedupe.jobs.active_count', {
       description: 'Number of currently running jobs',
     })
     .addCallback((result) => {

@@ -1,5 +1,5 @@
 [project]
-site_name = "Paperless-Dedupe"
+site_name = "Paperless NGX Dedupe"
 site_description = "A document deduplication companion for Paperless-NGX using MinHash/LSH algorithms with a web UI for reviewing and resolving duplicates"
 site_url = "https://m7kni.io/paperless-ngx-dedupe/"
 site_author = "Rob Knighton"
@@ -239,7 +239,7 @@ types = [
 
 [project.extra]
 social_image = "assets/social-card.png"
-social_image_alt = "Paperless-Dedupe documentation social preview card"
+social_image_alt = "Paperless NGX Dedupe documentation social preview card"
 twitter_site = "@rknightion"
 twitter_creator = "@rknightion"
 theme_color = "#3f51b5"

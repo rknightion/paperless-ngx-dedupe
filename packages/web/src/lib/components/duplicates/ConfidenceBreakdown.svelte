@@ -22,8 +22,9 @@
 
   function scoreColor(score: number | null): string {
     if (score === null) return 'oklch(0.75 0.01 260)';
-    if (score >= 0.95) return 'oklch(0.55 0.15 155)';
-    if (score >= 0.85) return 'oklch(0.65 0.15 85)';
+    if (score >= 0.9) return 'oklch(0.55 0.15 155)';
+    if (score >= 0.8) return 'oklch(0.65 0.15 85)';
+    if (score >= 0.75) return 'oklch(0.6 0.15 55)';
     return 'oklch(0.55 0.2 25)';
   }
 

@@ -11,7 +11,7 @@ test.describe('Bulk Operations Wizard', () => {
 
   test('page loads and shows title', async ({ page }) => {
     await page.goto('/duplicates/wizard');
-    await expect(page).toHaveTitle('Bulk Operations Wizard - Paperless Dedupe');
+    await expect(page).toHaveTitle('Bulk Operations Wizard - Paperless NGX Dedupe');
   });
 
   test('breadcrumb navigation is present', async ({ page }) => {

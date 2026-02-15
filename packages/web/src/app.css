@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
+@import '@fontsource/geist-sans';
 @import '@fontsource-variable/jetbrains-mono';
 
 /* ─── Design System ─────────────────────────────────────────────────────
@@ -11,9 +11,12 @@
 
 @theme {
   --color-canvas: oklch(0.97 0.005 90);
+  --color-canvas-deep: oklch(0.94 0.008 90);
   --color-ink: oklch(0.2 0.02 260);
+  --color-ink-light: oklch(0.35 0.02 260);
   --color-accent: oklch(0.55 0.15 195);
   --color-accent-light: oklch(0.92 0.04 195);
+  --color-accent-subtle: oklch(0.96 0.02 195);
   --color-accent-hover: oklch(0.48 0.15 195);
   --color-ember: oklch(0.55 0.2 25);
   --color-ember-light: oklch(0.92 0.05 25);
@@ -22,10 +25,21 @@
   --color-muted: oklch(0.55 0.015 260);
   --color-success: oklch(0.55 0.15 155);
   --color-success-light: oklch(0.92 0.04 155);
-  --color-sidebar: oklch(0.22 0.02 260);
+  --color-warn: oklch(0.7 0.15 85);
+  --color-warn-light: oklch(0.94 0.04 85);
+  --color-sidebar: oklch(0.18 0.025 260);
   --color-sidebar-hover: oklch(0.3 0.02 260);
+  --color-sidebar-active: oklch(0.3 0.03 195);
 
-  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* Chart palette — 6 distinct colors */
+  --color-chart-1: oklch(0.55 0.15 195);
+  --color-chart-2: oklch(0.6 0.16 155);
+  --color-chart-3: oklch(0.65 0.14 265);
+  --color-chart-4: oklch(0.7 0.15 85);
+  --color-chart-5: oklch(0.6 0.18 330);
+  --color-chart-6: oklch(0.6 0.12 140);
+
+  --font-sans: 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
 }
 
@@ -34,13 +48,71 @@
   border: 1px solid var(--color-soft);
   border-radius: var(--radius-xl);
   padding: calc(var(--spacing) * 4);
-  box-shadow: var(--shadow-sm);
+  box-shadow:
+    0 1px 2px oklch(0.2 0.02 260 / 0.04),
+    0 2px 8px oklch(0.2 0.02 260 / 0.03);
+  transition: box-shadow 0.2s ease;
+}
+
+@utility panel-interactive {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-soft);
+  border-radius: var(--radius-xl);
+  padding: calc(var(--spacing) * 4);
+  box-shadow:
+    0 1px 2px oklch(0.2 0.02 260 / 0.04),
+    0 2px 8px oklch(0.2 0.02 260 / 0.03);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 2px 4px oklch(0.2 0.02 260 / 0.06),
+      0 4px 16px oklch(0.2 0.02 260 / 0.05);
+    border-color: var(--color-accent);
+  }
+}
+
+@utility panel-inset {
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-soft);
+  border-radius: var(--radius-lg);
+  padding: calc(var(--spacing) * 3);
+}
+
+@utility divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--color-soft), transparent);
 }
 
 @layer base {
   html {
     font-family: var(--font-sans);
     color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  button:active:not(:disabled),
+  a:active {
+    transform: scale(0.98);
+  }
+
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: 0.15s;
+    transition-timing-function: ease;
   }
 
   details > summary {
@@ -60,5 +132,33 @@
 
   details[open] > summary::before {
     transform: rotate(90deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

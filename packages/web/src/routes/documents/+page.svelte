@@ -1,6 +1,7 @@
 <script lang="ts">
   import { StatCard, EChart, ProgressBar } from '$lib/components';
   import { formatBytes } from '$lib/utils/format';
+  import { FileStack, Database, Clock, Type, Copy } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -20,7 +21,7 @@
       {
         type: 'bar',
         data: data.stats.correspondentDistribution.map((c) => c.count).reverse(),
-        itemStyle: { color: 'oklch(0.55 0.15 195)' },
+        itemStyle: { color: 'oklch(0.7 0.15 85)' },
         barMaxWidth: 24,
       },
     ],
@@ -30,6 +31,14 @@
   // Document type donut chart
   let docTypeOption: EChartsOption = $derived({
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    color: [
+      'oklch(0.55 0.15 195)',
+      'oklch(0.6 0.16 155)',
+      'oklch(0.65 0.14 265)',
+      'oklch(0.7 0.15 85)',
+      'oklch(0.6 0.18 330)',
+      'oklch(0.6 0.12 140)',
+    ],
     series: [
       {
         type: 'pie',
@@ -49,6 +58,14 @@
   // Tag treemap
   let tagOption: EChartsOption = $derived({
     tooltip: { formatter: '{b}: {c} documents' },
+    color: [
+      'oklch(0.55 0.15 195)',
+      'oklch(0.6 0.16 155)',
+      'oklch(0.65 0.14 265)',
+      'oklch(0.7 0.15 85)',
+      'oklch(0.6 0.18 330)',
+      'oklch(0.6 0.12 140)',
+    ],
     series: [
       {
         type: 'treemap',
@@ -105,7 +122,7 @@
       {
         type: 'bar',
         data: data.stats.fileSizeDistribution.map((d) => d.count),
-        itemStyle: { color: 'oklch(0.55 0.15 195)' },
+        itemStyle: { color: 'oklch(0.65 0.14 265)' },
         barMaxWidth: 40,
       },
     ],
@@ -125,7 +142,7 @@
       {
         type: 'bar',
         data: data.stats.wordCountDistribution.map((d) => d.count),
-        itemStyle: { color: 'oklch(0.55 0.15 155)' },
+        itemStyle: { color: 'oklch(0.6 0.16 155)' },
         barMaxWidth: 40,
       },
     ],
@@ -134,19 +151,29 @@
 </script>
 
 <svelte:head>
-  <title>Documents - Paperless Dedupe</title>
+  <title>Documents - Paperless NGX Dedupe</title>
 </svelte:head>
 
 <div class="space-y-8">
-  <div>
-    <h1 class="text-ink text-3xl font-bold">Documents</h1>
+  <header class="space-y-1">
+    <h1 class="text-ink text-2xl font-semibold tracking-tight">Documents</h1>
     <p class="text-muted mt-1">Library statistics and document overview.</p>
+  </header>
+
+  <!-- Overview Divider -->
+  <div class="flex items-center gap-4">
+    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Overview</span>
+    <div class="divider flex-1"></div>
   </div>
 
   <!-- Summary Cards -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()} />
-    <StatCard label="Total Storage" value={formatBytes(data.stats.totalStorageBytes)} />
+    <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()}>
+      {#snippet icon()}<FileStack class="h-5 w-5" />{/snippet}
+    </StatCard>
+    <StatCard label="Total Storage" value={formatBytes(data.stats.totalStorageBytes)}>
+      {#snippet icon()}<Database class="h-5 w-5" />{/snippet}
+    </StatCard>
     <div class="panel">
       <p class="text-muted text-sm">OCR Coverage</p>
       <p class="text-ink mt-1 text-2xl font-semibold">{data.stats.ocrCoverage.percentage}%</p>
@@ -163,15 +190,21 @@
       value="{data.stats.processingStatus.completed} / {data.stats.totalDocuments}"
       trendLabel="{data.stats.processingStatus.pending} pending"
       trend={data.stats.processingStatus.pending > 0 ? 'neutral' : 'up'}
-    />
-    <StatCard label="Avg Word Count" value={data.stats.averageWordCount.toLocaleString()} />
+    >
+      {#snippet icon()}<Clock class="h-5 w-5" />{/snippet}
+    </StatCard>
+    <StatCard label="Avg Word Count" value={data.stats.averageWordCount.toLocaleString()}>
+      {#snippet icon()}<Type class="h-5 w-5" />{/snippet}
+    </StatCard>
     <StatCard
       label="Duplicate Involvement"
       value="{data.stats.duplicateInvolvement.percentage}%"
       trendLabel="{data.stats.duplicateInvolvement.documentsInGroups} of {data.stats
         .totalDocuments} documents"
       trend={data.stats.duplicateInvolvement.percentage > 0 ? 'neutral' : 'up'}
-    />
+    >
+      {#snippet icon()}<Copy class="h-5 w-5" />{/snippet}
+    </StatCard>
   </div>
 
   <!-- Deduplication Activity -->
@@ -197,6 +230,12 @@
       </div>
     </div>
   {/if}
+
+  <!-- Analytics Divider -->
+  <div class="flex items-center gap-4">
+    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Analytics</span>
+    <div class="divider flex-1"></div>
+  </div>
 
   <!-- Documents Over Time -->
   {#if data.stats.documentsOverTime.length > 0}
@@ -251,6 +290,12 @@
     </div>
   {/if}
 
+  <!-- Data Quality Divider -->
+  <div class="flex items-center gap-4">
+    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Data Quality</span>
+    <div class="divider flex-1"></div>
+  </div>
+
   <!-- Data Quality -->
   {#if data.stats.unclassified.noCorrespondent > 0 || data.stats.unclassified.noDocumentType > 0 || data.stats.unclassified.noTags > 0}
     <div class="panel">
@@ -294,7 +339,9 @@
           </thead>
           <tbody>
             {#each data.stats.largestDocuments as doc (doc.id)}
-              <tr class="border-soft border-b last:border-0">
+              <tr
+                class="border-soft hover:bg-accent-subtle border-b transition-colors last:border-0"
+              >
                 <td class="text-ink py-2 font-medium">{doc.title}</td>
                 <td class="text-muted py-2">{doc.correspondent ?? '-'}</td>
                 <td class="text-muted py-2 text-right font-mono text-xs">

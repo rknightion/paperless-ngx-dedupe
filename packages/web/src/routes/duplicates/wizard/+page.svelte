@@ -9,6 +9,7 @@
     RecycleBinPrompt,
   } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
+  import { XCircle, Eye, Trash2, CheckCircle } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -287,7 +288,7 @@
 </script>
 
 <svelte:head>
-  <title>Bulk Operations Wizard - Paperless Dedupe</title>
+  <title>Bulk Operations Wizard - Paperless NGX Dedupe</title>
 </svelte:head>
 
 <div class="space-y-6">
@@ -305,13 +306,15 @@
       {@const isCompleted = step > stepNum}
       {@const isCurrent = step === stepNum}
       {#if i > 0}
-        <div class="h-px flex-1 {isCompleted ? 'bg-success' : 'bg-soft'}"></div>
+        <div
+          class="h-px flex-1 transition-all duration-500 {isCompleted ? 'bg-success' : 'bg-soft'}"
+        ></div>
       {/if}
       <div class="flex items-center gap-2">
         <div
-          class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold
+          class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold
             {isCurrent
-            ? 'bg-accent text-white'
+            ? 'bg-accent shadow-accent/25 text-white shadow-md'
             : isCompleted
               ? 'bg-success text-white'
               : 'bg-soft text-muted'}"
@@ -322,7 +325,13 @@
             {stepNum}
           {/if}
         </div>
-        <span class="hidden text-sm font-medium sm:inline {isCurrent ? 'text-ink' : 'text-muted'}">
+        <span
+          class="hidden text-sm font-medium sm:inline {isCurrent
+            ? 'text-accent'
+            : isCompleted
+              ? 'text-success'
+              : 'text-muted'}"
+        >
           {label}
         </span>
       </div>
@@ -475,6 +484,7 @@
             : 'border-soft hover:border-accent'}"
         >
           <div class="flex items-center gap-3">
+            <XCircle class="text-muted h-5 w-5 shrink-0" />
             <input
               type="radio"
               name="action"
@@ -497,6 +507,7 @@
             : 'border-soft hover:border-accent'}"
         >
           <div class="flex items-center gap-3">
+            <Eye class="text-muted h-5 w-5 shrink-0" />
             <input
               type="radio"
               name="action"
@@ -519,6 +530,11 @@
             : 'border-soft hover:border-ember'}"
         >
           <div class="flex items-center gap-3">
+            <div
+              class="bg-ember-light flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+            >
+              <Trash2 class="text-ember h-5 w-5 shrink-0" />
+            </div>
             <input
               type="radio"
               name="action"
@@ -639,26 +655,34 @@
       <!-- Step 6: Results -->
     {:else if step === 6}
       {#if executionResult?.success}
-        <h2 class="text-success text-xl font-semibold">Operation Complete</h2>
-
-        <div
-          class="border-success bg-success-light text-success mt-6 rounded-lg border px-4 py-4 text-sm"
-        >
-          <span class="font-semibold">{executionResult.processed}</span> groups processed successfully.
+        <div class="flex flex-col items-center text-center">
+          <div class="bg-success-light flex h-16 w-16 items-center justify-center rounded-full">
+            <CheckCircle class="text-success h-8 w-8" />
+          </div>
+          <h2 class="text-success mt-4 text-xl font-semibold">Operation Complete</h2>
+          <div
+            class="border-success bg-success-light text-success mt-4 rounded-lg border px-4 py-4 text-sm"
+          >
+            <span class="font-semibold">{executionResult.processed}</span> groups processed successfully.
+          </div>
         </div>
 
         {#if showRecycleBinSection && selectedAction === 'delete'}
           <RecycleBinPrompt />
         {/if}
       {:else}
-        <h2 class="text-ember text-xl font-semibold">Operation Failed</h2>
-
-        <div
-          class="border-ember bg-ember-light text-ember mt-6 rounded-lg border px-4 py-4 text-sm"
-        >
-          {#each executionResult?.errors ?? ['Unknown error'] as error, i (i)}
-            <p>{error}</p>
-          {/each}
+        <div class="flex flex-col items-center text-center">
+          <div class="bg-ember-light flex h-16 w-16 items-center justify-center rounded-full">
+            <XCircle class="text-ember h-8 w-8" />
+          </div>
+          <h2 class="text-ember mt-4 text-xl font-semibold">Operation Failed</h2>
+          <div
+            class="border-ember bg-ember-light text-ember mt-4 rounded-lg border px-4 py-4 text-sm"
+          >
+            {#each executionResult?.errors ?? ['Unknown error'] as error, i (i)}
+              <p>{error}</p>
+            {/each}
+          </div>
         </div>
       {/if}
 

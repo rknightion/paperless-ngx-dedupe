@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const configSchema = z
   .object({
-    DATABASE_URL: z.string().default('./data/paperless-dedupe.db'),
+    DATABASE_URL: z.string().default('./data/paperless-ngx-dedupe.db'),
     PAPERLESS_URL: z.url({ error: 'PAPERLESS_URL must be a valid URL' }),
     PAPERLESS_API_TOKEN: z.string().optional(),
     PAPERLESS_USERNAME: z.string().optional(),

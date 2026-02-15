@@ -1,4 +1,4 @@
-# Paperless-Dedupe
+# Paperless NGX Dedupe
 
 A document deduplication companion for [Paperless-NGX](https://github.com/paperless-ngx/paperless-ngx). It syncs your documents, identifies duplicates using MinHash/LSH algorithms, and provides a web UI to review and resolve them.
 
