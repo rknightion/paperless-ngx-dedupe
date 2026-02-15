@@ -31,6 +31,9 @@ export function launchWorker(options: LaunchWorkerOptions): WorkerHandle {
   const worker = new Worker(workerScriptPath, {
     workerData,
     execArgv: [], // Prevent inheriting --require ./telemetry.cjs; workers use initWorkerTelemetry()
+    resourceLimits: {
+      maxOldGenerationSizeMb: 768,
+    },
   });
 
   const done = new Promise<void>((resolve, reject) => {
