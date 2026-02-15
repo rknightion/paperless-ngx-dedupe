@@ -1,10 +1,15 @@
-import { context, propagation, ROOT_CONTEXT, type Context } from '@opentelemetry/api';
+import { context, propagation, trace, ROOT_CONTEXT, type Context } from '@opentelemetry/api';
 
 let workerSdk: { shutdown: () => Promise<void> } | null = null;
 
 /**
  * Initialize OTEL SDK in a worker thread. Workers run in separate V8 isolates
  * and don't inherit the main thread's SDK.
+ *
+ * No auto-instrumentation is registered — workers use manual spans via withSpan().
+ * UndiciInstrumentation was intentionally removed: during a 13k-document sync the
+ * worker makes ~13,000 HTTP requests for metadata, each producing a span that
+ * accumulates in the BatchSpanProcessor queue and can cause heap OOM.
  */
 export async function initWorkerTelemetry(workerName: string): Promise<void> {
   if (process.env.OTEL_ENABLED !== 'true') return;
@@ -13,7 +18,6 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
   const { NodeSDK } = await import('@opentelemetry/sdk-node');
   const { resourceFromAttributes } = await import('@opentelemetry/resources');
   const { ATTR_SERVICE_NAME } = await import('@opentelemetry/semantic-conventions');
-  const { UndiciInstrumentation } = await import('@opentelemetry/instrumentation-undici');
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
