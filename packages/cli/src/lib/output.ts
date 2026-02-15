@@ -82,7 +82,7 @@ export function formatDashboard(data: DashboardData): string {
   const lines = [
     'Dashboard',
     `  Total documents:      ${data.totalDocuments}`,
-    `  Unresolved groups:    ${data.unresolvedGroups}`,
+    `  Pending groups:       ${data.pendingGroups}`,
     `  Storage savings:      ${formatBytes(data.storageSavingsBytes)}`,
     `  Pending analysis:     ${data.pendingAnalysis}`,
     `  Last sync:            ${data.lastSyncAt ?? 'never'}`,
@@ -103,9 +103,10 @@ export function formatDuplicateStats(stats: DuplicateStats): string {
   const lines = [
     'Duplicate Stats',
     `  Total groups:     ${stats.totalGroups}`,
-    `  Reviewed:         ${stats.reviewedGroups}`,
-    `  Resolved:         ${stats.resolvedGroups}`,
-    `  Unresolved:       ${stats.unresolvedGroups}`,
+    `  Pending:          ${stats.pendingGroups}`,
+    `  False Positive:   ${stats.falsePositiveGroups}`,
+    `  Ignored:          ${stats.ignoredGroups}`,
+    `  Deleted:          ${stats.deletedGroups}`,
   ];
   if (stats.confidenceDistribution.length > 0) {
     lines.push('  Confidence distribution:');
