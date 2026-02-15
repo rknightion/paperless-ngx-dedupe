@@ -39,7 +39,7 @@ FROM node:24-slim AS production
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tini gosu && rm -rf /var/lib/apt/lists/*
 
 # Copy production deps from pnpm deploy (flat node_modules, no symlinks)
 COPY --from=build /app/deployed/node_modules ./node_modules
@@ -57,24 +57,24 @@ COPY --from=build /app/cli-bundle/paperless-dedupe.mjs ./cli/paperless-dedupe.mj
 # Copy OTEL preload script (loaded via --require when OTEL_ENABLED=true)
 COPY --from=build /app/packages/web/telemetry.cjs ./telemetry.cjs
 
-# Create non-root user and data directory
-RUN addgroup --system --gid 1001 appgroup && \
-    adduser --system --uid 1001 --ingroup appgroup appuser && \
-    mkdir -p /app/data && \
-    chown -R appuser:appgroup /app && \
+# Create data directory and CLI wrapper
+RUN mkdir -p /app/data && \
     printf '#!/bin/sh\nexec node /app/cli/paperless-dedupe.mjs "$@"\n' > /usr/local/bin/paperless-dedupe && \
     chmod +x /usr/local/bin/paperless-dedupe
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 LABEL org.opencontainers.image.source="https://github.com/rknightion/paperless-ngx-dedupe"
 LABEL org.opencontainers.image.description="Document deduplication companion for Paperless-NGX"
 
 ENV NODE_ENV=production
 
-USER appuser
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://localhost:3000/api/v1/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
 
-ENTRYPOINT ["tini", "--"]
+ENTRYPOINT ["tini", "--", "/docker-entrypoint.sh"]
 CMD ["node", "--require", "./telemetry.cjs", "build"]
