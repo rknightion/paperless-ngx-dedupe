@@ -1,6 +1,6 @@
 import { trace, SpanStatusCode, type Span } from '@opentelemetry/api';
 
-const TRACER_NAME = 'paperless-dedupe';
+const TRACER_NAME = 'paperless-ngx-dedupe';
 
 export function getTracer() {
   return trace.getTracer(TRACER_NAME);

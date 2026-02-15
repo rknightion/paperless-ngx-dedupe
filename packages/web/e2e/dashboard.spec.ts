@@ -11,7 +11,7 @@ test.describe('Dashboard', () => {
 
   test('page loads and shows title', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle('Dashboard - Paperless Dedupe');
+    await expect(page).toHaveTitle('Dashboard - Paperless NGX Dedupe');
     await expect(page.locator('main h1')).toHaveText('Dashboard');
   });
 
@@ -29,7 +29,7 @@ test.describe('Dashboard', () => {
     await page.goto('/');
 
     const sidebar = page.locator('aside');
-    await expect(sidebar.getByText('Paperless Dedupe')).toBeVisible();
+    await expect(sidebar.getByText('Paperless NGX Dedupe')).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Dashboard' })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Documents' })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Duplicates' })).toBeVisible();

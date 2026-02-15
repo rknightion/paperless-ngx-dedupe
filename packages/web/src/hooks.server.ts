@@ -1,4 +1,5 @@
 import { sequence } from '@sveltejs/kit/hooks';
+import { trace } from '@opentelemetry/api';
 import { parseConfig, initLogger, createLogger } from '@paperless-dedupe/core';
 import type { Handle } from '@sveltejs/kit';
 import { getDatabase } from '$lib/server/db';
@@ -79,6 +80,16 @@ const handleRequest: Handle = async ({ event, resolve }) => {
   const start = performance.now();
   const response = await resolve(event);
   const duration = Math.round(performance.now() - start);
+
+  // Enrich the HTTP instrumentation span with SvelteKit route info.
+  // Without this, spans have generic names like "GET"; with it they get
+  // descriptive names like "GET /duplicates/[id]".
+  const span = trace.getActiveSpan();
+  if (span) {
+    const routeId = event.route.id ?? event.url.pathname;
+    span.setAttribute('http.route', routeId);
+    span.updateName(`${event.request.method} ${routeId}`);
+  }
 
   logger.info(
     {

@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { ConfirmDialog, RecycleBinPrompt } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
+  import { XCircle, CheckCircle, Trash2, RotateCcw } from 'lucide-svelte';
 
   interface Props {
     groupId: string;
@@ -78,14 +79,21 @@
   }
 </script>
 
-<div class="panel flex flex-wrap items-center gap-3">
+<div
+  class="panel flex flex-wrap items-center gap-3 {status === 'pending'
+    ? 'border-accent bg-accent-subtle border-2'
+    : 'bg-canvas'}"
+>
   {#if status === 'pending'}
     <button
       onclick={() => setStatus('false_positive')}
       disabled={isUpdating}
       class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
     >
-      Not a Duplicate
+      <span class="flex items-center gap-2">
+        <XCircle class="h-4 w-4" />
+        Not a Duplicate
+      </span>
     </button>
 
     <button
@@ -93,7 +101,10 @@
       disabled={isUpdating}
       class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
     >
-      Keep All
+      <span class="flex items-center gap-2">
+        <CheckCircle class="h-4 w-4" />
+        Keep All
+      </span>
     </button>
 
     <button
@@ -103,7 +114,10 @@
       disabled={isUpdating || memberCount < 2}
       class="bg-ember rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
     >
-      Delete Duplicates
+      <span class="flex items-center gap-2">
+        <Trash2 class="h-4 w-4" />
+        Delete Duplicates
+      </span>
     </button>
   {:else}
     <button
@@ -111,7 +125,10 @@
       disabled={isUpdating}
       class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
     >
-      Reopen
+      <span class="flex items-center gap-2">
+        <RotateCcw class="h-4 w-4" />
+        Reopen
+      </span>
     </button>
   {/if}
 

@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Common issues and solutions for Paperless-Dedupe — connection, sync, analysis, database, Docker, and performance
+description: Common issues and solutions for Paperless NGX Dedupe — connection, sync, analysis, database, Docker, and performance
 ---
 
 # Troubleshooting
@@ -14,7 +14,7 @@ description: Common issues and solutions for Paperless-Dedupe — connection, sy
 **Causes and fixes:**
 
 - **Wrong URL:** Verify `PAPERLESS_URL` is correct. It should include the protocol and port (e.g., `http://paperless:8000`). Do not include a trailing slash.
-- **Docker networking:** If both Paperless-NGX and Paperless-Dedupe run in Docker, `localhost` inside the Dedupe container refers to itself, not the host. Use the container name (e.g., `http://paperless-ngx:8000`) or the Docker network IP. Both containers must be on the same Docker network.
+- **Docker networking:** If both Paperless-NGX and Paperless NGX Dedupe run in Docker, `localhost` inside the Dedupe container refers to itself, not the host. Use the container name (e.g., `http://paperless-ngx:8000`) or the Docker network IP. Both containers must be on the same Docker network.
 - **Firewall:** Ensure the Paperless-NGX port is accessible from the Dedupe container. On Linux, `iptables` or `ufw` rules may block inter-container traffic.
 
 ```bash
@@ -42,14 +42,14 @@ curl -H "Authorization: Token your-token-here" http://paperless:8000/api/documen
 If your Paperless-NGX instance uses HTTPS with a self-signed certificate, the Node.js runtime may reject the connection. This is a security measure. If you must bypass it for local development:
 
 ```yaml
-# docker-compose.yml (NOT recommended for production)
+# compose.yml (NOT recommended for production)
 environment:
   - NODE_TLS_REJECT_UNAUTHORIZED=0
 ```
 
 ## Sync Problems
 
-### "A job of type SYNC is already running"
+### "A job of type 'sync' is already running or pending"
 
 **Symptom:** POST `/api/v1/sync` returns a 409 error.
 
@@ -134,7 +134,7 @@ curl -X PUT http://localhost:3000/api/v1/config/dedup \
   -d '{ "minWords": 5 }'
 ```
 
-### "A job of type ANALYSIS is already running"
+### "A job of type 'analysis' is already running or pending"
 
 Same as the sync job conflict -- wait for the current analysis to finish or cancel it.
 
@@ -146,7 +146,7 @@ Same as the sync job conflict -- wait for the current analysis to finish or canc
 
 **Causes:**
 
-- Multiple processes writing to the same SQLite file simultaneously. Paperless-Dedupe handles this internally, but if you have external tools accessing the same database file, they may conflict.
+- Multiple processes writing to the same SQLite file simultaneously. Paperless NGX Dedupe handles this internally, but if you have external tools accessing the same database file, they may conflict.
 - A crashed worker left a write lock. Restart the container.
 
 ```bash
@@ -157,14 +157,14 @@ docker compose restart
 
 **Symptom:** Container fails to start with "Permission denied" errors for the database.
 
-**Fix:** The container runs as UID 1001. If using a bind mount instead of a named volume, ensure the directory is writable:
+**Fix:** The container drops privileges to `PUID`/`PGID` (defaults: `1000:1000`). Ensure your bind-mounted data directory is writable by that user/group:
 
 ```bash
-mkdir -p ./data
-chown 1001:1001 ./data
+mkdir -p ./docker-data
+chown 1000:1000 ./docker-data
 ```
 
-Named Docker volumes (the default in the provided `docker-compose.yml`) handle permissions automatically.
+If you override `PUID`/`PGID` in `.env`, use those values instead.
 
 ### Database corruption
 
@@ -173,24 +173,26 @@ In rare cases (e.g., unclean shutdown during a write), SQLite databases can beco
 **Recovery steps:**
 
 1. Stop the container: `docker compose down`
-2. Back up the database file from the volume
+2. Back up `./docker-data/paperless-ngx-dedupe.db`
 3. Try the SQLite integrity check:
    ```bash
-   sqlite3 /path/to/paperless-dedupe.db "PRAGMA integrity_check;"
+   sqlite3 /path/to/paperless-ngx-dedupe.db "PRAGMA integrity_check;"
    ```
 4. If corrupted beyond repair, delete the database and re-sync:
    ```bash
-   docker compose down -v
+   docker compose down
+   rm -rf docker-data
    docker compose up -d
    # Then sync and analyze from scratch
    ```
 
 ### Resetting the database
 
-To start fresh, remove the Docker volume:
+To start fresh, remove the persisted data directory:
 
 ```bash
-docker compose down -v
+docker compose down
+rm -rf docker-data
 docker compose up -d
 ```
 
@@ -202,7 +204,7 @@ This deletes all synced data, duplicate groups, and configuration. You will need
 
 **Symptom:** Container fails to start with "port is already in use".
 
-**Fix:** Change the host port in your `.env` or `docker-compose.yml`:
+**Fix:** Change the host port in your `.env` or `compose.yml`:
 
 ```bash
 PORT=3001
@@ -231,22 +233,17 @@ ORIGIN=http://localhost:3000
 ORIGIN=https://dedupe.example.com
 ```
 
-### Read-only filesystem errors
+### Data directory path issues
 
-**Symptom:** Application errors mentioning "read-only file system".
+**Symptom:** Startup or write failures for the SQLite database.
 
-**Cause:** The default `docker-compose.yml` uses `read_only: true` for security. The app needs writable access to:
+**Cause:** The app needs write access to `/app/data` in the container. In the default setup, this maps to `./docker-data` on the host.
 
-- `/app/data` -- via the volume mount (for the SQLite database)
-- `/tmp` -- via tmpfs (for worker threads)
-
-**Fix:** Ensure both are configured:
+**Fix:** Verify the mount and host permissions:
 
 ```yaml
 volumes:
-  - app-data:/app/data
-tmpfs:
-  - /tmp
+  - ./docker-data:/app/data
 ```
 
 ### Viewing container logs

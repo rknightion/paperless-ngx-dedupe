@@ -28,7 +28,7 @@ RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
 # Bundle CLI into a single file (resolves TS source + all non-native deps)
 RUN pnpm dlx esbuild packages/cli/src/bin.ts \
   --bundle --platform=node --format=esm \
-  --outfile=/app/cli-bundle/paperless-dedupe.mjs \
+  --outfile=/app/cli-bundle/paperless-ngx-dedupe.mjs \
   --external:better-sqlite3 \
   --external:pino \
   --external:pino-pretty \
@@ -52,15 +52,15 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/packages/core/dist ./core
 
 # Copy bundled CLI (uses node_modules for native deps like better-sqlite3)
-COPY --from=build /app/cli-bundle/paperless-dedupe.mjs ./cli/paperless-dedupe.mjs
+COPY --from=build /app/cli-bundle/paperless-ngx-dedupe.mjs ./cli/paperless-ngx-dedupe.mjs
 
 # Copy OTEL preload script (loaded via --require when OTEL_ENABLED=true)
 COPY --from=build /app/packages/web/telemetry.cjs ./telemetry.cjs
 
 # Create data directory and CLI wrapper
 RUN mkdir -p /app/data && \
-    printf '#!/bin/sh\nexec node /app/cli/paperless-dedupe.mjs "$@"\n' > /usr/local/bin/paperless-dedupe && \
-    chmod +x /usr/local/bin/paperless-dedupe
+    printf '#!/bin/sh\nexec node /app/cli/paperless-ngx-dedupe.mjs "$@"\n' > /usr/local/bin/paperless-ngx-dedupe && \
+    chmod +x /usr/local/bin/paperless-ngx-dedupe
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh

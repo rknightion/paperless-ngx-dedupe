@@ -15,8 +15,9 @@
 
   function barColor(score: number | null): string {
     if (score === null) return 'bg-white/30';
-    if (score >= 0.95) return 'bg-green-400';
-    if (score >= 0.85) return 'bg-amber-400';
+    if (score >= 0.9) return 'bg-green-400';
+    if (score >= 0.8) return 'bg-amber-400';
+    if (score >= 0.75) return 'bg-orange-400';
     return 'bg-red-400';
   }
 

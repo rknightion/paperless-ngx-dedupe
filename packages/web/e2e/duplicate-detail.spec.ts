@@ -17,7 +17,7 @@ test.describe('Duplicate Detail Page', () => {
     await page.goto(`/duplicates/${groupId}`);
 
     // Page title should contain group info
-    await expect(page).toHaveTitle(/Paperless Dedupe/);
+    await expect(page).toHaveTitle(/Paperless NGX Dedupe/);
 
     // Header should show confidence badge
     await expect(page.locator('main h1')).toBeVisible();

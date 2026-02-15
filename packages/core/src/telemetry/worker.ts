@@ -17,7 +17,7 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-dedupe',
+      [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-ngx-dedupe',
       'worker.name': workerName,
       'worker.type': 'worker_thread',
     }),

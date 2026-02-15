@@ -9,7 +9,7 @@ import { registerExportCommand } from './commands/export.js';
 export const program = new Command();
 
 program
-  .name('paperless-dedupe')
+  .name('paperless-ngx-dedupe')
   .description('Document deduplication companion for Paperless-NGX')
   .version('0.0.1')
   .option('--db <path>', 'database file path (overrides DATABASE_URL)')

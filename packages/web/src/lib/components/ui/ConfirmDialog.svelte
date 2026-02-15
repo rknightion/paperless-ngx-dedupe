@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { AlertTriangle } from 'lucide-svelte';
+
   interface Props {
     open: boolean;
     title: string;
@@ -49,13 +51,24 @@
   onclick={(e) => {
     if (e.target === dialog) oncancel();
   }}
-  class="border-soft bg-surface m-auto max-w-md rounded-xl border p-0 shadow-lg backdrop:bg-black/40"
+  class="border-soft bg-surface m-auto max-w-md rounded-xl border p-0 shadow-lg backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-200"
   aria-labelledby="confirm-dialog-title"
   aria-describedby="confirm-dialog-message"
 >
   <div class="p-6">
-    <h2 id="confirm-dialog-title" class="text-ink text-lg font-semibold">{title}</h2>
-    <p id="confirm-dialog-message" class="text-muted mt-2 text-sm">{message}</p>
+    <div class="flex items-start gap-3">
+      {#if variant === 'ember'}
+        <div
+          class="bg-ember-light flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+        >
+          <AlertTriangle class="text-ember h-5 w-5" />
+        </div>
+      {/if}
+      <div>
+        <h2 id="confirm-dialog-title" class="text-ink text-lg font-semibold">{title}</h2>
+        <p id="confirm-dialog-message" class="text-muted mt-2 text-sm">{message}</p>
+      </div>
+    </div>
     <div class="mt-6 flex justify-end gap-3">
       <button
         onclick={oncancel}

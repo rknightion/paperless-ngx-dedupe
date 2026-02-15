@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Paperless-Dedupe is a document deduplication companion for Paperless-NGX. It syncs documents from a Paperless-NGX instance, identifies duplicates using MinHash/LSH algorithms, and provides a web UI for reviewing and resolving duplicates. Early development — not production-ready.
+Paperless NGX Dedupe is a document deduplication companion for Paperless-NGX. It syncs documents from a Paperless-NGX instance, identifies duplicates using MinHash/LSH algorithms, and provides a web UI for reviewing and resolving duplicates. Early development — not production-ready.
 
 ## Commands
 

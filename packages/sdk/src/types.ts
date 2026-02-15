@@ -1,7 +1,7 @@
 // ── SDK-specific types ─────────────────────────────────────────────────
 
 export interface ClientOptions {
-  /** Base URL of the Paperless-Dedupe instance (e.g. "http://localhost:3000") */
+  /** Base URL of the Paperless NGX Dedupe instance (e.g. "http://localhost:3000") */
   baseUrl: string;
   /** Optional custom fetch implementation for testing or environments without global fetch */
   fetch?: typeof globalThis.fetch;

@@ -1,11 +1,13 @@
 ---
 title: CLI Reference
-description: Command-line interface for Paperless-Dedupe — sync, analysis, configuration, and data export
+description: Command-line interface for Paperless NGX Dedupe — sync, analysis, configuration, and data export
 ---
 
 # CLI Reference
 
 The `@paperless-dedupe/cli` package provides a command-line interface for running sync, analysis, configuration, and export operations without the web server.
+
+The Docker image also installs a `paperless-ngx-dedupe` binary, so you can run CLI commands inside the container if needed.
 
 ## Installation
 
@@ -22,7 +24,7 @@ node packages/cli/dist/bin.js --help
 pnpm --filter @paperless-dedupe/cli dev -- --help
 ```
 
-The binary is named `paperless-dedupe` and is defined in `packages/cli/package.json`.
+The binary is named `paperless-ngx-dedupe` and is defined in `packages/cli/package.json`.
 
 ## Global Options
 
@@ -42,7 +44,7 @@ These options are available on all commands:
 Sync documents from your Paperless-NGX instance.
 
 ```bash
-paperless-dedupe sync [options]
+paperless-ngx-dedupe sync [options]
 ```
 
 **Options:**
@@ -55,13 +57,13 @@ paperless-dedupe sync [options]
 
 ```bash
 # Incremental sync (only changed documents)
-paperless-dedupe sync
+paperless-ngx-dedupe sync
 
 # Full sync (re-fetch everything)
-paperless-dedupe sync --full
+paperless-ngx-dedupe sync --full
 
 # JSON output for scripting
-paperless-dedupe sync --json
+paperless-ngx-dedupe sync --json
 ```
 
 **Output:**
@@ -75,7 +77,7 @@ The command displays sync duration, total documents fetched, and counts for inse
 Run the deduplication analysis pipeline.
 
 ```bash
-paperless-dedupe analyze [options]
+paperless-ngx-dedupe analyze [options]
 ```
 
 **Options:**
@@ -88,10 +90,10 @@ paperless-dedupe analyze [options]
 
 ```bash
 # Incremental analysis (only new/changed documents)
-paperless-dedupe analyze
+paperless-ngx-dedupe analyze
 
 # Force full re-analysis
-paperless-dedupe analyze --force
+paperless-ngx-dedupe analyze --force
 ```
 
 **Output:**
@@ -105,17 +107,17 @@ Displays analysis duration, documents analyzed, signatures generated/reused, can
 Show dashboard and duplicate statistics.
 
 ```bash
-paperless-dedupe status
+paperless-ngx-dedupe status
 ```
 
 **Examples:**
 
 ```bash
 # Human-readable dashboard
-paperless-dedupe status
+paperless-ngx-dedupe status
 
 # JSON for scripting
-paperless-dedupe status --json
+paperless-ngx-dedupe status --json
 ```
 
 **Output:**
@@ -135,7 +137,7 @@ Displays two sections:
 Display the current deduplication configuration.
 
 ```bash
-paperless-dedupe config show
+paperless-ngx-dedupe config show
 ```
 
 **Output:**
@@ -149,7 +151,7 @@ Lists all dedup configuration parameters with their current values.
 Update deduplication configuration parameters.
 
 ```bash
-paperless-dedupe config set [options]
+paperless-ngx-dedupe config set [options]
 ```
 
 **Options:**
@@ -175,17 +177,17 @@ paperless-dedupe config set [options]
 
 ```bash
 # Lower the similarity threshold
-paperless-dedupe config set --similarity-threshold 0.6
+paperless-ngx-dedupe config set --similarity-threshold 0.6
 
 # Adjust confidence weights to prioritize text content
-paperless-dedupe config set \
+paperless-ngx-dedupe config set \
   --weight-jaccard 50 \
   --weight-fuzzy 35 \
   --weight-metadata 10 \
   --weight-filename 5
 
 # Disable auto-analysis
-paperless-dedupe config set --auto-analyze false
+paperless-ngx-dedupe config set --auto-analyze false
 ```
 
 ---
@@ -195,7 +197,7 @@ paperless-dedupe config set --auto-analyze false
 Export duplicate groups as CSV.
 
 ```bash
-paperless-dedupe export duplicates [options]
+paperless-ngx-dedupe export duplicates [options]
 ```
 
 **Options:**
@@ -203,21 +205,21 @@ paperless-dedupe export duplicates [options]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--min-confidence <n>` | none | Minimum confidence score (0.0 -- 1.0) |
-| `--status <status>` | none | Filter by status (e.g., `pending`, `false_positive`, `ignored`, `deleted`) |
+| `--status <status>` | none | Status filter; supports comma-separated values (e.g., `pending,false_positive`) |
 
 **Examples:**
 
 ```bash
 # Export all duplicates
-paperless-dedupe export duplicates > duplicates.csv
+paperless-ngx-dedupe export duplicates > duplicates.csv
 
 # Export high-confidence pending only
-paperless-dedupe export duplicates \
+paperless-ngx-dedupe export duplicates \
   --min-confidence 0.9 \
   --status pending > high-confidence.csv
 
 # JSON format
-paperless-dedupe export duplicates --json > duplicates.json
+paperless-ngx-dedupe export duplicates --json > duplicates.json
 ```
 
 ---
@@ -227,14 +229,14 @@ paperless-dedupe export duplicates --json > duplicates.json
 Export configuration backup as JSON.
 
 ```bash
-paperless-dedupe export config
+paperless-ngx-dedupe export config
 ```
 
 **Examples:**
 
 ```bash
 # Export to file
-paperless-dedupe export config > config-backup.json
+paperless-ngx-dedupe export config > config-backup.json
 ```
 
 ---
@@ -262,15 +264,15 @@ See [Configuration](configuration.md) for details on all environment variables.
 #!/bin/bash
 # Cron job: sync and analyze nightly
 
-paperless-dedupe sync --json 2>/dev/null | jq '.totalFetched'
-paperless-dedupe analyze --json 2>/dev/null | jq '.groupsCreated'
+paperless-ngx-dedupe sync --json 2>/dev/null | jq '.totalFetched'
+paperless-ngx-dedupe analyze --json 2>/dev/null | jq '.groupsCreated'
 ```
 
 ### Export Report
 
 ```bash
 # Generate a report of high-confidence pending duplicates
-paperless-dedupe export duplicates \
+paperless-ngx-dedupe export duplicates \
   --min-confidence 0.85 \
   --status pending > report.csv
 
@@ -281,7 +283,7 @@ echo "Found $(wc -l < report.csv) duplicate entries"
 
 ```bash
 # Quick status check
-paperless-dedupe status --json | jq '{
+paperless-ngx-dedupe status --json | jq '{
   documents: .dashboard.totalDocuments,
   pending: .dashboard.pendingGroups,
   savings: .dashboard.storageSavingsBytes

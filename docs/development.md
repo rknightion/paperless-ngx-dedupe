@@ -64,7 +64,7 @@ paperless-ngx-dedupe/
 │           └── lib/        # CLI utilities
 ├── docs/               # Documentation (this site)
 ├── Dockerfile          # Multi-stage Docker build
-├── docker-compose.yml  # Development/production compose
+├── compose.yml         # Development/production compose
 └── pnpm-workspace.yaml # Monorepo workspace config
 ```
 
@@ -94,7 +94,6 @@ graph TD
 | `pnpm build` | Build all packages (core, sdk, cli, web) |
 | `pnpm check` | TypeScript type-check all packages |
 | `pnpm test` | Run Vitest tests (core and sdk) |
-| `pnpm test:watch` | Run tests in watch mode |
 | `pnpm lint` | ESLint check |
 | `pnpm lint:fix` | ESLint auto-fix |
 | `pnpm format` | Prettier check |
@@ -108,8 +107,9 @@ Tests use **Vitest** and are co-located with source files as `*.test.ts` or in `
 # Run all tests once
 pnpm test
 
-# Watch mode
-pnpm test:watch
+# Watch mode (per package)
+pnpm --filter @paperless-dedupe/core test:watch
+pnpm --filter @paperless-dedupe/sdk test:watch
 
 # Run tests for a specific package
 pnpm --filter @paperless-dedupe/core test
@@ -152,7 +152,7 @@ docker compose up
 The **Dockerfile** uses a 3-stage build:
 
 1. **deps** -- Install pnpm dependencies
-2. **build** -- Build all packages
+2. **build** -- Build core + web and bundle the CLI
 3. **production** -- Minimal runtime with flattened node_modules
 
-The container runs as a non-root user (UID 1001) with a read-only filesystem. Write access is limited to `/app/data` (volume) and `/tmp` (tmpfs).
+The container runs as a non-root user using `PUID`/`PGID` (defaults: `1000:1000`). Data is persisted at `/app/data` (mounted from `./docker-data` by default).

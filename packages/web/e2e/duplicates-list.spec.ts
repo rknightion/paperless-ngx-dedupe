@@ -11,7 +11,7 @@ test.describe('Duplicates List Page', () => {
 
   test('page loads and shows title', async ({ page }) => {
     await page.goto('/duplicates');
-    await expect(page).toHaveTitle('Duplicates - Paperless Dedupe');
+    await expect(page).toHaveTitle('Duplicates - Paperless NGX Dedupe');
     await expect(page.locator('main h1')).toHaveText('Duplicate Groups');
   });
 

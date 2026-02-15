@@ -1,22 +1,21 @@
 ---
 title: SDK Reference
-description: TypeScript SDK for the Paperless-Dedupe REST API — client library, types, and error handling
+description: TypeScript SDK for the Paperless NGX Dedupe API (current state and known limitations)
 ---
 
 # SDK Reference
 
-The `@paperless-dedupe/sdk` package provides a typed TypeScript client for the Paperless-Dedupe REST API.
+`@paperless-dedupe/sdk` is currently **pre-1.0 / experimental**.
+
+Use this page as the source of truth for current behavior.
 
 ## Installation
 
-The SDK is not yet published to npm. Install from the monorepo:
-
 ```bash
-# From the monorepo root
 pnpm --filter @paperless-dedupe/sdk build
 ```
 
-Or reference it directly in your `package.json`:
+Workspace usage:
 
 ```json
 {
@@ -28,181 +27,84 @@ Or reference it directly in your `package.json`:
 
 ## Quick Start
 
-```typescript
+```ts
 import { PaperlessDedupeClient } from '@paperless-dedupe/sdk';
 
 const client = new PaperlessDedupeClient({
   baseUrl: 'http://localhost:3000',
 });
 
-// Check health
 const health = await client.health();
-console.log(health.status); // "ok"
+console.log(health.status); // ok
 
-// Trigger sync and monitor progress
 const job = await client.sync();
 client.subscribeToJobProgress(job.id, {
-  onProgress: (data) => console.log(`${data.progress}% - ${data.message}`),
-  onComplete: (data) => console.log(`Done: ${data.status}`),
+  onProgress: (e) => console.log(e.progress, e.message), // progress is 0..1
+  onComplete: (e) => console.log(e.status),
   onError: (err) => console.error(err),
 });
-
-// List high-confidence pending duplicates
-const { data: groups, meta } = await client.listDuplicates({
-  minConfidence: 0.9,
-  status: 'pending',
-  limit: 10,
-});
-console.log(`${meta.total} pending groups above 90%`);
 ```
 
 ## Client Options
 
-```typescript
+```ts
 interface ClientOptions {
-  /** Base URL of the Paperless-Dedupe instance (e.g. "http://localhost:3000") */
   baseUrl: string;
-  /** Optional custom fetch implementation for testing or non-browser environments */
   fetch?: typeof globalThis.fetch;
-  /** Request timeout in milliseconds (default: 30000) */
-  timeout?: number;
+  timeout?: number; // default 30000
 }
 ```
 
 ## Methods
 
-### Health
+### Generally Usable Today
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `health()` | `{ status: string }` | Basic health check |
-| `ready()` | `{ status: string }` | Deep readiness check (DB + Paperless connectivity) |
+- `health()`
+- `ready()`
+- `sync()`
+- `analyze()`
+- `listDocuments(params?)`
+- `getDocument(id)`
+- `getDocumentStats()`
+- `listDuplicates(params?)`
+- `getDuplicate(id)`
+- `getDuplicateStats()`
+- `getDuplicateGraph(params?)`
+- `setGroupStatus(groupId, status)`
+- `deleteDuplicate(groupId)`
+- `getDashboard()`
+- `getConfig()`
+- `updateConfig(settings)`
+- `getJob(jobId)`
+- `subscribeToJobProgress(jobId, callbacks)`
+- `exportDuplicatesCsv(params?)`
 
-### Sync & Analysis
+### Known Limitations / Legacy Mappings
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `sync()` | `Job` | Trigger document sync from Paperless-NGX |
-| `analyze()` | `Job` | Trigger deduplication analysis |
+These methods exist in the SDK but currently target routes or method semantics that do not match the server:
 
-### Documents
+- `getDocumentContent(id)`
+  - Calls `/api/v1/documents/:id/content` (not implemented by server)
+- `setPrimary(groupId, documentId)`
+  - Sends `POST` but server expects `PUT /api/v1/duplicates/:id/primary`
+- `batchSetStatus(groupIds, status)`
+  - Server responds with `{ updated }`, while SDK `BatchResult` expects `{ processed }`
+- `batchDeleteNonPrimary(groupIds, confirm)`
+  - Server responds with `{ jobId }` (async background job), while SDK `BatchDeleteResult` expects `{ processed, deleted }`
+- `getDedupConfig()`
+- `updateDedupConfig(config)`
+- `recalculateDedupConfig()`
+  - Use legacy `/api/v1/dedup-config*` paths (current API uses `/api/v1/config/dedup`)
+- `exportConfig()`
+  - Uses `/api/v1/export/config` (current API endpoint is `/api/v1/export/config.json`)
+- `importConfig(backup)`
+  - Runtime API returns `{ appConfigKeys, dedupConfigUpdated }`, while SDK return type is currently `ConfigBackup`
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `listDocuments(params?)` | `{ data: DocumentSummary[], meta: PaginationMeta }` | List documents with filters and pagination |
-| `getDocument(id)` | `DocumentDetail` | Get full document details including content |
-| `getDocumentContent(id)` | `{ fullText: string \| null }` | Get document text content |
-| `getDocumentStats()` | `DocumentStats` | Aggregate document statistics |
+For these operations, call the REST API directly for now (see [API Reference](api-reference.md)).
 
-**Filter parameters for `listDocuments`:**
+## Key Types
 
-```typescript
-interface DocumentFilters {
-  correspondent?: string;
-  documentType?: string;
-  tag?: string;
-  processingStatus?: 'pending' | 'completed';
-  search?: string;
-}
-```
-
-### Duplicate Groups
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `listDuplicates(params?)` | `{ data: DuplicateGroupSummary[], meta: PaginationMeta }` | List groups with filters |
-| `getDuplicate(id)` | `DuplicateGroupDetail` | Full group details with members |
-| `getDuplicateStats()` | `DuplicateStats` | Aggregate group statistics |
-| `getDuplicateGraph(params?)` | `SimilarityGraphData` | Similarity graph (nodes + edges) |
-| `setPrimary(groupId, documentId)` | `DuplicateGroupDetail` | Set the primary document |
-| `setGroupStatus(groupId, status)` | `{ groupId, status }` | Set group status (`pending`, `false_positive`, `ignored`, `deleted`) |
-| `deleteDuplicate(groupId)` | `void` | Delete a group (not the documents) |
-
-**Filter parameters for `listDuplicates`:**
-
-```typescript
-interface DuplicateGroupFilters {
-  minConfidence?: number;
-  maxConfidence?: number;
-  status?: string;
-  sortBy?: 'confidence' | 'created_at' | 'member_count';
-  sortOrder?: 'asc' | 'desc';
-}
-```
-
-### Batch Operations
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `batchSetStatus(groupIds, status)` | `BatchResult` | Set status for multiple groups |
-| `batchDeleteNonPrimary(groupIds, confirm)` | `BatchDeleteResult` | Delete non-primary documents from Paperless-NGX |
-
-!!! danger "Destructive"
-    `batchDeleteNonPrimary` permanently removes documents from Paperless-NGX. The `confirm` parameter must be `true`.
-
-### Dashboard
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `getDashboard()` | `DashboardData` | Summary statistics for the dashboard |
-
-### Configuration
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `getConfig()` | `Record<string, string>` | Get all config key-value pairs |
-| `updateConfig(settings)` | `Record<string, string>` | Update config settings |
-| `getDedupConfig()` | `DedupConfig` | Get dedup algorithm configuration |
-| `updateDedupConfig(config)` | `DedupConfig` | Update dedup configuration (partial) |
-| `recalculateDedupConfig()` | `Job` | Recalculate all group scores |
-
-### Jobs
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `getJob(jobId)` | `Job` | Get job details |
-| `subscribeToJobProgress(jobId, callbacks)` | `SSESubscription` | Subscribe to real-time progress |
-
-### Export & Import
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `exportDuplicatesCsv(params?)` | `string` | Export duplicates as CSV text |
-| `exportConfig()` | `ConfigBackup` | Export configuration backup |
-| `importConfig(backup)` | `ConfigBackup` | Import configuration backup |
-
-## Types
-
-### Core Types
-
-```typescript
-interface Job {
-  id: string;
-  type: string;
-  status: string | null;
-  progress: number | null;
-  progressMessage: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  errorMessage: string | null;
-  resultJson: string | null;
-  createdAt: string;
-}
-
-interface DedupConfig {
-  numPermutations: number;
-  numBands: number;
-  ngramSize: number;
-  minWords: number;
-  similarityThreshold: number;
-  confidenceWeightJaccard: number;
-  confidenceWeightFuzzy: number;
-  confidenceWeightMetadata: number;
-  confidenceWeightFilename: number;
-  fuzzySampleSize: number;
-  autoAnalyze: boolean;
-}
-
+```ts
 interface PaginationParams {
   limit?: number;
   offset?: number;
@@ -213,144 +115,51 @@ interface PaginationMeta {
   limit: number;
   offset: number;
 }
-```
 
-### Document Types
-
-```typescript
-interface DocumentSummary {
+interface Job {
   id: string;
-  paperlessId: number;
-  title: string;
-  correspondent: string | null;
-  documentType: string | null;
-  tags: string[];
-  createdDate: string | null;
-  addedDate: string | null;
-  processingStatus: string | null;
-  originalFileSize: number | null;
-  archiveFileSize: number | null;
-}
-
-interface DocumentDetail extends DocumentSummary {
-  modifiedDate: string | null;
-  fingerprint: string | null;
-  syncedAt: string;
-  content: {
-    fullText: string | null;
-    normalizedText: string | null;
-    wordCount: number | null;
-    contentHash: string | null;
-  } | null;
-  groupMemberships: {
-    groupId: string;
-    confidenceScore: number;
-    isPrimary: boolean;
-    status: string;
-  }[];
-}
-```
-
-### Duplicate Group Types
-
-```typescript
-interface DuplicateGroupSummary {
-  id: string;
-  confidenceScore: number;
-  status: string;
-  memberCount: number;
-  primaryDocumentTitle: string | null;
+  type: string;
+  status: string | null;
+  progress: number | null; // 0..1
+  progressMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  errorMessage: string | null;
+  resultJson: string | null;
   createdAt: string;
-  updatedAt: string;
-}
-
-interface DuplicateGroupDetail {
-  id: string;
-  confidenceScore: number;
-  jaccardSimilarity: number | null;
-  fuzzyTextRatio: number | null;
-  metadataSimilarity: number | null;
-  filenameSimilarity: number | null;
-  algorithmVersion: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-  members: DuplicateGroupMember[];
 }
 ```
+
+Current notable drift in SDK-exported types vs live API:
+
+- `BatchResult` is typed as `{ processed: number }`, but API returns `{ updated: number }`.
+- `BatchDeleteResult` is typed as `{ processed: number; deleted: number }`, but API returns `{ jobId: string }` and you must track progress via jobs endpoints/SSE.
 
 ## Error Handling
 
-The SDK provides typed error classes:
-
-```typescript
+```ts
 import {
-  PaperlessDedupeError,
   PaperlessDedupeApiError,
   PaperlessDedupeNetworkError,
 } from '@paperless-dedupe/sdk';
 
 try {
   await client.sync();
-} catch (error) {
-  if (error instanceof PaperlessDedupeApiError) {
-    // Server returned an error response
-    console.log(error.status);  // HTTP status code (e.g., 409)
-    console.log(error.code);    // Error code (e.g., "JOB_ALREADY_RUNNING")
-    console.log(error.message); // Human-readable message
-    console.log(error.details); // Optional Zod validation details
-  } else if (error instanceof PaperlessDedupeNetworkError) {
-    // Network or connection failure
-    console.log(error.message); // e.g., "fetch failed"
-    console.log(error.cause);   // Underlying error
+} catch (err) {
+  if (err instanceof PaperlessDedupeApiError) {
+    console.log(err.status, err.code, err.message, err.details);
+  } else if (err instanceof PaperlessDedupeNetworkError) {
+    console.log(err.message, err.cause);
   }
 }
 ```
 
-**Error hierarchy:**
+## SSE Progress
 
-- `PaperlessDedupeError` -- Base error class
-    - `PaperlessDedupeApiError` -- Server returned an error (has `status`, `code`, `details`)
-    - `PaperlessDedupeNetworkError` -- Network failure (has `cause`)
+`subscribeToJobProgress(jobId, callbacks)` opens `GET /api/v1/jobs/:jobId/progress` and emits:
 
-## SSE Subscriptions
+- `onProgress({ progress, message, status })`
+- `onComplete({ progress, message, status })`
+- `onError(error)`
 
-Monitor job progress in real-time:
-
-```typescript
-const job = await client.sync();
-
-const subscription = client.subscribeToJobProgress(job.id, {
-  onProgress: (data) => {
-    // data.progress: number (0-100)
-    // data.message: string | undefined
-    console.log(`${data.progress}% - ${data.message}`);
-  },
-  onComplete: (data) => {
-    // data.status: string ("completed" | "failed" | "cancelled")
-    // data.result: unknown | undefined
-    console.log(`Job ${data.status}`);
-  },
-  onError: (error) => {
-    console.error('SSE error:', error);
-  },
-});
-
-// Unsubscribe when done
-subscription.unsubscribe();
-```
-
-## Custom Fetch
-
-Provide a custom `fetch` implementation for testing or environments without global `fetch`:
-
-```typescript
-import { PaperlessDedupeClient } from '@paperless-dedupe/sdk';
-
-// Example: using node-fetch or a mock
-const client = new PaperlessDedupeClient({
-  baseUrl: 'http://localhost:3000',
-  fetch: myCustomFetch,
-  timeout: 60_000, // 60 second timeout
-});
-```
+`progress` is fractional (`0..1`), not percentage.

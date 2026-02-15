@@ -1,8 +1,8 @@
 ================================================================================
-Paperless-Dedupe — Implementation Roadmap
+Paperless NGX Dedupe — Implementation Roadmap
 ================================================================================
 
-This file tracks the full implementation timeline for the Paperless-Dedupe app,
+This file tracks the full implementation timeline for the Paperless NGX Dedupe app,
 a TypeScript rewrite of paperless-ngx-dedupe. It identifies and manages duplicate
 documents within Paperless-NGX document management systems using MinHash/LSH for
 efficient O(n log n) duplicate detection at scale (13,000+ documents).

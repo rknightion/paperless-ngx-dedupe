@@ -180,14 +180,14 @@
 </script>
 
 <svelte:head>
-  <title>Similarity Graph - Paperless Dedupe</title>
+  <title>Similarity Graph - Paperless NGX Dedupe</title>
 </svelte:head>
 
 <div class="space-y-4">
   <!-- Page Header -->
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
-      <h1 class="text-ink text-3xl font-bold">Similarity Graph</h1>
+      <h1 class="text-ink text-2xl font-semibold tracking-tight">Similarity Graph</h1>
     </div>
     <a
       href="/duplicates"
@@ -261,19 +261,61 @@
   <!-- Graph + Detail Panel -->
   <div class="flex gap-4">
     <!-- Graph -->
-    <div class="panel min-w-0 flex-1">
+    <div
+      class="border-soft bg-canvas-deep relative min-w-0 flex-1 overflow-hidden rounded-xl border"
+    >
       {#if data.graph.nodes.length > 0}
-        <EChart option={chartOption} height="600px" onChartReady={handleChartReady} />
+        <EChart option={chartOption} height="560px" onChartReady={handleChartReady} />
       {:else}
         <div class="flex h-96 items-center justify-center">
           <p class="text-muted">No data to display. Try adjusting filters or run analysis first.</p>
         </div>
       {/if}
+
+      <!-- Legend (overlay inside graph) -->
+      <div
+        class="border-soft bg-surface/90 absolute bottom-4 left-4 rounded-lg border px-4 py-3 backdrop-blur-sm"
+      >
+        <h3 class="text-ink mb-2 text-sm font-semibold">Legend</h3>
+        <div class="flex flex-wrap gap-6 text-xs">
+          <div class="space-y-1">
+            <p class="text-muted font-medium">Edge Colors</p>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block h-0.5 w-4 rounded" style="background: #6366f1"></span>
+              <span class="text-ink">Pending</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block h-0.5 w-4 rounded" style="background: #9ca3af"></span>
+              <span class="text-ink">False Positive</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block h-0.5 w-4 rounded" style="background: #3b82f6"></span>
+              <span class="text-ink">Ignored</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block h-0.5 w-4 rounded" style="background: #22c55e"></span>
+              <span class="text-ink">Deleted</span>
+            </div>
+          </div>
+          <div class="space-y-1">
+            <p class="text-muted font-medium">Node Size</p>
+            <p class="text-ink">Larger = appears in more groups</p>
+          </div>
+          <div class="space-y-1">
+            <p class="text-muted font-medium">Node Color</p>
+            <p class="text-ink">Grouped by correspondent</p>
+          </div>
+          <div class="space-y-1">
+            <p class="text-muted font-medium">Edge Width</p>
+            <p class="text-ink">Thicker = higher confidence</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Detail Panel -->
     {#if selectedNode || selectedEdge}
-      <div class="panel w-80 shrink-0 space-y-4">
+      <div class="panel w-80 shrink-0 space-y-4 transition-opacity duration-200">
         {#if selectedNode}
           <div>
             <h3 class="text-ink text-sm font-semibold">Document Details</h3>
@@ -347,43 +389,5 @@
         </button>
       </div>
     {/if}
-  </div>
-
-  <!-- Legend -->
-  <div class="panel">
-    <h3 class="text-ink mb-2 text-sm font-semibold">Legend</h3>
-    <div class="flex flex-wrap gap-6 text-xs">
-      <div class="space-y-1">
-        <p class="text-muted font-medium">Edge Colors</p>
-        <div class="flex items-center gap-1.5">
-          <span class="inline-block h-0.5 w-4 rounded" style="background: #6366f1"></span>
-          <span class="text-ink">Pending</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="inline-block h-0.5 w-4 rounded" style="background: #9ca3af"></span>
-          <span class="text-ink">False Positive</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="inline-block h-0.5 w-4 rounded" style="background: #3b82f6"></span>
-          <span class="text-ink">Ignored</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="inline-block h-0.5 w-4 rounded" style="background: #22c55e"></span>
-          <span class="text-ink">Deleted</span>
-        </div>
-      </div>
-      <div class="space-y-1">
-        <p class="text-muted font-medium">Node Size</p>
-        <p class="text-ink">Larger = appears in more groups</p>
-      </div>
-      <div class="space-y-1">
-        <p class="text-muted font-medium">Node Color</p>
-        <p class="text-ink">Grouped by correspondent</p>
-      </div>
-      <div class="space-y-1">
-        <p class="text-muted font-medium">Edge Width</p>
-        <p class="text-ink">Thicker = higher confidence</p>
-      </div>
-    </div>
   </div>
 </div>

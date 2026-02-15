@@ -1,24 +1,24 @@
 ---
 title: Getting Started
-description: First run walkthrough for Paperless-Dedupe — sync documents, run analysis, and review duplicates
+description: First run walkthrough for Paperless NGX Dedupe — sync documents, run analysis, and review duplicates
 ---
 
 # Getting Started
 
 !!! warning "Early Development"
-    Paperless-Dedupe is in early development and is **not production-ready**. Features are incomplete, APIs will change, and data loss may occur. Do not use this against a Paperless-NGX instance you care about without backups.
+    Paperless NGX Dedupe is in early development and is **not production-ready**. Features are incomplete, APIs will change, and data loss may occur. Do not use this against a Paperless-NGX instance you care about without backups.
 
-This guide walks you through your first session with Paperless-Dedupe after [installation](installation.md). By the end, you will have synced your documents, identified duplicates, and reviewed them.
+This guide walks you through your first session with Paperless NGX Dedupe after [installation](installation.md). By the end, you will have synced your documents, identified duplicates, and reviewed them.
 
 ## First Run Walkthrough
 
 ### 1. Check the Dashboard
 
-The dashboard at `/` shows the current state of your Paperless-Dedupe instance. On first launch, all counters will be zero.
+The dashboard at `/` shows the current state of your Paperless NGX Dedupe instance. On first launch, all counters will be zero.
 
 ### 2. Verify Connection
 
-Navigate to **Settings** in the sidebar. Click **Test Connection** to verify Paperless-Dedupe can reach your Paperless-NGX instance. You should see the Paperless-NGX version and document count.
+Navigate to **Settings** in the sidebar. Click **Test Connection** to verify Paperless NGX Dedupe can reach your Paperless-NGX instance. You should see the Paperless-NGX version and document count.
 
 If the connection fails, see the [Troubleshooting Guide](troubleshooting.md#paperless-ngx-connection-issues).
 

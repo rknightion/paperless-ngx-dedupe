@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
   import { formatBytes } from '$lib/utils/format';
+  import { ExternalLink } from 'lucide-svelte';
 
   interface Props {
     primary: DuplicateGroupMember;
@@ -91,7 +92,7 @@
         class="text-accent hover:text-accent-hover text-sm"
         title="Open in Paperless-NGX"
       >
-        &#8599;
+        <ExternalLink class="h-4 w-4" />
       </a>
     </div>
     <dl class="space-y-2">
@@ -122,14 +123,14 @@
         class="text-accent hover:text-accent-hover text-sm"
         title="Open in Paperless-NGX"
       >
-        &#8599;
+        <ExternalLink class="h-4 w-4" />
       </a>
     </div>
     <dl class="space-y-2">
       {#each fields as field (field.label)}
         <div
           class="border-soft flex justify-between border-b py-1.5 text-sm last:border-0 {field.isDifferent
-            ? 'rounded bg-amber-50'
+            ? 'bg-warn-light border-warn -mx-2 rounded-md border-l-2 px-2'
             : ''}"
         >
           <dt class="text-muted">{field.label}</dt>

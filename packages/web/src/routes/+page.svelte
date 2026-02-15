@@ -3,6 +3,7 @@
   import { StatCard, JobStatusCard, EChart, ProgressBar } from '$lib/components';
   import { formatBytes } from '$lib/utils/format';
   import { connectJobSSE } from '$lib/sse';
+  import { FileStack, AlertCircle, HardDrive, Clock } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -178,8 +179,19 @@
     series: [
       {
         type: 'bar',
-        data: data.duplicateStats.confidenceDistribution.map((b) => b.count),
-        itemStyle: { color: 'oklch(0.55 0.15 195)' },
+        data: data.duplicateStats.confidenceDistribution.map((b) => ({
+          value: b.count,
+          itemStyle: {
+            color:
+              b.label.startsWith('95') || b.label.startsWith('90')
+                ? 'oklch(0.55 0.15 155)' // green for 90%+
+                : b.label.startsWith('85') || b.label.startsWith('80')
+                  ? 'oklch(0.7 0.15 85)' // yellow for 80-90%
+                  : b.label.startsWith('75')
+                    ? 'oklch(0.6 0.15 55)' // orange for 75-80%
+                    : 'oklch(0.55 0.2 25)', // red for below 75%
+          },
+        })),
         barMaxWidth: 40,
       },
     ],
@@ -188,27 +200,35 @@
 </script>
 
 <svelte:head>
-  <title>Dashboard - Paperless Dedupe</title>
+  <title>Dashboard - Paperless NGX Dedupe</title>
 </svelte:head>
 
 <div class="space-y-8">
-  <div>
-    <h1 class="text-ink text-3xl font-bold">Dashboard</h1>
-    <p class="text-muted mt-1">Overview of your document library and deduplication status.</p>
-  </div>
+  <header class="space-y-1">
+    <h1 class="text-ink text-2xl font-semibold tracking-tight">Dashboard</h1>
+    <p class="text-muted text-sm">Overview of your document library and deduplication status.</p>
+  </header>
 
   <!-- Stat Cards -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <StatCard label="Total Documents" value={data.dashboard.totalDocuments.toLocaleString()} />
-    <StatCard label="Pending Groups" value={data.dashboard.pendingGroups.toLocaleString()} />
-    <StatCard label="Storage Savings" value={formatBytes(data.dashboard.storageSavingsBytes)} />
-    <StatCard label="Pending Analysis" value={data.dashboard.pendingAnalysis.toLocaleString()} />
+    <StatCard label="Total Documents" value={data.dashboard.totalDocuments.toLocaleString()}>
+      {#snippet icon()}<FileStack class="h-5 w-5" />{/snippet}
+    </StatCard>
+    <StatCard label="Pending Groups" value={data.dashboard.pendingGroups.toLocaleString()}>
+      {#snippet icon()}<AlertCircle class="h-5 w-5" />{/snippet}
+    </StatCard>
+    <StatCard label="Storage Savings" value={formatBytes(data.dashboard.storageSavingsBytes)}>
+      {#snippet icon()}<HardDrive class="h-5 w-5" />{/snippet}
+    </StatCard>
+    <StatCard label="Pending Analysis" value={data.dashboard.pendingAnalysis.toLocaleString()}>
+      {#snippet icon()}<Clock class="h-5 w-5" />{/snippet}
+    </StatCard>
   </div>
 
   <!-- Controls Row -->
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <!-- Sync Controls -->
-    <div class="panel">
+    <div class="panel border-l-accent border-l-4">
       <h2 class="text-ink text-lg font-semibold">Sync Documents</h2>
       <p class="text-muted mt-1 text-sm">Pull latest documents from Paperless-NGX.</p>
       <div class="mt-4 flex items-center gap-4">
@@ -217,7 +237,16 @@
           disabled={isSyncing}
           class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {isSyncing ? 'Syncing...' : 'Sync Now'}
+          {#if isSyncing}
+            <span class="flex items-center gap-2">
+              <span
+                class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+              ></span>
+              Syncing...
+            </span>
+          {:else}
+            Sync Now
+          {/if}
         </button>
         <label class="text-muted flex items-center gap-2 text-sm">
           <input type="checkbox" bind:checked={syncForce} class="rounded" />
@@ -238,7 +267,7 @@
     </div>
 
     <!-- Analysis Controls -->
-    <div class="panel">
+    <div class="panel border-l-accent border-l-4">
       <h2 class="text-ink text-lg font-semibold">Duplicate Analysis</h2>
       <p class="text-muted mt-1 text-sm">Run deduplication analysis on synced documents.</p>
       <div class="mt-4 flex items-center gap-4">
@@ -247,7 +276,16 @@
           disabled={isAnalyzing}
           class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {isAnalyzing ? 'Analyzing...' : 'Run Analysis'}
+          {#if isAnalyzing}
+            <span class="flex items-center gap-2">
+              <span
+                class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+              ></span>
+              Analyzing...
+            </span>
+          {:else}
+            Run Analysis
+          {/if}
         </button>
         <label class="text-muted flex items-center gap-2 text-sm">
           <input type="checkbox" bind:checked={analysisForce} class="rounded" />
@@ -293,11 +331,20 @@
     {#if data.dashboard.topCorrespondents.length > 0}
       <div class="panel">
         <h2 class="text-ink mb-4 text-lg font-semibold">Top Duplicated Correspondents</h2>
-        <ul class="space-y-2">
+        <ul class="space-y-3">
           {#each data.dashboard.topCorrespondents as c (c.correspondent)}
-            <li class="flex items-center justify-between text-sm">
-              <span class="text-ink">{c.correspondent}</span>
-              <span class="text-muted font-mono text-xs">{c.groupCount} groups</span>
+            {@const maxCount = data.dashboard.topCorrespondents[0]?.groupCount ?? 1}
+            <li class="space-y-1">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-ink">{c.correspondent}</span>
+                <span class="text-muted font-mono text-xs">{c.groupCount} groups</span>
+              </div>
+              <div class="bg-canvas-deep h-2 overflow-hidden rounded-full">
+                <div
+                  class="bg-accent h-full rounded-full transition-all duration-300"
+                  style="width: {(c.groupCount / maxCount) * 100}%"
+                ></div>
+              </div>
             </li>
           {/each}
         </ul>

@@ -11,7 +11,7 @@ test.describe('Settings Page', () => {
 
   test('page loads and shows title', async ({ page }) => {
     await page.goto('/settings');
-    await expect(page).toHaveTitle('Settings - Paperless Dedupe');
+    await expect(page).toHaveTitle('Settings - Paperless NGX Dedupe');
     await expect(page.locator('main h1')).toHaveText('Settings');
   });
 

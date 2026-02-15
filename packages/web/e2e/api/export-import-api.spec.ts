@@ -59,7 +59,7 @@ test.describe('Export/Import API', () => {
 
     const contentDisposition = response.headers()['content-disposition'];
     expect(contentDisposition).toContain('attachment');
-    expect(contentDisposition).toContain('paperless-dedupe-config-');
+    expect(contentDisposition).toContain('paperless-ngx-dedupe-config-');
     expect(contentDisposition).toContain('.json');
 
     const body = await response.json();

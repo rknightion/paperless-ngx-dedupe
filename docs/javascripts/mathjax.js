@@ -1,4 +1,4 @@
-// MathJax configuration for Paperless-Dedupe documentation
+// MathJax configuration for Paperless NGX Dedupe documentation
 window.MathJax = {
   tex: {
     inlineMath: [["\\(", "\\)"]],

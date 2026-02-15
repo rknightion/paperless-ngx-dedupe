@@ -7,7 +7,7 @@ export const GET: RequestHandler = async ({ locals }) => {
   return new Response(JSON.stringify(backup, null, 2), {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="paperless-dedupe-config-${date}.json"`,
+      'Content-Disposition': `attachment; filename="paperless-ngx-dedupe-config-${date}.json"`,
     },
   });
 };

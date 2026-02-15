@@ -1,103 +1,92 @@
 ---
 title: API Reference
-description: Complete REST API documentation for Paperless-Dedupe with curl examples
+description: REST API reference for Paperless NGX Dedupe
 ---
 
 # API Reference
 
-All endpoints are served under the base path `/api/v1/`.
+Base path: `/api/v1`
 
 ## Conventions
 
-### Response Envelope
+### Standard Envelope
 
-**Success responses** follow this shape:
+Most endpoints return:
 
 ```json
 {
-  "data": { ... },
-  "meta": { ... }
+  "data": {},
+  "meta": {}
 }
 ```
 
-The `meta` field is optional and only included when the endpoint provides pagination or additional context (e.g., `total`, `limit`, `offset`, `recalculatedGroups`).
+- `meta` is optional (pagination, recalculation counts, etc.).
 
-**Error responses** follow this shape:
+Errors return:
 
 ```json
 {
   "error": {
     "code": "ERROR_CODE",
-    "message": "Human-readable description",
-    "details": [...]
+    "message": "Human-readable message",
+    "details": []
   }
 }
 ```
 
-The `details` array is optional and typically contains Zod validation issues.
+`details` is optional (usually validation details).
+
+### Endpoints That Do Not Use the Envelope
+
+- `GET /api/v1/jobs/:jobId/progress` (SSE stream)
+- `GET /api/v1/export/duplicates.csv` (raw CSV download)
+- `GET /api/v1/export/config.json` (raw JSON download)
+- `GET /api/v1/paperless/documents/:paperlessId/preview` (proxied binary stream)
+- `GET /api/v1/paperless/documents/:paperlessId/thumb` (proxied binary stream)
 
 ### Error Codes
 
-| Code                  | HTTP Status | Description                                                  |
-| --------------------- | ----------- | ------------------------------------------------------------ |
-| `VALIDATION_FAILED`   | 400         | Invalid request parameters or body                           |
-| `UNAUTHORIZED`        | 401         | Missing or invalid authentication                            |
-| `NOT_FOUND`           | 404         | Resource does not exist                                      |
-| `CONFLICT`            | 409         | Resource state conflict (e.g., already resolved)             |
-| `JOB_ALREADY_RUNNING` | 409         | A job of the same type is already in progress                |
-| `INTERNAL_ERROR`      | 500         | Unexpected server error                                      |
-| `NOT_READY`           | 503         | Application is not ready (database or Paperless unreachable) |
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `BAD_REQUEST` | 400 | Invalid path/query input |
+| `VALIDATION_FAILED` | 400 | Invalid request body or params |
+| `UNAUTHORIZED` | 401 | Auth failed/missing |
+| `NOT_FOUND` | 404 | Resource not found |
+| `CONFLICT` | 409 | State conflict |
+| `JOB_ALREADY_RUNNING` | 409 | Same-type job already running/pending |
+| `BAD_GATEWAY` | 502 | Upstream Paperless request failed |
+| `NOT_READY` | 503 | Readiness checks failed |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |
 
 ### Pagination
 
-Paginated endpoints accept these query parameters:
+Common pagination params:
 
-| Parameter | Default | Range    | Description              |
-| --------- | ------- | -------- | ------------------------ |
-| `limit`   | 50      | 1 -- 100 | Number of items per page |
-| `offset`  | 0       | 0+       | Number of items to skip  |
+| Param | Default | Range |
+| --- | --- | --- |
+| `limit` | `50` | `1..100` |
+| `offset` | `0` | `>=0` |
 
-Paginated responses include pagination metadata:
+`GET /api/v1/jobs` uses `limit` range `1..200`.
 
-```json
-{
-  "data": [...],
-  "meta": { "total": 142, "limit": 50, "offset": 0 }
-}
-```
-
----
-
-## Health & Readiness
+## Health
 
 ### GET /api/v1/health
 
-Basic health check. Returns 200 if the server is running.
-
-**Response:**
+Returns process liveness.
 
 ```json
 {
   "data": {
     "status": "ok",
-    "timestamp": "2025-01-15T10:30:00.000Z"
+    "timestamp": "2026-02-15T10:00:00.000Z"
   }
 }
 ```
 
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/health
-```
-
----
-
 ### GET /api/v1/ready
 
-Deep readiness check. Verifies database connectivity and Paperless-NGX reachability.
-
-**Response (all checks pass):**
+Returns readiness checks (database + Paperless reachability).
 
 ```json
 {
@@ -111,1163 +100,360 @@ Deep readiness check. Verifies database connectivity and Paperless-NGX reachabil
 }
 ```
 
-**Response (check failed, HTTP 503):**
-
-```json
-{
-  "error": {
-    "code": "NOT_READY",
-    "message": "One or more checks failed",
-    "details": [
-      {
-        "database": { "status": "ok" },
-        "paperless": { "status": "error", "error": "fetch failed" }
-      }
-    ]
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/ready
-```
-
----
+If any check fails, returns HTTP 503 with `NOT_READY`.
 
 ## Dashboard
 
 ### GET /api/v1/dashboard
 
-Returns summary statistics for the dashboard.
+Returns summary cards and top correspondents.
 
-**Response:**
-
-```json
-{
-  "data": {
-    "totalDocuments": 1250,
-    "pendingGroups": 42,
-    "storageSavingsBytes": 52428800,
-    "pendingAnalysis": 15,
-    "lastSyncAt": "2025-01-15T08:00:00.000Z",
-    "lastSyncDocumentCount": 50,
-    "lastAnalysisAt": "2025-01-15T08:05:00.000Z",
-    "totalDuplicateGroups": 67,
-    "topCorrespondents": [
-      { "correspondent": "Insurance Co", "groupCount": 12 },
-      { "correspondent": "Bank", "groupCount": 8 }
-    ]
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/dashboard
-```
-
----
-
-## Sync
+## Sync and Analysis
 
 ### POST /api/v1/sync
 
-Trigger a document sync from Paperless-NGX. Returns 202 with the job ID. Only one sync job can run at a time.
+Starts sync job.
 
-**Request body (optional):**
+Optional JSON body:
 
 ```json
 { "force": true }
 ```
 
-Setting `force` to `true` performs a full sync, re-fetching all documents even if they have not changed.
-
-**Response (202):**
+Response (202):
 
 ```json
-{
-  "data": { "jobId": "01HQ3X..." }
-}
+{ "data": { "jobId": "..." } }
 ```
-
-**Error (409 -- sync already running):**
-
-```json
-{
-  "error": {
-    "code": "JOB_ALREADY_RUNNING",
-    "message": "A job of type sync is already running"
-  }
-}
-```
-
-**curl:**
-
-```bash
-# Normal sync
-curl -X POST http://localhost:3000/api/v1/sync
-
-# Force full sync
-curl -X POST http://localhost:3000/api/v1/sync \
-  -H 'Content-Type: application/json' \
-  -d '{ "force": true }'
-```
-
----
 
 ### GET /api/v1/sync/status
 
-Returns the current sync state and whether a sync is in progress.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "lastSyncAt": "2025-01-15T08:00:00.000Z",
-    "lastSyncDocumentCount": 50,
-    "totalDocuments": 1250,
-    "isSyncing": false,
-    "currentJobId": null
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/sync/status
-```
-
----
-
-## Analysis
+Returns last sync metadata plus active sync job status.
 
 ### POST /api/v1/analysis
 
-Trigger duplicate analysis. Returns 202 with the job ID. Only one analysis job can run at a time.
+Starts analysis job.
 
-**Request body (optional):**
+Optional JSON body:
 
 ```json
 { "force": true }
 ```
 
-Setting `force` to `true` regenerates all signatures and re-analyzes all documents, even those already processed.
-
-**Response (202):**
+Response (202):
 
 ```json
-{
-  "data": { "jobId": "01HQ3Y..." }
-}
+{ "data": { "jobId": "..." } }
 ```
-
-**Error (409):**
-
-```json
-{
-  "error": {
-    "code": "JOB_ALREADY_RUNNING",
-    "message": "A job of type analysis is already running"
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl -X POST http://localhost:3000/api/v1/analysis
-
-# Force re-analysis
-curl -X POST http://localhost:3000/api/v1/analysis \
-  -H 'Content-Type: application/json' \
-  -d '{ "force": true }'
-```
-
----
 
 ### GET /api/v1/analysis/status
 
-Returns the current analysis state and whether analysis is in progress.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "lastAnalysisAt": "2025-01-15T08:05:00.000Z",
-    "totalDuplicateGroups": 67,
-    "isAnalyzing": false,
-    "currentJobId": null
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/analysis/status
-```
-
----
+Returns last analysis metadata plus active analysis job status.
 
 ## Jobs
 
 ### GET /api/v1/jobs
 
-List jobs with optional filters.
+List jobs.
 
-**Query parameters:**
+Query params:
 
-| Parameter | Required | Description                                                                |
-| --------- | -------- | -------------------------------------------------------------------------- |
-| `type`    | No       | Filter by job type: `sync`, `analysis`, `batch_operation`                  |
-| `status`  | No       | Filter by status: `pending`, `running`, `completed`, `failed`, `cancelled` |
-| `limit`   | No       | Max results (1-200)                                                        |
+- `type`: `sync | analysis | batch_operation`
+- `status`: `pending | running | completed | failed | cancelled`
+- `limit`: `1..200`
 
-**Response:**
+### GET /api/v1/jobs/:jobId
+
+Get one job.
+
+Job object fields:
 
 ```json
 {
-  "data": [
-    {
-      "id": "01HQ3X...",
-      "type": "sync",
-      "status": "completed",
-      "progress": 100,
-      "progressMessage": "Sync complete",
-      "createdAt": "2025-01-15T08:00:00.000Z",
-      "startedAt": "2025-01-15T08:00:01.000Z",
-      "completedAt": "2025-01-15T08:02:30.000Z",
-      "result": null,
-      "error": null
-    }
-  ]
+  "id": "...",
+  "type": "sync",
+  "status": "running",
+  "progress": 0.42,
+  "progressMessage": "...",
+  "startedAt": "...",
+  "completedAt": null,
+  "errorMessage": null,
+  "resultJson": null,
+  "createdAt": "..."
 }
 ```
 
-**curl:**
+`progress` is `0..1`.
 
-```bash
-# All jobs
-curl http://localhost:3000/api/v1/jobs
+### GET /api/v1/jobs/:jobId/progress
 
-# Running sync jobs
-curl "http://localhost:3000/api/v1/jobs?type=sync&status=running"
-```
+SSE stream.
 
----
+Events:
 
-### GET /api/v1/jobs/:id
+- `progress`
+- `complete`
 
-Get details for a specific job.
-
-**Response:**
+Event data shape:
 
 ```json
 {
-  "data": {
-    "id": "01HQ3X...",
-    "type": "sync",
-    "status": "running",
-    "progress": 45,
-    "progressMessage": "Fetching documents (450/1000)",
-    "createdAt": "2025-01-15T08:00:00.000Z",
-    "startedAt": "2025-01-15T08:00:01.000Z",
-    "completedAt": null,
-    "result": null,
-    "error": null
-  }
-}
-```
-
-**Error (404):**
-
-```json
-{
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Job '01HQ3X...' not found"
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/jobs/01HQ3X...
-```
-
----
-
-### GET /api/v1/jobs/:id/progress
-
-Server-Sent Events (SSE) stream for real-time job progress. The connection stays open until the job completes, fails, or is cancelled.
-
-**Event types:**
-
-- `progress` -- Sent every 500ms while the job is running
-- `complete` -- Sent once when the job reaches a terminal state, then the stream closes
-
-**Event data:**
-
-```json
-{
-  "progress": 45,
-  "message": "Fetching documents (450/1000)",
+  "progress": 0.42,
+  "message": "...",
   "status": "running"
 }
 ```
 
-**curl:**
+### POST /api/v1/jobs/:jobId/cancel
 
-```bash
-curl -N http://localhost:3000/api/v1/jobs/01HQ3X.../progress
-```
-
-**JavaScript:**
-
-```javascript
-const source = new EventSource('/api/v1/jobs/01HQ3X.../progress');
-
-source.addEventListener('progress', (e) => {
-  const data = JSON.parse(e.data);
-  console.log(`${data.progress}% - ${data.message}`);
-});
-
-source.addEventListener('complete', (e) => {
-  const data = JSON.parse(e.data);
-  console.log(`Job ${data.status}: ${data.message}`);
-  source.close();
-});
-```
-
----
-
-### POST /api/v1/jobs/:id/cancel
-
-Cancel a running or pending job.
-
-**Response:**
+Cancels a pending/running job.
 
 ```json
-{
-  "data": { "jobId": "01HQ3X...", "status": "cancelled" }
-}
+{ "data": { "jobId": "...", "status": "cancelled" } }
 ```
-
-**Error (409 -- job already in terminal state):**
-
-```json
-{
-  "error": {
-    "code": "CONFLICT",
-    "message": "Job '01HQ3X...' is already in a terminal state"
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl -X POST http://localhost:3000/api/v1/jobs/01HQ3X.../cancel
-```
-
----
 
 ## Configuration
 
 ### GET /api/v1/config
 
-Get all application configuration key-value pairs.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "dedup.numPermutations": "192",
-    "dedup.similarityThreshold": "0.75",
-    "schema_ddl_hash": "abc123..."
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/config
-```
-
----
+Returns app config key/value map from DB.
 
 ### PUT /api/v1/config
 
-Set a single configuration key-value pair or a batch of settings.
-
-**Request body (single):**
+Accepts either:
 
 ```json
-{ "key": "dedup.similarityThreshold", "value": "0.8" }
+{ "key": "some.key", "value": "some-value" }
 ```
 
-**Request body (batch):**
+or:
 
 ```json
-{
-  "settings": {
-    "dedup.similarityThreshold": "0.8",
-    "dedup.numBands": "25"
-  }
-}
+{ "settings": { "some.key": "value", "another.key": "value" } }
 ```
 
-**Response:** Returns the full updated configuration (same as GET /config).
-
-**curl:**
-
-```bash
-# Single setting
-curl -X PUT http://localhost:3000/api/v1/config \
-  -H 'Content-Type: application/json' \
-  -d '{ "key": "dedup.similarityThreshold", "value": "0.8" }'
-
-# Batch settings
-curl -X PUT http://localhost:3000/api/v1/config \
-  -H 'Content-Type: application/json' \
-  -d '{ "settings": { "dedup.similarityThreshold": "0.8" } }'
-```
-
----
+Returns full config map.
 
 ### POST /api/v1/config/test-connection
 
-Test connectivity to the Paperless-NGX instance. Uses the configured environment variables by default, or accepts explicit connection parameters.
+Tests Paperless connectivity.
 
-**Request body (optional):**
+- If body includes `url`, validates explicit body config.
+- Otherwise uses current runtime env config.
+
+Body shape when explicit:
 
 ```json
 {
   "url": "http://paperless:8000",
-  "token": "abc123..."
+  "token": "..."
 }
 ```
 
-**Response (success):**
+or
+
+```json
+{
+  "url": "http://paperless:8000",
+  "username": "admin",
+  "password": "..."
+}
+```
+
+Success:
 
 ```json
 {
   "data": {
     "connected": true,
-    "version": "2.4.1",
-    "documentCount": 1250
+    "version": "2.x",
+    "documentCount": 1234
   }
 }
 ```
-
-**Response (failure, HTTP 502):**
-
-```json
-{
-  "error": {
-    "code": "INTERNAL_ERROR",
-    "message": "Connection refused"
-  }
-}
-```
-
-**curl:**
-
-```bash
-# Test with configured env vars
-curl -X POST http://localhost:3000/api/v1/config/test-connection
-
-# Test with explicit params
-curl -X POST http://localhost:3000/api/v1/config/test-connection \
-  -H 'Content-Type: application/json' \
-  -d '{ "url": "http://paperless:8000", "token": "abc123" }'
-```
-
----
 
 ### GET /api/v1/config/dedup
 
-Get the current deduplication algorithm configuration.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "numPermutations": 192,
-    "numBands": 20,
-    "ngramSize": 3,
-    "minWords": 20,
-    "similarityThreshold": 0.75,
-    "confidenceWeightJaccard": 40,
-    "confidenceWeightFuzzy": 30,
-    "confidenceWeightMetadata": 15,
-    "confidenceWeightFilename": 15,
-    "fuzzySampleSize": 5000,
-    "autoAnalyze": true
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/config/dedup
-```
-
----
+Returns effective dedup config.
 
 ### PUT /api/v1/config/dedup
 
-Update deduplication algorithm configuration. Accepts partial updates -- only include the fields you want to change. If confidence weights are changed, all existing duplicate group scores are recalculated automatically.
+Updates dedup config (partial).
 
-**Request body (partial):**
+- Requires `Content-Type: application/json`
+- Weight fields must sum to 100
 
-```json
-{
-  "similarityThreshold": 0.8,
-  "confidenceWeightJaccard": 50,
-  "confidenceWeightFuzzy": 30,
-  "confidenceWeightMetadata": 10,
-  "confidenceWeightFilename": 10
-}
-```
-
-Note: When updating any confidence weight, ensure all four weights still sum to 100.
-
-**Response:**
+If weight keys change, `meta.recalculatedGroups` is included.
 
 ```json
 {
   "data": {
-    "numPermutations": 192,
-    "numBands": 20,
+    "numPermutations": 256,
+    "numBands": 32,
     "ngramSize": 3,
     "minWords": 20,
-    "similarityThreshold": 0.8,
-    "confidenceWeightJaccard": 50,
-    "confidenceWeightFuzzy": 30,
+    "similarityThreshold": 0.75,
+    "confidenceWeightJaccard": 45,
+    "confidenceWeightFuzzy": 40,
     "confidenceWeightMetadata": 10,
-    "confidenceWeightFilename": 10,
-    "fuzzySampleSize": 5000,
+    "confidenceWeightFilename": 5,
+    "fuzzySampleSize": 10000,
     "autoAnalyze": true
   },
-  "meta": { "recalculatedGroups": 67 }
-}
-```
-
-**Error (400 -- weights don't sum to 100):**
-
-```json
-{
-  "error": {
-    "code": "VALIDATION_FAILED",
-    "message": "Confidence weights must sum to 100"
+  "meta": {
+    "recalculatedGroups": 42
   }
 }
 ```
-
-**curl:**
-
-```bash
-curl -X PUT http://localhost:3000/api/v1/config/dedup \
-  -H 'Content-Type: application/json' \
-  -d '{ "similarityThreshold": 0.8 }'
-```
-
----
 
 ## Documents
 
 ### GET /api/v1/documents
 
-List synced documents with optional filters and pagination.
+Lists documents.
 
-**Query parameters:**
+Query params:
 
-| Parameter          | Required | Default | Description                  |
-| ------------------ | -------- | ------- | ---------------------------- |
-| `limit`            | No       | 50      | Items per page (1-100)       |
-| `offset`           | No       | 0       | Items to skip                |
-| `correspondent`    | No       | --      | Filter by correspondent name |
-| `documentType`     | No       | --      | Filter by document type      |
-| `tag`              | No       | --      | Filter by tag                |
-| `processingStatus` | No       | --      | `pending` or `completed`     |
-| `search`           | No       | --      | Search in document titles    |
-
-**Response:**
-
-```json
-{
-  "data": [
-    {
-      "id": "doc-uuid-1",
-      "paperlessId": 42,
-      "title": "Invoice 2024-001",
-      "correspondent": "Insurance Co",
-      "documentType": "Invoice",
-      "tags": ["finance", "2024"],
-      "createdDate": "2024-03-15T00:00:00.000Z",
-      "addedDate": "2024-03-16T10:00:00.000Z",
-      "processingStatus": "completed",
-      "originalFileSize": 245760,
-      "archiveFileSize": 198400
-    }
-  ],
-  "meta": { "total": 1250, "limit": 50, "offset": 0 }
-}
-```
-
-**curl:**
-
-```bash
-curl "http://localhost:3000/api/v1/documents?limit=10&correspondent=Insurance%20Co"
-```
-
----
+- `limit`, `offset`
+- `correspondent`
+- `documentType`
+- `tag`
+- `processingStatus` (`pending | completed`)
+- `search` (title match)
 
 ### GET /api/v1/documents/:id
 
-Get full details for a single document, including content and group memberships.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "id": "doc-uuid-1",
-    "paperlessId": 42,
-    "title": "Invoice 2024-001",
-    "correspondent": "Insurance Co",
-    "documentType": "Invoice",
-    "tags": ["finance", "2024"],
-    "createdDate": "2024-03-15T00:00:00.000Z",
-    "addedDate": "2024-03-16T10:00:00.000Z",
-    "modifiedDate": "2024-03-16T10:00:00.000Z",
-    "processingStatus": "completed",
-    "originalFileSize": 245760,
-    "archiveFileSize": 198400,
-    "fingerprint": "sha256-abc123...",
-    "syncedAt": "2025-01-15T08:00:00.000Z",
-    "content": {
-      "fullText": "Invoice No. 2024-001...",
-      "normalizedText": "invoice no 2024 001...",
-      "wordCount": 342,
-      "contentHash": "sha256-def456..."
-    },
-    "groupMemberships": [
-      {
-        "groupId": "group-uuid-1",
-        "confidenceScore": 0.92,
-        "isPrimary": true,
-        "status": "pending"
-      }
-    ]
-  }
-}
-```
-
-**Error (404):**
-
-```json
-{
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Document not found: doc-uuid-1"
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/documents/doc-uuid-1
-```
-
----
+Returns one document, plus content and group memberships.
 
 ### GET /api/v1/documents/stats
 
-Get aggregate statistics about synced documents.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "totalDocuments": 1250,
-    "ocrCoverage": {
-      "withContent": 1200,
-      "withoutContent": 50,
-      "percentage": 96.0
-    },
-    "processingStatus": { "pending": 10, "completed": 1240 },
-    "correspondentDistribution": [
-      { "name": "Insurance Co", "count": 150 },
-      { "name": "Bank", "count": 120 }
-    ],
-    "documentTypeDistribution": [
-      { "name": "Invoice", "count": 400 },
-      { "name": "Letter", "count": 200 }
-    ],
-    "tagDistribution": [
-      { "name": "finance", "count": 500 },
-      { "name": "2024", "count": 300 }
-    ],
-    "totalStorageBytes": 524288000,
-    "averageWordCount": 450
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/documents/stats
-```
-
----
+Returns aggregate document analytics.
 
 ## Duplicates
 
 ### GET /api/v1/duplicates
 
-List duplicate groups with optional filters and pagination.
+Lists duplicate groups.
 
-**Query parameters:**
+Query params:
 
-| Parameter       | Required | Default      | Description                                   |
-| --------------- | -------- | ------------ | --------------------------------------------- |
-| `limit`         | No       | 50           | Items per page (1-100)                        |
-| `offset`        | No       | 0            | Items to skip                                 |
-| `minConfidence` | No       | --           | Minimum confidence score (0-1)                |
-| `maxConfidence` | No       | --           | Maximum confidence score (0-1)                |
-| `status`        | No       | --           | Comma-separated list: `pending`, `false_positive`, `ignored`, `deleted` |
-| `sortBy`        | No       | `confidence` | `confidence`, `created_at`, or `member_count` |
-| `sortOrder`     | No       | `desc`       | `asc` or `desc`                               |
-
-**Response:**
-
-```json
-{
-  "data": [
-    {
-      "id": "group-uuid-1",
-      "confidenceScore": 0.92,
-      "status": "pending",
-      "memberCount": 2,
-      "primaryDocumentTitle": "Invoice 2024-001",
-      "createdAt": "2025-01-15T08:05:00.000Z",
-      "updatedAt": "2025-01-15T08:05:00.000Z"
-    }
-  ],
-  "meta": { "total": 67, "limit": 50, "offset": 0 }
-}
-```
-
-**curl:**
-
-```bash
-# High-confidence pending groups
-curl "http://localhost:3000/api/v1/duplicates?minConfidence=0.9&status=pending"
-
-# Sort by member count
-curl "http://localhost:3000/api/v1/duplicates?sortBy=member_count&sortOrder=desc"
-```
-
----
+- `limit`, `offset`
+- `minConfidence`, `maxConfidence` (`0..1`)
+- `status` (comma-separated: `pending,false_positive,ignored,deleted`)
+- `sortBy` (`confidence | created_at | member_count`)
+- `sortOrder` (`asc | desc`)
 
 ### GET /api/v1/duplicates/:id
 
-Get full details for a duplicate group, including all member documents.
+Returns group details.
 
-**Response:**
+Optional query:
 
-```json
-{
-  "data": {
-    "id": "group-uuid-1",
-    "confidenceScore": 0.92,
-    "jaccardSimilarity": 0.95,
-    "fuzzyTextRatio": 0.88,
-    "metadataSimilarity": 0.9,
-    "filenameSimilarity": 0.85,
-    "algorithmVersion": "1.0.0",
-    "status": "pending",
-    "createdAt": "2025-01-15T08:05:00.000Z",
-    "updatedAt": "2025-01-15T08:05:00.000Z",
-    "members": [
-      {
-        "memberId": "member-uuid-1",
-        "documentId": "doc-uuid-1",
-        "isPrimary": true,
-        "paperlessId": 42,
-        "title": "Invoice 2024-001",
-        "correspondent": "Insurance Co",
-        "documentType": "Invoice",
-        "tags": ["finance", "2024"],
-        "createdDate": "2024-03-15T00:00:00.000Z",
-        "originalFileSize": 245760,
-        "archiveFileSize": 198400,
-        "content": {
-          "fullText": "Invoice No. 2024-001...",
-          "wordCount": 342
-        }
-      },
-      {
-        "memberId": "member-uuid-2",
-        "documentId": "doc-uuid-2",
-        "isPrimary": false,
-        "paperlessId": 87,
-        "title": "Invoice 2024-001 (copy)",
-        "correspondent": "Insurance Co",
-        "documentType": "Invoice",
-        "tags": ["finance"],
-        "createdDate": "2024-03-15T00:00:00.000Z",
-        "originalFileSize": 245760,
-        "archiveFileSize": 198400,
-        "content": {
-          "fullText": "Invoice No. 2024-001...",
-          "wordCount": 340
-        }
-      }
-    ]
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/duplicates/group-uuid-1
-```
-
----
-
-### GET /api/v1/duplicates/:id/content
-
-Get the full text content for two documents in a group, for side-by-side comparison.
-
-**Query parameters:**
-
-| Parameter | Required | Description                        |
-| --------- | -------- | ---------------------------------- |
-| `docA`    | Yes      | Document ID of the first document  |
-| `docB`    | Yes      | Document ID of the second document |
-
-Both documents must be members of the specified group.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "docA": {
-      "fullText": "Invoice No. 2024-001 from Insurance Co...",
-      "wordCount": 342
-    },
-    "docB": {
-      "fullText": "Invoice No. 2024-001 from Insurance Co...",
-      "wordCount": 340
-    }
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl "http://localhost:3000/api/v1/duplicates/group-uuid-1/content?docA=doc-uuid-1&docB=doc-uuid-2"
-```
-
----
-
-### GET /api/v1/duplicates/stats
-
-Get aggregate statistics about duplicate groups.
-
-**Response:**
-
-```json
-{
-  "data": {
-    "totalGroups": 67,
-    "pendingGroups": 32,
-    "falsePositiveGroups": 10,
-    "ignoredGroups": 10,
-    "deletedGroups": 15,
-    "confidenceDistribution": [
-      { "label": "90-100%", "min": 0.9, "max": 1.0, "count": 25 },
-      { "label": "80-90%", "min": 0.8, "max": 0.9, "count": 18 },
-      { "label": "70-80%", "min": 0.7, "max": 0.8, "count": 24 }
-    ],
-    "topCorrespondents": [
-      { "correspondent": "Insurance Co", "groupCount": 12 },
-      { "correspondent": "Bank", "groupCount": 8 }
-    ]
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl http://localhost:3000/api/v1/duplicates/stats
-```
-
----
+- `light=true` to omit full member text content.
 
 ### DELETE /api/v1/duplicates/:id
 
-Delete a duplicate group and its member associations. Does not delete the underlying documents.
+Deletes group record and memberships (does not delete documents in Paperless).
 
-**Response:**
+### GET /api/v1/duplicates/:id/content
 
-```json
-{
-  "data": { "deleted": true }
-}
-```
+Returns text content for two members in a group.
 
-**Error (404):**
+Required query params:
 
-```json
-{
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Duplicate group not found: group-uuid-1"
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl -X DELETE http://localhost:3000/api/v1/duplicates/group-uuid-1
-```
-
----
+- `docA`
+- `docB`
 
 ### PUT /api/v1/duplicates/:id/status
 
-Set the status of a duplicate group. Valid statuses are `pending`, `false_positive`, `ignored`, and `deleted`.
-
-**Request body:**
+Request:
 
 ```json
 { "status": "false_positive" }
 ```
 
-**Response:**
-
-```json
-{
-  "data": { "groupId": "group-uuid-1", "status": "false_positive" }
-}
-```
-
-**curl:**
-
-```bash
-curl -X PUT http://localhost:3000/api/v1/duplicates/group-uuid-1/status \
-  -H 'Content-Type: application/json' \
-  -d '{ "status": "false_positive" }'
-```
-
----
+Valid statuses: `pending`, `false_positive`, `ignored`, `deleted`.
 
 ### PUT /api/v1/duplicates/:id/primary
 
-Set the primary document for a duplicate group. The primary document is the one intended to be kept.
-
-**Request body:**
+Request:
 
 ```json
-{ "documentId": "doc-uuid-1" }
+{ "documentId": "..." }
 ```
 
-**Response:**
+### GET /api/v1/duplicates/stats
 
-```json
-{
-  "data": { "groupId": "group-uuid-1", "documentId": "doc-uuid-1" }
-}
-```
+Returns totals by status, confidence buckets, and top correspondents.
 
-**Error (404):**
+### GET /api/v1/duplicates/graph
 
-```json
-{
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Duplicate group not found: group-uuid-1"
-  }
-}
-```
+Returns graph nodes/edges for visualization.
 
-**curl:**
+Query params:
 
-```bash
-curl -X PUT http://localhost:3000/api/v1/duplicates/group-uuid-1/primary \
-  -H 'Content-Type: application/json' \
-  -d '{ "documentId": "doc-uuid-1" }'
-```
-
----
+- `minConfidence`, `maxConfidence`
+- `status` (comma-separated)
+- `maxGroups` (`1..500`, default `100`)
 
 ## Batch Operations
 
 ### POST /api/v1/batch/status
 
-Set the status for multiple duplicate groups in a single request.
-
-**Request body:**
+Updates status for many groups.
 
 ```json
 {
-  "groupIds": ["group-uuid-1", "group-uuid-2", "group-uuid-3"],
-  "status": "false_positive"
+  "groupIds": ["...", "..."],
+  "status": "ignored"
 }
 ```
 
-The `groupIds` array must contain 1 to 1000 items. Valid statuses: `pending`, `false_positive`, `ignored`, `deleted`.
+`groupIds` must contain `1..1000` ids.
 
-**Response:**
+Response:
 
 ```json
-{
-  "data": { "processed": 3 }
-}
+{ "data": { "updated": 2 } }
 ```
-
-**curl:**
-
-```bash
-curl -X POST http://localhost:3000/api/v1/batch/status \
-  -H 'Content-Type: application/json' \
-  -d '{ "groupIds": ["group-uuid-1", "group-uuid-2"], "status": "false_positive" }'
-```
-
----
 
 ### POST /api/v1/batch/delete-non-primary
 
-Delete non-primary documents from Paperless-NGX for the specified groups. This is a destructive operation -- non-primary documents will be permanently deleted from Paperless-NGX. Only groups with `pending` status can be included; non-pending groups will be rejected.
-
-Runs as a background job because it may take time for large batches.
-
-**Request body:**
+Starts destructive batch delete in Paperless (background job).
 
 ```json
 {
-  "groupIds": ["group-uuid-1", "group-uuid-2"],
+  "groupIds": ["...", "..."],
   "confirm": true
 }
 ```
 
-The `confirm` field must be `true` (a safety check to prevent accidental deletions).
+Rules:
 
-**Response (202):**
+- `confirm` must be `true`
+- all groups must currently be `pending`
 
-```json
-{
-  "data": { "jobId": "01HQ3Z..." }
-}
-```
-
-**Error (409 -- batch operation already running):**
+Response (202):
 
 ```json
-{
-  "error": {
-    "code": "JOB_ALREADY_RUNNING",
-    "message": "A job of type batch_operation is already running"
-  }
-}
+{ "data": { "jobId": "..." } }
 ```
 
-**curl:**
-
-```bash
-curl -X POST http://localhost:3000/api/v1/batch/delete-non-primary \
-  -H 'Content-Type: application/json' \
-  -d '{ "groupIds": ["group-uuid-1", "group-uuid-2"], "confirm": true }'
-```
-
----
-
-## Export & Import
+## Export / Import
 
 ### GET /api/v1/export/duplicates.csv
 
-Export duplicate groups as a CSV file. Supports the same filters as `GET /api/v1/duplicates`.
-
-**Query parameters:** Same as [GET /api/v1/duplicates](#get-apiv1duplicates) (minConfidence, maxConfidence, status, sortBy, sortOrder).
-
-**Response:** `text/csv` file download with `Content-Disposition` header.
-
-**CSV columns:** `group_id`, `confidence_score`, `jaccard_similarity`, `fuzzy_text_ratio`, `metadata_similarity`, `filename_similarity`, `group_status`, `is_primary`, `paperless_id`, `title`, `correspondent`, `document_type`, `tags`, `created_date`, `original_file_size`, `word_count`, `group_created_at`
-
-**curl:**
-
-```bash
-# Export all groups
-curl -o duplicates.csv http://localhost:3000/api/v1/export/duplicates.csv
-
-# Export only high-confidence pending groups
-curl -o duplicates.csv "http://localhost:3000/api/v1/export/duplicates.csv?minConfidence=0.9&status=pending"
-```
-
----
+Downloads CSV. Supports same filter params as `GET /api/v1/duplicates`.
 
 ### GET /api/v1/export/config.json
 
-Export the current application and dedup configuration as a JSON file for backup.
-
-**Response:** `application/json` file download with `Content-Disposition` header.
-
-**Response body:**
-
-```json
-{
-  "version": "1.0",
-  "exportedAt": "2025-01-15T10:00:00.000Z",
-  "appConfig": {
-    "dedup.numPermutations": "192",
-    "dedup.similarityThreshold": "0.75"
-  },
-  "dedupConfig": {
-    "numPermutations": 192,
-    "numBands": 20,
-    "similarityThreshold": 0.75
-  }
-}
-```
-
-**curl:**
-
-```bash
-curl -o config-backup.json http://localhost:3000/api/v1/export/config.json
-```
-
----
+Downloads config backup JSON.
 
 ### POST /api/v1/import/config
 
-Import a previously exported configuration backup.
+Imports config backup JSON.
 
-**Request body:** The JSON content from a config export (same shape as the export response).
-
-**Response:**
+Response:
 
 ```json
 {
@@ -1278,10 +464,34 @@ Import a previously exported configuration backup.
 }
 ```
 
-**curl:**
+## Paperless Proxy Endpoints
 
-```bash
-curl -X POST http://localhost:3000/api/v1/import/config \
-  -H 'Content-Type: application/json' \
-  -d @config-backup.json
+### GET /api/v1/paperless/documents/:paperlessId/preview
+
+Proxies Paperless preview stream.
+
+### GET /api/v1/paperless/documents/:paperlessId/thumb
+
+Proxies Paperless thumbnail stream.
+
+### GET /api/v1/paperless/trash
+
+Returns recycle bin count.
+
+```json
+{ "data": { "count": 12 } }
+```
+
+### POST /api/v1/paperless/trash
+
+Request:
+
+```json
+{ "action": "empty" }
+```
+
+Response:
+
+```json
+{ "data": { "emptied": true } }
 ```

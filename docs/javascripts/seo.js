@@ -1,4 +1,4 @@
-/* SEO enhancements for Paperless-Dedupe documentation */
+/* SEO enhancements for Paperless NGX Dedupe documentation */
 
 document.addEventListener('DOMContentLoaded', function() {
   addStructuredData();
@@ -13,7 +13,7 @@ function addStructuredData() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "Paperless-Dedupe",
+    "name": "Paperless NGX Dedupe",
     "applicationCategory": "Document Management Software",
     "operatingSystem": "Docker / Node.js",
     "description": "A document deduplication companion for Paperless-NGX using MinHash/LSH algorithms with a web UI for reviewing and resolving duplicates",
@@ -67,7 +67,7 @@ function addStructuredData() {
     "@context": "https://schema.org",
     "@type": "TechArticle",
     "headline": document.title,
-    "description": document.querySelector('meta[name="description"]')?.content || "Paperless-Dedupe documentation",
+    "description": document.querySelector('meta[name="description"]')?.content || "Paperless NGX Dedupe documentation",
     "url": window.location.href,
     "datePublished": document.querySelector('meta[name="date"]')?.content,
     "dateModified": document.querySelector('meta[name="git-revision-date-localized"]')?.content,
@@ -77,7 +77,7 @@ function addStructuredData() {
     },
     "publisher": {
       "@type": "Organization",
-      "name": "Paperless-Dedupe",
+      "name": "Paperless NGX Dedupe",
       "url": "https://m7kni.io/paperless-ngx-dedupe/"
     },
     "mainEntityOfPage": {
@@ -88,7 +88,7 @@ function addStructuredData() {
     "keywords": getPageKeywords(),
     "about": {
       "@type": "SoftwareApplication",
-      "name": "Paperless-Dedupe"
+      "name": "Paperless NGX Dedupe"
     }
   };
 
@@ -131,11 +131,11 @@ function enhanceMetaTags() {
 
 // Add Open Graph tags
 function addOpenGraphTags() {
-  const title = document.title || 'Paperless-Dedupe';
+  const title = document.title || 'Paperless NGX Dedupe';
   const description = document.querySelector('meta[name="description"]')?.content ||
     'Document deduplication companion for Paperless-NGX using MinHash/LSH algorithms';
   const url = window.location.href;
-  const siteName = 'Paperless-Dedupe Documentation';
+  const siteName = 'Paperless NGX Dedupe Documentation';
 
   addMetaTag('property', 'og:type', 'website');
   addMetaTag('property', 'og:site_name', siteName);
@@ -146,12 +146,12 @@ function addOpenGraphTags() {
   addMetaTag('property', 'og:image', 'https://m7kni.io/paperless-ngx-dedupe/assets/social-card.png');
   addMetaTag('property', 'og:image:width', '1200');
   addMetaTag('property', 'og:image:height', '630');
-  addMetaTag('property', 'og:image:alt', 'Paperless-Dedupe - Document deduplication for Paperless-NGX');
+  addMetaTag('property', 'og:image:alt', 'Paperless NGX Dedupe - Document deduplication for Paperless-NGX');
 }
 
 // Add Twitter Card tags
 function addTwitterCardTags() {
-  const title = document.title || 'Paperless-Dedupe';
+  const title = document.title || 'Paperless NGX Dedupe';
   const description = document.querySelector('meta[name="description"]')?.content ||
     'Document deduplication companion for Paperless-NGX using MinHash/LSH algorithms';
 
