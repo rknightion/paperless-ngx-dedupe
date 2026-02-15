@@ -29,7 +29,7 @@ test.describe('Dashboard', () => {
     await page.goto('/');
 
     const sidebar = page.locator('aside');
-    await expect(sidebar.getByText('Paperless NGX Dedupe')).toBeVisible();
+    await expect(sidebar.getByRole('link', { name: 'Paperless NGX Dedupe' })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Dashboard' })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Documents' })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Duplicates' })).toBeVisible();
