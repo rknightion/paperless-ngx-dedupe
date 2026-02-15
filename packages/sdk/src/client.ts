@@ -129,20 +129,11 @@ export class PaperlessDedupeClient {
     return res.data;
   }
 
-  async markReviewed(groupId: string): Promise<DuplicateGroupDetail> {
-    const res = await request<DuplicateGroupDetail>(
-      `/api/v1/duplicates/${groupId}/reviewed`,
+  async setGroupStatus(groupId: string, status: string): Promise<{ groupId: string; status: string }> {
+    const res = await request<{ groupId: string; status: string }>(
+      `/api/v1/duplicates/${groupId}/status`,
       this.httpOptions,
-      { method: 'POST' },
-    );
-    return res.data;
-  }
-
-  async markResolved(groupId: string): Promise<DuplicateGroupDetail> {
-    const res = await request<DuplicateGroupDetail>(
-      `/api/v1/duplicates/${groupId}/resolved`,
-      this.httpOptions,
-      { method: 'POST' },
+      { method: 'PUT', body: { status } },
     );
     return res.data;
   }
@@ -155,18 +146,10 @@ export class PaperlessDedupeClient {
 
   // ── Batch Operations ─────────────────────────────────────────────────
 
-  async batchReview(groupIds: string[]): Promise<BatchResult> {
-    const res = await request<BatchResult>('/api/v1/batch/review', this.httpOptions, {
+  async batchSetStatus(groupIds: string[], status: string): Promise<BatchResult> {
+    const res = await request<BatchResult>('/api/v1/batch/status', this.httpOptions, {
       method: 'POST',
-      body: { groupIds },
-    });
-    return res.data;
-  }
-
-  async batchResolve(groupIds: string[]): Promise<BatchResult> {
-    const res = await request<BatchResult>('/api/v1/batch/resolve', this.httpOptions, {
-      method: 'POST',
-      body: { groupIds },
+      body: { groupIds, status },
     });
     return res.data;
   }
