@@ -6,8 +6,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   const filtersResult = similarityGraphFiltersSchema.safeParse({
     minConfidence: url.searchParams.get('minConfidence') ?? undefined,
     maxConfidence: url.searchParams.get('maxConfidence') ?? undefined,
-    reviewed: url.searchParams.get('reviewed') ?? undefined,
-    resolved: url.searchParams.get('resolved') ?? undefined,
+    status: url.searchParams.get('status') ?? undefined,
     maxGroups: url.searchParams.get('maxGroups') ?? undefined,
   });
 
