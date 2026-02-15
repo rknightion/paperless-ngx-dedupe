@@ -45,8 +45,7 @@
 
   // Derived helpers
   let hasFilters = $derived(
-    $page.url.searchParams.has('reviewed') ||
-      $page.url.searchParams.has('resolved') ||
+    $page.url.searchParams.has('status') ||
       $page.url.searchParams.has('minConfidence') ||
       $page.url.searchParams.has('maxConfidence'),
   );
@@ -54,12 +53,7 @@
   let allSelected = $derived(data.groups.length > 0 && selectedIds.size === data.groups.length);
 
   let currentStatus = $derived(() => {
-    const reviewed = $page.url.searchParams.get('reviewed');
-    const resolved = $page.url.searchParams.get('resolved');
-    if (resolved === 'true') return 'resolved';
-    if (reviewed === 'true') return 'reviewed';
-    if (reviewed === 'false' && resolved === 'false') return 'unreviewed';
-    return 'all';
+    return $page.url.searchParams.get('status') ?? 'all';
   });
 
   let showingFrom = $derived(data.offset + 1);
@@ -86,25 +80,7 @@
 
   function handleStatusChange(e: Event) {
     const value = (e.target as HTMLSelectElement).value;
-    if (value === 'all') {
-      applyFilters({ reviewed: '', resolved: '' });
-    } else if (value === 'unreviewed') {
-      applyFilters({ reviewed: 'false', resolved: 'false' });
-    } else if (value === 'reviewed') {
-      // eslint-disable-next-line svelte/prefer-svelte-reactivity
-      const params = new URLSearchParams($page.url.searchParams);
-      params.set('reviewed', 'true');
-      params.delete('resolved');
-      params.delete('offset');
-      goto(`?${params.toString()}`, { replaceState: true });
-    } else if (value === 'resolved') {
-      // eslint-disable-next-line svelte/prefer-svelte-reactivity
-      const params = new URLSearchParams($page.url.searchParams);
-      params.set('resolved', 'true');
-      params.delete('reviewed');
-      params.delete('offset');
-      goto(`?${params.toString()}`, { replaceState: true });
-    }
+    applyFilters({ status: value === 'all' ? '' : value });
   }
 
   function handleMinConfidence(e: Event) {
@@ -174,12 +150,12 @@
     return success;
   }
 
-  function markReviewed() {
-    batchAction('/api/v1/batch/review', { groupIds: [...selectedIds] });
+  function dismissSelected() {
+    batchAction('/api/v1/batch/status', { groupIds: [...selectedIds], status: 'false_positive' });
   }
 
-  function resolveSelected() {
-    batchAction('/api/v1/batch/resolve', { groupIds: [...selectedIds] });
+  function ignoreSelected() {
+    batchAction('/api/v1/batch/status', { groupIds: [...selectedIds], status: 'ignored' });
   }
 
   async function deleteNonPrimary() {
@@ -290,11 +266,11 @@
       </p>
       <p>
         <strong class="text-ink">Workflow:</strong> Review groups by clicking a row to compare
-        documents side-by-side. Mark groups as
-        <em>Reviewed</em>
-        after checking them, or
-        <em>Resolved</em>
-        once you have taken action (e.g., deleted a duplicate in Paperless-NGX). Use the
+        documents side-by-side. For each group, choose an outcome:
+        <em>Not a Duplicate</em> (false positive),
+        <em>Keep All</em> (real duplicates, but you want to keep every copy), or
+        <em>Delete Duplicates</em> (remove non-primary documents via Paperless-NGX recycle bin).
+        Groups can be reopened at any time. Use the
         <a href="/duplicates/wizard" class="text-accent hover:text-accent-hover underline">
           Bulk Operations Wizard
         </a>
@@ -331,9 +307,10 @@
           class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         >
           <option value="all">All</option>
-          <option value="unreviewed">Unreviewed</option>
-          <option value="reviewed">Reviewed</option>
-          <option value="resolved">Resolved</option>
+          <option value="pending">Pending</option>
+          <option value="false_positive">False Positive</option>
+          <option value="ignored">Ignored</option>
+          <option value="deleted">Deleted</option>
         </select>
       </div>
 
@@ -400,13 +377,13 @@
   {#if hasFilters}
     <div class="flex flex-wrap items-center gap-2">
       <span class="text-muted text-xs">Active filters:</span>
-      {#if $page.url.searchParams.get('reviewed') || $page.url.searchParams.get('resolved')}
+      {#if $page.url.searchParams.get('status')}
         <span
           class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
         >
           Status: {currentStatus()}
           <button
-            onclick={() => applyFilters({ reviewed: '', resolved: '' })}
+            onclick={() => applyFilters({ status: '' })}
             class="hover:text-accent-hover">&times;</button
           >
         </span>
@@ -446,18 +423,18 @@
     >
       <span class="text-ink text-sm font-medium">{selectedIds.size} selected</span>
       <button
-        onclick={markReviewed}
+        onclick={dismissSelected}
         disabled={isSubmitting}
-        class="bg-accent hover:bg-accent-hover rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
       >
-        Mark Reviewed
+        Not Duplicates
       </button>
       <button
-        onclick={resolveSelected}
+        onclick={ignoreSelected}
         disabled={isSubmitting}
         class="bg-accent hover:bg-accent-hover rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
       >
-        Resolve Selected
+        Keep All
       </button>
       <button
         onclick={() => (showDeleteConfirm = true)}
@@ -539,9 +516,7 @@
                 </RichTooltip>
               </td>
               <td class="hidden px-4 py-3 sm:table-cell">
-                <StatusBadge
-                  status={group.resolved ? 'resolved' : group.reviewed ? 'reviewed' : 'pending'}
-                />
+                <StatusBadge status={group.status} />
               </td>
               <td class="text-muted hidden px-4 py-3 text-xs lg:table-cell" title={group.updatedAt}>
                 {timeAgo(group.updatedAt)}
