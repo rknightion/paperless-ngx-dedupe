@@ -15,15 +15,15 @@ export function registerExportCommand(program: Command): void {
     .command('duplicates')
     .description('Export duplicate groups as CSV')
     .option('--min-confidence <value>', 'minimum confidence score (0-1)', parseFloat)
-    .option('--unresolved-only', 'only include unresolved groups')
-    .action((opts: { minConfidence?: number; unresolvedOnly?: boolean }) => {
+    .option('--status <status>', 'filter by status (e.g., pending, false_positive, ignored, deleted)')
+    .action((opts: { minConfidence?: number; status?: string }) => {
       const globalOpts = program.opts<GlobalOpts>();
       const ctx = createDbContext(globalOpts);
 
       try {
         const rows = getDuplicateGroupsForExport(ctx.db, {
           minConfidence: opts.minConfidence,
-          resolved: opts.unresolvedOnly ? false : undefined,
+          status: opts.status ? opts.status.split(',') : undefined,
           sortBy: 'confidence',
           sortOrder: 'desc',
         });
