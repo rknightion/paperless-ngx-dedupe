@@ -1,6 +1,7 @@
 import { and, count, desc, asc, eq, gte, lte, sql, inArray } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
+import type { GroupStatus } from '../types/enums.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { parseTagsJson } from './helpers.js';
@@ -23,7 +24,7 @@ import type {
 // ── List queries ────────────────────────────────────────────────────────
 
 export function buildGroupWhere(
-  filters: Pick<DuplicateGroupFilters, 'minConfidence' | 'maxConfidence' | 'reviewed' | 'resolved'>,
+  filters: Pick<DuplicateGroupFilters, 'minConfidence' | 'maxConfidence' | 'status'>,
 ) {
   const conditions = [];
 
@@ -33,11 +34,12 @@ export function buildGroupWhere(
   if (filters.maxConfidence !== undefined) {
     conditions.push(lte(duplicateGroup.confidenceScore, filters.maxConfidence));
   }
-  if (filters.reviewed !== undefined) {
-    conditions.push(eq(duplicateGroup.reviewed, filters.reviewed));
-  }
-  if (filters.resolved !== undefined) {
-    conditions.push(eq(duplicateGroup.resolved, filters.resolved));
+  if (filters.status !== undefined && filters.status.length > 0) {
+    if (filters.status.length === 1) {
+      conditions.push(eq(duplicateGroup.status, filters.status[0]));
+    } else {
+      conditions.push(inArray(duplicateGroup.status, filters.status));
+    }
   }
 
   return conditions.length > 0 ? and(...conditions) : undefined;
@@ -108,8 +110,7 @@ export function getDuplicateGroups(
     fuzzyTextRatio: g.fuzzyTextRatio,
     metadataSimilarity: g.metadataSimilarity,
     filenameSimilarity: g.filenameSimilarity,
-    reviewed: g.reviewed ?? false,
-    resolved: g.resolved ?? false,
+    status: g.status,
     memberCount: countMap.get(g.id) ?? 0,
     primaryDocumentTitle: titleMap.get(g.id) ?? null,
     createdAt: g.createdAt,
@@ -185,8 +186,7 @@ export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDe
     metadataSimilarity: group.metadataSimilarity,
     filenameSimilarity: group.filenameSimilarity,
     algorithmVersion: group.algorithmVersion,
-    reviewed: group.reviewed ?? false,
-    resolved: group.resolved ?? false,
+    status: group.status,
     createdAt: group.createdAt,
     updatedAt: group.updatedAt,
     members,
@@ -261,8 +261,7 @@ export function getDuplicateGroupLight(db: AppDatabase, id: string): DuplicateGr
     metadataSimilarity: group.metadataSimilarity,
     filenameSimilarity: group.filenameSimilarity,
     algorithmVersion: group.algorithmVersion,
-    reviewed: group.reviewed ?? false,
-    resolved: group.resolved ?? false,
+    status: group.status,
     createdAt: group.createdAt,
     updatedAt: group.updatedAt,
     members,
@@ -274,17 +273,17 @@ export function getDuplicateGroupLight(db: AppDatabase, id: string): DuplicateGr
 export function getDuplicateStats(db: AppDatabase): DuplicateStats {
   const [{ total }] = db.select({ total: count() }).from(duplicateGroup).all();
 
-  const [{ reviewed }] = db
-    .select({ reviewed: count() })
+  // Count by status
+  const statusCounts = db
+    .select({
+      status: duplicateGroup.status,
+      count: count(),
+    })
     .from(duplicateGroup)
-    .where(eq(duplicateGroup.reviewed, true))
+    .groupBy(duplicateGroup.status)
     .all();
 
-  const [{ resolved }] = db
-    .select({ resolved: count() })
-    .from(duplicateGroup)
-    .where(eq(duplicateGroup.resolved, true))
-    .all();
+  const statusMap = new Map(statusCounts.map((s) => [s.status, s.count]));
 
   // Confidence histogram via CASE expression
   const buckets = db
@@ -328,7 +327,7 @@ export function getDuplicateStats(db: AppDatabase): DuplicateStats {
     count: bucketCountMap.get(def.label) ?? 0,
   }));
 
-  // Top correspondents
+  // Top correspondents (pending groups only)
   const topCorrespondents = db
     .select({
       correspondent: document.correspondent,
@@ -337,7 +336,7 @@ export function getDuplicateStats(db: AppDatabase): DuplicateStats {
     .from(duplicateMember)
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
     .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
-    .where(sql`${document.correspondent} IS NOT NULL AND ${duplicateGroup.resolved} = 0`)
+    .where(sql`${document.correspondent} IS NOT NULL AND ${duplicateGroup.status} = 'pending'`)
     .groupBy(document.correspondent)
     .orderBy(sql`COUNT(DISTINCT ${duplicateMember.groupId}) DESC`)
     .limit(10)
@@ -345,9 +344,10 @@ export function getDuplicateStats(db: AppDatabase): DuplicateStats {
 
   return {
     totalGroups: total,
-    reviewedGroups: reviewed,
-    resolvedGroups: resolved,
-    unresolvedGroups: total - resolved,
+    pendingGroups: statusMap.get('pending') ?? 0,
+    falsePositiveGroups: statusMap.get('false_positive') ?? 0,
+    ignoredGroups: statusMap.get('ignored') ?? 0,
+    deletedGroups: statusMap.get('deleted') ?? 0,
     confidenceDistribution,
     topCorrespondents,
   };
@@ -460,8 +460,7 @@ export function getSimilarityGraph(
           target: members[j],
           groupId,
           confidenceScore: g.confidenceScore,
-          reviewed: g.reviewed ?? false,
-          resolved: g.resolved ?? false,
+          status: g.status,
         });
       }
     }
@@ -511,29 +510,30 @@ export function setPrimaryDocument(db: AppDatabase, groupId: string, documentId:
   return true;
 }
 
-export function markGroupReviewed(db: AppDatabase, groupId: string): boolean {
+export function setGroupStatus(
+  db: AppDatabase,
+  groupId: string,
+  status: GroupStatus,
+): boolean {
+  const group = db
+    .select({ id: duplicateGroup.id, status: duplicateGroup.status })
+    .from(duplicateGroup)
+    .where(eq(duplicateGroup.id, groupId))
+    .get();
+
+  if (!group) return false;
+
+  // Already at the requested status
+  if (group.status === status) return true;
+
   const result = db
     .update(duplicateGroup)
-    .set({ reviewed: true, updatedAt: new Date().toISOString() })
-    .where(and(eq(duplicateGroup.id, groupId), eq(duplicateGroup.reviewed, false)))
+    .set({ status, updatedAt: new Date().toISOString() })
+    .where(eq(duplicateGroup.id, groupId))
     .run();
 
   if (result.changes > 0) {
-    incrementUsageStats(db, { groupsReviewed: 1 });
-  }
-
-  return result.changes > 0;
-}
-
-export function markGroupResolved(db: AppDatabase, groupId: string): boolean {
-  const result = db
-    .update(duplicateGroup)
-    .set({ resolved: true, updatedAt: new Date().toISOString() })
-    .where(and(eq(duplicateGroup.id, groupId), eq(duplicateGroup.resolved, false)))
-    .run();
-
-  if (result.changes > 0) {
-    incrementUsageStats(db, { groupsResolved: 1 });
+    incrementUsageStats(db, { groupsActioned: 1 });
   }
 
   return result.changes > 0;
@@ -558,41 +558,25 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
-export function batchMarkReviewed(db: AppDatabase, groupIds: string[]): { updated: number } {
+export function batchSetStatus(
+  db: AppDatabase,
+  groupIds: string[],
+  status: GroupStatus,
+): { updated: number } {
   let updated = 0;
   const now = new Date().toISOString();
 
   for (const chunk of chunkArray(groupIds, CHUNK_SIZE)) {
     const result = db
       .update(duplicateGroup)
-      .set({ reviewed: true, updatedAt: now })
-      .where(and(inArray(duplicateGroup.id, chunk), eq(duplicateGroup.reviewed, false)))
+      .set({ status, updatedAt: now })
+      .where(inArray(duplicateGroup.id, chunk))
       .run();
     updated += result.changes;
   }
 
   if (updated > 0) {
-    incrementUsageStats(db, { groupsReviewed: updated });
-  }
-
-  return { updated };
-}
-
-export function batchMarkResolved(db: AppDatabase, groupIds: string[]): { updated: number } {
-  let updated = 0;
-  const now = new Date().toISOString();
-
-  for (const chunk of chunkArray(groupIds, CHUNK_SIZE)) {
-    const result = db
-      .update(duplicateGroup)
-      .set({ resolved: true, updatedAt: now })
-      .where(and(inArray(duplicateGroup.id, chunk), eq(duplicateGroup.resolved, false)))
-      .run();
-    updated += result.changes;
-  }
-
-  if (updated > 0) {
-    incrementUsageStats(db, { groupsResolved: updated });
+    incrementUsageStats(db, { groupsActioned: updated });
   }
 
   return { updated };

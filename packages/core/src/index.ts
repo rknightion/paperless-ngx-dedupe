@@ -174,11 +174,9 @@ export {
   getDuplicateStats,
   getSimilarityGraph,
   setPrimaryDocument,
-  markGroupReviewed,
-  markGroupResolved,
+  setGroupStatus,
   deleteDuplicateGroup,
-  batchMarkReviewed,
-  batchMarkResolved,
+  batchSetStatus,
   buildGroupWhere,
 } from './queries/duplicates.js';
 export { getConfig, setConfig, setConfigBatch } from './queries/config.js';
