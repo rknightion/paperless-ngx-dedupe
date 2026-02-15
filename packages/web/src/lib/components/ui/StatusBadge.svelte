@@ -12,8 +12,13 @@
     completed: 'bg-success-light text-success',
     failed: 'bg-ember-light text-ember',
     cancelled: 'bg-gray-100 text-gray-600',
-    reviewed: 'bg-accent-light text-accent',
-    resolved: 'bg-success-light text-success',
+    false_positive: 'bg-gray-100 text-gray-600',
+    ignored: 'bg-accent-light text-accent',
+    deleted: 'bg-success-light text-success',
+  };
+
+  const displayLabels: Record<string, string> = {
+    false_positive: 'False Positive',
   };
 
   let classes = $derived(statusClasses[status] ?? 'bg-gray-100 text-gray-600');
@@ -22,5 +27,5 @@
 <span
   class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize {classes}"
 >
-  {status}
+  {displayLabels[status] ?? status}
 </span>

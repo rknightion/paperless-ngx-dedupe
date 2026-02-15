@@ -14,8 +14,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const filters = duplicateGroupFiltersSchema.parse({
     minConfidence: url.searchParams.get('minConfidence') ?? undefined,
     maxConfidence: url.searchParams.get('maxConfidence') ?? undefined,
-    reviewed: url.searchParams.get('reviewed') ?? undefined,
-    resolved: url.searchParams.get('resolved') ?? undefined,
+    status: url.searchParams.get('status') ?? undefined,
     sortBy: url.searchParams.get('sortBy') ?? undefined,
     sortOrder: url.searchParams.get('sortOrder') ?? undefined,
   });

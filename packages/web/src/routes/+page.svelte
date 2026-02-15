@@ -200,7 +200,7 @@
   <!-- Stat Cards -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <StatCard label="Total Documents" value={data.dashboard.totalDocuments.toLocaleString()} />
-    <StatCard label="Unresolved Groups" value={data.dashboard.unresolvedGroups.toLocaleString()} />
+    <StatCard label="Pending Groups" value={data.dashboard.pendingGroups.toLocaleString()} />
     <StatCard label="Storage Savings" value={formatBytes(data.dashboard.storageSavingsBytes)} />
     <StatCard label="Pending Analysis" value={data.dashboard.pendingAnalysis.toLocaleString()} />
   </div>

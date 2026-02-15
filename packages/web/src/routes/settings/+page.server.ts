@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       databaseUrl: locals.config.DATABASE_URL,
       paperlessUrl: locals.config.PAPERLESS_URL,
       totalDocuments: dashboard.totalDocuments,
-      duplicateGroups: dashboard.unresolvedGroups,
+      duplicateGroups: dashboard.pendingGroups,
     },
   };
 };
