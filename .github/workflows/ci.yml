@@ -81,7 +81,7 @@ jobs:
 
       - name: Unit test report
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@b082adf0eced0765477756c2a610396589b8c637 # v2
         with:
           name: Unit Test Results
           path: packages/*/test-results/junit.xml
@@ -147,7 +147,7 @@ jobs:
 
       - name: E2E test report
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@b082adf0eced0765477756c2a610396589b8c637 # v2
         with:
           name: E2E Test Results
           path: packages/web/test-results/junit.xml
@@ -170,14 +170,14 @@ jobs:
           path: coverage
 
       - name: Core coverage summary
-        uses: davelosert/vitest-coverage-report-action@v2
+        uses: davelosert/vitest-coverage-report-action@15b5b41bb7d36796d89f4bf482b09529c53f3446 # v2
         with:
           json-summary-path: coverage/packages/core/coverage/coverage-summary.json
           json-final-path: coverage/packages/core/coverage/coverage-final.json
           name: Core Package Coverage
 
       - name: SDK coverage summary
-        uses: davelosert/vitest-coverage-report-action@v2
+        uses: davelosert/vitest-coverage-report-action@15b5b41bb7d36796d89f4bf482b09529c53f3446 # v2
         with:
           json-summary-path: coverage/packages/sdk/coverage/coverage-summary.json
           json-final-path: coverage/packages/sdk/coverage/coverage-final.json
