@@ -16,6 +16,12 @@ import { sampleText } from './fuzzy.js';
 import { UnionFind } from './union-find.js';
 import { getDedupConfig } from './config.js';
 import { ALGORITHM_VERSION } from './types.js';
+import { withSpan } from '../telemetry/spans.js';
+import {
+  analysisRunsTotal,
+  analysisDuration,
+  analysisStageDuration,
+} from '../telemetry/metrics.js';
 import type { AppDatabase } from '../db/client.js';
 import type {
   AnalysisOptions,
@@ -194,29 +200,38 @@ export async function runAnalysis(
   // Stage 4: Build LSH index from ALL signatures
   await onProgress?.(0.4, 'Building LSH index...');
 
-  const allSignatureRows = db
-    .select({
-      documentId: documentSignature.documentId,
-      minhashSignature: documentSignature.minhashSignature,
-    })
-    .from(documentSignature)
-    .where(eq(documentSignature.numPermutations, config.numPermutations))
-    .all();
+  const { lshIndex, signatureMap } = await withSpan(
+    'dedupe.analysis.build_lsh_index',
+    {},
+    async (span) => {
+      const allSignatureRows = db
+        .select({
+          documentId: documentSignature.documentId,
+          minhashSignature: documentSignature.minhashSignature,
+        })
+        .from(documentSignature)
+        .where(eq(documentSignature.numPermutations, config.numPermutations))
+        .all();
 
-  const lshIndex = new LSHIndex(config.numPermutations, config.numBands);
-  const signatureMap = new Map<string, Uint32Array>();
+      const idx = new LSHIndex(config.numPermutations, config.numBands);
+      const sigMap = new Map<string, Uint32Array>();
 
-  for (const row of allSignatureRows) {
-    if (!row.minhashSignature) continue;
-    const sig = new Uint32Array(
-      row.minhashSignature.buffer.slice(
-        row.minhashSignature.byteOffset,
-        row.minhashSignature.byteOffset + row.minhashSignature.byteLength,
-      ),
-    );
-    lshIndex.insert(row.documentId, sig);
-    signatureMap.set(row.documentId, sig);
-  }
+      for (const row of allSignatureRows) {
+        if (!row.minhashSignature) continue;
+        const sig = new Uint32Array(
+          row.minhashSignature.buffer.slice(
+            row.minhashSignature.byteOffset,
+            row.minhashSignature.byteOffset + row.minhashSignature.byteLength,
+          ),
+        );
+        idx.insert(row.documentId, sig);
+        sigMap.set(row.documentId, sig);
+      }
+
+      span.setAttribute('index.size', sigMap.size);
+      return { lshIndex: idx, signatureMap: sigMap };
+    },
+  );
 
   logger.info({ indexedSignatures: signatureMap.size }, 'LSH index built');
   await onProgress?.(0.5, `LSH index built with ${signatureMap.size} signatures`);
@@ -359,6 +374,7 @@ export async function runAnalysis(
   }
 
   result.candidatePairsScored = scoredPairs.length;
+  analysisStageDuration().record((Date.now() - scoringStart) / 1000, { stage: 'scoring' });
   logger.info({ scoredPairs: scoredPairs.length }, 'Pairs scored');
   await onProgress?.(0.8, `Scored ${scoredPairs.length} pairs above threshold`);
 
@@ -576,6 +592,11 @@ export async function runAnalysis(
   await onProgress?.(1.0, `Analysis complete: ${result.groupsCreated} new groups found`);
 
   logger.info({ ...result }, 'Analysis complete');
+
+  // Record OTEL metrics
+  const outcome = result.durationMs > 0 ? 'success' : 'failure';
+  analysisRunsTotal().add(1, { outcome });
+  analysisDuration().record(result.durationMs / 1000);
 
   return result;
 }

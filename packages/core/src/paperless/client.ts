@@ -1,6 +1,7 @@
 import type { ZodType } from 'zod';
 import { createLogger } from '../logger.js';
 import type { Logger } from '../logger.js';
+import { paperlessRequestsTotal } from '../telemetry/metrics.js';
 import type {
   PaperlessConfig,
   PaperlessDocument,
@@ -165,6 +166,11 @@ export class PaperlessClient {
         body,
       );
     }
+
+    paperlessRequestsTotal().add(1, {
+      method: options.method ?? 'GET',
+      status_code: response.status,
+    });
 
     return response;
   }
