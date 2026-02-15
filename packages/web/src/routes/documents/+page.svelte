@@ -178,7 +178,9 @@
   {#if data.stats.usageStats.cumulativeGroupsResolved > 0 || data.stats.usageStats.cumulativeDocumentsDeleted > 0 || data.stats.usageStats.cumulativeGroupsReviewed > 0}
     <div>
       <h2 class="text-ink text-lg font-semibold">Deduplication Activity</h2>
-      <p class="text-muted mt-1 mb-3 text-sm">Cumulative totals across all deduplication sessions.</p>
+      <p class="text-muted mt-1 mb-3 text-sm">
+        Cumulative totals across all deduplication sessions.
+      </p>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Groups Resolved"
