@@ -148,7 +148,7 @@ Returns summary statistics for the dashboard.
 {
   "data": {
     "totalDocuments": 1250,
-    "unresolvedGroups": 42,
+    "pendingGroups": 42,
     "storageSavingsBytes": 52428800,
     "pendingAnalysis": 15,
     "lastSyncAt": "2025-01-15T08:00:00.000Z",
@@ -769,8 +769,7 @@ Get full details for a single document, including content and group memberships.
         "groupId": "group-uuid-1",
         "confidenceScore": 0.92,
         "isPrimary": true,
-        "reviewed": false,
-        "resolved": false
+        "status": "pending"
       }
     ]
   }
@@ -852,8 +851,7 @@ List duplicate groups with optional filters and pagination.
 | `offset`        | No       | 0            | Items to skip                                 |
 | `minConfidence` | No       | --           | Minimum confidence score (0-1)                |
 | `maxConfidence` | No       | --           | Maximum confidence score (0-1)                |
-| `reviewed`      | No       | --           | `true` or `false`                             |
-| `resolved`      | No       | --           | `true` or `false`                             |
+| `status`        | No       | --           | Comma-separated list: `pending`, `false_positive`, `ignored`, `deleted` |
 | `sortBy`        | No       | `confidence` | `confidence`, `created_at`, or `member_count` |
 | `sortOrder`     | No       | `desc`       | `asc` or `desc`                               |
 
@@ -865,8 +863,7 @@ List duplicate groups with optional filters and pagination.
     {
       "id": "group-uuid-1",
       "confidenceScore": 0.92,
-      "reviewed": false,
-      "resolved": false,
+      "status": "pending",
       "memberCount": 2,
       "primaryDocumentTitle": "Invoice 2024-001",
       "createdAt": "2025-01-15T08:05:00.000Z",
@@ -880,8 +877,8 @@ List duplicate groups with optional filters and pagination.
 **curl:**
 
 ```bash
-# High-confidence unresolved groups
-curl "http://localhost:3000/api/v1/duplicates?minConfidence=0.9&resolved=false"
+# High-confidence pending groups
+curl "http://localhost:3000/api/v1/duplicates?minConfidence=0.9&status=pending"
 
 # Sort by member count
 curl "http://localhost:3000/api/v1/duplicates?sortBy=member_count&sortOrder=desc"
@@ -905,8 +902,7 @@ Get full details for a duplicate group, including all member documents.
     "metadataSimilarity": 0.9,
     "filenameSimilarity": 0.85,
     "algorithmVersion": "1.0.0",
-    "reviewed": false,
-    "resolved": false,
+    "status": "pending",
     "createdAt": "2025-01-15T08:05:00.000Z",
     "updatedAt": "2025-01-15T08:05:00.000Z",
     "members": [
@@ -1005,9 +1001,10 @@ Get aggregate statistics about duplicate groups.
 {
   "data": {
     "totalGroups": 67,
-    "reviewedGroups": 20,
-    "resolvedGroups": 15,
-    "unresolvedGroups": 52,
+    "pendingGroups": 32,
+    "falsePositiveGroups": 10,
+    "ignoredGroups": 10,
+    "deletedGroups": 15,
     "confidenceDistribution": [
       { "label": "90-100%", "min": 0.9, "max": 1.0, "count": 25 },
       { "label": "80-90%", "min": 0.8, "max": 0.9, "count": 18 },
@@ -1060,42 +1057,30 @@ curl -X DELETE http://localhost:3000/api/v1/duplicates/group-uuid-1
 
 ---
 
-### PUT /api/v1/duplicates/:id/review
+### PUT /api/v1/duplicates/:id/status
 
-Mark a duplicate group as reviewed.
+Set the status of a duplicate group. Valid statuses are `pending`, `false_positive`, `ignored`, and `deleted`.
+
+**Request body:**
+
+```json
+{ "status": "false_positive" }
+```
 
 **Response:**
 
 ```json
 {
-  "data": { "groupId": "group-uuid-1", "reviewed": true }
+  "data": { "groupId": "group-uuid-1", "status": "false_positive" }
 }
 ```
 
 **curl:**
 
 ```bash
-curl -X PUT http://localhost:3000/api/v1/duplicates/group-uuid-1/review
-```
-
----
-
-### PUT /api/v1/duplicates/:id/resolve
-
-Mark a duplicate group as resolved.
-
-**Response:**
-
-```json
-{
-  "data": { "groupId": "group-uuid-1", "resolved": true }
-}
-```
-
-**curl:**
-
-```bash
-curl -X PUT http://localhost:3000/api/v1/duplicates/group-uuid-1/resolve
+curl -X PUT http://localhost:3000/api/v1/duplicates/group-uuid-1/status \
+  -H 'Content-Type: application/json' \
+  -d '{ "status": "false_positive" }'
 ```
 
 ---
@@ -1141,71 +1126,42 @@ curl -X PUT http://localhost:3000/api/v1/duplicates/group-uuid-1/primary \
 
 ## Batch Operations
 
-### POST /api/v1/batch/review
+### POST /api/v1/batch/status
 
-Mark multiple duplicate groups as reviewed in a single request.
+Set the status for multiple duplicate groups in a single request.
 
 **Request body:**
 
 ```json
 {
-  "groupIds": ["group-uuid-1", "group-uuid-2", "group-uuid-3"]
+  "groupIds": ["group-uuid-1", "group-uuid-2", "group-uuid-3"],
+  "status": "false_positive"
 }
 ```
 
-The `groupIds` array must contain 1 to 1000 items.
+The `groupIds` array must contain 1 to 1000 items. Valid statuses: `pending`, `false_positive`, `ignored`, `deleted`.
 
 **Response:**
 
 ```json
 {
-  "data": { "updated": 3 }
+  "data": { "processed": 3 }
 }
 ```
 
 **curl:**
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/batch/review \
+curl -X POST http://localhost:3000/api/v1/batch/status \
   -H 'Content-Type: application/json' \
-  -d '{ "groupIds": ["group-uuid-1", "group-uuid-2"] }'
-```
-
----
-
-### POST /api/v1/batch/resolve
-
-Mark multiple duplicate groups as resolved in a single request.
-
-**Request body:**
-
-```json
-{
-  "groupIds": ["group-uuid-1", "group-uuid-2"]
-}
-```
-
-**Response:**
-
-```json
-{
-  "data": { "updated": 2 }
-}
-```
-
-**curl:**
-
-```bash
-curl -X POST http://localhost:3000/api/v1/batch/resolve \
-  -H 'Content-Type: application/json' \
-  -d '{ "groupIds": ["group-uuid-1", "group-uuid-2"] }'
+  -d '{ "groupIds": ["group-uuid-1", "group-uuid-2"], "status": "false_positive" }'
 ```
 
 ---
 
 ### POST /api/v1/batch/delete-non-primary
 
-Delete non-primary documents from Paperless-NGX for the specified groups. This is a destructive operation -- non-primary documents will be permanently deleted from Paperless-NGX.
+Delete non-primary documents from Paperless-NGX for the specified groups. This is a destructive operation -- non-primary documents will be permanently deleted from Paperless-NGX. Only groups with `pending` status can be included; non-pending groups will be rejected.
 
 Runs as a background job because it may take time for large batches.
 
@@ -1255,11 +1211,11 @@ curl -X POST http://localhost:3000/api/v1/batch/delete-non-primary \
 
 Export duplicate groups as a CSV file. Supports the same filters as `GET /api/v1/duplicates`.
 
-**Query parameters:** Same as [GET /api/v1/duplicates](#get-apiv1duplicates) (minConfidence, maxConfidence, reviewed, resolved, sortBy, sortOrder).
+**Query parameters:** Same as [GET /api/v1/duplicates](#get-apiv1duplicates) (minConfidence, maxConfidence, status, sortBy, sortOrder).
 
 **Response:** `text/csv` file download with `Content-Disposition` header.
 
-**CSV columns:** `group_id`, `confidence_score`, `jaccard_similarity`, `fuzzy_text_ratio`, `metadata_similarity`, `filename_similarity`, `group_reviewed`, `group_resolved`, `is_primary`, `paperless_id`, `title`, `correspondent`, `document_type`, `tags`, `created_date`, `original_file_size`, `word_count`, `group_created_at`
+**CSV columns:** `group_id`, `confidence_score`, `jaccard_similarity`, `fuzzy_text_ratio`, `metadata_similarity`, `filename_similarity`, `group_status`, `is_primary`, `paperless_id`, `title`, `correspondent`, `document_type`, `tags`, `created_date`, `original_file_size`, `word_count`, `group_created_at`
 
 **curl:**
 
@@ -1267,8 +1223,8 @@ Export duplicate groups as a CSV file. Supports the same filters as `GET /api/v1
 # Export all groups
 curl -o duplicates.csv http://localhost:3000/api/v1/export/duplicates.csv
 
-# Export only high-confidence unresolved groups
-curl -o duplicates.csv "http://localhost:3000/api/v1/export/duplicates.csv?minConfidence=0.9&resolved=false"
+# Export only high-confidence pending groups
+curl -o duplicates.csv "http://localhost:3000/api/v1/export/duplicates.csv?minConfidence=0.9&status=pending"
 ```
 
 ---

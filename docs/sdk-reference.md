@@ -47,13 +47,13 @@ client.subscribeToJobProgress(job.id, {
   onError: (err) => console.error(err),
 });
 
-// List high-confidence duplicates
+// List high-confidence pending duplicates
 const { data: groups, meta } = await client.listDuplicates({
   minConfidence: 0.9,
-  resolved: false,
+  status: 'pending',
   limit: 10,
 });
-console.log(`${meta.total} unresolved groups above 90%`);
+console.log(`${meta.total} pending groups above 90%`);
 ```
 
 ## Client Options
@@ -115,8 +115,7 @@ interface DocumentFilters {
 | `getDuplicateStats()` | `DuplicateStats` | Aggregate group statistics |
 | `getDuplicateGraph(params?)` | `SimilarityGraphData` | Similarity graph (nodes + edges) |
 | `setPrimary(groupId, documentId)` | `DuplicateGroupDetail` | Set the primary document |
-| `markReviewed(groupId)` | `DuplicateGroupDetail` | Mark group as reviewed |
-| `markResolved(groupId)` | `DuplicateGroupDetail` | Mark group as resolved |
+| `setGroupStatus(groupId, status)` | `{ groupId, status }` | Set group status (`pending`, `false_positive`, `ignored`, `deleted`) |
 | `deleteDuplicate(groupId)` | `void` | Delete a group (not the documents) |
 
 **Filter parameters for `listDuplicates`:**
@@ -125,8 +124,7 @@ interface DocumentFilters {
 interface DuplicateGroupFilters {
   minConfidence?: number;
   maxConfidence?: number;
-  reviewed?: boolean;
-  resolved?: boolean;
+  status?: string;
   sortBy?: 'confidence' | 'created_at' | 'member_count';
   sortOrder?: 'asc' | 'desc';
 }
@@ -136,8 +134,7 @@ interface DuplicateGroupFilters {
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `batchReview(groupIds)` | `BatchResult` | Mark multiple groups as reviewed |
-| `batchResolve(groupIds)` | `BatchResult` | Mark multiple groups as resolved |
+| `batchSetStatus(groupIds, status)` | `BatchResult` | Set status for multiple groups |
 | `batchDeleteNonPrimary(groupIds, confirm)` | `BatchDeleteResult` | Delete non-primary documents from Paperless-NGX |
 
 !!! danger "Destructive"
@@ -249,8 +246,7 @@ interface DocumentDetail extends DocumentSummary {
     groupId: string;
     confidenceScore: number;
     isPrimary: boolean;
-    reviewed: boolean;
-    resolved: boolean;
+    status: string;
   }[];
 }
 ```
@@ -261,8 +257,7 @@ interface DocumentDetail extends DocumentSummary {
 interface DuplicateGroupSummary {
   id: string;
   confidenceScore: number;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
   memberCount: number;
   primaryDocumentTitle: string | null;
   createdAt: string;
@@ -277,8 +272,7 @@ interface DuplicateGroupDetail {
   metadataSimilarity: number | null;
   filenameSimilarity: number | null;
   algorithmVersion: string;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
   createdAt: string;
   updatedAt: string;
   members: DuplicateGroupMember[];

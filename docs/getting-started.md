@@ -50,11 +50,11 @@ Navigate to **Duplicates** in the sidebar. You will see a list of duplicate grou
 - Click to open the detail view with side-by-side comparison
 - View text diffs between documents
 - Set the primary document (the one to keep)
-- Mark as reviewed or resolved
+- Dismiss as a false positive, keep all copies, or delete duplicates
 
 ### 6. Batch Operations
 
-For large numbers of duplicates, use the **Bulk Operations Wizard** (button on the Duplicates page) to review, resolve, or delete non-primary documents in batch.
+For large numbers of duplicates, use the **Bulk Operations Wizard** (button on the Duplicates page) to dismiss, ignore, or delete non-primary documents in batch.
 
 !!! danger "Destructive Action"
     The "Delete Non-Primary Documents" batch operation permanently removes documents from Paperless-NGX. Always verify your primary document selections before using this feature.

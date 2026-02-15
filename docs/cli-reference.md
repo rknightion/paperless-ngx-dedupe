@@ -122,8 +122,8 @@ paperless-dedupe status --json
 
 Displays two sections:
 
-1. **Dashboard** -- total documents, unresolved groups, storage savings, last sync/analysis timestamps, top correspondents
-2. **Duplicate Statistics** -- total/reviewed/resolved/unresolved groups, confidence distribution, top correspondents
+1. **Dashboard** -- total documents, pending groups, storage savings, last sync/analysis timestamps, top correspondents
+2. **Duplicate Statistics** -- total/pending/false positive/ignored/deleted groups, confidence distribution, top correspondents
 
 !!! tip "Database-Only Command"
     The `status` command only reads from the local SQLite database. It does not require a connection to Paperless-NGX.
@@ -203,7 +203,7 @@ paperless-dedupe export duplicates [options]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--min-confidence <n>` | none | Minimum confidence score (0.0 -- 1.0) |
-| `--unresolved-only` | `false` | Only include unresolved groups |
+| `--status <status>` | none | Filter by status (e.g., `pending`, `false_positive`, `ignored`, `deleted`) |
 
 **Examples:**
 
@@ -211,10 +211,10 @@ paperless-dedupe export duplicates [options]
 # Export all duplicates
 paperless-dedupe export duplicates > duplicates.csv
 
-# Export high-confidence unresolved only
+# Export high-confidence pending only
 paperless-dedupe export duplicates \
   --min-confidence 0.9 \
-  --unresolved-only > high-confidence.csv
+  --status pending > high-confidence.csv
 
 # JSON format
 paperless-dedupe export duplicates --json > duplicates.json
@@ -269,10 +269,10 @@ paperless-dedupe analyze --json 2>/dev/null | jq '.groupsCreated'
 ### Export Report
 
 ```bash
-# Generate a report of high-confidence unresolved duplicates
+# Generate a report of high-confidence pending duplicates
 paperless-dedupe export duplicates \
   --min-confidence 0.85 \
-  --unresolved-only > report.csv
+  --status pending > report.csv
 
 echo "Found $(wc -l < report.csv) duplicate entries"
 ```
@@ -283,7 +283,7 @@ echo "Found $(wc -l < report.csv) duplicate entries"
 # Quick status check
 paperless-dedupe status --json | jq '{
   documents: .dashboard.totalDocuments,
-  unresolved: .dashboard.unresolvedGroups,
+  pending: .dashboard.pendingGroups,
   savings: .dashboard.storageSavingsBytes
 }'
 ```
