@@ -45,14 +45,14 @@ test.describe('Duplicates API', () => {
     }
   });
 
-  test('GET /api/v1/duplicates supports filtering by resolved status', async ({ request }) => {
-    const response = await request.get('/api/v1/duplicates?resolved=true');
+  test('GET /api/v1/duplicates supports filtering by status', async ({ request }) => {
+    const response = await request.get('/api/v1/duplicates?status=deleted');
 
     expect(response.status()).toBe(200);
     const body = await response.json();
-    // All returned items should be resolved
+    // All returned items should have deleted status
     for (const item of body.data) {
-      expect(item.resolved).toBe(true);
+      expect(item.status).toBe('deleted');
     }
   });
 
@@ -78,43 +78,27 @@ test.describe('Duplicates API', () => {
     expect(body.error.code).toBe('NOT_FOUND');
   });
 
-  test('PUT /api/v1/duplicates/:id/review marks group as reviewed', async ({ request }) => {
+  test('PUT /api/v1/duplicates/:id/status sets group status', async ({ request }) => {
     const groupId = seed.groupIds[0];
-    const response = await request.put(`/api/v1/duplicates/${groupId}/review`);
+    const response = await request.put(`/api/v1/duplicates/${groupId}/status`, {
+      data: { status: 'false_positive' },
+    });
 
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.data.groupId).toBe(groupId);
-    expect(body.data.reviewed).toBe(true);
+    expect(body.data.status).toBe('false_positive');
 
     // Verify the change persisted
     const getResponse = await request.get(`/api/v1/duplicates/${groupId}`);
     const getBody = await getResponse.json();
-    expect(getBody.data.reviewed).toBe(true);
+    expect(getBody.data.status).toBe('false_positive');
   });
 
-  test('PUT /api/v1/duplicates/:id/resolve marks group as resolved', async ({ request }) => {
-    const groupId = seed.groupIds[0];
-    const response = await request.put(`/api/v1/duplicates/${groupId}/resolve`);
-
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body.data.groupId).toBe(groupId);
-    expect(body.data.resolved).toBe(true);
-
-    // Verify the change persisted
-    const getResponse = await request.get(`/api/v1/duplicates/${groupId}`);
-    const getBody = await getResponse.json();
-    expect(getBody.data.resolved).toBe(true);
-  });
-
-  test('PUT /api/v1/duplicates/:id/review returns 404 for nonexistent', async ({ request }) => {
-    const response = await request.put('/api/v1/duplicates/nonexistent-id/review');
-    expect(response.status()).toBe(404);
-  });
-
-  test('PUT /api/v1/duplicates/:id/resolve returns 404 for nonexistent', async ({ request }) => {
-    const response = await request.put('/api/v1/duplicates/nonexistent-id/resolve');
+  test('PUT /api/v1/duplicates/:id/status returns 404 for nonexistent', async ({ request }) => {
+    const response = await request.put('/api/v1/duplicates/nonexistent-id/status', {
+      data: { status: 'ignored' },
+    });
     expect(response.status()).toBe(404);
   });
 });

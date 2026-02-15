@@ -36,8 +36,8 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
   `);
 
   const insertGroup = db.prepare(`
-    INSERT OR IGNORE INTO duplicate_group (id, confidence_score, jaccard_similarity, fuzzy_text_ratio, metadata_similarity, filename_similarity, algorithm_version, reviewed, resolved, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO duplicate_group (id, confidence_score, jaccard_similarity, fuzzy_text_ratio, metadata_similarity, filename_similarity, algorithm_version, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertMember = db.prepare(`
@@ -98,8 +98,7 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         fuzzy: 0.89,
         metadata: 0.85,
         filename: 0.78,
-        reviewed: 0,
-        resolved: 0,
+        status: 'pending',
         memberCount: 2,
       },
       {
@@ -108,8 +107,7 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         fuzzy: 0.75,
         metadata: 0.7,
         filename: 0.65,
-        reviewed: 1,
-        resolved: 0,
+        status: 'ignored',
         memberCount: 3,
       },
       {
@@ -118,8 +116,7 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         fuzzy: 0.6,
         metadata: 0.55,
         filename: 0.5,
-        reviewed: 1,
-        resolved: 1,
+        status: 'deleted',
         memberCount: 2,
       },
     ];
@@ -138,8 +135,7 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         cfg.metadata,
         cfg.filename,
         'v1',
-        cfg.reviewed,
-        cfg.resolved,
+        cfg.status,
         `2024-01-${10 + g}T00:00:00Z`,
         `2024-01-${10 + g}T00:00:00Z`,
       );
