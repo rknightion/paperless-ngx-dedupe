@@ -81,8 +81,7 @@ export interface DocumentDetail extends DocumentSummary {
     groupId: string;
     confidenceScore: number;
     isPrimary: boolean;
-    reviewed: boolean;
-    resolved: boolean;
+    status: string;
   }[];
 }
 
@@ -110,8 +109,7 @@ export interface DocumentFilters {
 export interface DuplicateGroupSummary {
   id: string;
   confidenceScore: number;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
   memberCount: number;
   primaryDocumentTitle: string | null;
   createdAt: string;
@@ -144,8 +142,7 @@ export interface DuplicateGroupDetail {
   metadataSimilarity: number | null;
   filenameSimilarity: number | null;
   algorithmVersion: string;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
   createdAt: string;
   updatedAt: string;
   members: DuplicateGroupMember[];
@@ -160,9 +157,10 @@ export interface ConfidenceBucket {
 
 export interface DuplicateStats {
   totalGroups: number;
-  reviewedGroups: number;
-  resolvedGroups: number;
-  unresolvedGroups: number;
+  pendingGroups: number;
+  falsePositiveGroups: number;
+  ignoredGroups: number;
+  deletedGroups: number;
   confidenceDistribution: ConfidenceBucket[];
   topCorrespondents: { correspondent: string; groupCount: number }[];
 }
@@ -170,8 +168,7 @@ export interface DuplicateStats {
 export interface DuplicateGroupFilters {
   minConfidence?: number;
   maxConfidence?: number;
-  reviewed?: boolean;
-  resolved?: boolean;
+  status?: string;
   sortBy?: 'confidence' | 'created_at' | 'member_count';
   sortOrder?: 'asc' | 'desc';
 }
@@ -192,8 +189,7 @@ export interface GraphEdge {
   target: string;
   groupId: string;
   confidenceScore: number;
-  reviewed: boolean;
-  resolved: boolean;
+  status: string;
 }
 
 export interface SimilarityGraphData {
@@ -206,8 +202,7 @@ export interface SimilarityGraphData {
 export interface SimilarityGraphFilters {
   minConfidence?: number;
   maxConfidence?: number;
-  reviewed?: boolean;
-  resolved?: boolean;
+  status?: string;
   maxGroups?: number;
 }
 
@@ -215,7 +210,7 @@ export interface SimilarityGraphFilters {
 
 export interface DashboardData {
   totalDocuments: number;
-  unresolvedGroups: number;
+  pendingGroups: number;
   storageSavingsBytes: number;
   pendingAnalysis: number;
   lastSyncAt: string | null;
