@@ -215,8 +215,7 @@ erDiagram
         real fuzzyTextRatio
         real metadataSimilarity
         real filenameSimilarity
-        int reviewed
-        int resolved
+        text status
     }
 
     duplicateMember {
