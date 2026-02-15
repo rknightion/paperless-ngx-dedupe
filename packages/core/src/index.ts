@@ -121,7 +121,12 @@ export { computeSimilarityScore } from './dedup/scoring.js';
 export { UnionFind } from './dedup/union-find.js';
 export { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from './dedup/config.js';
 export { runAnalysis } from './dedup/analyze.js';
-export { DEFAULT_DEDUP_CONFIG, dedupConfigSchema, ALGORITHM_VERSION } from './dedup/types.js';
+export {
+  DEFAULT_DEDUP_CONFIG,
+  dedupConfigBaseSchema,
+  dedupConfigSchema,
+  ALGORITHM_VERSION,
+} from './dedup/types.js';
 export type {
   DedupConfig,
   SimilarityWeights,
