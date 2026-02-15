@@ -4,6 +4,7 @@ import type { AppDatabase } from '../db/client.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { parseTagsJson } from './helpers.js';
+import { incrementUsageStats } from './documents.js';
 import type {
   DuplicateGroupFilters,
   DuplicateGroupSummary,
@@ -514,8 +515,12 @@ export function markGroupReviewed(db: AppDatabase, groupId: string): boolean {
   const result = db
     .update(duplicateGroup)
     .set({ reviewed: true, updatedAt: new Date().toISOString() })
-    .where(eq(duplicateGroup.id, groupId))
+    .where(and(eq(duplicateGroup.id, groupId), eq(duplicateGroup.reviewed, false)))
     .run();
+
+  if (result.changes > 0) {
+    incrementUsageStats(db, { groupsReviewed: 1 });
+  }
 
   return result.changes > 0;
 }
@@ -524,8 +529,12 @@ export function markGroupResolved(db: AppDatabase, groupId: string): boolean {
   const result = db
     .update(duplicateGroup)
     .set({ resolved: true, updatedAt: new Date().toISOString() })
-    .where(eq(duplicateGroup.id, groupId))
+    .where(and(eq(duplicateGroup.id, groupId), eq(duplicateGroup.resolved, false)))
     .run();
+
+  if (result.changes > 0) {
+    incrementUsageStats(db, { groupsResolved: 1 });
+  }
 
   return result.changes > 0;
 }
@@ -557,9 +566,13 @@ export function batchMarkReviewed(db: AppDatabase, groupIds: string[]): { update
     const result = db
       .update(duplicateGroup)
       .set({ reviewed: true, updatedAt: now })
-      .where(inArray(duplicateGroup.id, chunk))
+      .where(and(inArray(duplicateGroup.id, chunk), eq(duplicateGroup.reviewed, false)))
       .run();
     updated += result.changes;
+  }
+
+  if (updated > 0) {
+    incrementUsageStats(db, { groupsReviewed: updated });
   }
 
   return { updated };
@@ -573,9 +586,13 @@ export function batchMarkResolved(db: AppDatabase, groupIds: string[]): { update
     const result = db
       .update(duplicateGroup)
       .set({ resolved: true, updatedAt: now })
-      .where(inArray(duplicateGroup.id, chunk))
+      .where(and(inArray(duplicateGroup.id, chunk), eq(duplicateGroup.resolved, false)))
       .run();
     updated += result.changes;
+  }
+
+  if (updated > 0) {
+    incrementUsageStats(db, { groupsResolved: updated });
   }
 
   return { updated };
