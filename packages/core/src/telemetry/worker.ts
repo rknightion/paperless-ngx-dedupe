@@ -22,11 +22,28 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
       'worker.type': 'worker_thread',
     }),
     // No explicit exporters — SDK reads OTEL_TRACES_EXPORTER, OTEL_METRICS_EXPORTER, etc.
-    instrumentations: [new UndiciInstrumentation()],
+    instrumentations: [],
+    spanLimits: {
+      eventCountLimit: 64,
+      attributeCountLimit: 64,
+      linkCountLimit: 32,
+    },
   });
 
   sdk.start();
   workerSdk = sdk;
+}
+
+/**
+ * Force-flush pending telemetry data. Call periodically during long operations
+ * to prevent span/metric accumulation. No-op when OTEL is disabled.
+ */
+export async function flushWorkerTelemetry(): Promise<void> {
+  if (!workerSdk) return;
+  const provider = trace.getTracerProvider();
+  if ('forceFlush' in provider && typeof provider.forceFlush === 'function') {
+    await (provider as { forceFlush: () => Promise<void> }).forceFlush();
+  }
 }
 
 /**
