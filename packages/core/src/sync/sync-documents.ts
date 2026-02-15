@@ -4,6 +4,8 @@ import { syncState } from '../schema/sqlite/app.js';
 import { createLogger } from '../logger.js';
 import { normalizeText } from './normalize.js';
 import { computeFingerprint } from './fingerprint.js';
+import { withSpan } from '../telemetry/spans.js';
+import { syncDocumentsTotal, syncRunsTotal, syncDuration } from '../telemetry/metrics.js';
 import type { SyncDependencies, SyncOptions, SyncResult, ReferenceMaps } from './types.js';
 import type { PaperlessDocument } from '../paperless/types.js';
 import type { PaperlessClient } from '../paperless/client.js';
@@ -33,7 +35,9 @@ export async function syncDocuments(
   await onProgress?.(0, `Starting ${syncType} sync...`);
 
   // 2. Fetch reference data
-  const refMaps = await fetchReferenceMaps(client);
+  const refMaps = await withSpan('dedupe.sync.fetch_references', {}, async () =>
+    fetchReferenceMaps(client),
+  );
   await onProgress?.(0.05, 'Loaded reference data');
 
   // 3. Load local documents for O(1) lookup
@@ -131,6 +135,16 @@ export async function syncDocuments(
     { ...result },
     `Sync complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed`,
   );
+
+  // Record OTEL metrics
+  syncDocumentsTotal().add(result.inserted, { status: 'inserted' });
+  syncDocumentsTotal().add(result.updated, { status: 'updated' });
+  syncDocumentsTotal().add(result.skipped, { status: 'skipped' });
+  syncDocumentsTotal().add(result.failed, { status: 'failed' });
+  syncRunsTotal().add(1, {
+    outcome: result.failed > 0 && result.inserted === 0 ? 'failure' : 'success',
+  });
+  syncDuration().record(result.durationMs / 1000);
 
   return result;
 }
