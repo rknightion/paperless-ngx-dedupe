@@ -165,6 +165,7 @@ export {
   getDocument,
   getDocumentContent,
   getDocumentStats,
+  incrementUsageStats,
 } from './queries/documents.js';
 export {
   getDuplicateGroups,
