@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.4.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.3.1...v0.4.0) (2026-02-15)
+
+
+### Features
+
+* update UI terminology from 'Unresolved' to 'Pending' groups ([af4fc0f](https://github.com/rknightion/paperless-ngx-dedupe/commit/af4fc0fb8e725658f2825caa1e95089d3021edad))
+
+
+### Bug Fixes
+
+* **deps:** update dependency commander to v14 ([0b95bd4](https://github.com/rknightion/paperless-ngx-dedupe/commit/0b95bd46b9e1df25f6dc15a9d0fe6f51391d2387))
+* **deps:** update dependency commander to v14 ([f522135](https://github.com/rknightion/paperless-ngx-dedupe/commit/f522135da07f9c856702da870c57f00ab228dff9))
+* **deps:** update dependency dotenv to v17 ([#137](https://github.com/rknightion/paperless-ngx-dedupe/issues/137)) ([93f84be](https://github.com/rknightion/paperless-ngx-dedupe/commit/93f84be75f3637528bf35e5d95ee0ad52e6d427f))
+* **deps:** update dependency pino to v10 ([#138](https://github.com/rknightion/paperless-ngx-dedupe/issues/138)) ([0e5f3fc](https://github.com/rknightion/paperless-ngx-dedupe/commit/0e5f3fc9ccff0ed915b24656f2ac0cb02ec5221f))
+
+
+### Miscellaneous
+
+* **deps:** update actions/setup-node action to v6 ([#130](https://github.com/rknightion/paperless-ngx-dedupe/issues/130)) ([e6ca353](https://github.com/rknightion/paperless-ngx-dedupe/commit/e6ca3537c3b6390bc489f9dfe30a2d6c63ba1b06))
+* **deps:** update dependency @sveltejs/kit to v2.52.0 ([dc8bc15](https://github.com/rknightion/paperless-ngx-dedupe/commit/dc8bc155c053605acd0bf81209cfd9c56f8b9a8d))
+* **deps:** update dependency @sveltejs/vite-plugin-svelte to v6 ([#131](https://github.com/rknightion/paperless-ngx-dedupe/issues/131)) ([4ab92fc](https://github.com/rknightion/paperless-ngx-dedupe/commit/4ab92fca07a1d2d4168ca88c1572a5686b9829dc))
+* **deps:** update dependency svelte to v5.51.1 ([6f00d01](https://github.com/rknightion/paperless-ngx-dedupe/commit/6f00d01eed7bf45fa352d225d8e4259167afabc0))
+* **deps:** update dependency svelte to v5.51.2 ([#144](https://github.com/rknightion/paperless-ngx-dedupe/issues/144)) ([91193f4](https://github.com/rknightion/paperless-ngx-dedupe/commit/91193f4207d80991082583b625a5e902d8c83c6b))
+* **deps:** update dependency vite to v7 ([#134](https://github.com/rknightion/paperless-ngx-dedupe/issues/134)) ([e2f4f0f](https://github.com/rknightion/paperless-ngx-dedupe/commit/e2f4f0fffd2bfb2f5b5f42363a9a79d15646c5b7))
+* **deps:** update postgres docker tag to v18 ([51e3a5e](https://github.com/rknightion/paperless-ngx-dedupe/commit/51e3a5ee0884f5b101da80cb32dd67246b44cc83))
+* **deps:** update postgres docker tag to v18 ([b226169](https://github.com/rknightion/paperless-ngx-dedupe/commit/b22616905eb5007ba29ea0808646c62a6f2b6f59))
+* fix ci ([979953e](https://github.com/rknightion/paperless-ngx-dedupe/commit/979953ee81b1d931e0b4dc23d8a5f21272b4525e))
+* format ([833629f](https://github.com/rknightion/paperless-ngx-dedupe/commit/833629f2bfc0534f6b9222e5a32df8f1b34512e3))
+
+
+### Refactoring
+
+* replace review/resolved flags with status enum ([79d3d4f](https://github.com/rknightion/paperless-ngx-dedupe/commit/79d3d4f498a9c00cbe902621984e7365e8d66e83))
+* update Zod schema API for v4 compatibility ([20f1e5d](https://github.com/rknightion/paperless-ngx-dedupe/commit/20f1e5da82cef65f36fed1d5d94fd82186dc576e))
+
+
+### Tests
+
+* update UI text expectations for terminology changes ([922849a](https://github.com/rknightion/paperless-ngx-dedupe/commit/922849abec422f48b2e8265e9e7fcceb280c4d79))
+
 ## [0.3.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.3.0...v0.3.1) (2026-02-14)
 
 
