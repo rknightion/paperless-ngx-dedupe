@@ -15,14 +15,13 @@ export const duplicateGroup = sqliteTable(
     metadataSimilarity: real('metadata_similarity'),
     filenameSimilarity: real('filename_similarity'),
     algorithmVersion: text('algorithm_version').notNull(),
-    reviewed: integer('reviewed', { mode: 'boolean' }).default(false),
-    resolved: integer('resolved', { mode: 'boolean' }).default(false),
+    status: text('status').notNull().default('pending'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
     index('idx_dg_confidence').on(table.confidenceScore),
-    index('idx_dg_status').on(table.reviewed, table.resolved),
+    index('idx_dg_status').on(table.status),
     index('idx_dg_created').on(table.createdAt),
   ],
 );

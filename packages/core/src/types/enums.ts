@@ -20,10 +20,12 @@ export const JobStatus = {
 } as const;
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 
-export const DuplicateResolution = {
-  UNRESOLVED: 'unresolved',
-  KEPT: 'kept',
+export const GroupStatus = {
+  PENDING: 'pending',
+  FALSE_POSITIVE: 'false_positive',
+  IGNORED: 'ignored',
   DELETED: 'deleted',
-  MERGED: 'merged',
 } as const;
-export type DuplicateResolution = (typeof DuplicateResolution)[keyof typeof DuplicateResolution];
+export type GroupStatus = (typeof GroupStatus)[keyof typeof GroupStatus];
+
+export const GROUP_STATUS_VALUES: readonly GroupStatus[] = Object.values(GroupStatus);
