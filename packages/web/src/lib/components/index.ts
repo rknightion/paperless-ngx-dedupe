@@ -14,3 +14,5 @@ export { default as RichTooltip } from './ui/RichTooltip.svelte';
 export { default as InfoIcon } from './ui/InfoIcon.svelte';
 export { default as ConfidenceTooltipContent } from './duplicates/ConfidenceTooltipContent.svelte';
 export { default as GroupPreviewModal } from './duplicates/GroupPreviewModal.svelte';
+export { default as DocumentVisualCompare } from './duplicates/DocumentVisualCompare.svelte';
+export { default as RecycleBinPrompt } from './duplicates/RecycleBinPrompt.svelte';
