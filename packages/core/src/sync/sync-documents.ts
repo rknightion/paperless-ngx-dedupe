@@ -115,12 +115,13 @@ export async function syncDocuments(
     await onProgress?.(0.85, `Fetching metadata for ${docsNeedingMetadata.length} documents...`);
     let metadataFetched = 0;
 
-    // Process with controlled concurrency
+    // Process with controlled concurrency using settled flags
     const queue = [...docsNeedingMetadata];
-    const inFlight: Promise<void>[] = [];
+    const inFlight: { promise: Promise<void>; settled: boolean }[] = [];
 
     for (const item of queue) {
-      const task = (async () => {
+      const entry: { promise: Promise<void>; settled: boolean } = { promise: null!, settled: false };
+      entry.promise = (async () => {
         try {
           const metadata = await client.getDocumentMetadata(item.paperlessId);
           db.update(document)
@@ -143,24 +144,22 @@ export async function syncDocuments(
             `Fetching metadata: ${metadataFetched}/${docsNeedingMetadata.length}`,
           );
         }
-      })();
+      })().finally(() => {
+        entry.settled = true;
+      });
 
-      inFlight.push(task);
+      inFlight.push(entry);
 
       if (inFlight.length >= METADATA_CONCURRENCY) {
-        await Promise.race(inFlight);
-        // Remove settled promises
+        await Promise.race(inFlight.map((e) => e.promise));
+        // Remove settled entries
         for (let i = inFlight.length - 1; i >= 0; i--) {
-          const settled = await Promise.race([
-            inFlight[i].then(() => true),
-            Promise.resolve(false),
-          ]);
-          if (settled) inFlight.splice(i, 1);
+          if (inFlight[i].settled) inFlight.splice(i, 1);
         }
       }
     }
 
-    await Promise.all(inFlight);
+    await Promise.all(inFlight.map((e) => e.promise));
     logger.info({ metadataFetched: docsNeedingMetadata.length }, 'Metadata fetch complete');
     await onProgress?.(0.95, `Fetched metadata for ${docsNeedingMetadata.length} documents`);
   }

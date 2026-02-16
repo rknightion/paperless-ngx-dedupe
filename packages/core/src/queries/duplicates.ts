@@ -122,12 +122,15 @@ export function getDuplicateGroups(
 
 // ── Detail query ────────────────────────────────────────────────────────
 
-export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDetail | null {
+function fetchGroupWithMembers(
+  db: AppDatabase,
+  id: string,
+  opts: { includeFullText: boolean },
+): DuplicateGroupDetail | null {
   const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, id)).get();
 
   if (!group) return null;
 
-  // Load members with document data
   const memberRows = db
     .select({
       memberId: duplicateMember.id,
@@ -147,18 +150,29 @@ export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDe
     .where(eq(duplicateMember.groupId, id))
     .all();
 
-  // Batch-load content for all member documents
   const memberDocIds = memberRows.map((m) => m.documentId);
-  const contentRows =
-    memberDocIds.length > 0
-      ? db
-          .select()
-          .from(documentContent)
-          .where(inArray(documentContent.documentId, memberDocIds))
-          .all()
-      : [];
 
-  const contentMap = new Map(contentRows.map((c) => [c.documentId, c]));
+  type ContentRow = { documentId: string; fullText: string | null; wordCount: number | null };
+  type LightContentRow = { documentId: string; wordCount: number | null };
+
+  let contentMap: Map<string, ContentRow | LightContentRow>;
+  if (memberDocIds.length === 0) {
+    contentMap = new Map();
+  } else if (opts.includeFullText) {
+    const rows = db
+      .select()
+      .from(documentContent)
+      .where(inArray(documentContent.documentId, memberDocIds))
+      .all();
+    contentMap = new Map(rows.map((c) => [c.documentId, c]));
+  } else {
+    const rows = db
+      .select({ documentId: documentContent.documentId, wordCount: documentContent.wordCount })
+      .from(documentContent)
+      .where(inArray(documentContent.documentId, memberDocIds))
+      .all();
+    contentMap = new Map(rows.map((c) => [c.documentId, c]));
+  }
 
   const members: DuplicateGroupMember[] = memberRows.map((m) => {
     const content = contentMap.get(m.documentId);
@@ -174,7 +188,12 @@ export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDe
       createdDate: m.createdDate,
       originalFileSize: m.originalFileSize,
       archiveFileSize: m.archiveFileSize,
-      content: content ? { fullText: content.fullText, wordCount: content.wordCount } : null,
+      content: content
+        ? {
+            fullText: 'fullText' in content ? (content.fullText as string | null) : null,
+            wordCount: content.wordCount,
+          }
+        : null,
     };
   });
 
@@ -193,79 +212,12 @@ export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDe
   };
 }
 
-// ── Light detail query (no fullText) ─────────────────────────────────────
+export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDetail | null {
+  return fetchGroupWithMembers(db, id, { includeFullText: true });
+}
 
 export function getDuplicateGroupLight(db: AppDatabase, id: string): DuplicateGroupDetail | null {
-  const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, id)).get();
-
-  if (!group) return null;
-
-  const memberRows = db
-    .select({
-      memberId: duplicateMember.id,
-      documentId: duplicateMember.documentId,
-      isPrimary: duplicateMember.isPrimary,
-      paperlessId: document.paperlessId,
-      title: document.title,
-      correspondent: document.correspondent,
-      documentType: document.documentType,
-      tagsJson: document.tagsJson,
-      createdDate: document.createdDate,
-      originalFileSize: document.originalFileSize,
-      archiveFileSize: document.archiveFileSize,
-    })
-    .from(duplicateMember)
-    .innerJoin(document, eq(duplicateMember.documentId, document.id))
-    .where(eq(duplicateMember.groupId, id))
-    .all();
-
-  // Only load wordCount, not fullText
-  const memberDocIds = memberRows.map((m) => m.documentId);
-  const contentRows =
-    memberDocIds.length > 0
-      ? db
-          .select({
-            documentId: documentContent.documentId,
-            wordCount: documentContent.wordCount,
-          })
-          .from(documentContent)
-          .where(inArray(documentContent.documentId, memberDocIds))
-          .all()
-      : [];
-
-  const contentMap = new Map(contentRows.map((c) => [c.documentId, c]));
-
-  const members: DuplicateGroupMember[] = memberRows.map((m) => {
-    const content = contentMap.get(m.documentId);
-    return {
-      memberId: m.memberId,
-      documentId: m.documentId,
-      isPrimary: m.isPrimary ?? false,
-      paperlessId: m.paperlessId,
-      title: m.title,
-      correspondent: m.correspondent,
-      documentType: m.documentType,
-      tags: parseTagsJson(m.tagsJson),
-      createdDate: m.createdDate,
-      originalFileSize: m.originalFileSize,
-      archiveFileSize: m.archiveFileSize,
-      content: content ? { fullText: null, wordCount: content.wordCount } : null,
-    };
-  });
-
-  return {
-    id: group.id,
-    confidenceScore: group.confidenceScore,
-    jaccardSimilarity: group.jaccardSimilarity,
-    fuzzyTextRatio: group.fuzzyTextRatio,
-    metadataSimilarity: group.metadataSimilarity,
-    filenameSimilarity: group.filenameSimilarity,
-    algorithmVersion: group.algorithmVersion,
-    status: group.status,
-    createdAt: group.createdAt,
-    updatedAt: group.updatedAt,
-    members,
-  };
+  return fetchGroupWithMembers(db, id, { includeFullText: false });
 }
 
 // ── Stats query ─────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import type { RequestHandler } from './$types';
 
@@ -6,7 +7,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
   // Check database
   try {
-    // TODO: Wire up actual DB check (SELECT 1) once database is connected
+    locals.db.run(sql`SELECT 1`);
     checks.database = { status: 'ok' };
   } catch (err) {
     checks.database = {

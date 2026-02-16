@@ -1,7 +1,6 @@
 import { runWorkerTask } from '../worker-entry.js';
 import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js';
-import { duplicateMember } from '../../schema/sqlite/duplicates.js';
-import { duplicateGroup } from '../../schema/sqlite/duplicates.js';
+import { duplicateMember, duplicateGroup } from '../../schema/sqlite/duplicates.js';
 import { document } from '../../schema/sqlite/documents.js';
 import { eq, and } from 'drizzle-orm';
 import { incrementUsageStats } from '../../queries/documents.js';
