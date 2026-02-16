@@ -12,7 +12,6 @@ import type {
   PaperlessStatistics,
   PaperlessStatus,
   PaperlessStoragePath,
-  PaperlessTask,
   PaperlessRemoteVersion,
   ConnectionTestResult,
 } from './types.js';
@@ -25,7 +24,6 @@ import {
   paperlessStatisticsSchema,
   paperlessStatusSchema,
   paperlessStoragePathSchema,
-  paperlessTaskSchema,
   paperlessRemoteVersionSchema,
   paginatedResponseSchema,
 } from './schemas.js';
@@ -278,10 +276,12 @@ export class PaperlessClient {
     return this.fetchAllPaginated('/api/storage_paths/', paperlessStoragePathSchema);
   }
 
-  async getTasks(): Promise<PaperlessTask[]> {
-    const response = await this.fetchWithRetry(this.buildUrl('/api/tasks/'));
+  async getTaskCountByStatus(status: string): Promise<number> {
+    const response = await this.fetchWithRetry(
+      this.buildUrl(`/api/tasks/?page_size=1&status=${encodeURIComponent(status)}`),
+    );
     const json = await response.json();
-    return z.array(paperlessTaskSchema).parse(json);
+    return z.object({ count: z.number() }).parse(json).count;
   }
 
   async getGroupCount(): Promise<number> {

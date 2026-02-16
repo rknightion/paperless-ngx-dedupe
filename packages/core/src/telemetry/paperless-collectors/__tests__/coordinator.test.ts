@@ -60,7 +60,7 @@ function createMockClient() {
     getCorrespondents: vi.fn().mockResolvedValue([]),
     getDocumentTypes: vi.fn().mockResolvedValue([]),
     getStoragePaths: vi.fn().mockResolvedValue([]),
-    getTasks: vi.fn().mockResolvedValue([]),
+    getTaskCountByStatus: vi.fn().mockResolvedValue(0),
     getGroupCount: vi.fn().mockResolvedValue(2),
     getUserCount: vi.fn().mockResolvedValue(5),
     getRemoteVersion: vi.fn().mockResolvedValue({ version: '2.0.0', updateAvailable: false }),

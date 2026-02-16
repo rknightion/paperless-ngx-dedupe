@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   paperlessStatusSchema,
   paperlessStoragePathSchema,
-  paperlessTaskSchema,
   paperlessRemoteVersionSchema,
   paperlessTagSchema,
   paperlessCorrespondentSchema,
@@ -68,37 +67,6 @@ describe('paperlessStoragePathSchema', () => {
     const result = paperlessStoragePathSchema.parse(input);
     expect(result.slug).toBe('');
     expect(result.documentCount).toBe(0);
-  });
-});
-
-describe('paperlessTaskSchema', () => {
-  it('transforms task response', () => {
-    const input = {
-      id: 42,
-      task_id: 'abc-123',
-      task_file_name: 'doc.pdf',
-      type: 'file',
-      status: 'SUCCESS',
-      date_created: '2024-01-01T00:00:00Z',
-      date_done: '2024-01-01T00:01:00Z',
-    };
-    const result = paperlessTaskSchema.parse(input);
-    expect(result.id).toBe(42);
-    expect(result.taskId).toBe('abc-123');
-    expect(result.taskFileName).toBe('doc.pdf');
-    expect(result.type).toBe('file');
-    expect(result.status).toBe('SUCCESS');
-    expect(result.created).toBe('2024-01-01T00:00:00Z');
-    expect(result.done).toBe('2024-01-01T00:01:00Z');
-  });
-
-  it('handles null optional fields', () => {
-    const input = { id: 1, task_id: 'x', status: 'PENDING' };
-    const result = paperlessTaskSchema.parse(input);
-    expect(result.taskFileName).toBeNull();
-    expect(result.created).toBeNull();
-    expect(result.done).toBeNull();
-    expect(result.type).toBe('');
   });
 });
 
