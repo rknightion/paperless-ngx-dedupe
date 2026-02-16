@@ -54,8 +54,18 @@ jobs:
           # This will handover control about PR rejection to the GitHub side
           max-allowed-issues: 2147483647
 
-      # Upload the SARIF file generated in the previous step
+      # Split multi-run SARIF into one file per tool so each gets a unique category
+      - name: Split SARIF runs
+        run: |
+          mkdir -p sarif-results
+          runs=$(jq '.runs | length' results.sarif)
+          for i in $(seq 0 $(( runs - 1 ))); do
+            tool=$(jq -r ".runs[$i].tool.driver.name" results.sarif)
+            jq --argjson i "$i" '{"$schema": ."$schema", version: .version, runs: [.runs[$i]]}' results.sarif > "sarif-results/${tool}.sarif"
+          done
+
+      # Upload the SARIF files generated in the previous step
       - name: Upload SARIF results file
         uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6 # v4
         with:
-          sarif_file: results.sarif
+          sarif_file: sarif-results
