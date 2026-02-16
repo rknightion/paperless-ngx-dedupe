@@ -36,6 +36,8 @@ jobs:
           key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
   quality:
+    permissions:
+      contents: read
     needs: install
     runs-on: ubuntu-24.04
     steps:
