@@ -319,6 +319,7 @@
             progressMessage={j.progressMessage}
             startedAt={j.startedAt}
             completedAt={j.completedAt}
+            errorMessage={j.errorMessage}
           />
         {/each}
       </div>
