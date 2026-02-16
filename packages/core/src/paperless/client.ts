@@ -276,14 +276,6 @@ export class PaperlessClient {
     return this.fetchAllPaginated('/api/storage_paths/', paperlessStoragePathSchema);
   }
 
-  async getTaskCountByStatus(status: string): Promise<number> {
-    const response = await this.fetchWithRetry(
-      this.buildUrl(`/api/tasks/?page_size=1&status=${encodeURIComponent(status)}`),
-    );
-    const json = await response.json();
-    return z.object({ count: z.number() }).parse(json).count;
-  }
-
   async getGroupCount(): Promise<number> {
     const response = await this.fetchWithRetry(this.buildUrl('/api/groups/?page_size=1'));
     const json = await response.json();

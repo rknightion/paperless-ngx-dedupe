@@ -12,7 +12,6 @@ export const COLLECTOR_IDS = [
   'correspondent',
   'document_type',
   'storage_path',
-  'task',
   'group',
   'user',
   'remote_version',
