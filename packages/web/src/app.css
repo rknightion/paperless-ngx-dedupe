@@ -54,28 +54,6 @@
   transition: box-shadow 0.2s ease;
 }
 
-@utility panel-interactive {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-soft);
-  border-radius: var(--radius-xl);
-  padding: calc(var(--spacing) * 4);
-  box-shadow:
-    0 1px 2px oklch(0.2 0.02 260 / 0.04),
-    0 2px 8px oklch(0.2 0.02 260 / 0.03);
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease,
-    border-color 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      0 2px 4px oklch(0.2 0.02 260 / 0.06),
-      0 4px 16px oklch(0.2 0.02 260 / 0.05);
-    border-color: var(--color-accent);
-  }
-}
-
 @utility panel-inset {
   background-color: var(--color-canvas);
   border: 1px solid var(--color-soft);

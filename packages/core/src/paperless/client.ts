@@ -220,10 +220,27 @@ export class PaperlessClient {
     let page = 1;
     let hasNext = true;
 
+    const fields = [
+      'id',
+      'title',
+      'content',
+      'tags',
+      'correspondent',
+      'document_type',
+      'created',
+      'modified',
+      'added',
+      'original_file_name',
+      'archived_file_name',
+      'archive_serial_number',
+    ].join(',');
+
     while (hasNext) {
       this.logger.debug({ page, pageSize, ordering }, 'Fetching documents page');
       const response = await this.fetchWithRetry(
-        this.buildUrl(`/api/documents/?page=${page}&page_size=${pageSize}&ordering=${ordering}`),
+        this.buildUrl(
+          `/api/documents/?page=${page}&page_size=${pageSize}&ordering=${ordering}&fields=${fields}`,
+        ),
       );
       const json = await response.json();
       const parsed = schema.parse(json);

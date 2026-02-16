@@ -5,7 +5,7 @@ import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js'
 runWorkerTask(async (ctx, onProgress) => {
   const config = parseConfig(process.env as Record<string, string | undefined>);
   const paperlessConfig = toPaperlessConfig(config);
-  const client = new PaperlessClient(paperlessConfig);
+  const client = new PaperlessClient({ ...paperlessConfig, timeout: 120_000 });
 
   const taskData = ctx.taskData as { force?: boolean } | undefined;
 
