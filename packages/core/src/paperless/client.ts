@@ -1,4 +1,4 @@
-import type { ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 import { createLogger } from '../logger.js';
 import type { Logger } from '../logger.js';
 import { paperlessRequestsTotal } from '../telemetry/metrics.js';
@@ -10,6 +10,10 @@ import type {
   PaperlessCorrespondent,
   PaperlessDocumentType,
   PaperlessStatistics,
+  PaperlessStatus,
+  PaperlessStoragePath,
+  PaperlessTask,
+  PaperlessRemoteVersion,
   ConnectionTestResult,
 } from './types.js';
 import {
@@ -19,6 +23,10 @@ import {
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,
   paperlessStatisticsSchema,
+  paperlessStatusSchema,
+  paperlessStoragePathSchema,
+  paperlessTaskSchema,
+  paperlessRemoteVersionSchema,
   paginatedResponseSchema,
 } from './schemas.js';
 import { PaperlessApiError, PaperlessAuthError, PaperlessConnectionError } from './errors.js';
@@ -258,6 +266,40 @@ export class PaperlessClient {
     const response = await this.fetchWithRetry(this.buildUrl('/api/statistics/'));
     const json = await response.json();
     return paperlessStatisticsSchema.parse(json);
+  }
+
+  async getStatus(): Promise<PaperlessStatus> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/status/'));
+    const json = await response.json();
+    return paperlessStatusSchema.parse(json);
+  }
+
+  async getStoragePaths(): Promise<PaperlessStoragePath[]> {
+    return this.fetchAllPaginated('/api/storage_paths/', paperlessStoragePathSchema);
+  }
+
+  async getTasks(): Promise<PaperlessTask[]> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/tasks/'));
+    const json = await response.json();
+    return z.array(paperlessTaskSchema).parse(json);
+  }
+
+  async getGroupCount(): Promise<number> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/groups/?page_size=1'));
+    const json = await response.json();
+    return z.object({ count: z.number() }).parse(json).count;
+  }
+
+  async getUserCount(): Promise<number> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/users/?page_size=1'));
+    const json = await response.json();
+    return z.object({ count: z.number() }).parse(json).count;
+  }
+
+  async getRemoteVersion(): Promise<PaperlessRemoteVersion> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/remote_version/'));
+    const json = await response.json();
+    return paperlessRemoteVersionSchema.parse(json);
   }
 
   async deleteDocument(id: number): Promise<void> {

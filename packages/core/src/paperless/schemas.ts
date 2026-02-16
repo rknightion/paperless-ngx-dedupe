@@ -59,6 +59,7 @@ export const paperlessTagSchema = z
   .object({
     id: z.number(),
     name: z.string(),
+    slug: z.string().default(''),
     color: z.string().default('#a6cee3'),
     text_color: z.string().default('#000000'),
     is_inbox_tag: z.boolean().default(false),
@@ -69,6 +70,7 @@ export const paperlessTagSchema = z
   .transform((raw) => ({
     id: raw.id,
     name: raw.name,
+    slug: raw.slug,
     color: raw.color,
     textColor: raw.text_color,
     isInboxTag: raw.is_inbox_tag,
@@ -81,22 +83,27 @@ export const paperlessCorrespondentSchema = z
   .object({
     id: z.number(),
     name: z.string(),
+    slug: z.string().default(''),
     matching_algorithm: z.number().default(0),
     match: z.string().default(''),
     document_count: z.number().default(0),
+    last_correspondence: z.string().nullable().default(null),
   })
   .transform((raw) => ({
     id: raw.id,
     name: raw.name,
+    slug: raw.slug,
     matchingAlgorithm: raw.matching_algorithm,
     match: raw.match,
     documentCount: raw.document_count,
+    lastCorrespondence: raw.last_correspondence,
   }));
 
 export const paperlessDocumentTypeSchema = z
   .object({
     id: z.number(),
     name: z.string(),
+    slug: z.string().default(''),
     matching_algorithm: z.number().default(0),
     match: z.string().default(''),
     document_count: z.number().default(0),
@@ -104,6 +111,7 @@ export const paperlessDocumentTypeSchema = z
   .transform((raw) => ({
     id: raw.id,
     name: raw.name,
+    slug: raw.slug,
     matchingAlgorithm: raw.matching_algorithm,
     match: raw.match,
     documentCount: raw.document_count,
@@ -135,6 +143,90 @@ export const paperlessStatisticsSchema = z
     inboxTag: raw.inbox_tag,
     documentFileTypeCount: raw.document_file_type_count,
     characterCount: raw.character_count,
+  }));
+
+export const paperlessStatusSchema = z
+  .object({
+    storage: z.object({
+      total: z.number(),
+      available: z.number(),
+    }),
+    database: z.object({
+      status: z.string(),
+      migration_status: z
+        .object({
+          unapplied_migrations: z.array(z.string()).default([]),
+        })
+        .default({ unapplied_migrations: [] }),
+    }),
+    tasks: z.object({
+      redis_status: z.string().default(''),
+      celery_status: z.string().default(''),
+      index_status: z.string().default(''),
+      index_last_modified: z.string().nullable().default(null),
+      classifier_status: z.string().default(''),
+      classifier_last_trained: z.string().nullable().default(null),
+      sanity_check_status: z.string().default(''),
+      sanity_check_last_run: z.string().nullable().default(null),
+    }),
+  })
+  .transform((raw) => ({
+    storageTotal: raw.storage.total,
+    storageAvailable: raw.storage.available,
+    databaseStatus: raw.database.status,
+    databaseUnappliedMigrations: raw.database.migration_status.unapplied_migrations.length,
+    redisStatus: raw.tasks.redis_status,
+    celeryStatus: raw.tasks.celery_status,
+    indexStatus: raw.tasks.index_status,
+    indexLastModified: raw.tasks.index_last_modified,
+    classifierStatus: raw.tasks.classifier_status,
+    classifierLastTrained: raw.tasks.classifier_last_trained,
+    sanityCheckStatus: raw.tasks.sanity_check_status,
+    sanityCheckLastRun: raw.tasks.sanity_check_last_run,
+  }));
+
+export const paperlessStoragePathSchema = z
+  .object({
+    id: z.number(),
+    name: z.string(),
+    slug: z.string().default(''),
+    document_count: z.number().default(0),
+  })
+  .transform((raw) => ({
+    id: raw.id,
+    name: raw.name,
+    slug: raw.slug,
+    documentCount: raw.document_count,
+  }));
+
+export const paperlessTaskSchema = z
+  .object({
+    id: z.number(),
+    task_id: z.string(),
+    task_file_name: z.string().nullable().default(null),
+    type: z.string().default(''),
+    status: z.string(),
+    date_created: z.string().nullable().default(null),
+    date_done: z.string().nullable().default(null),
+  })
+  .transform((raw) => ({
+    id: raw.id,
+    taskId: raw.task_id,
+    taskFileName: raw.task_file_name,
+    type: raw.type,
+    status: raw.status,
+    created: raw.date_created,
+    done: raw.date_done,
+  }));
+
+export const paperlessRemoteVersionSchema = z
+  .object({
+    version: z.string(),
+    update_available: z.boolean(),
+  })
+  .transform((raw) => ({
+    version: raw.version,
+    updateAvailable: raw.update_available,
   }));
 
 export const connectionTestResultSchema = z

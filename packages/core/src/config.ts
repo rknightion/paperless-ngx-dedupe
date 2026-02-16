@@ -14,6 +14,11 @@ const configSchema = z
       .string()
       .default('true')
       .transform((v) => v === 'true'),
+    PAPERLESS_METRICS_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
+    PAPERLESS_METRICS_COLLECTORS: z.string().optional(),
   })
   .refine(
     (data) => data.PAPERLESS_API_TOKEN || (data.PAPERLESS_USERNAME && data.PAPERLESS_PASSWORD),

@@ -212,7 +212,10 @@ export {
   flushWorkerTelemetry,
   serializeTraceContext,
   extractTraceContext,
+  PaperlessMetricsCoordinator,
+  COLLECTOR_IDS,
 } from './telemetry/index.js';
+export type { PaperlessMetricsOptions, CollectorId } from './telemetry/index.js';
 
 // Export
 export { getDuplicateGroupsForExport, formatDuplicatesCsv } from './export/csv.js';
