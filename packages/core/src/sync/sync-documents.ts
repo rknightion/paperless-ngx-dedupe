@@ -11,7 +11,7 @@ import type { PaperlessDocument } from '../paperless/types.js';
 import type { PaperlessClient } from '../paperless/client.js';
 import type { AppDatabase } from '../db/client.js';
 
-const DEFAULT_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 25;
 const DEFAULT_MAX_OCR_LENGTH = 500_000;
 const METADATA_CONCURRENCY = 5;
 
