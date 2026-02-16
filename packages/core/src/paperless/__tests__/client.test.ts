@@ -669,6 +669,7 @@ describe('PaperlessClient', () => {
       expect(types[0]).toEqual({
         id: 1,
         name: 'Invoice',
+        slug: '',
         matchingAlgorithm: 2,
         match: 'invoice',
         documentCount: 15,
