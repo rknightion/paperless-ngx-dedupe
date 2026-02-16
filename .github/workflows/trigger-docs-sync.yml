@@ -12,6 +12,8 @@ concurrency:
 
 jobs:
   trigger-sync:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     steps:
