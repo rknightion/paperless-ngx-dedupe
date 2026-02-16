@@ -9,9 +9,11 @@
     progressMessage?: string | null;
     startedAt?: string | null;
     completedAt?: string | null;
+    errorMessage?: string | null;
   }
 
-  let { type, status, progress, progressMessage, startedAt, completedAt }: Props = $props();
+  let { type, status, progress, progressMessage, startedAt, completedAt, errorMessage }: Props =
+    $props();
 
   let duration = $derived.by(() => {
     if (!startedAt) return null;
@@ -43,6 +45,9 @@
       <div class="mt-2">
         <ProgressBar {progress} message={progressMessage ?? ''} />
       </div>
+    {/if}
+    {#if status === 'failed' && errorMessage}
+      <p class="text-ember mt-1 truncate text-xs" title={errorMessage}>{errorMessage}</p>
     {/if}
   </div>
   {#if duration}

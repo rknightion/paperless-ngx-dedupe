@@ -120,7 +120,10 @@ export async function syncDocuments(
     const inFlight: { promise: Promise<void>; settled: boolean }[] = [];
 
     for (const item of queue) {
-      const entry: { promise: Promise<void>; settled: boolean } = { promise: null!, settled: false };
+      const entry: { promise: Promise<void>; settled: boolean } = {
+        promise: null!,
+        settled: false,
+      };
       entry.promise = (async () => {
         try {
           const metadata = await client.getDocumentMetadata(item.paperlessId);
