@@ -31,7 +31,11 @@ function ensureInitialized() {
   initLogger(config.LOG_LEVEL);
 
   if (process.env.OTEL_ENABLED === 'true' && config.PAPERLESS_METRICS_ENABLED) {
-    const metricsClient = new PaperlessClient(toPaperlessConfig(config));
+    const metricsClient = new PaperlessClient({
+      ...toPaperlessConfig(config),
+      timeout: 10_000,
+      maxRetries: 0,
+    });
     const coordinator = new PaperlessMetricsCoordinator({
       client: metricsClient,
       enabledCollectors: config.PAPERLESS_METRICS_COLLECTORS

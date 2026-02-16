@@ -199,26 +199,6 @@ export const paperlessStoragePathSchema = z
     documentCount: raw.document_count,
   }));
 
-export const paperlessTaskSchema = z
-  .object({
-    id: z.number(),
-    task_id: z.string(),
-    task_file_name: z.string().nullable().default(null),
-    type: z.string().default(''),
-    status: z.string(),
-    date_created: z.string().nullable().default(null),
-    date_done: z.string().nullable().default(null),
-  })
-  .transform((raw) => ({
-    id: raw.id,
-    taskId: raw.task_id,
-    taskFileName: raw.task_file_name,
-    type: raw.type,
-    status: raw.status,
-    created: raw.date_created,
-    done: raw.date_done,
-  }));
-
 export const paperlessRemoteVersionSchema = z
   .object({
     version: z.string(),

@@ -108,16 +108,6 @@ export interface PaperlessStoragePath {
   documentCount: number;
 }
 
-export interface PaperlessTask {
-  id: number;
-  taskId: string;
-  taskFileName: string | null;
-  type: string;
-  status: string;
-  created: string | null;
-  done: string | null;
-}
-
 export interface PaperlessRemoteVersion {
   version: string;
   updateAvailable: boolean;
