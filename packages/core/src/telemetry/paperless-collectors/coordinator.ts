@@ -16,7 +16,6 @@ import { TagCollector } from './tag.js';
 import { CorrespondentCollector } from './correspondent.js';
 import { DocumentTypeCollector } from './document-type.js';
 import { StoragePathCollector } from './storage-path.js';
-import { TaskCollector } from './task.js';
 import { GroupCollector } from './group.js';
 import { UserCollector } from './user.js';
 import { RemoteVersionCollector } from './remote-version.js';
@@ -35,7 +34,6 @@ const COLLECTOR_FACTORIES: Record<CollectorId, () => Collector> = {
   correspondent: () => new CorrespondentCollector(),
   document_type: () => new DocumentTypeCollector(),
   storage_path: () => new StoragePathCollector(),
-  task: () => new TaskCollector(),
   group: () => new GroupCollector(),
   user: () => new UserCollector(),
   remote_version: () => new RemoteVersionCollector(),
