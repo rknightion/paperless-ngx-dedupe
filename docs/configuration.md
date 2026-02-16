@@ -54,6 +54,43 @@ OpenTelemetry is off unless `OTEL_ENABLED=true`. Common vars:
 
 See `.env.example` for the full list.
 
+### Paperless-NGX System Metrics (Optional)
+
+When enabled, Paperless NGX Dedupe can collect and emit system-level metrics from your Paperless-NGX instance via OTEL. This provides the same observability as running a separate [prometheus-paperless-exporter](https://github.com/hansmi/prometheus-paperless-exporter) container, but delivered through your existing OTEL pipeline -- one fewer container to manage.
+
+Metric names match the Prometheus exporter exactly (e.g. `paperless_status_storage_total_bytes`, `paperless_statistics_documents_total`) for Grafana dashboard compatibility.
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `PAPERLESS_METRICS_ENABLED` | No | `false` | Enable Paperless system metrics collection (requires `OTEL_ENABLED=true`) |
+| `PAPERLESS_METRICS_COLLECTORS` | No | all | Comma-separated list of collectors to enable |
+
+**Available collectors:**
+
+| Collector | API Calls | Description |
+| --- | --- | --- |
+| `status` | 1 | Storage, database, Redis, Celery, index, classifier, and sanity check status |
+| `statistics` | 1 + paginated | Document totals, inbox count, file type breakdown, character count, metadata counts |
+| `document` | 1 | Total document count |
+| `tag` | paginated | Per-tag info, document counts, inbox flag |
+| `correspondent` | paginated | Per-correspondent info, document counts, last correspondence timestamp |
+| `document_type` | paginated | Per-document-type info and document counts |
+| `storage_path` | paginated | Per-storage-path info and document counts |
+| `task` | 1 | Background task info, status, timestamps |
+| `group` | 1 | User group count |
+| `user` | 1 | User count |
+| `remote_version` | 1 | Update availability check (causes Paperless-NGX to make an outbound network call) |
+
+All collectors are enabled by default. To enable only specific collectors:
+
+```bash
+PAPERLESS_METRICS_COLLECTORS=status,statistics,document
+```
+
+Metrics are collected on the same interval as OTEL metric exports (controlled by `OTEL_METRIC_EXPORT_INTERVAL`, default 60s). Instances with many tags, correspondents, or document types will produce proportionally more time series from the labeled collectors (`tag`, `correspondent`, `document_type`, `storage_path`). Disable these if cardinality is a concern.
+
+Credit: metric definitions and collector design inspired by [prometheus-paperless-exporter](https://github.com/hansmi/prometheus-paperless-exporter) by hansmi.
+
 ## Deduplication Settings
 
 Change these in **Settings** or via `PUT /api/v1/config/dedup`.

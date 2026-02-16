@@ -1,6 +1,13 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import { trace } from '@opentelemetry/api';
-import { parseConfig, initLogger, createLogger } from '@paperless-dedupe/core';
+import {
+  parseConfig,
+  initLogger,
+  createLogger,
+  PaperlessClient,
+  PaperlessMetricsCoordinator,
+  toPaperlessConfig,
+} from '@paperless-dedupe/core';
 import type { Handle } from '@sveltejs/kit';
 import { getDatabase } from '$lib/server/db';
 
@@ -22,6 +29,24 @@ function ensureInitialized() {
   if (initialized) return;
   config = parseConfig(process.env as Record<string, string | undefined>);
   initLogger(config.LOG_LEVEL);
+
+  if (process.env.OTEL_ENABLED === 'true' && config.PAPERLESS_METRICS_ENABLED) {
+    const metricsClient = new PaperlessClient(toPaperlessConfig(config));
+    const coordinator = new PaperlessMetricsCoordinator({
+      client: metricsClient,
+      enabledCollectors: config.PAPERLESS_METRICS_COLLECTORS
+        ? config.PAPERLESS_METRICS_COLLECTORS.split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined,
+    });
+    coordinator.start();
+
+    if (typeof process !== 'undefined') {
+      process.on('SIGTERM', () => coordinator.shutdown());
+    }
+  }
+
   initialized = true;
 }
 

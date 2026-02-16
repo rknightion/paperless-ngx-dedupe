@@ -25,3 +25,7 @@ export {
   serializeTraceContext,
   extractTraceContext,
 } from './worker.js';
+
+// Paperless-NGX system metrics collectors
+export { PaperlessMetricsCoordinator, COLLECTOR_IDS } from './paperless-collectors/index.js';
+export type { PaperlessMetricsOptions, CollectorId } from './paperless-collectors/index.js';
