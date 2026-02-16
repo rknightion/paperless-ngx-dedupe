@@ -44,6 +44,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm format
       - run: pnpm check
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
 
   unit-tests:
     needs: install
@@ -185,6 +188,9 @@ jobs:
 
   docker-build-verify:
     runs-on: ubuntu-24.04
+    permissions:
+      security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -202,6 +208,20 @@ jobs:
             type=gha,scope=build-verify
             type=gha,scope=build-linux-amd64
           cache-to: type=gha,scope=build-verify,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284
+        with:
+          image-ref: 'paperless-dedupe:ci-test'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
 
       - name: Verify container starts and is healthy
         run: |
