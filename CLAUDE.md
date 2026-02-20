@@ -1,70 +1,52 @@
-# CLAUDE.md
+# Project: Paperless NGX Dedupe
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Document deduplication companion for Paperless-NGX. Syncs documents from a Paperless-NGX instance, identifies duplicates via MinHash/LSH, and provides a web UI and REST API for reviewing and resolving them.
 
-## Project Overview
+## Architecture
 
-Paperless NGX Dedupe is a document deduplication companion for Paperless-NGX. It syncs documents from a Paperless-NGX instance, identifies duplicates using MinHash/LSH algorithms, and provides a web UI for reviewing and resolving duplicates. Early development — not production-ready.
+pnpm monorepo (Node >=24.0.0 required) with four packages:
+
+- **`packages/core`** — Framework-agnostic TypeScript library owning all business logic: Paperless API client, sync, MinHash/LSH dedup engine, Drizzle ORM schema, SQLite job queue, queries, and telemetry. No web framework imports allowed here.
+- **`packages/web`** — SvelteKit 2 app (Svelte 5 runes). Serves the UI and REST API (`/api/v1/*`). Imports core for all logic; does not implement independent business logic.
+- **`packages/sdk`** — Public npm package (`private: false`). Zero-dependency TypeScript HTTP client wrapping all `/api/v1/*` endpoints for external consumers. Exports compiled `dist/`.
+- **`packages/cli`** — Private command-line runner (commander.js). Connects directly to a local SQLite DB via core.
+
+Path aliases: `@paperless-dedupe/core` → `packages/core/src/index.ts`; `@paperless-dedupe/sdk` → `packages/sdk/src/index.ts`.
 
 ## Commands
 
 ```bash
-# Development
-pnpm dev              # Start SvelteKit dev server (http://localhost:5173)
-pnpm build            # Build both core and web packages
-pnpm check            # Type-check both packages
-
-# Testing (core package only, Vitest)
-pnpm test             # Run all tests once
-pnpm test:watch       # Watch mode
-
-# Linting & Formatting
-pnpm lint             # ESLint check
-pnpm lint:fix         # ESLint auto-fix
-pnpm format           # Prettier check
-pnpm format:fix       # Prettier auto-fix
+pnpm dev           # SvelteKit dev server (http://localhost:5173)
+pnpm build         # Build all packages in dependency order: core → sdk → cli → web
+pnpm check         # Type-check all four packages
+pnpm test          # Vitest unit tests for core and sdk (not integration tests — see Gotchas)
+pnpm test:e2e      # Playwright E2E tests against a built web package
+pnpm lint          # ESLint
+pnpm lint:fix      # ESLint auto-fix
+pnpm format        # Prettier check
+pnpm format:fix    # Prettier auto-fix
+pnpm cli           # Run CLI in dev via tsx (not built output)
 ```
 
-## Architecture
+Single-package variant: `pnpm --filter @paperless-dedupe/core test`, etc.
 
-**Monorepo** (pnpm workspaces) with two packages:
+## Workflow
 
-- **`packages/core`** — Framework-agnostic TypeScript library. Contains all business logic: Paperless API client, document sync, MinHash/LSH dedup algorithms, job queue, database queries, and Drizzle ORM schema. This package has no web framework dependencies and can be reused by CLI tools or SDKs.
+Run `pnpm lint && pnpm format && pnpm check && pnpm test` before pushing. CI additionally runs `pnpm audit --audit-level=high` and a Docker build-verify job on every PR.
 
-- **`packages/web`** — SvelteKit 2 application (Svelte 5 runes). Serves both the UI and REST API (`/api/v1/*`). Imports `@paperless-dedupe/core` for all logic. Uses adapter-node for Docker deployment.
+## Gotchas & Constraints
 
-### Key Technical Choices
+- **Node >=24.0.0 is required.** Do not test or build with older Node versions.
+- `pnpm test` runs **only unit tests** (core + sdk). Integration tests in `packages/core/vitest.integration.config.ts` require a live Paperless-NGX Docker instance and run separately in CI.
+- **`packages/sdk` is a public package.** Its exported API surface is a breaking-change boundary — treat it like a published library.
+- All `/api/v1/*` routes must return JSON with consistent error shapes and correct HTTP status codes. SvelteKit page `.server.ts` load functions must call the same core query functions as the corresponding API routes — not duplicate logic independently.
+- Database schema changes: modify Drizzle table definitions in `packages/core/src/schema/sqlite/`; there are no migration files. The app detects changes via SHA-256 hash at startup and applies DDL automatically (`AUTO_MIGRATE=true` by default).
+- The CLI uses esbuild with `--external:better-sqlite3`. Adding a native module to `packages/cli` requires adding it to the esbuild externals list in the CLI build config.
 
-- **Database:** SQLite (better-sqlite3) with Drizzle ORM. Schema defined in `packages/core/src/schema/`. DDL changes detected via SHA-256 hashing.
-- **Background jobs:** worker_threads + SQLite job queue (no Redis). One job per type at a time. Job types: SYNC, ANALYSIS, BATCH_OPERATIONS.
-- **Real-time progress:** Server-Sent Events (`/api/v1/jobs/:jobId/progress`).
-- **Dedup algorithms:** Pure TypeScript MinHash (192 permutations) + LSH (20 bands) with 3-gram word shingles. No native deps beyond better-sqlite3.
-- **Validation:** Zod for env config parsing and API request validation.
-- **Logging:** Pino structured JSON logging.
-- **Styling:** Tailwind CSS 4 via Vite plugin.
+## Key Files & References
 
-### Data Flow
-
-1. **Sync:** POST `/api/v1/sync` → spawns worker thread → `syncDocuments()` fetches from Paperless API → normalizes text, computes fingerprints → persists to DB
-2. **Analysis:** POST `/api/v1/analysis` → spawns worker thread → `runAnalysis()` runs 10-stage pipeline (signatures → LSH candidates → scoring → union-find clustering → group formation)
-3. **Review:** UI at `/duplicates` → side-by-side comparison with OCR diff → set status (false positive/ignored/deleted), set primary via API
-
-### Database Tables
-
-Defined in `packages/core/src/schema/`: `document`, `documentContent`, `documentSignature`, `duplicateGroup`, `duplicateMember`, `job`, `appConfig`, `syncState`.
-
-## Code Conventions
-
-- **Formatting:** Prettier — 100 char width, single quotes, trailing commas, 2-space indent
-- **Path alias:** `@paperless-dedupe/core` resolves to `packages/core/src/index.ts`
-- **Test files:** Co-located as `*.test.ts` in `packages/core/src/`
-- **API routes:** SvelteKit file-based routing at `packages/web/src/routes/api/v1/`
-- **Env config:** Zod-validated in `packages/core/src/config.ts`, loaded from `.env` (see `.env.example`)
-
-## Docker
-
-Single-container deployment. Port 3000. SQLite data persisted via volume mount at `/app/data`. Health: `/api/v1/health`, readiness: `/api/v1/ready`. Non-root user (UID 1001).
-
-```bash
-docker compose up     # Requires .env file with PAPERLESS_URL and auth config
-```
+- `packages/core/src/config.ts` — all environment variables, Zod schemas, and defaults
+- `packages/core/src/schema/sqlite/` — Drizzle table definitions (source of truth for DB schema)
+- `packages/core/src/index.ts` — public API of the core library
+- `packages/core/src/jobs/worker-paths.ts` — worker module path resolution (critical for Docker)
+- `.env.example` — full environment variable reference including OpenTelemetry config
