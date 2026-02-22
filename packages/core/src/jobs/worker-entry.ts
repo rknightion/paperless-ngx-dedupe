@@ -12,7 +12,11 @@ import {
 import { withSpan } from '../telemetry/spans.js';
 import type { AppDatabase } from '../db/client.js';
 
-export type ProgressCallback = (progress: number, message?: string) => Promise<void>;
+export type ProgressCallback = (
+  progress: number,
+  message?: string,
+  phaseProgress?: number,
+) => Promise<void>;
 
 export interface WorkerContext {
   db: AppDatabase;
@@ -57,8 +61,12 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   let lastFlushTime = Date.now();
   const FLUSH_INTERVAL_MS = 30_000;
 
-  const onProgress: ProgressCallback = async (progress: number, message?: string) => {
-    updateJobProgress(db, jobId, progress, message);
+  const onProgress: ProgressCallback = async (
+    progress: number,
+    message?: string,
+    phaseProgress?: number,
+  ) => {
+    updateJobProgress(db, jobId, progress, message, phaseProgress);
 
     const now = Date.now();
 
