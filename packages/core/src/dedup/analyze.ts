@@ -126,8 +126,12 @@ export async function runAnalysis(
         sigReused++;
         processedDocIds.push(doc.id);
         if (i % PROGRESS_BATCH_SIZE === 0) {
-          const progress = 0.05 + 0.35 * (i / docsToProcess.length);
-          await onProgress?.(progress, `Processing signatures: ${i}/${docsToProcess.length}`);
+          const sigPhase = i / docsToProcess.length;
+          await onProgress?.(
+            0.05 + 0.35 * sigPhase,
+            `Processing signatures: ${i}/${docsToProcess.length}`,
+            sigPhase,
+          );
         }
         continue;
       }
@@ -185,8 +189,12 @@ export async function runAnalysis(
     processedDocIds.push(doc.id);
 
     if (i % PROGRESS_BATCH_SIZE === 0) {
-      const progress = 0.05 + 0.35 * (i / docsToProcess.length);
-      await onProgress?.(progress, `Processing signatures: ${i}/${docsToProcess.length}`);
+      const sigPhase = i / docsToProcess.length;
+      await onProgress?.(
+        0.05 + 0.35 * sigPhase,
+        `Processing signatures: ${i}/${docsToProcess.length}`,
+        sigPhase,
+      );
     }
   }
 
@@ -363,8 +371,12 @@ export async function runAnalysis(
     }
 
     if (i % PROGRESS_BATCH_SIZE === 0) {
-      const progress = 0.55 + 0.25 * (i / filteredPairs.length);
-      await onProgress?.(progress, `Scoring: ${i}/${filteredPairs.length}`);
+      const scorePhase = i / filteredPairs.length;
+      await onProgress?.(
+        0.55 + 0.25 * scorePhase,
+        `Scoring: ${i}/${filteredPairs.length}`,
+        scorePhase,
+      );
     }
   }
 
