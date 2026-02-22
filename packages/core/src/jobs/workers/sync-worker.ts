@@ -7,12 +7,13 @@ runWorkerTask(async (ctx, onProgress) => {
   const paperlessConfig = toPaperlessConfig(config);
   const client = new PaperlessClient({ ...paperlessConfig, timeout: 120_000 });
 
-  const taskData = ctx.taskData as { force?: boolean } | undefined;
+  const taskData = ctx.taskData as { force?: boolean; purge?: boolean } | undefined;
 
   const result = await syncDocuments(
     { db: ctx.db, client },
     {
       forceFullSync: taskData?.force,
+      purgeBeforeSync: taskData?.purge,
       metadataConcurrency: config.SYNC_METADATA_CONCURRENCY,
       onProgress,
     },
