@@ -261,7 +261,12 @@
       <div class="text-muted mt-3 text-xs">
         Last sync: {formatDate(data.dashboard.lastSyncAt)}
         {#if data.dashboard.lastSyncDocumentCount != null}
-          &middot; {data.dashboard.lastSyncDocumentCount} documents
+          &middot;
+          {#if data.dashboard.lastSyncDocumentCount === 0}
+            No changes
+          {:else}
+            {data.dashboard.lastSyncDocumentCount} documents changed
+          {/if}
         {/if}
       </div>
     </div>
@@ -320,6 +325,7 @@
             startedAt={j.startedAt}
             completedAt={j.completedAt}
             errorMessage={j.errorMessage}
+            resultJson={j.resultJson}
           />
         {/each}
       </div>

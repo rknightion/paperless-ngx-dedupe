@@ -175,14 +175,14 @@ export async function syncDocuments(
     .values({
       id: 'singleton',
       lastSyncAt: now,
-      lastSyncDocumentCount: result.totalFetched,
+      lastSyncDocumentCount: result.inserted + result.updated,
       totalDocuments: totalDocsCount,
     })
     .onConflictDoUpdate({
       target: syncState.id,
       set: {
         lastSyncAt: now,
-        lastSyncDocumentCount: result.totalFetched,
+        lastSyncDocumentCount: result.inserted + result.updated,
         totalDocuments: totalDocsCount,
       },
     })

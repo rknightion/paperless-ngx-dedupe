@@ -10,10 +10,19 @@
     startedAt?: string | null;
     completedAt?: string | null;
     errorMessage?: string | null;
+    resultJson?: string | null;
   }
 
-  let { type, status, progress, progressMessage, startedAt, completedAt, errorMessage }: Props =
-    $props();
+  let {
+    type,
+    status,
+    progress,
+    progressMessage,
+    startedAt,
+    completedAt,
+    errorMessage,
+    resultJson,
+  }: Props = $props();
 
   let duration = $derived.by(() => {
     if (!startedAt) return null;
@@ -24,6 +33,36 @@
     const minutes = Math.floor(seconds / 60);
     const remaining = seconds % 60;
     return `${minutes}m ${remaining}s`;
+  });
+
+  let resultSummary = $derived.by(() => {
+    if (status !== 'completed' || !resultJson) return null;
+    try {
+      const result = JSON.parse(resultJson);
+
+      if (type === 'sync') {
+        const parts: string[] = [];
+        if (result.inserted > 0) parts.push(`${result.inserted} added`);
+        if (result.updated > 0) parts.push(`${result.updated} updated`);
+        if (result.skipped > 0) parts.push(`${result.skipped} unchanged`);
+        if (result.failed > 0) parts.push(`${result.failed} failed`);
+        return parts.length > 0 ? parts.join(', ') : 'No changes';
+      }
+
+      if (type === 'analysis') {
+        const parts: string[] = [];
+        if (result.documentsAnalyzed != null)
+          parts.push(`${result.documentsAnalyzed} docs analyzed`);
+        if (result.groupsCreated > 0) parts.push(`${result.groupsCreated} groups created`);
+        if (result.groupsUpdated > 0) parts.push(`${result.groupsUpdated} groups updated`);
+        if (result.groupsRemoved > 0) parts.push(`${result.groupsRemoved} groups removed`);
+        return parts.length > 0 ? parts.join(', ') : 'No duplicates found';
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   });
 
   const typeLabels: Record<string, string> = {
@@ -48,6 +87,9 @@
     {/if}
     {#if status === 'failed' && errorMessage}
       <p class="text-ember mt-1 truncate text-xs" title={errorMessage}>{errorMessage}</p>
+    {/if}
+    {#if resultSummary}
+      <p class="text-muted mt-1 text-xs">{resultSummary}</p>
     {/if}
   </div>
   {#if duration}
