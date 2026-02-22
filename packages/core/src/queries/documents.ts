@@ -1,4 +1,4 @@
-import { and, asc, avg, count, desc, eq, isNotNull, isNull, like, sql, sum } from 'drizzle-orm';
+import { and, asc, avg, count, desc, eq, isNotNull, isNull, like, sql } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
@@ -64,8 +64,6 @@ export function getDocuments(
     createdDate: row.createdDate,
     addedDate: row.addedDate,
     processingStatus: row.processingStatus,
-    originalFileSize: row.originalFileSize,
-    archiveFileSize: row.archiveFileSize,
   }));
 
   return { items, total, limit: pagination.limit, offset: pagination.offset };
@@ -106,8 +104,6 @@ export function getDocument(db: AppDatabase, id: string): DocumentDetail | null 
     addedDate: row.addedDate,
     modifiedDate: row.modifiedDate,
     processingStatus: row.processingStatus,
-    originalFileSize: row.originalFileSize,
-    archiveFileSize: row.archiveFileSize,
     fingerprint: row.fingerprint,
     syncedAt: row.syncedAt,
     content: contentRow
@@ -148,7 +144,6 @@ export function incrementUsageStats(
   increments: {
     groupsActioned?: number;
     documentsDeleted?: number;
-    storageBytesReclaimed?: number;
   },
 ): void {
   const sets: Record<string, unknown> = {};
@@ -158,9 +153,6 @@ export function incrementUsageStats(
   }
   if (increments.documentsDeleted) {
     sets.cumulativeDocumentsDeleted = sql`coalesce(${syncState.cumulativeDocumentsDeleted}, 0) + ${increments.documentsDeleted}`;
-  }
-  if (increments.storageBytesReclaimed) {
-    sets.cumulativeStorageBytesReclaimed = sql`coalesce(${syncState.cumulativeStorageBytesReclaimed}, 0) + ${increments.storageBytesReclaimed}`;
   }
 
   if (Object.keys(sets).length === 0) return;
@@ -241,19 +233,13 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     .sort((a, b) => b.count - a.count)
     .slice(0, 30);
 
-  // 7. Total storage bytes
-  const [{ totalStorageBytes }] = db
-    .select({ totalStorageBytes: sql<number>`coalesce(${sum(document.archiveFileSize)}, 0)` })
-    .from(document)
-    .all();
-
-  // 8. Average word count
+  // 7. Average word count
   const [{ averageWordCount }] = db
     .select({ averageWordCount: sql<number>`coalesce(${avg(documentContent.wordCount)}, 0)` })
     .from(documentContent)
     .all();
 
-  // 9. Documents added per month
+  // 8. Documents added per month
   const documentsOverTime = db
     .select({
       month: sql<string>`strftime('%Y-%m', ${document.addedDate})`.as('month'),
@@ -265,39 +251,7 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     .orderBy(asc(sql`strftime('%Y-%m', ${document.addedDate})`))
     .all() as { month: string; count: number }[];
 
-  // 10. File size distribution (archive file size buckets)
-  const fileSizeRows = db
-    .select({
-      bucket: sql<string>`CASE
-        WHEN ${document.archiveFileSize} < 102400 THEN '< 100 KB'
-        WHEN ${document.archiveFileSize} < 1048576 THEN '100 KB - 1 MB'
-        WHEN ${document.archiveFileSize} < 10485760 THEN '1 - 10 MB'
-        WHEN ${document.archiveFileSize} < 52428800 THEN '10 - 50 MB'
-        ELSE '50+ MB'
-      END`.as('bucket'),
-      count: count(),
-    })
-    .from(document)
-    .where(isNotNull(document.archiveFileSize))
-    .groupBy(
-      sql`CASE
-        WHEN ${document.archiveFileSize} < 102400 THEN '< 100 KB'
-        WHEN ${document.archiveFileSize} < 1048576 THEN '100 KB - 1 MB'
-        WHEN ${document.archiveFileSize} < 10485760 THEN '1 - 10 MB'
-        WHEN ${document.archiveFileSize} < 52428800 THEN '10 - 50 MB'
-        ELSE '50+ MB'
-      END`,
-    )
-    .all() as { bucket: string; count: number }[];
-
-  const fileSizeBucketLabels = ['< 100 KB', '100 KB - 1 MB', '1 - 10 MB', '10 - 50 MB', '50+ MB'];
-  const fileSizeMap = new Map(fileSizeRows.map((r) => [r.bucket, r.count]));
-  const fileSizeDistribution = fileSizeBucketLabels.map((label) => ({
-    bucket: label,
-    count: fileSizeMap.get(label) ?? 0,
-  }));
-
-  // 11. Word count distribution
+  // 9. Word count distribution
   const wordCountRows = db
     .select({
       bucket: sql<string>`CASE
@@ -331,7 +285,7 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     count: wordCountMap.get(label) ?? 0,
   }));
 
-  // 12. Unclassified documents
+  // 10. Unclassified documents
   const [{ noCorrespondent }] = db
     .select({ noCorrespondent: count() })
     .from(document)
@@ -352,7 +306,7 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     )
     .all();
 
-  // 13. Duplicate involvement
+  // 11. Duplicate involvement
   const [{ documentsInGroups }] = db
     .select({
       documentsInGroups: sql<number>`COUNT(DISTINCT ${duplicateMember.documentId})`,
@@ -363,33 +317,11 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
   const dupPercentage =
     totalDocuments > 0 ? Math.round((Number(documentsInGroups) / totalDocuments) * 100) : 0;
 
-  // 14. Largest documents (top 10 by archive file size)
-  const largestDocuments = db
-    .select({
-      id: document.id,
-      paperlessId: document.paperlessId,
-      title: document.title,
-      correspondent: document.correspondent,
-      archiveFileSize: document.archiveFileSize,
-    })
-    .from(document)
-    .where(isNotNull(document.archiveFileSize))
-    .orderBy(desc(document.archiveFileSize))
-    .limit(10)
-    .all() as {
-    id: string;
-    paperlessId: number;
-    title: string;
-    correspondent: string | null;
-    archiveFileSize: number;
-  }[];
-
-  // 15. Cumulative usage stats
+  // 12. Cumulative usage stats
   const syncRow = db.select().from(syncState).where(eq(syncState.id, 'singleton')).get();
   const usageStats = {
     cumulativeGroupsActioned: syncRow?.cumulativeGroupsActioned ?? 0,
     cumulativeDocumentsDeleted: syncRow?.cumulativeDocumentsDeleted ?? 0,
-    cumulativeStorageBytesReclaimed: syncRow?.cumulativeStorageBytesReclaimed ?? 0,
   };
 
   return {
@@ -406,17 +338,14 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     correspondentDistribution,
     documentTypeDistribution,
     tagDistribution,
-    totalStorageBytes: Number(totalStorageBytes),
     averageWordCount: Math.round(Number(averageWordCount)),
     documentsOverTime,
-    fileSizeDistribution,
     wordCountDistribution,
     unclassified: { noCorrespondent, noDocumentType, noTags },
     duplicateInvolvement: {
       documentsInGroups: Number(documentsInGroups),
       percentage: dupPercentage,
     },
-    largestDocuments,
     usageStats,
   };
 }

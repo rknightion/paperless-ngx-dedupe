@@ -108,8 +108,6 @@ export function getDuplicateGroups(
     confidenceScore: g.confidenceScore,
     jaccardSimilarity: g.jaccardSimilarity,
     fuzzyTextRatio: g.fuzzyTextRatio,
-    metadataSimilarity: g.metadataSimilarity,
-    filenameSimilarity: g.filenameSimilarity,
     status: g.status,
     memberCount: countMap.get(g.id) ?? 0,
     primaryDocumentTitle: titleMap.get(g.id) ?? null,
@@ -142,8 +140,6 @@ function fetchGroupWithMembers(
       documentType: document.documentType,
       tagsJson: document.tagsJson,
       createdDate: document.createdDate,
-      originalFileSize: document.originalFileSize,
-      archiveFileSize: document.archiveFileSize,
     })
     .from(duplicateMember)
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
@@ -186,8 +182,6 @@ function fetchGroupWithMembers(
       documentType: m.documentType,
       tags: parseTagsJson(m.tagsJson),
       createdDate: m.createdDate,
-      originalFileSize: m.originalFileSize,
-      archiveFileSize: m.archiveFileSize,
       content: content
         ? {
             fullText: 'fullText' in content ? (content.fullText as string | null) : null,
@@ -202,8 +196,6 @@ function fetchGroupWithMembers(
     confidenceScore: group.confidenceScore,
     jaccardSimilarity: group.jaccardSimilarity,
     fuzzyTextRatio: group.fuzzyTextRatio,
-    metadataSimilarity: group.metadataSimilarity,
-    filenameSimilarity: group.filenameSimilarity,
     algorithmVersion: group.algorithmVersion,
     status: group.status,
     createdAt: group.createdAt,

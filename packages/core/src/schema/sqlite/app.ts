@@ -16,5 +16,4 @@ export const syncState = sqliteTable('sync_state', {
   // Cumulative usage counters (survive group/document deletion)
   cumulativeGroupsActioned: integer('cumulative_groups_actioned').default(0),
   cumulativeDocumentsDeleted: integer('cumulative_documents_deleted').default(0),
-  cumulativeStorageBytesReclaimed: integer('cumulative_storage_bytes_reclaimed').default(0),
 });

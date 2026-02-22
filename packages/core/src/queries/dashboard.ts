@@ -1,4 +1,4 @@
-import { count, eq, sql, sum } from 'drizzle-orm';
+import { count, eq, sql } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
 import { document } from '../schema/sqlite/documents.js';
@@ -15,15 +15,6 @@ export function getDashboard(db: AppDatabase): DashboardData {
     .select({ value: count() })
     .from(duplicateGroup)
     .where(eq(duplicateGroup.status, 'pending'))
-    .all();
-
-  // Storage savings: sum of archive_file_size for non-primary members of pending groups
-  const [{ value: storageSavingsBytes }] = db
-    .select({ value: sum(document.archiveFileSize) })
-    .from(duplicateMember)
-    .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
-    .innerJoin(document, eq(duplicateMember.documentId, document.id))
-    .where(sql`${duplicateMember.isPrimary} = 0 AND ${duplicateGroup.status} = 'pending'`)
     .all();
 
   // Pending analysis
@@ -54,7 +45,6 @@ export function getDashboard(db: AppDatabase): DashboardData {
   return {
     totalDocuments,
     pendingGroups,
-    storageSavingsBytes: Number(storageSavingsBytes) || 0,
     pendingAnalysis,
     lastSyncAt: syncRow?.lastSyncAt ?? null,
     lastSyncDocumentCount: syncRow?.lastSyncDocumentCount ?? null,

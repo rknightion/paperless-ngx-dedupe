@@ -58,8 +58,6 @@ export interface DocumentSummary {
   createdDate: string | null;
   addedDate: string | null;
   processingStatus: string | null;
-  originalFileSize: number | null;
-  archiveFileSize: number | null;
 }
 
 export interface DocumentDetail extends DocumentSummary {
@@ -85,8 +83,6 @@ export interface DuplicateGroupSummary {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
-  metadataSimilarity: number | null;
-  filenameSimilarity: number | null;
   status: string;
   memberCount: number;
   primaryDocumentTitle: string | null;
@@ -104,8 +100,6 @@ export interface DuplicateGroupMember {
   documentType: string | null;
   tags: string[];
   createdDate: string | null;
-  originalFileSize: number | null;
-  archiveFileSize: number | null;
   content: {
     fullText: string | null;
     wordCount: number | null;
@@ -117,8 +111,6 @@ export interface DuplicateGroupDetail {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
-  metadataSimilarity: number | null;
-  filenameSimilarity: number | null;
   algorithmVersion: string;
   status: string;
   createdAt: string;
@@ -146,7 +138,6 @@ export interface DuplicateStats {
 export interface DashboardData {
   totalDocuments: number;
   pendingGroups: number;
-  storageSavingsBytes: number;
   pendingAnalysis: number;
   lastSyncAt: string | null;
   lastSyncDocumentCount: number | null;
@@ -162,24 +153,14 @@ export interface DocumentStats {
   correspondentDistribution: { name: string; count: number }[];
   documentTypeDistribution: { name: string; count: number }[];
   tagDistribution: { name: string; count: number }[];
-  totalStorageBytes: number;
   averageWordCount: number;
   documentsOverTime: { month: string; count: number }[];
-  fileSizeDistribution: { bucket: string; count: number }[];
   wordCountDistribution: { bucket: string; count: number }[];
   unclassified: { noCorrespondent: number; noDocumentType: number; noTags: number };
   duplicateInvolvement: { documentsInGroups: number; percentage: number };
-  largestDocuments: {
-    id: string;
-    paperlessId: number;
-    title: string;
-    correspondent: string | null;
-    archiveFileSize: number;
-  }[];
   usageStats: {
     cumulativeGroupsActioned: number;
     cumulativeDocumentsDeleted: number;
-    cumulativeStorageBytesReclaimed: number;
   };
 }
 
