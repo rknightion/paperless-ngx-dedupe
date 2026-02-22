@@ -29,8 +29,6 @@
   let threshold = $state(Math.round(initialDedup.similarityThreshold * 100));
   let weightJaccard = $state(initialDedup.confidenceWeightJaccard);
   let weightFuzzy = $state(initialDedup.confidenceWeightFuzzy);
-  let weightMetadata = $state(initialDedup.confidenceWeightMetadata);
-  let weightFilename = $state(initialDedup.confidenceWeightFilename);
   let numPermutations = $state(initialDedup.numPermutations);
   let numBands = $state(initialDedup.numBands);
   let ngramSize = $state(initialDedup.ngramSize);
@@ -46,7 +44,7 @@
   let isImporting = $state(false);
   let importStatus: { type: 'success' | 'error'; message: string } | null = $state(null);
 
-  let weightSum = $derived(weightJaccard + weightFuzzy + weightMetadata + weightFilename);
+  let weightSum = $derived(weightJaccard + weightFuzzy);
   let weightsValid = $derived(weightSum === 100);
 
   async function testConnection() {
@@ -149,8 +147,6 @@
           similarityThreshold: threshold / 100,
           confidenceWeightJaccard: weightJaccard,
           confidenceWeightFuzzy: weightFuzzy,
-          confidenceWeightMetadata: weightMetadata,
-          confidenceWeightFilename: weightFilename,
           numPermutations,
           numBands,
           ngramSize,
@@ -398,67 +394,6 @@
             </div>
           </details>
         </div>
-        <div>
-          <label for="w-metadata" class="text-muted block text-sm">
-            Metadata: <span class="text-ink font-mono font-medium">{weightMetadata}</span>
-          </label>
-          <p class="text-muted mt-0.5 text-xs">
-            Compares file size, creation date, document type, and correspondent.
-          </p>
-          <input
-            id="w-metadata"
-            type="range"
-            min="0"
-            max="100"
-            bind:value={weightMetadata}
-            class="accent-accent mt-1 w-full"
-          />
-          <details class="mt-1.5">
-            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
-              How does this work?
-            </summary>
-            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
-              Metadata similarity is an average of four sub-scores: file size ratio (how close the
-              byte sizes are), date proximity (documents created within 30 days score 1.0, over a
-              year apart score 0.0), document type match (exact match = 1.0), and correspondent
-              match (exact match = 1.0). Missing metadata fields are excluded from the average.
-              <strong class="text-ink">Higher weight</strong> means document metadata matters more.
-              <br /><br />
-              <strong class="text-ink">Best for:</strong> environments where documents are well-tagged
-              and dates are reliable.
-            </div>
-          </details>
-        </div>
-        <div>
-          <label for="w-filename" class="text-muted block text-sm">
-            Filename: <span class="text-ink font-mono font-medium">{weightFilename}</span>
-          </label>
-          <p class="text-muted mt-0.5 text-xs">
-            Compares document titles using fuzzy string matching.
-          </p>
-          <input
-            id="w-filename"
-            type="range"
-            min="0"
-            max="100"
-            bind:value={weightFilename}
-            class="accent-accent mt-1 w-full"
-          />
-          <details class="mt-1.5">
-            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
-              How does this work?
-            </summary>
-            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
-              Filename similarity applies the same token-sort Levenshtein ratio used by fuzzy text
-              matching, but on the document titles instead of the full content. This catches files
-              that were renamed slightly (e.g., "Invoice_2024.pdf" vs "Invoice 2024 copy.pdf").
-              <strong class="text-ink">Higher weight</strong> means title similarity matters more.
-              <br /><br />
-              <strong class="text-ink">Best for:</strong> environments where filenames are descriptive
-              and consistently named.
-            </div>
-          </details>
-        </div>
       </div>
 
       <!-- Weight Budget Bar -->
@@ -474,16 +409,6 @@
             style="width: {weightFuzzy}%; background: oklch(0.6 0.16 155);"
             title="Fuzzy: {weightFuzzy}"
           ></div>
-          <div
-            class="transition-all duration-200"
-            style="width: {weightMetadata}%; background: oklch(0.65 0.14 265);"
-            title="Metadata: {weightMetadata}"
-          ></div>
-          <div
-            class="transition-all duration-200"
-            style="width: {weightFilename}%; background: oklch(0.7 0.15 85);"
-            title="Filename: {weightFilename}"
-          ></div>
         </div>
         <div class="text-muted mt-1.5 flex gap-4 text-xs">
           <span class="flex items-center gap-1"
@@ -495,16 +420,6 @@
           <span class="flex items-center gap-1"
             ><span class="inline-block h-2 w-2 rounded-full" style="background: oklch(0.6 0.16 155)"
             ></span> Fuzzy</span
-          >
-          <span class="flex items-center gap-1"
-            ><span
-              class="inline-block h-2 w-2 rounded-full"
-              style="background: oklch(0.65 0.14 265)"
-            ></span> Metadata</span
-          >
-          <span class="flex items-center gap-1"
-            ><span class="inline-block h-2 w-2 rounded-full" style="background: oklch(0.7 0.15 85)"
-            ></span> Filename</span
           >
         </div>
       </div>
