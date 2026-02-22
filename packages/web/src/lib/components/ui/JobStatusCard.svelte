@@ -6,6 +6,7 @@
     type: string;
     status: string;
     progress?: number;
+    phaseProgress?: number | null;
     progressMessage?: string | null;
     startedAt?: string | null;
     completedAt?: string | null;
@@ -17,6 +18,7 @@
     type,
     status,
     progress,
+    phaseProgress,
     progressMessage,
     startedAt,
     completedAt,
@@ -82,7 +84,11 @@
     </div>
     {#if status === 'running' && progress !== undefined}
       <div class="mt-2">
-        <ProgressBar {progress} message={progressMessage ?? ''} />
+        <ProgressBar
+          {progress}
+          phaseProgress={phaseProgress ?? undefined}
+          message={progressMessage ?? ''}
+        />
       </div>
     {/if}
     {#if status === 'failed' && errorMessage}
