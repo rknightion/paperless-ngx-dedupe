@@ -21,7 +21,6 @@ describe('getDashboard', () => {
 
     expect(result.totalDocuments).toBe(0);
     expect(result.pendingGroups).toBe(0);
-    expect(result.storageSavingsBytes).toBe(0);
     expect(result.pendingAnalysis).toBe(0);
     expect(result.lastSyncAt).toBeNull();
     expect(result.lastSyncDocumentCount).toBeNull();
@@ -40,7 +39,6 @@ describe('getDashboard', () => {
           title: 'Doc A',
           correspondent: 'Alice',
           processingStatus: 'completed',
-          archiveFileSize: 1000,
           syncedAt: '2024-01-01T00:00:00Z',
         },
         {
@@ -49,7 +47,6 @@ describe('getDashboard', () => {
           title: 'Doc B',
           correspondent: 'Alice',
           processingStatus: 'completed',
-          archiveFileSize: 2000,
           syncedAt: '2024-01-01T00:00:00Z',
         },
         {
@@ -58,7 +55,6 @@ describe('getDashboard', () => {
           title: 'Doc C',
           correspondent: 'Bob',
           processingStatus: 'pending',
-          archiveFileSize: 3000,
           syncedAt: '2024-01-01T00:00:00Z',
         },
       ])
@@ -111,8 +107,6 @@ describe('getDashboard', () => {
 
     expect(result.totalDocuments).toBe(3);
     expect(result.pendingGroups).toBe(1);
-    // Storage savings = archiveFileSize of non-primary members in pending groups = doc-2's 2000
-    expect(result.storageSavingsBytes).toBe(2000);
     expect(result.pendingAnalysis).toBe(1);
     expect(result.lastSyncAt).toBe('2024-06-01T12:00:00Z');
     expect(result.lastSyncDocumentCount).toBe(100);

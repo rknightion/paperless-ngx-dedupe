@@ -28,7 +28,6 @@ function insertTestData(db: AppDatabase) {
         documentType: 'Invoice',
         tagsJson: '["finance"]',
         createdDate: '2024-01-01',
-        archiveFileSize: 1000,
         syncedAt: '2024-01-01T00:00:00Z',
       },
       {
@@ -39,7 +38,6 @@ function insertTestData(db: AppDatabase) {
         documentType: 'Invoice',
         tagsJson: '["finance","tax"]',
         createdDate: '2024-01-02',
-        archiveFileSize: 2000,
         syncedAt: '2024-01-01T00:00:00Z',
       },
       {
@@ -50,7 +48,6 @@ function insertTestData(db: AppDatabase) {
         documentType: 'Receipt',
         tagsJson: '["expense"]',
         createdDate: '2024-02-01',
-        archiveFileSize: 500,
         syncedAt: '2024-01-01T00:00:00Z',
       },
       {
@@ -61,7 +58,6 @@ function insertTestData(db: AppDatabase) {
         documentType: 'Receipt',
         tagsJson: null,
         createdDate: '2024-02-02',
-        archiveFileSize: 600,
         syncedAt: '2024-01-01T00:00:00Z',
       },
     ])
@@ -82,8 +78,6 @@ function insertTestData(db: AppDatabase) {
       confidenceScore: 0.95,
       jaccardSimilarity: 0.9,
       fuzzyTextRatio: 0.88,
-      metadataSimilarity: 0.85,
-      filenameSimilarity: 0.7,
       algorithmVersion: 'v1',
       createdAt: '2024-01-10T00:00:00Z',
       updatedAt: '2024-01-10T00:00:00Z',
