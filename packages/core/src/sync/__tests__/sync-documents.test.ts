@@ -30,7 +30,7 @@ function makePaperlessDoc(id: number, overrides?: Partial<PaperlessDocument>): P
 function createMockClient(docs: PaperlessDocument[]): PaperlessClient {
   return {
     async *getDocuments() {
-      yield docs;
+      yield { results: docs, totalCount: docs.length };
     },
     async getTags() {
       return [
