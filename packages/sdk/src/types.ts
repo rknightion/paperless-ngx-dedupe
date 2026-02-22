@@ -237,6 +237,13 @@ export interface Job {
 
 // ── Sync types ─────────────────────────────────────────────────────────
 
+export interface SyncOptions {
+  /** Force a full sync instead of incremental. */
+  force?: boolean;
+  /** Purge all local data before syncing. Implies a full sync. */
+  purge?: boolean;
+}
+
 export interface SyncResult {
   totalFetched: number;
   inserted: number;
