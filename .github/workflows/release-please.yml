@@ -45,6 +45,13 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        with:
+          driver-opts: |
+            env.OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+            env.OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+            env.OTEL_TRACES_EXPORTER=otlp
+            env.OTEL_SERVICE_NAME=paperless-ngx-dedupe-ci
+            env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }},ci.platform=${{ matrix.platform }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
