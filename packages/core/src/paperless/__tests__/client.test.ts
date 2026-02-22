@@ -367,15 +367,16 @@ describe('PaperlessClient', () => {
         )
         .mockResolvedValueOnce(mockResponse(makePaginatedResponse([doc3], null, 3)));
 
-      const pages: any[][] = [];
+      const pages: any[] = [];
       for await (const page of client.getDocuments({ pageSize: 1 })) {
         pages.push(page);
       }
 
       expect(pages).toHaveLength(3);
-      expect(pages[0][0].id).toBe(1);
-      expect(pages[1][0].id).toBe(2);
-      expect(pages[2][0].id).toBe(3);
+      expect(pages[0].results[0].id).toBe(1);
+      expect(pages[0].totalCount).toBe(3);
+      expect(pages[1].results[0].id).toBe(2);
+      expect(pages[2].results[0].id).toBe(3);
       expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 
@@ -385,13 +386,14 @@ describe('PaperlessClient', () => {
       const doc = makeSnakeCaseDocument({ id: 1 });
       mockFetch.mockResolvedValueOnce(mockResponse(makePaginatedResponse([doc], null, 1)));
 
-      const pages: any[][] = [];
+      const pages: any[] = [];
       for await (const page of client.getDocuments()) {
         pages.push(page);
       }
 
       expect(pages).toHaveLength(1);
-      expect(pages[0]).toHaveLength(1);
+      expect(pages[0].results).toHaveLength(1);
+      expect(pages[0].totalCount).toBe(1);
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
@@ -400,13 +402,14 @@ describe('PaperlessClient', () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse(makePaginatedResponse([], null, 0)));
 
-      const pages: any[][] = [];
+      const pages: any[] = [];
       for await (const page of client.getDocuments()) {
         pages.push(page);
       }
 
       expect(pages).toHaveLength(1);
-      expect(pages[0]).toEqual([]);
+      expect(pages[0].results).toEqual([]);
+      expect(pages[0].totalCount).toBe(0);
     });
   });
 
