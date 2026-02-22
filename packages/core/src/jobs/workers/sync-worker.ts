@@ -13,6 +13,7 @@ runWorkerTask(async (ctx, onProgress) => {
     { db: ctx.db, client },
     {
       forceFullSync: taskData?.force,
+      metadataConcurrency: config.SYNC_METADATA_CONCURRENCY,
       onProgress,
     },
   );
