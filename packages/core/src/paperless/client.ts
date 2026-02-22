@@ -213,7 +213,7 @@ export class PaperlessClient {
   async *getDocuments(options?: {
     ordering?: string;
     pageSize?: number;
-  }): AsyncGenerator<PaperlessDocument[]> {
+  }): AsyncGenerator<{ results: PaperlessDocument[]; totalCount: number }> {
     const pageSize = options?.pageSize ?? 100;
     const ordering = options?.ordering ?? '-modified';
     const schema = paginatedResponseSchema(paperlessDocumentSchema);
@@ -245,7 +245,7 @@ export class PaperlessClient {
       const json = await response.json();
       const parsed = schema.parse(json);
 
-      yield parsed.results;
+      yield { results: parsed.results, totalCount: parsed.count };
 
       hasNext = parsed.next !== null;
       page++;
