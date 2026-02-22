@@ -303,6 +303,7 @@ export interface BatchDeleteResult {
 
 export interface SSEProgressEvent {
   progress: number;
+  phaseProgress?: number;
   message?: string;
 }
 
