@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
-  import { formatBytes } from '$lib/utils/format';
   import { ExternalLink } from 'lucide-svelte';
 
   interface Props {
@@ -53,18 +52,6 @@
       primaryValue: formatDate(primary.createdDate),
       secondaryValue: formatDate(secondary.createdDate),
       isDifferent: differs(primary.createdDate, secondary.createdDate),
-    },
-    {
-      label: 'Original File Size',
-      primaryValue: primary.originalFileSize ? formatBytes(primary.originalFileSize) : '-',
-      secondaryValue: secondary.originalFileSize ? formatBytes(secondary.originalFileSize) : '-',
-      isDifferent: differs(primary.originalFileSize, secondary.originalFileSize),
-    },
-    {
-      label: 'Archive File Size',
-      primaryValue: primary.archiveFileSize ? formatBytes(primary.archiveFileSize) : '-',
-      secondaryValue: secondary.archiveFileSize ? formatBytes(secondary.archiveFileSize) : '-',
-      isDifferent: differs(primary.archiveFileSize, secondary.archiveFileSize),
     },
     {
       label: 'Word Count',

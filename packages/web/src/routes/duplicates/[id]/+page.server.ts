@@ -16,8 +16,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     weights: {
       jaccard: dedupConfig.confidenceWeightJaccard,
       fuzzy: dedupConfig.confidenceWeightFuzzy,
-      metadata: dedupConfig.confidenceWeightMetadata,
-      filename: dedupConfig.confidenceWeightFilename,
     },
   };
 };

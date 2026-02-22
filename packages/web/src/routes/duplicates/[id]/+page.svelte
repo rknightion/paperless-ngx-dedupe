@@ -9,7 +9,6 @@
     GroupActionBar,
     DocumentVisualCompare,
   } from '$lib/components';
-  import { formatBytes } from '$lib/utils/format';
   import { ArrowLeft, ExternalLink } from 'lucide-svelte';
 
   let { data } = $props();
@@ -90,8 +89,6 @@
     overallScore={data.group.confidenceScore}
     jaccardSimilarity={data.group.jaccardSimilarity}
     fuzzyTextRatio={data.group.fuzzyTextRatio}
-    metadataSimilarity={data.group.metadataSimilarity}
-    filenameSimilarity={data.group.filenameSimilarity}
     weights={data.weights}
   />
 
@@ -116,7 +113,6 @@
             <th class="pr-4 pb-2 font-medium">Title</th>
             <th class="hidden pr-4 pb-2 font-medium sm:table-cell">Correspondent</th>
             <th class="pr-4 pb-2 font-medium">Role</th>
-            <th class="hidden pr-4 pb-2 font-medium md:table-cell">File Size</th>
             <th class="pb-2 font-medium">Actions</th>
           </tr>
         </thead>
@@ -137,9 +133,6 @@
                 {:else}
                   <span class="text-muted">-</span>
                 {/if}
-              </td>
-              <td class="text-muted hidden py-2.5 pr-4 font-mono text-xs md:table-cell">
-                {member.originalFileSize ? formatBytes(member.originalFileSize) : '-'}
               </td>
               <td class="py-2.5">
                 <div class="flex items-center gap-2">

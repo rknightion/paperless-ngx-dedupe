@@ -29,8 +29,6 @@
       memberCount: number;
       jaccardSimilarity: number | null;
       fuzzyTextRatio: number | null;
-      metadataSimilarity: number | null;
-      filenameSimilarity: number | null;
     }>
   >([]);
   let groupsTotal = $state(0);
@@ -419,8 +417,6 @@
                   <ConfidenceTooltipContent
                     jaccardSimilarity={group.jaccardSimilarity}
                     fuzzyTextRatio={group.fuzzyTextRatio}
-                    metadataSimilarity={group.metadataSimilarity}
-                    filenameSimilarity={group.filenameSimilarity}
                   />
                 {/snippet}
               </RichTooltip>

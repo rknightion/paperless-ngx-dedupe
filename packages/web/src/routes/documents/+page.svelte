@@ -1,7 +1,6 @@
 <script lang="ts">
   import { StatCard, EChart, ProgressBar } from '$lib/components';
-  import { formatBytes } from '$lib/utils/format';
-  import { FileStack, Database, Clock, Type, Copy } from 'lucide-svelte';
+  import { FileStack, Clock, Type, Copy } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -109,26 +108,6 @@
     grid: { left: 50, right: 20, top: 30, bottom: 40 },
   });
 
-  // File size distribution bar chart
-  let fileSizeOption: EChartsOption = $derived({
-    tooltip: { trigger: 'axis' },
-    xAxis: {
-      type: 'category',
-      data: data.stats.fileSizeDistribution.map((d) => d.bucket),
-      axisLabel: { fontSize: 11 },
-    },
-    yAxis: { type: 'value', name: 'Documents' },
-    series: [
-      {
-        type: 'bar',
-        data: data.stats.fileSizeDistribution.map((d) => d.count),
-        itemStyle: { color: 'oklch(0.65 0.14 265)' },
-        barMaxWidth: 40,
-      },
-    ],
-    grid: { left: 50, right: 20, top: 30, bottom: 40 },
-  });
-
   // Word count distribution bar chart
   let wordCountOption: EChartsOption = $derived({
     tooltip: { trigger: 'axis' },
@@ -171,9 +150,6 @@
     <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()}>
       {#snippet icon()}<FileStack class="h-5 w-5" />{/snippet}
     </StatCard>
-    <StatCard label="Total Storage" value={formatBytes(data.stats.totalStorageBytes)}>
-      {#snippet icon()}<Database class="h-5 w-5" />{/snippet}
-    </StatCard>
     <div class="panel">
       <p class="text-muted text-sm">OCR Coverage</p>
       <p class="text-ink mt-1 text-2xl font-semibold">{data.stats.ocrCoverage.percentage}%</p>
@@ -214,7 +190,7 @@
       <p class="text-muted mt-1 mb-3 text-sm">
         Cumulative totals across all deduplication sessions.
       </p>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="Groups Actioned"
           value={data.stats.usageStats.cumulativeGroupsActioned.toLocaleString()}
@@ -222,10 +198,6 @@
         <StatCard
           label="Documents Deleted"
           value={data.stats.usageStats.cumulativeDocumentsDeleted.toLocaleString()}
-        />
-        <StatCard
-          label="Storage Reclaimed"
-          value={formatBytes(data.stats.usageStats.cumulativeStorageBytesReclaimed)}
         />
       </div>
     </div>
@@ -245,22 +217,13 @@
     </div>
   {/if}
 
-  <!-- File Size + Word Count Distribution -->
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    {#if data.stats.fileSizeDistribution.some((d) => d.count > 0)}
-      <div class="panel">
-        <h2 class="text-ink mb-4 text-lg font-semibold">File Size Distribution</h2>
-        <EChart option={fileSizeOption} height="250px" />
-      </div>
-    {/if}
-
-    {#if data.stats.wordCountDistribution.some((d) => d.count > 0)}
-      <div class="panel">
-        <h2 class="text-ink mb-4 text-lg font-semibold">Word Count Distribution</h2>
-        <EChart option={wordCountOption} height="250px" />
-      </div>
-    {/if}
-  </div>
+  <!-- Word Count Distribution -->
+  {#if data.stats.wordCountDistribution.some((d) => d.count > 0)}
+    <div class="panel">
+      <h2 class="text-ink mb-4 text-lg font-semibold">Word Count Distribution</h2>
+      <EChart option={wordCountOption} height="250px" />
+    </div>
+  {/if}
 
   <!-- Correspondent + Document Type Distribution -->
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -320,37 +283,6 @@
           </p>
           <p class="text-muted text-xs">No Tags</p>
         </div>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Largest Documents -->
-  {#if data.stats.largestDocuments.length > 0}
-    <div class="panel">
-      <h2 class="text-ink mb-4 text-lg font-semibold">Largest Documents</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-soft border-b text-left">
-              <th class="text-muted pb-2 font-medium">Title</th>
-              <th class="text-muted pb-2 font-medium">Correspondent</th>
-              <th class="text-muted pb-2 text-right font-medium">Size</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each data.stats.largestDocuments as doc (doc.id)}
-              <tr
-                class="border-soft hover:bg-accent-subtle border-b transition-colors last:border-0"
-              >
-                <td class="text-ink py-2 font-medium">{doc.title}</td>
-                <td class="text-muted py-2">{doc.correspondent ?? '-'}</td>
-                <td class="text-muted py-2 text-right font-mono text-xs">
-                  {formatBytes(doc.archiveFileSize)}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
       </div>
     </div>
   {/if}
