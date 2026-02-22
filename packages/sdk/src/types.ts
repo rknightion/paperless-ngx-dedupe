@@ -63,8 +63,6 @@ export interface DocumentSummary {
   createdDate: string | null;
   addedDate: string | null;
   processingStatus: string | null;
-  originalFileSize: number | null;
-  archiveFileSize: number | null;
 }
 
 export interface DocumentDetail extends DocumentSummary {
@@ -92,7 +90,6 @@ export interface DocumentStats {
   correspondentDistribution: { name: string; count: number }[];
   documentTypeDistribution: { name: string; count: number }[];
   tagDistribution: { name: string; count: number }[];
-  totalStorageBytes: number;
   averageWordCount: number;
 }
 
@@ -126,8 +123,6 @@ export interface DuplicateGroupMember {
   documentType: string | null;
   tags: string[];
   createdDate: string | null;
-  originalFileSize: number | null;
-  archiveFileSize: number | null;
   content: {
     fullText: string | null;
     wordCount: number | null;
@@ -139,8 +134,6 @@ export interface DuplicateGroupDetail {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
-  metadataSimilarity: number | null;
-  filenameSimilarity: number | null;
   algorithmVersion: string;
   status: string;
   createdAt: string;
@@ -211,7 +204,6 @@ export interface SimilarityGraphFilters {
 export interface DashboardData {
   totalDocuments: number;
   pendingGroups: number;
-  storageSavingsBytes: number;
   pendingAnalysis: number;
   lastSyncAt: string | null;
   lastSyncDocumentCount: number | null;
@@ -280,8 +272,6 @@ export interface DedupConfig {
   similarityThreshold: number;
   confidenceWeightJaccard: number;
   confidenceWeightFuzzy: number;
-  confidenceWeightMetadata: number;
-  confidenceWeightFilename: number;
   fuzzySampleSize: number;
   autoAnalyze: boolean;
 }

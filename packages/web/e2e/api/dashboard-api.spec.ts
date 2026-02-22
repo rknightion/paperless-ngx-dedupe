@@ -20,7 +20,6 @@ test.describe('Dashboard API', () => {
     expect(typeof data.totalDocuments).toBe('number');
     expect(data.totalDocuments).toBeGreaterThan(0);
     expect(typeof data.pendingGroups).toBe('number');
-    expect(typeof data.storageSavingsBytes).toBe('number');
     expect(typeof data.pendingAnalysis).toBe('number');
 
     // Sync state fields
