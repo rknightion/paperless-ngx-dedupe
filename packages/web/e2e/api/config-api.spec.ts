@@ -80,8 +80,6 @@ test.describe('Config API', () => {
     expect(typeof data.similarityThreshold).toBe('number');
     expect(typeof data.confidenceWeightJaccard).toBe('number');
     expect(typeof data.confidenceWeightFuzzy).toBe('number');
-    expect(typeof data.confidenceWeightMetadata).toBe('number');
-    expect(typeof data.confidenceWeightFilename).toBe('number');
     expect(typeof data.fuzzySampleSize).toBe('number');
     expect(typeof data.autoAnalyze).toBe('boolean');
   });

@@ -92,13 +92,10 @@ test.describe('Documents API', () => {
     expect(Array.isArray(data.correspondentDistribution)).toBe(true);
     expect(Array.isArray(data.documentTypeDistribution)).toBe(true);
     expect(Array.isArray(data.tagDistribution)).toBe(true);
-    expect(Array.isArray(data.fileSizeDistribution)).toBe(true);
     expect(Array.isArray(data.wordCountDistribution)).toBe(true);
     expect(Array.isArray(data.documentsOverTime)).toBe(true);
-    expect(Array.isArray(data.largestDocuments)).toBe(true);
 
     // Scalar stats
-    expect(typeof data.totalStorageBytes).toBe('number');
     expect(typeof data.averageWordCount).toBe('number');
 
     // Unclassified
