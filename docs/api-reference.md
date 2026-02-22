@@ -293,10 +293,8 @@ If weight keys change, `meta.recalculatedGroups` is included.
     "ngramSize": 3,
     "minWords": 20,
     "similarityThreshold": 0.75,
-    "confidenceWeightJaccard": 45,
-    "confidenceWeightFuzzy": 40,
-    "confidenceWeightMetadata": 10,
-    "confidenceWeightFilename": 5,
+    "confidenceWeightJaccard": 55,
+    "confidenceWeightFuzzy": 45,
     "fuzzySampleSize": 10000,
     "autoAnalyze": true
   },

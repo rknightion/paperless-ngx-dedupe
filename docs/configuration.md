@@ -109,14 +109,12 @@ Change these in **Settings** or via `PUT /api/v1/config/dedup`.
 
 ### Confidence Weights
 
-All four are integers `0-100` and **must sum to 100**.
+Both are integers `0-100` and **must sum to 100**.
 
 | Setting | Default |
 | --- | --- |
-| `confidenceWeightJaccard` | `45` |
-| `confidenceWeightFuzzy` | `40` |
-| `confidenceWeightMetadata` | `10` |
-| `confidenceWeightFilename` | `5` |
+| `confidenceWeightJaccard` | `55` |
+| `confidenceWeightFuzzy` | `45` |
 
 When any weight changes, existing group confidence scores are recalculated automatically.
 
@@ -132,10 +130,8 @@ curl -X PUT http://localhost:3000/api/v1/config/dedup \
 curl -X PUT http://localhost:3000/api/v1/config/dedup \
   -H 'Content-Type: application/json' \
   -d '{
-    "confidenceWeightJaccard":50,
-    "confidenceWeightFuzzy":35,
-    "confidenceWeightMetadata":10,
-    "confidenceWeightFilename":5
+    "confidenceWeightJaccard":60,
+    "confidenceWeightFuzzy":40
   }'
 ```
 
