@@ -8,6 +8,7 @@ export const job = sqliteTable('job', {
   type: text('type').notNull(),
   status: text('status').default('pending'),
   progress: real('progress').default(0),
+  phaseProgress: real('phase_progress'),
   progressMessage: text('progress_message'),
   startedAt: text('started_at'),
   completedAt: text('completed_at'),
