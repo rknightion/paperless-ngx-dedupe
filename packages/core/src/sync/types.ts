@@ -1,7 +1,11 @@
 import type { AppDatabase } from '../db/client.js';
 import type { PaperlessClient } from '../paperless/client.js';
 
-export type SyncProgressCallback = (progress: number, message?: string) => Promise<void>;
+export type SyncProgressCallback = (
+  progress: number,
+  message?: string,
+  phaseProgress?: number,
+) => Promise<void>;
 
 export interface SyncOptions {
   forceFullSync?: boolean;
