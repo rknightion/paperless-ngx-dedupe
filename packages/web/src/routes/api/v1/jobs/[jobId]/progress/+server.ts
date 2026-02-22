@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (terminalStates.includes(initialJob.status!)) {
     const body = [
       `event: complete`,
-      `data: ${JSON.stringify({ progress: initialJob.progress, message: initialJob.progressMessage, status: initialJob.status })}`,
+      `data: ${JSON.stringify({ progress: initialJob.progress, phaseProgress: initialJob.phaseProgress, message: initialJob.progressMessage, status: initialJob.status })}`,
       '',
       '',
     ].join('\n');
@@ -58,6 +58,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
       // Send initial progress
       sendEvent('progress', {
         progress: initialJob.progress,
+        phaseProgress: initialJob.phaseProgress,
         message: initialJob.progressMessage,
         status: initialJob.status,
       });
@@ -77,6 +78,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
           if (terminalStates.includes(currentJob.status!)) {
             sendEvent('complete', {
               progress: currentJob.progress,
+              phaseProgress: currentJob.phaseProgress,
               message: currentJob.progressMessage,
               status: currentJob.status,
             });
@@ -87,6 +89,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
           sendEvent('progress', {
             progress: currentJob.progress,
+            phaseProgress: currentJob.phaseProgress,
             message: currentJob.progressMessage,
             status: currentJob.status,
           });
