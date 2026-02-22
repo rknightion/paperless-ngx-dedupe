@@ -203,6 +203,7 @@ jobs:
             env.OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
             env.OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
             env.OTEL_TRACES_EXPORTER=otlp
+            env.OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
             env.OTEL_SERVICE_NAME=paperless-ngx-dedupe-ci
             "env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }}"
 
@@ -270,6 +271,7 @@ jobs:
             env.OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
             env.OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
             env.OTEL_TRACES_EXPORTER=otlp
+            env.OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
             env.OTEL_SERVICE_NAME=paperless-ngx-dedupe-ci
             "env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }},ci.platform=${{ matrix.platform }}"
 
