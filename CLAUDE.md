@@ -13,6 +13,24 @@ pnpm monorepo (Node >=24.0.0 required) with four packages:
 
 Path aliases: `@paperless-dedupe/core` → `packages/core/src/index.ts`; `@paperless-dedupe/sdk` → `packages/sdk/src/index.ts`.
 
+## Quality Checks
+
+Always run the full build and type-check (`npm run build` or equivalent) after completing any code changes. Do not consider a task done until the build passes cleanly with zero errors.
+
+After editing files, check for duplicate imports and stale references from the previous code. Run ESLint or the project linter to catch these before proceeding.
+
+## Svelte 5 Conventions
+
+When working in Svelte 5 files (.svelte, .svelte.ts): use `SvelteMap` and `SvelteSet` instead of native `Map`/`Set`, use `const` (not `let`) for `$derived` runes, avoid deprecated `svelte:component` syntax, and ensure all `{#each}` blocks have unique keys.
+
+## Debugging Guidelines
+
+Before changing code to fix a bug, first investigate the root cause thoroughly (check git history, trace data flow, examine API responses). Do not make speculative code fixes before understanding why the issue occurs.
+
+## Workflow Preferences
+
+When creating implementation plans from todos.txt, keep the planning phase brief and present the plan for approval before exploring the entire codebase. Do not spend excessive time on exploration before producing actionable output.
+
 ## Commands
 
 ```bash
