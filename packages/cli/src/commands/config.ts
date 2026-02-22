@@ -41,8 +41,6 @@ export function registerConfigCommand(program: Command): void {
     .option('--min-words <value>', 'minimum words for analysis', parseInt)
     .option('--weight-jaccard <value>', 'confidence weight for Jaccard (0-100)', parseInt)
     .option('--weight-fuzzy <value>', 'confidence weight for fuzzy text (0-100)', parseInt)
-    .option('--weight-metadata <value>', 'confidence weight for metadata (0-100)', parseInt)
-    .option('--weight-filename <value>', 'confidence weight for filename (0-100)', parseInt)
     .option('--fuzzy-sample-size <value>', 'fuzzy text sample size', parseInt)
     .option('--auto-analyze <value>', 'auto-analyze after sync (true/false)')
     .action(
@@ -54,8 +52,6 @@ export function registerConfigCommand(program: Command): void {
         minWords?: number;
         weightJaccard?: number;
         weightFuzzy?: number;
-        weightMetadata?: number;
-        weightFilename?: number;
         fuzzySampleSize?: number;
         autoAnalyze?: string;
       }) => {
@@ -79,12 +75,6 @@ export function registerConfigCommand(program: Command): void {
           }
           if (opts.weightFuzzy !== undefined) {
             updates.confidenceWeightFuzzy = opts.weightFuzzy;
-          }
-          if (opts.weightMetadata !== undefined) {
-            updates.confidenceWeightMetadata = opts.weightMetadata;
-          }
-          if (opts.weightFilename !== undefined) {
-            updates.confidenceWeightFilename = opts.weightFilename;
           }
           if (opts.fuzzySampleSize !== undefined) {
             updates.fuzzySampleSize = opts.fuzzySampleSize;
