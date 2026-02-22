@@ -267,6 +267,7 @@ describe('toPaperlessConfig bridge function', () => {
       CORS_ALLOW_ORIGIN: '',
       AUTO_MIGRATE: true,
       PAPERLESS_METRICS_ENABLED: false,
+      SYNC_METADATA_CONCURRENCY: 10,
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');
@@ -287,6 +288,7 @@ describe('toPaperlessConfig bridge function', () => {
       CORS_ALLOW_ORIGIN: '',
       AUTO_MIGRATE: true,
       PAPERLESS_METRICS_ENABLED: false,
+      SYNC_METADATA_CONCURRENCY: 10,
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');
