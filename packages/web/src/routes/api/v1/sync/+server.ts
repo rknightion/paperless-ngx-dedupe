@@ -10,12 +10,14 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   let force = false;
+  let purge = false;
 
   const contentType = request.headers.get('content-type');
   if (contentType?.includes('application/json')) {
     try {
       const body = await request.json();
       force = body?.force === true;
+      purge = body?.purge === true;
     } catch {
       // Ignore parse errors, default to non-force
     }
@@ -37,7 +39,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     jobId,
     dbPath: locals.config.DATABASE_URL,
     workerScriptPath: workerPath,
-    taskData: { force },
+    taskData: { force, purge },
   });
 
   return apiSuccess({ jobId }, undefined, 202);
