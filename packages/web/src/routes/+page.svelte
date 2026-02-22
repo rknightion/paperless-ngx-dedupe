@@ -14,6 +14,7 @@
   let syncPhaseProgress = $state<number | undefined>(undefined);
   let syncMessage = $state('');
   let syncForce = $state(false);
+  let syncPurge = $state(false);
   let syncSSE: { close: () => void } | null = null;
 
   // Analysis state
@@ -29,7 +30,18 @@
     return new Date(iso).toLocaleString();
   }
 
+  $effect(() => {
+    if (!syncForce) syncPurge = false;
+  });
+
   async function startSync() {
+    if (syncPurge) {
+      const confirmed = confirm(
+        'This will permanently delete all local documents, analysis results, and duplicate groups. The data will be reimported from Paperless-NGX.\n\nContinue?',
+      );
+      if (!confirmed) return;
+    }
+
     isSyncing = true;
     syncProgress = 0;
     syncMessage = 'Starting sync...';
@@ -37,7 +49,7 @@
       const res = await fetch('/api/v1/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: syncForce }),
+        body: JSON.stringify({ force: syncForce, purge: syncPurge }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -263,6 +275,16 @@
           Force Full Sync
         </label>
       </div>
+      {#if syncForce}
+        <label class="text-muted mt-2 flex items-center gap-2 text-sm">
+          <input type="checkbox" bind:checked={syncPurge} class="rounded" />
+          <span>
+            Purge & Resync
+            <span class="text-xs opacity-70">— Delete all local data and reimport from scratch</span
+            >
+          </span>
+        </label>
+      {/if}
       {#if isSyncing}
         <div class="mt-4">
           <ProgressBar
