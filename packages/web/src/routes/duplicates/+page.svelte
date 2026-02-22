@@ -232,7 +232,7 @@
     <div class="text-muted mt-3 space-y-3 text-sm leading-relaxed">
       <p>
         Paperless NGX Dedupe identifies potential duplicates using a multi-stage pipeline that
-        compares documents across four similarity dimensions:
+        compares documents across two similarity dimensions:
       </p>
       <dl
         class="border-soft grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 rounded-lg border p-3 text-xs"
@@ -247,19 +247,9 @@
           Measures character-level edit distance after sorting words. Catches documents with minor
           wording differences or typos.
         </dd>
-        <dt class="text-ink font-semibold">Metadata</dt>
-        <dd>
-          Compares correspondent, document type, tags, and dates. Useful when OCR text varies but
-          document metadata is consistent.
-        </dd>
-        <dt class="text-ink font-semibold">Filename</dt>
-        <dd>
-          Compares original filenames for structural similarity. Helps when files were uploaded
-          multiple times with similar names.
-        </dd>
       </dl>
       <p>
-        These four scores are combined into an overall
+        These two scores are combined into an overall
         <strong class="text-ink">confidence score</strong>
         using configurable weights (adjustable in
         <a href="/settings" class="text-accent hover:text-accent-hover underline">Settings</a>).
@@ -515,8 +505,6 @@
                     <ConfidenceTooltipContent
                       jaccardSimilarity={group.jaccardSimilarity}
                       fuzzyTextRatio={group.fuzzyTextRatio}
-                      metadataSimilarity={group.metadataSimilarity}
-                      filenameSimilarity={group.filenameSimilarity}
                     />
                   {/snippet}
                 </RichTooltip>

@@ -6,19 +6,10 @@
     overallScore: number;
     jaccardSimilarity: number | null;
     fuzzyTextRatio: number | null;
-    metadataSimilarity: number | null;
-    filenameSimilarity: number | null;
-    weights?: { jaccard: number; fuzzy: number; metadata: number; filename: number };
+    weights?: { jaccard: number; fuzzy: number };
   }
 
-  let {
-    overallScore,
-    jaccardSimilarity,
-    fuzzyTextRatio,
-    metadataSimilarity,
-    filenameSimilarity,
-    weights,
-  }: Props = $props();
+  let { overallScore, jaccardSimilarity, fuzzyTextRatio, weights }: Props = $props();
 
   function scoreColor(score: number | null): string {
     if (score === null) return 'oklch(0.75 0.01 260)';
@@ -31,8 +22,6 @@
   const components = $derived([
     { name: 'Jaccard (Shingles)', score: jaccardSimilarity, weight: weights?.jaccard },
     { name: 'Fuzzy Text', score: fuzzyTextRatio, weight: weights?.fuzzy },
-    { name: 'Metadata', score: metadataSimilarity, weight: weights?.metadata },
-    { name: 'Filename', score: filenameSimilarity, weight: weights?.filename },
   ]);
 
   let chartOption: EChartsOption = $derived({
@@ -88,5 +77,5 @@
     <h3 class="text-ink text-base font-semibold">Confidence Breakdown</h3>
     <ConfidenceBadge score={overallScore} />
   </div>
-  <EChart option={chartOption} height="180px" />
+  <EChart option={chartOption} height="120px" />
 </div>

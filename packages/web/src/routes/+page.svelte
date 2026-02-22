@@ -1,9 +1,8 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { StatCard, JobStatusCard, EChart, ProgressBar } from '$lib/components';
-  import { formatBytes } from '$lib/utils/format';
   import { connectJobSSE } from '$lib/sse';
-  import { FileStack, AlertCircle, HardDrive, Clock } from 'lucide-svelte';
+  import { FileStack, AlertCircle, Clock } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -232,15 +231,12 @@
   </header>
 
   <!-- Stat Cards -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <StatCard label="Total Documents" value={data.dashboard.totalDocuments.toLocaleString()}>
       {#snippet icon()}<FileStack class="h-5 w-5" />{/snippet}
     </StatCard>
     <StatCard label="Pending Groups" value={data.dashboard.pendingGroups.toLocaleString()}>
       {#snippet icon()}<AlertCircle class="h-5 w-5" />{/snippet}
-    </StatCard>
-    <StatCard label="Storage Savings" value={formatBytes(data.dashboard.storageSavingsBytes)}>
-      {#snippet icon()}<HardDrive class="h-5 w-5" />{/snippet}
     </StatCard>
     <StatCard label="Pending Analysis" value={data.dashboard.pendingAnalysis.toLocaleString()}>
       {#snippet icon()}<Clock class="h-5 w-5" />{/snippet}

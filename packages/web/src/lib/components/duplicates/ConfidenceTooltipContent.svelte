@@ -2,12 +2,9 @@
   interface Props {
     jaccardSimilarity: number | null;
     fuzzyTextRatio: number | null;
-    metadataSimilarity: number | null;
-    filenameSimilarity: number | null;
   }
 
-  let { jaccardSimilarity, fuzzyTextRatio, metadataSimilarity, filenameSimilarity }: Props =
-    $props();
+  let { jaccardSimilarity, fuzzyTextRatio }: Props = $props();
 
   function fmt(score: number | null): string {
     return score !== null ? `${Math.round(score * 100)}%` : 'N/A';
@@ -24,8 +21,6 @@
   let components = $derived([
     { label: 'Jaccard', score: jaccardSimilarity },
     { label: 'Fuzzy Text', score: fuzzyTextRatio },
-    { label: 'Metadata', score: metadataSimilarity },
-    { label: 'Filename', score: filenameSimilarity },
   ]);
 </script>
 
