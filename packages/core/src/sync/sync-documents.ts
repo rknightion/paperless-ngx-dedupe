@@ -6,6 +6,7 @@ import { normalizeText } from './normalize.js';
 import { computeFingerprint } from './fingerprint.js';
 import { withSpan } from '../telemetry/spans.js';
 import { syncDocumentsTotal, syncRunsTotal, syncDuration } from '../telemetry/metrics.js';
+import { purgeAllDocumentData } from './purge.js';
 import type { SyncDependencies, SyncOptions, SyncResult, ReferenceMaps } from './types.js';
 import type { PaperlessDocument } from '../paperless/types.js';
 import type { PaperlessClient } from '../paperless/client.js';
@@ -27,7 +28,15 @@ export async function syncDocuments(
   const metadataConcurrency = options?.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY;
   const onProgress = options?.onProgress;
 
-  // 1. Determine sync type (full vs incremental)
+  // 1. Purge all local data if requested (before determining sync type)
+  if (options?.purgeBeforeSync) {
+    logger.info('Purging all local document data before sync');
+    await onProgress?.(0, 'Purging existing data...');
+    const purgeResult = purgeAllDocumentData(db);
+    logger.info(purgeResult, 'Purge complete');
+  }
+
+  // 2. Determine sync type (full vs incremental)
   const state = db.select().from(syncState).where(eq(syncState.id, 'singleton')).get();
   const lastSyncAt = state?.lastSyncAt ?? null;
   const isFullSync = options?.forceFullSync || !lastSyncAt;
@@ -36,16 +45,16 @@ export async function syncDocuments(
   logger.info({ syncType, lastSyncAt, metadataConcurrency }, 'Starting document sync');
   await onProgress?.(0, `Starting ${syncType} sync...`);
 
-  // 2. Fetch reference data
+  // 3. Fetch reference data
   const refMaps = await withSpan('dedupe.sync.fetch_references', {}, async () =>
     fetchReferenceMaps(client),
   );
   await onProgress?.(0.02, 'Loaded reference data');
 
-  // 3. Load local documents for O(1) lookup
+  // 4. Load local documents for O(1) lookup
   const localDocs = loadLocalDocuments(db);
 
-  // 4. Iterate through Paperless documents with pipelined metadata fetching
+  // 5. Iterate through Paperless documents with pipelined metadata fetching
   // Progress allocation (based on benchmarked time split):
   //   Reference data:  0% →  2%
   //   Doc fetch:       2% → 20%  (~19% of sync time)
@@ -161,7 +170,7 @@ export async function syncDocuments(
     }
   }
 
-  // 5. Drain remaining in-flight metadata fetches
+  // 6. Drain remaining in-flight metadata fetches
   if (metadataQueued > 0) {
     const metadataTotal = metadataQueued;
 
@@ -188,7 +197,7 @@ export async function syncDocuments(
     await onProgress?.(0.95, `Fetched metadata for ${metadataTotal} documents`);
   }
 
-  // 6. Update sync state
+  // 7. Update sync state
   const now = new Date().toISOString();
   const totalDocsCount = db.select().from(document).all().length;
 

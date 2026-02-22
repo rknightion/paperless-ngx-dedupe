@@ -9,6 +9,7 @@ export type SyncProgressCallback = (
 
 export interface SyncOptions {
   forceFullSync?: boolean;
+  purgeBeforeSync?: boolean;
   maxOcrLength?: number;
   metadataConcurrency?: number;
   pageSize?: number;
