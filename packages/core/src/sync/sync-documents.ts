@@ -14,7 +14,6 @@ import type { AppDatabase } from '../db/client.js';
 
 const DEFAULT_PAGE_SIZE = 100;
 const DEFAULT_MAX_OCR_LENGTH = 500_000;
-const DEFAULT_METADATA_CONCURRENCY = 10;
 
 export async function syncDocuments(
   deps: SyncDependencies,
@@ -25,7 +24,6 @@ export async function syncDocuments(
   const { db, client } = deps;
   const pageSize = options?.pageSize ?? DEFAULT_PAGE_SIZE;
   const maxOcrLength = options?.maxOcrLength ?? DEFAULT_MAX_OCR_LENGTH;
-  const metadataConcurrency = options?.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY;
   const onProgress = options?.onProgress;
 
   // 1. Purge all local data if requested (before determining sync type)
@@ -42,7 +40,7 @@ export async function syncDocuments(
   const isFullSync = options?.forceFullSync || !lastSyncAt;
   const syncType = isFullSync ? 'full' : 'incremental';
 
-  logger.info({ syncType, lastSyncAt, metadataConcurrency }, 'Starting document sync');
+  logger.info({ syncType, lastSyncAt }, 'Starting document sync');
   await onProgress?.(0, `Starting ${syncType} sync...`);
 
   // 3. Fetch reference data
@@ -54,12 +52,7 @@ export async function syncDocuments(
   // 4. Load local documents for O(1) lookup
   const localDocs = loadLocalDocuments(db);
 
-  // 5. Iterate through Paperless documents with pipelined metadata fetching
-  // Progress allocation (based on benchmarked time split):
-  //   Reference data:  0% →  2%
-  //   Doc fetch:       2% → 20%  (~19% of sync time)
-  //   Metadata:       20% → 95%  (~81% of sync time)
-  //   Finalize:       95% → 100%
+  // 5. Iterate through Paperless documents
   const result: SyncResult = {
     totalFetched: 0,
     inserted: 0,
@@ -69,46 +62,6 @@ export async function syncDocuments(
     errors: [],
     durationMs: 0,
     syncType,
-  };
-
-  // Metadata concurrency pool — fetches start immediately as docs are inserted/updated
-  const metadataInFlight: { promise: Promise<void>; settled: boolean }[] = [];
-  let metadataQueued = 0;
-  let metadataFetched = 0;
-
-  const queueMetadataFetch = (paperlessId: number, localId: string) => {
-    metadataQueued++;
-    const entry: { promise: Promise<void>; settled: boolean } = {
-      promise: null!,
-      settled: false,
-    };
-    entry.promise = (async () => {
-      try {
-        const metadata = await client.getDocumentMetadata(paperlessId);
-        db.update(document)
-          .set({
-            originalFileSize: metadata.originalSize,
-            archiveFileSize: metadata.archiveSize,
-          })
-          .where(eq(document.id, localId))
-          .run();
-      } catch (error) {
-        logger.warn({ paperlessId, error: String(error) }, 'Failed to fetch document metadata');
-      }
-      metadataFetched++;
-    })().finally(() => {
-      entry.settled = true;
-    });
-    metadataInFlight.push(entry);
-  };
-
-  const drainToCapacity = async () => {
-    if (metadataInFlight.length >= metadataConcurrency) {
-      await Promise.race(metadataInFlight.map((e) => e.promise));
-      for (let i = metadataInFlight.length - 1; i >= 0; i--) {
-        if (metadataInFlight[i].settled) metadataInFlight.splice(i, 1);
-      }
-    }
   };
 
   let shouldStop = false;
@@ -127,16 +80,12 @@ export async function syncDocuments(
         const localDoc = localDocs.get(doc.id);
 
         if (!localDoc) {
-          // New document - insert and queue metadata fetch
-          const localId = insertDocument(db, doc, fingerprint, refMaps, maxOcrLength);
-          queueMetadataFetch(doc.id, localId);
-          await drainToCapacity();
+          // New document - insert
+          insertDocument(db, doc, fingerprint, refMaps, maxOcrLength);
           result.inserted++;
         } else if (localDoc.fingerprint !== fingerprint) {
-          // Modified - update and queue metadata fetch
+          // Modified - update
           updateDocument(db, localDoc.id, doc, fingerprint, refMaps, maxOcrLength);
-          queueMetadataFetch(doc.id, localDoc.id);
-          await drainToCapacity();
           result.updated++;
         } else {
           // Unchanged - skip
@@ -150,11 +99,9 @@ export async function syncDocuments(
       }
     }
 
-    // Report progress: doc fetch drives 2%→20%, metadata may push beyond 20%
+    // Report progress
     const docPhase = totalCount && totalCount > 0 ? result.totalFetched / totalCount : 0;
-    const docProgress = 0.02 + 0.18 * docPhase;
-    const metaProgress = metadataQueued > 0 ? 0.2 + 0.75 * (metadataFetched / metadataQueued) : 0;
-    const progress = Math.max(docProgress, metaProgress);
+    const progress = 0.02 + 0.93 * docPhase;
     await onProgress?.(
       Math.min(progress, 0.95),
       `Syncing documents: ${result.totalFetched}/${totalCount ?? '?'} (${result.inserted} new, ${result.updated} updated)`,
@@ -170,34 +117,7 @@ export async function syncDocuments(
     }
   }
 
-  // 6. Drain remaining in-flight metadata fetches
-  if (metadataQueued > 0) {
-    const metadataTotal = metadataQueued;
-
-    // Report progress periodically while draining
-    const reportDrainProgress = async () => {
-      const metaPhase = metadataFetched / metadataTotal;
-      await onProgress?.(
-        Math.min(0.2 + 0.75 * metaPhase, 0.95),
-        `Fetching metadata: ${metadataFetched}/${metadataTotal}`,
-        metaPhase,
-      );
-    };
-
-    // Wait for all in-flight to complete, reporting progress periodically
-    while (metadataInFlight.length > 0) {
-      await Promise.race(metadataInFlight.map((e) => e.promise));
-      for (let i = metadataInFlight.length - 1; i >= 0; i--) {
-        if (metadataInFlight[i].settled) metadataInFlight.splice(i, 1);
-      }
-      await reportDrainProgress();
-    }
-
-    logger.info({ metadataFetched: metadataTotal }, 'Metadata fetch complete');
-    await onProgress?.(0.95, `Fetched metadata for ${metadataTotal} documents`);
-  }
-
-  // 7. Update sync state
+  // 6. Update sync state
   const now = new Date().toISOString();
   const totalDocsCount = db.select().from(document).all().length;
 

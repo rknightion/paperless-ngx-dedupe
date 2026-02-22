@@ -16,8 +16,6 @@ export const document = sqliteTable(
     createdDate: text('created_date'),
     addedDate: text('added_date'),
     modifiedDate: text('modified_date'),
-    originalFileSize: integer('original_file_size'),
-    archiveFileSize: integer('archive_file_size'),
     processingStatus: text('processing_status').default('pending'),
     syncedAt: text('synced_at').notNull(),
   },

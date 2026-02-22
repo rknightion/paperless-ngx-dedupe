@@ -5,7 +5,6 @@ import { paperlessRequestsTotal } from '../telemetry/metrics.js';
 import type {
   PaperlessConfig,
   PaperlessDocument,
-  DocumentMetadata,
   PaperlessTag,
   PaperlessCorrespondent,
   PaperlessDocumentType,
@@ -17,7 +16,6 @@ import type {
 } from './types.js';
 import {
   paperlessDocumentSchema,
-  documentMetadataSchema,
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,
@@ -257,12 +255,6 @@ export class PaperlessClient {
     const json = await response.json();
     const doc = paperlessDocumentSchema.parse(json);
     return doc.content;
-  }
-
-  async getDocumentMetadata(id: number): Promise<DocumentMetadata> {
-    const response = await this.fetchWithRetry(this.buildUrl(`/api/documents/${id}/metadata/`));
-    const json = await response.json();
-    return documentMetadataSchema.parse(json);
   }
 
   async getTags(): Promise<PaperlessTag[]> {

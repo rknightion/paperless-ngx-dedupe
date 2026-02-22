@@ -11,7 +11,6 @@ export interface SyncOptions {
   forceFullSync?: boolean;
   purgeBeforeSync?: boolean;
   maxOcrLength?: number;
-  metadataConcurrency?: number;
   pageSize?: number;
   onProgress?: SyncProgressCallback;
   signal?: AbortSignal;

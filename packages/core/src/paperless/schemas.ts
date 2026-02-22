@@ -33,28 +33,6 @@ export const paperlessDocumentSchema = z
     archiveSerialNumber: raw.archive_serial_number,
   }));
 
-export const documentMetadataSchema = z
-  .object({
-    original_checksum: z.string(),
-    original_size: z.number(),
-    original_mime_type: z.string(),
-    media_filename: z.string(),
-    has_archive_version: z.boolean(),
-    archive_checksum: z.string().nullable().default(null),
-    archive_size: z.number().nullable().default(null),
-    archive_media_filename: z.string().nullable().default(null),
-  })
-  .transform((raw) => ({
-    originalChecksum: raw.original_checksum,
-    originalSize: raw.original_size,
-    originalMimeType: raw.original_mime_type,
-    mediaFilename: raw.media_filename,
-    hasArchiveVersion: raw.has_archive_version,
-    archiveChecksum: raw.archive_checksum,
-    archiveSize: raw.archive_size,
-    archiveMediaFilename: raw.archive_media_filename,
-  }));
-
 export const paperlessTagSchema = z
   .object({
     id: z.number(),

@@ -26,7 +26,6 @@ runWorkerTask(async (ctx, onProgress) => {
 
   let deletedDocuments = 0;
   let deletedGroups = 0;
-  let totalBytesReclaimed = 0;
   const errors: BatchError[] = [];
 
   for (let i = 0; i < groupIds.length; i++) {
@@ -44,7 +43,6 @@ runWorkerTask(async (ctx, onProgress) => {
         isPrimary: duplicateMember.isPrimary,
         paperlessId: document.paperlessId,
         title: document.title,
-        archiveFileSize: document.archiveFileSize,
       })
       .from(duplicateMember)
       .innerJoin(document, eq(duplicateMember.documentId, document.id))
@@ -57,7 +55,6 @@ runWorkerTask(async (ctx, onProgress) => {
       try {
         await client.deleteDocument(member.paperlessId);
         deletedDocuments++;
-        totalBytesReclaimed += member.archiveFileSize ?? 0;
       } catch (error) {
         groupSuccess = false;
         errors.push({
@@ -83,11 +80,10 @@ runWorkerTask(async (ctx, onProgress) => {
   if (deletedDocuments > 0) {
     incrementUsageStats(ctx.db, {
       documentsDeleted: deletedDocuments,
-      storageBytesReclaimed: totalBytesReclaimed,
     });
   }
 
   await onProgress(100, 'Batch operation complete');
 
-  return { deletedDocuments, deletedGroups, totalBytesReclaimed, errors };
+  return { deletedDocuments, deletedGroups, errors };
 });

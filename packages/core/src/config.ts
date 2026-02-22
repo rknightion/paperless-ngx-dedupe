@@ -19,7 +19,6 @@ const configSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     PAPERLESS_METRICS_COLLECTORS: z.string().optional(),
-    SYNC_METADATA_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(10),
   })
   .refine(
     (data) => data.PAPERLESS_API_TOKEN || (data.PAPERLESS_USERNAME && data.PAPERLESS_PASSWORD),
