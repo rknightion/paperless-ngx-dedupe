@@ -107,6 +107,8 @@ export type { WorkerName } from './jobs/worker-paths.js';
 
 // Sync
 export { syncDocuments } from './sync/sync-documents.js';
+export { purgeAllDocumentData } from './sync/purge.js';
+export type { PurgeResult } from './sync/purge.js';
 export { normalizeText } from './sync/normalize.js';
 export type { NormalizedResult } from './sync/normalize.js';
 export { computeFingerprint } from './sync/fingerprint.js';
