@@ -62,7 +62,6 @@ test.describe('Duplicate Detail Page', () => {
     await expect(membersTable.getByText('Title')).toBeVisible();
     await expect(membersTable.getByText('Correspondent')).toBeVisible();
     await expect(membersTable.getByText('Role')).toBeVisible();
-    await expect(membersTable.getByText('File Size')).toBeVisible();
 
     // Should show primary badge for primary member (scoped to table to avoid matching ConfirmDialog)
     await expect(page.locator('table').getByText('Primary').first()).toBeVisible();

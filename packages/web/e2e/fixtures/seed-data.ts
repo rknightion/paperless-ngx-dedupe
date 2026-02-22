@@ -26,8 +26,8 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
   const jobIds: string[] = [];
 
   const insertDoc = db.prepare(`
-    INSERT OR IGNORE INTO document (id, paperless_id, title, fingerprint, correspondent, document_type, tags_json, created_date, added_date, modified_date, original_file_size, archive_file_size, processing_status, synced_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO document (id, paperless_id, title, fingerprint, correspondent, document_type, tags_json, created_date, added_date, modified_date, processing_status, synced_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertContent = db.prepare(`
@@ -36,8 +36,8 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
   `);
 
   const insertGroup = db.prepare(`
-    INSERT OR IGNORE INTO duplicate_group (id, confidence_score, jaccard_similarity, fuzzy_text_ratio, metadata_similarity, filename_similarity, algorithm_version, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO duplicate_group (id, confidence_score, jaccard_similarity, fuzzy_text_ratio, algorithm_version, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertMember = db.prepare(`
@@ -73,8 +73,6 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         `2024-0${Math.min(i, 9)}-01T00:00:00Z`,
         `2024-0${Math.min(i, 9)}-02T00:00:00Z`,
         `2024-0${Math.min(i, 9)}-03T00:00:00Z`,
-        1000 + i * 100,
-        800 + i * 80,
         'completed',
         now,
       );
@@ -96,8 +94,6 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         confidence: 0.95,
         jaccard: 0.92,
         fuzzy: 0.89,
-        metadata: 0.85,
-        filename: 0.78,
         status: 'pending',
         memberCount: 2,
       },
@@ -105,8 +101,6 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         confidence: 0.82,
         jaccard: 0.78,
         fuzzy: 0.75,
-        metadata: 0.7,
-        filename: 0.65,
         status: 'ignored',
         memberCount: 3,
       },
@@ -114,8 +108,6 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         confidence: 0.71,
         jaccard: 0.65,
         fuzzy: 0.6,
-        metadata: 0.55,
-        filename: 0.5,
         status: 'deleted',
         memberCount: 2,
       },
@@ -132,8 +124,6 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
         cfg.confidence,
         cfg.jaccard,
         cfg.fuzzy,
-        cfg.metadata,
-        cfg.filename,
         'v1',
         cfg.status,
         `2024-01-${10 + g}T00:00:00Z`,

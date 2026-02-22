@@ -78,8 +78,6 @@ test.describe('Settings Page', () => {
 
     await expect(page.locator('#w-jaccard')).toBeVisible();
     await expect(page.locator('#w-fuzzy')).toBeVisible();
-    await expect(page.locator('#w-metadata')).toBeVisible();
-    await expect(page.locator('#w-filename')).toBeVisible();
   });
 
   test('weight sum indicator shows', async ({ page }) => {
