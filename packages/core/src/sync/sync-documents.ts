@@ -60,11 +60,14 @@ export async function syncDocuments(
   const docsNeedingMetadata: { paperlessId: number; localId: string }[] = [];
 
   let shouldStop = false;
+  let totalCount: number | undefined;
 
-  for await (const batch of client.getDocuments({ ordering: '-modified', pageSize })) {
+  for await (const page of client.getDocuments({ ordering: '-modified', pageSize })) {
     if (shouldStop) break;
 
-    for (const doc of batch) {
+    totalCount ??= page.totalCount;
+
+    for (const doc of page.results) {
       result.totalFetched++;
 
       try {
@@ -94,16 +97,17 @@ export async function syncDocuments(
     }
 
     // Report progress
-    const progressFraction =
-      0.1 + 0.75 * (result.totalFetched / Math.max(result.totalFetched + pageSize, 1));
+    const phase = totalCount && totalCount > 0 ? result.totalFetched / totalCount : 0;
+    const progressFraction = 0.1 + 0.75 * phase;
     await onProgress?.(
       Math.min(progressFraction, 0.85),
-      `Synced ${result.totalFetched} documents (${result.inserted} new, ${result.updated} updated)`,
+      `Syncing documents: ${result.totalFetched}/${totalCount ?? '?'} (${result.inserted} new, ${result.updated} updated)`,
+      phase,
     );
 
     // Incremental sync cutoff: stop when oldest doc in batch is older than lastSyncAt
-    if (!isFullSync && lastSyncAt && batch.length > 0) {
-      const oldestInBatch = batch[batch.length - 1];
+    if (!isFullSync && lastSyncAt && page.results.length > 0) {
+      const oldestInBatch = page.results[page.results.length - 1];
       if (oldestInBatch.modified < lastSyncAt) {
         shouldStop = true;
       }
@@ -112,7 +116,7 @@ export async function syncDocuments(
 
   // 5. Fetch file size metadata for inserted/updated documents
   if (docsNeedingMetadata.length > 0) {
-    await onProgress?.(0.85, `Fetching metadata for ${docsNeedingMetadata.length} documents...`);
+    await onProgress?.(0.85, `Fetching metadata: 0/${docsNeedingMetadata.length}`, 0);
     let metadataFetched = 0;
 
     // Process with controlled concurrency using settled flags
@@ -142,9 +146,11 @@ export async function syncDocuments(
         }
         metadataFetched++;
         if (metadataFetched % 20 === 0) {
+          const metaPhase = metadataFetched / docsNeedingMetadata.length;
           await onProgress?.(
-            0.85 + 0.1 * (metadataFetched / docsNeedingMetadata.length),
+            0.85 + 0.1 * metaPhase,
             `Fetching metadata: ${metadataFetched}/${docsNeedingMetadata.length}`,
+            metaPhase,
           );
         }
       })().finally(() => {
