@@ -70,20 +70,11 @@ export function formatAnalysisResult(result: AnalysisResult): string {
   ].join('\n');
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const val = bytes / Math.pow(1024, i);
-  return `${val.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
 export function formatDashboard(data: DashboardData): string {
   const lines = [
     'Dashboard',
     `  Total documents:      ${data.totalDocuments}`,
     `  Pending groups:       ${data.pendingGroups}`,
-    `  Storage savings:      ${formatBytes(data.storageSavingsBytes)}`,
     `  Pending analysis:     ${data.pendingAnalysis}`,
     `  Last sync:            ${data.lastSyncAt ?? 'never'}`,
     `  Last sync docs:       ${data.lastSyncDocumentCount ?? 'n/a'}`,
