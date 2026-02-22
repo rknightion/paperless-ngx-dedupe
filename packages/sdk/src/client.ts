@@ -23,6 +23,7 @@ import type {
   SSESubscription,
   SimilarityGraphData,
   SimilarityGraphFilters,
+  SyncOptions,
 } from './types.js';
 
 const DEFAULT_TIMEOUT = 30_000;
@@ -53,8 +54,11 @@ export class PaperlessDedupeClient {
 
   // ── Sync & Analysis ──────────────────────────────────────────────────
 
-  async sync(): Promise<Job> {
-    const res = await request<Job>('/api/v1/sync', this.httpOptions, { method: 'POST' });
+  async sync(options?: SyncOptions): Promise<Job> {
+    const res = await request<Job>('/api/v1/sync', this.httpOptions, {
+      method: 'POST',
+      body: options,
+    });
     return res.data;
   }
 

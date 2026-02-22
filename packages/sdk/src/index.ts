@@ -33,6 +33,7 @@ export type {
   SimilarityGraphFilters,
   DashboardData,
   Job,
+  SyncOptions,
   SyncResult,
   AnalysisResult,
   DedupConfig,
