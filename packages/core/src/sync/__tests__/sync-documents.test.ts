@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
@@ -6,7 +6,7 @@ import { syncDocuments } from '../sync-documents.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { syncState } from '../../schema/sqlite/app.js';
 import { eq } from 'drizzle-orm';
-import type { PaperlessDocument, DocumentMetadata } from '../../paperless/types.js';
+import type { PaperlessDocument } from '../../paperless/types.js';
 import type { PaperlessClient } from '../../paperless/client.js';
 
 function makePaperlessDoc(id: number, overrides?: Partial<PaperlessDocument>): PaperlessDocument {
@@ -27,29 +27,13 @@ function makePaperlessDoc(id: number, overrides?: Partial<PaperlessDocument>): P
   };
 }
 
-function makeMetadata(id: number, overrides?: Partial<DocumentMetadata>): DocumentMetadata {
-  return {
-    originalChecksum: `checksum-${id}`,
-    originalSize: 1000 * id,
-    originalMimeType: 'application/pdf',
-    mediaFilename: `doc${id}.pdf`,
-    hasArchiveVersion: true,
-    archiveChecksum: `archive-checksum-${id}`,
-    archiveSize: 800 * id,
-    archiveMediaFilename: `doc${id}-archive.pdf`,
-    ...overrides,
-  };
-}
-
 interface MockClientOptions {
   docs: PaperlessDocument[];
   pageSize?: number;
-  metadataMap?: Map<number, DocumentMetadata>;
-  metadataFn?: (id: number) => Promise<DocumentMetadata>;
 }
 
 function createMockClient(options: MockClientOptions): PaperlessClient {
-  const { docs, pageSize, metadataMap, metadataFn } = options;
+  const { docs, pageSize } = options;
   const effectivePageSize = pageSize ?? docs.length;
 
   return {
@@ -60,14 +44,6 @@ function createMockClient(options: MockClientOptions): PaperlessClient {
           totalCount: docs.length,
         };
       }
-    },
-    async getDocumentMetadata(id: number): Promise<DocumentMetadata> {
-      if (metadataFn) return metadataFn(id);
-      if (metadataMap) {
-        const meta = metadataMap.get(id);
-        if (meta) return meta;
-      }
-      return makeMetadata(id);
     },
     async getTags() {
       return [
@@ -302,215 +278,6 @@ describe('syncDocuments', () => {
     expect(result.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  describe('metadata fetching', () => {
-    it('should fetch and store file sizes for new documents', async () => {
-      const docs = [makePaperlessDoc(1), makePaperlessDoc(2)];
-      const metadataMap = new Map([
-        [1, makeMetadata(1, { originalSize: 5000, archiveSize: 4000 })],
-        [2, makeMetadata(2, { originalSize: 10000, archiveSize: 8000 })],
-      ]);
-      const client = createMockClient({ docs, metadataMap });
-
-      await syncDocuments({ db, client });
-
-      const dbDocs = db.select().from(document).orderBy(document.paperlessId).all();
-      expect(dbDocs[0].originalFileSize).toBe(5000);
-      expect(dbDocs[0].archiveFileSize).toBe(4000);
-      expect(dbDocs[1].originalFileSize).toBe(10000);
-      expect(dbDocs[1].archiveFileSize).toBe(8000);
-    });
-
-    it('should fetch metadata for updated documents', async () => {
-      const docs = [makePaperlessDoc(1)];
-      const client = createMockClient({
-        docs,
-        metadataMap: new Map([[1, makeMetadata(1, { originalSize: 5000, archiveSize: 4000 })]]),
-      });
-
-      // First sync
-      await syncDocuments({ db, client });
-
-      // Modify doc and re-sync with new metadata
-      const modifiedDocs = [
-        makePaperlessDoc(1, { title: 'Updated', modified: '2024-07-01T00:00:00Z' }),
-      ];
-      const updatedClient = createMockClient({
-        docs: modifiedDocs,
-        metadataMap: new Map([[1, makeMetadata(1, { originalSize: 6000, archiveSize: 5000 })]]),
-      });
-
-      await syncDocuments({ db, client: updatedClient }, { forceFullSync: true });
-
-      const dbDocs = db.select().from(document).all();
-      expect(dbDocs[0].originalFileSize).toBe(6000);
-      expect(dbDocs[0].archiveFileSize).toBe(5000);
-    });
-
-    it('should not fetch metadata for skipped (unchanged) documents', async () => {
-      const metadataFn = vi.fn().mockResolvedValue(makeMetadata(1));
-      const docs = [makePaperlessDoc(1)];
-      const client = createMockClient({ docs, metadataFn });
-
-      // First sync - metadata fetched
-      await syncDocuments({ db, client });
-      expect(metadataFn).toHaveBeenCalledTimes(1);
-
-      metadataFn.mockClear();
-
-      // Second sync - doc unchanged, no metadata fetch
-      await syncDocuments({ db, client }, { forceFullSync: true });
-      expect(metadataFn).not.toHaveBeenCalled();
-    });
-
-    it('should handle null archiveSize gracefully', async () => {
-      const docs = [makePaperlessDoc(1)];
-      const client = createMockClient({
-        docs,
-        metadataMap: new Map([[1, makeMetadata(1, { archiveSize: null })]]),
-      });
-
-      await syncDocuments({ db, client });
-
-      const dbDocs = db.select().from(document).all();
-      expect(dbDocs[0].originalFileSize).toBe(1000);
-      expect(dbDocs[0].archiveFileSize).toBeNull();
-    });
-
-    it('should continue sync when metadata fetch fails for a document', async () => {
-      const docs = [makePaperlessDoc(1), makePaperlessDoc(2), makePaperlessDoc(3)];
-      const metadataFn = vi.fn().mockImplementation(async (id: number) => {
-        if (id === 2) throw new Error('Network timeout');
-        return makeMetadata(id);
-      });
-      const client = createMockClient({ docs, metadataFn });
-
-      const result = await syncDocuments({ db, client });
-
-      // All docs should still be inserted despite metadata failure
-      expect(result.inserted).toBe(3);
-      expect(result.failed).toBe(0);
-
-      // Doc 1 and 3 have metadata, doc 2 does not
-      const dbDocs = db.select().from(document).orderBy(document.paperlessId).all();
-      expect(dbDocs[0].originalFileSize).toBe(1000);
-      expect(dbDocs[1].originalFileSize).toBeNull();
-      expect(dbDocs[2].originalFileSize).toBe(3000);
-    });
-
-    it('should call getDocumentMetadata for each inserted/updated doc', async () => {
-      const metadataFn = vi.fn().mockImplementation(async (id: number) => makeMetadata(id));
-      const docs = [makePaperlessDoc(1), makePaperlessDoc(2), makePaperlessDoc(3)];
-      const client = createMockClient({ docs, metadataFn });
-
-      await syncDocuments({ db, client });
-
-      expect(metadataFn).toHaveBeenCalledTimes(3);
-      expect(metadataFn).toHaveBeenCalledWith(1);
-      expect(metadataFn).toHaveBeenCalledWith(2);
-      expect(metadataFn).toHaveBeenCalledWith(3);
-    });
-  });
-
-  describe('metadata concurrency', () => {
-    it('should respect metadataConcurrency option', async () => {
-      // Create enough docs to exceed the concurrency limit
-      const docs = Array.from({ length: 8 }, (_, i) => makePaperlessDoc(i + 1));
-      let maxConcurrent = 0;
-      let currentConcurrent = 0;
-
-      const metadataFn = vi.fn().mockImplementation(async (id: number) => {
-        currentConcurrent++;
-        maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
-        // Simulate async work so concurrency control kicks in
-        await new Promise((r) => setTimeout(r, 10));
-        currentConcurrent--;
-        return makeMetadata(id);
-      });
-
-      const client = createMockClient({ docs, metadataFn });
-      await syncDocuments({ db, client }, { metadataConcurrency: 3 });
-
-      expect(metadataFn).toHaveBeenCalledTimes(8);
-      expect(maxConcurrent).toBeLessThanOrEqual(3);
-    });
-
-    it('should default to 10 concurrency when not specified', async () => {
-      const docs = Array.from({ length: 15 }, (_, i) => makePaperlessDoc(i + 1));
-      let maxConcurrent = 0;
-      let currentConcurrent = 0;
-
-      const metadataFn = vi.fn().mockImplementation(async (id: number) => {
-        currentConcurrent++;
-        maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
-        await new Promise((r) => setTimeout(r, 10));
-        currentConcurrent--;
-        return makeMetadata(id);
-      });
-
-      const client = createMockClient({ docs, metadataFn });
-      await syncDocuments({ db, client });
-
-      expect(metadataFn).toHaveBeenCalledTimes(15);
-      expect(maxConcurrent).toBeLessThanOrEqual(10);
-    });
-  });
-
-  describe('pipelined metadata', () => {
-    it('should start metadata fetches during document processing, not after', async () => {
-      const events: string[] = [];
-
-      // Create docs across 2 pages
-      const docs = Array.from({ length: 4 }, (_, i) => makePaperlessDoc(i + 1));
-      const metadataFn = vi.fn().mockImplementation(async (id: number) => {
-        events.push(`meta-start-${id}`);
-        await new Promise((r) => setTimeout(r, 5));
-        events.push(`meta-end-${id}`);
-        return makeMetadata(id);
-      });
-
-      const client = createMockClient({ docs, pageSize: 2, metadataFn });
-
-      const progressCalls: Array<{ progress: number; message?: string }> = [];
-      await syncDocuments(
-        { db, client },
-        {
-          metadataConcurrency: 4,
-          onProgress: async (progress, message) => {
-            progressCalls.push({ progress, message });
-          },
-        },
-      );
-
-      // Metadata should have been called for all 4 docs
-      expect(metadataFn).toHaveBeenCalledTimes(4);
-
-      // Verify metadata starts were interleaved (not all after docs finish)
-      // With 2 pages of 2 docs each: page 1 docs should trigger metadata before page 2 starts
-      const firstMetaStart = events.indexOf('meta-start-1');
-      expect(firstMetaStart).toBeGreaterThanOrEqual(0);
-    });
-
-    it('should drain all metadata before completing sync', async () => {
-      const docs = Array.from({ length: 6 }, (_, i) => makePaperlessDoc(i + 1));
-      const metadataFn = vi.fn().mockImplementation(async (id: number) => {
-        await new Promise((r) => setTimeout(r, 10));
-        return makeMetadata(id);
-      });
-
-      const client = createMockClient({ docs, metadataFn });
-      await syncDocuments({ db, client }, { metadataConcurrency: 2 });
-
-      // All 6 metadata fetches should have completed
-      expect(metadataFn).toHaveBeenCalledTimes(6);
-
-      // All docs should have file sizes populated
-      const dbDocs = db.select().from(document).orderBy(document.paperlessId).all();
-      for (const doc of dbDocs) {
-        expect(doc.originalFileSize).not.toBeNull();
-      }
-    });
-  });
-
   describe('progress reporting', () => {
     it('should call progress callback', async () => {
       const docs = [makePaperlessDoc(1)];
@@ -552,7 +319,7 @@ describe('syncDocuments', () => {
       }
     });
 
-    it('should allocate doc fetch in 2%-20% range and metadata in 20%-95% range', async () => {
+    it('should allocate doc fetch in 2%-95% range', async () => {
       const docs = Array.from({ length: 3 }, (_, i) => makePaperlessDoc(i + 1));
       const client = createSimpleClient(docs);
       const progressCalls: Array<{ progress: number; message?: string }> = [];
@@ -577,41 +344,8 @@ describe('syncDocuments', () => {
         expect(call.progress).toBeLessThanOrEqual(0.95);
       }
 
-      // Find metadata progress calls (should be between 0.20 and 0.95)
-      const metaCalls = progressCalls.filter((c) => c.message?.startsWith('Fetching metadata'));
-      for (const call of metaCalls) {
-        expect(call.progress).toBeGreaterThanOrEqual(0.2);
-        expect(call.progress).toBeLessThanOrEqual(0.95);
-      }
-
       // Final call should be 1.0
       expect(progressCalls[progressCalls.length - 1].progress).toBe(1);
-    });
-
-    it('should include metadata drain progress messages', async () => {
-      const docs = Array.from({ length: 4 }, (_, i) => makePaperlessDoc(i + 1));
-      const metadataFn = vi.fn().mockImplementation(async (id: number) => {
-        // Add delay so some metadata drains after the doc loop
-        await new Promise((r) => setTimeout(r, 15));
-        return makeMetadata(id);
-      });
-
-      const client = createMockClient({ docs, metadataFn });
-      const progressCalls: Array<{ progress: number; message?: string }> = [];
-
-      await syncDocuments(
-        { db, client },
-        {
-          metadataConcurrency: 2,
-          onProgress: async (progress, message) => {
-            progressCalls.push({ progress, message });
-          },
-        },
-      );
-
-      // Should have at least one "Fetching metadata" or "Fetched metadata" message
-      const metaMessages = progressCalls.filter((c) => c.message?.includes('metadata'));
-      expect(metaMessages.length).toBeGreaterThan(0);
     });
   });
 
@@ -651,7 +385,7 @@ describe('syncDocuments', () => {
 
       const result = await syncDocuments({ db, client: incrementalClient });
       expect(result.syncType).toBe('incremental');
-      // Should process page 1 (doc 4 new, doc 3 old → triggers stop)
+      // Should process page 1 (doc 4 new, doc 3 old -> triggers stop)
       // then break before fetching page 2
       expect(result.totalFetched).toBe(2);
       expect(result.inserted).toBe(1); // doc 4

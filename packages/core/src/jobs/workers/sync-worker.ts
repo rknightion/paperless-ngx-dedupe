@@ -14,7 +14,6 @@ runWorkerTask(async (ctx, onProgress) => {
     {
       forceFullSync: taskData?.force,
       purgeBeforeSync: taskData?.purge,
-      metadataConcurrency: config.SYNC_METADATA_CONCURRENCY,
       onProgress,
     },
   );

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   paperlessDocumentSchema,
-  documentMetadataSchema,
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,
@@ -76,28 +75,6 @@ describe('snake_case to camelCase transformation', () => {
     const result = paperlessDocumentTypeSchema.parse(input);
     expect(result.matchingAlgorithm).toBe(1);
     expect(result.documentCount).toBe(20);
-  });
-
-  it('documentMetadataSchema transforms metadata fields', () => {
-    const input = {
-      original_checksum: 'abc123',
-      original_size: 1024,
-      original_mime_type: 'application/pdf',
-      media_filename: 'test.pdf',
-      has_archive_version: true,
-      archive_checksum: 'def456',
-      archive_size: 2048,
-      archive_media_filename: 'test_archive.pdf',
-    };
-    const result = documentMetadataSchema.parse(input);
-    expect(result.originalChecksum).toBe('abc123');
-    expect(result.originalSize).toBe(1024);
-    expect(result.originalMimeType).toBe('application/pdf');
-    expect(result.mediaFilename).toBe('test.pdf');
-    expect(result.hasArchiveVersion).toBe(true);
-    expect(result.archiveChecksum).toBe('def456');
-    expect(result.archiveSize).toBe(2048);
-    expect(result.archiveMediaFilename).toBe('test_archive.pdf');
   });
 
   it('paperlessStatisticsSchema transforms statistics fields including nested', () => {
@@ -267,7 +244,6 @@ describe('toPaperlessConfig bridge function', () => {
       CORS_ALLOW_ORIGIN: '',
       AUTO_MIGRATE: true,
       PAPERLESS_METRICS_ENABLED: false,
-      SYNC_METADATA_CONCURRENCY: 10,
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');
@@ -288,7 +264,6 @@ describe('toPaperlessConfig bridge function', () => {
       CORS_ALLOW_ORIGIN: '',
       AUTO_MIGRATE: true,
       PAPERLESS_METRICS_ENABLED: false,
-      SYNC_METADATA_CONCURRENCY: 10,
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');

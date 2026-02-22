@@ -55,7 +55,6 @@ export type { Logger } from './logger.js';
 export type {
   PaperlessConfig,
   PaperlessDocument,
-  DocumentMetadata,
   PaperlessTag,
   PaperlessCorrespondent,
   PaperlessDocumentType,
@@ -65,7 +64,6 @@ export type {
 } from './paperless/types.js';
 export {
   paperlessDocumentSchema,
-  documentMetadataSchema,
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,

@@ -1,7 +1,6 @@
 export type {
   PaperlessConfig,
   PaperlessDocument,
-  DocumentMetadata,
   PaperlessTag,
   PaperlessCorrespondent,
   PaperlessDocumentType,
@@ -15,7 +14,6 @@ export type {
 
 export {
   paperlessDocumentSchema,
-  documentMetadataSchema,
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,

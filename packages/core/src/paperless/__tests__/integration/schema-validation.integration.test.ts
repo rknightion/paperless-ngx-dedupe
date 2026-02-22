@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import {
   paperlessStatisticsSchema,
   paperlessDocumentSchema,
-  documentMetadataSchema,
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,
@@ -71,26 +70,6 @@ describe.skipIf(!process.env.INTEGRATION_TEST)(
       }
       expect(result.success).toBe(true);
       expect(result.data!.results.length).toBeGreaterThan(0);
-    });
-
-    it('documentMetadataSchema validates /api/documents/:id/metadata/', async () => {
-      // Get a document ID
-      const listResponse = await fetch(`${PAPERLESS_URL}/api/documents/?page_size=1`, { headers });
-      const listJson = await listResponse.json();
-      const docId = listJson.results[0].id;
-
-      const response = await fetch(`${PAPERLESS_URL}/api/documents/${docId}/metadata/`, {
-        headers,
-      });
-      expect(response.ok).toBe(true);
-
-      const raw = await response.json();
-      const result = documentMetadataSchema.safeParse(raw);
-
-      if (!result.success) {
-        console.error('Document metadata schema validation errors:', result.error.issues);
-      }
-      expect(result.success).toBe(true);
     });
 
     it('paperlessTagSchema validates /api/tags/', async () => {

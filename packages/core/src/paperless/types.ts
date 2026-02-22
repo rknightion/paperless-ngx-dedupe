@@ -22,17 +22,6 @@ export interface PaperlessDocument {
   archiveSerialNumber: number | null;
 }
 
-export interface DocumentMetadata {
-  originalChecksum: string;
-  originalSize: number;
-  originalMimeType: string;
-  mediaFilename: string;
-  hasArchiveVersion: boolean;
-  archiveChecksum: string | null;
-  archiveSize: number | null;
-  archiveMediaFilename: string | null;
-}
-
 export interface PaperlessTag {
   id: number;
   name: string;
