@@ -75,8 +75,6 @@ export function recalculateConfidenceScores(db: AppDatabase, config: DedupConfig
   const weights = {
     jaccard: config.confidenceWeightJaccard,
     fuzzy: config.confidenceWeightFuzzy,
-    metadata: config.confidenceWeightMetadata,
-    filename: config.confidenceWeightFilename,
   };
 
   let updatedCount = 0;
@@ -90,8 +88,6 @@ export function recalculateConfidenceScores(db: AppDatabase, config: DedupConfig
       const components: { score: number | null; weight: number }[] = [
         { score: group.jaccardSimilarity, weight: weights.jaccard },
         { score: group.fuzzyTextRatio, weight: weights.fuzzy },
-        { score: group.metadataSimilarity, weight: weights.metadata },
-        { score: group.filenameSimilarity, weight: weights.filename },
       ];
 
       for (const { score, weight } of components) {

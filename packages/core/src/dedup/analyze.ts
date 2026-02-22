@@ -285,8 +285,6 @@ export async function runAnalysis(
   const weights: SimilarityWeights = {
     jaccard: config.confidenceWeightJaccard,
     fuzzy: config.confidenceWeightFuzzy,
-    metadata: config.confidenceWeightMetadata,
-    filename: config.confidenceWeightFilename,
   };
 
   // Pre-filter candidates by jaccard threshold
@@ -310,7 +308,6 @@ export async function runAnalysis(
       .select({
         id: document.id,
         title: document.title,
-        originalFileSize: document.originalFileSize,
       })
       .from(document)
       .where(inArray(document.id, batch))
@@ -321,7 +318,6 @@ export async function runAnalysis(
         id: row.id,
         title: row.title,
         normalizedText: '',
-        originalFileSize: row.originalFileSize,
       });
     }
   }
@@ -462,22 +458,16 @@ export async function runAnalysis(
       // Average component scores across pairs
       let avgJaccard = 0;
       let avgFuzzy = 0;
-      let avgMetadata = 0;
-      let avgFilename = 0;
       let avgOverall = 0;
 
       if (pairs.length > 0) {
         for (const pair of pairs) {
           avgJaccard += pair.similarity.jaccard;
           avgFuzzy += pair.similarity.fuzzy;
-          avgMetadata += pair.similarity.metadata;
-          avgFilename += pair.similarity.filename;
           avgOverall += pair.similarity.overall;
         }
         avgJaccard /= pairs.length;
         avgFuzzy /= pairs.length;
-        avgMetadata /= pairs.length;
-        avgFilename /= pairs.length;
         avgOverall /= pairs.length;
       }
 
@@ -494,8 +484,6 @@ export async function runAnalysis(
             confidenceScore: avgOverall,
             jaccardSimilarity: avgJaccard,
             fuzzyTextRatio: avgFuzzy,
-            metadataSimilarity: avgMetadata,
-            filenameSimilarity: avgFilename,
             algorithmVersion: ALGORITHM_VERSION,
             updatedAt: now,
           })
@@ -513,8 +501,6 @@ export async function runAnalysis(
             confidenceScore: avgOverall,
             jaccardSimilarity: avgJaccard,
             fuzzyTextRatio: avgFuzzy,
-            metadataSimilarity: avgMetadata,
-            filenameSimilarity: avgFilename,
             algorithmVersion: ALGORITHM_VERSION,
             createdAt: now,
             updatedAt: now,

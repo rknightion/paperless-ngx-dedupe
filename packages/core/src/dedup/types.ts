@@ -7,23 +7,18 @@ export const DEDUP_CONFIG_PREFIX = 'dedup.';
 export interface SimilarityWeights {
   jaccard: number;
   fuzzy: number;
-  metadata: number;
-  filename: number;
 }
 
 export interface SimilarityResult {
   overall: number;
   jaccard: number;
   fuzzy: number;
-  metadata: number;
-  filename: number;
 }
 
 export interface DocumentScoringData {
   id: string;
   title: string;
   normalizedText: string;
-  originalFileSize: number | null;
 }
 
 export interface DedupConfig {
@@ -34,8 +29,6 @@ export interface DedupConfig {
   similarityThreshold: number;
   confidenceWeightJaccard: number;
   confidenceWeightFuzzy: number;
-  confidenceWeightMetadata: number;
-  confidenceWeightFilename: number;
   fuzzySampleSize: number;
   autoAnalyze: boolean;
 }
@@ -46,21 +39,14 @@ export const dedupConfigBaseSchema = z.object({
   ngramSize: z.number().int().min(1).max(10).default(3),
   minWords: z.number().int().min(1).max(1000).default(20),
   similarityThreshold: z.number().min(0).max(1).default(0.75),
-  confidenceWeightJaccard: z.number().int().min(0).max(100).default(45),
-  confidenceWeightFuzzy: z.number().int().min(0).max(100).default(40),
-  confidenceWeightMetadata: z.number().int().min(0).max(100).default(10),
-  confidenceWeightFilename: z.number().int().min(0).max(100).default(5),
+  confidenceWeightJaccard: z.number().int().min(0).max(100).default(55),
+  confidenceWeightFuzzy: z.number().int().min(0).max(100).default(45),
   fuzzySampleSize: z.number().int().min(100).max(100000).default(10000),
   autoAnalyze: z.boolean().default(true),
 });
 
 export const dedupConfigSchema = dedupConfigBaseSchema.refine(
-  (data) =>
-    data.confidenceWeightJaccard +
-      data.confidenceWeightFuzzy +
-      data.confidenceWeightMetadata +
-      data.confidenceWeightFilename ===
-    100,
+  (data) => data.confidenceWeightJaccard + data.confidenceWeightFuzzy === 100,
   { message: 'Confidence weights must sum to 100' },
 );
 
@@ -70,10 +56,8 @@ export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
   ngramSize: 3,
   minWords: 20,
   similarityThreshold: 0.75,
-  confidenceWeightJaccard: 45,
-  confidenceWeightFuzzy: 40,
-  confidenceWeightMetadata: 10,
-  confidenceWeightFilename: 5,
+  confidenceWeightJaccard: 55,
+  confidenceWeightFuzzy: 45,
   fuzzySampleSize: 10000,
   autoAnalyze: true,
 };
@@ -111,7 +95,6 @@ export interface DocumentForScoring {
   id: string;
   title: string;
   normalizedText: string;
-  originalFileSize: number | null;
 }
 
 export interface ScoringOptions {
