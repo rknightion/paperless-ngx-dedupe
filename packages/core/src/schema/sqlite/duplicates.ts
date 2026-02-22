@@ -12,8 +12,6 @@ export const duplicateGroup = sqliteTable(
     confidenceScore: real('confidence_score').notNull(),
     jaccardSimilarity: real('jaccard_similarity'),
     fuzzyTextRatio: real('fuzzy_text_ratio'),
-    metadataSimilarity: real('metadata_similarity'),
-    filenameSimilarity: real('filename_similarity'),
     algorithmVersion: text('algorithm_version').notNull(),
     status: text('status').notNull().default('pending'),
     createdAt: text('created_at').notNull(),
