@@ -78,12 +78,14 @@ export function updateJobProgress(
   id: string,
   progress: number,
   message?: string,
+  phaseProgress?: number,
 ): void {
   const clamped = Math.max(0, Math.min(1, progress));
 
   db.update(job)
     .set({
       progress: clamped,
+      phaseProgress: phaseProgress != null ? Math.max(0, Math.min(1, phaseProgress)) : null,
       progressMessage: message,
     })
     .where(eq(job.id, id))
