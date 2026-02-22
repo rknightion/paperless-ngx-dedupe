@@ -24,7 +24,7 @@ jobs:
       matrix:
         paperless-tag: ${{ fromJSON(format('[{0}]', inputs.paperless_tags || '"latest","dev"')) }}
     continue-on-error: ${{ matrix.paperless-tag == 'dev' }}
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -115,12 +115,24 @@ jobs:
           pnpm --filter @paperless-dedupe/core exec vitest run
           --config vitest.integration.config.ts
 
+      - name: Run pipeline tests
+        env:
+          PIPELINE_TEST: '1'
+          INTEGRATION_PAPERLESS_URL: 'http://localhost:8000'
+          INTEGRATION_ADMIN_USER: 'admin'
+          INTEGRATION_ADMIN_PASSWORD: 'admin'
+        run: >-
+          pnpm --filter @paperless-dedupe/core exec vitest run
+          --config vitest.pipeline.config.ts
+
       - name: Upload integration test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: integration-results-${{ matrix.paperless-tag }}
-          path: packages/core/test-results/integration-junit.xml
+          path: |
+            packages/core/test-results/integration-junit.xml
+            packages/core/test-results/pipeline-junit.xml
           retention-days: 7
 
       - name: Integration test report
@@ -129,6 +141,14 @@ jobs:
         with:
           name: Integration Tests (${{ matrix.paperless-tag }})
           path: packages/core/test-results/integration-junit.xml
+          reporter: java-junit
+
+      - name: Pipeline test report
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@b082adf0eced0765477756c2a610396589b8c637 # v2
+        with:
+          name: Pipeline Tests (${{ matrix.paperless-tag }})
+          path: packages/core/test-results/pipeline-junit.xml
           reporter: java-junit
 
       - name: Collect all service logs on failure
