@@ -13,7 +13,7 @@ The pipeline works in three broad phases:
 
 1. **Sync** documents from Paperless-NGX and prepare their text
 2. **Index** documents using probabilistic data structures (MinHash + LSH) to find candidate pairs without comparing every document to every other
-3. **Score and group** candidates using multiple similarity dimensions, then cluster them for review
+3. **Score and group** candidates using Jaccard and fuzzy text similarity, then cluster them for review
 
 ```mermaid
 flowchart LR
@@ -36,7 +36,7 @@ When you trigger a sync, Paperless NGX Dedupe fetches documents from your Paperl
 
 For each document, the sync process:
 
-- Stores metadata (title, correspondent, document type, tags, dates, file sizes)
+- Stores metadata (title, correspondent, document type, tags, dates)
 - Extracts the full OCR text content
 - Normalizes the text: lowercases, strips punctuation, collapses whitespace
 - Computes a fingerprint (hash of the normalized text) so future syncs can skip unchanged documents
@@ -89,17 +89,13 @@ With 256 permutations and 32 bands, the effective candidate funnel is tuned for 
 
 ## Step 5: Similarity Scoring
 
-Each candidate pair from LSH is scored across four dimensions:
+Each candidate pair from LSH is scored across two dimensions:
 
-1. **Jaccard Similarity** (default weight: 45%) -- Set overlap of shingle sets, estimated from MinHash signatures. Measures how much text content the two documents share.
+1. **Jaccard Similarity** (default weight: 55%) -- Set overlap of shingle sets, estimated from MinHash signatures. Measures how much text content the two documents share.
 
-2. **Fuzzy Text Similarity** (default weight: 40%) -- Edit-distance-based ratio computed on a character sample of the normalized text (controlled by `fuzzySampleSize`). Catches cases where documents have similar content but different word order or minor variations.
+2. **Fuzzy Text Similarity** (default weight: 45%) -- Edit-distance-based ratio computed on a character sample of the normalized text (controlled by `fuzzySampleSize`). Catches cases where documents have similar content but different word order or minor variations.
 
-3. **Metadata Similarity** (default weight: 10%) -- Compares correspondent, document type, creation date, and file size. Documents from the same source with similar dates are more likely to be duplicates.
-
-4. **Filename Similarity** (default weight: 5%) -- String similarity between document titles. Useful for catching re-uploads or scans with auto-generated names.
-
-The overall confidence score is the weighted combination of all four dimensions. Pairs scoring below `similarityThreshold` (default: 0.75) are discarded.
+The overall confidence score is the weighted combination of both dimensions. Pairs scoring below `similarityThreshold` (default: 0.75) are discarded.
 
 ## Step 6: Clustering
 
@@ -118,7 +114,7 @@ Groups are presented in the web UI for review, sorted by confidence.
 ### Too many false positives (unrelated documents grouped together)
 
 - **Raise `similarityThreshold`** (e.g., 0.85 or 0.90) to require stronger matches
-- **Increase `confidenceWeightJaccard`** to rely more on actual text overlap
+- **Adjust confidence weights** to shift emphasis between Jaccard and fuzzy text matching
 - **Reduce `numBands`** to narrow the LSH candidate funnel
 
 ### Missing obvious duplicates

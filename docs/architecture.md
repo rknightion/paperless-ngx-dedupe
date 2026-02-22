@@ -44,7 +44,7 @@ Framework-agnostic TypeScript library containing all business logic. No web fram
 
 **Key modules:**
 
-- `dedup/` -- MinHash signatures, LSH indexing, fuzzy matching, multi-dimensional scoring, union-find clustering
+- `dedup/` -- MinHash signatures, LSH indexing, fuzzy matching, scoring, union-find clustering
 - `sync/` -- Document sync from Paperless-NGX, text normalization, fingerprinting
 - `jobs/` -- Worker thread launcher and job queue manager
 - `queries/` -- Database queries via Drizzle ORM (documents, duplicates, dashboard, config)
@@ -143,8 +143,8 @@ sequenceDiagram
     W->>W: Band hashing (32 bands)
     W->>W: Bucket collision → candidate pairs
 
-    Note over W: Stage 4: Multi-dimensional scoring
-    W->>W: Jaccard + Fuzzy + Metadata + Filename
+    Note over W: Stage 4: Similarity scoring
+    W->>W: Jaccard + Fuzzy text matching
     W->>W: Weighted confidence score
 
     Note over W: Stage 5: Union-find clustering
@@ -212,8 +212,6 @@ erDiagram
         real confidenceScore
         real jaccardSimilarity
         real fuzzyTextRatio
-        real metadataSimilarity
-        real filenameSimilarity
         text status
     }
 

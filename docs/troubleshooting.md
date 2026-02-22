@@ -116,7 +116,7 @@ curl -X PUT http://localhost:3000/api/v1/config/dedup \
 **Fixes:**
 
 - Raise `similarityThreshold` (e.g., 0.85 or 0.90)
-- Increase `confidenceWeightJaccard` to rely more on text overlap rather than metadata
+- Adjust confidence weights to shift emphasis between Jaccard and fuzzy text matching
 - Reduce `numBands` to narrow the candidate pool
 - See [How It Works - Tuning Guide](how-it-works.md#tuning-guide) for detailed guidance
 

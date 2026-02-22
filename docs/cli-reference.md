@@ -124,7 +124,7 @@ paperless-ngx-dedupe status --json
 
 Displays two sections:
 
-1. **Dashboard** -- total documents, pending groups, storage savings, last sync/analysis timestamps, top correspondents
+1. **Dashboard** -- total documents, pending groups, last sync/analysis timestamps, top correspondents
 2. **Duplicate Statistics** -- total/pending/false positive/ignored/deleted groups, confidence distribution, top correspondents
 
 !!! tip "Database-Only Command"
@@ -165,13 +165,11 @@ paperless-ngx-dedupe config set [options]
 | `--min-words <n>` | int | 1 -- 1000 | Minimum word count for analysis |
 | `--weight-jaccard <n>` | int | 0 -- 100 | Confidence weight for Jaccard similarity |
 | `--weight-fuzzy <n>` | int | 0 -- 100 | Confidence weight for fuzzy text |
-| `--weight-metadata <n>` | int | 0 -- 100 | Confidence weight for metadata |
-| `--weight-filename <n>` | int | 0 -- 100 | Confidence weight for filename |
 | `--fuzzy-sample-size <n>` | int | 100 -- 100,000 | Character sample size for fuzzy comparison |
 | `--auto-analyze <bool>` | string | `true`/`false` | Auto-analyze after sync |
 
 !!! warning "Weight Constraint"
-    The four confidence weights (`--weight-jaccard`, `--weight-fuzzy`, `--weight-metadata`, `--weight-filename`) must sum to 100.
+    The two confidence weights (`--weight-jaccard`, `--weight-fuzzy`) must sum to 100.
 
 **Examples:**
 
@@ -179,12 +177,10 @@ paperless-ngx-dedupe config set [options]
 # Lower the similarity threshold
 paperless-ngx-dedupe config set --similarity-threshold 0.6
 
-# Adjust confidence weights to prioritize text content
+# Adjust confidence weights
 paperless-ngx-dedupe config set \
-  --weight-jaccard 50 \
-  --weight-fuzzy 35 \
-  --weight-metadata 10 \
-  --weight-filename 5
+  --weight-jaccard 60 \
+  --weight-fuzzy 40
 
 # Disable auto-analysis
 paperless-ngx-dedupe config set --auto-analyze false
@@ -285,7 +281,6 @@ echo "Found $(wc -l < report.csv) duplicate entries"
 # Quick status check
 paperless-ngx-dedupe status --json | jq '{
   documents: .dashboard.totalDocuments,
-  pending: .dashboard.pendingGroups,
-  savings: .dashboard.storageSavingsBytes
+  pending: .dashboard.pendingGroups
 }'
 ```

@@ -5,7 +5,7 @@ A document deduplication companion for [Paperless-NGX](https://github.com/paperl
 ## Features
 
 - **Intelligent duplicate detection** -- MinHash signatures + Locality-Sensitive Hashing for efficient O(n log n) candidate discovery
-- **Multi-dimensional similarity scoring** -- combines text content (Jaccard), fuzzy text matching, metadata, and filename similarity
+- **Similarity scoring** -- combines Jaccard similarity and fuzzy text matching for accurate duplicate detection
 - **Document sync** -- full and incremental sync from your Paperless-NGX instance
 - **Background processing** -- worker threads with real-time progress via Server-Sent Events
 - **Web UI** -- dashboard, document browser, side-by-side duplicate review with OCR text diff
