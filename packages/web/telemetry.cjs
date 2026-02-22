@@ -27,7 +27,8 @@ const sdk = new NodeSDK({
   instrumentations: [
     getNodeAutoInstrumentations({
       '@opentelemetry/instrumentation-http': {
-        ignoreIncomingPaths: ['/api/v1/health', '/api/v1/ready'],
+        ignoreIncomingRequestHook: (req) =>
+          req.url === '/api/v1/health' || req.url === '/api/v1/ready',
       },
       '@opentelemetry/instrumentation-fs': {
         requireParentSpan: true,
