@@ -18,7 +18,6 @@ function insertTestData(db: AppDatabase) {
         documentType: 'Invoice',
         tagsJson: '["finance","tax"]',
         createdDate: '2024-01-01',
-        originalFileSize: 1000,
         syncedAt: '2024-01-01T00:00:00Z',
       },
       {
@@ -29,7 +28,6 @@ function insertTestData(db: AppDatabase) {
         documentType: 'Invoice',
         tagsJson: '["finance"]',
         createdDate: '2024-01-02',
-        originalFileSize: 2000,
         syncedAt: '2024-01-01T00:00:00Z',
       },
     ])
@@ -48,8 +46,6 @@ function insertTestData(db: AppDatabase) {
       confidenceScore: 0.95,
       jaccardSimilarity: 0.9,
       fuzzyTextRatio: 0.88,
-      metadataSimilarity: 0.85,
-      filenameSimilarity: 0.7,
       algorithmVersion: 'v1',
       createdAt: '2024-01-10T00:00:00Z',
       updatedAt: '2024-01-10T00:00:00Z',
@@ -103,9 +99,9 @@ describe('formatDuplicatesCsv', () => {
     expect(lines[0]).toBe(
       '\uFEFF' +
         'group_id,confidence_score,jaccard_similarity,fuzzy_text_ratio,' +
-        'metadata_similarity,filename_similarity,group_status,' +
+        'group_status,' +
         'is_primary,paperless_id,title,correspondent,document_type,tags,' +
-        'created_date,original_file_size,word_count,group_created_at',
+        'created_date,word_count,group_created_at',
     );
     // Should have header + trailing CRLF (empty last element)
     expect(lines).toHaveLength(2);
@@ -118,8 +114,6 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.95,
       jaccardSimilarity: 0.9,
       fuzzyTextRatio: 0.88,
-      metadataSimilarity: 0.85,
-      filenameSimilarity: 0.7,
       groupStatus: 'pending',
       isPrimary: true,
       paperlessId: 1,
@@ -128,7 +122,6 @@ describe('formatDuplicatesCsv', () => {
       documentType: 'Invoice',
       tags: ['finance', 'tax'],
       createdDate: '2024-01-01',
-      originalFileSize: 1000,
       wordCount: 3,
       groupCreatedAt: '2024-01-10T00:00:00Z',
     };
@@ -139,9 +132,9 @@ describe('formatDuplicatesCsv', () => {
 
     const dataLine = lines[1];
     expect(dataLine).toBe(
-      'grp-1,0.95,0.9,0.88,0.85,0.7,pending,' +
+      'grp-1,0.95,0.9,0.88,pending,' +
         'true,1,Invoice A,Alice,Invoice,' +
-        'finance|tax,2024-01-01,1000,3,2024-01-10T00:00:00Z',
+        'finance|tax,2024-01-01,3,2024-01-10T00:00:00Z',
     );
   });
 
@@ -151,8 +144,6 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
-      metadataSimilarity: null,
-      filenameSimilarity: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -161,7 +152,6 @@ describe('formatDuplicatesCsv', () => {
       documentType: null,
       tags: [],
       createdDate: null,
-      originalFileSize: null,
       wordCount: null,
       groupCreatedAt: '2024-01-01T00:00:00Z',
     };
@@ -176,8 +166,6 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
-      metadataSimilarity: null,
-      filenameSimilarity: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -186,7 +174,6 @@ describe('formatDuplicatesCsv', () => {
       documentType: null,
       tags: [],
       createdDate: null,
-      originalFileSize: null,
       wordCount: null,
       groupCreatedAt: '2024-01-01T00:00:00Z',
     };
@@ -201,8 +188,6 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
-      metadataSimilarity: null,
-      filenameSimilarity: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -211,7 +196,6 @@ describe('formatDuplicatesCsv', () => {
       documentType: null,
       tags: ['finance', 'tax', 'important'],
       createdDate: null,
-      originalFileSize: null,
       wordCount: null,
       groupCreatedAt: '2024-01-01T00:00:00Z',
     };
@@ -226,8 +210,6 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
-      metadataSimilarity: null,
-      filenameSimilarity: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -236,7 +218,6 @@ describe('formatDuplicatesCsv', () => {
       documentType: null,
       tags: [],
       createdDate: null,
-      originalFileSize: null,
       wordCount: null,
       groupCreatedAt: '2024-01-01T00:00:00Z',
     };
@@ -244,8 +225,8 @@ describe('formatDuplicatesCsv', () => {
     const csv = formatDuplicatesCsv([row]);
     const lines = csv.split('\r\n');
     const dataLine = lines[1];
-    // jaccard, fuzzy, metadata, filename all null => empty between commas
-    expect(dataLine).toContain('0.5,,,,');
+    // jaccard, fuzzy all null => empty between commas
+    expect(dataLine).toContain('0.5,,');
     // correspondent, documentType null => empty
     expect(dataLine).toContain('Test,,');
   });
@@ -256,8 +237,6 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
-      metadataSimilarity: null,
-      filenameSimilarity: null,
       groupStatus: 'deleted',
       isPrimary: true,
       paperlessId: 1,
@@ -266,7 +245,6 @@ describe('formatDuplicatesCsv', () => {
       documentType: null,
       tags: [],
       createdDate: null,
-      originalFileSize: null,
       wordCount: null,
       groupCreatedAt: '2024-01-01T00:00:00Z',
     };

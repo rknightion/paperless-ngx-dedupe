@@ -5,8 +5,6 @@ export interface DuplicateExportRow {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
-  metadataSimilarity: number | null;
-  filenameSimilarity: number | null;
   groupStatus: string;
   isPrimary: boolean;
   paperlessId: number;
@@ -15,7 +13,6 @@ export interface DuplicateExportRow {
   documentType: string | null;
   tags: string[];
   createdDate: string | null;
-  originalFileSize: number | null;
   wordCount: number | null;
   groupCreatedAt: string;
 }

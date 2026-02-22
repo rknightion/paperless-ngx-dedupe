@@ -20,8 +20,6 @@ export function getDuplicateGroupsForExport(
       confidenceScore: duplicateGroup.confidenceScore,
       jaccardSimilarity: duplicateGroup.jaccardSimilarity,
       fuzzyTextRatio: duplicateGroup.fuzzyTextRatio,
-      metadataSimilarity: duplicateGroup.metadataSimilarity,
-      filenameSimilarity: duplicateGroup.filenameSimilarity,
       groupStatus: duplicateGroup.status,
       groupCreatedAt: duplicateGroup.createdAt,
       isPrimary: duplicateMember.isPrimary,
@@ -32,7 +30,6 @@ export function getDuplicateGroupsForExport(
       documentType: document.documentType,
       tagsJson: document.tagsJson,
       createdDate: document.createdDate,
-      originalFileSize: document.originalFileSize,
       wordCount: documentContent.wordCount,
     })
     .from(duplicateGroup)
@@ -48,8 +45,6 @@ export function getDuplicateGroupsForExport(
     confidenceScore: r.confidenceScore,
     jaccardSimilarity: r.jaccardSimilarity,
     fuzzyTextRatio: r.fuzzyTextRatio,
-    metadataSimilarity: r.metadataSimilarity,
-    filenameSimilarity: r.filenameSimilarity,
     groupStatus: r.groupStatus,
     isPrimary: r.isPrimary ?? false,
     paperlessId: r.paperlessId,
@@ -58,7 +53,6 @@ export function getDuplicateGroupsForExport(
     documentType: r.documentType,
     tags: parseTagsJson(r.tagsJson),
     createdDate: r.createdDate,
-    originalFileSize: r.originalFileSize,
     wordCount: r.wordCount ?? null,
     groupCreatedAt: r.groupCreatedAt,
   }));
@@ -69,8 +63,6 @@ const CSV_HEADERS = [
   'confidence_score',
   'jaccard_similarity',
   'fuzzy_text_ratio',
-  'metadata_similarity',
-  'filename_similarity',
   'group_status',
   'is_primary',
   'paperless_id',
@@ -79,7 +71,6 @@ const CSV_HEADERS = [
   'document_type',
   'tags',
   'created_date',
-  'original_file_size',
   'word_count',
   'group_created_at',
 ];
@@ -110,8 +101,6 @@ export function formatDuplicatesCsv(rows: DuplicateExportRow[]): string {
       row.confidenceScore,
       row.jaccardSimilarity,
       row.fuzzyTextRatio,
-      row.metadataSimilarity,
-      row.filenameSimilarity,
       row.groupStatus,
       row.isPrimary,
       row.paperlessId,
@@ -120,7 +109,6 @@ export function formatDuplicatesCsv(rows: DuplicateExportRow[]): string {
       row.documentType,
       row.tags,
       row.createdDate,
-      row.originalFileSize,
       row.wordCount,
       row.groupCreatedAt,
     ];
