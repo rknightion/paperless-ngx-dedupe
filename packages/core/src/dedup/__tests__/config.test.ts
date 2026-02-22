@@ -41,10 +41,8 @@ describe('setDedupConfig', () => {
   it('should reject weights that do not sum to 100', () => {
     expect(() =>
       setDedupConfig(db, {
-        confidenceWeightJaccard: 50,
-        confidenceWeightFuzzy: 50,
-        confidenceWeightMetadata: 50,
-        confidenceWeightFilename: 50,
+        confidenceWeightJaccard: 60,
+        confidenceWeightFuzzy: 60,
       }),
     ).toThrow();
   });
@@ -56,10 +54,8 @@ describe('setDedupConfig', () => {
       ngramSize: 4,
       minWords: 30,
       similarityThreshold: 0.8,
-      confidenceWeightJaccard: 50,
-      confidenceWeightFuzzy: 20,
-      confidenceWeightMetadata: 20,
-      confidenceWeightFilename: 10,
+      confidenceWeightJaccard: 60,
+      confidenceWeightFuzzy: 40,
       fuzzySampleSize: 3000,
       autoAnalyze: false,
     };
@@ -100,8 +96,6 @@ describe('recalculateConfidenceScores', () => {
         confidenceScore: 0.5,
         jaccardSimilarity: 0.9,
         fuzzyTextRatio: 0.8,
-        metadataSimilarity: 0.6,
-        filenameSimilarity: 0.7,
         algorithmVersion: '1.0.0',
         createdAt: now,
         updatedAt: now,
@@ -110,10 +104,8 @@ describe('recalculateConfidenceScores', () => {
 
     const config = {
       ...DEFAULT_DEDUP_CONFIG,
-      confidenceWeightJaccard: 40,
-      confidenceWeightFuzzy: 30,
-      confidenceWeightMetadata: 15,
-      confidenceWeightFilename: 15,
+      confidenceWeightJaccard: 60,
+      confidenceWeightFuzzy: 40,
     };
 
     const count = recalculateConfidenceScores(db, config);
@@ -122,9 +114,9 @@ describe('recalculateConfidenceScores', () => {
     // Verify the score was recalculated
     const groups = db.select().from(duplicateGroup).all();
     const group = groups[0];
-    // Expected: (0.9*40 + 0.8*30 + 0.6*15 + 0.7*15) / (40+30+15+15)
-    // = (36 + 24 + 9 + 10.5) / 100 = 79.5 / 100 = 0.795
-    expect(group.confidenceScore).toBeCloseTo(0.795, 3);
+    // Expected: (0.9*60 + 0.8*40) / (60+40)
+    // = (54 + 32) / 100 = 86 / 100 = 0.86
+    expect(group.confidenceScore).toBeCloseTo(0.86, 3);
   });
 
   it('should skip null component scores in weighted average', () => {
@@ -136,8 +128,6 @@ describe('recalculateConfidenceScores', () => {
         confidenceScore: 0.5,
         jaccardSimilarity: 0.9,
         fuzzyTextRatio: null,
-        metadataSimilarity: null,
-        filenameSimilarity: null,
         algorithmVersion: '1.0.0',
         createdAt: now,
         updatedAt: now,
@@ -146,17 +136,15 @@ describe('recalculateConfidenceScores', () => {
 
     const config = {
       ...DEFAULT_DEDUP_CONFIG,
-      confidenceWeightJaccard: 40,
-      confidenceWeightFuzzy: 30,
-      confidenceWeightMetadata: 15,
-      confidenceWeightFilename: 15,
+      confidenceWeightJaccard: 60,
+      confidenceWeightFuzzy: 40,
     };
 
     recalculateConfidenceScores(db, config);
 
     const groups = db.select().from(duplicateGroup).all();
     const group = groups[0];
-    // Only jaccard is non-null: 0.9*40 / 40 = 0.9
+    // Only jaccard is non-null: 0.9*60 / 60 = 0.9
     expect(group.confidenceScore).toBeCloseTo(0.9, 3);
   });
 });
