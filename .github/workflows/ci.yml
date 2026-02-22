@@ -204,7 +204,6 @@ jobs:
             env.OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
             env.OTEL_TRACES_EXPORTER=otlp
             env.OTEL_SERVICE_NAME=paperless-ngx-dedupe-ci
-            env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }}
 
       - name: Build Docker image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
@@ -271,7 +270,6 @@ jobs:
             env.OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
             env.OTEL_TRACES_EXPORTER=otlp
             env.OTEL_SERVICE_NAME=paperless-ngx-dedupe-ci
-            env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }},ci.platform=${{ matrix.platform }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
