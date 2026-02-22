@@ -11,6 +11,7 @@
   // Sync state
   let isSyncing = $state(false);
   let syncProgress = $state(0);
+  let syncPhaseProgress = $state<number | undefined>(undefined);
   let syncMessage = $state('');
   let syncForce = $state(false);
   let syncSSE: { close: () => void } | null = null;
@@ -18,6 +19,7 @@
   // Analysis state
   let isAnalyzing = $state(false);
   let analysisProgress = $state(0);
+  let analysisPhaseProgress = $state<number | undefined>(undefined);
   let analysisMessage = $state('');
   let analysisForce = $state(false);
   let analysisSSE: { close: () => void } | null = null;
@@ -46,11 +48,13 @@
       syncSSE = connectJobSSE(json.data.jobId, {
         onProgress: (d) => {
           syncProgress = d.progress;
+          syncPhaseProgress = d.phaseProgress;
           syncMessage = d.message ?? '';
         },
         onComplete: () => {
           isSyncing = false;
           syncProgress = 1;
+          syncPhaseProgress = undefined;
           syncMessage = 'Sync complete';
           invalidateAll();
         },
@@ -84,11 +88,13 @@
       analysisSSE = connectJobSSE(json.data.jobId, {
         onProgress: (d) => {
           analysisProgress = d.progress;
+          analysisPhaseProgress = d.phaseProgress;
           analysisMessage = d.message ?? '';
         },
         onComplete: () => {
           isAnalyzing = false;
           analysisProgress = 1;
+          analysisPhaseProgress = undefined;
           analysisMessage = 'Analysis complete';
           invalidateAll();
         },
@@ -119,11 +125,13 @@
         syncSSE = connectJobSSE(syncStatus.data.currentJobId, {
           onProgress: (d) => {
             syncProgress = d.progress;
+            syncPhaseProgress = d.phaseProgress;
             syncMessage = d.message ?? '';
           },
           onComplete: () => {
             isSyncing = false;
             syncProgress = 1;
+            syncPhaseProgress = undefined;
             syncMessage = 'Sync complete';
             invalidateAll();
           },
@@ -140,11 +148,13 @@
         analysisSSE = connectJobSSE(analysisStatus.data.currentJobId, {
           onProgress: (d) => {
             analysisProgress = d.progress;
+            analysisPhaseProgress = d.phaseProgress;
             analysisMessage = d.message ?? '';
           },
           onComplete: () => {
             isAnalyzing = false;
             analysisProgress = 1;
+            analysisPhaseProgress = undefined;
             analysisMessage = 'Analysis complete';
             invalidateAll();
           },
@@ -255,7 +265,11 @@
       </div>
       {#if isSyncing}
         <div class="mt-4">
-          <ProgressBar progress={syncProgress} message={syncMessage} />
+          <ProgressBar
+            progress={syncProgress}
+            phaseProgress={syncPhaseProgress}
+            message={syncMessage}
+          />
         </div>
       {/if}
       <div class="text-muted mt-3 text-xs">
@@ -299,7 +313,11 @@
       </div>
       {#if isAnalyzing}
         <div class="mt-4">
-          <ProgressBar progress={analysisProgress} message={analysisMessage} />
+          <ProgressBar
+            progress={analysisProgress}
+            phaseProgress={analysisPhaseProgress}
+            message={analysisMessage}
+          />
         </div>
       {/if}
       <div class="text-muted mt-3 text-xs">
@@ -321,6 +339,7 @@
             type={j.type}
             status={j.status ?? 'pending'}
             progress={j.progress ?? 0}
+            phaseProgress={j.phaseProgress}
             progressMessage={j.progressMessage}
             startedAt={j.startedAt}
             completedAt={j.completedAt}
