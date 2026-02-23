@@ -284,7 +284,7 @@ describe.skipIf(!process.env.PIPELINE_TEST)(
 
     // --- Group F: Unique documents ---
 
-    describe('Group F: Unique documents (x160)', () => {
+    describe('Group F: Unique documents (x80)', () => {
       it('should not group unique documents with each other', () => {
         // Check that no group consists entirely of unique-* docs
         for (const g of resolved) {
