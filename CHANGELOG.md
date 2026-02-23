@@ -1,5 +1,121 @@
 # Changelog
 
+## [0.6.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.5.0...v0.6.0) (2026-02-23)
+
+
+### Features
+
+* add metrics from paperless-exporter project ([a3f5712](https://github.com/rknightion/paperless-ngx-dedupe/commit/a3f57123659ccd7595eec11ff17270383c3966a9))
+* add pdf-lib dependency for PDF generation in tests ([8b2a8d8](https://github.com/rknightion/paperless-ngx-dedupe/commit/8b2a8d8731b8a046c0027917bab3bbfbec4bc93a))
+* add pipeline test script to package.json ([0aa3e3d](https://github.com/rknightion/paperless-ngx-dedupe/commit/0aa3e3dcd33b5cae931bdeb15c76b93003103e56))
+* **api:** add phase progress to SSE progress events ([ef33920](https://github.com/rknightion/paperless-ngx-dedupe/commit/ef339202bcbe67441827a27a87ac4506dce1b3f4))
+* **api:** support purge parameter in sync endpoint ([4a26bb7](https://github.com/rknightion/paperless-ngx-dedupe/commit/4a26bb7d87371c49b9153b1f65e83d6c6e67a5ab))
+* **config:** add SYNC_METADATA_CONCURRENCY configuration option ([f401abc](https://github.com/rknightion/paperless-ngx-dedupe/commit/f401abc5b6c3ee1a1b82861f3293cc8356b4f10d))
+* **core:** add purgeAllDocumentData function to clear local database ([4ad6e4b](https://github.com/rknightion/paperless-ngx-dedupe/commit/4ad6e4b7d6d64c4bc1873c2d0e8dcfdebecb9187))
+* **core:** export purge functionality from main module ([ef4b99b](https://github.com/rknightion/paperless-ngx-dedupe/commit/ef4b99bde3b976873884cc9615c82fed3f973a80))
+* **dedup:** add phase progress to analysis operations ([1cc0d33](https://github.com/rknightion/paperless-ngx-dedupe/commit/1cc0d33ba74c7199dd8312872b732b49b106a853))
+* **jobs:** extend progress callback to include phase progress ([636b60c](https://github.com/rknightion/paperless-ngx-dedupe/commit/636b60c8b16228770cb7ed02ff67d6d6ea05bc65))
+* **progress:** add phase progress tracking to job system ([33a759c](https://github.com/rknightion/paperless-ngx-dedupe/commit/33a759cfc666f2dd4f66ac0d652eeeb22248136e))
+* **sdk:** add phase progress to SSE event types ([bef0bcb](https://github.com/rknightion/paperless-ngx-dedupe/commit/bef0bcb23909c5094159b9c34a2d5b903c512e3d))
+* **sdk:** add SyncOptions to client sync method ([02be31a](https://github.com/rknightion/paperless-ngx-dedupe/commit/02be31abc14419e5a1d10b83db883a0e6834bf53))
+* **sync:** add purgeBeforeSync option to sync operations ([53b8884](https://github.com/rknightion/paperless-ngx-dedupe/commit/53b8884703da415bb0a3107139c72b907707bf65))
+* **sync:** implement phase progress tracking in document sync ([2b15885](https://github.com/rknightion/paperless-ngx-dedupe/commit/2b158857da32aa242ea242456e7f9a2fa1aa4bdf))
+* **sync:** implement pipelined metadata fetching with concurrency control ([748eca1](https://github.com/rknightion/paperless-ngx-dedupe/commit/748eca106684f6ee007cb0f9afc2d0ca472b615c))
+* **sync:** update sync types for phase progress support ([5cfd459](https://github.com/rknightion/paperless-ngx-dedupe/commit/5cfd45948446d681efe903c108f2165ccd234885))
+* **ui:** add error message display for failed jobs ([8e9551a](https://github.com/rknightion/paperless-ngx-dedupe/commit/8e9551acf7e844ff2928d77823cc926b4d089ae5))
+* **ui:** improve sync status display with detailed results ([33c7141](https://github.com/rknightion/paperless-ngx-dedupe/commit/33c7141954be60b8ff4d63eea3d072f9ba161d48))
+* **web:** add purge option to sync UI with confirmation dialog ([e60d4a4](https://github.com/rknightion/paperless-ngx-dedupe/commit/e60d4a45cfe75ad9fb915e284c0d0173c9f2ac1e))
+* **web:** enhance progress bar with phase progress and ETA ([ff23df1](https://github.com/rknightion/paperless-ngx-dedupe/commit/ff23df1396053fa9579a59826a8cd48b6e1a0b7e))
+* **web:** implement phase progress in main page operations ([db6a8a4](https://github.com/rknightion/paperless-ngx-dedupe/commit/db6a8a483be897a03556d4e85edaf17a17a95a49))
+* **web:** integrate phase progress throughout UI components ([147eea4](https://github.com/rknightion/paperless-ngx-dedupe/commit/147eea4c05110bbb590828f291f176032bd61027))
+* **worker:** support purge option in sync worker task data ([c418ba0](https://github.com/rknightion/paperless-ngx-dedupe/commit/c418ba050237d9fe32f3028d5b735d5121b665f3))
+
+
+### Bug Fixes
+
+* ci ([f28b473](https://github.com/rknightion/paperless-ngx-dedupe/commit/f28b47366efb147300323da21d8451432ef79f5c))
+* **deps:** update dependency lucide-svelte to ^0.568.0 ([#158](https://github.com/rknightion/paperless-ngx-dedupe/issues/158)) ([a1e45f8](https://github.com/rknightion/paperless-ngx-dedupe/commit/a1e45f893eccf72f2baba870ca2c24f9f08a4488))
+* **deps:** update dependency lucide-svelte to ^0.574.0 ([#162](https://github.com/rknightion/paperless-ngx-dedupe/issues/162)) ([cfc9285](https://github.com/rknightion/paperless-ngx-dedupe/commit/cfc9285f50e8b8a2e18fd68225440fe63d2c99a4))
+* **deps:** update dependency lucide-svelte to ^0.575.0 ([#169](https://github.com/rknightion/paperless-ngx-dedupe/issues/169)) ([7a54f06](https://github.com/rknightion/paperless-ngx-dedupe/commit/7a54f0644171d86a1675fafb8cf4b2fe5a5ee0ac))
+* **deps:** update opentelemetry-js-contrib monorepo ([#159](https://github.com/rknightion/paperless-ngx-dedupe/issues/159)) ([f0d5f40](https://github.com/rknightion/paperless-ngx-dedupe/commit/f0d5f40e38295f9f308deec90adee9b2b3cf539f))
+* remove tasks endpoint metrics ([e78c9c3](https://github.com/rknightion/paperless-ngx-dedupe/commit/e78c9c3554957a7e30d7b01e80a02f3e725cd404))
+* **telemetry:** improve HTTP instrumentation filtering configuration ([b637dc0](https://github.com/rknightion/paperless-ngx-dedupe/commit/b637dc09b088a97a14d61811417727fb612378e1))
+
+
+### Miscellaneous
+
+* add curl to Docker and reduce sync page size ([52381ec](https://github.com/rknightion/paperless-ngx-dedupe/commit/52381ec50aae55e1934f68220343fee74bb7de86))
+* claude.md improvements ([86e2f1e](https://github.com/rknightion/paperless-ngx-dedupe/commit/86e2f1e3c532d7e193570a0f55c2fff9450cfef5))
+* **deps:** lock file maintenance ([#177](https://github.com/rknightion/paperless-ngx-dedupe/issues/177)) ([8d41e1d](https://github.com/rknightion/paperless-ngx-dedupe/commit/8d41e1d6f7ac203504bb1f3d406dfee6a872eea0))
+* **deps:** lock file maintenance ([#178](https://github.com/rknightion/paperless-ngx-dedupe/issues/178)) ([719c053](https://github.com/rknightion/paperless-ngx-dedupe/commit/719c053b23adafe9511a156c4ed89e653da4cd42))
+* **deps:** pin dependencies ([#151](https://github.com/rknightion/paperless-ngx-dedupe/issues/151)) ([07f0cbb](https://github.com/rknightion/paperless-ngx-dedupe/commit/07f0cbbfd3e309114948add56a4c7d125dc36509))
+* **deps:** update actions/checkout action to v6 ([5d7fd05](https://github.com/rknightion/paperless-ngx-dedupe/commit/5d7fd0590d671094d4f71ab5bbf00c6fbfe7289d))
+* **deps:** update actions/checkout action to v6 ([bdd1bf6](https://github.com/rknightion/paperless-ngx-dedupe/commit/bdd1bf6ea626bc3f3800c510711198bfef434a91))
+* **deps:** update aquasecurity/trivy-action digest to c1824fd ([3dca951](https://github.com/rknightion/paperless-ngx-dedupe/commit/3dca95155ac70a60beada2ab709ca12c30e3655e))
+* **deps:** update aquasecurity/trivy-action digest to c1824fd ([a6de668](https://github.com/rknightion/paperless-ngx-dedupe/commit/a6de668e404573d7402a60067adae9229b643eef))
+* **deps:** update codacy/codacy-analysis-cli-action digest to 30783d0 ([#156](https://github.com/rknightion/paperless-ngx-dedupe/issues/156)) ([6ee4d0b](https://github.com/rknightion/paperless-ngx-dedupe/commit/6ee4d0bb757f71b0660903bfb825213be547468c))
+* **deps:** update dependency @sveltejs/kit to v2.52.2 ([#166](https://github.com/rknightion/paperless-ngx-dedupe/issues/166)) ([b173429](https://github.com/rknightion/paperless-ngx-dedupe/commit/b173429b2d04295162f3ebb8d8c8a16d25c30542))
+* **deps:** update dependency @sveltejs/kit to v2.53.0 ([#174](https://github.com/rknightion/paperless-ngx-dedupe/issues/174)) ([f163373](https://github.com/rknightion/paperless-ngx-dedupe/commit/f163373adaefbf67e9db871a8a8c7d07dc506e2b))
+* **deps:** update dependency eslint to v10.0.1 ([#172](https://github.com/rknightion/paperless-ngx-dedupe/issues/172)) ([4fb3c69](https://github.com/rknightion/paperless-ngx-dedupe/commit/4fb3c69b4a6fab7b30536a2e834b15dacca9a533))
+* **deps:** update dependency prettier-plugin-svelte to v3.5.0 ([#168](https://github.com/rknightion/paperless-ngx-dedupe/issues/168)) ([07470d3](https://github.com/rknightion/paperless-ngx-dedupe/commit/07470d34dffe355139a64de85935ae0b0e165c2c))
+* **deps:** update dependency svelte to v5.51.3 ([#160](https://github.com/rknightion/paperless-ngx-dedupe/issues/160)) ([4548c0f](https://github.com/rknightion/paperless-ngx-dedupe/commit/4548c0f9d1bfd8360a7dd48f88054d444d2c3aed))
+* **deps:** update dependency svelte to v5.51.5 ([#164](https://github.com/rknightion/paperless-ngx-dedupe/issues/164)) ([dea7b30](https://github.com/rknightion/paperless-ngx-dedupe/commit/dea7b30215a2a1a1900f8f804662034835e260e0))
+* **deps:** update dependency svelte to v5.53.0 ([#167](https://github.com/rknightion/paperless-ngx-dedupe/issues/167)) ([e273aca](https://github.com/rknightion/paperless-ngx-dedupe/commit/e273acae5c5534f40b7004833c6eeab8fd9b6fa5))
+* **deps:** update dependency svelte to v5.53.1 ([#175](https://github.com/rknightion/paperless-ngx-dedupe/issues/175)) ([807e299](https://github.com/rknightion/paperless-ngx-dedupe/commit/807e299484b3448009886fd7bdb52e70babb2e82))
+* **deps:** update dependency svelte to v5.53.2 ([#176](https://github.com/rknightion/paperless-ngx-dedupe/issues/176)) ([ea916d7](https://github.com/rknightion/paperless-ngx-dedupe/commit/ea916d7e021bbc278ebf82d301424cda12252fa3))
+* **deps:** update dependency svelte-check to v4.4.1 ([#165](https://github.com/rknightion/paperless-ngx-dedupe/issues/165)) ([6b32a01](https://github.com/rknightion/paperless-ngx-dedupe/commit/6b32a01ef092f059c5e5ea2d0db0289d7fdb68cb))
+* **deps:** update dependency svelte-check to v4.4.3 ([#173](https://github.com/rknightion/paperless-ngx-dedupe/issues/173)) ([b86c904](https://github.com/rknightion/paperless-ngx-dedupe/commit/b86c9048bc9db763ccdbca0b5af4a4da1e267a2d))
+* **deps:** update github/codeql-action digest to 89a39a4 ([#171](https://github.com/rknightion/paperless-ngx-dedupe/issues/171)) ([c3a4746](https://github.com/rknightion/paperless-ngx-dedupe/commit/c3a47463647970312cb8d0d2fe281e2efe76d3eb))
+* **deps:** update pnpm to v10.30.0 ([#161](https://github.com/rknightion/paperless-ngx-dedupe/issues/161)) ([73c2e98](https://github.com/rknightion/paperless-ngx-dedupe/commit/73c2e98ae4fcfb79d88de79d048a5ccf7fe1b189))
+* **deps:** update pnpm to v10.30.1 ([#170](https://github.com/rknightion/paperless-ngx-dedupe/issues/170)) ([675f249](https://github.com/rknightion/paperless-ngx-dedupe/commit/675f249c873404ada7904eda6faec947eeed3b37))
+* **deps:** update tailwindcss monorepo to v4.2.0 ([#163](https://github.com/rknightion/paperless-ngx-dedupe/issues/163)) ([8216d7a](https://github.com/rknightion/paperless-ngx-dedupe/commit/8216d7a0a6ee5f7c530e7a315c6563ebf0055d93))
+* **deps:** update typescript-eslint monorepo to v8.56.0 ([#157](https://github.com/rknightion/paperless-ngx-dedupe/issues/157)) ([9e7a889](https://github.com/rknightion/paperless-ngx-dedupe/commit/9e7a88910f22e9b0435d02c96258c0fcfd7bc1e5))
+* lint ([b6c0c74](https://github.com/rknightion/paperless-ngx-dedupe/commit/b6c0c7494b0061ac4c57ded1d84975eef35f454d))
+* remove sync metadata concurrency configuration option ([fe40fb8](https://github.com/rknightion/paperless-ngx-dedupe/commit/fe40fb8eec3c390340286ca9a4f172cceea57c44))
+
+
+### Documentation
+
+* add quality checks and development guidelines to CLAUDE.md ([790e342](https://github.com/rknightion/paperless-ngx-dedupe/commit/790e342fe3340b30ce6f69294302bbfe3e667017))
+* update documentation to reflect simplified 2-component scoring ([96f6ee5](https://github.com/rknightion/paperless-ngx-dedupe/commit/96f6ee51d6bd3b8a1d6a604f4c7eb8a26b9bc4f2))
+
+
+### Refactoring
+
+* **api:** update SDK and API types to remove file size and metadata fields ([15c69bf](https://github.com/rknightion/paperless-ngx-dedupe/commit/15c69bf007b77b76e68bafa000ba827ca277fdf6))
+* **cli:** remove metadata and filename weight options from config commands ([656a422](https://github.com/rknightion/paperless-ngx-dedupe/commit/656a422f0a9bbcfb6e4173598302b3ad37c07700))
+* **core:** update test configurations for simplified scoring system ([dba1011](https://github.com/rknightion/paperless-ngx-dedupe/commit/dba10111138b0bf8a3cf95fa377dbfe94b45c126))
+* **db:** remove storage and file size related fields from schema and queries ([b465d6e](https://github.com/rknightion/paperless-ngx-dedupe/commit/b465d6e68796cb2da768deaa8521e2d9bb06b4cd))
+* **dedup:** remove metadata and filename similarity scoring ([b33a669](https://github.com/rknightion/paperless-ngx-dedupe/commit/b33a6691309949beaf4049fd01eb512e7bec49de))
+* **export:** remove file size and metadata fields from CSV export ([70ba722](https://github.com/rknightion/paperless-ngx-dedupe/commit/70ba7221fd3b7a7099429c5f2f3ce0383902730f))
+* **paperless:** change getDocuments to return page metadata ([468e2a7](https://github.com/rknightion/paperless-ngx-dedupe/commit/468e2a7deba1021ab39f22a4493604dc58c1cf43))
+* **paperless:** replace task fetching with count-based metrics ([16f0652](https://github.com/rknightion/paperless-ngx-dedupe/commit/16f0652e1aa1619543c06b5d58a25a770c2e08a3))
+* **settings:** simplify confidence weight configuration to 2-component system ([84f8b1e](https://github.com/rknightion/paperless-ngx-dedupe/commit/84f8b1e415240d291e319b58dacf521befd865cd))
+* **sync:** pass metadata concurrency from config to sync worker ([2af7736](https://github.com/rknightion/paperless-ngx-dedupe/commit/2af7736d8d39c0a283c186a33424e0ccae051442))
+* **sync:** remove document metadata fetching and file size tracking ([fa93b40](https://github.com/rknightion/paperless-ngx-dedupe/commit/fa93b409b78e073707e36b1575639a285a470f5f))
+* **sync:** rename concurrency option to metadataConcurrency ([7b193ce](https://github.com/rknightion/paperless-ngx-dedupe/commit/7b193ce06a05f0a7e8cefb75dbc7a80268f11640))
+* **ui:** remove file size displays and metadata scoring from web interface ([7d3fb06](https://github.com/rknightion/paperless-ngx-dedupe/commit/7d3fb069ad497c22a0f12d670b2845bedac93574))
+
+
+### Performance
+
+* **core:** optimize API calls and resource usage ([6b7af0c](https://github.com/rknightion/paperless-ngx-dedupe/commit/6b7af0cd15192698b5e3686672b213fb91e36d78))
+* **sync:** increase default page size to improve throughput ([5eef665](https://github.com/rknightion/paperless-ngx-dedupe/commit/5eef665644e3520bbd8d86201ce95776cdc0165b))
+
+
+### Tests
+
+* add comprehensive test corpus for pipeline E2E testing ([9efcfad](https://github.com/rknightion/paperless-ngx-dedupe/commit/9efcfad1cb980df1cea58067a823a76cf65f44e1))
+* add dedicated Vitest configuration for pipeline tests ([99c3513](https://github.com/rknightion/paperless-ngx-dedupe/commit/99c351369feb34f24e820a294669bb97b3fd5a95))
+* add PDF generator utility for pipeline testing ([beb7e41](https://github.com/rknightion/paperless-ngx-dedupe/commit/beb7e41fb0e004cff2f7853d155f46499a904fac))
+* add pipeline test setup utilities and database management ([02421ba](https://github.com/rknightion/paperless-ngx-dedupe/commit/02421baa5a2baadac27ac458a2af13e91ae5b781))
+* exclude pipeline tests from main test configuration ([ea1fb6e](https://github.com/rknightion/paperless-ngx-dedupe/commit/ea1fb6ee10ace8f5813ccbc30ba025950a3428e5))
+* implement comprehensive pipeline E2E test suite ([52d3744](https://github.com/rknightion/paperless-ngx-dedupe/commit/52d37448577f0a0fb6ed7bb7a2ad0ffc99e30ed9))
+* remove file size and metadata similarity assertions ([6a70935](https://github.com/rknightion/paperless-ngx-dedupe/commit/6a70935d4c6e083927c0efb774236d0389d5c489))
+* **sync:** enhance sync-documents tests with comprehensive metadata testing ([a52dd01](https://github.com/rknightion/paperless-ngx-dedupe/commit/a52dd01ad86248a0e465c0fe9832eb0f079b293c))
+* **sync:** update config schema tests for new SYNC_METADATA_CONCURRENCY ([f79af45](https://github.com/rknightion/paperless-ngx-dedupe/commit/f79af4545dcad26d6915b5f779031438d0774ced))
+* update paperless client tests for new return format ([3b69704](https://github.com/rknightion/paperless-ngx-dedupe/commit/3b6970441e69665ac01fb8f486a4ffe7b892f15a))
+
 ## [0.5.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.4.0...v0.5.0) (2026-02-15)
 
 
