@@ -34,10 +34,10 @@ services:
       PAPERLESS_DISABLE_DBHANDLER: 'true'
       # Minimize resource usage for CI
       PAPERLESS_OCR_LANGUAGE: eng
-      PAPERLESS_OCR_MODE: skip
+      PAPERLESS_OCR_MODE: skip_noarchive
       PAPERLESS_CONSUMER_POLLING: 0
       PAPERLESS_OCR_SKIP_ARCHIVE_FILE: always
-      PAPERLESS_TASK_WORKERS: 2
+      PAPERLESS_TASK_WORKERS: 4
       PAPERLESS_THREADS_PER_WORKER: 2
     healthcheck:
       test: ['CMD', 'curl', '-sf', 'http://localhost:8000/api/']

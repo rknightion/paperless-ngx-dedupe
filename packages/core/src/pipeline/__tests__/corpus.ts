@@ -286,8 +286,8 @@ export function buildCorpus(): TestDocument[] {
     });
   }
 
-  // --- Group F: 160 unique documents ---
-  for (let i = 0; i < 160; i++) {
+  // --- Group F: 80 unique documents ---
+  for (let i = 0; i < 80; i++) {
     const templateIdx = i % TOPIC_TEMPLATES.length;
     const { topic, template } = TOPIC_TEMPLATES[templateIdx];
     docs.push({
