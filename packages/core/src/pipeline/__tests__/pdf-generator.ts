@@ -12,8 +12,13 @@ const MAX_LINES_PER_PAGE = Math.floor((PAGE_HEIGHT - 2 * MARGIN) / LINE_HEIGHT);
  * Generate a PDF document from plain text content.
  * Text is embedded via drawText (not rasterized), so Paperless-NGX
  * can extract it directly without OCR.
+ *
+ * Each PDF is made byte-unique via the title and producer metadata fields,
+ * even when the text content is identical. This prevents Paperless-NGX from
+ * rejecting uploads as hash-identical duplicates — our test needs documents
+ * that are duplicates in OCR content but distinct files by checksum.
  */
-export async function generatePdf(text: string, title?: string): Promise<Uint8Array> {
+export async function generatePdf(text: string, title: string): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
@@ -30,9 +35,8 @@ export async function generatePdf(text: string, title?: string): Promise<Uint8Ar
     }
   }
 
-  if (title) {
-    pdfDoc.setTitle(title);
-  }
+  pdfDoc.setTitle(title);
+  pdfDoc.setProducer(`pipeline-test-${title}-${Date.now()}`);
 
   return pdfDoc.save();
 }
