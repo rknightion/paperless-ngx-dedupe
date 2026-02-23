@@ -37,7 +37,7 @@ When creating implementation plans from todos.txt, keep the planning phase brief
 pnpm dev           # SvelteKit dev server (http://localhost:5173)
 pnpm build         # Build all packages in dependency order: core → sdk → cli → web
 pnpm check         # Type-check all four packages
-pnpm test          # Vitest unit tests for core and sdk (not integration tests — see Gotchas)
+pnpm test          # Vitest unit tests for core and sdk
 pnpm test:e2e      # Playwright E2E tests against a built web package
 pnpm lint          # ESLint
 pnpm lint:fix      # ESLint auto-fix
@@ -55,7 +55,7 @@ Run `pnpm lint && pnpm format && pnpm check && pnpm test` before pushing. CI add
 ## Gotchas & Constraints
 
 - **Node >=24.0.0 is required.** Do not test or build with older Node versions.
-- `pnpm test` runs **only unit tests** (core + sdk). Integration tests in `packages/core/vitest.integration.config.ts` require a live Paperless-NGX Docker instance and run separately in CI.
+- `pnpm test` runs **only unit tests** (core + sdk).
 - **`packages/sdk` is a public package.** Its exported API surface is a breaking-change boundary — treat it like a published library.
 - All `/api/v1/*` routes must return JSON with consistent error shapes and correct HTTP status codes. SvelteKit page `.server.ts` load functions must call the same core query functions as the corresponding API routes — not duplicate logic independently.
 - Database schema changes: modify Drizzle table definitions in `packages/core/src/schema/sqlite/`; there are no migration files. The app detects changes via SHA-256 hash at startup and applies DDL automatically (`AUTO_MIGRATE=true` by default).

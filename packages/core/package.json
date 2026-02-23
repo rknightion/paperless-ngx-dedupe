@@ -11,8 +11,7 @@
     "build": "tsc",
     "check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:pipeline": "vitest run --config vitest.pipeline.config.ts"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
@@ -35,7 +34,6 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "pdf-lib": "^1.17.1",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^4.0.18"
