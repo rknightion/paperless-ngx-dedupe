@@ -3,7 +3,6 @@ Business logic library for Paperless NGX Dedupe. No web framework dependencies â
 ## Tests
 
 - **Unit tests** (co-located `*.test.ts`): `pnpm test` or `vitest run` from this directory.
-- **Integration tests** (`vitest.integration.config.ts`): `vitest run --config vitest.integration.config.ts` â€” require a live Paperless-NGX Docker instance. These do not run as part of the root `pnpm test`.
 
 ## Gotchas
 
