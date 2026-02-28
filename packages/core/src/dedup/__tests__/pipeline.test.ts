@@ -184,6 +184,121 @@ describe('runAnalysis pipeline', () => {
     expect(result2.signaturesReused).toBe(0); // docs 1 and 2 are 'completed', not in pending set
   });
 
+  it('should preserve existing groups during incremental analysis with new docs', async () => {
+    // Set up two duplicate documents and run initial analysis
+    const text = generateText('the quick brown fox jumps over the lazy dog near the river', 10);
+    seedDocument(db, 1, 'Doc A', text);
+    seedDocument(db, 2, 'Doc B', text);
+
+    const result1 = await runAnalysis(db);
+    expect(result1.groupsCreated).toBe(1);
+    expect(result1.groupsRemoved).toBe(0);
+
+    // Verify the group exists
+    const groupsBefore = db.select().from(duplicateGroup).all();
+    expect(groupsBefore).toHaveLength(1);
+    expect(groupsBefore[0].status).toBe('pending');
+
+    // Add a completely different document (not a duplicate of anything)
+    seedDocument(
+      db,
+      3,
+      'Unrelated Doc',
+      generateText('quantum physics explains the fundamental nature of particles and waves', 10),
+    );
+
+    // Run incremental analysis (only the new doc is pending)
+    const result2 = await runAnalysis(db);
+
+    // The new doc should not form any groups
+    expect(result2.groupsCreated).toBe(0);
+    // The existing group should NOT be removed
+    expect(result2.groupsRemoved).toBe(0);
+
+    // Verify the original group is still intact
+    const groupsAfter = db.select().from(duplicateGroup).all();
+    expect(groupsAfter).toHaveLength(1);
+    expect(groupsAfter[0].id).toBe(groupsBefore[0].id);
+
+    // Verify members are still intact
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, groupsAfter[0].id))
+      .all();
+    expect(members).toHaveLength(2);
+  });
+
+  it('should remove subsumed group when new doc expands it', async () => {
+    // Set up two duplicate documents and run initial analysis
+    const text = generateText('the quick brown fox jumps over the lazy dog near the river', 10);
+    seedDocument(db, 1, 'Doc A', text);
+    seedDocument(db, 2, 'Doc B', text);
+
+    const result1 = await runAnalysis(db);
+    expect(result1.groupsCreated).toBe(1);
+
+    const groupsBefore = db.select().from(duplicateGroup).all();
+    expect(groupsBefore).toHaveLength(1);
+
+    // Add a third document that is similar to the existing pair
+    seedDocument(db, 3, 'Doc C', text + ' with minor variation added');
+
+    // Run incremental analysis
+    const result2 = await runAnalysis(db);
+
+    // The old {A, B} group should be subsumed by the new {A, B, C} group
+    const groupsAfter = db.select().from(duplicateGroup).all();
+    expect(groupsAfter).toHaveLength(1);
+
+    // The new group should have 3 members
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, groupsAfter[0].id))
+      .all();
+    expect(members).toHaveLength(3);
+
+    // Old group should have been removed and new one created
+    expect(result2.groupsRemoved).toBe(1);
+    expect(result2.groupsCreated).toBe(1);
+  });
+
+  it('should still delete stale groups when their members are re-analyzed with force', async () => {
+    // Set up two duplicate documents and run initial analysis
+    const text = generateText('the quick brown fox jumps over the lazy dog near the river', 10);
+    seedDocument(db, 1, 'Doc A', text);
+    seedDocument(db, 2, 'Doc B', text);
+
+    const result1 = await runAnalysis(db);
+    expect(result1.groupsCreated).toBe(1);
+
+    // Change doc B's content so it's no longer a duplicate
+    const docB = db.select().from(document).where(eq(document.paperlessId, 2)).get()!;
+    db.update(documentContent)
+      .set({
+        normalizedText: generateText(
+          'quantum physics explains the fundamental nature of particles and waves',
+          10,
+        ),
+        wordCount: 100,
+      })
+      .where(eq(documentContent.documentId, docB.id))
+      .run();
+    // Delete its signature so it gets regenerated with new content
+    db.delete(documentSignature).where(eq(documentSignature.documentId, docB.id)).run();
+
+    // Force re-analysis — all docs are in search scope
+    const result2 = await runAnalysis(db, { force: true });
+
+    // The old group should be removed since docs are no longer similar
+    expect(result2.groupsRemoved).toBe(1);
+    expect(result2.groupsCreated).toBe(0);
+
+    const groupsAfter = db.select().from(duplicateGroup).all();
+    expect(groupsAfter).toHaveLength(0);
+  });
+
   it('should regenerate all signatures with force=true', async () => {
     const text = generateText('the quick brown fox jumps over the lazy dog near the river', 10);
 

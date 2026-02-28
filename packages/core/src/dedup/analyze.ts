@@ -445,6 +445,20 @@ export async function runAnalysis(
     });
   }
 
+  // Build groupId -> memberIds lookup for deletion scope check
+  const existingGroupMemberIds = new Map<string, Set<string>>();
+  for (const entry of existingGroupMembers.values()) {
+    existingGroupMemberIds.set(entry.groupId, entry.memberIds);
+  }
+
+  // Build document -> new group members lookup for subsumption check
+  const docToNewGroupMembers = new Map<string, Set<string>>();
+  for (const [, members] of groupMembers) {
+    for (const docId of members) {
+      docToNewGroupMembers.set(docId, members);
+    }
+  }
+
   // Track which existing groups are still active
   const activeExistingGroupIds = new Set<string>();
 
@@ -526,12 +540,30 @@ export async function runAnalysis(
       }
     }
 
-    // Delete stale groups that are still pending (preserve user-actioned groups)
+    // Delete stale groups that are still pending (preserve user-actioned groups).
+    // Two deletion criteria:
+    // 1. Subsumed: all members appear in a newly-formed expanded group
+    // 2. Stale: at least one member was in the search scope but group wasn't re-detected
+    const searchDocIdSet = new Set(searchDocIds);
     for (const group of existingGroups) {
       if (activeExistingGroupIds.has(group.id)) continue;
       if (group.status !== 'pending') continue;
 
-      // Delete members first (cascade should handle, but be explicit)
+      const memberIds = existingGroupMemberIds.get(group.id);
+      if (!memberIds || memberIds.size === 0) continue;
+
+      // Check if subsumed by a newly-formed group (all members in same new group)
+      const firstMember = [...memberIds][0];
+      const newGroupMembers = docToNewGroupMembers.get(firstMember);
+      const isSubsumed =
+        newGroupMembers && [...memberIds].every((id) => newGroupMembers.has(id));
+
+      if (!isSubsumed) {
+        // Not subsumed — only delete if at least one member was in search scope
+        const wasEvaluated = [...memberIds].some((id) => searchDocIdSet.has(id));
+        if (!wasEvaluated) continue;
+      }
+
       tx.delete(duplicateMember).where(eq(duplicateMember.groupId, group.id)).run();
       tx.delete(duplicateGroup).where(eq(duplicateGroup.id, group.id)).run();
 
