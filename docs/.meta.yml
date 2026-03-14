@@ -1,0 +1,14 @@
+title: Paperless NGX Dedupe Documentation
+description: A document deduplication companion for Paperless-NGX using MinHash/LSH algorithms with a web UI for reviewing and resolving duplicates
+tags:
+  - paperless-ngx
+  - document-deduplication
+  - minhash
+  - duplicate-detection
+image: assets/social-card.png
+twitter:
+  creator: "@rknightion"
+  site: "@rknightion"
+robots: index,follow
+language: en
+canonical_base: https://m7kni.io/paperless-ngx-dedupe/
