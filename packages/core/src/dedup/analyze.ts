@@ -555,8 +555,7 @@ export async function runAnalysis(
       // Check if subsumed by a newly-formed group (all members in same new group)
       const firstMember = [...memberIds][0];
       const newGroupMembers = docToNewGroupMembers.get(firstMember);
-      const isSubsumed =
-        newGroupMembers && [...memberIds].every((id) => newGroupMembers.has(id));
+      const isSubsumed = newGroupMembers && [...memberIds].every((id) => newGroupMembers.has(id));
 
       if (!isSubsumed) {
         // Not subsumed — only delete if at least one member was in search scope
