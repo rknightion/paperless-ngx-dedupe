@@ -9,9 +9,12 @@
     status: string;
     memberCount: number;
     onaction?: () => void;
+    returnParams?: string;
   }
 
-  let { groupId, status, memberCount, onaction }: Props = $props();
+  let { groupId, status, memberCount, onaction, returnParams = '' }: Props = $props();
+
+  let returnUrl = $derived(returnParams ? `/duplicates?${returnParams}` : '/duplicates');
 
   let isUpdating = $state(false);
   let error = $state<string | null>(null);
@@ -162,11 +165,11 @@
   <dialog
     open
     onclick={(e) => {
-      if (e.target === e.currentTarget) goto('/duplicates');
+      if (e.target === e.currentTarget) goto(returnUrl);
     }}
     class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
   >
     <h2 class="text-ink text-lg font-semibold">Delete Complete</h2>
-    <RecycleBinPrompt onclose={() => goto('/duplicates')} />
+    <RecycleBinPrompt onclose={() => goto(returnUrl)} />
   </dialog>
 {/if}
