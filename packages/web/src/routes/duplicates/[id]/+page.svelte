@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
+  import { page } from '$app/stores';
   import {
     ConfidenceBadge,
     StatusBadge,
@@ -25,6 +26,8 @@
   let selectedSecondary = $derived(secondaryMembers[selectedSecondaryIndex] || secondaryMembers[0]);
 
   let groupStatus = $derived(data.group.status);
+  let returnParams = $derived($page.url.searchParams.get('returnParams') ?? '');
+  let returnUrl = $derived(returnParams ? `/duplicates?${returnParams}` : '/duplicates');
 
   async function setPrimary(documentId: string) {
     isSettingPrimary = true;
@@ -48,7 +51,7 @@
 <div class="space-y-6">
   <!-- Breadcrumb -->
   <a
-    href="/duplicates"
+    href={returnUrl}
     class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm"
   >
     <ArrowLeft class="h-4 w-4" /> Back to Duplicates
@@ -76,6 +79,7 @@
     status={data.group.status}
     memberCount={data.group.members.length}
     onaction={() => invalidateAll()}
+    {returnParams}
   />
 
   <!-- Confidence section divider -->

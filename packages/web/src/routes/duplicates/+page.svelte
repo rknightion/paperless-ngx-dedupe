@@ -472,7 +472,13 @@
               0
                 ? 'bg-surface'
                 : 'bg-canvas'}"
-              onclick={() => goto(`/duplicates/${group.id}`)}
+              onclick={() => {
+                const returnParams = $page.url.searchParams.toString();
+                const url = returnParams
+                  ? `/duplicates/${group.id}?returnParams=${encodeURIComponent(returnParams)}`
+                  : `/duplicates/${group.id}`;
+                goto(url);
+              }}
             >
               <td class="px-4 py-3">
                 <input
