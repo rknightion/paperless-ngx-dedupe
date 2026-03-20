@@ -100,55 +100,92 @@ export const paperlessStatisticsSchema = z
     documents_total: z.number(),
     documents_inbox: z.number().nullable().default(null),
     inbox_tag: z.number().nullable().default(null),
+    // v2 field name (singular, inner field: count)
     document_file_type_count: z
-      .array(
-        z
-          .object({
-            mime_type: z.string(),
-            count: z.number(),
-          })
-          .transform((raw) => ({
-            mimeType: raw.mime_type,
-            count: raw.count,
-          })),
-      )
-      .default([]),
+      .array(z.object({ mime_type: z.string(), count: z.number() }))
+      .optional(),
+    // v3 field name (plural, inner field: mime_type_count)
+    document_file_type_counts: z
+      .array(z.object({ mime_type: z.string(), mime_type_count: z.number() }))
+      .optional(),
     character_count: z.number(),
+    // v3 additions (absent in v2)
+    inbox_tags: z.array(z.number()).optional(),
+    tag_count: z.number().optional(),
+    correspondent_count: z.number().optional(),
+    document_type_count: z.number().optional(),
+    storage_path_count: z.number().optional(),
+    current_asn: z.number().nullable().optional(),
   })
-  .transform((raw) => ({
-    documentsTotal: raw.documents_total,
-    documentsInbox: raw.documents_inbox,
-    inboxTag: raw.inbox_tag,
-    documentFileTypeCount: raw.document_file_type_count,
-    characterCount: raw.character_count,
-  }));
+  .transform((raw) => {
+    // Normalize file type counts: prefer v3 plural form, fall back to v2 singular
+    const fileTypeCounts = raw.document_file_type_counts
+      ? raw.document_file_type_counts.map((ft) => ({
+          mimeType: ft.mime_type,
+          count: ft.mime_type_count,
+        }))
+      : (raw.document_file_type_count ?? []).map((ft) => ({
+          mimeType: ft.mime_type,
+          count: ft.count,
+        }));
+
+    return {
+      documentsTotal: raw.documents_total,
+      documentsInbox: raw.documents_inbox,
+      inboxTag: raw.inbox_tag,
+      documentFileTypeCount: fileTypeCounts,
+      characterCount: raw.character_count,
+      tagCount: raw.tag_count ?? null,
+      correspondentCount: raw.correspondent_count ?? null,
+      documentTypeCount: raw.document_type_count ?? null,
+      storagePathCount: raw.storage_path_count ?? null,
+    };
+  });
 
 export const paperlessStatusSchema = z
   .object({
+    pngx_version: z.string().optional(),
+    server_os: z.string().optional(),
+    install_type: z.string().optional(),
     storage: z.object({
       total: z.number(),
       available: z.number(),
     }),
     database: z.object({
       status: z.string(),
+      type: z.string().optional(),
+      url: z.string().optional(),
+      error: z.string().nullable().optional(),
       migration_status: z
         .object({
           unapplied_migrations: z.array(z.string()).default([]),
+          latest_migration: z.string().optional(),
         })
         .default({ unapplied_migrations: [] }),
     }),
     tasks: z.object({
       redis_status: z.string().default(''),
+      redis_url: z.string().optional(),
+      redis_error: z.string().nullable().optional(),
       celery_status: z.string().default(''),
+      celery_url: z.string().nullable().optional(),
+      celery_error: z.string().nullable().optional(),
       index_status: z.string().default(''),
       index_last_modified: z.string().nullable().default(null),
+      index_error: z.string().nullable().optional(),
       classifier_status: z.string().default(''),
       classifier_last_trained: z.string().nullable().default(null),
+      classifier_error: z.string().nullable().optional(),
       sanity_check_status: z.string().default(''),
       sanity_check_last_run: z.string().nullable().default(null),
+      sanity_check_error: z.string().nullable().optional(),
+      llmindex_status: z.string().optional(),
+      llmindex_last_modified: z.string().nullable().optional(),
+      llmindex_error: z.string().nullable().optional(),
     }),
   })
   .transform((raw) => ({
+    pngxVersion: raw.pngx_version ?? null,
     storageTotal: raw.storage.total,
     storageAvailable: raw.storage.available,
     databaseStatus: raw.database.status,

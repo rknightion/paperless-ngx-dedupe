@@ -80,9 +80,23 @@ export class StatisticsCollector implements Collector {
 
   async collect(ctx: CollectorContext): Promise<void> {
     const stats = await ctx.client.getStatistics();
+    this.latest = stats;
 
-    // The statistics endpoint doesn't include tag/correspondent/documentType/storagePath counts
-    // directly in all Paperless versions. We fetch them separately via the client.
+    // v3 includes entity counts directly in the statistics response
+    if (
+      stats.tagCount !== null &&
+      stats.correspondentCount !== null &&
+      stats.documentTypeCount !== null &&
+      stats.storagePathCount !== null
+    ) {
+      this._tagCount = stats.tagCount;
+      this._correspondentCount = stats.correspondentCount;
+      this._documentTypeCount = stats.documentTypeCount;
+      this._storagePathCount = stats.storagePathCount;
+      return;
+    }
+
+    // v2 fallback: fetch counts separately via paginated endpoints
     const [tags, correspondents, documentTypes, storagePaths] = await Promise.all([
       ctx.client.getTags(),
       ctx.client.getCorrespondents(),
@@ -90,10 +104,6 @@ export class StatisticsCollector implements Collector {
       ctx.client.getStoragePaths(),
     ]);
 
-    this.latest = stats;
-
-    // Store counts to be observed in the callback — we do this by updating latest
-    // and reading auxiliary data in the callback via closure
     this._tagCount = tags.length;
     this._correspondentCount = correspondents.length;
     this._documentTypeCount = documentTypes.length;

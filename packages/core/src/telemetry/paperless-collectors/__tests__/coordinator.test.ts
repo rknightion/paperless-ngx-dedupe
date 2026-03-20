@@ -36,6 +36,7 @@ vi.mock('../../../logger.js', () => ({
 function createMockClient() {
   return {
     getStatus: vi.fn().mockResolvedValue({
+      pngxVersion: null,
       storageTotal: 1000,
       storageAvailable: 500,
       databaseStatus: 'OK',
@@ -55,6 +56,10 @@ function createMockClient() {
       inboxTag: 1,
       documentFileTypeCount: [],
       characterCount: 50000,
+      tagCount: null,
+      correspondentCount: null,
+      documentTypeCount: null,
+      storagePathCount: null,
     }),
     getTags: vi.fn().mockResolvedValue([]),
     getCorrespondents: vi.fn().mockResolvedValue([]),

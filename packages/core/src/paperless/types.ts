@@ -59,6 +59,11 @@ export interface PaperlessStatistics {
   inboxTag: number | null;
   documentFileTypeCount: Array<{ mimeType: string; count: number }>;
   characterCount: number;
+  /** v3 entity counts — null when connected to a v2 instance */
+  tagCount: number | null;
+  correspondentCount: number | null;
+  documentTypeCount: number | null;
+  storagePathCount: number | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -76,6 +81,7 @@ export interface ConnectionTestResult {
 }
 
 export interface PaperlessStatus {
+  pngxVersion: string | null;
   storageTotal: number;
   storageAvailable: number;
   databaseStatus: string;

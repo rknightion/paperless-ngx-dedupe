@@ -9,7 +9,7 @@ import {
 } from '../schemas.js';
 
 describe('paperlessStatusSchema', () => {
-  it('transforms status response', () => {
+  it('transforms v2 status response', () => {
     const input = {
       storage: { total: 1000000, available: 500000 },
       database: {
@@ -28,6 +28,7 @@ describe('paperlessStatusSchema', () => {
       },
     };
     const result = paperlessStatusSchema.parse(input);
+    expect(result.pngxVersion).toBeNull();
     expect(result.storageTotal).toBe(1000000);
     expect(result.storageAvailable).toBe(500000);
     expect(result.databaseStatus).toBe('OK');
@@ -40,6 +41,51 @@ describe('paperlessStatusSchema', () => {
     expect(result.sanityCheckLastRun).toBeNull();
   });
 
+  it('transforms v3 status response with extra fields', () => {
+    const input = {
+      pngx_version: '3.0.0',
+      server_os: 'Linux-6.1.0',
+      install_type: 'docker',
+      storage: { total: 5000000, available: 2500000 },
+      database: {
+        type: 'postgresql',
+        url: 'postgresql://localhost/paperless',
+        status: 'OK',
+        error: null,
+        migration_status: {
+          latest_migration: 'documents.0042_auto',
+          unapplied_migrations: [],
+        },
+      },
+      tasks: {
+        redis_url: 'redis://localhost:6379',
+        redis_status: 'OK',
+        redis_error: null,
+        celery_status: 'OK',
+        celery_url: 'celery@worker1',
+        celery_error: null,
+        index_status: 'OK',
+        index_last_modified: '2024-06-01T00:00:00Z',
+        index_error: null,
+        classifier_status: 'OK',
+        classifier_last_trained: '2024-06-01T12:00:00Z',
+        classifier_error: null,
+        sanity_check_status: 'OK',
+        sanity_check_last_run: '2024-06-01T00:00:00Z',
+        sanity_check_error: null,
+        llmindex_status: 'DISABLED',
+        llmindex_last_modified: null,
+        llmindex_error: null,
+      },
+    };
+    const result = paperlessStatusSchema.parse(input);
+    expect(result.pngxVersion).toBe('3.0.0');
+    expect(result.storageTotal).toBe(5000000);
+    expect(result.databaseStatus).toBe('OK');
+    expect(result.databaseUnappliedMigrations).toBe(0);
+    expect(result.sanityCheckLastRun).toBe('2024-06-01T00:00:00Z');
+  });
+
   it('defaults missing migration_status', () => {
     const input = {
       storage: { total: 100, available: 50 },
@@ -47,6 +93,7 @@ describe('paperlessStatusSchema', () => {
       tasks: {},
     };
     const result = paperlessStatusSchema.parse(input);
+    expect(result.pngxVersion).toBeNull();
     expect(result.databaseUnappliedMigrations).toBe(0);
     expect(result.redisStatus).toBe('');
   });
