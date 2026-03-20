@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.6.2](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.6.1...v0.6.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-svelte to ^0.577.0 ([#201](https://github.com/rknightion/paperless-ngx-dedupe/issues/201)) ([405c759](https://github.com/rknightion/paperless-ngx-dedupe/commit/405c7595a6bb4c672cff33130907681989285ce9))
+* **deps:** update opentelemetry-js monorepo ([#206](https://github.com/rknightion/paperless-ngx-dedupe/issues/206)) ([a3aa3f9](https://github.com/rknightion/paperless-ngx-dedupe/commit/a3aa3f920cf5e04869d6a61df9dfaeac2d956fe3))
+* **deps:** update opentelemetry-js-contrib monorepo ([#217](https://github.com/rknightion/paperless-ngx-dedupe/issues/217)) ([f55cbfe](https://github.com/rknightion/paperless-ngx-dedupe/commit/f55cbfea26e8a67eaba06f4bb20432de41bd74da))
+* preserve filter state when navigating back from duplicate detail page ([f911a3e](https://github.com/rknightion/paperless-ngx-dedupe/commit/f911a3e5ee3ecb20d262dce825e4ab1d3913158a))
+
+
+### Miscellaneous
+
+* **deps:** update actions/cache digest to 6682284 ([#225](https://github.com/rknightion/paperless-ngx-dedupe/issues/225)) ([411cc05](https://github.com/rknightion/paperless-ngx-dedupe/commit/411cc05a9ffd6cbe34c36219211d1dd15f303fc9))
+* **deps:** update actions/download-artifact digest to 3e5f45b ([#210](https://github.com/rknightion/paperless-ngx-dedupe/issues/210)) ([1a761d5](https://github.com/rknightion/paperless-ngx-dedupe/commit/1a761d5041e81478287f2a2e658dd88cc754ccb8))
+* **deps:** update actions/setup-node digest to 53b8394 ([#207](https://github.com/rknightion/paperless-ngx-dedupe/issues/207)) ([61c6246](https://github.com/rknightion/paperless-ngx-dedupe/commit/61c62464babe80c71f5ac08314ec72734fec4b22))
+* **deps:** update dependency @sveltejs/kit to v2.55.0 ([#212](https://github.com/rknightion/paperless-ngx-dedupe/issues/212)) ([aba345e](https://github.com/rknightion/paperless-ngx-dedupe/commit/aba345e8b70ac48279cb07792ebfe4ca2846487f))
+* **deps:** update dependency @sveltejs/vite-plugin-svelte to v7 ([d36812f](https://github.com/rknightion/paperless-ngx-dedupe/commit/d36812ff6d72b35124eb6be506b8e33500b2530c))
+* **deps:** update dependency @sveltejs/vite-plugin-svelte to v7 ([a140b58](https://github.com/rknightion/paperless-ngx-dedupe/commit/a140b58cda3633ac8118ab1d718f34662cb8fe8d))
+* **deps:** update dependency better-sqlite3 to v12.8.0 ([#213](https://github.com/rknightion/paperless-ngx-dedupe/issues/213)) ([7910ae4](https://github.com/rknightion/paperless-ngx-dedupe/commit/7910ae49cc68d865b986a67bca92310201960bb7))
+* **deps:** update dependency drizzle-kit to v0.31.10 ([#224](https://github.com/rknightion/paperless-ngx-dedupe/issues/224)) ([4f0d871](https://github.com/rknightion/paperless-ngx-dedupe/commit/4f0d8710ed89825f1574c19acbf5edf13afda5d9))
+* **deps:** update dependency globals to v17.4.0 ([#199](https://github.com/rknightion/paperless-ngx-dedupe/issues/199)) ([f13c125](https://github.com/rknightion/paperless-ngx-dedupe/commit/f13c12562180cf17d10c3d9010fa0d3355046b81))
+* **deps:** update dependency prettier-plugin-svelte to v3.5.1 ([#204](https://github.com/rknightion/paperless-ngx-dedupe/issues/204)) ([7efdadb](https://github.com/rknightion/paperless-ngx-dedupe/commit/7efdadbc6dcbfb813e641b04954212d128d05966))
+* **deps:** update dependency vite to v8 ([b80cefc](https://github.com/rknightion/paperless-ngx-dedupe/commit/b80cefc9dc44b3666ad0bb978ef890ae010f4ce3))
+* **deps:** update dependency vite to v8 ([b72643e](https://github.com/rknightion/paperless-ngx-dedupe/commit/b72643eb88a6dcbb8592f2650fd7712a67e39ea2))
+* **deps:** update dependency vite to v8.0.1 ([#227](https://github.com/rknightion/paperless-ngx-dedupe/issues/227)) ([f8b4a87](https://github.com/rknightion/paperless-ngx-dedupe/commit/f8b4a878e2e6d7950824921a903fec38896eb01a))
+* **deps:** update docker/login-action action to v4 ([#208](https://github.com/rknightion/paperless-ngx-dedupe/issues/208)) ([9431c38](https://github.com/rknightion/paperless-ngx-dedupe/commit/9431c38b3c02d2b82b9bc58cd0e08a7b2b22639b))
+* **deps:** update dorny/test-reporter digest to 3d76b34 ([#203](https://github.com/rknightion/paperless-ngx-dedupe/issues/203)) ([85f5eda](https://github.com/rknightion/paperless-ngx-dedupe/commit/85f5edae21e8461d187d58b801be9c78d2133a9f))
+* **deps:** update github actions ([#220](https://github.com/rknightion/paperless-ngx-dedupe/issues/220)) ([cd43ab4](https://github.com/rknightion/paperless-ngx-dedupe/commit/cd43ab42b25cfe8dc5f0f015869ee8b9955493be))
+* **deps:** update github/codeql-action digest to b1bff81 ([#202](https://github.com/rknightion/paperless-ngx-dedupe/issues/202)) ([2630162](https://github.com/rknightion/paperless-ngx-dedupe/commit/2630162bef95d4fc23b7185f0994a00148b955d2))
+* **deps:** update pnpm to v10.32.1 ([#214](https://github.com/rknightion/paperless-ngx-dedupe/issues/214)) ([e07d886](https://github.com/rknightion/paperless-ngx-dedupe/commit/e07d8862e3462f1bb1d3460539782168dc6adb18))
+* **deps:** update pnpm/action-setup action to v5 ([#223](https://github.com/rknightion/paperless-ngx-dedupe/issues/223)) ([aff4bd8](https://github.com/rknightion/paperless-ngx-dedupe/commit/aff4bd8e853dab11c1569b967339574acdabe8be))
+* **deps:** update pnpm/action-setup digest to fc06bc1 ([#211](https://github.com/rknightion/paperless-ngx-dedupe/issues/211)) ([c795fd7](https://github.com/rknightion/paperless-ngx-dedupe/commit/c795fd724b8fbc7108576778fc49511ccafde7ff))
+* **deps:** update tailwindcss monorepo to v4.2.2 ([#226](https://github.com/rknightion/paperless-ngx-dedupe/issues/226)) ([68a8abe](https://github.com/rknightion/paperless-ngx-dedupe/commit/68a8abe6161118c9183f44909e425469192c1f13))
+* **deps:** update typescript-eslint monorepo to v8.57.0 ([#215](https://github.com/rknightion/paperless-ngx-dedupe/issues/215)) ([179e990](https://github.com/rknightion/paperless-ngx-dedupe/commit/179e990a4be237c81a90f4b15e9e74281aa4a020))
+* **deps:** update typescript-eslint monorepo to v8.57.1 ([#222](https://github.com/rknightion/paperless-ngx-dedupe/issues/222)) ([e2ae494](https://github.com/rknightion/paperless-ngx-dedupe/commit/e2ae4944a44eb35c955cddaf426dc745409f3c5f))
+* **deps:** update vitest monorepo to v4.1.0 ([#216](https://github.com/rknightion/paperless-ngx-dedupe/issues/216)) ([544fc04](https://github.com/rknightion/paperless-ngx-dedupe/commit/544fc048260c62d975b61edc7f1b72d8030605de))
+
 ## [0.6.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.6.0...v0.6.1) (2026-02-28)
 
 
