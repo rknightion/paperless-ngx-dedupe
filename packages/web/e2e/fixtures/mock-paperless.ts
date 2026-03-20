@@ -73,7 +73,11 @@ function checkAuth(req: http.IncomingMessage): boolean {
 }
 
 function jsonResponse(res: http.ServerResponse, data: unknown, status = 200) {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'X-Api-Version': '5',
+    'X-Version': '2.14.0',
+  });
   res.end(JSON.stringify(data));
 }
 

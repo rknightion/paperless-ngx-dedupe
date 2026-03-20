@@ -77,7 +77,7 @@ describe('snake_case to camelCase transformation', () => {
     expect(result.documentCount).toBe(20);
   });
 
-  it('paperlessStatisticsSchema transforms statistics fields including nested', () => {
+  it('paperlessStatisticsSchema transforms v2 statistics fields including nested', () => {
     const input = {
       documents_total: 100,
       documents_inbox: 5,
@@ -94,6 +94,40 @@ describe('snake_case to camelCase transformation', () => {
       { mimeType: 'application/pdf', count: 80 },
       { mimeType: 'image/png', count: 20 },
     ]);
+    // v2 does not include entity counts
+    expect(result.tagCount).toBeNull();
+    expect(result.correspondentCount).toBeNull();
+    expect(result.documentTypeCount).toBeNull();
+    expect(result.storagePathCount).toBeNull();
+  });
+
+  it('paperlessStatisticsSchema transforms v3 format with plural field name', () => {
+    const input = {
+      documents_total: 200,
+      documents_inbox: 10,
+      inbox_tag: 1,
+      inbox_tags: [1, 2],
+      document_file_type_counts: [
+        { mime_type: 'application/pdf', mime_type_count: 150 },
+        { mime_type: 'image/jpeg', mime_type_count: 50 },
+      ],
+      character_count: 1000000,
+      tag_count: 15,
+      correspondent_count: 8,
+      document_type_count: 4,
+      storage_path_count: 3,
+      current_asn: 42,
+    };
+    const result = paperlessStatisticsSchema.parse(input);
+    expect(result.documentsTotal).toBe(200);
+    expect(result.documentFileTypeCount).toEqual([
+      { mimeType: 'application/pdf', count: 150 },
+      { mimeType: 'image/jpeg', count: 50 },
+    ]);
+    expect(result.tagCount).toBe(15);
+    expect(result.correspondentCount).toBe(8);
+    expect(result.documentTypeCount).toBe(4);
+    expect(result.storagePathCount).toBe(3);
   });
 });
 

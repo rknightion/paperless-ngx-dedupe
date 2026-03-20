@@ -146,14 +146,57 @@ describe('PaperlessClient', () => {
       expect(options.headers['Authorization']).toBeUndefined();
     });
 
-    it('should always include Accept header with version 9', async () => {
+    it('should include Accept header without hardcoded version', async () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
       mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
 
       await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
 
       const [, options] = mockFetch.mock.calls[0];
-      expect(options.headers['Accept']).toBe('application/json; version=9');
+      expect(options.headers['Accept']).toBe('application/json');
+    });
+  });
+
+  // ─── Version detection ─────────────────────────────────────────────
+
+  describe('version detection', () => {
+    it('should detect API version from X-Api-Version header', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({ ok: true }, 200, { 'X-Api-Version': '10', 'X-Version': '3.0.0' }),
+      );
+
+      await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
+
+      expect(client.apiVersion).toBe('10');
+      expect(client.paperlessVersion).toBe('3.0.0');
+    });
+
+    it('should return null versions when headers are absent', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+      mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
+
+      await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
+
+      expect(client.apiVersion).toBeNull();
+      expect(client.paperlessVersion).toBeNull();
+    });
+
+    it('should only detect version once (from first successful response)', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+      mockFetch
+        .mockResolvedValueOnce(
+          mockResponse({ ok: true }, 200, { 'X-Api-Version': '9', 'X-Version': '2.14.0' }),
+        )
+        .mockResolvedValueOnce(
+          mockResponse({ ok: true }, 200, { 'X-Api-Version': '10', 'X-Version': '3.0.0' }),
+        );
+
+      await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
+      await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
+
+      expect(client.apiVersion).toBe('9');
+      expect(client.paperlessVersion).toBe('2.14.0');
     });
   });
 
@@ -554,11 +597,29 @@ describe('PaperlessClient', () => {
 
       const result = await client.testConnection();
 
-      expect(result).toEqual({
-        success: true,
-        version: 'unknown',
-        documentCount: 42,
-      });
+      expect(result.success).toBe(true);
+      expect(result.documentCount).toBe(42);
+      // No version headers in mock → falls back to 'unknown'
+      expect(result.version).toBe('unknown');
+    });
+
+    it('should return detected version from X-Version header', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+
+      const doc = makeSnakeCaseDocument();
+      mockFetch
+        .mockResolvedValueOnce(
+          mockResponse(makeSnakeCaseStatistics(), 200, {
+            'X-Api-Version': '10',
+            'X-Version': '3.0.0',
+          }),
+        )
+        .mockResolvedValueOnce(mockResponse(makePaginatedResponse([doc], null, 42)));
+
+      const result = await client.testConnection();
+
+      expect(result.success).toBe(true);
+      expect(result.version).toBe('3.0.0');
     });
 
     it('should return auth failure on PaperlessAuthError', async () => {

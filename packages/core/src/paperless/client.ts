@@ -33,12 +33,14 @@ export class PaperlessClient {
   private readonly timeout: number;
   private readonly maxRetries: number;
   private readonly logger: Logger;
+  private detectedApiVersion: string | null = null;
+  private detectedPngxVersion: string | null = null;
 
   constructor(config: PaperlessConfig) {
     this.baseUrl = config.url.replace(/\/+$/, '');
 
     this.headers = {
-      Accept: 'application/json; version=9',
+      Accept: 'application/json',
     };
     if (config.token) {
       this.headers['Authorization'] = `Token ${config.token}`;
@@ -171,12 +173,33 @@ export class PaperlessClient {
       );
     }
 
+    if (!this.detectedApiVersion) {
+      const apiVer = response.headers.get('X-Api-Version');
+      const pngxVer = response.headers.get('X-Version');
+      if (apiVer) {
+        this.detectedApiVersion = apiVer;
+        this.detectedPngxVersion = pngxVer;
+        this.logger.info(
+          { apiVersion: apiVer, pngxVersion: pngxVer },
+          'Detected Paperless-NGX API version',
+        );
+      }
+    }
+
     paperlessRequestsTotal().add(1, {
       method: options.method ?? 'GET',
       status_code: response.status,
     });
 
     return response;
+  }
+
+  get apiVersion(): string | null {
+    return this.detectedApiVersion;
+  }
+
+  get paperlessVersion(): string | null {
+    return this.detectedPngxVersion;
   }
 
   async testConnection(): Promise<ConnectionTestResult> {
@@ -191,7 +214,7 @@ export class PaperlessClient {
 
       return {
         success: true,
-        version: 'unknown',
+        version: this.detectedPngxVersion ?? this.detectedApiVersion ?? 'unknown',
         documentCount: paginated.count,
       };
     } catch (error) {
