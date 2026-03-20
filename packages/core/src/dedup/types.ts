@@ -70,6 +70,8 @@ export interface AnalysisOptions {
 export interface AnalysisResult {
   totalDocuments: number;
   documentsAnalyzed: number;
+  documentsSkipped: number;
+  isFullRebuild: boolean;
   signaturesGenerated: number;
   signaturesReused: number;
   candidatePairsFound: number;
