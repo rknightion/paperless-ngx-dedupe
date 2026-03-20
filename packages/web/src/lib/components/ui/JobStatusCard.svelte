@@ -53,8 +53,24 @@
 
       if (type === 'analysis') {
         const parts: string[] = [];
-        if (result.documentsAnalyzed != null)
-          parts.push(`${result.documentsAnalyzed} docs analyzed`);
+        const analyzed = result.documentsAnalyzed ?? 0;
+        const skipped = result.documentsSkipped ?? 0;
+        const total = result.totalDocuments ?? 0;
+        const isFullRebuild = result.isFullRebuild ?? false;
+
+        if (isFullRebuild) {
+          parts.push(`${total.toLocaleString()} docs analyzed (full rebuild)`);
+        } else if (analyzed > 0 || skipped > 0) {
+          let analyzedPart = `${analyzed.toLocaleString()} new docs analyzed`;
+          if (skipped > 0) {
+            analyzedPart += `, ${skipped.toLocaleString()} skipped`;
+          }
+          if (total > 0) {
+            analyzedPart += ` (of ${total.toLocaleString()} total)`;
+          }
+          parts.push(analyzedPart);
+        }
+
         if (result.groupsCreated > 0) parts.push(`${result.groupsCreated} groups created`);
         if (result.groupsUpdated > 0) parts.push(`${result.groupsUpdated} groups updated`);
         if (result.groupsRemoved > 0) parts.push(`${result.groupsRemoved} groups removed`);

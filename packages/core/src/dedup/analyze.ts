@@ -46,6 +46,8 @@ export async function runAnalysis(
   const result: AnalysisResult = {
     totalDocuments: 0,
     documentsAnalyzed: 0,
+    documentsSkipped: 0,
+    isFullRebuild: force,
     signaturesGenerated: 0,
     signaturesReused: 0,
     candidatePairsFound: 0,
@@ -115,6 +117,7 @@ export async function runAnalysis(
   }
 
   const processedDocIds: string[] = [];
+  const skippedDocIds: string[] = [];
 
   for (let i = 0; i < docsToProcess.length; i++) {
     const doc = docsToProcess[i];
@@ -148,15 +151,18 @@ export async function runAnalysis(
       .get();
 
     if (!content || !content.normalizedText) {
+      skippedDocIds.push(doc.id);
       continue;
     }
 
     if ((content.wordCount ?? 0) < config.minWords) {
+      skippedDocIds.push(doc.id);
       continue;
     }
 
     const shingles = textToShingles(content.normalizedText, config.ngramSize, config.minWords);
     if (!shingles) {
+      skippedDocIds.push(doc.id);
       continue;
     }
 
@@ -201,8 +207,12 @@ export async function runAnalysis(
   result.signaturesGenerated = sigGenerated;
   result.signaturesReused = sigReused;
   result.documentsAnalyzed = processedDocIds.length;
+  result.documentsSkipped = skippedDocIds.length;
 
-  logger.info({ generated: sigGenerated, reused: sigReused }, 'Signatures processed');
+  logger.info(
+    { generated: sigGenerated, reused: sigReused, skipped: skippedDocIds.length },
+    'Signatures processed',
+  );
   await onProgress?.(0.4, `Signatures: ${sigGenerated} generated, ${sigReused} reused`);
 
   // Stage 4: Build LSH index from ALL signatures
@@ -585,6 +595,15 @@ export async function runAnalysis(
   // Update processingStatus in batches
   for (let i = 0; i < processedDocIds.length; i += SQL_VARIABLE_LIMIT) {
     const batch = processedDocIds.slice(i, i + SQL_VARIABLE_LIMIT);
+    db.update(document)
+      .set({ processingStatus: 'completed' })
+      .where(inArray(document.id, batch))
+      .run();
+  }
+
+  // Mark skipped documents as completed — they've been evaluated but lack sufficient content
+  for (let i = 0; i < skippedDocIds.length; i += SQL_VARIABLE_LIMIT) {
+    const batch = skippedDocIds.slice(i, i + SQL_VARIABLE_LIMIT);
     db.update(document)
       .set({ processingStatus: 'completed' })
       .where(inArray(document.id, batch))
