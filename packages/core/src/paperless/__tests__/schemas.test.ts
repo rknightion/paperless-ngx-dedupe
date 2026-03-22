@@ -129,6 +129,27 @@ describe('snake_case to camelCase transformation', () => {
     expect(result.documentTypeCount).toBe(4);
     expect(result.storagePathCount).toBe(3);
   });
+
+  it('paperlessStatisticsSchema accepts inbox_tags as null (no inbox tags configured)', () => {
+    const input = {
+      documents_total: 100,
+      documents_inbox: null,
+      inbox_tag: null,
+      inbox_tags: null,
+      document_file_type_counts: [
+        { mime_type: 'application/pdf', mime_type_count: 80 },
+      ],
+      character_count: 500000,
+      tag_count: 10,
+      correspondent_count: 5,
+      document_type_count: 3,
+      storage_path_count: 2,
+      current_asn: null,
+    };
+    const result = paperlessStatisticsSchema.parse(input);
+    expect(result.documentsTotal).toBe(100);
+    expect(result.documentsInbox).toBeNull();
+  });
 });
 
 describe('missing optional fields get defaults', () => {

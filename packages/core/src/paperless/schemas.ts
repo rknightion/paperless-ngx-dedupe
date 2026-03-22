@@ -110,7 +110,7 @@ export const paperlessStatisticsSchema = z
       .optional(),
     character_count: z.number(),
     // v3 additions (absent in v2)
-    inbox_tags: z.array(z.number()).optional(),
+    inbox_tags: z.array(z.number()).nullable().optional(),
     tag_count: z.number().optional(),
     correspondent_count: z.number().optional(),
     document_type_count: z.number().optional(),
