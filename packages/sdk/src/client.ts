@@ -2,6 +2,12 @@ import { buildQueryString, request, requestRaw } from './http.js';
 import type { HttpOptions } from './http.js';
 import { subscribeToJobProgress } from './sse.js';
 import type {
+  AiApplyOptions,
+  AiConfig,
+  AiProcessOptions,
+  AiResultFilters,
+  AiResultSummary,
+  AiStats,
   BatchDeleteResult,
   BatchResult,
   ClientOptions,
@@ -242,6 +248,79 @@ export class PaperlessDedupeClient {
     const res = await request<ConfigBackup>('/api/v1/import/config', this.httpOptions, {
       method: 'POST',
       body: backup,
+    });
+    return res.data;
+  }
+
+  // ── AI Processing ───────────────────────────────────────────────────
+
+  async processAi(options?: AiProcessOptions): Promise<Job> {
+    const res = await request<Job>('/api/v1/ai/process', this.httpOptions, {
+      method: 'POST',
+      body: options,
+    });
+    return res.data;
+  }
+
+  async getAiResults(
+    params?: PaginationParams & AiResultFilters,
+  ): Promise<{ data: AiResultSummary[]; meta: PaginationMeta }> {
+    const qs = buildQueryString({ ...params });
+    const res = await request<AiResultSummary[]>(`/api/v1/ai/results${qs}`, this.httpOptions);
+    return { data: res.data, meta: res.meta as PaginationMeta };
+  }
+
+  async getAiResult(id: string): Promise<AiResultSummary> {
+    const res = await request<AiResultSummary>(`/api/v1/ai/results/${id}`, this.httpOptions);
+    return res.data;
+  }
+
+  async applyAiResult(id: string, options?: AiApplyOptions): Promise<void> {
+    await request<unknown>(`/api/v1/ai/results/${id}/apply`, this.httpOptions, {
+      method: 'POST',
+      body: options,
+    });
+  }
+
+  async rejectAiResult(id: string): Promise<void> {
+    await request<unknown>(`/api/v1/ai/results/${id}/reject`, this.httpOptions, {
+      method: 'POST',
+    });
+  }
+
+  async batchApplyAiResults(
+    resultIds: string[],
+    fields?: ('correspondent' | 'documentType' | 'tags')[],
+  ): Promise<{ applied: number; failed: number }> {
+    const res = await request<{ applied: number; failed: number }>(
+      '/api/v1/ai/results/batch-apply',
+      this.httpOptions,
+      { method: 'POST', body: { resultIds, fields } },
+    );
+    return res.data;
+  }
+
+  async batchRejectAiResults(resultIds: string[]): Promise<void> {
+    await request<unknown>('/api/v1/ai/results/batch-reject', this.httpOptions, {
+      method: 'POST',
+      body: { resultIds },
+    });
+  }
+
+  async getAiStats(): Promise<AiStats> {
+    const res = await request<AiStats>('/api/v1/ai/stats', this.httpOptions);
+    return res.data;
+  }
+
+  async getAiConfig(): Promise<AiConfig> {
+    const res = await request<AiConfig>('/api/v1/ai/config', this.httpOptions);
+    return res.data;
+  }
+
+  async updateAiConfig(config: Partial<AiConfig>): Promise<AiConfig> {
+    const res = await request<AiConfig>('/api/v1/ai/config', this.httpOptions, {
+      method: 'PUT',
+      body: config,
     });
     return res.data;
   }

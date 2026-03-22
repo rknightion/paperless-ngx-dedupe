@@ -40,5 +40,12 @@ export type {
   ConfigBackup,
   BatchResult,
   BatchDeleteResult,
+  // AI Processing types
+  AiResultSummary,
+  AiStats,
+  AiConfig,
+  AiResultFilters,
+  AiProcessOptions,
+  AiApplyOptions,
 } from './types.js';
 export { ErrorCode } from './types.js';
