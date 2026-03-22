@@ -1,0 +1,61 @@
+import type { AiProviderInterface, AiExtractionResult } from './providers/types.js';
+import { buildPromptParts, truncateContent } from './prompt.js';
+import { createLogger } from '../logger.js';
+
+const logger = createLogger('ai-extract');
+
+export interface ProcessDocumentOptions {
+  provider: AiProviderInterface;
+  documentTitle: string;
+  documentContent: string;
+  existingCorrespondents: string[];
+  existingDocumentTypes: string[];
+  existingTags: string[];
+  promptTemplate: string;
+  maxContentLength: number;
+  includeCorrespondents: boolean;
+  includeDocumentTypes: boolean;
+  includeTags: boolean;
+  reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
+}
+
+export async function processDocument(
+  options: ProcessDocumentOptions,
+): Promise<AiExtractionResult> {
+  const truncatedContent = truncateContent(options.documentContent, options.maxContentLength);
+
+  const { systemPrompt, userPrompt } = buildPromptParts({
+    promptTemplate: options.promptTemplate,
+    documentTitle: options.documentTitle,
+    documentContent: truncatedContent,
+    existingCorrespondents: options.existingCorrespondents,
+    existingDocumentTypes: options.existingDocumentTypes,
+    existingTags: options.existingTags,
+    includeCorrespondents: options.includeCorrespondents,
+    includeDocumentTypes: options.includeDocumentTypes,
+    includeTags: options.includeTags,
+    provider: options.provider.provider,
+  });
+
+  const startMs = performance.now();
+  try {
+    const result = await options.provider.extract({
+      systemPrompt,
+      userPrompt,
+      reasoningEffort: options.reasoningEffort,
+    });
+    const durationMs = Math.round(performance.now() - startMs);
+    logger.debug(
+      { title: options.documentTitle, durationMs, provider: options.provider.provider },
+      'Document processed successfully',
+    );
+    return result;
+  } catch (error) {
+    const durationMs = Math.round(performance.now() - startMs);
+    logger.error(
+      { title: options.documentTitle, durationMs, error: (error as Error).message },
+      'Document processing failed',
+    );
+    throw error;
+  }
+}
