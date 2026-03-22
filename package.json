@@ -18,7 +18,8 @@
     "format:fix": "prettier --write .",
     "test": "pnpm --filter @paperless-dedupe/core test && pnpm --filter @paperless-dedupe/sdk test",
     "cli": "node --import tsx/esm packages/cli/src/bin.ts",
-    "test:e2e": "pnpm --filter @paperless-dedupe/web test:e2e"
+    "test:e2e": "pnpm --filter @paperless-dedupe/web test:e2e",
+    "docker:validate": "docker build -t paperless-ngx-dedupe:local . && docker compose -f compose.dev.yml up --force-recreate --abort-on-container-exit"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
