@@ -675,7 +675,7 @@
 
       <!-- Provider Selection -->
       <div class="mt-4">
-        <label class="text-ink block text-sm font-medium">AI Provider</label>
+        <span class="text-ink block text-sm font-medium">AI Provider</span>
         <div class="mt-2 flex gap-4">
           <label class="flex items-center gap-2 text-sm {!data.hasOpenAiKey ? 'opacity-50' : ''}">
             <input
