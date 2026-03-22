@@ -118,6 +118,9 @@ export async function runAnalysis(
 
   const processedDocIds: string[] = [];
   const skippedDocIds: string[] = [];
+  let skipNoContent = 0;
+  let skipTooShort = 0;
+  let skipShinglesFailed = 0;
 
   for (let i = 0; i < docsToProcess.length; i++) {
     const doc = docsToProcess[i];
@@ -152,17 +155,20 @@ export async function runAnalysis(
 
     if (!content || !content.normalizedText) {
       skippedDocIds.push(doc.id);
+      skipNoContent++;
       continue;
     }
 
     if ((content.wordCount ?? 0) < config.minWords) {
       skippedDocIds.push(doc.id);
+      skipTooShort++;
       continue;
     }
 
     const shingles = textToShingles(content.normalizedText, config.ngramSize, config.minWords);
     if (!shingles) {
       skippedDocIds.push(doc.id);
+      skipShinglesFailed++;
       continue;
     }
 
@@ -208,6 +214,11 @@ export async function runAnalysis(
   result.signaturesReused = sigReused;
   result.documentsAnalyzed = processedDocIds.length;
   result.documentsSkipped = skippedDocIds.length;
+  result.skipReasons = {
+    noContent: skipNoContent,
+    tooShort: skipTooShort,
+    shinglesFailed: skipShinglesFailed,
+  };
 
   logger.info(
     { generated: sigGenerated, reused: sigReused, skipped: skippedDocIds.length },
