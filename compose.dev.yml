@@ -1,0 +1,18 @@
+services:
+  app:
+    image: paperless-ngx-dedupe:local
+    ports:
+      - '${PORT:-3000}:3000'
+    volumes:
+      - ./docker-data:/app/data
+    env_file:
+      - .env
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    stop_grace_period: 30s
