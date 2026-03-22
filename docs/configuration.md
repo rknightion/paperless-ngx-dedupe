@@ -43,6 +43,16 @@ If both token and username/password are set, token is used first.
 | --- | --- | --- | --- |
 | `ORIGIN` | Usually no | - | Set when running behind reverse proxies or non-localhost hostnames to satisfy origin checks |
 
+### AI Processing (Optional)
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `AI_ENABLED` | No | `false` | Enable AI-powered document classification |
+| `AI_OPENAI_API_KEY` | When using OpenAI | - | OpenAI API key |
+| `AI_ANTHROPIC_API_KEY` | When using Anthropic | - | Anthropic API key |
+
+At least one API key is required when `AI_ENABLED=true`. Runtime settings (provider, model, prompt, etc.) are configured in the Settings page or via API. See [AI Processing](ai-processing.md) for full details.
+
 ### Observability (Optional)
 
 OpenTelemetry is off unless `OTEL_ENABLED=true`. Common vars:
