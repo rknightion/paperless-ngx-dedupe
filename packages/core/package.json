@@ -37,5 +37,17 @@
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "openai": "^6.0.0",
+    "@anthropic-ai/sdk": "^0.79.0"
+  },
+  "peerDependenciesMeta": {
+    "openai": {
+      "optional": true
+    },
+    "@anthropic-ai/sdk": {
+      "optional": true
+    }
   }
 }
