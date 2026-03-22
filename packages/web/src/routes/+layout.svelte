@@ -1,9 +1,9 @@
 <script>
   import '../app.css';
   import { page } from '$app/stores';
-  import { LayoutDashboard, FileText, Copy, Settings, X, Menu } from 'lucide-svelte';
+  import { LayoutDashboard, FileText, Copy, Settings, X, Menu, Brain } from 'lucide-svelte';
 
-  let { children } = $props();
+  let { data, children } = $props();
   let sidebarOpen = $state(false);
 
   $effect(() => {
@@ -81,6 +81,21 @@
           Duplicates
         </span>
       </a>
+      {#if data.aiEnabled}
+        <a
+          href="/ai-processing"
+          class="px-3 py-2 text-sm font-medium transition-colors {$page.url.pathname.startsWith(
+            '/ai-processing',
+          )
+            ? 'bg-sidebar-active rounded-lg text-white'
+            : 'hover:bg-sidebar-hover rounded-lg text-white/70 hover:text-white'}"
+        >
+          <span class="flex items-center gap-3">
+            <Brain class="h-4 w-4" />
+            AI Processing
+          </span>
+        </a>
+      {/if}
       <a
         href="/settings"
         class="px-3 py-2 text-sm font-medium transition-colors {$page.url.pathname.startsWith(
