@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { invalidateAll, goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { ProgressBar } from '$lib/components';
@@ -19,17 +20,19 @@
 
   let { data } = $props();
 
+  const initialData = untrack(() => data);
+
   let isProcessing = $state(false);
-  let jobId = $state<string | null>(data.activeJob?.id ?? null);
-  let jobProgress = $state(data.activeJob?.progress ?? 0);
+  let jobId = $state<string | null>(initialData.activeJob?.id ?? null);
+  let jobProgress = $state(initialData.activeJob?.progress ?? 0);
   let jobPhaseProgress = $state<number | undefined>(undefined);
-  let jobMessage = $state(data.activeJob?.message ?? '');
+  let jobMessage = $state(initialData.activeJob?.progressMessage ?? '');
   let sseConnection: { close: () => void } | null = null;
   let selectedIds = $state<Set<string>>(new Set());
   let selectAll = $state(false);
   let isApplying = $state(false);
-  let statusFilter = $state(data.status ?? '');
-  let searchQuery = $state(data.search ?? '');
+  let statusFilter = $state(initialData.status ?? '');
+  let searchQuery = $state(initialData.search ?? '');
 
   let stats = $derived(data.stats);
   let results = $derived(data.results);
