@@ -40,7 +40,7 @@
   },
   "peerDependencies": {
     "openai": "^6.0.0",
-    "@anthropic-ai/sdk": "^0.79.0"
+    "@anthropic-ai/sdk": "^0.79.0 || ^0.80.0"
   },
   "peerDependenciesMeta": {
     "openai": {
