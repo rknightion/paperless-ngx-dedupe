@@ -356,8 +356,8 @@
             </p>
             <p class="mt-2">
               Only new documents are analyzed by default. Use
-              <span class="font-semibold">Force Full Rebuild</span> to re-analyze all documents from
-              scratch, e.g. after changing deduplication settings.
+              <span class="font-semibold">Force Full Rebuild</span> to re-analyze all documents from scratch,
+              e.g. after changing deduplication settings.
             </p>
           {/snippet}
         </RichTooltip>

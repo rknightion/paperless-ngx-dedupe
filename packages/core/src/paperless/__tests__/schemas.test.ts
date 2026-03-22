@@ -136,9 +136,7 @@ describe('snake_case to camelCase transformation', () => {
       documents_inbox: null,
       inbox_tag: null,
       inbox_tags: null,
-      document_file_type_counts: [
-        { mime_type: 'application/pdf', mime_type_count: 80 },
-      ],
+      document_file_type_counts: [{ mime_type: 'application/pdf', mime_type_count: 80 }],
       character_count: 500000,
       tag_count: 10,
       correspondent_count: 5,
