@@ -13,6 +13,7 @@ import type {
   PaperlessStoragePath,
   PaperlessRemoteVersion,
   ConnectionTestResult,
+  DocumentUpdate,
 } from './types.js';
 import {
   paperlessDocumentSchema,
@@ -324,6 +325,49 @@ export class PaperlessClient {
     const response = await this.fetchWithRetry(this.buildUrl('/api/remote_version/'));
     const json = await response.json();
     return paperlessRemoteVersionSchema.parse(json);
+  }
+
+  async updateDocument(id: number, update: DocumentUpdate): Promise<void> {
+    const body: Record<string, unknown> = {};
+    if (update.correspondent !== undefined) body.correspondent = update.correspondent;
+    if (update.documentType !== undefined) body.document_type = update.documentType;
+    if (update.tags !== undefined) body.tags = update.tags;
+
+    await this.fetchWithRetry(this.buildUrl(`/api/documents/${id}/`), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async createCorrespondent(name: string): Promise<PaperlessCorrespondent> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/correspondents/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const json = await response.json();
+    return paperlessCorrespondentSchema.parse(json);
+  }
+
+  async createDocumentType(name: string): Promise<PaperlessDocumentType> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/document_types/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const json = await response.json();
+    return paperlessDocumentTypeSchema.parse(json);
+  }
+
+  async createTag(name: string): Promise<PaperlessTag> {
+    const response = await this.fetchWithRetry(this.buildUrl('/api/tags/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const json = await response.json();
+    return paperlessTagSchema.parse(json);
   }
 
   async deleteDocument(id: number): Promise<void> {
