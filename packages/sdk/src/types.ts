@@ -253,6 +253,11 @@ export interface AnalysisResult {
   totalDocuments: number;
   documentsAnalyzed: number;
   documentsSkipped?: number;
+  skipReasons?: {
+    noContent: number;
+    tooShort: number;
+    shinglesFailed: number;
+  };
   isFullRebuild?: boolean;
   signaturesGenerated: number;
   signaturesReused: number;
