@@ -1,0 +1,19 @@
+FROM node:24-slim
+
+WORKDIR /app
+
+RUN corepack enable
+
+# Install dependencies (cached layer — only re-runs when lockfile changes)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/core/package.json ./packages/core/
+COPY packages/sdk/package.json ./packages/sdk/
+COPY packages/cli/package.json ./packages/cli/
+COPY packages/web/package.json ./packages/web/
+
+RUN pnpm install --frozen-lockfile
+
+EXPOSE 5173
+
+WORKDIR /app/packages/web
+CMD ["pnpm", "exec", "vite", "dev", "--host", "0.0.0.0"]

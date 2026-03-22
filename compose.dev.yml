@@ -16,3 +16,25 @@ services:
       timeout: 5s
       retries: 12
     stop_grace_period: 30s
+
+  dev:
+    profiles: ['dev']
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - '${PORT:-5173}:5173'
+    volumes:
+      - ./packages:/app/packages
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./docker-data:/app/data
+      # Preserve pnpm-installed node_modules from the image (volume mount above overwrites them)
+      - /app/packages/core/node_modules
+      - /app/packages/web/node_modules
+      - /app/packages/sdk/node_modules
+      - /app/packages/cli/node_modules
+    env_file:
+      - .env
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
