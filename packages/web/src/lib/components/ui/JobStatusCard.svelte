@@ -1,6 +1,7 @@
 <script lang="ts">
   import StatusBadge from './StatusBadge.svelte';
   import ProgressBar from './ProgressBar.svelte';
+  import RichTooltip from './RichTooltip.svelte';
 
   interface Props {
     type: string;
@@ -51,32 +52,59 @@
       }
 
       if (type === 'analysis') {
-        const parts: string[] = [];
-        const analyzed = result.documentsAnalyzed ?? 0;
-        const skipped = result.documentsSkipped ?? 0;
-        const total = result.totalDocuments ?? 0;
-        const isFullRebuild = result.isFullRebuild ?? false;
-
-        if (isFullRebuild) {
-          parts.push(`${total.toLocaleString()} docs analyzed (full rebuild)`);
-        } else if (analyzed > 0 || skipped > 0) {
-          let analyzedPart = `${analyzed.toLocaleString()} new docs analyzed`;
-          if (skipped > 0) {
-            analyzedPart += `, ${skipped.toLocaleString()} skipped`;
-          }
-          if (total > 0) {
-            analyzedPart += ` (of ${total.toLocaleString()} total)`;
-          }
-          parts.push(analyzedPart);
-        }
-
-        if (result.groupsCreated > 0) parts.push(`${result.groupsCreated} groups created`);
-        if (result.groupsUpdated > 0) parts.push(`${result.groupsUpdated} groups updated`);
-        if (result.groupsRemoved > 0) parts.push(`${result.groupsRemoved} groups removed`);
-        return parts.length > 0 ? parts.join(', ') : 'No duplicates found';
+        return null; // Handled by analysisParts for richer rendering
       }
 
       return null;
+    } catch {
+      return null;
+    }
+  });
+
+  let analysisParts = $derived.by(() => {
+    if (status !== 'completed' || !resultJson || type !== 'analysis') return null;
+    try {
+      const result = JSON.parse(resultJson);
+      const analyzed = (result.documentsAnalyzed ?? 0) as number;
+      const skipped = (result.documentsSkipped ?? 0) as number;
+      const total = (result.totalDocuments ?? 0) as number;
+      const isFullRebuild = (result.isFullRebuild ?? false) as boolean;
+      const reasons = result.skipReasons as
+        | { noContent: number; tooShort: number; shinglesFailed: number }
+        | undefined;
+
+      let prefix = '';
+      if (isFullRebuild) {
+        prefix = `${total.toLocaleString()} docs analyzed (full rebuild)`;
+      } else if (analyzed > 0 || skipped > 0) {
+        prefix = `${analyzed.toLocaleString()} new docs analyzed`;
+      }
+
+      const totalSuffix =
+        !isFullRebuild && total > 0 ? ` (of ${total.toLocaleString()} total)` : '';
+
+      const groupParts: string[] = [];
+      if (result.groupsCreated > 0) groupParts.push(`${result.groupsCreated} groups created`);
+      if (result.groupsUpdated > 0) groupParts.push(`${result.groupsUpdated} groups updated`);
+      if (result.groupsRemoved > 0) groupParts.push(`${result.groupsRemoved} groups removed`);
+
+      if (!prefix && groupParts.length === 0 && skipped === 0) {
+        return {
+          text: 'No duplicates found',
+          skipped: 0,
+          totalSuffix: '',
+          groupsSuffix: '',
+          skipReasons: null,
+        };
+      }
+
+      return {
+        text: prefix,
+        skipped,
+        totalSuffix,
+        groupsSuffix: groupParts.length > 0 ? groupParts.join(', ') : '',
+        skipReasons: reasons ?? null,
+      };
     } catch {
       return null;
     }
@@ -109,7 +137,26 @@
     {#if status === 'failed' && errorMessage}
       <p class="text-ember mt-1 truncate text-xs" title={errorMessage}>{errorMessage}</p>
     {/if}
-    {#if resultSummary}
+    {#if analysisParts}
+      <p class="text-muted mt-1 text-xs">
+        {analysisParts.text}{#if analysisParts.skipped > 0}{#if analysisParts.text},
+          {/if}{#if analysisParts.skipReasons}<RichTooltip position="bottom"
+              ><span class="cursor-help border-b border-dotted border-current"
+                >{analysisParts.skipped.toLocaleString()} skipped</span
+              >{#snippet content()}<p class="font-semibold">Skip reasons</p>
+                {#if analysisParts.skipReasons.noContent > 0}<p class="mt-1">
+                    No text content: {analysisParts.skipReasons.noContent.toLocaleString()}
+                  </p>{/if}
+                {#if analysisParts.skipReasons.tooShort > 0}<p class="mt-1">
+                    Too few words (&lt;20): {analysisParts.skipReasons.tooShort.toLocaleString()}
+                  </p>{/if}
+                {#if analysisParts.skipReasons.shinglesFailed > 0}<p class="mt-1">
+                    Processing failed: {analysisParts.skipReasons.shinglesFailed.toLocaleString()}
+                  </p>{/if}{/snippet}</RichTooltip
+            >{:else}{analysisParts.skipped.toLocaleString()} skipped{/if}{/if}{analysisParts.totalSuffix}{#if analysisParts.groupsSuffix},
+          {analysisParts.groupsSuffix}{/if}
+      </p>
+    {:else if resultSummary}
       <p class="text-muted mt-1 text-xs">{resultSummary}</p>
     {/if}
   </div>
