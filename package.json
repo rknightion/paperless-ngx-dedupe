@@ -44,7 +44,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.79.0",
+    "@anthropic-ai/sdk": "^0.80.0",
     "openai": "^6.32.0"
   }
 }
