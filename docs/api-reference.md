@@ -394,6 +394,195 @@ Query params:
 - `status` (comma-separated)
 - `maxGroups` (`1..500`, default `100`)
 
+## AI Processing
+
+All AI endpoints return `400 BAD_REQUEST` when `AI_ENABLED` is `false`.
+
+### GET /api/v1/ai/config
+
+Returns the current AI configuration object.
+
+```json
+{
+  "data": {
+    "provider": "openai",
+    "model": "gpt-5.4-mini",
+    "maxContentLength": 8000,
+    "batchSize": 10,
+    "rateDelayMs": 500,
+    "autoProcess": false,
+    "includeCorrespondents": false,
+    "includeDocumentTypes": false,
+    "includeTags": false,
+    "reasoningEffort": "low",
+    "maxRetries": 3
+  }
+}
+```
+
+### PUT /api/v1/ai/config
+
+Partial update of AI config. Validated against the config schema.
+
+```json
+{
+  "provider": "anthropic",
+  "model": "claude-sonnet-4-6",
+  "includeCorrespondents": true
+}
+```
+
+Returns the full updated config.
+
+### GET /api/v1/ai/models
+
+Returns available models for a provider.
+
+Query params:
+
+- `provider`: `openai` or `anthropic` (required)
+
+```json
+{
+  "data": [
+    { "id": "gpt-5.4", "name": "GPT-5.4" },
+    { "id": "gpt-5.4-mini", "name": "GPT-5.4 Mini" },
+    { "id": "gpt-5.4-nano", "name": "GPT-5.4 Nano" }
+  ]
+}
+```
+
+### POST /api/v1/ai/process
+
+Starts an AI processing batch job.
+
+Optional JSON body:
+
+```json
+{
+  "reprocess": false,
+  "documentIds": ["doc-id-1", "doc-id-2"]
+}
+```
+
+- `reprocess`: if `true`, re-processes all documents (not just new ones)
+- `documentIds`: process only specific documents
+
+Response (202):
+
+```json
+{ "data": { "jobId": "..." } }
+```
+
+Returns `409 JOB_ALREADY_RUNNING` if a processing job is already active.
+
+### GET /api/v1/ai/results
+
+Lists AI processing results.
+
+Query params:
+
+- `status`: `pending`, `applied`, `rejected`, `partial`
+- `search`: title substring match
+- `limit`, `offset`
+
+```json
+{
+  "data": [
+    {
+      "id": "...",
+      "documentTitle": "Invoice 2024-001",
+      "suggestedCorrespondent": "Amazon",
+      "suggestedDocumentType": "Invoice",
+      "suggestedTags": ["shopping", "2024"],
+      "confidence": { "correspondent": 0.95, "documentType": 0.90, "tags": 0.80 },
+      "currentCorrespondent": null,
+      "appliedStatus": "pending"
+    }
+  ],
+  "meta": { "total": 42, "limit": 20, "offset": 0 }
+}
+```
+
+### GET /api/v1/ai/results/:id
+
+Returns full details for a single result, including token counts and processing time.
+
+### POST /api/v1/ai/results/:id/apply
+
+Applies AI suggestions to the document in Paperless-NGX.
+
+Optional JSON body:
+
+```json
+{ "fields": ["correspondent", "tags"] }
+```
+
+If `fields` is omitted, all three fields are applied. Partial field lists result in `partial` status.
+
+Missing correspondents, document types, and tags are created automatically in Paperless-NGX.
+
+```json
+{ "data": { "applied": true } }
+```
+
+### POST /api/v1/ai/results/:id/reject
+
+Marks a result as rejected. No request body required.
+
+```json
+{ "data": { "rejected": true } }
+```
+
+### POST /api/v1/ai/results/batch-apply
+
+Applies multiple results.
+
+```json
+{
+  "resultIds": ["id-1", "id-2"],
+  "fields": ["correspondent", "documentType", "tags"]
+}
+```
+
+Response:
+
+```json
+{ "data": { "applied": 2, "failed": 0, "total": 2 } }
+```
+
+### POST /api/v1/ai/results/batch-reject
+
+Rejects multiple results.
+
+```json
+{ "resultIds": ["id-1", "id-2"] }
+```
+
+Response:
+
+```json
+{ "data": { "rejected": 2 } }
+```
+
+### GET /api/v1/ai/stats
+
+Returns aggregate AI processing statistics.
+
+```json
+{
+  "data": {
+    "totalProcessed": 150,
+    "pendingReview": 42,
+    "applied": 95,
+    "rejected": 13,
+    "failed": 3,
+    "totalPromptTokens": 450000,
+    "totalCompletionTokens": 25000
+  }
+}
+```
+
 ## Batch Operations
 
 ### POST /api/v1/batch/status
