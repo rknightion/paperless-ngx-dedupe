@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { InfoIcon } from '$lib/components';
-  import { Link, SlidersHorizontal, Info, Archive } from 'lucide-svelte';
+  import { Link, SlidersHorizontal, Info, Archive, Brain } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -43,6 +43,28 @@
   let importFile: File | null = $state(null);
   let isImporting = $state(false);
   let importStatus: { type: 'success' | 'error'; message: string } | null = $state(null);
+
+  // AI Settings
+  const initialAiConfig = untrack(() => data.aiConfig);
+  let aiProvider = $state(initialAiConfig?.provider ?? 'openai');
+  let aiModel = $state(initialAiConfig?.model ?? 'gpt-5-mini');
+  let aiAutoProcess = $state(initialAiConfig?.autoProcess ?? false);
+  let aiAddProcessedTag = $state(initialAiConfig?.addProcessedTag ?? false);
+  let aiProcessedTagName = $state(initialAiConfig?.processedTagName ?? 'ai-processed');
+  let aiPromptTemplate = $state(initialAiConfig?.promptTemplate ?? '');
+  let aiMaxContentLength = $state(initialAiConfig?.maxContentLength ?? 8000);
+  let aiBatchSize = $state(initialAiConfig?.batchSize ?? 10);
+  let aiRateDelayMs = $state(initialAiConfig?.rateDelayMs ?? 500);
+  let aiIncludeCorrespondents = $state(initialAiConfig?.includeCorrespondents ?? false);
+  let aiIncludeDocumentTypes = $state(initialAiConfig?.includeDocumentTypes ?? false);
+  let aiIncludeTags = $state(initialAiConfig?.includeTags ?? false);
+  let aiReasoningEffort = $state(initialAiConfig?.reasoningEffort ?? 'low');
+  let aiMaxRetries = $state(initialAiConfig?.maxRetries ?? 3);
+  let showPrompt = $state(false);
+  let showAiAdvanced = $state(false);
+  let isSavingAi = $state(false);
+  let aiSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
+  let aiModels = $state<{ id: string; name: string }[]>([]);
 
   let weightSum = $derived(weightJaccard + weightFuzzy);
   let weightsValid = $derived(weightSum === 100);
@@ -171,6 +193,84 @@
     }
     isSavingDedup = false;
   }
+
+  async function fetchAiModels(provider: string) {
+    try {
+      const res = await fetch(`/api/v1/ai/models?provider=${provider}`);
+      const json = await res.json();
+      if (res.ok) {
+        aiModels = json.data ?? [];
+      }
+    } catch {
+      aiModels = [];
+    }
+  }
+
+  $effect(() => {
+    if (data.aiEnabled) {
+      fetchAiModels(aiProvider);
+    }
+  });
+
+  async function saveAiConfig() {
+    isSavingAi = true;
+    aiSaveStatus = null;
+    try {
+      const res = await fetch('/api/v1/ai/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: aiProvider,
+          model: aiModel,
+          autoProcess: aiAutoProcess,
+          addProcessedTag: aiAddProcessedTag,
+          processedTagName: aiProcessedTagName,
+          promptTemplate: aiPromptTemplate,
+          maxContentLength: aiMaxContentLength,
+          batchSize: aiBatchSize,
+          rateDelayMs: aiRateDelayMs,
+          includeCorrespondents: aiIncludeCorrespondents,
+          includeDocumentTypes: aiIncludeDocumentTypes,
+          includeTags: aiIncludeTags,
+          reasoningEffort: aiReasoningEffort,
+          maxRetries: aiMaxRetries,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        aiSaveStatus = { type: 'success', message: 'AI configuration saved' };
+      } else {
+        aiSaveStatus = { type: 'error', message: json.error?.message ?? 'Save failed' };
+      }
+    } catch {
+      aiSaveStatus = { type: 'error', message: 'Save failed' };
+    }
+    isSavingAi = false;
+  }
+
+  async function revertPrompt() {
+    try {
+      // Reset to empty so the server default is used
+      aiPromptTemplate = '';
+      // Save immediately with empty prompt to revert
+      const saveRes = await fetch('/api/v1/ai/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptTemplate: undefined }),
+      });
+      if (saveRes.ok) {
+        // Re-fetch to get the default
+        const freshRes = await fetch('/api/v1/ai/config');
+        const freshJson = await freshRes.json();
+        if (freshRes.ok) {
+          aiPromptTemplate = freshJson.data?.promptTemplate ?? '';
+        }
+        aiSaveStatus = { type: 'success', message: 'Prompt reverted to default' };
+      }
+    } catch {
+      aiSaveStatus = { type: 'error', message: 'Failed to revert prompt' };
+    }
+  }
 </script>
 
 <svelte:head>
@@ -194,6 +294,13 @@
     <a href="#dedup" class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
       >Dedup Parameters</a
     >
+    {#if data.aiEnabled}
+      <a
+        href="#ai-processing"
+        class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
+        >AI Processing</a
+      >
+    {/if}
     <a
       href="#system"
       class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">System</a
@@ -557,6 +664,237 @@
       </div>
     {/if}
   </div>
+
+  <!-- AI Processing Settings -->
+  {#if data.aiEnabled}
+    <div class="panel" id="ai-processing">
+      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+        <Brain class="text-accent h-5 w-5" />
+        AI Processing
+      </h2>
+
+      <!-- Provider Selection -->
+      <div class="mt-4">
+        <label class="text-ink block text-sm font-medium">AI Provider</label>
+        <div class="mt-2 flex gap-4">
+          <label class="flex items-center gap-2 text-sm {!data.hasOpenAiKey ? 'opacity-50' : ''}">
+            <input
+              type="radio"
+              bind:group={aiProvider}
+              value="openai"
+              disabled={!data.hasOpenAiKey}
+              onchange={() => fetchAiModels('openai')}
+            />
+            OpenAI
+            {#if !data.hasOpenAiKey}
+              <span class="text-muted text-xs">(no key)</span>
+            {/if}
+          </label>
+          <label
+            class="flex items-center gap-2 text-sm {!data.hasAnthropicKey ? 'opacity-50' : ''}"
+          >
+            <input
+              type="radio"
+              bind:group={aiProvider}
+              value="anthropic"
+              disabled={!data.hasAnthropicKey}
+              onchange={() => fetchAiModels('anthropic')}
+            />
+            Anthropic
+            {#if !data.hasAnthropicKey}
+              <span class="text-muted text-xs">(no key)</span>
+            {/if}
+          </label>
+        </div>
+      </div>
+
+      <!-- Model Selection -->
+      <div class="mt-4">
+        <label for="ai-model" class="text-ink block text-sm font-medium">Model</label>
+        <select
+          id="ai-model"
+          bind:value={aiModel}
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none sm:w-64"
+        >
+          {#each aiModels as model (model.id)}
+            <option value={model.id}>{model.name}</option>
+          {/each}
+        </select>
+      </div>
+
+      <!-- Reasoning Effort (OpenAI only) -->
+      {#if aiProvider === 'openai'}
+        <div class="mt-4">
+          <label for="ai-reasoning-effort" class="text-ink block text-sm font-medium"
+            >Reasoning Effort</label
+          >
+          <p class="text-muted mt-0.5 text-xs">
+            Controls how much reasoning the model uses. Lower values are faster and cheaper.
+          </p>
+          <select
+            id="ai-reasoning-effort"
+            bind:value={aiReasoningEffort}
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none sm:w-64"
+          >
+            <option value="none">None</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      {/if}
+
+      <!-- Auto-Process & Tag -->
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div class="flex items-center">
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiAutoProcess} class="rounded" />
+            Auto-process new documents after sync
+          </label>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiAddProcessedTag} class="rounded" />
+            Add tag:
+          </label>
+          <input
+            type="text"
+            bind:value={aiProcessedTagName}
+            disabled={!aiAddProcessedTag}
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-40 rounded-lg border px-3 py-1.5 text-sm focus:ring-1 focus:outline-none disabled:opacity-50"
+          />
+        </div>
+      </div>
+
+      <!-- Reference Data Toggles -->
+      <div class="border-soft mt-6 border-t pt-4">
+        <h3 class="text-ink text-sm font-medium">Include Existing Metadata in Prompt</h3>
+        <p class="text-muted mt-1 text-xs">
+          When enabled, existing names from your Paperless-NGX instance are included in the AI
+          prompt to encourage reuse. When disabled, the AI creates metadata from scratch using
+          built-in naming guidelines. Disable these if you have many correspondents, types, or tags
+          to keep prompts small and costs low.
+        </p>
+        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiIncludeCorrespondents} class="rounded" />
+            Correspondents
+          </label>
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiIncludeDocumentTypes} class="rounded" />
+            Document Types
+          </label>
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiIncludeTags} class="rounded" />
+            Tags
+          </label>
+        </div>
+      </div>
+
+      <!-- Prompt Template -->
+      <div class="border-soft mt-6 border-t pt-4">
+        <button
+          onclick={() => (showPrompt = !showPrompt)}
+          class="text-accent hover:text-accent-hover text-sm font-medium"
+        >
+          {showPrompt ? 'Hide' : 'Show'} Prompt Template
+        </button>
+        {#if showPrompt}
+          <div class="mt-3">
+            <textarea
+              bind:value={aiPromptTemplate}
+              rows="12"
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none"
+            ></textarea>
+            <button
+              onclick={revertPrompt}
+              class="text-accent hover:text-accent-hover mt-2 text-xs font-medium"
+            >
+              Revert to Default
+            </button>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Advanced AI Settings -->
+      <div class="border-soft mt-4 border-t pt-4">
+        <button
+          onclick={() => (showAiAdvanced = !showAiAdvanced)}
+          class="text-accent hover:text-accent-hover text-sm font-medium"
+        >
+          {showAiAdvanced ? 'Hide' : 'Show'} Advanced Settings
+        </button>
+        {#if showAiAdvanced}
+          <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label for="ai-max-content" class="text-muted text-sm">Max Content Length</label>
+              <input
+                id="ai-max-content"
+                type="number"
+                min="500"
+                max="100000"
+                bind:value={aiMaxContentLength}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="ai-batch" class="text-muted text-sm">Batch Size</label>
+              <input
+                id="ai-batch"
+                type="number"
+                min="1"
+                max="100"
+                bind:value={aiBatchSize}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="ai-delay" class="text-muted text-sm">Rate Delay (ms)</label>
+              <input
+                id="ai-delay"
+                type="number"
+                min="0"
+                max="60000"
+                bind:value={aiRateDelayMs}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="ai-retries" class="text-muted text-sm">Max Retries</label>
+              <input
+                id="ai-retries"
+                type="number"
+                min="0"
+                max="10"
+                bind:value={aiMaxRetries}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Save Button -->
+      <div class="mt-6 flex items-center gap-3">
+        <button
+          onclick={saveAiConfig}
+          disabled={isSavingAi}
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {isSavingAi ? 'Saving...' : 'Save AI Configuration'}
+        </button>
+      </div>
+      {#if aiSaveStatus}
+        <div
+          class="mt-3 rounded-lg px-3 py-2 text-sm {aiSaveStatus.type === 'success'
+            ? 'bg-success-light text-success'
+            : 'bg-ember-light text-ember'}"
+        >
+          {aiSaveStatus.message}
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <!-- System Information -->
   <div class="panel" id="system">
