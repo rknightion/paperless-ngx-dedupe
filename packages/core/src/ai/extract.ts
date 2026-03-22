@@ -45,8 +45,15 @@ export async function processDocument(
       reasoningEffort: options.reasoningEffort,
     });
     const durationMs = Math.round(performance.now() - startMs);
-    logger.debug(
-      { title: options.documentTitle, durationMs, provider: options.provider.provider },
+    logger.info(
+      {
+        title: options.documentTitle,
+        durationMs,
+        provider: options.provider.provider,
+        promptTokens: result.usage.promptTokens,
+        completionTokens: result.usage.completionTokens,
+        ...(result.usage.cachedTokens ? { cachedTokens: result.usage.cachedTokens } : {}),
+      },
       'Document processed successfully',
     );
     return result;
