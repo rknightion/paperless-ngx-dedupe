@@ -3,12 +3,14 @@ export { document, documentContent, documentSignature } from './schema/sqlite/do
 export { duplicateGroup, duplicateMember } from './schema/sqlite/duplicates.js';
 export { job } from './schema/sqlite/jobs.js';
 export { appConfig, syncState } from './schema/sqlite/app.js';
+export { aiProcessingResult } from './schema/sqlite/ai-processing.js';
 export {
   documentRelations,
   documentContentRelations,
   documentSignatureRelations,
   duplicateGroupRelations,
   duplicateMemberRelations,
+  aiProcessingResultRelations,
 } from './schema/relations.js';
 
 // Types

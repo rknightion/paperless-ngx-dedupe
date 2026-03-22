@@ -7,12 +7,14 @@ import { document, documentContent, documentSignature } from '../schema/sqlite/d
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { job } from '../schema/sqlite/jobs.js';
 import { appConfig, syncState } from '../schema/sqlite/app.js';
+import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import {
   documentRelations,
   documentContentRelations,
   documentSignatureRelations,
   duplicateGroupRelations,
   duplicateMemberRelations,
+  aiProcessingResultRelations,
 } from '../schema/relations.js';
 import { OtelDrizzleLogger } from '../telemetry/drizzle-logger.js';
 
@@ -25,11 +27,13 @@ const schema = {
   job,
   appConfig,
   syncState,
+  aiProcessingResult,
   documentRelations,
   documentContentRelations,
   documentSignatureRelations,
   duplicateGroupRelations,
   duplicateMemberRelations,
+  aiProcessingResultRelations,
 };
 
 // Shared logger instance — only adds span events when an active OTEL span exists
