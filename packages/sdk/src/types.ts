@@ -298,6 +298,69 @@ export interface BatchDeleteResult {
   deleted: number;
 }
 
+// ── AI Processing types ───────────────────────────────────────────────
+
+export interface AiResultSummary {
+  id: string;
+  documentId: string;
+  paperlessId: number;
+  documentTitle: string;
+  provider: string;
+  model: string;
+  suggestedCorrespondent: string | null;
+  suggestedDocumentType: string | null;
+  suggestedTags: string[];
+  confidence: { correspondent: number; documentType: number; tags: number } | null;
+  currentCorrespondent: string | null;
+  currentDocumentType: string | null;
+  currentTags: string[];
+  appliedStatus: string;
+  appliedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface AiStats {
+  totalProcessed: number;
+  pendingReview: number;
+  applied: number;
+  rejected: number;
+  failed: number;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+}
+
+export interface AiConfig {
+  provider: 'openai' | 'anthropic';
+  model: string;
+  promptTemplate: string;
+  maxContentLength: number;
+  batchSize: number;
+  rateDelayMs: number;
+  autoProcess: boolean;
+  processedTagName: string;
+  addProcessedTag: boolean;
+  includeCorrespondents: boolean;
+  includeDocumentTypes: boolean;
+  includeTags: boolean;
+  reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
+  maxRetries?: number;
+}
+
+export interface AiResultFilters {
+  status?: string;
+  search?: string;
+}
+
+export interface AiProcessOptions {
+  reprocess?: boolean;
+  documentIds?: string[];
+}
+
+export interface AiApplyOptions {
+  fields?: ('correspondent' | 'documentType' | 'tags')[];
+}
+
 // ── SSE types ──────────────────────────────────────────────────────────
 
 export interface SSEProgressEvent {
