@@ -272,5 +272,5 @@ export {
   batchMarkRejected,
 } from './ai/queries.js';
 export type { AiResultFilters, AiResultSummary, AiStats } from './ai/queries.js';
-export { applyAiResult } from './ai/apply.js';
+export { applyAiResult, rejectAiResult, batchRejectAiResults } from './ai/apply.js';
 export type { ApplyOptions } from './ai/apply.js';
