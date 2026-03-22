@@ -46,7 +46,6 @@
         const parts: string[] = [];
         if (result.inserted > 0) parts.push(`${result.inserted} added`);
         if (result.updated > 0) parts.push(`${result.updated} updated`);
-        if (result.skipped > 0) parts.push(`${result.skipped} unchanged`);
         if (result.failed > 0) parts.push(`${result.failed} failed`);
         return parts.length > 0 ? parts.join(', ') : 'No changes';
       }
