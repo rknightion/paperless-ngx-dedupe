@@ -23,6 +23,7 @@ export type {
   Job,
   AppConfigRow,
   SyncState,
+  AiProcessingResult,
   NewDocument,
   NewDocumentContent,
   NewDocumentSignature,
@@ -31,6 +32,7 @@ export type {
   NewJob,
   NewAppConfigRow,
   NewSyncState,
+  NewAiProcessingResult,
 } from './schema/types.js';
 export {
   ProcessingStatus,
@@ -38,6 +40,8 @@ export {
   JobStatus,
   GroupStatus,
   GROUP_STATUS_VALUES,
+  AiProvider,
+  AiAppliedStatus,
 } from './types/enums.js';
 export type { AppConfig } from './config.js';
 
@@ -63,6 +67,7 @@ export type {
   PaperlessStatistics,
   PaginatedResponse,
   ConnectionTestResult,
+  DocumentUpdate,
 } from './paperless/types.js';
 export {
   paperlessDocumentSchema,
@@ -223,3 +228,43 @@ export type { PaperlessMetricsOptions, CollectorId } from './telemetry/index.js'
 export { getDuplicateGroupsForExport, formatDuplicatesCsv } from './export/csv.js';
 export { exportConfig, importConfig } from './export/config.js';
 export type { DuplicateExportRow, ConfigBackup } from './export/types.js';
+
+// AI
+export { getAiConfig, setAiConfig } from './ai/config.js';
+export {
+  aiConfigSchema,
+  DEFAULT_EXTRACTION_PROMPT,
+  DEFAULT_AI_CONFIG,
+  OPENAI_MODELS,
+  ANTHROPIC_MODELS,
+  AI_CONFIG_PREFIX,
+} from './ai/types.js';
+export type { AiConfig, AiBatchResult } from './ai/types.js';
+export type {
+  AiExtractionRequest,
+  AiExtractionResponse,
+  AiProviderUsage,
+  AiExtractionResult,
+  AiProviderInterface,
+  AiFailureType,
+} from './ai/providers/types.js';
+export { AiExtractionError, aiExtractionResponseSchema } from './ai/providers/types.js';
+export { createAiProvider } from './ai/providers/factory.js';
+export { buildPromptParts, truncateContent } from './ai/prompt.js';
+export type { PromptParts, BuildPromptOptions } from './ai/prompt.js';
+export { processDocument } from './ai/extract.js';
+export type { ProcessDocumentOptions } from './ai/extract.js';
+export { processBatch } from './ai/batch.js';
+export type { BatchProcessOptions } from './ai/batch.js';
+export {
+  getAiResults,
+  getAiResult,
+  getAiStats,
+  markAiResultApplied,
+  markAiResultRejected,
+  batchMarkApplied,
+  batchMarkRejected,
+} from './ai/queries.js';
+export type { AiResultFilters, AiResultSummary, AiStats } from './ai/queries.js';
+export { applyAiResult } from './ai/apply.js';
+export type { ApplyOptions } from './ai/apply.js';
