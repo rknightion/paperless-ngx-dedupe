@@ -1,6 +1,6 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import { StatCard, JobStatusCard, EChart, ProgressBar } from '$lib/components';
+  import { StatCard, JobStatusCard, EChart, ProgressBar, RichTooltip } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import { FileStack, AlertCircle, Clock } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
@@ -247,7 +247,35 @@
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <!-- Sync Controls -->
     <div class="panel border-l-accent border-l-4">
-      <h2 class="text-ink text-lg font-semibold">Sync Documents</h2>
+      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+        Sync Documents
+        <RichTooltip position="bottom">
+          <svg
+            class="text-muted hover:text-accent inline-block h-4 w-4 shrink-0 cursor-help transition-colors"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          {#snippet content()}
+            <p class="font-semibold">Why sync?</p>
+            <p class="mt-1">
+              Sync pulls documents from your Paperless-NGX instance into the local database so
+              they can be compared for duplicates.
+            </p>
+            <p class="mt-2">
+              New and deleted documents are detected automatically. However, changes to existing
+              documents (e.g. adding OCR text or editing metadata) won't be picked up — use
+              <span class="font-semibold">Force Full Sync</span> to re-check everything.
+            </p>
+          {/snippet}
+        </RichTooltip>
+      </h2>
       <p class="text-muted mt-1 text-sm">Pull latest documents from Paperless-NGX.</p>
       <div class="mt-4 flex items-center gap-4">
         <button
