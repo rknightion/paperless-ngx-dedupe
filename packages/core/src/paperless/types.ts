@@ -107,3 +107,9 @@ export interface PaperlessRemoteVersion {
   version: string;
   updateAvailable: boolean;
 }
+
+export interface DocumentUpdate {
+  correspondent?: number | null;
+  documentType?: number | null;
+  tags?: number[];
+}
