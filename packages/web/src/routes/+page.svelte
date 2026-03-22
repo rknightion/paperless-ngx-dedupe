@@ -265,8 +265,8 @@
           {#snippet content()}
             <p class="font-semibold">Why sync?</p>
             <p class="mt-1">
-              Sync pulls documents from your Paperless-NGX instance into the local database so
-              they can be compared for duplicates.
+              Sync pulls documents from your Paperless-NGX instance into the local database so they
+              can be compared for duplicates.
             </p>
             <p class="mt-2">
               New and deleted documents are detected automatically. However, changes to existing
@@ -333,7 +333,35 @@
 
     <!-- Analysis Controls -->
     <div class="panel border-l-accent border-l-4">
-      <h2 class="text-ink text-lg font-semibold">Duplicate Analysis</h2>
+      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+        Duplicate Analysis
+        <RichTooltip position="bottom">
+          <svg
+            class="text-muted hover:text-accent inline-block h-4 w-4 shrink-0 cursor-help transition-colors"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          {#snippet content()}
+            <p class="font-semibold">How does analysis work?</p>
+            <p class="mt-1">
+              Analysis compares your synced documents using MinHash fingerprinting to find potential
+              duplicates, then groups them by similarity.
+            </p>
+            <p class="mt-2">
+              Only new documents are analyzed by default. Use
+              <span class="font-semibold">Force Full Rebuild</span> to re-analyze all documents from
+              scratch, e.g. after changing deduplication settings.
+            </p>
+          {/snippet}
+        </RichTooltip>
+      </h2>
       <p class="text-muted mt-1 text-sm">Run deduplication analysis on synced documents.</p>
       <div class="mt-4 flex items-center gap-4">
         <button
