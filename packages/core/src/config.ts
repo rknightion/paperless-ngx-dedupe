@@ -19,6 +19,12 @@ const configSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     PAPERLESS_METRICS_COLLECTORS: z.string().optional(),
+    AI_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
+    AI_OPENAI_API_KEY: z.string().optional(),
+    AI_ANTHROPIC_API_KEY: z.string().optional(),
   })
   .refine(
     (data) => data.PAPERLESS_API_TOKEN || (data.PAPERLESS_USERNAME && data.PAPERLESS_PASSWORD),
@@ -27,7 +33,12 @@ const configSchema = z
         'At least one authentication method is required: PAPERLESS_API_TOKEN or both PAPERLESS_USERNAME and PAPERLESS_PASSWORD',
       path: ['PAPERLESS_API_TOKEN'],
     },
-  );
+  )
+  .refine((data) => !data.AI_ENABLED || data.AI_OPENAI_API_KEY || data.AI_ANTHROPIC_API_KEY, {
+    error:
+      'When AI_ENABLED=true, at least one AI API key is required: AI_OPENAI_API_KEY or AI_ANTHROPIC_API_KEY',
+    path: ['AI_ENABLED'],
+  });
 
 export type AppConfig = z.infer<typeof configSchema>;
 
