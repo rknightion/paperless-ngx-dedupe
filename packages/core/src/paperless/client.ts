@@ -40,7 +40,7 @@ export class PaperlessClient {
     this.baseUrl = config.url.replace(/\/+$/, '');
 
     this.headers = {
-      Accept: 'application/json',
+      Accept: 'application/json; version=10',
     };
     if (config.token) {
       this.headers['Authorization'] = `Token ${config.token}`;
