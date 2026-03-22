@@ -1,4 +1,4 @@
-import { getConfig, getDedupConfig, getDashboard } from '@paperless-dedupe/core';
+import { getConfig, getDedupConfig, getDashboard, getAiConfig } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -15,5 +15,9 @@ export const load: PageServerLoad = async ({ locals }) => {
       totalDocuments: dashboard.totalDocuments,
       duplicateGroups: dashboard.pendingGroups,
     },
+    aiEnabled: locals.config.AI_ENABLED,
+    aiConfig: locals.config.AI_ENABLED ? getAiConfig(locals.db) : null,
+    hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
+    hasAnthropicKey: !!locals.config.AI_ANTHROPIC_API_KEY,
   };
 };
