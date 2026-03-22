@@ -11,6 +11,12 @@ export {
   syncDuration,
   analysisDuration,
   analysisStageDuration,
+  aiDocumentsTotal,
+  aiTokensTotal,
+  aiRunsTotal,
+  aiApplyTotal,
+  aiDocumentDuration,
+  aiBatchDuration,
   registerObservableGauges,
 } from './metrics.js';
 

@@ -87,6 +87,63 @@ export function analysisStageDuration(): Histogram {
   ));
 }
 
+// --- AI Counters ---
+
+let _aiDocumentsTotal: Counter | undefined;
+export function aiDocumentsTotal(): Counter {
+  return (_aiDocumentsTotal ??= getMeter().createCounter(
+    'paperless_ngx_dedupe.ai.documents_total',
+    {
+      description: 'Total documents processed by AI, by outcome and provider',
+    },
+  ));
+}
+
+let _aiTokensTotal: Counter | undefined;
+export function aiTokensTotal(): Counter {
+  return (_aiTokensTotal ??= getMeter().createCounter('paperless_ngx_dedupe.ai.tokens_total', {
+    description: 'Total AI tokens consumed, by type and provider',
+  }));
+}
+
+let _aiRunsTotal: Counter | undefined;
+export function aiRunsTotal(): Counter {
+  return (_aiRunsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.ai.runs_total', {
+    description: 'Total AI batch runs',
+  }));
+}
+
+let _aiApplyTotal: Counter | undefined;
+export function aiApplyTotal(): Counter {
+  return (_aiApplyTotal ??= getMeter().createCounter('paperless_ngx_dedupe.ai.apply_total', {
+    description: 'Total AI results applied or rejected',
+  }));
+}
+
+// --- AI Histograms ---
+
+let _aiDocumentDuration: Histogram | undefined;
+export function aiDocumentDuration(): Histogram {
+  return (_aiDocumentDuration ??= getMeter().createHistogram(
+    'paperless_ngx_dedupe.ai.document_duration_seconds',
+    {
+      description: 'Per-document AI processing time in seconds',
+      unit: 's',
+    },
+  ));
+}
+
+let _aiBatchDuration: Histogram | undefined;
+export function aiBatchDuration(): Histogram {
+  return (_aiBatchDuration ??= getMeter().createHistogram(
+    'paperless_ngx_dedupe.ai.batch_duration_seconds',
+    {
+      description: 'Total AI batch duration in seconds',
+      unit: 's',
+    },
+  ));
+}
+
 // --- Observable Gauges ---
 
 /**
@@ -98,6 +155,7 @@ export function registerObservableGauges(
     documentsCount: number;
     unresolvedDuplicatesCount: number;
     activeJobsCount: number;
+    aiPendingCount?: number;
   },
 ): void {
   const meter = getMeter();
@@ -124,5 +182,13 @@ export function registerObservableGauges(
     })
     .addCallback((result) => {
       result.observe(getStats().activeJobsCount);
+    });
+
+  meter
+    .createObservableGauge('paperless_ngx_dedupe.ai.pending_count', {
+      description: 'Number of AI results pending review',
+    })
+    .addCallback((result) => {
+      result.observe(getStats().aiPendingCount ?? 0);
     });
 }
