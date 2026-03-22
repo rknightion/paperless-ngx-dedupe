@@ -1,5 +1,5 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { batchMarkRejected } from '@paperless-dedupe/core';
+import { batchRejectAiResults } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -10,6 +10,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     return apiError(ErrorCode.BAD_REQUEST, 'No result IDs provided');
   }
 
-  batchMarkRejected(locals.db, resultIds);
+  batchRejectAiResults(locals.db, resultIds);
   return apiSuccess({ rejected: resultIds.length });
 };
