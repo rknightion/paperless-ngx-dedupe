@@ -7,6 +7,7 @@
   import {
     Brain,
     Play,
+    Pause,
     RefreshCw,
     Check,
     X,
@@ -22,6 +23,7 @@
     CircleX,
     TriangleAlert,
     Settings,
+    Info,
   } from 'lucide-svelte';
 
   let { data } = $props();
@@ -38,12 +40,14 @@
   let selectedIds = $state<Set<string>>(new Set());
   let selectAll = $state(false);
   let isApplying = $state(false);
+  let showResumeHint = $state(false);
   let statusFilter = $state(initialData.status ?? '');
   let searchQuery = $state(initialData.search ?? '');
   let lastInvalidateTime = 0;
   const INVALIDATE_INTERVAL_MS = 3000;
 
   let stats = $derived(data.stats);
+  const isResumable = $derived(stats.unprocessed > 0 && stats.totalProcessed > 0);
   let results = $derived(data.results);
   let totalPages = $derived(Math.ceil(data.total / data.limit));
   let currentPage = $derived(Math.floor(data.offset / data.limit) + 1);
@@ -76,6 +80,9 @@
           jobProgress = 0;
           jobError = sseData.errorMessage ?? 'Processing failed';
           jobMessage = '';
+        } else if (sseData.status === 'cancelled') {
+          jobMessage = 'Processing paused';
+          showResumeHint = true;
         } else {
           jobProgress = 1;
           jobMessage = 'Processing complete';
@@ -111,6 +118,7 @@
     jobProgress = 0;
     jobError = null;
     jobMessage = 'Starting...';
+    showResumeHint = false;
     try {
       const res = await fetch('/api/v1/ai/process', {
         method: 'POST',
@@ -128,6 +136,11 @@
       isProcessing = false;
       jobMessage = 'Failed to start processing';
     }
+  }
+
+  async function cancelCurrentJob() {
+    if (!jobId) return;
+    await fetch(`/api/v1/jobs/${jobId}/cancel`, { method: 'POST' });
   }
 
   async function applyResult(id: string) {
@@ -242,7 +255,7 @@
           Processing...
         {:else}
           <Play class="h-4 w-4" />
-          Process New
+          {isResumable ? 'Resume' : 'Process New'}
         {/if}
       </button>
       <button
@@ -318,9 +331,18 @@
   <!-- Progress -->
   {#if isProcessing}
     <div class="panel">
-      <div class="flex items-center gap-2.5 text-sm font-medium">
-        <Loader2 class="text-accent h-4 w-4 animate-spin" />
-        <span class="text-ink">Processing documents...</span>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5 text-sm font-medium">
+          <Loader2 class="text-accent h-4 w-4 animate-spin" />
+          <span class="text-ink">Processing documents...</span>
+        </div>
+        <button
+          onclick={cancelCurrentJob}
+          class="border-soft text-muted hover:text-ink hover:bg-canvas flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+        >
+          <Pause class="h-4 w-4" />
+          Pause
+        </button>
       </div>
       <div class="mt-3">
         <ProgressBar progress={jobProgress} phaseProgress={jobPhaseProgress} message={jobMessage} />
@@ -340,6 +362,29 @@
       </div>
       <button
         onclick={() => (jobError = null)}
+        class="text-muted hover:text-ink -mt-0.5 shrink-0 rounded-lg p-1 transition-colors"
+        title="Dismiss"
+      >
+        <X class="h-4 w-4" />
+      </button>
+    </div>
+  {/if}
+
+  <!-- Resume Hint -->
+  {#if showResumeHint}
+    <div class="bg-accent-light border-accent/20 flex items-start gap-3 rounded-xl border p-4">
+      <div class="bg-accent/10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+        <Info class="text-accent h-4 w-4" />
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-ink text-sm font-medium">Processing paused</p>
+        <p class="text-ink-light mt-0.5 text-sm">
+          {stats.unprocessed.toLocaleString()} document{stats.unprocessed === 1 ? '' : 's'} remaining.
+          Click "{isResumable ? 'Resume' : 'Process New'}" to continue from where you left off.
+        </p>
+      </div>
+      <button
+        onclick={() => (showResumeHint = false)}
         class="text-muted hover:text-ink -mt-0.5 shrink-0 rounded-lg p-1 transition-colors"
         title="Dismiss"
       >
