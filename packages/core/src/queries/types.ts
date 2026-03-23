@@ -86,6 +86,7 @@ export interface DuplicateGroupSummary {
   status: string;
   memberCount: number;
   primaryDocumentTitle: string | null;
+  primaryPaperlessId: number | null;
   createdAt: string;
   updatedAt: string;
 }
