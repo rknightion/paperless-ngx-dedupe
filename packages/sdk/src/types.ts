@@ -327,6 +327,7 @@ export interface AiResultSummary {
 
 export interface AiStats {
   totalProcessed: number;
+  unprocessed: number;
   pendingReview: number;
   applied: number;
   rejected: number;
