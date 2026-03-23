@@ -54,6 +54,14 @@ export function getDuplicateGroups(
 
   const [{ value: total }] = db.select({ value: count() }).from(duplicateGroup).where(where).all();
 
+  // Total member count across ALL matching groups (not just current page)
+  const [{ value: totalMemberCount }] = db
+    .select({ value: count() })
+    .from(duplicateMember)
+    .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
+    .where(where)
+    .all();
+
   const orderCol =
     filters.sortBy === 'created_at'
       ? duplicateGroup.createdAt
@@ -72,7 +80,13 @@ export function getDuplicateGroups(
     .all();
 
   if (groups.length === 0) {
-    return { items: [], total, limit: pagination.limit, offset: pagination.offset };
+    return {
+      items: [],
+      total,
+      totalMemberCount,
+      limit: pagination.limit,
+      offset: pagination.offset,
+    };
   }
 
   const groupIds = groups.map((g) => g.id);
@@ -120,7 +134,7 @@ export function getDuplicateGroups(
     };
   });
 
-  return { items, total, limit: pagination.limit, offset: pagination.offset };
+  return { items, total, totalMemberCount, limit: pagination.limit, offset: pagination.offset };
 }
 
 // ── Detail query ────────────────────────────────────────────────────────
