@@ -594,6 +594,182 @@ Returns aggregate AI processing statistics.
 }
 ```
 
+## Document Q&A
+
+All endpoints return `404` when `RAG_ENABLED=false`.
+
+### GET /api/v1/rag/config
+
+Returns current RAG configuration.
+
+```json
+{
+  "data": {
+    "embeddingModel": "text-embedding-3-small",
+    "embeddingDimensions": 1536,
+    "chunkSize": 400,
+    "chunkOverlap": 40,
+    "topK": 10,
+    "answerProvider": "openai",
+    "answerModel": "gpt-5.4-mini",
+    "systemPrompt": "You are a helpful document assistant...",
+    "maxContextTokens": 4000,
+    "autoIndex": false
+  }
+}
+```
+
+### PUT /api/v1/rag/config
+
+Updates RAG configuration. Accepts a partial object — only included fields are updated.
+
+```json
+{
+  "embeddingModel": "text-embedding-3-large",
+  "topK": 15,
+  "autoIndex": true
+}
+```
+
+### POST /api/v1/rag/ask
+
+Streams a Q&A response. Send a question and optionally a conversation ID for multi-turn.
+
+**Request:**
+
+```json
+{
+  "question": "What was my electricity bill last quarter?",
+  "conversationId": "abc123"
+}
+```
+
+**Response:** Server-Sent Events stream (Vercel AI SDK data stream format). Custom headers:
+
+| Header | Description |
+| --- | --- |
+| `X-Conversation-Id` | ID of the conversation (created if not provided) |
+| `X-Sources` | JSON array of source citations |
+
+Each source citation:
+
+```json
+{
+  "documentId": "doc_abc",
+  "title": "British Gas Energy Bill Q1 2024",
+  "chunkContent": "Period: 1 Jan - 31 Mar 2024. Total: £142.50...",
+  "score": 0.034
+}
+```
+
+### POST /api/v1/rag/index
+
+Starts a background indexing job. Returns `202` with a job ID.
+
+**Request (optional):**
+
+```json
+{
+  "rebuild": true
+}
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `rebuild` | boolean | `false` | When `true`, deletes all existing chunks and re-indexes everything. Required after changing embedding model or dimensions. |
+
+**Response:**
+
+```json
+{
+  "data": { "jobId": "job_xyz" }
+}
+```
+
+Track progress via `GET /api/v1/jobs/:jobId/progress` (SSE).
+
+### GET /api/v1/rag/stats
+
+Returns index and conversation statistics.
+
+```json
+{
+  "data": {
+    "totalChunks": 12500,
+    "indexedDocuments": 2400,
+    "unindexedDocuments": 100,
+    "embeddingModel": "text-embedding-3-small",
+    "lastIndexedAt": "2026-03-23T10:30:00.000Z",
+    "totalConversations": 15,
+    "totalMessages": 87
+  }
+}
+```
+
+### GET /api/v1/rag/conversations
+
+Lists conversations, ordered by most recent first.
+
+**Query parameters:** `limit` (default 20), `offset` (default 0).
+
+```json
+{
+  "data": [
+    {
+      "id": "conv_abc",
+      "title": "What was my electricity bill last quarter?",
+      "createdAt": "2026-03-23T10:30:00.000Z",
+      "updatedAt": "2026-03-23T10:32:00.000Z",
+      "messageCount": 4
+    }
+  ],
+  "meta": { "total": 15 }
+}
+```
+
+### GET /api/v1/rag/conversations/:id
+
+Returns a single conversation with all messages.
+
+```json
+{
+  "data": {
+    "id": "conv_abc",
+    "title": "What was my electricity bill last quarter?",
+    "createdAt": "2026-03-23T10:30:00.000Z",
+    "updatedAt": "2026-03-23T10:32:00.000Z",
+    "messages": [
+      {
+        "id": "msg_1",
+        "role": "user",
+        "content": "What was my electricity bill last quarter?",
+        "sourcesJson": "[{\"documentId\":\"doc_abc\",\"title\":\"...\"}]",
+        "tokenUsage": null,
+        "createdAt": "2026-03-23T10:30:00.000Z"
+      },
+      {
+        "id": "msg_2",
+        "role": "assistant",
+        "content": "Based on your British Gas energy bill...",
+        "sourcesJson": null,
+        "tokenUsage": 450,
+        "createdAt": "2026-03-23T10:30:05.000Z"
+      }
+    ]
+  }
+}
+```
+
+### DELETE /api/v1/rag/conversations/:id
+
+Deletes a conversation and all its messages. Returns `404` if not found.
+
+```json
+{
+  "data": { "deleted": true }
+}
+```
+
 ## Batch Operations
 
 ### POST /api/v1/batch/status
