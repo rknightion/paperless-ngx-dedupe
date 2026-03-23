@@ -1,0 +1,55 @@
+{
+  "name": "document_classification",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "correspondent": {
+        "type": ["string", "null"],
+        "description": "The person or organization this document relates to, or null if unclear"
+      },
+      "documentType": {
+        "type": ["string", "null"],
+        "description": "The category of document (e.g., Invoice, Receipt, Contract), or null if unclear"
+      },
+      "tags": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Up to 5 relevant descriptive labels",
+        "maxItems": 5
+      },
+      "confidence": {
+        "type": "object",
+        "properties": {
+          "correspondent": {
+            "type": "number",
+            "description": "Confidence score for the correspondent classification (0.0 to 1.0)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "documentType": {
+            "type": "number",
+            "description": "Confidence score for the document type classification (0.0 to 1.0)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "tags": {
+            "type": "number",
+            "description": "Confidence score for the tag classifications (0.0 to 1.0)",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": ["correspondent", "documentType", "tags"],
+        "additionalProperties": false
+      },
+      "evidence": {
+        "type": "string",
+        "description": "Short evidence snippet from the document text supporting the classification decisions",
+        "maxLength": 500
+      }
+    },
+    "required": ["correspondent", "documentType", "tags", "confidence", "evidence"],
+    "additionalProperties": false
+  }
+}
