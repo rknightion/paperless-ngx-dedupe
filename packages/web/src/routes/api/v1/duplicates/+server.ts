@@ -39,6 +39,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   const result = getDuplicateGroups(locals.db, filtersResult.data, paginationResult.data);
   return apiSuccess(result.items, {
     total: result.total,
+    totalMemberCount: result.totalMemberCount,
     limit: result.limit,
     offset: result.offset,
   });
