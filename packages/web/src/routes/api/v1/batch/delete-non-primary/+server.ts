@@ -12,7 +12,7 @@ import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
 const bodySchema = z.object({
-  groupIds: z.array(z.string().min(1)).min(1).max(1000),
+  groupIds: z.array(z.string().min(1)).min(1).max(50000),
   confirm: z.literal(true),
 });
 
