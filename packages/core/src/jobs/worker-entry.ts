@@ -1,6 +1,6 @@
 import { workerData } from 'node:worker_threads';
 import { context } from '@opentelemetry/api';
-import { createDatabase } from '../db/client.js';
+import { createDatabaseWithHandle } from '../db/client.js';
 import { updateJobProgress, completeJob, failJob, getJob } from './manager.js';
 import { createLogger } from '../logger.js';
 import {
@@ -20,6 +20,7 @@ export type ProgressCallback = (
 
 export interface WorkerContext {
   db: AppDatabase;
+  sqlite: import('better-sqlite3').Database; // eslint-disable-line @typescript-eslint/consistent-type-imports
   jobId: string;
   taskData: unknown;
 }
@@ -41,7 +42,7 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   const parentContext = extractTraceContext(traceContext);
 
   const logger = createLogger('worker');
-  const db = createDatabase(dbPath);
+  const { db, sqlite } = createDatabaseWithHandle(dbPath);
 
   // Set job to running
   const { job: jobTable } = await import('../schema/sqlite/jobs.js');
@@ -90,7 +91,7 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
     // Run task within the parent trace context so spans are linked
     await context.with(parentContext, async () => {
       await withSpan('dedupe.worker.task', { 'job.id': jobId }, async () => {
-        const result = await taskFn({ db, jobId, taskData }, onProgress);
+        const result = await taskFn({ db, sqlite, jobId, taskData }, onProgress);
         completeJob(db, jobId, result);
         logger.info({ jobId }, 'Worker task completed successfully');
       });

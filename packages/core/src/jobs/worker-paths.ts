@@ -8,7 +8,8 @@ export type WorkerName =
   | 'sync-worker'
   | 'analysis-worker'
   | 'batch-worker'
-  | 'ai-processing-worker';
+  | 'ai-processing-worker'
+  | 'rag-indexing-worker';
 
 export function getWorkerPath(name: WorkerName): string {
   const candidates = [
