@@ -30,6 +30,7 @@ RUN pnpm dlx esbuild packages/cli/src/bin.ts \
   --bundle --platform=node --format=esm \
   --outfile=/app/cli-bundle/paperless-ngx-dedupe.mjs \
   --external:better-sqlite3 \
+  --external:sqlite-vec \
   --external:pino \
   --external:pino-pretty \
   --banner:js='import{createRequire as _cr}from"module";const require=_cr(import.meta.url);'

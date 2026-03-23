@@ -1,4 +1,11 @@
-import { getConfig, getDedupConfig, getDashboard, getAiConfig } from '@paperless-dedupe/core';
+import {
+  getConfig,
+  getDedupConfig,
+  getDashboard,
+  getAiConfig,
+  getRagConfig,
+  getRagStats,
+} from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -19,5 +26,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     aiConfig: locals.config.AI_ENABLED ? getAiConfig(locals.db) : null,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
     hasAnthropicKey: !!locals.config.AI_ANTHROPIC_API_KEY,
+    ragEnabled: locals.config.RAG_ENABLED,
+    ragConfig: locals.config.RAG_ENABLED ? getRagConfig(locals.db) : null,
+    ragStats: locals.config.RAG_ENABLED ? getRagStats(locals.db) : null,
   };
 };

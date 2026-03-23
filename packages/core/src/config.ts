@@ -25,6 +25,10 @@ const configSchema = z
       .transform((v) => v === 'true'),
     AI_OPENAI_API_KEY: z.string().optional(),
     AI_ANTHROPIC_API_KEY: z.string().optional(),
+    RAG_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
   })
   .refine(
     (data) => data.PAPERLESS_API_TOKEN || (data.PAPERLESS_USERNAME && data.PAPERLESS_PASSWORD),
@@ -38,6 +42,10 @@ const configSchema = z
     error:
       'When AI_ENABLED=true, at least one AI API key is required: AI_OPENAI_API_KEY or AI_ANTHROPIC_API_KEY',
     path: ['AI_ENABLED'],
+  })
+  .refine((data) => !data.RAG_ENABLED || data.AI_OPENAI_API_KEY, {
+    error: 'When RAG_ENABLED=true, AI_OPENAI_API_KEY is required for generating embeddings',
+    path: ['RAG_ENABLED'],
   });
 
 export type AppConfig = z.infer<typeof configSchema>;

@@ -29,6 +29,7 @@
     "fastest-levenshtein": "^1.0.16",
     "nanoid": "^5.0.0",
     "pino": "^10.0.0",
+    "sqlite-vec": "^0.1.7",
     "zod": "^4.0.0"
   },
   "devDependencies": {
@@ -39,14 +40,26 @@
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
+    "@anthropic-ai/sdk": "^0.79.0 || ^0.80.0",
     "openai": "^6.0.0",
-    "@anthropic-ai/sdk": "^0.79.0 || ^0.80.0"
+    "ai": "^4.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/anthropic": "^1.0.0"
   },
   "peerDependenciesMeta": {
     "openai": {
       "optional": true
     },
     "@anthropic-ai/sdk": {
+      "optional": true
+    },
+    "ai": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "@ai-sdk/anthropic": {
       "optional": true
     }
   }

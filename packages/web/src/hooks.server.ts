@@ -106,7 +106,9 @@ const handleRequest: Handle = async ({ event, resolve }) => {
   const logger = createLogger('http');
   event.locals.config = config!;
   event.locals.logger = logger;
-  event.locals.db = await getDatabase(config!);
+  const { db, sqlite } = await getDatabase(config!);
+  event.locals.db = db;
+  event.locals.sqlite = sqlite;
 
   const start = performance.now();
   const response = await resolve(event);
