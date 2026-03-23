@@ -722,27 +722,29 @@
         </select>
       </div>
 
-      <!-- Reasoning Effort (OpenAI only) -->
-      {#if aiProvider === 'openai'}
-        <div class="mt-4">
-          <label for="ai-reasoning-effort" class="text-ink block text-sm font-medium"
-            >Reasoning Effort</label
-          >
-          <p class="text-muted mt-0.5 text-xs">
-            Controls how much reasoning the model uses. Lower values are faster and cheaper.
-          </p>
-          <select
-            id="ai-reasoning-effort"
-            bind:value={aiReasoningEffort}
-            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none sm:w-64"
-          >
-            <option value="none">None</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-      {/if}
+      <!-- Reasoning Effort -->
+      <div class="mt-4">
+        <label
+          for="ai-reasoning-effort"
+          class="text-ink flex items-center gap-1.5 text-sm font-medium"
+        >
+          Reasoning Effort
+          <InfoIcon
+            text="Controls how much the model reasons before answering. For OpenAI, this sets the reasoning effort parameter. For Anthropic, this enables extended thinking mode. 'Low' (default) is recommended — fast and cost-effective for classification. Higher levels increase thinking tokens which are billed as output tokens, potentially doubling costs at 'High'. 'None' disables reasoning/thinking entirely."
+            position="bottom"
+          />
+        </label>
+        <select
+          id="ai-reasoning-effort"
+          bind:value={aiReasoningEffort}
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none sm:w-64"
+        >
+          <option value="none">None</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
 
       <!-- Auto-Process & Tag -->
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
