@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
 const bodySchema = z.object({
-  groupIds: z.array(z.string().min(1)).min(1).max(1000),
+  groupIds: z.array(z.string().min(1)).min(1).max(50000),
   status: z.string().refine((s) => GROUP_STATUS_VALUES.includes(s as GroupStatus), {
     error: `Invalid status. Must be one of: ${GROUP_STATUS_VALUES.join(', ')}`,
   }),
