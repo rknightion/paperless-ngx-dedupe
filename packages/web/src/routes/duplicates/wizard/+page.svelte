@@ -1,15 +1,19 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import type { DuplicateGroupMember } from '@paperless-dedupe/core';
   import {
     ConfidenceBadge,
     EChart,
+    GroupPreviewModal,
     ProgressBar,
     RichTooltip,
     ConfidenceTooltipContent,
     RecycleBinPrompt,
+    ThumbnailPreview,
+    WizardGroupCard,
   } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
-  import { XCircle, Eye, Trash2, CheckCircle } from 'lucide-svelte';
+  import { XCircle, Eye, Trash2, CheckCircle, ExternalLink, List, LayoutGrid } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -25,6 +29,7 @@
     Array<{
       id: string;
       primaryDocumentTitle: string | null;
+      primaryPaperlessId: number | null;
       confidenceScore: number;
       memberCount: number;
       jaccardSimilarity: number | null;
@@ -35,6 +40,15 @@
   let groupsOffset = $state(0);
   let excludedGroupIds = $state<Set<string>>(new Set());
   let isLoadingGroups = $state(false);
+  let viewMode = $state<'condensed' | 'expanded'>('condensed');
+
+  // Expanded view member cache
+  let memberCache = $state<Map<string, DuplicateGroupMember[]>>(new Map());
+
+  // Preview modal
+  let previewGroupId: string | null = $state(null);
+  let previewGroupTitle = $state('');
+  let previewConfidenceScore = $state(0);
 
   // Step 3
   let selectedAction = $state<'false_positive' | 'ignored' | 'delete'>('false_positive');
@@ -86,6 +100,11 @@
     confirmChecks.understand && (selectedAction !== 'delete' || confirmChecks.irreversible),
   );
 
+  // Step 4 enrichment: total member count across all visible groups
+  let totalMemberCount = $derived(
+    groups.reduce((sum, g) => sum + (excludedGroupIds.has(g.id) ? 0 : g.memberCount), 0),
+  );
+
   // ── Fetch helpers ─────────────────────────────────────────────────────
   async function fetchMatchCount() {
     isLoadingCount = true;
@@ -115,6 +134,29 @@
       groupsTotal = 0;
     }
     isLoadingGroups = false;
+    if (viewMode === 'expanded') {
+      fetchMembersForExpandedView();
+    }
+  }
+
+  async function fetchMembersForExpandedView() {
+    const uncached = groups.filter((g) => !memberCache.has(g.id));
+    if (uncached.length === 0) return;
+    const results = await Promise.all(
+      uncached.map(async (g) => {
+        try {
+          const res = await fetch(`/api/v1/duplicates/${g.id}?light=true`);
+          const json = await res.json();
+          return { id: g.id, members: json.data.members as DuplicateGroupMember[] };
+        } catch {
+          return { id: g.id, members: [] as DuplicateGroupMember[] };
+        }
+      }),
+    );
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const next = new Map(memberCache);
+    for (const r of results) next.set(r.id, r.members);
+    memberCache = next;
   }
 
   // ── Effects ───────────────────────────────────────────────────────────
@@ -123,6 +165,13 @@
     const timer = setTimeout(() => fetchMatchCount(), 300);
     return () => clearTimeout(timer);
   });
+
+  // ── Preview modal ────────────────────────────────────────────────────
+  function openPreview(group: (typeof groups)[0]) {
+    previewGroupId = group.id;
+    previewGroupTitle = group.primaryDocumentTitle ?? 'Untitled';
+    previewConfidenceScore = group.confidenceScore;
+  }
 
   // ── Step navigation ───────────────────────────────────────────────────
   function handleNext() {
@@ -276,6 +325,9 @@
     groupsOffset = 0;
     excludedGroupIds = new Set();
     isLoadingGroups = false;
+    viewMode = 'condensed';
+    memberCache = new Map();
+    previewGroupId = null;
     selectedAction = 'false_positive';
     confirmChecks = { understand: false, irreversible: false };
     executionProgress = 0;
