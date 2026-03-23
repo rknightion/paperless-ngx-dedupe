@@ -10,7 +10,7 @@
     GroupPreviewModal,
     RecycleBinPrompt,
   } from '$lib/components';
-  import { Network, Download, Wand2, ArrowDown, ArrowUp } from 'lucide-svelte';
+  import { Network, Download, Wand2, ArrowDown, ArrowUp, Trash2 } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -19,6 +19,7 @@
   let actionFeedback: { type: 'success' | 'error'; message: string } | null = $state(null);
   let showDeleteConfirm = $state(false);
   let showRecycleBinPrompt = $state(false);
+  let showPurgeConfirm = $state(false);
   let previewGroupId: string | null = $state(null);
   let previewGroupTitle = $state('');
   let previewConfidenceScore = $state(0);
@@ -170,6 +171,28 @@
     }
   }
 
+  async function purgeDeleted() {
+    showPurgeConfirm = false;
+    isSubmitting = true;
+    actionFeedback = null;
+    try {
+      const res = await fetch('/api/v1/batch/purge-deleted', { method: 'POST' });
+      const json = await res.json();
+      if (res.ok) {
+        actionFeedback = {
+          type: 'success',
+          message: `Purged ${json.data.purged} deleted group(s) from the database.`,
+        };
+        await invalidateAll();
+      } else {
+        actionFeedback = { type: 'error', message: json.error?.message ?? 'Purge failed' };
+      }
+    } catch {
+      actionFeedback = { type: 'error', message: 'Request failed' };
+    }
+    isSubmitting = false;
+  }
+
   // Pagination
   function goToPage(newOffset: number) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -221,6 +244,15 @@
       >
         <Wand2 class="h-4 w-4" />Bulk Operations Wizard
       </a>
+      {#if data.deletedGroupCount > 0}
+        <button
+          onclick={() => (showPurgeConfirm = true)}
+          disabled={isSubmitting}
+          class="border-soft text-ember hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          <Trash2 class="h-4 w-4" />Purge {data.deletedGroupCount} Deleted
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -261,7 +293,7 @@
         <em>Not a Duplicate</em> (false positive),
         <em>Keep All</em> (real duplicates, but you want to keep every copy), or
         <em>Delete Duplicates</em> (remove non-primary documents via Paperless-NGX recycle bin).
-        Groups can be reopened at any time. Use the
+        Non-deleted groups can be reopened at any time. Use the
         <a href="/duplicates/wizard" class="text-accent hover:text-accent-hover underline">
           Bulk Operations Wizard
         </a>
@@ -609,6 +641,17 @@
   variant="ember"
   onconfirm={deleteNonPrimary}
   oncancel={() => (showDeleteConfirm = false)}
+/>
+
+<!-- Purge Deleted Groups Confirmation Dialog -->
+<ConfirmDialog
+  open={showPurgeConfirm}
+  title="Purge Deleted Groups"
+  message="This will permanently remove {data.deletedGroupCount} deleted group(s) from the database. This cannot be undone. Documents in Paperless-NGX are not affected."
+  confirmLabel="Purge"
+  variant="ember"
+  onconfirm={purgeDeleted}
+  oncancel={() => (showPurgeConfirm = false)}
 />
 
 <!-- Recycle Bin Prompt Dialog -->
