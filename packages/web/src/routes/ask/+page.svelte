@@ -42,7 +42,7 @@
   let isStreaming = $state(false);
   let streamingText = $state('');
   let sidebarOpen = $state(true);
-  let expandedSources = $state(new SvelteSet<number>());
+  let expandedSources = new SvelteSet<number>();
   let isIndexing = $state(false);
   let chatContainer: HTMLDivElement | undefined = $state();
 
@@ -106,7 +106,7 @@
     activeConversationId = null;
     messages = [];
     inputText = '';
-    expandedSources = new SvelteSet();
+    expandedSources.clear();
   }
 
   async function deleteConversation(id: string, event: MouseEvent) {
