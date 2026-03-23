@@ -192,6 +192,7 @@ jobs:
           name: SDK Package Coverage
 
   docker-build-verify:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -246,23 +247,14 @@ jobs:
         if: always()
         run: docker rm -f ci-test 2>/dev/null || true
 
-  docker-build-main:
-    needs: [quality, unit-tests, docker-build-verify]
+  docker:
+    needs: [quality, unit-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [linux/amd64, linux/arm64]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Prepare platform pair
-        run: echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-        env:
-          platform: ${{ matrix.platform }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
@@ -273,7 +265,7 @@ jobs:
             env.OTEL_TRACES_EXPORTER=otlp
             env.OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
             env.OTEL_SERVICE_NAME=paperless-ngx-dedupe-ci
-            "env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }},ci.platform=${{ matrix.platform }}"
+            "env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }}"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
@@ -282,58 +274,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
-        id: build
+      - name: Build Docker image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
         with:
           context: .
-          platforms: ${{ matrix.platform }}
-          outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
+          push: false
+          load: true
+          tags: ghcr.io/${{ github.repository }}:main
           cache-from: |
-            type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+            type=gha,scope=build-linux-amd64
             type=gha,scope=build-verify
-          cache-to: type=gha,scope=build-${{ env.PLATFORM_PAIR }},mode=max
+          cache-to: type=gha,scope=build-linux-amd64,mode=max
 
-      - name: Export digest
+      - name: Verify container starts and is healthy
         run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          docker run -d --name ci-test \
+            -p 3000:3000 \
+            -e PAPERLESS_URL=http://localhost:8000 \
+            -e PAPERLESS_API_TOKEN=test-token \
+            ghcr.io/${{ github.repository }}:main
 
-      - name: Upload digest
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
-        with:
-          name: digests-main-${{ env.PLATFORM_PAIR }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
+          for i in $(seq 1 60); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' ci-test 2>/dev/null || echo "starting")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Container is healthy after ${i}s"
+              break
+            fi
+            if [ "$i" = "60" ]; then
+              echo "Container failed to become healthy"
+              docker logs ci-test
+              exit 1
+            fi
+            sleep 1
+          done
 
-  docker-merge-main:
-    needs: docker-build-main
-    runs-on: ubuntu-24.04
-    permissions:
-      packages: write
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          path: /tmp/digests
-          pattern: digests-main-*
-          merge-multiple: true
+      - name: Cleanup
+        if: always()
+        run: docker rm -f ci-test 2>/dev/null || true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository }}:main \
-            $(printf 'ghcr.io/${{ github.repository }}@sha256:%s ' *)
+      - name: Push image
+        run: docker push ghcr.io/${{ github.repository }}:main
