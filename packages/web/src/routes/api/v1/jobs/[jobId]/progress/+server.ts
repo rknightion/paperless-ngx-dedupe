@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (terminalStates.includes(initialJob.status!)) {
     const body = [
       `event: complete`,
-      `data: ${JSON.stringify({ progress: initialJob.progress, phaseProgress: initialJob.phaseProgress, message: initialJob.progressMessage, status: initialJob.status })}`,
+      `data: ${JSON.stringify({ progress: initialJob.progress, phaseProgress: initialJob.phaseProgress, message: initialJob.progressMessage, status: initialJob.status, errorMessage: initialJob.errorMessage })}`,
       '',
       '',
     ].join('\n');
@@ -81,6 +81,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
               phaseProgress: currentJob.phaseProgress,
               message: currentJob.progressMessage,
               status: currentJob.status,
+              errorMessage: currentJob.errorMessage,
             });
             cleanup();
             controller.close();

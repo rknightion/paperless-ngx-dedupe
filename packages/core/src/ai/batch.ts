@@ -155,6 +155,11 @@ export async function processBatch(
 
       await onProgress?.(0, `Starting AI processing of ${totalDocs} documents...`);
 
+      // Circuit breaker: stop processing if the same error occurs consecutively
+      const CIRCUIT_BREAKER_THRESHOLD = 3;
+      let consecutiveSameError = 0;
+      let lastErrorMsg = '';
+
       for (let i = 0; i < docs.length; i++) {
         const doc = docs[i];
 
@@ -255,6 +260,10 @@ export async function processBatch(
               provider: provider.provider,
             });
           }
+
+          // Reset circuit breaker on success
+          consecutiveSameError = 0;
+          lastErrorMsg = '';
         } catch (error) {
           const isAiError = error instanceof AiExtractionError;
           const errorMsg = isAiError
@@ -294,6 +303,40 @@ export async function processBatch(
 
           result.failed++;
           aiDocumentsTotal().add(1, { outcome: 'failed', provider: provider.provider });
+
+          // Circuit breaker: stop if the same error repeats consecutively
+          if (errorMsg === lastErrorMsg) {
+            consecutiveSameError++;
+          } else {
+            consecutiveSameError = 1;
+            lastErrorMsg = errorMsg;
+          }
+
+          if (consecutiveSameError >= CIRCUIT_BREAKER_THRESHOLD) {
+            result.processed++;
+            result.durationMs = Math.round(performance.now() - startMs);
+
+            const batchOutcome = result.succeeded === 0 ? 'failure' : 'success';
+            aiRunsTotal().add(1, { outcome: batchOutcome });
+            aiBatchDuration().record(result.durationMs / 1000);
+
+            span.setAttributes({
+              'batch.succeeded': result.succeeded,
+              'batch.failed': result.failed,
+              'batch.skipped': result.skipped,
+              'batch.circuit_breaker': true,
+            });
+
+            logger.error(
+              { consecutiveFailures: CIRCUIT_BREAKER_THRESHOLD, error: errorMsg },
+              'Circuit breaker triggered — stopping batch',
+            );
+
+            throw new Error(
+              `Processing stopped: ${CIRCUIT_BREAKER_THRESHOLD} consecutive documents failed with the same error: ${errorMsg}`,
+              { cause: error },
+            );
+          }
         }
 
         result.processed++;
