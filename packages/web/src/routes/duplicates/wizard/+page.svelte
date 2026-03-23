@@ -698,6 +698,10 @@
               <dd class="text-ink font-medium">{selectedCount}</dd>
             </div>
             <div class="flex justify-between">
+              <dt class="text-muted">Estimated documents</dt>
+              <dd class="text-ink font-medium">~{totalMemberCount} across current page</dd>
+            </div>
+            <div class="flex justify-between">
               <dt class="text-muted">Confidence threshold</dt>
               <dd class="text-ink font-medium">{threshold}%+</dd>
             </div>
@@ -706,8 +710,8 @@
 
         {#if selectedAction === 'delete'}
           <div class="border-ember bg-ember-light text-ember rounded-lg border-2 px-4 py-3 text-sm">
-            Deleted documents will be moved to the Paperless-NGX recycle bin. You can empty the
-            recycle bin after the operation completes.
+            Non-primary documents from each group will be moved to the Paperless-NGX recycle bin.
+            You can restore them or empty the recycle bin after the operation completes.
           </div>
         {/if}
 
@@ -812,3 +816,17 @@
     {/if}
   </div>
 </div>
+
+<!-- Group Preview Modal -->
+{#if previewGroupId}
+  <GroupPreviewModal
+    open={previewGroupId !== null}
+    groupId={previewGroupId}
+    groupTitle={previewGroupTitle}
+    confidenceScore={previewConfidenceScore}
+    paperlessUrl={data.paperlessUrl}
+    onclose={() => {
+      previewGroupId = null;
+    }}
+  />
+{/if}
