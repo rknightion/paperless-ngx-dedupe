@@ -15,8 +15,8 @@
   type LoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
   let loadState: LoadState = $state('idle');
-  let textA: string | null = $state(null);
-  let textB: string | null = $state(null);
+  let textA = $state(null as string | null);
+  let textB = $state(null as string | null);
   let errorMessage: string = $state('');
   let diffs: [number, string][] = $state([]);
   let showFull = $state(false);

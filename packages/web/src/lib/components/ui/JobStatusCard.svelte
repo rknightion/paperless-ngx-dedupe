@@ -144,13 +144,19 @@
               ><span class="cursor-help border-b border-dotted border-current"
                 >{analysisParts.skipped.toLocaleString()} skipped</span
               >{#snippet content()}<p class="font-semibold">Skip reasons</p>
-                {#if analysisParts.skipReasons.noContent > 0}<p class="mt-1">
+                {#if analysisParts.skipReasons?.noContent && analysisParts.skipReasons.noContent > 0}<p
+                    class="mt-1"
+                  >
                     No text content: {analysisParts.skipReasons.noContent.toLocaleString()}
                   </p>{/if}
-                {#if analysisParts.skipReasons.tooShort > 0}<p class="mt-1">
+                {#if analysisParts.skipReasons?.tooShort && analysisParts.skipReasons.tooShort > 0}<p
+                    class="mt-1"
+                  >
                     Too few words (&lt;20): {analysisParts.skipReasons.tooShort.toLocaleString()}
                   </p>{/if}
-                {#if analysisParts.skipReasons.shinglesFailed > 0}<p class="mt-1">
+                {#if analysisParts.skipReasons?.shinglesFailed && analysisParts.skipReasons.shinglesFailed > 0}<p
+                    class="mt-1"
+                  >
                     Processing failed: {analysisParts.skipReasons.shinglesFailed.toLocaleString()}
                   </p>{/if}{/snippet}</RichTooltip
             >{:else}{analysisParts.skipped.toLocaleString()} skipped{/if}{/if}{analysisParts.totalSuffix}{#if analysisParts.groupsSuffix},
