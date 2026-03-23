@@ -12,6 +12,8 @@ import {
   setGroupStatus,
   deleteDuplicateGroup,
   batchSetStatus,
+  purgeDeletedGroups,
+  StatusTransitionError,
 } from '../duplicates.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
@@ -435,6 +437,27 @@ describe('setGroupStatus', () => {
   it('returns false for missing group', () => {
     expect(setGroupStatus(db, 'nonexistent', 'ignored')).toBe(false);
   });
+
+  it('throws StatusTransitionError when reopening a deleted group', () => {
+    setGroupStatus(db, 'grp-1', 'deleted');
+    expect(() => setGroupStatus(db, 'grp-1', 'pending')).toThrow(StatusTransitionError);
+    // Status remains deleted
+    expect(getDuplicateGroup(db, 'grp-1')!.status).toBe('deleted');
+  });
+
+  it('allows transitions between non-deleted statuses', () => {
+    setGroupStatus(db, 'grp-1', 'false_positive');
+    expect(getDuplicateGroup(db, 'grp-1')!.status).toBe('false_positive');
+
+    const result = setGroupStatus(db, 'grp-1', 'pending');
+    expect(result).toBe(true);
+    expect(getDuplicateGroup(db, 'grp-1')!.status).toBe('pending');
+  });
+
+  it('returns true when setting deleted group to deleted (idempotent)', () => {
+    setGroupStatus(db, 'grp-1', 'deleted');
+    expect(setGroupStatus(db, 'grp-1', 'deleted')).toBe(true);
+  });
 });
 
 describe('deleteDuplicateGroup', () => {
@@ -496,6 +519,51 @@ describe('batchSetStatus', () => {
   it('returns correct updated count for non-existent IDs', () => {
     const { updated } = batchSetStatus(db, ['grp-1', 'nonexistent'], 'ignored');
     expect(updated).toBe(1);
+  });
+
+  it('skips groups in deleted status', () => {
+    setGroupStatus(db, 'grp-1', 'deleted');
+    const { updated } = batchSetStatus(db, ['grp-1', 'grp-2'], 'pending');
+    expect(updated).toBe(1);
+    // grp-1 remains deleted
+    expect(getDuplicateGroup(db, 'grp-1')!.status).toBe('deleted');
+    expect(getDuplicateGroup(db, 'grp-2')!.status).toBe('pending');
+  });
+});
+
+describe('purgeDeletedGroups', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestData(db);
+  });
+
+  it('removes all groups with deleted status', () => {
+    setGroupStatus(db, 'grp-1', 'deleted');
+    const { purged } = purgeDeletedGroups(db);
+    expect(purged).toBe(1);
+    expect(getDuplicateGroup(db, 'grp-1')).toBeNull();
+    // grp-2 (pending) still exists
+    expect(getDuplicateGroup(db, 'grp-2')).not.toBeNull();
+  });
+
+  it('returns zero when no deleted groups exist', () => {
+    const { purged } = purgeDeletedGroups(db);
+    expect(purged).toBe(0);
+  });
+
+  it('cascade-deletes members of purged groups', () => {
+    setGroupStatus(db, 'grp-1', 'deleted');
+    purgeDeletedGroups(db);
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, 'grp-1'))
+      .all();
+    expect(members).toHaveLength(0);
   });
 });
 
