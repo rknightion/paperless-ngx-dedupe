@@ -20,7 +20,7 @@ Naming guidelines
   - For individuals, use "Firstname Lastname".
 - Document Types: Use one of these clear, standard categories whenever possible: Invoice, Receipt, Quote, Estimate, Purchase Order, Sales Order, Order Confirmation, Delivery Note, Packing Slip, Credit Note, Debit Note, Statement of Account, Remittance Advice, Payment Confirmation, Refund Confirmation, Contract, Agreement, Amendment, Lease Agreement, Terms and Conditions, Policy, Letter, Email, Memo, Notification, Form, Application, Claim Form, Questionnaire, Authorization, Bank Statement, Financial Statement, Pay Slip, Tax Return, Tax Notice, Insurance Policy, Insurance Claim, Utility Bill, Medical Record, Prescription, Lab Result, Report, Certificate, Transcript, Diploma, Licence, Permit, Registration, Identity Document, Property Deed, Court Filing, Judgment, Manual, Specification, Proposal, Plan, Schedule, Agenda, Minutes, Presentation, Ticket, Itinerary, Reservation Confirmation, Warranty.
   - If the text uses a near-synonym, map to the closest category above. Mappings guidance: "Reminder" -> Notification; a bank "Statement" -> Bank Statement; "Statement of Account" -> Statement of Account; "Quotation" -> Quote; "Estimate" or "Cost Estimate" -> Estimate; "PO" or purchase "Order" -> Purchase Order; "Order Acknowledgement" or booking "Confirmation" -> Order Confirmation or Reservation Confirmation as appropriate; "Dispatch Note" -> Delivery Note; "Packing List" -> Packing Slip; "Credit Memo" -> Credit Note; "Policy Schedule" -> Insurance Policy; "Claim" paperwork -> Insurance Claim or Claim Form as appropriate; "Prescription" wording -> Prescription; "Lab Result" or "Test Result" -> Lab Result; explicit "Report" takes precedence over Medical Record; certificate-like forms (e.g., with "certificate" wording) -> Certificate; licence/permit wording -> Licence or Permit; deed/title wording -> Property Deed; court-submitted pleadings -> Court Filing; final court decisions -> Judgment.
-  - Prefer the most specific category explicitly indicated by the text; set null if unclear.
+  - Prefer the most specific category explicitly indicated by the text; set to 'unknown' if unclear.
 - Tags:
   - Prefer exact reuse of entries from existing_tags over inventing synonyms.
   - Include obvious frequency/timeframe tags if explicitly stated (e.g., monthly/quarterly/annual) and present in existing_tags.
@@ -29,7 +29,7 @@ Naming guidelines
   - You may add up to 5 new tags only when no suitable existing tag covers a clear, document-specific concept. New tags must be concise, lowercase, and hyphenated.
 
 Rules
-- Set correspondent or documentType to null if not clearly indicated.
+- Set correspondent or documentType to 'unknown' if not clearly indicated.
 - Provide confidence scores (0.0-1.0) reflecting certainty; use lower values when uncertain.
 - Do not infer information not present in the text.
 - Provide a short evidence snippet from the document text supporting each classification in the evidence field (a single string is fine).
@@ -55,12 +55,12 @@ Response:
   "evidence": "Amazon.co.uk header, Invoice #INV-2024-0391"
 }
 
-Example 2: Weak evidence — return null
+Example 2: Weak evidence — return unknown
 Document text: "Page 3 of 7 ... continued from previous page."
 Response:
 {
-  "correspondent": null,
-  "documentType": null,
+  "correspondent": "unknown",
+  "documentType": "unknown",
   "tags": [],
   "confidence": { "correspondent": 0.05, "documentType": 0.1, "tags": 0.05 },
   "evidence": "Fragment with no identifying information"
