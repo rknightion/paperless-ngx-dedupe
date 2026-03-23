@@ -198,8 +198,10 @@ export {
   setPrimaryDocument,
   setGroupStatus,
   deleteDuplicateGroup,
+  purgeDeletedGroups,
   batchSetStatus,
   buildGroupWhere,
+  StatusTransitionError,
 } from './queries/duplicates.js';
 export { getConfig, setConfig, setConfigBatch } from './queries/config.js';
 

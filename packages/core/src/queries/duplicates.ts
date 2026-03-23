@@ -1,7 +1,16 @@
-import { and, count, desc, asc, eq, gte, lte, sql, inArray } from 'drizzle-orm';
+import { and, count, desc, asc, eq, gte, lte, sql, inArray, ne } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
 import type { GroupStatus } from '../types/enums.js';
+
+// ── Errors ───────────────────────────────────────────────────────────────
+
+export class StatusTransitionError extends Error {
+  constructor(groupId: string, currentStatus: string) {
+    super(`Cannot change status of group ${groupId}: status '${currentStatus}' is terminal`);
+    this.name = 'StatusTransitionError';
+  }
+}
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { parseTagsJson } from './helpers.js';
@@ -484,6 +493,11 @@ export function setGroupStatus(db: AppDatabase, groupId: string, status: GroupSt
 
   // Already at the requested status
   if (group.status === status) return true;
+
+  // Deleted groups cannot be reopened — the documents no longer exist
+  if (group.status === 'deleted') {
+    throw new StatusTransitionError(groupId, group.status);
+  }
 
   const result = db
     .update(duplicateGroup)
