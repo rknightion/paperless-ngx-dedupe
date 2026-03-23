@@ -440,7 +440,33 @@
 
       <!-- Step 2: Review Groups -->
     {:else if step === 2}
-      <h2 class="text-ink text-xl font-semibold">Review Matching Groups</h2>
+      <div class="flex items-center justify-between">
+        <h2 class="text-ink text-xl font-semibold">Review Matching Groups</h2>
+        <!-- View mode toggle -->
+        <div class="border-soft flex items-center gap-1 rounded-lg border p-0.5">
+          <button
+            onclick={() => (viewMode = 'condensed')}
+            class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'condensed'
+              ? 'bg-accent text-white'
+              : 'text-muted hover:text-ink'}"
+            title="Condensed view"
+          >
+            <List class="h-4 w-4" />
+          </button>
+          <button
+            onclick={() => {
+              viewMode = 'expanded';
+              fetchMembersForExpandedView();
+            }}
+            class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'expanded'
+              ? 'bg-accent text-white'
+              : 'text-muted hover:text-ink'}"
+            title="Expanded view"
+          >
+            <LayoutGrid class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       <div class="text-muted mt-4 text-sm">
         Selected: <span class="text-ink font-semibold">{selectedCount}</span> of {groupsTotal}
@@ -448,7 +474,8 @@
 
       {#if isLoadingGroups}
         <div class="text-muted mt-6 text-sm">Loading groups...</div>
-      {:else}
+      {:else if viewMode === 'condensed'}
+        <!-- Condensed view -->
         <div class="mt-4 space-y-2">
           {#each groups as group (group.id)}
             <div
@@ -460,9 +487,29 @@
                 onchange={() => toggleGroup(group.id)}
                 class="rounded"
               />
+              <ThumbnailPreview
+                paperlessId={group.primaryPaperlessId}
+                alt={group.primaryDocumentTitle ?? 'Untitled'}
+              />
               <span class="text-ink flex-1 truncate text-sm">
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </span>
+              <a
+                href="/duplicates/{group.id}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-muted hover:text-accent shrink-0"
+                title="Open full detail"
+              >
+                <ExternalLink class="h-4 w-4" />
+              </a>
+              <button
+                onclick={() => openPreview(group)}
+                class="text-muted hover:text-accent shrink-0"
+                title="Quick preview"
+              >
+                <Eye class="h-4 w-4" />
+              </button>
               <RichTooltip position="left">
                 <ConfidenceBadge score={group.confidenceScore} />
                 {#snippet content()}
@@ -478,30 +525,44 @@
             </div>
           {/each}
         </div>
+      {:else}
+        <!-- Expanded view -->
+        <div class="mt-4 space-y-4">
+          {#each groups as group (group.id)}
+            <WizardGroupCard
+              {group}
+              excluded={excludedGroupIds.has(group.id)}
+              paperlessUrl={data.paperlessUrl}
+              members={memberCache.get(group.id) ?? null}
+              ontoggle={() => toggleGroup(group.id)}
+              onpreview={() => openPreview(group)}
+            />
+          {/each}
+        </div>
+      {/if}
 
-        {#if groupsTotal > 10}
-          <div class="mt-4 flex items-center justify-between">
-            <span class="text-muted text-sm">
-              Showing {groupsOffset + 1}-{Math.min(groupsOffset + 10, groupsTotal)} of {groupsTotal}
-            </span>
-            <div class="flex gap-2">
-              <button
-                onclick={prevPage}
-                disabled={groupsOffset === 0}
-                class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                onclick={nextPage}
-                disabled={groupsOffset + 10 >= groupsTotal}
-                class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
+      {#if groupsTotal > 10}
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-muted text-sm">
+            Showing {groupsOffset + 1}-{Math.min(groupsOffset + 10, groupsTotal)} of {groupsTotal}
+          </span>
+          <div class="flex gap-2">
+            <button
+              onclick={prevPage}
+              disabled={groupsOffset === 0}
+              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onclick={nextPage}
+              disabled={groupsOffset + 10 >= groupsTotal}
+              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            >
+              Next
+            </button>
           </div>
-        {/if}
+        </div>
       {/if}
 
       <div class="mt-8 flex justify-between">
