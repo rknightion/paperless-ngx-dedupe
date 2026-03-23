@@ -110,7 +110,7 @@
   <!-- Thumbnail comparison area -->
   {#if !members}
     <!-- Loading state -->
-    <div class="flex h-[200px] items-center justify-center">
+    <div class="flex h-[350px] items-center justify-center">
       <span
         class="border-accent inline-block h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
       ></span>
@@ -141,12 +141,12 @@
           <img
             src={thumbUrl(primaryMember.paperlessId)}
             alt="Primary: {primaryMember.title}"
-            class="border-soft h-[200px] w-full rounded-lg border object-contain"
+            class="border-soft h-[350px] w-full rounded-lg border object-contain"
             onerror={() => (thumbErrorPrimary = true)}
           />
         {:else}
           <div
-            class="border-soft bg-canvas text-muted flex h-[200px] w-full items-center justify-center rounded-lg border"
+            class="border-soft bg-canvas text-muted flex h-[350px] w-full items-center justify-center rounded-lg border"
           >
             <FileText class="h-8 w-8" />
           </div>
@@ -186,12 +186,12 @@
           <img
             src={thumbUrl(firstSecondary.paperlessId)}
             alt="Secondary: {firstSecondary.title}"
-            class="border-soft h-[200px] w-full rounded-lg border object-contain"
+            class="border-soft h-[350px] w-full rounded-lg border object-contain"
             onerror={() => (thumbErrorSecondary = true)}
           />
         {:else}
           <div
-            class="border-soft bg-canvas text-muted flex h-[200px] w-full items-center justify-center rounded-lg border"
+            class="border-soft bg-canvas text-muted flex h-[350px] w-full items-center justify-center rounded-lg border"
           >
             <FileText class="h-8 w-8" />
           </div>
