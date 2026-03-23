@@ -15,6 +15,7 @@ export type PaginationParams = z.infer<typeof paginationSchema>;
 export interface PaginatedResult<T> {
   items: T[];
   total: number;
+  totalMemberCount?: number;
   limit: number;
   offset: number;
 }
