@@ -208,6 +208,7 @@ describe('getAiStats', () => {
   it('computes counts by status', () => {
     const stats = getAiStats(db);
     expect(stats.totalProcessed).toBe(3);
+    expect(stats.unprocessed).toBe(0);
     expect(stats.pendingReview).toBe(1);
     expect(stats.applied).toBe(1);
     expect(stats.rejected).toBe(1);
@@ -224,6 +225,23 @@ describe('getAiStats', () => {
     expect(stats.totalCompletionTokens).toBe(90); // 50 + 40 + 0
   });
 
+  it('counts unprocessed documents without AI results', async () => {
+    // Add a document without an AI result
+    db.insert(document)
+      .values({
+        id: 'doc-4',
+        paperlessId: 4,
+        title: 'Letter D',
+        processingStatus: 'completed',
+        syncedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+
+    const stats = getAiStats(db);
+    expect(stats.totalProcessed).toBe(3);
+    expect(stats.unprocessed).toBe(1);
+  });
+
   it('returns all zeros for empty database', async () => {
     const handle = createDatabaseWithHandle(':memory:');
     const emptyDb = handle.db;
@@ -231,6 +249,7 @@ describe('getAiStats', () => {
 
     const stats = getAiStats(emptyDb);
     expect(stats.totalProcessed).toBe(0);
+    expect(stats.unprocessed).toBe(0);
     expect(stats.pendingReview).toBe(0);
     expect(stats.applied).toBe(0);
     expect(stats.rejected).toBe(0);
