@@ -43,6 +43,7 @@ Errors return:
 - `GET /api/v1/export/config.json` (raw JSON download)
 - `GET /api/v1/paperless/documents/:paperlessId/preview` (proxied binary stream)
 - `GET /api/v1/paperless/documents/:paperlessId/thumb` (proxied binary stream)
+- `GET /api/v1/metrics` (Prometheus text exposition format)
 
 ### Error Codes
 
@@ -101,6 +102,16 @@ Returns readiness checks (database + Paperless reachability).
 ```
 
 If any check fails, returns HTTP 503 with `NOT_READY`.
+
+### GET /api/v1/metrics
+
+Returns application metrics in [Prometheus exposition format](https://prometheus.io/docs/instrumenting/exposition_formats/). Requires `OTEL_PROMETHEUS_ENABLED=true`.
+
+Returns `404` with a text message when the feature is not enabled.
+
+Content-Type: `text/plain; version=0.0.4; charset=utf-8`
+
+See [Configuration > Prometheus Scrape Endpoint](configuration.md#prometheus-scrape-endpoint-optional) for setup details.
 
 ## Dashboard
 
