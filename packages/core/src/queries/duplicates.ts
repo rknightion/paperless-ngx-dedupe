@@ -554,3 +554,8 @@ export function batchSetStatus(
 
   return { updated };
 }
+
+export function purgeDeletedGroups(db: AppDatabase): { purged: number } {
+  const result = db.delete(duplicateGroup).where(eq(duplicateGroup.status, 'deleted')).run();
+  return { purged: result.changes };
+}
