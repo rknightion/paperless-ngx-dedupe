@@ -22,6 +22,7 @@
   let step = $state(1);
   let threshold = $state(95);
   let matchCount = $state<number | null>(null);
+  let totalMemberCountAll = $state<number | null>(null);
   let isLoadingCount = $state(false);
 
   // Step 2
@@ -100,11 +101,6 @@
     confirmChecks.understand && (selectedAction !== 'delete' || confirmChecks.irreversible),
   );
 
-  // Step 4 enrichment: total member count across all visible groups
-  let totalMemberCount = $derived(
-    groups.reduce((sum, g) => sum + (excludedGroupIds.has(g.id) ? 0 : g.memberCount), 0),
-  );
-
   // ── Fetch helpers ─────────────────────────────────────────────────────
   async function fetchMatchCount() {
     isLoadingCount = true;
@@ -114,8 +110,10 @@
       );
       const json = await res.json();
       matchCount = json.meta?.total ?? 0;
+      totalMemberCountAll = json.meta?.totalMemberCount ?? null;
     } catch {
       matchCount = 0;
+      totalMemberCountAll = null;
     }
     isLoadingCount = false;
   }
@@ -699,7 +697,15 @@
             </div>
             <div class="flex justify-between">
               <dt class="text-muted">Estimated documents</dt>
-              <dd class="text-ink font-medium">~{totalMemberCount} across current page</dd>
+              <dd class="text-ink font-medium">
+                {#if totalMemberCountAll !== null}
+                  {selectedAction === 'delete'
+                    ? `~${totalMemberCountAll - selectedCount} non-primary`
+                    : totalMemberCountAll}
+                {:else}
+                  —
+                {/if}
+              </dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-muted">Confidence threshold</dt>
