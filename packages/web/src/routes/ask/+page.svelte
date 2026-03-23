@@ -42,7 +42,7 @@
   let isStreaming = $state(false);
   let streamingText = $state('');
   let sidebarOpen = $state(true);
-  let expandedSources = new SvelteSet<number>();
+  let expandedSources = $state(new SvelteSet<number>());
   let isIndexing = $state(false);
   let chatContainer: HTMLDivElement | undefined = $state();
 
