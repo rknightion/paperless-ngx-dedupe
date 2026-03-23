@@ -30,6 +30,7 @@ export interface AiResultSummary {
 
 export interface AiStats {
   totalProcessed: number;
+  unprocessed: number;
   pendingReview: number;
   applied: number;
   rejected: number;
@@ -205,8 +206,19 @@ export function getAiStats(db: AppDatabase): AiStats {
     .where(sql`${aiProcessingResult.errorMessage} IS NOT NULL`)
     .get();
 
+  const totalDocs = db
+    .select({ count: sql<number>`count(*)` })
+    .from(document)
+    .get();
+
+  const processedDocs = db
+    .select({ count: sql<number>`count(distinct ${aiProcessingResult.documentId})` })
+    .from(aiProcessingResult)
+    .get();
+
   const stats: AiStats = {
     totalProcessed: 0,
+    unprocessed: (totalDocs?.count ?? 0) - (processedDocs?.count ?? 0),
     pendingReview: 0,
     applied: 0,
     rejected: 0,
