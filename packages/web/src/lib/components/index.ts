@@ -16,3 +16,5 @@ export { default as ConfidenceTooltipContent } from './duplicates/ConfidenceTool
 export { default as GroupPreviewModal } from './duplicates/GroupPreviewModal.svelte';
 export { default as DocumentVisualCompare } from './duplicates/DocumentVisualCompare.svelte';
 export { default as RecycleBinPrompt } from './duplicates/RecycleBinPrompt.svelte';
+export { default as ThumbnailPreview } from './duplicates/ThumbnailPreview.svelte';
+export { default as WizardGroupCard } from './duplicates/WizardGroupCard.svelte';
