@@ -1,5 +1,6 @@
 import {
   getDuplicateGroups,
+  getDuplicateStats,
   paginationSchema,
   duplicateGroupFiltersSchema,
 } from '@paperless-dedupe/core';
@@ -20,6 +21,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   });
 
   const result = getDuplicateGroups(locals.db, filters, pagination);
+  const stats = getDuplicateStats(locals.db);
 
   return {
     groups: result.items,
@@ -28,5 +30,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     offset: result.offset,
     filters,
     paperlessUrl: locals.config.PAPERLESS_URL,
+    deletedGroupCount: stats.deletedGroups,
   };
 };
