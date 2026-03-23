@@ -30,7 +30,9 @@ function ensureInitialized() {
   config = parseConfig(process.env as Record<string, string | undefined>);
   initLogger(config.LOG_LEVEL);
 
-  if (process.env.OTEL_ENABLED === 'true' && config.PAPERLESS_METRICS_ENABLED) {
+  const telemetryActive =
+    process.env.OTEL_ENABLED === 'true' || process.env.OTEL_PROMETHEUS_ENABLED === 'true';
+  if (telemetryActive && config.PAPERLESS_METRICS_ENABLED) {
     const metricsClient = new PaperlessClient({
       ...toPaperlessConfig(config),
       timeout: 10_000,

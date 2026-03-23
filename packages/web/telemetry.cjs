@@ -8,46 +8,78 @@
 //   OTEL_METRICS_EXPORTER   — otlp (default), console, or none
 //   OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_PROTOCOL, etc.
 //
-// When OTEL_ENABLED is not 'true', this script exits immediately with zero overhead.
+// Set OTEL_PROMETHEUS_ENABLED=true to expose a /api/v1/metrics scrape endpoint.
+// Can be used standalone or alongside OTEL_ENABLED=true.
 
-if (process.env.OTEL_ENABLED !== 'true') {
+const otelEnabled = process.env.OTEL_ENABLED === 'true';
+const prometheusEnabled = process.env.OTEL_PROMETHEUS_ENABLED === 'true';
+
+if (!otelEnabled && !prometheusEnabled) {
   return;
 }
 
 const { NodeSDK } = require('@opentelemetry/sdk-node');
 const { resourceFromAttributes } = require('@opentelemetry/resources');
 const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = require('@opentelemetry/semantic-conventions');
-const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+
+const metricReaders = [];
+
+if (prometheusEnabled) {
+  const {
+    PrometheusExporter,
+    PrometheusSerializer,
+  } = require('@opentelemetry/exporter-prometheus');
+  const exporter = new PrometheusExporter({ preventServerStart: true });
+  const serializer = new PrometheusSerializer();
+  metricReaders.push(exporter);
+
+  globalThis.__otelPrometheusCollect = async () => {
+    const { resourceMetrics, errors } = await exporter.collect();
+    if (errors.length) {
+      console.warn('Prometheus metrics collection errors:', ...errors);
+    }
+    return serializer.serialize(resourceMetrics);
+  };
+}
+
+const instrumentations = otelEnabled
+  ? [
+      require('@opentelemetry/auto-instrumentations-node').getNodeAutoInstrumentations({
+        '@opentelemetry/instrumentation-http': {
+          ignoreIncomingRequestHook: (req) =>
+            req.url === '/api/v1/health' ||
+            req.url === '/api/v1/ready' ||
+            req.url === '/api/v1/metrics',
+        },
+        '@opentelemetry/instrumentation-fs': {
+          requireParentSpan: true,
+        },
+        '@opentelemetry/instrumentation-pino': {},
+      }),
+    ]
+  : [];
 
 const sdk = new NodeSDK({
   resource: resourceFromAttributes({
     [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-dedupe',
     [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
   }),
-  instrumentations: [
-    getNodeAutoInstrumentations({
-      '@opentelemetry/instrumentation-http': {
-        ignoreIncomingRequestHook: (req) =>
-          req.url === '/api/v1/health' || req.url === '/api/v1/ready',
-      },
-      '@opentelemetry/instrumentation-fs': {
-        requireParentSpan: true,
-      },
-      '@opentelemetry/instrumentation-pino': {},
-    }),
-  ],
+  metricReaders,
+  instrumentations,
 });
 
 sdk.start();
 
-// Force RITM hooks to fire for built-in modules that were loaded during SDK
-// initialization (before hooks were registered). The SDK transitively requires
-// http/https via its OTLP exporter deps, caching them before instrumentation
-// hooks are set up. Re-requiring them triggers the patched Module.prototype.require,
-// which calls instrumentation-http's onRequire → wraps http.Server.prototype.emit
-// for incoming request spans. The prototype mutation persists for ESM imports too.
-require('http');
-require('https');
+if (otelEnabled) {
+  // Force RITM hooks to fire for built-in modules that were loaded during SDK
+  // initialization (before hooks were registered). The SDK transitively requires
+  // http/https via its OTLP exporter deps, caching them before instrumentation
+  // hooks are set up. Re-requiring them triggers the patched Module.prototype.require,
+  // which calls instrumentation-http's onRequire → wraps http.Server.prototype.emit
+  // for incoming request spans. The prototype mutation persists for ESM imports too.
+  require('http');
+  require('https');
+}
 
 globalThis.__otelSdk = sdk;
 
