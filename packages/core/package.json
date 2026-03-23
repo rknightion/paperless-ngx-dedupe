@@ -4,12 +4,18 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./*": "./src/*"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/*"
+    }
   },
   "scripts": {
     "build": "tsc",
-    "check": "tsc --noEmit",
+    "check": "tsc --emitDeclarationOnly",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -36,7 +42,7 @@
     "@types/better-sqlite3": "^7.6.0",
     "@vitest/coverage-v8": "^4.0.18",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.0",
+    "typescript": "^6.0.0",
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
