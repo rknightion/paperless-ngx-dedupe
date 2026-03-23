@@ -19,7 +19,8 @@ export async function generateEmbeddings(
   if (texts.length === 0) return [];
 
   const provider = createProvider(opts.apiKey);
-  const model = provider.embedding(opts.model, { dimensions: opts.dimensions });
+  const model = provider.embedding(opts.model);
+  const providerOptions = { openai: { dimensions: opts.dimensions } };
 
   // Batch in groups of 100
   const batchSize = 100;
@@ -27,7 +28,7 @@ export async function generateEmbeddings(
 
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize);
-    const result = await embedMany({ model, values: batch });
+    const result = await embedMany({ model, values: batch, providerOptions });
     allEmbeddings.push(...result.embeddings);
   }
 
@@ -39,8 +40,12 @@ export async function generateEmbedding(
   opts: EmbeddingOptions,
 ): Promise<Float32Array> {
   const provider = createProvider(opts.apiKey);
-  const model = provider.embedding(opts.model, { dimensions: opts.dimensions });
-  const result = await embed({ model, value: text });
+  const model = provider.embedding(opts.model);
+  const result = await embed({
+    model,
+    value: text,
+    providerOptions: { openai: { dimensions: opts.dimensions } },
+  });
   return new Float32Array(result.embedding);
 }
 

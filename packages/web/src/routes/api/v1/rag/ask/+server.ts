@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     });
 
     // Collect the full response text for saving
-    const response = result.streamResult.toDataStreamResponse();
+    const response = result.streamResult.toTextStreamResponse();
 
     // Add metadata headers
     response.headers.set('X-Conversation-Id', result.conversationId);
