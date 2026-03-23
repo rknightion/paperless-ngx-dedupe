@@ -139,7 +139,7 @@
     </div>
   </aside>
 
-  <main class="bg-canvas min-h-screen flex-1 p-4 sm:p-6 md:ml-64 md:p-8">
+  <main class="bg-canvas min-h-screen min-w-0 flex-1 p-4 sm:p-6 md:ml-64 md:p-8">
     <!-- Mobile hamburger -->
     <button
       class="text-ink mb-4 md:hidden"

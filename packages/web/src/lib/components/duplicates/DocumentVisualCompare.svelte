@@ -22,9 +22,9 @@
   }
 </script>
 
-<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+<div class="grid grid-cols-1 gap-4 overflow-hidden lg:grid-cols-2">
   <!-- Primary -->
-  <div class="panel">
+  <div class="panel min-w-0">
     <div class="mb-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <h4 class="text-ink text-sm font-semibold">Primary Document</h4>
@@ -56,7 +56,7 @@
       <img
         src={thumbUrl(primary.paperlessId)}
         alt="Thumbnail: {primary.title}"
-        class="border-soft w-full rounded-lg border object-contain"
+        class="border-soft max-h-[600px] w-full rounded-lg border object-contain"
         onerror={() => (thumbErrorPrimary = true)}
       />
     {/if}
@@ -65,7 +65,7 @@
   </div>
 
   <!-- Secondary -->
-  <div class="panel">
+  <div class="panel min-w-0">
     <div class="mb-3 flex items-center justify-between">
       <h4 class="text-ink text-sm font-semibold">Compared Document</h4>
       <button
@@ -92,7 +92,7 @@
       <img
         src={thumbUrl(secondary.paperlessId)}
         alt="Thumbnail: {secondary.title}"
-        class="border-soft w-full rounded-lg border object-contain"
+        class="border-soft max-h-[600px] w-full rounded-lg border object-contain"
         onerror={() => (thumbErrorSecondary = true)}
       />
     {/if}
