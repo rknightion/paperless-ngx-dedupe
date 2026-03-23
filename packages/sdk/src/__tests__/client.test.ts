@@ -459,6 +459,231 @@ describe('PaperlessDedupeClient', () => {
     });
   });
 
+  // ── AI Processing ─────────────────────────────────────────────────
+
+  describe('processAi()', () => {
+    it('sends POST to /api/v1/ai/process', async () => {
+      const job = {
+        id: 'job-ai-1',
+        type: 'ai-processing',
+        status: 'pending',
+        createdAt: '2024-01-01',
+      };
+      const fetch = mockFetch(job);
+      const client = createClient(fetch);
+
+      const result = await client.processAi();
+      expect(result).toEqual(job);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/process',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('passes options in the body', async () => {
+      const job = { id: 'job-ai-2', type: 'ai-processing', status: 'pending' };
+      const fetch = mockFetch(job);
+      const client = createClient(fetch);
+
+      await client.processAi({ reprocess: true, documentIds: ['doc-1', 'doc-2'] });
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/process',
+        expect.objectContaining({
+          method: 'POST',
+          body: '{"reprocess":true,"documentIds":["doc-1","doc-2"]}',
+        }),
+      );
+    });
+  });
+
+  describe('getAiResults()', () => {
+    it('returns paginated AI results', async () => {
+      const results = [{ id: 'r-1', documentId: 'doc-1', status: 'pending' }];
+      const meta = { total: 1, limit: 20, offset: 0 };
+      const fetch = mockFetch(results, meta);
+      const client = createClient(fetch);
+
+      const response = await client.getAiResults({ limit: 20, offset: 0 });
+      expect(response.data).toEqual(results);
+      expect(response.meta).toEqual(meta);
+    });
+
+    it('passes filter params as query string', async () => {
+      const fetch = mockFetch([], { total: 0, limit: 20, offset: 0 });
+      const client = createClient(fetch);
+
+      await client.getAiResults({ status: 'pending', search: 'invoice' });
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('status=pending'),
+        expect.any(Object),
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('search=invoice'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('getAiResult()', () => {
+    it('returns a single AI result', async () => {
+      const result = { id: 'r-1', documentId: 'doc-1', status: 'pending' };
+      const fetch = mockFetch(result);
+      const client = createClient(fetch);
+
+      const response = await client.getAiResult('r-1');
+      expect(response).toEqual(result);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/results/r-1',
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('applyAiResult()', () => {
+    it('sends POST to /api/v1/ai/results/:id/apply', async () => {
+      const fetch = mockFetch({ applied: true });
+      const client = createClient(fetch);
+
+      await client.applyAiResult('r-1');
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/results/r-1/apply',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('passes fields option in the body', async () => {
+      const fetch = mockFetch({ applied: true });
+      const client = createClient(fetch);
+
+      await client.applyAiResult('r-1', { fields: ['correspondent', 'tags'] });
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/results/r-1/apply',
+        expect.objectContaining({
+          method: 'POST',
+          body: '{"fields":["correspondent","tags"]}',
+        }),
+      );
+    });
+  });
+
+  describe('rejectAiResult()', () => {
+    it('sends POST to /api/v1/ai/results/:id/reject', async () => {
+      const fetch = mockFetch({ rejected: true });
+      const client = createClient(fetch);
+
+      await client.rejectAiResult('r-1');
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/results/r-1/reject',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
+  describe('batchApplyAiResults()', () => {
+    it('sends POST with resultIds and returns counts', async () => {
+      const fetch = mockFetch({ applied: 2, failed: 1 });
+      const client = createClient(fetch);
+
+      const result = await client.batchApplyAiResults(['r-1', 'r-2', 'r-3']);
+      expect(result).toEqual({ applied: 2, failed: 1 });
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/results/batch-apply',
+        expect.objectContaining({
+          method: 'POST',
+          body: '{"resultIds":["r-1","r-2","r-3"]}',
+        }),
+      );
+    });
+
+    it('passes optional fields parameter', async () => {
+      const fetch = mockFetch({ applied: 1, failed: 0 });
+      const client = createClient(fetch);
+
+      await client.batchApplyAiResults(['r-1'], ['correspondent', 'documentType']);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/results/batch-apply',
+        expect.objectContaining({
+          body: '{"resultIds":["r-1"],"fields":["correspondent","documentType"]}',
+        }),
+      );
+    });
+  });
+
+  describe('batchRejectAiResults()', () => {
+    it('sends POST with resultIds', async () => {
+      const fetch = mockFetch({ rejected: 2 });
+      const client = createClient(fetch);
+
+      await client.batchRejectAiResults(['r-1', 'r-2']);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/results/batch-reject',
+        expect.objectContaining({
+          method: 'POST',
+          body: '{"resultIds":["r-1","r-2"]}',
+        }),
+      );
+    });
+  });
+
+  describe('getAiStats()', () => {
+    it('returns AI stats', async () => {
+      const stats = {
+        totalProcessed: 50,
+        pendingReview: 10,
+        applied: 30,
+        rejected: 5,
+        failed: 5,
+        totalPromptTokens: 10000,
+        totalCompletionTokens: 5000,
+      };
+      const fetch = mockFetch(stats);
+      const client = createClient(fetch);
+
+      const result = await client.getAiStats();
+      expect(result).toEqual(stats);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/stats',
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('getAiConfig()', () => {
+    it('returns AI config', async () => {
+      const config = { provider: 'openai', model: 'gpt-4o' };
+      const fetch = mockFetch(config);
+      const client = createClient(fetch);
+
+      const result = await client.getAiConfig();
+      expect(result).toEqual(config);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/config',
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('updateAiConfig()', () => {
+    it('sends PUT with partial config', async () => {
+      const updated = { provider: 'anthropic', model: 'claude-sonnet-4-20250514' };
+      const fetch = mockFetch(updated);
+      const client = createClient(fetch);
+
+      const result = await client.updateAiConfig({
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-20250514',
+      });
+      expect(result).toEqual(updated);
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/ai/config',
+        expect.objectContaining({
+          method: 'PUT',
+          body: '{"provider":"anthropic","model":"claude-sonnet-4-20250514"}',
+        }),
+      );
+    });
+  });
+
   // ── Error handling ─────────────────────────────────────────────────
 
   describe('error handling', () => {
