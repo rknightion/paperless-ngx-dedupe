@@ -90,30 +90,35 @@ export function getDuplicateGroups(
 
   const countMap = new Map(memberCounts.map((mc) => [mc.groupId, mc.memberCount]));
 
-  // Primary document titles per group
+  // Primary document titles and paperless IDs per group
   const primaryDocs = db
     .select({
       groupId: duplicateMember.groupId,
       title: document.title,
+      paperlessId: document.paperlessId,
     })
     .from(duplicateMember)
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
     .where(and(inArray(duplicateMember.groupId, groupIds), eq(duplicateMember.isPrimary, true)))
     .all();
 
-  const titleMap = new Map(primaryDocs.map((pd) => [pd.groupId, pd.title]));
+  const primaryMap = new Map(primaryDocs.map((pd) => [pd.groupId, pd]));
 
-  const items: DuplicateGroupSummary[] = groups.map((g) => ({
-    id: g.id,
-    confidenceScore: g.confidenceScore,
-    jaccardSimilarity: g.jaccardSimilarity,
-    fuzzyTextRatio: g.fuzzyTextRatio,
-    status: g.status,
-    memberCount: countMap.get(g.id) ?? 0,
-    primaryDocumentTitle: titleMap.get(g.id) ?? null,
-    createdAt: g.createdAt,
-    updatedAt: g.updatedAt,
-  }));
+  const items: DuplicateGroupSummary[] = groups.map((g) => {
+    const primary = primaryMap.get(g.id);
+    return {
+      id: g.id,
+      confidenceScore: g.confidenceScore,
+      jaccardSimilarity: g.jaccardSimilarity,
+      fuzzyTextRatio: g.fuzzyTextRatio,
+      status: g.status,
+      memberCount: countMap.get(g.id) ?? 0,
+      primaryDocumentTitle: primary?.title ?? null,
+      primaryPaperlessId: primary?.paperlessId ?? null,
+      createdAt: g.createdAt,
+      updatedAt: g.updatedAt,
+    };
+  });
 
   return { items, total, limit: pagination.limit, offset: pagination.offset };
 }
