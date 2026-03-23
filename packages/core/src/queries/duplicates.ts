@@ -543,7 +543,7 @@ export function batchSetStatus(
     const result = db
       .update(duplicateGroup)
       .set({ status, updatedAt: now })
-      .where(inArray(duplicateGroup.id, chunk))
+      .where(and(inArray(duplicateGroup.id, chunk), ne(duplicateGroup.status, 'deleted')))
       .run();
     updated += result.changes;
   }
