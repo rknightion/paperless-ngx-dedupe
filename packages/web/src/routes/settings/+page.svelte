@@ -829,7 +829,13 @@
         {#if showAiAdvanced}
           <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label for="ai-max-content" class="text-muted text-sm">Max Content Length</label>
+              <label for="ai-max-content" class="text-muted flex items-center gap-1.5 text-sm">
+                Max Content Length
+                <InfoIcon
+                  text="Maximum number of characters (not tokens) sent to the AI per document. Documents longer than this are truncated, keeping the first 60% and last 40%. Default 8,000 chars (~2,000 tokens) balances accuracy with cost. Increase for long documents but be aware this directly increases token usage and cost."
+                  position="top"
+                />
+              </label>
               <input
                 id="ai-max-content"
                 type="number"
@@ -840,7 +846,13 @@
               />
             </div>
             <div>
-              <label for="ai-batch" class="text-muted text-sm">Batch Size</label>
+              <label for="ai-batch" class="text-muted flex items-center gap-1.5 text-sm">
+                Batch Size
+                <InfoIcon
+                  text="Number of documents queued per processing run. Documents are still sent to the AI one at a time — this controls how many are picked up in each batch job. Default: 10."
+                  position="top"
+                />
+              </label>
               <input
                 id="ai-batch"
                 type="number"
@@ -851,7 +863,13 @@
               />
             </div>
             <div>
-              <label for="ai-delay" class="text-muted text-sm">Rate Delay (ms)</label>
+              <label for="ai-delay" class="text-muted flex items-center gap-1.5 text-sm">
+                Rate Delay (ms)
+                <InfoIcon
+                  text="Milliseconds to wait between each document request to the AI provider. Prevents rate limiting when processing many documents. Default 500ms is safe for most API tiers. Set to 0 for maximum speed if your API plan allows it."
+                  position="top"
+                />
+              </label>
               <input
                 id="ai-delay"
                 type="number"
@@ -862,7 +880,13 @@
               />
             </div>
             <div>
-              <label for="ai-retries" class="text-muted text-sm">Max Retries</label>
+              <label for="ai-retries" class="text-muted flex items-center gap-1.5 text-sm">
+                Max Retries
+                <InfoIcon
+                  text="Number of automatic retries when an AI request fails (e.g., network error or rate limit). The SDK handles exponential backoff between retries. Default: 3. Set to 0 to disable retries."
+                  position="top"
+                />
+              </label>
               <input
                 id="ai-retries"
                 type="number"
