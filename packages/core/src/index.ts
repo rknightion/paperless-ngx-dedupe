@@ -4,6 +4,7 @@ export { duplicateGroup, duplicateMember } from './schema/sqlite/duplicates.js';
 export { job } from './schema/sqlite/jobs.js';
 export { appConfig, syncState } from './schema/sqlite/app.js';
 export { aiProcessingResult } from './schema/sqlite/ai-processing.js';
+export { documentChunk, ragConversation, ragMessage } from './schema/sqlite/rag.js';
 export {
   documentRelations,
   documentContentRelations,
@@ -11,6 +12,9 @@ export {
   duplicateGroupRelations,
   duplicateMemberRelations,
   aiProcessingResultRelations,
+  documentChunkRelations,
+  ragConversationRelations,
+  ragMessageRelations,
 } from './schema/relations.js';
 
 // Types
@@ -274,3 +278,47 @@ export {
 export type { AiResultFilters, AiResultSummary, AiStats } from './ai/queries.js';
 export { applyAiResult, rejectAiResult, batchRejectAiResults } from './ai/apply.js';
 export type { ApplyOptions } from './ai/apply.js';
+
+// RAG
+export { getRagConfig, setRagConfig } from './rag/config.js';
+export {
+  ragConfigSchema,
+  DEFAULT_RAG_SYSTEM_PROMPT,
+  DEFAULT_RAG_CONFIG,
+  OPENAI_EMBEDDING_MODELS,
+  RAG_CONFIG_PREFIX,
+} from './rag/types.js';
+export type {
+  RagConfig,
+  Chunk,
+  SearchResult,
+  RagSource,
+  RagStats,
+  CostEstimate,
+} from './rag/types.js';
+export { loadSqliteVec, initRagTables } from './rag/vector-store.js';
+export { chunkDocument } from './rag/chunker.js';
+export {
+  generateEmbeddings,
+  generateEmbedding,
+  embeddingOptionsFromConfig,
+} from './rag/embeddings.js';
+export { hybridSearch } from './rag/search.js';
+export { askDocuments } from './rag/ask.js';
+export type { AskResult } from './rag/ask.js';
+export { indexDocuments } from './rag/indexer.js';
+export type { IndexProgress, IndexResult, IndexOptions } from './rag/indexer.js';
+export {
+  createConversation,
+  getConversations,
+  getConversation,
+  deleteConversation,
+  addMessage,
+  getConversationMessages,
+} from './rag/conversations.js';
+export type {
+  ConversationSummary,
+  ConversationDetail,
+  MessageDetail,
+} from './rag/conversations.js';
+export { getRagStats } from './rag/queries.js';

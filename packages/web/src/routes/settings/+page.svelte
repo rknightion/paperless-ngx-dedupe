@@ -2,7 +2,14 @@
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { InfoIcon } from '$lib/components';
-  import { Link, SlidersHorizontal, Info, Archive, Brain } from 'lucide-svelte';
+  import {
+    Link,
+    SlidersHorizontal,
+    Info,
+    Archive,
+    Brain,
+    MessageCircleQuestion,
+  } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -65,6 +72,27 @@
   let isSavingAi = $state(false);
   let aiSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
   let aiModels = $state<{ id: string; name: string }[]>([]);
+
+  // RAG Settings
+  const initialRagConfig = untrack(() => data.ragConfig);
+  const initialRagStats = untrack(() => data.ragStats);
+  let ragEmbeddingModel = $state(initialRagConfig?.embeddingModel ?? 'text-embedding-3-small');
+  let ragEmbeddingDimensions = $state(initialRagConfig?.embeddingDimensions ?? 1536);
+  let ragChunkSize = $state(initialRagConfig?.chunkSize ?? 400);
+  let ragChunkOverlap = $state(initialRagConfig?.chunkOverlap ?? 40);
+  let ragTopK = $state(initialRagConfig?.topK ?? 10);
+  let ragAnswerProvider = $state(initialRagConfig?.answerProvider ?? 'openai');
+  let ragAnswerModel = $state(initialRagConfig?.answerModel ?? 'gpt-5.4-mini');
+  let ragSystemPrompt = $state(initialRagConfig?.systemPrompt ?? '');
+  let ragMaxContextTokens = $state(initialRagConfig?.maxContextTokens ?? 4000);
+  let ragAutoIndex = $state(initialRagConfig?.autoIndex ?? false);
+  let showRagPrompt = $state(false);
+  let showRagAdvanced = $state(false);
+  let isSavingRag = $state(false);
+  let ragSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
+  let ragModels = $state<{ id: string; name: string }[]>([]);
+  let ragStats = $state(initialRagStats);
+  let isRagIndexing = $state(false);
 
   let weightSum = $derived(weightJaccard + weightFuzzy);
   let weightsValid = $derived(weightSum === 100);
@@ -248,6 +276,67 @@
     isSavingAi = false;
   }
 
+  async function fetchRagModels(provider: string) {
+    try {
+      const res = await fetch(`/api/v1/ai/models?provider=${provider}`);
+      const json = await res.json();
+      if (res.ok) ragModels = json.data ?? [];
+    } catch {
+      ragModels = [];
+    }
+  }
+
+  $effect(() => {
+    if (data.ragEnabled) {
+      fetchRagModels(ragAnswerProvider);
+    }
+  });
+
+  async function saveRagConfig() {
+    isSavingRag = true;
+    ragSaveStatus = null;
+    try {
+      const res = await fetch('/api/v1/rag/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          embeddingModel: ragEmbeddingModel,
+          embeddingDimensions: ragEmbeddingDimensions,
+          chunkSize: ragChunkSize,
+          chunkOverlap: ragChunkOverlap,
+          topK: ragTopK,
+          answerProvider: ragAnswerProvider,
+          answerModel: ragAnswerModel,
+          systemPrompt: ragSystemPrompt,
+          maxContextTokens: ragMaxContextTokens,
+          autoIndex: ragAutoIndex,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        ragSaveStatus = { type: 'success', message: 'Document Q&A configuration saved' };
+      } else {
+        ragSaveStatus = { type: 'error', message: json.error?.message ?? 'Save failed' };
+      }
+    } catch {
+      ragSaveStatus = { type: 'error', message: 'Save failed' };
+    }
+    isSavingRag = false;
+  }
+
+  async function rebuildRagIndex() {
+    isRagIndexing = true;
+    try {
+      await fetch('/api/v1/rag/index', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rebuild: true }),
+      });
+    } catch {
+      isRagIndexing = false;
+    }
+  }
+
   async function revertPrompt() {
     try {
       // Reset to empty so the server default is used
@@ -299,6 +388,13 @@
         href="#ai-processing"
         class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
         >AI Processing</a
+      >
+    {/if}
+    {#if data.ragEnabled}
+      <a
+        href="#document-qa"
+        class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
+        >Document Q&A</a
       >
     {/if}
     <a
@@ -917,6 +1013,297 @@
             : 'bg-ember-light text-ember'}"
         >
           {aiSaveStatus.message}
+        </div>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Document Q&A Settings -->
+  {#if data.ragEnabled}
+    <div class="panel" id="document-qa">
+      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+        <MessageCircleQuestion class="text-accent h-5 w-5" />
+        Document Q&A
+      </h2>
+
+      <!-- Embedding Model -->
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="rag-embed-model" class="text-ink block text-sm font-medium">
+            Embedding Model
+          </label>
+          <select
+            id="rag-embed-model"
+            bind:value={ragEmbeddingModel}
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+          >
+            <option value="text-embedding-3-small">text-embedding-3-small (1536d, cheaper)</option>
+            <option value="text-embedding-3-large"
+              >text-embedding-3-large (3072d, higher quality)</option
+            >
+          </select>
+        </div>
+        <div>
+          <label for="rag-embed-dims" class="text-muted flex items-center gap-1.5 text-sm">
+            Embedding Dimensions
+            <InfoIcon
+              text="Number of dimensions for the embedding vectors. Lower values save storage and are faster. Default: 1536 for small, 3072 for large."
+              position="top"
+            />
+          </label>
+          <input
+            id="rag-embed-dims"
+            type="number"
+            min="256"
+            max="3072"
+            bind:value={ragEmbeddingDimensions}
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- Answer Model -->
+      <div class="border-soft mt-6 border-t pt-4">
+        <h3 class="text-ink text-sm font-medium">Answer Model</h3>
+        <p class="text-muted mt-1 text-xs">
+          The AI model used to generate answers from retrieved document context. Independent from
+          the AI Processing model.
+        </p>
+        <div class="mt-3 grid gap-4 sm:grid-cols-2">
+          <div>
+            <span class="text-ink block text-sm font-medium">Provider</span>
+            <div class="mt-2 flex gap-4">
+              <label
+                class="flex items-center gap-2 text-sm {!data.hasOpenAiKey ? 'opacity-50' : ''}"
+              >
+                <input
+                  type="radio"
+                  bind:group={ragAnswerProvider}
+                  value="openai"
+                  disabled={!data.hasOpenAiKey}
+                  onchange={() => fetchRagModels('openai')}
+                />
+                OpenAI
+              </label>
+              <label
+                class="flex items-center gap-2 text-sm {!data.hasAnthropicKey ? 'opacity-50' : ''}"
+              >
+                <input
+                  type="radio"
+                  bind:group={ragAnswerProvider}
+                  value="anthropic"
+                  disabled={!data.hasAnthropicKey}
+                  onchange={() => fetchRagModels('anthropic')}
+                />
+                Anthropic
+              </label>
+            </div>
+          </div>
+          <div>
+            <label for="rag-model" class="text-ink block text-sm font-medium">Model</label>
+            <select
+              id="rag-model"
+              bind:value={ragAnswerModel}
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+            >
+              {#each ragModels as model (model.id)}
+                <option value={model.id}>{model.name}</option>
+              {/each}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auto-Index & Retrieval -->
+      <div class="border-soft mt-6 border-t pt-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="flex items-center">
+            <label class="text-muted flex items-center gap-2 text-sm">
+              <input type="checkbox" bind:checked={ragAutoIndex} class="rounded" />
+              Auto-index documents after sync
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Settings -->
+      <div class="border-soft mt-4 border-t pt-4">
+        <button
+          onclick={() => (showRagAdvanced = !showRagAdvanced)}
+          class="text-accent hover:text-accent-hover text-sm font-medium"
+        >
+          {showRagAdvanced ? 'Hide' : 'Show'} Advanced Settings
+        </button>
+        {#if showRagAdvanced}
+          <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label for="rag-chunk-size" class="text-muted flex items-center gap-1.5 text-sm">
+                Chunk Size (tokens)
+                <InfoIcon
+                  text="Number of tokens per document chunk. Smaller chunks give more precise retrieval but may lose context. Default: 400."
+                  position="top"
+                />
+              </label>
+              <input
+                id="rag-chunk-size"
+                type="number"
+                min="100"
+                max="2000"
+                bind:value={ragChunkSize}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="rag-overlap" class="text-muted flex items-center gap-1.5 text-sm">
+                Chunk Overlap (tokens)
+                <InfoIcon
+                  text="Token overlap between consecutive chunks. Prevents information loss at chunk boundaries. Default: 40."
+                  position="top"
+                />
+              </label>
+              <input
+                id="rag-overlap"
+                type="number"
+                min="0"
+                max="500"
+                bind:value={ragChunkOverlap}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="rag-topk" class="text-muted flex items-center gap-1.5 text-sm">
+                Top-K Results
+                <InfoIcon
+                  text="Number of document chunks retrieved per query. More chunks provide broader context but increase token usage. Default: 10."
+                  position="top"
+                />
+              </label>
+              <input
+                id="rag-topk"
+                type="number"
+                min="1"
+                max="50"
+                bind:value={ragTopK}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="rag-context" class="text-muted flex items-center gap-1.5 text-sm">
+                Max Context Tokens
+                <InfoIcon
+                  text="Maximum number of tokens from retrieved chunks included in the prompt to the answer model. Default: 4000."
+                  position="top"
+                />
+              </label>
+              <input
+                id="rag-context"
+                type="number"
+                min="500"
+                max="100000"
+                bind:value={ragMaxContextTokens}
+                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+              />
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- System Prompt -->
+      <div class="border-soft mt-4 border-t pt-4">
+        <button
+          onclick={() => (showRagPrompt = !showRagPrompt)}
+          class="text-accent hover:text-accent-hover text-sm font-medium"
+        >
+          {showRagPrompt ? 'Hide' : 'Show'} System Prompt
+        </button>
+        {#if showRagPrompt}
+          <div class="mt-3">
+            <textarea
+              bind:value={ragSystemPrompt}
+              rows="8"
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none"
+            ></textarea>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Index Status -->
+      {#if ragStats}
+        <div class="border-soft mt-6 border-t pt-4">
+          <h3 class="text-ink text-sm font-medium">Index Status</h3>
+          <div class="text-muted mt-2 grid gap-2 text-sm sm:grid-cols-3">
+            <div>
+              <span class="text-muted text-xs">Indexed Documents</span>
+              <p class="text-ink font-medium">
+                {ragStats.indexedDocuments} / {ragStats.indexedDocuments +
+                  ragStats.unindexedDocuments}
+              </p>
+            </div>
+            <div>
+              <span class="text-muted text-xs">Total Chunks</span>
+              <p class="text-ink font-medium">{ragStats.totalChunks.toLocaleString()}</p>
+            </div>
+            <div>
+              <span class="text-muted text-xs">Last Indexed</span>
+              <p class="text-ink font-medium">
+                {ragStats.lastIndexedAt
+                  ? new Date(ragStats.lastIndexedAt).toLocaleString()
+                  : 'Never'}
+              </p>
+            </div>
+          </div>
+          {#if ragStats.indexCost}
+            <div class="mt-3 rounded-lg px-3 py-2 text-sm" style="background: oklch(0.95 0.02 85);">
+              <span class="text-ink">
+                Indexing {ragStats.unindexedDocuments} unindexed document{ragStats.unindexedDocuments ===
+                1
+                  ? ''
+                  : 's'}: ~{(ragStats.indexCost.estimatedTokens / 1000).toFixed(0)}K tokens,
+                estimated
+                <strong
+                  >~${ragStats.indexCost.estimatedCostUsd < 0.01
+                    ? '<0.01'
+                    : ragStats.indexCost.estimatedCostUsd.toFixed(2)}</strong
+                >
+              </span>
+            </div>
+          {/if}
+          {#if ragStats.rebuildCost}
+            <div class="text-muted mt-2 text-xs">
+              Full rebuild (all documents): ~{(ragStats.rebuildCost.estimatedTokens / 1000).toFixed(
+                0,
+              )}K tokens, ~${ragStats.rebuildCost.estimatedCostUsd < 0.01
+                ? '<0.01'
+                : ragStats.rebuildCost.estimatedCostUsd.toFixed(2)}
+            </div>
+          {/if}
+          <button
+            onclick={rebuildRagIndex}
+            disabled={isRagIndexing}
+            class="border-soft text-ink hover:bg-canvas mt-3 rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {isRagIndexing ? 'Rebuilding...' : 'Rebuild Index'}
+          </button>
+        </div>
+      {/if}
+
+      <!-- Save Button -->
+      <div class="mt-6 flex items-center gap-3">
+        <button
+          onclick={saveRagConfig}
+          disabled={isSavingRag}
+          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {isSavingRag ? 'Saving...' : 'Save Q&A Configuration'}
+        </button>
+      </div>
+      {#if ragSaveStatus}
+        <div
+          class="mt-3 rounded-lg px-3 py-2 text-sm {ragSaveStatus.type === 'success'
+            ? 'bg-success-light text-success'
+            : 'bg-ember-light text-ember'}"
+        >
+          {ragSaveStatus.message}
         </div>
       {/if}
     </div>

@@ -1,7 +1,16 @@
 <script>
   import '../app.css';
   import { page } from '$app/stores';
-  import { LayoutDashboard, FileText, Copy, Settings, X, Menu, Brain } from 'lucide-svelte';
+  import {
+    LayoutDashboard,
+    FileText,
+    Copy,
+    Settings,
+    X,
+    Menu,
+    Brain,
+    MessageCircleQuestion,
+  } from 'lucide-svelte';
 
   let { data, children } = $props();
   let sidebarOpen = $state(false);
@@ -93,6 +102,21 @@
           <span class="flex items-center gap-3">
             <Brain class="h-4 w-4" />
             AI Processing
+          </span>
+        </a>
+      {/if}
+      {#if data.ragEnabled}
+        <a
+          href="/ask"
+          class="px-3 py-2 text-sm font-medium transition-colors {$page.url.pathname.startsWith(
+            '/ask',
+          )
+            ? 'bg-sidebar-active rounded-lg text-white'
+            : 'hover:bg-sidebar-hover rounded-lg text-white/70 hover:text-white'}"
+        >
+          <span class="flex items-center gap-3">
+            <MessageCircleQuestion class="h-4 w-4" />
+            Ask Documents
           </span>
         </a>
       {/if}

@@ -16,7 +16,8 @@ nav = [
   { "How It Works" = [
       { "Dedup Pipeline" = "how-it-works.md" },
       { Architecture = "architecture.md" },
-      { "AI Processing" = "ai-processing.md" }
+      { "AI Processing" = "ai-processing.md" },
+      { "Document Q&A" = "document-qa.md" }
     ] },
   { Reference = [
       { "API Reference" = "api-reference.md" },

@@ -1,4 +1,5 @@
 import type { AppConfig, Logger, AppDatabase } from '@paperless-dedupe/core';
+import type Database from 'better-sqlite3';
 
 declare global {
   namespace App {
@@ -6,6 +7,7 @@ declare global {
       config: AppConfig;
       logger: Logger;
       db: AppDatabase;
+      sqlite: Database.Database;
     }
   }
 }

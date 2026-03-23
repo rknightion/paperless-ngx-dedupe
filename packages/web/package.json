@@ -13,6 +13,8 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.63",
+    "@ai-sdk/openai": "^3.0.48",
     "@anthropic-ai/sdk": "^0.80.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.71.0",
@@ -25,6 +27,7 @@
     "@opentelemetry/sdk-node": "^0.213.0",
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@paperless-dedupe/core": "workspace:*",
+    "ai": "^6.0.136",
     "better-sqlite3": "^12.6.2",
     "diff-match-patch": "^1.0.5",
     "drizzle-kit": "^0.31.0",
@@ -35,6 +38,7 @@
     "nanoid": "^5.0.0",
     "openai": "^6.32.0",
     "pino": "^10.0.0",
+    "sqlite-vec": "^0.1.7",
     "zod": "^4.0.0"
   },
   "devDependencies": {
