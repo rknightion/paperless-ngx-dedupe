@@ -176,6 +176,13 @@ export class PaperlessDedupeClient {
     return res.data;
   }
 
+  async purgeDeletedGroups(): Promise<{ purged: number }> {
+    const res = await request<{ purged: number }>('/api/v1/batch/purge-deleted', this.httpOptions, {
+      method: 'POST',
+    });
+    return res.data;
+  }
+
   // ── Dashboard ────────────────────────────────────────────────────────
 
   async getDashboard(): Promise<DashboardData> {
