@@ -31,7 +31,7 @@
     "drizzle-orm": "^0.45.1",
     "echarts": "^6.0.0",
     "fastest-levenshtein": "^1.0.16",
-    "lucide-svelte": "^0.577.0",
+    "lucide-svelte": "^1.0.0",
     "nanoid": "^5.0.0",
     "openai": "^6.32.0",
     "pino": "^10.0.0",
