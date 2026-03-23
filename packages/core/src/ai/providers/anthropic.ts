@@ -32,9 +32,22 @@ export class AnthropicProvider implements AiProviderInterface {
   }
 
   async extract(request: AiExtractionRequest): Promise<AiExtractionResult> {
+    // Build output_config with optional effort for extended thinking
+    const outputConfig: Record<string, unknown> = {
+      format: {
+        type: 'json_schema',
+        schema: EXTRACTION_JSON_SCHEMA,
+      },
+    };
+
+    const thinkingEnabled = request.reasoningEffort && request.reasoningEffort !== 'none';
+    if (thinkingEnabled) {
+      outputConfig.effort = request.reasoningEffort;
+    }
+
     const message = await this.client.messages.create({
       model: this.model,
-      max_tokens: 1024,
+      max_tokens: thinkingEnabled ? 4096 : 1024,
       system: [
         {
           type: 'text',
@@ -43,12 +56,7 @@ export class AnthropicProvider implements AiProviderInterface {
         },
       ],
       messages: [{ role: 'user', content: request.userPrompt }],
-      output_config: {
-        format: {
-          type: 'json_schema',
-          schema: EXTRACTION_JSON_SCHEMA,
-        },
-      },
+      output_config: outputConfig,
     });
 
     // Check stop reason
