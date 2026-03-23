@@ -42,9 +42,9 @@
   "peerDependencies": {
     "@anthropic-ai/sdk": "^0.79.0 || ^0.80.0",
     "openai": "^6.0.0",
-    "ai": "^4.0.0 || ^6.0.0",
-    "@ai-sdk/openai": "^1.0.0 || ^3.0.0",
-    "@ai-sdk/anthropic": "^1.0.0 || ^3.0.0"
+    "ai": "^6.0.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "@ai-sdk/anthropic": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "openai": {
