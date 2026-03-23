@@ -64,15 +64,28 @@ OpenTelemetry is off unless `OTEL_ENABLED=true`. Common vars:
 
 See `.env.example` for the full list.
 
-### Paperless-NGX System Metrics (Optional)
-
-When enabled, Paperless NGX Dedupe can collect and emit system-level metrics from your Paperless-NGX instance via OTEL. This provides the same observability as running a separate [prometheus-paperless-exporter](https://github.com/hansmi/prometheus-paperless-exporter) container, but delivered through your existing OTEL pipeline -- one fewer container to manage.
-
-Metric names match the Prometheus exporter exactly (e.g. `paperless_status_storage_total_bytes`, `paperless_statistics_documents_total`) for Grafana dashboard compatibility.
+### Prometheus Scrape Endpoint (Optional)
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `PAPERLESS_METRICS_ENABLED` | No | `false` | Enable Paperless system metrics collection (requires `OTEL_ENABLED=true`) |
+| `OTEL_PROMETHEUS_ENABLED` | No | `false` | Expose a Prometheus scrape endpoint at `/api/v1/metrics` |
+
+When enabled, all application metrics (sync, analysis, jobs, AI, observable gauges) are available in Prometheus exposition format at `GET /api/v1/metrics`. This can be used **standalone** (without `OTEL_ENABLED`) or **alongside** full OTEL for both push and pull metrics.
+
+When both are active, the Prometheus endpoint exposes the same metrics as the OTLP pipeline.
+
+### Paperless-NGX System Metrics (Optional)
+
+When enabled, Paperless NGX Dedupe collects system-level metrics from your Paperless-NGX instance — storage, document counts, tags, correspondents, and more. This provides the same observability as running a separate [prometheus-paperless-exporter](https://github.com/hansmi/prometheus-paperless-exporter) container, but delivered through whichever metrics pipeline you have active (OTLP, Prometheus, or both) — one fewer container to manage.
+
+Metric names match the Prometheus exporter exactly (e.g. `paperless_status_storage_total_bytes`, `paperless_statistics_documents_total`) for Grafana dashboard compatibility.
+
+!!! note "Separately opt-in"
+    This is opt-in independently of `OTEL_ENABLED` / `OTEL_PROMETHEUS_ENABLED` because collectors poll the Paperless-NGX API every export interval (~60s), adding load to your Paperless instance. Enable only the collectors you need if this is a concern.
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `PAPERLESS_METRICS_ENABLED` | No | `false` | Enable Paperless system metrics collection. Requires `OTEL_ENABLED=true` or `OTEL_PROMETHEUS_ENABLED=true`. |
 | `PAPERLESS_METRICS_COLLECTORS` | No | all | Comma-separated list of collectors to enable |
 
 **Available collectors:**
