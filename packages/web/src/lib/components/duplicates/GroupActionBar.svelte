@@ -122,6 +122,10 @@
         Delete Duplicates
       </span>
     </button>
+  {:else if status === 'deleted'}
+    <p class="text-muted text-sm">
+      This group has been resolved — documents were deleted from Paperless-NGX.
+    </p>
   {:else}
     <button
       onclick={() => setStatus('pending')}
