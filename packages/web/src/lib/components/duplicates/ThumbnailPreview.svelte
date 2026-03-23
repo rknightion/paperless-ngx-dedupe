@@ -56,7 +56,7 @@
       <img
         src={thumbUrl(paperlessId)}
         alt="{alt} (enlarged)"
-        class="border-soft bg-surface h-auto w-[250px] rounded-lg border shadow-lg"
+        class="border-soft bg-surface h-auto w-[500px] rounded-lg border shadow-lg"
       />
       <div class="bg-ink absolute top-full left-1/2 -mt-1 h-2 w-2 -translate-x-1/2 rotate-45"></div>
     </div>
