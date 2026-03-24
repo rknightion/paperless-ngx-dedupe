@@ -1,12 +1,14 @@
+import { createRequire } from 'node:module';
 import type Database from 'better-sqlite3';
+
+const _require = createRequire(import.meta.url);
 
 let loaded = false;
 
 export function loadSqliteVec(sqlite: Database.Database): void {
   if (loaded) return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const sqliteVec = require('sqlite-vec');
+    const sqliteVec = _require('sqlite-vec');
     sqliteVec.load(sqlite);
     loaded = true;
   } catch {
