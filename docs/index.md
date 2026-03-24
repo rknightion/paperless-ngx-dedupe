@@ -1,16 +1,16 @@
 ---
 title: Paperless NGX Dedupe Documentation
-description: Document deduplication companion for Paperless-NGX using MinHash/LSH algorithms
+description: Document deduplication and AI-powered metadata companion for Paperless-NGX
 image: assets/social-card.png
 ---
 
 # Paperless NGX Dedupe
 
-**Intelligent document deduplication for Paperless-NGX**
+**Intelligent document deduplication, AI metadata extraction, and document Q&A for Paperless-NGX**
 
 ## Features
 
-### :material-magnify-scan: Intelligent Detection
+### :material-magnify-scan: Intelligent Duplicate Detection
 
 MinHash signatures combined with Locality-Sensitive Hashing provide efficient O(n log n) candidate discovery — no need to compare every document against every other.
 
@@ -18,9 +18,17 @@ MinHash signatures combined with Locality-Sensitive Hashing provide efficient O(
 
 Four similarity dimensions — Jaccard text overlap, fuzzy text matching, metadata comparison, and filename similarity — are combined into a single confidence score with configurable weights.
 
+### :material-robot-outline: AI Metadata Extraction
+
+Automatically extract correspondents, document types, and tags from document text using OpenAI or Anthropic models. Each suggestion includes a confidence score and evidence snippet, so you can review and apply results individually or in bulk.
+
+### :material-forum: RAG Document Q&A
+
+Ask natural language questions about your document library. Hybrid search combines vector embeddings with full-text search via Reciprocal Rank Fusion, with multi-turn conversations and source citations for every answer.
+
 ### :material-lightning-bolt: Real-Time Processing
 
-Background worker threads handle sync, analysis, and batch operations with real-time progress streamed via Server-Sent Events.
+Background worker threads handle sync, analysis, AI extraction, and document indexing with real-time progress streamed via Server-Sent Events.
 
 ### :material-docker: Single Container
 
