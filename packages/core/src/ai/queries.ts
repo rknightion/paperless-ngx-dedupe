@@ -294,6 +294,21 @@ export function batchMarkApplied(db: AppDatabase, ids: string[], appliedFields: 
   });
 }
 
+export function getPendingAiResultIds(db: AppDatabase): string[] {
+  const rows = db
+    .select({ id: aiProcessingResult.id })
+    .from(aiProcessingResult)
+    .where(
+      and(
+        eq(aiProcessingResult.appliedStatus, 'pending'),
+        sql`${aiProcessingResult.errorMessage} IS NULL`,
+      ),
+    )
+    .all();
+
+  return rows.map((r) => r.id);
+}
+
 export function batchMarkRejected(db: AppDatabase, ids: string[]): void {
   const now = new Date().toISOString();
 

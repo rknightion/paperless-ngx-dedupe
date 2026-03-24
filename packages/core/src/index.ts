@@ -276,6 +276,7 @@ export {
   markAiResultRejected,
   batchMarkApplied,
   batchMarkRejected,
+  getPendingAiResultIds,
 } from './ai/queries.js';
 export type { AiResultFilters, AiResultSummary, AiStats } from './ai/queries.js';
 export { applyAiResult, rejectAiResult, batchRejectAiResults } from './ai/apply.js';
