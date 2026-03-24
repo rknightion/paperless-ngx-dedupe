@@ -28,6 +28,9 @@ import {
 } from './schemas.js';
 import { PaperlessApiError, PaperlessAuthError, PaperlessConnectionError } from './errors.js';
 
+/** Paperless-NGX matching_algorithm=0 disables automatic assignment matching. */
+const MATCHING_NONE = 0;
+
 export class PaperlessClient {
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
@@ -344,7 +347,7 @@ export class PaperlessClient {
     const response = await this.fetchWithRetry(this.buildUrl('/api/correspondents/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, matching_algorithm: MATCHING_NONE }),
     });
     const json = await response.json();
     return paperlessCorrespondentSchema.parse(json);
@@ -354,7 +357,7 @@ export class PaperlessClient {
     const response = await this.fetchWithRetry(this.buildUrl('/api/document_types/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, matching_algorithm: MATCHING_NONE }),
     });
     const json = await response.json();
     return paperlessDocumentTypeSchema.parse(json);
@@ -364,7 +367,7 @@ export class PaperlessClient {
     const response = await this.fetchWithRetry(this.buildUrl('/api/tags/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, matching_algorithm: MATCHING_NONE }),
     });
     const json = await response.json();
     return paperlessTagSchema.parse(json);
