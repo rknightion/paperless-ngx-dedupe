@@ -7,7 +7,7 @@ import { chunkDocument } from './chunker.js';
 import { generateEmbeddings, embeddingOptionsFromConfig } from './embeddings.js';
 import { insertChunkEmbedding, deleteChunkEmbeddings } from './vector-store.js';
 import { insertChunkFts, deleteChunksFts } from './fts.js';
-import type { RagConfig } from './types.js';
+import type { Chunk, RagConfig } from './types.js';
 
 export interface IndexProgress {
   phase: string;
@@ -30,6 +30,20 @@ export interface IndexOptions {
   onProgress?: (progress: IndexProgress) => void;
 }
 
+interface DocWork {
+  doc: {
+    id: string;
+    title: string;
+    correspondent: string | null;
+    fullText: string | null;
+    contentHash: string | null;
+  };
+  chunks: Chunk[];
+  oldChunkIds: string[];
+}
+
+const DOC_BATCH_SIZE = 50;
+
 export async function indexDocuments(
   db: AppDatabase,
   sqlite: Database.Database,
@@ -41,7 +55,6 @@ export async function indexDocuments(
   let skipped = 0;
   let failed = 0;
   let totalChunks = 0;
-  let consecutiveErrors = 0;
 
   // If rebuild, clear all existing chunks
   if (opts.rebuild) {
@@ -73,18 +86,11 @@ export async function indexDocuments(
 
   const embeddingOpts = embeddingOptionsFromConfig(config, opts.apiKey);
 
+  // Phase 1: evaluate all docs — check hashes, chunk, collect work items
+  const toIndex: DocWork[] = [];
+
   for (let i = 0; i < docs.length; i++) {
     const doc = docs[i];
-    if (!doc.fullText) {
-      skipped++;
-      continue;
-    }
-
-    // Circuit breaker
-    if (consecutiveErrors >= 3) {
-      failed += docs.length - i;
-      break;
-    }
 
     opts.onProgress?.({
       phase: 'indexing',
@@ -92,6 +98,11 @@ export async function indexDocuments(
       total: totalDocs,
       documentTitle: doc.title,
     });
+
+    if (!doc.fullText) {
+      skipped++;
+      continue;
+    }
 
     // Check if already indexed with same content
     if (!opts.rebuild) {
@@ -107,78 +118,112 @@ export async function indexDocuments(
         continue;
       }
 
-      // Content changed — delete old chunks
+      // Content changed — collect old chunk IDs for deletion
       if (existing.length > 0) {
         const oldChunks = db
           .select({ id: documentChunk.id })
           .from(documentChunk)
           .where(eq(documentChunk.documentId, doc.id))
           .all();
-        const oldIds = oldChunks.map((c) => c.id);
-        if (oldIds.length > 0) {
-          deleteChunkEmbeddings(sqlite, oldIds);
-          deleteChunksFts(sqlite, oldIds);
-          db.delete(documentChunk).where(eq(documentChunk.documentId, doc.id)).run();
+        const chunks = chunkDocument(
+          doc.fullText,
+          { title: doc.title, correspondent: doc.correspondent },
+          { chunkSize: config.chunkSize, chunkOverlap: config.chunkOverlap },
+        );
+        if (chunks.length === 0) {
+          skipped++;
+          continue;
         }
+        toIndex.push({ doc, chunks, oldChunkIds: oldChunks.map((c) => c.id) });
+        continue;
       }
     }
 
+    const chunks = chunkDocument(
+      doc.fullText,
+      { title: doc.title, correspondent: doc.correspondent },
+      { chunkSize: config.chunkSize, chunkOverlap: config.chunkOverlap },
+    );
+
+    if (chunks.length === 0) {
+      skipped++;
+      continue;
+    }
+
+    toIndex.push({ doc, chunks, oldChunkIds: [] });
+  }
+
+  // Phase 2: process in groups — embed concurrently across docs, write to DB after each group
+  let consecutiveGroupErrors = 0;
+
+  for (let g = 0; g < toIndex.length; g += DOC_BATCH_SIZE) {
+    if (consecutiveGroupErrors >= 3) {
+      failed += toIndex.length - g;
+      break;
+    }
+
+    const group = toIndex.slice(g, g + DOC_BATCH_SIZE);
+    const allTexts = group.flatMap((d) => d.chunks.map((c) => c.content));
+
+    let allEmbeddings: number[][];
     try {
-      // Chunk the document
-      const chunks = chunkDocument(
-        doc.fullText,
-        { title: doc.title, correspondent: doc.correspondent },
-        { chunkSize: config.chunkSize, chunkOverlap: config.chunkOverlap },
-      );
-
-      if (chunks.length === 0) {
-        skipped++;
-        continue;
-      }
-
-      // Generate embeddings for all chunks
-      const texts = chunks.map((c) => c.content);
-      const embeddings = await generateEmbeddings(texts, embeddingOpts);
-
-      // Insert chunks, vectors, and FTS entries in a transaction
-      const now = new Date().toISOString();
-      const insertedIds: string[] = [];
-
-      db.transaction((tx) => {
-        for (let j = 0; j < chunks.length; j++) {
-          const chunk = chunks[j];
-          const result = tx
-            .insert(documentChunk)
-            .values({
-              documentId: doc.id,
-              chunkIndex: chunk.chunkIndex,
-              content: chunk.content,
-              tokenCount: chunk.tokenCount,
-              contentHash: doc.contentHash ?? chunk.contentHash,
-              embeddingModel: config.embeddingModel,
-              createdAt: now,
-            })
-            .returning({ id: documentChunk.id })
-            .get();
-          insertedIds.push(result.id);
-        }
-      });
-
-      // Insert into virtual tables (outside Drizzle transaction)
-      for (let j = 0; j < insertedIds.length; j++) {
-        const chunkId = insertedIds[j];
-        const embedding = new Float32Array(embeddings[j]);
-        insertChunkEmbedding(sqlite, chunkId, embedding);
-        insertChunkFts(sqlite, chunkId, chunks[j].content);
-      }
-
-      totalChunks += chunks.length;
-      indexed++;
-      consecutiveErrors = 0;
+      allEmbeddings = await generateEmbeddings(allTexts, embeddingOpts, config.concurrentBatches);
+      consecutiveGroupErrors = 0;
     } catch {
-      consecutiveErrors++;
-      failed++;
-      // Continue to next document
+      failed += group.length;
+      consecutiveGroupErrors++;
+      continue;
+    }
+
+    // Distribute embeddings back to each doc and write to DB
+    let offset = 0;
+    for (const item of group) {
+      const embeddings = allEmbeddings.slice(offset, offset + item.chunks.length);
+      offset += item.chunks.length;
+
+      try {
+        // Delete old chunks if this doc had changed content
+        if (item.oldChunkIds.length > 0) {
+          deleteChunkEmbeddings(sqlite, item.oldChunkIds);
+          deleteChunksFts(sqlite, item.oldChunkIds);
+          db.delete(documentChunk).where(eq(documentChunk.documentId, item.doc.id)).run();
+        }
+
+        const now = new Date().toISOString();
+        const insertedIds: string[] = [];
+
+        db.transaction((tx) => {
+          for (let j = 0; j < item.chunks.length; j++) {
+            const chunk = item.chunks[j];
+            const result = tx
+              .insert(documentChunk)
+              .values({
+                documentId: item.doc.id,
+                chunkIndex: chunk.chunkIndex,
+                content: chunk.content,
+                tokenCount: chunk.tokenCount,
+                contentHash: item.doc.contentHash ?? chunk.contentHash,
+                embeddingModel: config.embeddingModel,
+                createdAt: now,
+              })
+              .returning({ id: documentChunk.id })
+              .get();
+            insertedIds.push(result.id);
+          }
+        });
+
+        for (let j = 0; j < insertedIds.length; j++) {
+          const chunkId = insertedIds[j];
+          const embedding = new Float32Array(embeddings[j]);
+          insertChunkEmbedding(sqlite, chunkId, embedding);
+          insertChunkFts(sqlite, chunkId, item.chunks[j].content);
+        }
+
+        totalChunks += item.chunks.length;
+        indexed++;
+      } catch {
+        failed++;
+      }
     }
   }
 

@@ -13,7 +13,17 @@
     WizardGroupCard,
   } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
-  import { XCircle, Eye, Trash2, CheckCircle, ExternalLink, List, LayoutGrid } from 'lucide-svelte';
+  import {
+    XCircle,
+    Eye,
+    Trash2,
+    CheckCircle,
+    ExternalLink,
+    List,
+    LayoutGrid,
+    ArrowDown,
+    ArrowUp,
+  } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -26,6 +36,8 @@
   let isLoadingCount = $state(false);
 
   // Step 2
+  let sortBy = $state<'confidence' | 'created_at' | 'member_count'>('confidence');
+  let sortOrder = $state<'asc' | 'desc'>('desc');
   let groups = $state<
     Array<{
       id: string;
@@ -122,7 +134,7 @@
     isLoadingGroups = true;
     try {
       const res = await fetch(
-        `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=10&offset=${groupsOffset}`,
+        `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=10&offset=${groupsOffset}&sortBy=${sortBy}&sortOrder=${sortOrder}`,
       );
       const json = await res.json();
       groups = json.data ?? [];
@@ -194,6 +206,19 @@
     }
   }
 
+  // ── Sort ──────────────────────────────────────────────────────────────
+  function handleSortChange(e: Event) {
+    sortBy = (e.target as HTMLSelectElement).value as typeof sortBy;
+    groupsOffset = 0;
+    fetchGroups();
+  }
+
+  function toggleSortOrder() {
+    sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+    groupsOffset = 0;
+    fetchGroups();
+  }
+
   // ── Pagination ────────────────────────────────────────────────────────
   function prevPage() {
     groupsOffset = Math.max(0, groupsOffset - 10);
@@ -227,7 +252,7 @@
     while (true) {
       try {
         const res = await fetch(
-          `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=${limit}&offset=${offset}`,
+          `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=${limit}&offset=${offset}&sortBy=${sortBy}&sortOrder=${sortOrder}`,
         );
         const json = await res.json();
         const items = json.data ?? [];
@@ -321,6 +346,8 @@
     groups = [];
     groupsTotal = 0;
     groupsOffset = 0;
+    sortBy = 'confidence';
+    sortOrder = 'desc';
     excludedGroupIds = new Set();
     isLoadingGroups = false;
     viewMode = 'condensed';
@@ -438,31 +465,54 @@
 
       <!-- Step 2: Review Groups -->
     {:else if step === 2}
-      <div class="flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-ink text-xl font-semibold">Review Matching Groups</h2>
-        <!-- View mode toggle -->
-        <div class="border-soft flex items-center gap-1 rounded-lg border p-0.5">
-          <button
-            onclick={() => (viewMode = 'condensed')}
-            class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'condensed'
-              ? 'bg-accent text-white'
-              : 'text-muted hover:text-ink'}"
-            title="Condensed view"
+        <div class="flex items-center gap-2">
+          <!-- Sort controls -->
+          <select
+            onchange={handleSortChange}
+            value={sortBy}
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
           >
-            <List class="h-4 w-4" />
-          </button>
+            <option value="confidence">Confidence</option>
+            <option value="created_at">Created</option>
+            <option value="member_count">Members</option>
+          </select>
           <button
-            onclick={() => {
-              viewMode = 'expanded';
-              fetchMembersForExpandedView();
-            }}
-            class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'expanded'
-              ? 'bg-accent text-white'
-              : 'text-muted hover:text-ink'}"
-            title="Expanded view"
+            onclick={toggleSortOrder}
+            class="border-soft text-ink hover:bg-canvas rounded-lg border px-2 py-2 text-sm"
+            title="Toggle sort order"
           >
-            <LayoutGrid class="h-4 w-4" />
+            {#if sortOrder === 'desc'}
+              <ArrowDown class="h-4 w-4" />
+            {:else}
+              <ArrowUp class="h-4 w-4" />
+            {/if}
           </button>
+          <!-- View mode toggle -->
+          <div class="border-soft flex items-center gap-1 rounded-lg border p-0.5">
+            <button
+              onclick={() => (viewMode = 'condensed')}
+              class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'condensed'
+                ? 'bg-accent text-white'
+                : 'text-muted hover:text-ink'}"
+              title="Condensed view"
+            >
+              <List class="h-4 w-4" />
+            </button>
+            <button
+              onclick={() => {
+                viewMode = 'expanded';
+                fetchMembersForExpandedView();
+              }}
+              class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'expanded'
+                ? 'bg-accent text-white'
+                : 'text-muted hover:text-ink'}"
+              title="Expanded view"
+            >
+              <LayoutGrid class="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 

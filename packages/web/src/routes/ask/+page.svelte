@@ -43,7 +43,14 @@
   let streamingText = $state('');
   let sidebarOpen = $state(true);
   let expandedSources = new SvelteSet<number>();
-  let isIndexing = $state(false);
+  let isIndexing = $state(initialStats.isIndexingInProgress);
+  let indexPolling: ReturnType<typeof setInterval> | null = null;
+
+  $effect(() => {
+    if (initialStats.isIndexingInProgress) {
+      pollIndexStatus();
+    }
+  });
   let chatContainer: HTMLDivElement | undefined = $state();
 
   let needsIndexing = $derived(stats.unindexedDocuments > 0);
@@ -255,31 +262,42 @@
         body: JSON.stringify({}),
       });
       if (res.ok) {
-        // Poll for completion
         const json = await res.json();
         if (json.data?.jobId) {
           pollIndexStatus();
         }
+      } else if (res.status === 409) {
+        // Job already running — start polling to track progress
+        pollIndexStatus();
+      } else {
+        isIndexing = false;
       }
     } catch {
       isIndexing = false;
     }
   }
 
-  async function pollIndexStatus() {
-    const interval = setInterval(async () => {
+  function pollIndexStatus() {
+    if (indexPolling) return;
+    indexPolling = setInterval(async () => {
       try {
         const res = await fetch('/api/v1/rag/stats');
         const json = await res.json();
         if (res.ok && json.data) {
           stats = json.data;
-          if (json.data.unindexedDocuments === 0) {
-            clearInterval(interval);
+          if (json.data.unindexedDocuments === 0 || !json.data.isIndexingInProgress) {
+            clearInterval(indexPolling!);
+            indexPolling = null;
             isIndexing = false;
           }
+        } else {
+          clearInterval(indexPolling!);
+          indexPolling = null;
+          isIndexing = false;
         }
       } catch {
-        clearInterval(interval);
+        clearInterval(indexPolling!);
+        indexPolling = null;
         isIndexing = false;
       }
     }, 3000);

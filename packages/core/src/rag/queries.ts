@@ -1,7 +1,8 @@
-import { count, sql, max } from 'drizzle-orm';
+import { count, sql, max, eq, and, or } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client.js';
 import { documentContent } from '../schema/sqlite/documents.js';
 import { documentChunk, ragConversation, ragMessage } from '../schema/sqlite/rag.js';
+import { job } from '../schema/sqlite/jobs.js';
 import { OPENAI_EMBEDDING_MODELS } from './types.js';
 import type { RagStats, CostEstimate } from './types.js';
 import { getRagConfig } from './config.js';
@@ -72,6 +73,15 @@ export function getRagStats(db: AppDatabase): RagStats {
     .where(sql`${documentContent.fullText} IS NOT NULL`)
     .get();
 
+  // Check if a RAG indexing job is currently running or pending
+  const runningJob = db
+    .select({ id: job.id })
+    .from(job)
+    .where(
+      and(eq(job.type, 'rag_indexing'), or(eq(job.status, 'running'), eq(job.status, 'pending'))),
+    )
+    .get();
+
   const indexedCount = indexedResult?.count ?? 0;
   const totalDocs = totalDocsResult?.count ?? 0;
   const config = getRagConfig(db);
@@ -87,5 +97,6 @@ export function getRagStats(db: AppDatabase): RagStats {
     totalMessages: msgResult?.count ?? 0,
     indexCost: computeCost(unindexedChars?.total ?? 0, config.embeddingModel),
     rebuildCost: computeCost(allChars?.total ?? 0, config.embeddingModel),
+    isIndexingInProgress: !!runningJob,
   };
 }

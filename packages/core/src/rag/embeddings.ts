@@ -15,6 +15,7 @@ function createProvider(apiKey: string) {
 export async function generateEmbeddings(
   texts: string[],
   opts: EmbeddingOptions,
+  concurrentBatches = 5,
 ): Promise<number[][]> {
   if (texts.length === 0) return [];
 
@@ -22,14 +23,21 @@ export async function generateEmbeddings(
   const model = provider.embedding(opts.model);
   const providerOptions = { openai: { dimensions: opts.dimensions } };
 
-  // Batch in groups of 100
+  // Split into batches of 100
   const batchSize = 100;
-  const allEmbeddings: number[][] = [];
-
+  const batches: string[][] = [];
   for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
-    const result = await embedMany({ model, values: batch, providerOptions });
-    allEmbeddings.push(...result.embeddings);
+    batches.push(texts.slice(i, i + batchSize));
+  }
+
+  // Process batches with limited concurrency
+  const allEmbeddings: number[][] = [];
+  for (let i = 0; i < batches.length; i += concurrentBatches) {
+    const window = batches.slice(i, i + concurrentBatches);
+    const results = await Promise.all(
+      window.map((b) => embedMany({ model, values: b, providerOptions }).then((r) => r.embeddings)),
+    );
+    allEmbeddings.push(...results.flat());
   }
 
   return allEmbeddings;

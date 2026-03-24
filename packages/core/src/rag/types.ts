@@ -38,6 +38,7 @@ export const ragConfigSchema = z.object({
   systemPrompt: z.string().default(DEFAULT_RAG_SYSTEM_PROMPT),
   maxContextTokens: z.number().int().min(500).max(100000).default(4000),
   autoIndex: z.boolean().default(false),
+  concurrentBatches: z.number().int().min(1).max(20).default(5),
 });
 
 export type RagConfig = z.infer<typeof ragConfigSchema>;
@@ -85,4 +86,5 @@ export interface RagStats {
   totalMessages: number;
   indexCost: CostEstimate | null;
   rebuildCost: CostEstimate | null;
+  isIndexingInProgress: boolean;
 }
