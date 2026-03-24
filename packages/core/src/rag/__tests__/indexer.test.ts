@@ -204,7 +204,7 @@ describe('indexDocuments', () => {
     expect(result.indexed).toBe(2);
   });
 
-  it('circuit breaker stops after 3 consecutive errors', async () => {
+  it('circuit breaker stops after 3 consecutive group errors', async () => {
     // Create 5 documents
     for (let i = 1; i <= 5; i++) {
       db.insert(document)
@@ -228,14 +228,16 @@ describe('indexDocuments', () => {
     // Make generateEmbeddings throw every time
     mockGenerateEmbeddings.mockRejectedValue(new Error('API rate limit'));
 
+    // Use docBatchSize=1 so each doc is its own group, exercising the circuit breaker
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
       apiKey: 'test-key',
+      docBatchSize: 1,
     });
 
-    // First 3 fail, circuit breaker triggers, remaining 2 are counted as failed
+    // First 3 groups fail, circuit breaker triggers, remaining 2 docs counted as failed
     expect(result.failed).toBe(5);
     expect(result.indexed).toBe(0);
-    // Only 3 actual API calls should have been made
+    // Only 3 actual API calls before circuit breaker aborts
     expect(mockGenerateEmbeddings).toHaveBeenCalledTimes(3);
   });
 
