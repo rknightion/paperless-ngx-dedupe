@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.9.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.8.0...v0.9.0) (2026-03-24)
+
+
+### Features
+
+* **ai:** add concurrent processing with configurable batch size ([6d7be9a](https://github.com/rknightion/paperless-ngx-dedupe/commit/6d7be9ab11d7853d65c9d616280ff19b548863d0))
+* **ai:** add getPendingAiResultIds query function ([78e2646](https://github.com/rknightion/paperless-ngx-dedupe/commit/78e26466ef508c1a9d89302d0f418a27bac614ea))
+* **ai:** implement intelligent rate limiting based on provider tier limits ([f5d555e](https://github.com/rknightion/paperless-ngx-dedupe/commit/f5d555eed10b06a8da4c4ed596cefc3f703b1eb0))
+* **ai:** improve AI prompt guidelines for better classification ([f61c194](https://github.com/rknightion/paperless-ngx-dedupe/commit/f61c194efe68a1878f84f48b49493c4c8beab66d))
+* **api:** add bulk apply and reject endpoints for AI results ([f26a7fc](https://github.com/rknightion/paperless-ngx-dedupe/commit/f26a7fc9e02eed603ae3e838330bda318608ba20))
+* **rag:** increase default topK and maxContextTokens for better retrieval ([eb18034](https://github.com/rknightion/paperless-ngx-dedupe/commit/eb18034941cf10a5c310ed2f9e1bcfc025a3cf3a))
+* **ui:** add bulk operations for AI processing results ([e172579](https://github.com/rknightion/paperless-ngx-dedupe/commit/e17257960f1759477f801ef84ce7d27191348142))
+
+
+### Bug Fixes
+
+* **ai:** improve circuit breaker behavior in concurrent processing ([5fb801b](https://github.com/rknightion/paperless-ngx-dedupe/commit/5fb801bc9cc9c040195db6bc972383fa7519b1e3))
+* **paperless:** disable automatic matching for created entities ([ecfd057](https://github.com/rknightion/paperless-ngx-dedupe/commit/ecfd057286f78f16158444fe2bd4ef7a6bdecaa2))
+* **rag:** prevent FTS5 syntax errors with special characters in queries ([a85269b](https://github.com/rknightion/paperless-ngx-dedupe/commit/a85269bc32653a1675d86fe50baf9083ea309637))
+
+
+### Miscellaneous
+
+* **deps:** update dependency ai to v6.0.138 ([10c74ee](https://github.com/rknightion/paperless-ngx-dedupe/commit/10c74eeb2fa7500f770f190a5d6ef36f5242ba36))
+
+
+### Documentation
+
+* expand project description to include AI features and RAG Q&A ([70769ce](https://github.com/rknightion/paperless-ngx-dedupe/commit/70769ce04b97380fa7929f5221ca97aa4b8b840e))
+
+
+### Tests
+
+* **ai:** add comprehensive tests for concurrent processing and rate limiting ([b79801e](https://github.com/rknightion/paperless-ngx-dedupe/commit/b79801ec78ab50b71735c5420eca5b4a5c0012aa))
+
 ## [0.8.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.7.0...v0.8.0) (2026-03-24)
 
 
