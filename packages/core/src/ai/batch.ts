@@ -178,20 +178,22 @@ export async function processBatch(
       }
 
       logger.info(
-        { totalDocuments: totalDocs, provider: provider.provider, model: config.model },
+        {
+          totalDocuments: totalDocs,
+          provider: provider.provider,
+          model: config.model,
+          maxConcurrency,
+          intervalMs,
+          targetRpm,
+        },
         'Starting AI batch processing',
       );
 
       await onProgress?.(0, `Starting AI processing of ${totalDocs} documents...`);
 
-      // Circuit breaker: stop processing if the same error occurs consecutively
-      const CIRCUIT_BREAKER_THRESHOLD = 3;
-      let consecutiveSameError = 0;
-      let lastErrorMsg = '';
-
-      for (let i = 0; i < docs.length; i++) {
-        const doc = docs[i];
-
+      // Pre-partition: handle skipped docs (no content) upfront
+      const processableDocs: typeof docs = [];
+      for (const doc of docs) {
         if (!doc.fullText) {
           result.skipped++;
           result.processed++;
@@ -200,16 +202,40 @@ export async function processBatch(
             { documentId: doc.id, title: doc.title },
             'Skipping document with no content',
           );
-          await onProgress?.(result.processed / totalDocs, `Skipped ${doc.title} (no content)`);
-          continue;
+        } else {
+          processableDocs.push(doc);
         }
+      }
 
+      if (result.skipped > 0) {
+        await onProgress?.(
+          result.processed / totalDocs,
+          `Skipped ${result.skipped} documents with no content`,
+        );
+      }
+
+      if (processableDocs.length === 0) {
+        result.durationMs = Math.round(performance.now() - startMs);
+        aiRunsTotal().add(1, { outcome: 'success' });
+        aiBatchDuration().record(result.durationMs / 1000);
+        return result;
+      }
+
+      // Circuit breaker state (safe to mutate — JS is single-threaded)
+      const CIRCUIT_BREAKER_THRESHOLD = 3;
+      let consecutiveSameError = 0;
+      let lastErrorMsg = '';
+      let circuitBroken = false;
+      let circuitBreakerError: Error | undefined;
+
+      // Process a single document: API call, DB upsert, telemetry
+      async function processOne(doc: (typeof processableDocs)[0]): Promise<void> {
         const docStartMs = performance.now();
         try {
           const extraction = await processDocument({
             provider,
             documentTitle: doc.title,
-            documentContent: doc.fullText,
+            documentContent: doc.fullText!,
             existingCorrespondents: correspondentNames,
             existingDocumentTypes: documentTypeNames,
             existingTags: tagNames,
@@ -333,7 +359,7 @@ export async function processBatch(
           result.failed++;
           aiDocumentsTotal().add(1, { outcome: 'failed', provider: provider.provider });
 
-          // Circuit breaker: stop if the same error repeats consecutively
+          // Circuit breaker: track consecutive same errors
           if (errorMsg === lastErrorMsg) {
             consecutiveSameError++;
           } else {
@@ -373,12 +399,35 @@ export async function processBatch(
           result.processed / totalDocs,
           `Processed ${result.processed} of ${totalDocs} documents (${result.succeeded} succeeded, ${result.failed} failed)`,
         );
+      }
 
-        // Rate limiting delay between requests
-        if (i < docs.length - 1 && config.rateDelayMs > 0) {
-          await sleep(config.rateDelayMs);
+      // Rate-limited concurrent pool
+      const pending = new Set<Promise<void>>();
+
+      for (let i = 0; i < processableDocs.length; i++) {
+        if (circuitBroken) break;
+
+        // Wait for a concurrency slot
+        if (pending.size >= maxConcurrency) {
+          await Promise.race(pending);
+        }
+
+        // Check again after awaiting — circuit breaker may have tripped
+        if (circuitBroken) break;
+
+        const doc = processableDocs[i];
+        const promise = processOne(doc);
+        pending.add(promise);
+        promise.finally(() => pending.delete(promise));
+
+        // Rate-limit: pause before launching the next request
+        if (i < processableDocs.length - 1 && intervalMs > 0) {
+          await sleep(intervalMs);
         }
       }
+
+      // Drain remaining in-flight requests
+      await Promise.allSettled(pending);
 
       result.durationMs = Math.round(performance.now() - startMs);
 
@@ -391,6 +440,7 @@ export async function processBatch(
         'batch.succeeded': result.succeeded,
         'batch.failed': result.failed,
         'batch.skipped': result.skipped,
+        'batch.circuit_breaker': circuitBroken,
       });
 
       logger.info(
