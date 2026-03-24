@@ -368,28 +368,15 @@ export async function processBatch(
           }
 
           if (consecutiveSameError >= CIRCUIT_BREAKER_THRESHOLD) {
-            result.processed++;
-            result.durationMs = Math.round(performance.now() - startMs);
-
-            const batchOutcome = result.succeeded === 0 ? 'failure' : 'success';
-            aiRunsTotal().add(1, { outcome: batchOutcome });
-            aiBatchDuration().record(result.durationMs / 1000);
-
-            span.setAttributes({
-              'batch.succeeded': result.succeeded,
-              'batch.failed': result.failed,
-              'batch.skipped': result.skipped,
-              'batch.circuit_breaker': true,
-            });
+            circuitBroken = true;
+            circuitBreakerError = new Error(
+              `Processing stopped: ${CIRCUIT_BREAKER_THRESHOLD} consecutive documents failed with the same error: ${errorMsg}`,
+              { cause: error },
+            );
 
             logger.error(
               { consecutiveFailures: CIRCUIT_BREAKER_THRESHOLD, error: errorMsg },
               'Circuit breaker triggered — stopping batch',
-            );
-
-            throw new Error(
-              `Processing stopped: ${CIRCUIT_BREAKER_THRESHOLD} consecutive documents failed with the same error: ${errorMsg}`,
-              { cause: error },
             );
           }
         }
@@ -454,6 +441,10 @@ export async function processBatch(
         },
         'AI batch processing complete',
       );
+
+      if (circuitBreakerError) {
+        throw circuitBreakerError;
+      }
 
       return result;
     },
