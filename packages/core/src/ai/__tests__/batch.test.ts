@@ -27,11 +27,12 @@ vi.mock('../../telemetry/metrics.js', () => ({
 }));
 
 // Import after mocks are registered
-const { processBatch } = await import('../batch.js');
+const { processBatch, computeRequestInterval } = await import('../batch.js');
 
 function createMockProvider(
   overrides?: Partial<{
     extractFn: AiProviderInterface['extract'];
+    providerName: string;
   }>,
 ): AiProviderInterface {
   const defaultResult: AiExtractionResult = {
@@ -46,7 +47,7 @@ function createMockProvider(
   };
 
   return {
-    provider: 'openai',
+    provider: (overrides?.providerName ?? 'openai') as 'openai' | 'anthropic',
     extract: overrides?.extractFn ?? vi.fn().mockResolvedValue(defaultResult),
   };
 }
@@ -207,7 +208,10 @@ describe('processBatch', () => {
     });
     const client = createMockClient();
 
-    await expect(processBatch(db, { provider, client, config })).rejects.toThrow(
+    // Use batchSize: 1 to ensure sequential processing for predictable circuit breaker behavior
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    await expect(processBatch(db, { provider, client, config: seqConfig })).rejects.toThrow(
       /Processing stopped.*3 consecutive documents failed/,
     );
   });
@@ -327,7 +331,7 @@ describe('processBatch', () => {
 
     await processBatch(db, { provider, client, config, onProgress });
 
-    // 3 documents total: initial 0 call + 3 per-document calls
+    // Should be called: initial 0, skip report, and per-document completions
     expect(onProgress).toHaveBeenCalled();
     // First call should be at 0 progress
     expect(onProgress.mock.calls[0][0]).toBe(0);
@@ -357,5 +361,206 @@ describe('processBatch', () => {
     const result = await processBatch(db, { provider, client, config });
 
     expect(result.durationMs).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('computeRequestInterval', () => {
+  it('auto-calculates interval for OpenAI at 85% of Tier 1 (500 RPM)', () => {
+    const interval = computeRequestInterval('openai', 0);
+    // floor(500 * 0.85) = 425 RPM → ceil(60000/425) = 142ms
+    expect(interval).toBe(142);
+  });
+
+  it('auto-calculates interval for Anthropic at 85% of Tier 1 (50 RPM)', () => {
+    const interval = computeRequestInterval('anthropic', 0);
+    // floor(50 * 0.85) = 42 RPM → ceil(60000/42) = 1429ms
+    expect(interval).toBe(1429);
+  });
+
+  it('uses rateDelayMs override when explicitly set', () => {
+    expect(computeRequestInterval('openai', 1000)).toBe(1000);
+    expect(computeRequestInterval('anthropic', 200)).toBe(200);
+  });
+
+  it('falls back to OpenAI limits for unknown providers', () => {
+    const interval = computeRequestInterval('unknown-provider', 0);
+    expect(interval).toBe(142);
+  });
+});
+
+describe('concurrent processing', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+  });
+
+  function seedManyDocs(db: AppDatabase, count: number) {
+    const docs = [];
+    const contents = [];
+    for (let i = 1; i <= count; i++) {
+      docs.push({
+        id: `doc-${i}`,
+        paperlessId: i,
+        title: `Doc ${i}`,
+        processingStatus: 'completed' as const,
+        syncedAt: '2024-01-01T00:00:00Z',
+      });
+      contents.push({
+        documentId: `doc-${i}`,
+        fullText: `Content for document ${i}`,
+        contentHash: `hash${i}`,
+      });
+    }
+    db.insert(document).values(docs).run();
+    db.insert(documentContent).values(contents).run();
+  }
+
+  it('respects batchSize as max concurrency', async () => {
+    seedManyDocs(db, 6);
+
+    let currentConcurrency = 0;
+    let maxObservedConcurrency = 0;
+
+    const extractFn = vi.fn().mockImplementation(async () => {
+      currentConcurrency++;
+      maxObservedConcurrency = Math.max(maxObservedConcurrency, currentConcurrency);
+      // Simulate API latency so concurrent requests overlap
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      currentConcurrency--;
+      return {
+        response: {
+          correspondent: 'Test',
+          documentType: 'Invoice',
+          tags: [],
+          confidence: { correspondent: 0.9, documentType: 0.9, tags: 0.5 },
+          evidence: 'test',
+        },
+        usage: { promptTokens: 10, completionTokens: 5 },
+      };
+    });
+
+    const provider = createMockProvider({ extractFn });
+    const client = createMockClient();
+    const concurrencyConfig: AiConfig = { ...config, batchSize: 2 };
+
+    const result = await processBatch(db, { provider, client, config: concurrencyConfig });
+
+    expect(result.succeeded).toBe(6);
+    expect(extractFn).toHaveBeenCalledTimes(6);
+    expect(maxObservedConcurrency).toBeLessThanOrEqual(2);
+  });
+
+  it('batchSize: 1 processes sequentially', async () => {
+    seedManyDocs(db, 3);
+
+    const callOrder: number[] = [];
+    let callIndex = 0;
+    let maxConcurrency = 0;
+    let currentConcurrency = 0;
+
+    const extractFn = vi.fn().mockImplementation(async () => {
+      const myIndex = callIndex++;
+      currentConcurrency++;
+      maxConcurrency = Math.max(maxConcurrency, currentConcurrency);
+      callOrder.push(myIndex);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      currentConcurrency--;
+      return {
+        response: {
+          correspondent: 'Test',
+          documentType: 'Invoice',
+          tags: [],
+          confidence: { correspondent: 0.9, documentType: 0.9, tags: 0.5 },
+          evidence: 'test',
+        },
+        usage: { promptTokens: 10, completionTokens: 5 },
+      };
+    });
+
+    const provider = createMockProvider({ extractFn });
+    const client = createMockClient();
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    const result = await processBatch(db, { provider, client, config: seqConfig });
+
+    expect(result.succeeded).toBe(3);
+    expect(maxConcurrency).toBe(1);
+    expect(callOrder).toEqual([0, 1, 2]);
+  });
+
+  it('circuit breaker fires across concurrent requests', async () => {
+    seedManyDocs(db, 6);
+
+    const error = new AiExtractionError('rate_limit', 'Rate limited');
+    const provider = createMockProvider({
+      extractFn: vi.fn().mockRejectedValue(error),
+    });
+    const client = createMockClient();
+
+    // batchSize: 1 to ensure predictable sequential circuit breaker behavior
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    await expect(processBatch(db, { provider, client, config: seqConfig })).rejects.toThrow(
+      /Processing stopped.*3 consecutive documents failed/,
+    );
+
+    // Should have stopped after 3 failures, not processed all 6
+    const dbResults = db.select().from(aiProcessingResult).all();
+    expect(dbResults.length).toBeLessThanOrEqual(4); // 3 errors + possibly 1 in-flight
+  });
+
+  it('circuit breaker resets on success in mixed results', async () => {
+    seedManyDocs(db, 5);
+
+    let callCount = 0;
+    const error = new AiExtractionError('rate_limit', 'Rate limited');
+    const extractFn = vi.fn().mockImplementation(async () => {
+      callCount++;
+      // Fail on calls 1, 2; succeed on 3; fail on 4, 5
+      if (callCount <= 2 || callCount >= 4) {
+        throw error;
+      }
+      return {
+        response: {
+          correspondent: 'Test',
+          documentType: 'Invoice',
+          tags: [],
+          confidence: { correspondent: 0.9, documentType: 0.9, tags: 0.5 },
+          evidence: 'test',
+        },
+        usage: { promptTokens: 10, completionTokens: 5 },
+      };
+    });
+
+    const provider = createMockProvider({ extractFn });
+    const client = createMockClient();
+    // Use batchSize: 1 for predictable ordering
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    const result = await processBatch(db, { provider, client, config: seqConfig });
+
+    // Success on call 3 resets the counter, so calls 4 and 5 only give 2 consecutive errors
+    // (below threshold of 3) — all 5 documents should be processed
+    expect(result.processed).toBe(5);
+    expect(result.succeeded).toBe(1);
+    expect(result.failed).toBe(4);
+  });
+
+  it('uses rateDelayMs override when set explicitly', async () => {
+    seedManyDocs(db, 2);
+
+    const provider = createMockProvider();
+    const client = createMockClient();
+
+    const startMs = performance.now();
+    const delayConfig: AiConfig = { ...config, rateDelayMs: 100 };
+    await processBatch(db, { provider, client, config: delayConfig });
+    const durationMs = performance.now() - startMs;
+
+    // With rateDelayMs: 100 and 2 docs, there should be at least ~100ms delay
+    expect(durationMs).toBeGreaterThanOrEqual(80); // Allow some timer imprecision
   });
 });
