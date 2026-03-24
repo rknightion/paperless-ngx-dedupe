@@ -80,11 +80,11 @@
   let ragEmbeddingDimensions = $state(initialRagConfig?.embeddingDimensions ?? 1536);
   let ragChunkSize = $state(initialRagConfig?.chunkSize ?? 400);
   let ragChunkOverlap = $state(initialRagConfig?.chunkOverlap ?? 40);
-  let ragTopK = $state(initialRagConfig?.topK ?? 10);
+  let ragTopK = $state(initialRagConfig?.topK ?? 20);
   let ragAnswerProvider = $state(initialRagConfig?.answerProvider ?? 'openai');
   let ragAnswerModel = $state(initialRagConfig?.answerModel ?? 'gpt-5.4-mini');
   let ragSystemPrompt = $state(initialRagConfig?.systemPrompt ?? '');
-  let ragMaxContextTokens = $state(initialRagConfig?.maxContextTokens ?? 4000);
+  let ragMaxContextTokens = $state(initialRagConfig?.maxContextTokens ?? 8000);
   let ragAutoIndex = $state(initialRagConfig?.autoIndex ?? false);
   let showRagPrompt = $state(false);
   let showRagAdvanced = $state(false);
@@ -1174,7 +1174,7 @@
               <label for="rag-topk" class="text-muted flex items-center gap-1.5 text-sm">
                 Top-K Results
                 <InfoIcon
-                  text="Number of document chunks retrieved per query. More chunks provide broader context but increase token usage. Default: 10."
+                  text="Number of document chunks retrieved per query. More chunks provide broader context but increase token usage. Default: 20."
                   position="top"
                 />
               </label>
@@ -1182,7 +1182,7 @@
                 id="rag-topk"
                 type="number"
                 min="1"
-                max="50"
+                max="100"
                 bind:value={ragTopK}
                 class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
               />
@@ -1191,7 +1191,7 @@
               <label for="rag-context" class="text-muted flex items-center gap-1.5 text-sm">
                 Max Context Tokens
                 <InfoIcon
-                  text="Maximum number of tokens from retrieved chunks included in the prompt to the answer model. Default: 4000."
+                  text="Maximum number of tokens from retrieved chunks included in the prompt to the answer model. Default: 8000."
                   position="top"
                 />
               </label>

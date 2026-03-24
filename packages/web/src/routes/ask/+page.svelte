@@ -202,19 +202,9 @@
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        // Parse Vercel AI SDK data stream format
-        for (const line of chunk.split('\n')) {
-          if (line.startsWith('0:')) {
-            try {
-              const text = JSON.parse(line.slice(2));
-              fullText += text;
-              streamingText = fullText;
-              scrollToBottom();
-            } catch {
-              // Skip unparseable lines
-            }
-          }
-        }
+        fullText += chunk;
+        streamingText = fullText;
+        scrollToBottom();
       }
 
       // Finalize the message
@@ -542,7 +532,7 @@
 
                         {#if expandedSources.has(i)}
                           <div class="mt-1.5 space-y-1.5">
-                            {#each msg.sources.slice(0, 5) as source (source.documentId + source.chunkContent.slice(0, 20))}
+                            {#each msg.sources as source (source.documentId + source.chunkContent.slice(0, 20))}
                               <div class="border-soft bg-canvas rounded-lg border px-3 py-2">
                                 <div class="flex items-start gap-2">
                                   <FileText class="text-accent mt-0.5 h-3.5 w-3.5 shrink-0" />

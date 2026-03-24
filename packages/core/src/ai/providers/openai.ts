@@ -38,7 +38,7 @@ export class OpenAiProvider implements AiProviderInterface {
         { role: 'developer', content: request.systemPrompt },
         { role: 'user', content: request.userPrompt },
       ],
-      text: zodTextFormat(aiExtractionResponseSchema, 'document_classification'),
+      text: { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') },
     };
 
     if (request.reasoningEffort && request.reasoningEffort !== 'none') {
