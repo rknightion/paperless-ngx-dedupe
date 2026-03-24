@@ -28,6 +28,8 @@ export interface IndexOptions {
   apiKey: string;
   rebuild?: boolean;
   onProgress?: (progress: IndexProgress) => void;
+  /** Override the number of documents processed per group. Defaults to 50. Exposed for testing. */
+  docBatchSize?: number;
 }
 
 interface DocWork {
@@ -85,6 +87,7 @@ export async function indexDocuments(
   opts.onProgress?.({ phase: 'indexing', current: 0, total: totalDocs });
 
   const embeddingOpts = embeddingOptionsFromConfig(config, opts.apiKey);
+  const docBatchSize = opts.docBatchSize ?? DOC_BATCH_SIZE;
 
   // Phase 1: evaluate all docs — check hashes, chunk, collect work items
   const toIndex: DocWork[] = [];
@@ -156,13 +159,13 @@ export async function indexDocuments(
   // Phase 2: process in groups — embed concurrently across docs, write to DB after each group
   let consecutiveGroupErrors = 0;
 
-  for (let g = 0; g < toIndex.length; g += DOC_BATCH_SIZE) {
+  for (let g = 0; g < toIndex.length; g += docBatchSize) {
     if (consecutiveGroupErrors >= 3) {
       failed += toIndex.length - g;
       break;
     }
 
-    const group = toIndex.slice(g, g + DOC_BATCH_SIZE);
+    const group = toIndex.slice(g, g + docBatchSize);
     const allTexts = group.flatMap((d) => d.chunks.map((c) => c.content));
 
     let allEmbeddings: number[][];
