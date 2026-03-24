@@ -105,7 +105,7 @@ export const aiConfigSchema = z.object({
   promptTemplate: z.string().default(DEFAULT_EXTRACTION_PROMPT),
   maxContentLength: z.number().int().min(500).max(100000).default(8000),
   batchSize: z.number().int().min(1).max(100).default(10),
-  rateDelayMs: z.number().int().min(0).max(60000).default(500),
+  rateDelayMs: z.number().int().min(0).max(60000).default(0),
   autoProcess: z.boolean().default(false),
   processedTagName: z.string().default('ai-processed'),
   addProcessedTag: z.boolean().default(false),

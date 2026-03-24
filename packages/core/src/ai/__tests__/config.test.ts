@@ -25,7 +25,7 @@ describe('getAiConfig', () => {
     expect(config.includeCorrespondents).toBe(false);
     expect(config.includeDocumentTypes).toBe(false);
     expect(config.includeTags).toBe(false);
-    expect(config.rateDelayMs).toBe(500);
+    expect(config.rateDelayMs).toBe(0);
     expect(config.reasoningEffort).toBe('low');
     expect(config.maxRetries).toBe(3);
   });

@@ -19,6 +19,15 @@ import type { AiConfig } from './types.js';
 
 const logger = createLogger('ai-batch');
 
+/** Tier 1 RPM limits per provider (requests per minute) */
+const TIER1_RPM: Record<string, number> = {
+  openai: 500,
+  anthropic: 50,
+};
+
+/** Target utilization of Tier 1 rate limits */
+const TARGET_UTILIZATION = 0.85;
+
 export interface BatchProcessOptions {
   provider: AiProviderInterface;
   client: PaperlessClient;
@@ -32,11 +41,29 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Compute the inter-request launch interval in ms from provider rate limits.
+ * When rateDelayMs is explicitly set (> 0), uses that as an override.
+ * Otherwise auto-calculates from Tier 1 RPM at 85% utilization.
+ */
+export function computeRequestInterval(provider: string, rateDelayMs: number): number {
+  if (rateDelayMs > 0) return rateDelayMs;
+  const rpm = TIER1_RPM[provider] ?? TIER1_RPM.openai;
+  const targetRpm = Math.floor(rpm * TARGET_UTILIZATION);
+  return Math.ceil(60_000 / targetRpm);
+}
+
 export async function processBatch(
   db: AppDatabase,
   options: BatchProcessOptions,
 ): Promise<AiBatchResult> {
   const { provider, client, config, reprocess = false, documentIds, onProgress } = options;
+
+  const maxConcurrency = config.batchSize;
+  const intervalMs = computeRequestInterval(provider.provider, config.rateDelayMs);
+  const targetRpm = Math.floor(
+    (TIER1_RPM[provider.provider] ?? TIER1_RPM.openai) * TARGET_UTILIZATION,
+  );
 
   return withSpan(
     'dedupe.ai.batch',
@@ -44,6 +71,8 @@ export async function processBatch(
       'ai.provider': provider.provider,
       'ai.model': config.model,
       'ai.reprocess': reprocess,
+      'ai.batch_size': maxConcurrency,
+      'ai.target_rpm': targetRpm,
     },
     async (span) => {
       const startMs = performance.now();
