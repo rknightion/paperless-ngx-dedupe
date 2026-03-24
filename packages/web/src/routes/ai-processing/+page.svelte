@@ -40,6 +40,9 @@
   let selectedIds = $state<Set<string>>(new Set());
   let selectAll = $state(false);
   let isApplying = $state(false);
+  let isApplyingAll = $state(false);
+  let isRejectingAll = $state(false);
+  let confirmAction = $state<'apply-all' | 'reject-all' | null>(null);
   let showResumeHint = $state(false);
   let statusFilter = $state(initialData.status ?? '');
   let searchQuery = $state(initialData.search ?? '');
@@ -179,6 +182,22 @@
     selectedIds = new Set();
     selectAll = false;
     await invalidateAll();
+  }
+
+  async function applyAll() {
+    confirmAction = null;
+    isApplyingAll = true;
+    await fetch('/api/v1/ai/results/apply-all', { method: 'POST' });
+    await invalidateAll();
+    isApplyingAll = false;
+  }
+
+  async function rejectAll() {
+    confirmAction = null;
+    isRejectingAll = true;
+    await fetch('/api/v1/ai/results/reject-all', { method: 'POST' });
+    await invalidateAll();
+    isRejectingAll = false;
   }
 
   function toggleSelect(id: string) {
@@ -420,8 +439,8 @@
         />
       </div>
     </div>
-    {#if selectedIds.size > 0}
-      <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2">
+      {#if selectedIds.size > 0}
         <span class="text-muted text-sm font-medium">{selectedIds.size} selected</span>
         <button
           onclick={batchApply}
@@ -436,9 +455,87 @@
         >
           <X class="h-3.5 w-3.5" /> Reject
         </button>
-      </div>
-    {/if}
+        <div class="border-soft mx-1 h-5 border-l"></div>
+      {/if}
+      {#if stats.pendingReview > 0}
+        <button
+          onclick={() => (confirmAction = 'apply-all')}
+          disabled={isApplyingAll || isRejectingAll}
+          class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {#if isApplyingAll}
+            <Loader2 class="h-3.5 w-3.5 animate-spin" />
+          {:else}
+            <Check class="h-3.5 w-3.5" />
+          {/if}
+          Accept All
+        </button>
+        <button
+          onclick={() => (confirmAction = 'reject-all')}
+          disabled={isApplyingAll || isRejectingAll}
+          class="text-muted hover:bg-canvas flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {#if isRejectingAll}
+            <Loader2 class="h-3.5 w-3.5 animate-spin" />
+          {:else}
+            <X class="h-3.5 w-3.5" />
+          {/if}
+          Reject All
+        </button>
+      {/if}
+    </div>
   </div>
+
+  <!-- Confirmation Dialog -->
+  {#if confirmAction}
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="bg-surface mx-4 w-full max-w-md rounded-xl p-6 shadow-xl">
+        <h3 class="text-ink text-lg font-semibold">
+          {confirmAction === 'apply-all'
+            ? 'Accept All Pending Results?'
+            : 'Reject All Pending Results?'}
+        </h3>
+        <p class="text-muted mt-2 text-sm">
+          {#if confirmAction === 'apply-all'}
+            This will apply AI suggestions to all <strong>{stats.pendingReview}</strong> pending
+            document{stats.pendingReview === 1 ? '' : 's'}. Changes will be pushed to Paperless-NGX.
+          {:else}
+            This will reject all <strong>{stats.pendingReview}</strong> pending result{stats.pendingReview ===
+            1
+              ? ''
+              : 's'}. No changes will be made to your documents.
+          {/if}
+        </p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            onclick={() => (confirmAction = null)}
+            class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          {#if confirmAction === 'apply-all'}
+            <button
+              onclick={applyAll}
+              class="bg-success hover:bg-success/90 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors"
+            >
+              Accept All
+            </button>
+          {:else}
+            <button
+              onclick={rejectAll}
+              class="bg-ember hover:bg-ember/90 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors"
+            >
+              Reject All
+            </button>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Results Table -->
   {#if results.length === 0}
