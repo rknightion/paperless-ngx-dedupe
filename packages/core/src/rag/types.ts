@@ -32,11 +32,11 @@ export const ragConfigSchema = z.object({
   embeddingDimensions: z.number().int().min(256).max(3072).default(1536),
   chunkSize: z.number().int().min(100).max(2000).default(400),
   chunkOverlap: z.number().int().min(0).max(500).default(40),
-  topK: z.number().int().min(1).max(50).default(10),
+  topK: z.number().int().min(1).max(100).default(20),
   answerProvider: z.enum(['openai', 'anthropic']).default('openai'),
   answerModel: z.string().default('gpt-5.4-mini'),
   systemPrompt: z.string().default(DEFAULT_RAG_SYSTEM_PROMPT),
-  maxContextTokens: z.number().int().min(500).max(100000).default(4000),
+  maxContextTokens: z.number().int().min(500).max(100000).default(8000),
   autoIndex: z.boolean().default(false),
   concurrentBatches: z.number().int().min(1).max(20).default(5),
 });
