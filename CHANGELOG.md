@@ -1,5 +1,98 @@
 # Changelog
 
+## [0.8.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.7.0...v0.8.0) (2026-03-24)
+
+
+### Features
+
+* add prometheus metrics scrape endpoint ([d1e4ade](https://github.com/rknightion/paperless-ngx-dedupe/commit/d1e4adebcf32bdd7bb685a44db2314bbc49f887a))
+* **ai:** add circuit breaker pattern to prevent cascading batch failures ([26e2948](https://github.com/rknightion/paperless-ngx-dedupe/commit/26e294854aadb79f3fad485a23908803a437089a))
+* **ai:** add reasoning effort support for Anthropic provider ([27f760a](https://github.com/rknightion/paperless-ngx-dedupe/commit/27f760a7daf629cb5aad216e6901e05ea8f2add8))
+* **ai:** add unprocessed documents count to AI stats ([91d2b54](https://github.com/rknightion/paperless-ngx-dedupe/commit/91d2b5430b91ac3e43b7e5ddacd641ab38cc32df))
+* **ai:** enhance default prompt with improved guidelines and examples ([3904fbb](https://github.com/rknightion/paperless-ngx-dedupe/commit/3904fbbc00256e9aa93df0e95e3cd40a65321576))
+* **api:** add purge deleted groups endpoint ([78f091b](https://github.com/rknightion/paperless-ngx-dedupe/commit/78f091b99944342ea54ce99bf4cef43b1548a6b8))
+* **api:** expose totalMemberCount in duplicates endpoint ([fd13234](https://github.com/rknightion/paperless-ngx-dedupe/commit/fd132341a0ae7027eff69cab4cb6b664ce59757c))
+* **api:** handle status transition errors in duplicate group updates ([d41b01c](https://github.com/rknightion/paperless-ngx-dedupe/commit/d41b01c6c5781cfc8c59bed15d58bfd8b5dbdc6f))
+* **batch:** increase group processing limits from 1000 to 50000 ([d452001](https://github.com/rknightion/paperless-ngx-dedupe/commit/d45200159a5a37fec8a0ede8e42c56d57433b00e))
+* **core:** add primaryPaperlessId to duplicate group summaries ([ab1871c](https://github.com/rknightion/paperless-ngx-dedupe/commit/ab1871c5211ba4fb709e4f933885c7c29a8cb5bf))
+* **core:** add RAG (Retrieval-Augmented Generation) functionality for document querying ([5e9b2ed](https://github.com/rknightion/paperless-ngx-dedupe/commit/5e9b2ed6bdf23d6ead2167991b1eee837de2aeef))
+* **duplicates:** add purge functionality for deleted groups ([f253b71](https://github.com/rknightion/paperless-ngx-dedupe/commit/f253b7174c83b954cb667e1c57f6dc86ac627e62))
+* **duplicates:** add status transition validation for deleted groups ([5f397bc](https://github.com/rknightion/paperless-ngx-dedupe/commit/5f397bca3dcb8116701de38201bbf07e046db39f))
+* **duplicates:** prevent batch operations on deleted groups ([318c0e6](https://github.com/rknightion/paperless-ngx-dedupe/commit/318c0e624e5d7a7305722500b9303c1f8eb76cb7))
+* **evals:** add OpenAI evaluation assets for document classification ([1d848eb](https://github.com/rknightion/paperless-ngx-dedupe/commit/1d848eb8603774126a4f5c77e74e3f0bf2b624fa))
+* implement prometheus telemetry support ([2fc808c](https://github.com/rknightion/paperless-ngx-dedupe/commit/2fc808c42dff3486afd2289ee33b59a4de2396d5))
+* **queries:** add totalMemberCount to duplicate groups pagination ([52ca184](https://github.com/rknightion/paperless-ngx-dedupe/commit/52ca184a41687e0b47f96f99703f35e7796b5a3a))
+* **sdk:** add purge deleted groups method to client ([b583c01](https://github.com/rknightion/paperless-ngx-dedupe/commit/b583c01878cac184b890416464ac186bea8f5be1))
+* **web:** add deleted group count to duplicates page data ([e67848f](https://github.com/rknightion/paperless-ngx-dedupe/commit/e67848f2ea662dbb74445fbcf3f74cf48aab46ee))
+* **web:** add document count estimation and preview modal ([ec1fc91](https://github.com/rknightion/paperless-ngx-dedupe/commit/ec1fc91d276a0247906d2d45704114726b9ac7f6))
+* **web:** add expanded view mode to duplicates wizard ([6f61994](https://github.com/rknightion/paperless-ngx-dedupe/commit/6f6199476e35ec41d5fa4e6113743d444151e920))
+* **web:** add informative tooltips to advanced AI settings ([f67057f](https://github.com/rknightion/paperless-ngx-dedupe/commit/f67057fec87ec1b48d707855fd7d28c474b7cf20))
+* **web:** add pause functionality to AI processing ([5d368ec](https://github.com/rknightion/paperless-ngx-dedupe/commit/5d368ec80771bde69af8f70286f12a98de0b034c))
+* **web:** add purge deleted groups functionality to duplicates UI ([0b1fb8e](https://github.com/rknightion/paperless-ngx-dedupe/commit/0b1fb8e62fef09093fb4637ea031f413db2a9370))
+* **web:** add ThumbnailPreview component for document thumbnails ([81f9bce](https://github.com/rknightion/paperless-ngx-dedupe/commit/81f9bcef377b0b8d995679aa646c74d8a33579a4))
+* **web:** add WizardGroupCard component for expanded duplicate view ([1ff577b](https://github.com/rknightion/paperless-ngx-dedupe/commit/1ff577be4b4aed953834405f7b93323089cbc0d6))
+* **web:** enhance wizard UI with view toggles and thumbnails ([1b0899b](https://github.com/rknightion/paperless-ngx-dedupe/commit/1b0899b8dea5ee292a4da2fc224ce3f059ee6198))
+* **web:** export new duplicate components from index ([4efb172](https://github.com/rknightion/paperless-ngx-dedupe/commit/4efb172ba68cc72427d8045dbffab47e6ebc3df5))
+* **web:** extend reasoning effort support to all AI providers ([be21e9c](https://github.com/rknightion/paperless-ngx-dedupe/commit/be21e9cbb3089df4d1113d3d81e54a30b34ce227))
+* **web:** improve deleted group status display in action bar ([b9df353](https://github.com/rknightion/paperless-ngx-dedupe/commit/b9df353bc3e1e3507a3e003135bea2b27e803c1a))
+* **web:** pass paperlessUrl to wizard page from server ([aa5ec01](https://github.com/rknightion/paperless-ngx-dedupe/commit/aa5ec016738c5309a6a146b7fa72880b4fde6813))
+* **wizard:** display accurate document counts using totalMemberCount ([9a274a2](https://github.com/rknightion/paperless-ngx-dedupe/commit/9a274a25926923ae843d288ee5c6eae292c0c8fb))
+
+
+### Bug Fixes
+
+* add Document Q&A with RAG (Retrieval-Augmented Generation) support ([720f26f](https://github.com/rknightion/paperless-ngx-dedupe/commit/720f26f13d2afcd943eddb12af63b9c1412d6b9c))
+* **ask:** correct expandedSources state management and cleanup ([0b60471](https://github.com/rknightion/paperless-ngx-dedupe/commit/0b6047166cfe3e0fa5b0bfa137197e30cf49eec6))
+* **ask:** make expandedSources reactive with $state wrapper ([722fcfe](https://github.com/rknightion/paperless-ngx-dedupe/commit/722fcfedf02be2d58e92d881c8a253a554f911c6))
+* **deps:** update dependency lucide-svelte to v1 ([299e41f](https://github.com/rknightion/paperless-ngx-dedupe/commit/299e41f629dd81a2fb4ce0c85ffab22fd3064366))
+* **deps:** update dependency lucide-svelte to v1 ([6facb32](https://github.com/rknightion/paperless-ngx-dedupe/commit/6facb32e230267a471717bfb652ebe412d3f6198))
+* **rag:** add concurrent batch processing for embedding generation ([c83419c](https://github.com/rknightion/paperless-ngx-dedupe/commit/c83419cea5a277b195c9698d68db67fd11cf468d))
+* **rag:** replace require with createRequire for ES module compatibility ([5361878](https://github.com/rknightion/paperless-ngx-dedupe/commit/5361878027754b95f9bcc43844caabf087369331))
+* **sync:** add AI results and chunks to purge ([b52b313](https://github.com/rknightion/paperless-ngx-dedupe/commit/b52b313cf09d002768f4ef88d696f31606b16bca))
+* **web:** increase thumbnail size in duplicate detection wizard ([48df29c](https://github.com/rknightion/paperless-ngx-dedupe/commit/48df29c7092a1cd882001c73d0cbda3b36ae03d0))
+
+
+### Miscellaneous
+
+* **core:** update AI SDK dependencies and API usage for v6 compatibility ([1c40a3b](https://github.com/rknightion/paperless-ngx-dedupe/commit/1c40a3becd4edf825be108504bc5598ed21ea280))
+* **deps:** lock file maintenance ([#238](https://github.com/rknightion/paperless-ngx-dedupe/issues/238)) ([79ce64b](https://github.com/rknightion/paperless-ngx-dedupe/commit/79ce64b3926a0da9ac2eef1fc1c882f2028fafe9))
+* **deps:** lock file maintenance ([#240](https://github.com/rknightion/paperless-ngx-dedupe/issues/240)) ([ffffc89](https://github.com/rknightion/paperless-ngx-dedupe/commit/ffffc89dd36501732150bfd88c4c1189de46b632))
+* **deps:** update dependency @ai-sdk/anthropic to v3 ([ef771a2](https://github.com/rknightion/paperless-ngx-dedupe/commit/ef771a2889cb03e4c85d10cb399ed0f2a7458179))
+* **deps:** update dependency @ai-sdk/anthropic to v3 ([693ca01](https://github.com/rknightion/paperless-ngx-dedupe/commit/693ca01a3d7b267f5e19999f756b2dc8797b6086))
+* **deps:** update dependency @ai-sdk/anthropic to v3.0.64 ([#250](https://github.com/rknightion/paperless-ngx-dedupe/issues/250)) ([c79b7d0](https://github.com/rknightion/paperless-ngx-dedupe/commit/c79b7d0533735d6beabb0bbddc1cf4b5d17eee3a))
+* **deps:** update dependency @ai-sdk/openai to v3 ([127bce2](https://github.com/rknightion/paperless-ngx-dedupe/commit/127bce284bdf616a257b68df31a56cb8ce9f6097))
+* **deps:** update dependency @ai-sdk/openai to v3 ([f07b9f1](https://github.com/rknightion/paperless-ngx-dedupe/commit/f07b9f17ef65861caad795bf7b451182732cf492))
+* **deps:** update dependency ai to v6 ([f554e7d](https://github.com/rknightion/paperless-ngx-dedupe/commit/f554e7d1e0c87da7d14f963ae2832c8e9dbe40fa))
+* **deps:** update dependency ai to v6 ([1e224b8](https://github.com/rknightion/paperless-ngx-dedupe/commit/1e224b8289a134887f6a4b708ee49a8466ec9157))
+* **deps:** update dependency ai to v6.0.137 ([ec51702](https://github.com/rknightion/paperless-ngx-dedupe/commit/ec5170221bfe00c39044219e787061b0f324bd11))
+* **deps:** update dependency svelte to v5.55.0 ([#243](https://github.com/rknightion/paperless-ngx-dedupe/issues/243)) ([fa7ecb5](https://github.com/rknightion/paperless-ngx-dedupe/commit/fa7ecb57e1d5227daaec93fca71526cd6a8b5304))
+* **deps:** update dependency vite to v8.0.2 ([#242](https://github.com/rknightion/paperless-ngx-dedupe/issues/242)) ([91a6fb3](https://github.com/rknightion/paperless-ngx-dedupe/commit/91a6fb30393c2f859d388ba4e286da3d55db961b))
+* **deps:** update pnpm to v10.33.0 ([#251](https://github.com/rknightion/paperless-ngx-dedupe/issues/251)) ([1660ab9](https://github.com/rknightion/paperless-ngx-dedupe/commit/1660ab98e71614fe07c8f24a3cf7815f7aba4c9b))
+* **deps:** update typescript-eslint monorepo to v8.57.2 ([#248](https://github.com/rknightion/paperless-ngx-dedupe/issues/248)) ([122888e](https://github.com/rknightion/paperless-ngx-dedupe/commit/122888e9834878d6d47850f8eefa833f185ccc48))
+* **deps:** update vitest monorepo to v4.1.1 ([#249](https://github.com/rknightion/paperless-ngx-dedupe/issues/249)) ([3032563](https://github.com/rknightion/paperless-ngx-dedupe/commit/3032563f33bafa866b41906c19847877bfc857bf))
+* upgrade TypeScript to v6 and improve type safety ([4555291](https://github.com/rknightion/paperless-ngx-dedupe/commit/4555291ea1389d398c7f02c938353bc9b25d83a2))
+
+
+### Documentation
+
+* add Document Q&A API reference and configuration guide ([237b2c0](https://github.com/rknightion/paperless-ngx-dedupe/commit/237b2c050e7539595b3ec53f881a383d4ba7d9e3))
+* **evals:** add OpenAI evaluation framework documentation ([904977a](https://github.com/rknightion/paperless-ngx-dedupe/commit/904977a287e740a14bc164bfa668291bbe570b0d))
+* update api reference for prometheus endpoint ([a0b3fbc](https://github.com/rknightion/paperless-ngx-dedupe/commit/a0b3fbc0368effea29eafeabc1c50c7408109d33))
+* update configuration for prometheus support ([7d0281c](https://github.com/rknightion/paperless-ngx-dedupe/commit/7d0281c543815551acb0a4529590e3455b37855d))
+
+
+### Refactoring
+
+* **ai:** simplify prompt building by removing legacy template support ([dc1b953](https://github.com/rknightion/paperless-ngx-dedupe/commit/dc1b953a8b639951ad639bdb3a4f25e33c9465f9))
+
+
+### Tests
+
+* add comprehensive test coverage for AI and RAG modules ([d62e56b](https://github.com/rknightion/paperless-ngx-dedupe/commit/d62e56bda41ba022a6c184bddc0f1020d6040e85))
+* **ai:** add tests for unprocessed documents count ([5afc25f](https://github.com/rknightion/paperless-ngx-dedupe/commit/5afc25fe5ce5b023c4534d3bb094266f5ef1cb93))
+* **duplicates:** add comprehensive tests for deleted group handling ([b2f1103](https://github.com/rknightion/paperless-ngx-dedupe/commit/b2f11034683833a328d3b904df32cb0ec81e5f79))
+* **rag:** expose docBatchSize option to improve circuit breaker testing ([85f0f6d](https://github.com/rknightion/paperless-ngx-dedupe/commit/85f0f6dcdb15c673dacf35676a232bd0aae5524d))
+
 ## [0.7.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.6.2...v0.7.0) (2026-03-22)
 
 
