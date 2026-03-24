@@ -19,8 +19,11 @@ export function searchFts(
   query: string,
   topK: number,
 ): { chunkId: string; rank: number }[] {
-  // Escape FTS5 special characters
-  const safeQuery = query.replace(/['"*()]/g, ' ').trim();
+  // Strip everything except word characters and whitespace to prevent FTS5 syntax errors
+  const safeQuery = query
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!safeQuery) return [];
 
   const rows = sqlite

@@ -70,6 +70,25 @@ describe('FTS functions', () => {
       expect(() => searchFts(sqlite, "test's", 10)).not.toThrow();
     });
 
+    it('handles question marks and other punctuation without FTS5 errors', () => {
+      insertChunkFts(sqlite, 'chunk-1', 'invoice documents about payment processing');
+
+      // Question mark — the originally reported bug
+      expect(() => searchFts(sqlite, 'What is this?', 10)).not.toThrow();
+      const results = searchFts(sqlite, 'invoice?', 10);
+      expect(results).toHaveLength(1);
+
+      // Other punctuation that FTS5 rejects
+      expect(() => searchFts(sqlite, 'test!', 10)).not.toThrow();
+      expect(() => searchFts(sqlite, 'key: value', 10)).not.toThrow();
+      expect(() => searchFts(sqlite, 'a-b', 10)).not.toThrow();
+      expect(() => searchFts(sqlite, 'test~1', 10)).not.toThrow();
+      expect(() => searchFts(sqlite, '#invoice @user $100', 10)).not.toThrow();
+
+      // Realistic natural-language question — should not throw
+      expect(() => searchFts(sqlite, 'What documents mention invoice #1234?', 10)).not.toThrow();
+    });
+
     it('limits results by topK parameter', () => {
       for (let i = 0; i < 10; i++) {
         insertChunkFts(sqlite, `chunk-${i}`, `document about testing topic number ${i}`);
@@ -83,7 +102,7 @@ describe('FTS functions', () => {
       insertChunkFts(sqlite, 'chunk-1', 'some content');
 
       // All characters are special and get escaped to spaces → empty query
-      const results = searchFts(sqlite, '"\'*()', 10);
+      const results = searchFts(sqlite, '"\'*()!?#@$%^&', 10);
       expect(results).toHaveLength(0);
     });
   });
