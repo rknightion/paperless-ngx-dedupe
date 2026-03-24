@@ -1,15 +1,35 @@
 # Paperless NGX Dedupe
 
-A document deduplication companion for [Paperless-NGX](https://github.com/paperless-ngx/paperless-ngx). It syncs your documents, identifies duplicates using MinHash/LSH algorithms, and provides a web UI to review and resolve them.
+A document deduplication and AI-powered metadata companion for [Paperless-NGX](https://github.com/paperless-ngx/paperless-ngx). It syncs your documents, identifies duplicates using MinHash/LSH algorithms, extracts metadata with LLMs, and lets you ask questions about your document library — all through a web UI and REST API.
 
 ## Features
 
+### Deduplication
+
 - **Intelligent duplicate detection** -- MinHash signatures + Locality-Sensitive Hashing for efficient O(n log n) candidate discovery
 - **Similarity scoring** -- combines Jaccard similarity and fuzzy text matching for accurate duplicate detection
+- **Side-by-side review** -- compare duplicate documents with OCR text diff and resolve them individually or in bulk
+
+### AI Metadata Extraction
+
+- **Automatic classification** -- extract correspondents, document types, and tags from document text using OpenAI or Anthropic models
+- **Confidence scoring** -- per-field confidence scores with supporting evidence snippets so you can review before applying
+- **Reference-aware** -- optionally feeds your existing correspondents, document types, and tags to the LLM to avoid creating duplicates
+- **Batch processing** -- process your entire library or new documents automatically in configurable batches
+
+### RAG Document Q&A
+
+- **Ask questions about your documents** -- natural language queries answered using your document library as context
+- **Hybrid search** -- combines vector similarity (OpenAI embeddings) with full-text search via Reciprocal Rank Fusion for accurate retrieval
+- **Multi-turn conversations** -- follow-up questions with full conversation history and source citations
+- **Cost-aware indexing** -- estimates embedding costs before indexing, with configurable chunk sizes and token budgets
+
+### Platform
+
 - **Document sync** -- full and incremental sync from your Paperless-NGX instance
 - **Background processing** -- worker threads with real-time progress via Server-Sent Events
-- **Web UI** -- dashboard, document browser, side-by-side duplicate review with OCR text diff
-- **Batch operations** -- bulk review, resolve, and delete non-primary documents
+- **Web UI** -- dashboard, document browser, AI results review, and RAG chat interface
+- **Batch operations** -- bulk review, apply, reject, and delete across duplicates and AI results
 - **Data export** -- CSV duplicate reports and JSON configuration backup/restore
 - **Single container deployment** -- Docker with embedded SQLite, no external dependencies
 
