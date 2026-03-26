@@ -135,6 +135,7 @@ export { MinHash } from './dedup/minhash.js';
 export { LSHIndex } from './dedup/lsh.js';
 export { tokenSortRatio, sampleText } from './dedup/fuzzy.js';
 export { computeSimilarityScore } from './dedup/scoring.js';
+export { computeDiscriminativeScore, extractDiscriminativeTokens } from './dedup/discriminative.js';
 export { UnionFind } from './dedup/union-find.js';
 export { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from './dedup/config.js';
 export { runAnalysis } from './dedup/analyze.js';
