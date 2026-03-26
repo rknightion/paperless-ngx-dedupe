@@ -1,5 +1,77 @@
 # Changelog
 
+## [0.10.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.9.0...v0.10.0) (2026-03-26)
+
+
+### Features
+
+* **ai:** add bulk operations, grouping, and preflight checks to AI processing workflow ([2e076bf](https://github.com/rknightion/paperless-ngx-dedupe/commit/2e076bf2f945a2640f16a6e600c883d16d242df0))
+* **ai:** complete AI processing UX overhaul with safety improvements and review workflow ([93d6ad0](https://github.com/rknightion/paperless-ngx-dedupe/commit/93d6ad0231f41cd844044519bd62a2988e2d7ae1))
+* **ai:** implement comprehensive confidence gates, auto-apply, audit trails, and cost tracking ([3564894](https://github.com/rknightion/paperless-ngx-dedupe/commit/356489432d0e588108b9438f82244352e0fa33e6))
+* **ai:** sort reference lists alphabetically for deterministic prompts ([c23f464](https://github.com/rknightion/paperless-ngx-dedupe/commit/c23f4645f4a91bfeb564d2f0edc33aae40006379))
+* **api:** add staleness detection to dedup config endpoint ([3e9f020](https://github.com/rknightion/paperless-ngx-dedupe/commit/3e9f0201d7c6b6eab245015160f34980b9e90253))
+* **api:** update dedup config endpoint to handle discriminative weight ([33c735d](https://github.com/rknightion/paperless-ngx-dedupe/commit/33c735d27ce300f76f0728d8428e9e2c5be65991))
+* **api:** update duplicate queries to include discriminative scores ([419b27d](https://github.com/rknightion/paperless-ngx-dedupe/commit/419b27da919b4f7d4e8dd7d70b87e24d108cff8f))
+* **core:** export analysis hash tracking functions ([b93455e](https://github.com/rknightion/paperless-ngx-dedupe/commit/b93455eb7b5b952c4a3ce1b7de8cd38756290119))
+* **dashboard:** add analysis staleness detection ([bcb8f92](https://github.com/rknightion/paperless-ngx-dedupe/commit/bcb8f923ebecc78129232ecf2ccd4f05187742a9))
+* **dedup:** add analysis config hash tracking for staleness detection ([aad2fdf](https://github.com/rknightion/paperless-ngx-dedupe/commit/aad2fdf8c1c038143cd8bc5589f887b87f484403))
+* **dedup:** add discriminative scoring system for structured content ([48a831f](https://github.com/rknightion/paperless-ngx-dedupe/commit/48a831ffecc0ad52bf15911daaa2b46b0f2288bc))
+* **dedup:** expand discriminative token extraction patterns ([d4bc016](https://github.com/rknightion/paperless-ngx-dedupe/commit/d4bc016a68cf5aeb527b3fe156a513d523bd9fa1))
+* **dedup:** implement config migration from old weight systems ([5384dac](https://github.com/rknightion/paperless-ngx-dedupe/commit/5384dac347eec5bb22cd71a913f14c75a28a86c7))
+* **dedup:** integrate config hash tracking into analysis pipeline ([f7bfb02](https://github.com/rknightion/paperless-ngx-dedupe/commit/f7bfb02f7ece3e435c2f225fbfd395cc4c5c16e1))
+* **dedup:** integrate discriminative scoring into similarity computation ([2d40c01](https://github.com/rknightion/paperless-ngx-dedupe/commit/2d40c01bc46ade47d92a09de30e3edb7e13fb244))
+* **dedup:** update analysis pipeline to compute and store discriminative scores ([92a3e98](https://github.com/rknightion/paperless-ngx-dedupe/commit/92a3e987e958315807dddf5717199e4d6c4a60d0))
+* **dedup:** update config management to handle discriminative weights ([cfae76a](https://github.com/rknightion/paperless-ngx-dedupe/commit/cfae76a9721f820063775bfecd20bfc19d0e4a64))
+* **dedup:** update configuration schema to support three-weight system ([544a2e7](https://github.com/rknightion/paperless-ngx-dedupe/commit/544a2e70a87d9110b1f058bbe11db11dfb3ad963))
+* **export:** include discriminative scores in CSV export ([7a210c3](https://github.com/rknightion/paperless-ngx-dedupe/commit/7a210c3821b82e52ab9395ea6969a81736750204))
+* **schema:** add discriminative_score column to duplicate_group table ([5ccf728](https://github.com/rknightion/paperless-ngx-dedupe/commit/5ccf728bf074402cf19d5d8a691173e0cea93639))
+* **settings:** replace 3-weight system with 2-weight plus penalty UI ([ee5c423](https://github.com/rknightion/paperless-ngx-dedupe/commit/ee5c423ff75859e2529cec7b12c323ad5cc53aa7))
+* **types:** add discriminative score support to interfaces ([7f46e07](https://github.com/rknightion/paperless-ngx-dedupe/commit/7f46e07c998f3aaedc27f9b1779b7aefc9776e50))
+* **ui:** add discriminative score display to confidence components ([c032c69](https://github.com/rknightion/paperless-ngx-dedupe/commit/c032c69dae04ab91d99c7b0cedeaf5e58f5821aa))
+* **ui:** add stale analysis warning banner component ([df86257](https://github.com/rknightion/paperless-ngx-dedupe/commit/df86257d4dda23de8ab9495b786de0c636856ab7))
+* **ui:** integrate stale analysis warnings in dashboard ([5fa8ec2](https://github.com/rknightion/paperless-ngx-dedupe/commit/5fa8ec204698979586c179abf045735d8b6df027))
+* **ui:** update confidence breakdown to show penalty strength ([63175f8](https://github.com/rknightion/paperless-ngx-dedupe/commit/63175f809f1ca8c17c3bd2d8c379c8be9f008b81))
+* **ui:** update settings page for three-weight configuration system ([e6386eb](https://github.com/rknightion/paperless-ngx-dedupe/commit/e6386eb1cc90c432e43e4a146b5dde1eed9a85e4))
+
+
+### Bug Fixes
+
+* **db:** add discriminative_score column to duplicate_group table ([a9e3eeb](https://github.com/rknightion/paperless-ngx-dedupe/commit/a9e3eebd57ce24ca46262351b03b5b49139cce18))
+* **dedup:** improve money pattern matching and update UI for discriminative scoring ([42e7286](https://github.com/rknightion/paperless-ngx-dedupe/commit/42e7286b31146710795d3982b1891cdaf8ee0c95))
+* **deps:** update opentelemetry-js monorepo ([#255](https://github.com/rknightion/paperless-ngx-dedupe/issues/255)) ([6df9720](https://github.com/rknightion/paperless-ngx-dedupe/commit/6df9720c141ea701186e14fcb5c699edfde53743))
+* **deps:** update opentelemetry-js-contrib monorepo ([#257](https://github.com/rknightion/paperless-ngx-dedupe/issues/257)) ([d9fbe8d](https://github.com/rknightion/paperless-ngx-dedupe/commit/d9fbe8df2cac7c1d7315d25684268c510f05e168))
+* **export:** add backward compatibility for 3-weight dedup config imports ([4149eb3](https://github.com/rknightion/paperless-ngx-dedupe/commit/4149eb39006a2a9150ffab1db8e566b46d21b23e))
+
+
+### Miscellaneous
+
+* **deps:** update codacy/codacy-analysis-cli-action digest to d433603 ([#253](https://github.com/rknightion/paperless-ngx-dedupe/issues/253)) ([2928f1c](https://github.com/rknightion/paperless-ngx-dedupe/commit/2928f1cc77e8a216a6f3a96952b5b2debdde820f))
+* **deps:** update dependency openai to v6.33.0 ([#256](https://github.com/rknightion/paperless-ngx-dedupe/issues/256)) ([57bd3a5](https://github.com/rknightion/paperless-ngx-dedupe/commit/57bd3a52d9c1f73c3684427d5036fa3e2980370e))
+* **deps:** update dependency vite to v8.0.3 ([#258](https://github.com/rknightion/paperless-ngx-dedupe/issues/258)) ([1f87b6c](https://github.com/rknightion/paperless-ngx-dedupe/commit/1f87b6ca05c6346e8f14d05945ab63e55494d9fb))
+* **deps:** update vitest monorepo to v4.1.2 ([#259](https://github.com/rknightion/paperless-ngx-dedupe/issues/259)) ([2a9fcb6](https://github.com/rknightion/paperless-ngx-dedupe/commit/2a9fcb694011c1591e771e32d6705795fe854204))
+* fix issue classifier ([7247e79](https://github.com/rknightion/paperless-ngx-dedupe/commit/7247e79921f5ec4e4cae3c8a31317d52f5499c14))
+* remove triage ([e3496d8](https://github.com/rknightion/paperless-ngx-dedupe/commit/e3496d8168bbfb25125a2ed570683f2488df041c))
+
+
+### Documentation
+
+* update documentation for discriminative penalty scoring model ([6f52495](https://github.com/rknightion/paperless-ngx-dedupe/commit/6f524958cc64734f82062afc7577c43ce17a9a4b))
+
+
+### Refactoring
+
+* **dedup:** replace 3-weight system with 2-weight plus discriminative penalty ([84aa0bc](https://github.com/rknightion/paperless-ngx-dedupe/commit/84aa0bceef6cc8a3e1d505c1fdb548249ab4a580))
+* **dedup:** update confidence score calculation for penalty model ([5bf9ed0](https://github.com/rknightion/paperless-ngx-dedupe/commit/5bf9ed0d2f58a6c07d55181cf490b2e3532380c8))
+* **dedup:** update scoring to use penalty-based discriminative model ([7dd44ab](https://github.com/rknightion/paperless-ngx-dedupe/commit/7dd44abeebf7d788d5aa7349994f8526316db2b3))
+
+
+### Tests
+
+* **dedup:** add comprehensive tests for discriminative scoring integration ([9ce212f](https://github.com/rknightion/paperless-ngx-dedupe/commit/9ce212f961a7ee97dec7d212432fcffdd88068d0))
+* expand discriminative token extraction test coverage ([efa3587](https://github.com/rknightion/paperless-ngx-dedupe/commit/efa3587e8c2bed76b7d53e5cf722c4209920aebb))
+* update dedup config tests for penalty model migration ([c4a9f2a](https://github.com/rknightion/paperless-ngx-dedupe/commit/c4a9f2a73d751da310f1025da45744efc5849084))
+* update scoring tests for penalty-based discriminative model ([03c180c](https://github.com/rknightion/paperless-ngx-dedupe/commit/03c180ce1811af7f83197c2fa62f45fa6658ba67))
+
 ## [0.9.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.8.0...v0.9.0) (2026-03-24)
 
 
