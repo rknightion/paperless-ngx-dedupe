@@ -9,6 +9,7 @@ export type WorkerName =
   | 'analysis-worker'
   | 'batch-worker'
   | 'ai-processing-worker'
+  | 'ai-apply-worker'
   | 'rag-indexing-worker';
 
 export function getWorkerPath(name: WorkerName): string {

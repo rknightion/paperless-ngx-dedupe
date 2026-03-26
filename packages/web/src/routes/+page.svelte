@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { StatCard, JobStatusCard, EChart, ProgressBar, RichTooltip } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
-  import { FileStack, AlertCircle, Clock } from 'lucide-svelte';
+  import { FileStack, AlertCircle, Clock, Brain, CheckCircle, Zap, CircleDot } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -421,6 +421,55 @@
             resultJson={j.resultJson}
           />
         {/each}
+      </div>
+    </div>
+  {/if}
+
+  <!-- AI Processing Summary -->
+  {#if data.aiStats}
+    {@const totalTokens = data.aiStats.totalPromptTokens + data.aiStats.totalCompletionTokens}
+    <div class="panel">
+      <h2 class="text-ink mb-4 flex items-center gap-2 text-lg font-semibold">
+        <Brain class="text-accent h-5 w-5" />
+        AI Processing
+      </h2>
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <a
+          href="/ai-processing?status=pending_review"
+          class="bg-canvas-deep hover:ring-accent/40 flex flex-col items-center gap-1 rounded-lg p-4 text-center transition hover:ring-2"
+        >
+          <Clock class="text-warning h-5 w-5" />
+          <span class="text-ink text-xl font-semibold"
+            >{data.aiStats.pendingReview.toLocaleString()}</span
+          >
+          <span class="text-muted text-xs">Pending Review</span>
+        </a>
+        <a
+          href="/ai-processing?failed=true"
+          class="bg-canvas-deep hover:ring-accent/40 flex flex-col items-center gap-1 rounded-lg p-4 text-center transition hover:ring-2"
+        >
+          <AlertCircle class="text-ember h-5 w-5" />
+          <span class="text-ink text-xl font-semibold">{data.aiStats.failed.toLocaleString()}</span>
+          <span class="text-muted text-xs">Failed</span>
+        </a>
+        <div class="bg-canvas-deep flex flex-col items-center gap-1 rounded-lg p-4 text-center">
+          <CircleDot class="text-muted h-5 w-5" />
+          <span class="text-ink text-xl font-semibold"
+            >{data.aiStats.unprocessed.toLocaleString()}</span
+          >
+          <span class="text-muted text-xs">Unprocessed</span>
+        </div>
+        <div class="bg-canvas-deep flex flex-col items-center gap-1 rounded-lg p-4 text-center">
+          <CheckCircle class="text-success h-5 w-5" />
+          <span class="text-ink text-xl font-semibold">{data.aiStats.applied.toLocaleString()}</span
+          >
+          <span class="text-muted text-xs">Applied</span>
+        </div>
+        <div class="bg-canvas-deep flex flex-col items-center gap-1 rounded-lg p-4 text-center">
+          <Zap class="text-accent h-5 w-5" />
+          <span class="text-ink text-xl font-semibold">{totalTokens.toLocaleString()}</span>
+          <span class="text-muted text-xs">Total Tokens</span>
+        </div>
       </div>
     </div>
   {/if}

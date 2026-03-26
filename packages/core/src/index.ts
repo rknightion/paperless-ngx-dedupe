@@ -277,11 +277,23 @@ export {
   batchMarkApplied,
   batchMarkRejected,
   getPendingAiResultIds,
+  getAiResultIdsByFilter,
+  getDocumentIdsByAiFilter,
 } from './ai/queries.js';
 export type { AiResultFilters, AiResultSummary, AiResultDetail, AiStats } from './ai/queries.js';
 export { normalizeSuggestedLabel, normalizeSuggestedTags } from './ai/normalize.js';
 export { applyAiResult, rejectAiResult, batchRejectAiResults } from './ai/apply.js';
 export type { ApplyOptions } from './ai/apply.js';
+export {
+  getFailedDocumentIds,
+  resolveProcessScope,
+  resolveResultIdsForApplyScope,
+} from './ai/scopes.js';
+export type { ProcessScope, ApplyScope } from './ai/scopes.js';
+export { getAiResultGroups } from './ai/grouping.js';
+export type { GroupByField, AiResultGroup, AiGroupedResults } from './ai/grouping.js';
+export { computeApplyPreflight } from './ai/preflight.js';
+export type { ApplyPreflightResult } from './ai/preflight.js';
 
 // RAG
 export { getRagConfig, setRagConfig } from './rag/config.js';

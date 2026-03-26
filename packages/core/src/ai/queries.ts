@@ -368,6 +368,98 @@ export function getPendingAiResultIds(db: AppDatabase): string[] {
   return rows.map((r) => r.id);
 }
 
+export function getAiResultIdsByFilter(db: AppDatabase, filters: AiResultFilters): string[] {
+  const conditions = [];
+
+  if (filters.status) {
+    conditions.push(eq(aiProcessingResult.appliedStatus, filters.status));
+  }
+  if (filters.search) {
+    conditions.push(sql`${document.title} LIKE ${'%' + filters.search + '%'}`);
+  }
+  if (filters.failed === true) {
+    conditions.push(eq(aiProcessingResult.appliedStatus, 'failed'));
+  }
+  if (filters.minConfidence !== undefined) {
+    conditions.push(
+      sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 >= ${filters.minConfidence}`,
+    );
+  }
+  if (filters.maxConfidence !== undefined) {
+    conditions.push(
+      sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 <= ${filters.maxConfidence}`,
+    );
+  }
+  if (filters.provider) {
+    conditions.push(eq(aiProcessingResult.provider, filters.provider));
+  }
+  if (filters.model) {
+    conditions.push(eq(aiProcessingResult.model, filters.model));
+  }
+  if (filters.changedOnly) {
+    conditions.push(
+      sql`(${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+    );
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const rows = db
+    .select({ id: aiProcessingResult.id })
+    .from(aiProcessingResult)
+    .innerJoin(document, eq(aiProcessingResult.documentId, document.id))
+    .where(where)
+    .all();
+
+  return rows.map((r) => r.id);
+}
+
+export function getDocumentIdsByAiFilter(db: AppDatabase, filters: AiResultFilters): string[] {
+  const conditions = [];
+
+  if (filters.status) {
+    conditions.push(eq(aiProcessingResult.appliedStatus, filters.status));
+  }
+  if (filters.search) {
+    conditions.push(sql`${document.title} LIKE ${'%' + filters.search + '%'}`);
+  }
+  if (filters.failed === true) {
+    conditions.push(eq(aiProcessingResult.appliedStatus, 'failed'));
+  }
+  if (filters.minConfidence !== undefined) {
+    conditions.push(
+      sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 >= ${filters.minConfidence}`,
+    );
+  }
+  if (filters.maxConfidence !== undefined) {
+    conditions.push(
+      sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 <= ${filters.maxConfidence}`,
+    );
+  }
+  if (filters.provider) {
+    conditions.push(eq(aiProcessingResult.provider, filters.provider));
+  }
+  if (filters.model) {
+    conditions.push(eq(aiProcessingResult.model, filters.model));
+  }
+  if (filters.changedOnly) {
+    conditions.push(
+      sql`(${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+    );
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const rows = db
+    .select({ documentId: aiProcessingResult.documentId })
+    .from(aiProcessingResult)
+    .innerJoin(document, eq(aiProcessingResult.documentId, document.id))
+    .where(where)
+    .all();
+
+  return rows.map((r) => r.documentId);
+}
+
 export function batchMarkRejected(db: AppDatabase, ids: string[]): void {
   const now = new Date().toISOString();
 
