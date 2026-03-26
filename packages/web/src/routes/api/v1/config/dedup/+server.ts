@@ -3,6 +3,7 @@ import {
   getDedupConfig,
   setDedupConfig,
   recalculateConfidenceScores,
+  checkAnalysisStaleness,
   dedupConfigBaseSchema,
 } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
@@ -37,11 +38,21 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     );
   }
 
+  // Backward compatibility: convert old SDK field name
+  if (typeof body === 'object' && body !== null && 'confidenceWeightDiscriminative' in body) {
+    const b = body as Record<string, unknown>;
+    if (!('discriminativePenaltyStrength' in b)) {
+      const d = Number(b.confidenceWeightDiscriminative) || 0;
+      b.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 50));
+    }
+    delete b.confidenceWeightDiscriminative;
+  }
+
   // Check if weight keys are being changed
   const weightKeys = [
     'confidenceWeightJaccard',
     'confidenceWeightFuzzy',
-    'confidenceWeightDiscriminative',
+    'discriminativePenaltyStrength',
   ] as const;
   const weightsChanged = weightKeys.some((k) => k in parseResult.data);
 
@@ -53,11 +64,15 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     return apiError(ErrorCode.VALIDATION_FAILED, message);
   }
 
-  let meta: Record<string, unknown> | undefined;
+  const meta: Record<string, unknown> = {};
   if (weightsChanged) {
-    const recalculated = recalculateConfidenceScores(locals.db, config);
-    meta = { recalculatedGroups: recalculated };
+    meta.recalculatedGroups = recalculateConfidenceScores(locals.db, config);
   }
 
-  return apiSuccess(config, meta);
+  const staleness = checkAnalysisStaleness(locals.db);
+  if (staleness.isStale) {
+    meta.analysisStale = true;
+  }
+
+  return apiSuccess(config, Object.keys(meta).length > 0 ? meta : undefined);
 };
