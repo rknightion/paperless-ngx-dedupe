@@ -38,7 +38,11 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   }
 
   // Check if weight keys are being changed
-  const weightKeys = ['confidenceWeightJaccard', 'confidenceWeightFuzzy'] as const;
+  const weightKeys = [
+    'confidenceWeightJaccard',
+    'confidenceWeightFuzzy',
+    'confidenceWeightDiscriminative',
+  ] as const;
   const weightsChanged = weightKeys.some((k) => k in parseResult.data);
 
   let config;
