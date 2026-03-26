@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
-  import { InfoIcon } from '$lib/components';
+  import { InfoIcon, StaleAnalysisBanner } from '$lib/components';
   import {
     Link,
     SlidersHorizontal,
@@ -36,7 +36,7 @@
   let threshold = $state(Math.round(initialDedup.similarityThreshold * 100));
   let weightJaccard = $state(initialDedup.confidenceWeightJaccard);
   let weightFuzzy = $state(initialDedup.confidenceWeightFuzzy);
-  let weightDiscriminative = $state(initialDedup.confidenceWeightDiscriminative);
+  let penaltyStrength = $state(initialDedup.discriminativePenaltyStrength);
   let numPermutations = $state(initialDedup.numPermutations);
   let numBands = $state(initialDedup.numBands);
   let ngramSize = $state(initialDedup.ngramSize);
@@ -46,6 +46,7 @@
   let showAdvanced = $state(false);
   let isSavingDedup = $state(false);
   let dedupSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
+  let analysisStale = $state(false);
 
   // Backup & Restore
   let importFile: File | null = $state(null);
@@ -120,7 +121,7 @@
   let ragStats = $state(initialRagStats);
   let isRagIndexing = $state(false);
 
-  let weightSum = $derived(weightJaccard + weightFuzzy + weightDiscriminative);
+  let weightSum = $derived(weightJaccard + weightFuzzy);
   let weightsValid = $derived(weightSum === 100);
 
   async function testConnection() {
@@ -223,7 +224,7 @@
           similarityThreshold: threshold / 100,
           confidenceWeightJaccard: weightJaccard,
           confidenceWeightFuzzy: weightFuzzy,
-          confidenceWeightDiscriminative: weightDiscriminative,
+          discriminativePenaltyStrength: penaltyStrength,
           numPermutations,
           numBands,
           ngramSize,
@@ -240,6 +241,7 @@
           msg += ` — ${meta.recalculatedGroups} groups recalculated`;
         }
         dedupSaveStatus = { type: 'success', message: msg };
+        analysisStale = meta?.analysisStale === true;
       } else {
         dedupSaveStatus = { type: 'error', message: json.error?.message ?? 'Save failed' };
       }
@@ -572,7 +574,7 @@
           Sum: {weightSum}/100
         </span>
       </div>
-      <div class="mt-3 grid gap-6 sm:grid-cols-3">
+      <div class="mt-3 grid gap-6 sm:grid-cols-2">
         <div>
           <label for="w-jaccard" class="text-muted flex items-center gap-1.5 text-sm">
             Jaccard: <span class="text-ink font-mono font-medium">{weightJaccard}</span>
@@ -607,25 +609,6 @@
             class="accent-accent mt-1 w-full"
           />
         </div>
-        <div>
-          <label for="w-discriminative" class="text-muted flex items-center gap-1.5 text-sm">
-            Discriminative: <span class="text-ink font-mono font-medium"
-              >{weightDiscriminative}</span
-            >
-            <InfoIcon
-              text="Extracts and compares dates, monetary amounts, and reference numbers. Reduces false positives from template-based documents like monthly bank or credit card statements. When set to 0, the score is still computed and visible in group details."
-              position="top"
-            />
-          </label>
-          <input
-            id="w-discriminative"
-            type="range"
-            min="0"
-            max="100"
-            bind:value={weightDiscriminative}
-            class="accent-accent mt-1 w-full"
-          />
-        </div>
       </div>
 
       <!-- Weight Budget Bar -->
@@ -641,11 +624,6 @@
             style="width: {weightFuzzy}%; background: oklch(0.6 0.16 155);"
             title="Fuzzy: {weightFuzzy}"
           ></div>
-          <div
-            class="transition-all duration-200"
-            style="width: {weightDiscriminative}%; background: oklch(0.55 0.18 290);"
-            title="Discriminative: {weightDiscriminative}"
-          ></div>
         </div>
         <div class="text-muted mt-1.5 flex gap-4 text-xs">
           <span class="flex items-center gap-1"
@@ -658,13 +636,32 @@
             ><span class="inline-block h-2 w-2 rounded-full" style="background: oklch(0.6 0.16 155)"
             ></span> Fuzzy</span
           >
-          <span class="flex items-center gap-1"
-            ><span
-              class="inline-block h-2 w-2 rounded-full"
-              style="background: oklch(0.55 0.18 290)"
-            ></span> Discriminative</span
-          >
         </div>
+      </div>
+    </div>
+
+    <!-- Discriminative Penalty -->
+    <div class="mt-6">
+      <div class="flex items-center justify-between">
+        <h3 class="text-ink text-sm font-medium">Discriminative Penalty</h3>
+        <span class="text-ink font-mono text-sm font-medium">{penaltyStrength}%</span>
+      </div>
+      <div class="mt-3">
+        <label for="w-penalty" class="text-muted flex items-center gap-1.5 text-sm">
+          Strength: <span class="text-ink font-mono font-medium">{penaltyStrength}</span>
+          <InfoIcon
+            text="Penalizes the base score when documents have different dates, monetary amounts, or reference numbers. Reduces false positives from template-based documents like monthly bank statements. At 0% the penalty is disabled. At 100% the discriminative score is applied at full strength."
+            position="top"
+          />
+        </label>
+        <input
+          id="w-penalty"
+          type="range"
+          min="0"
+          max="100"
+          bind:value={penaltyStrength}
+          class="accent-accent mt-1 w-full"
+        />
       </div>
     </div>
 
@@ -797,6 +794,15 @@
           : 'bg-ember-light text-ember'}"
       >
         {dedupSaveStatus.message}
+      </div>
+    {/if}
+    {#if analysisStale}
+      <div class="mt-4">
+        <StaleAnalysisBanner compact showRunButton={false} />
+        <p class="text-muted mt-2 text-xs">
+          Go to the <a href="/" class="text-accent hover:text-accent-hover underline">Dashboard</a>
+          to re-run analysis with a full rebuild.
+        </p>
       </div>
     {/if}
   </div>
