@@ -405,13 +405,13 @@ Tasks
   Acceptance:
   - A power user can process many results without constant pointer movement.
 
-PHASE 2: Real bulk workflows and targeted processing
+PHASE 2: Real bulk workflows and targeted processing [COMPLETED]
 
 Goal
 - Make bulk operations feel safe, visible, and genuinely high-throughput.
 
 Tasks
-- [ ] Add “process selected documents” entry points.
+- [x] Add “process selected documents” entry points.
   Direction:
   - The process API already supports `documentIds`.
   - Build a doc picker or selection-based flow rather than forcing full-library processing.
@@ -424,7 +424,7 @@ Tasks
   Acceptance:
   - Users can run AI on a selected subset such as “these 20 invoices” or “this filter result”.
 
-- [ ] Add “retry failed”, “re-run selected”, and “re-run current filter” actions.
+- [x] Add “retry failed”, “re-run selected”, and “re-run current filter” actions.
   Direction:
   - Current “Process New” skips any document that already has an AI result.
   - Failed rows need a first-class retry path that does not require “Re-process All”.
@@ -439,7 +439,7 @@ Tasks
   - `packages/web/src/routes/api/v1/ai/process/+server.ts`
   - `packages/web/src/routes/ai-processing/+page.svelte`
 
-- [ ] Convert bulk apply into a background job with progress and cancellation.
+- [x] Convert bulk apply into a background job with progress and cancellation.
   Direction:
   - `batch-apply` and `apply-all` should not run as long synchronous requests.
   - Use the existing jobs infrastructure and SSE progress pattern already used by sync/analysis/AI processing.
@@ -460,7 +460,7 @@ Tasks
   Acceptance:
   - Large apply jobs show progress, can be cancelled, and do not rely on a long open HTTP request.
 
-- [ ] Add bulk preflight before apply.
+- [x] Add bulk preflight before apply.
   Preflight output should show:
   - documents affected
   - fields that will be changed
@@ -473,7 +473,7 @@ Tasks
   Acceptance:
   - “Apply all” is never a blind action.
 
-- [ ] Support server-side bulk selection by filter, not only page-local checkbox selection.
+- [x] Support server-side bulk selection by filter, not only page-local checkbox selection.
   Direction:
   - Current select-all only selects the visible page.
   - Add “select all matching current filter”.
@@ -483,7 +483,7 @@ Tasks
   - `packages/web/src/routes/ai-processing/+page.server.ts`
   - `packages/web/src/routes/ai-processing/+page.svelte`
 
-- [ ] Add result grouping to accelerate review.
+- [x] Add result grouping to accelerate review.
   Recommended grouping options:
   - by suggested correspondent
   - by suggested document type
@@ -508,7 +508,7 @@ Tasks
   - Review: active inbox with current selection
   - History: applied/rejected/partial with audit visibility
 
-- [ ] Introduce review presets.
+- [x] Introduce review presets.
   Suggested presets:
   - Fast lane: high-confidence changed-only results
   - Needs attention: low confidence, failures, new entity creation, destructive clear candidates
@@ -516,7 +516,7 @@ Tasks
   Acceptance:
   - A user can choose between speed and caution without manually building filters every time.
 
-- [ ] Add an AI summary widget to the dashboard and documents area.
+- [x] Add an AI summary widget to the dashboard and documents area.
   Direction:
   - The dashboard currently has no AI-specific overview.
   - Add cards/links such as:

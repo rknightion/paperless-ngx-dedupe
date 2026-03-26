@@ -7,8 +7,11 @@ import type {
   AiProcessOptions,
   AiResultFilters,
   AiResultDetail,
+  AiResultGroup,
   AiResultSummary,
   AiStats,
+  ApplyPreflightResult,
+  ApplyScope,
   BatchDeleteResult,
   BatchResult,
   ClientOptions,
@@ -23,6 +26,7 @@ import type {
   DuplicateGroupFilters,
   DuplicateGroupSummary,
   DuplicateStats,
+  GroupByField,
   Job,
   PaginationMeta,
   PaginationParams,
@@ -263,9 +267,14 @@ export class PaperlessDedupeClient {
   // ── AI Processing ───────────────────────────────────────────────────
 
   async processAi(options?: AiProcessOptions): Promise<Job> {
+    const body: Record<string, unknown> = {};
+    if (options?.reprocess !== undefined) body.reprocess = options.reprocess;
+    if (options?.documentIds !== undefined) body.documentIds = options.documentIds;
+    if (options?.scope !== undefined) body.scope = options.scope;
+
     const res = await request<Job>('/api/v1/ai/process', this.httpOptions, {
       method: 'POST',
-      body: options,
+      body: Object.keys(body).length > 0 ? body : undefined,
     });
     return res.data;
   }
@@ -299,13 +308,16 @@ export class PaperlessDedupeClient {
   async batchApplyAiResults(
     resultIds: string[],
     fields?: ('correspondent' | 'documentType' | 'tags')[],
-  ): Promise<{ applied: number; failed: number }> {
-    const res = await request<{ applied: number; failed: number }>(
+  ): Promise<Job> {
+    const res = await request<{ jobId: string }>(
       '/api/v1/ai/results/batch-apply',
       this.httpOptions,
-      { method: 'POST', body: { resultIds, fields } },
+      {
+        method: 'POST',
+        body: { resultIds, fields },
+      },
     );
-    return res.data;
+    return this.getJob(res.data.jobId);
   }
 
   async batchRejectAiResults(resultIds: string[]): Promise<void> {
@@ -313,6 +325,35 @@ export class PaperlessDedupeClient {
       method: 'POST',
       body: { resultIds },
     });
+  }
+
+  async applyAllAiResults(options?: AiApplyOptions): Promise<Job> {
+    const res = await request<{ jobId: string }>('/api/v1/ai/results/apply-all', this.httpOptions, {
+      method: 'POST',
+      body: options,
+    });
+    return this.getJob(res.data.jobId);
+  }
+
+  async preflightApply(scope: ApplyScope, options?: AiApplyOptions): Promise<ApplyPreflightResult> {
+    const res = await request<ApplyPreflightResult>(
+      '/api/v1/ai/results/preflight',
+      this.httpOptions,
+      { method: 'POST', body: { scope, ...options } },
+    );
+    return res.data;
+  }
+
+  async getAiResultGroups(
+    groupBy: GroupByField,
+    filters?: AiResultFilters,
+  ): Promise<{ groups: AiResultGroup[] }> {
+    const qs = buildQueryString({ groupBy, ...filters });
+    const res = await request<{ groups: AiResultGroup[] }>(
+      `/api/v1/ai/results/groups${qs}`,
+      this.httpOptions,
+    );
+    return res.data;
   }
 
   async getAiStats(): Promise<AiStats> {

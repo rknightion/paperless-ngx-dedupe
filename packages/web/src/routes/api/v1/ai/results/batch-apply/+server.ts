@@ -1,10 +1,12 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
-  applyAiResult,
-  getAiConfig,
-  PaperlessClient,
-  toPaperlessConfig,
+  createJob,
+  JobAlreadyRunningError,
+  JobType,
+  launchWorker,
+  getWorkerPath,
 } from '@paperless-dedupe/core';
+import type { ApplyScope } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -29,31 +31,34 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const allowClearing = body?.allowClearing === true;
   const createMissingEntities = body?.createMissingEntities !== false;
 
-  if (resultIds.length === 0) {
-    return apiError(ErrorCode.BAD_REQUEST, 'No result IDs provided');
-  }
-
-  const aiConfig = getAiConfig(locals.db);
-  const paperlessConfig = toPaperlessConfig(locals.config);
-  const client = new PaperlessClient(paperlessConfig);
-
-  let applied = 0;
-  let failed = 0;
-
-  for (const id of resultIds) {
-    try {
-      await applyAiResult(locals.db, client, id, {
-        fields,
-        allowClearing,
-        createMissingEntities,
-        addProcessedTag: aiConfig.addProcessedTag,
-        processedTagName: aiConfig.processedTagName,
-      });
-      applied++;
-    } catch {
-      failed++;
+  // Support both explicit scope and legacy resultIds
+  let scope: ApplyScope;
+  if (body?.scope) {
+    scope = body.scope;
+  } else {
+    if (resultIds.length === 0) {
+      return apiError(ErrorCode.BAD_REQUEST, 'No result IDs provided');
     }
+    scope = { type: 'selected_result_ids', resultIds };
   }
 
-  return apiSuccess({ applied, failed, total: resultIds.length });
+  let jobId: string;
+  try {
+    jobId = createJob(locals.db, JobType.AI_APPLY);
+  } catch (error) {
+    if (error instanceof JobAlreadyRunningError) {
+      return apiError(ErrorCode.JOB_ALREADY_RUNNING, error.message);
+    }
+    throw error;
+  }
+
+  const workerPath = getWorkerPath('ai-apply-worker');
+  launchWorker({
+    jobId,
+    dbPath: locals.config.DATABASE_URL,
+    workerScriptPath: workerPath,
+    taskData: { scope, fields, allowClearing, createMissingEntities },
+  });
+
+  return apiSuccess({ jobId }, undefined, 202);
 };

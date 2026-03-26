@@ -1,11 +1,12 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
-  applyAiResult,
-  getAiConfig,
-  getPendingAiResultIds,
-  PaperlessClient,
-  toPaperlessConfig,
+  createJob,
+  JobAlreadyRunningError,
+  JobType,
+  launchWorker,
+  getWorkerPath,
 } from '@paperless-dedupe/core';
+import type { ApplyScope } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -15,6 +16,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   let allowClearing = false;
   let createMissingEntities = true;
+  let fields: ('correspondent' | 'documentType' | 'tags')[] = [
+    'correspondent',
+    'documentType',
+    'tags',
+  ];
+  let scope: ApplyScope = { type: 'all_pending' };
 
   const contentType = request.headers.get('content-type');
   if (contentType?.includes('application/json')) {
@@ -22,44 +29,41 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       const body = await request.json();
       allowClearing = body?.allowClearing === true;
       createMissingEntities = body?.createMissingEntities !== false;
+
+      if (Array.isArray(body?.fields)) {
+        fields = body.fields.filter((f: string) =>
+          ['correspondent', 'documentType', 'tags'].includes(f),
+        );
+      }
+
+      // Support filter-scoped apply-all
+      if (body?.scope) {
+        scope = body.scope;
+      } else if (body?.filters) {
+        scope = { type: 'current_filter', filters: body.filters };
+      }
     } catch {
       // Use defaults
     }
   }
 
-  const resultIds = getPendingAiResultIds(locals.db);
-
-  if (resultIds.length === 0) {
-    return apiSuccess({ applied: 0, failed: 0, total: 0 });
-  }
-
-  const aiConfig = getAiConfig(locals.db);
-  const paperlessConfig = toPaperlessConfig(locals.config);
-  const client = new PaperlessClient(paperlessConfig);
-
-  const fields: ('correspondent' | 'documentType' | 'tags')[] = [
-    'correspondent',
-    'documentType',
-    'tags',
-  ];
-
-  let applied = 0;
-  let failed = 0;
-
-  for (const id of resultIds) {
-    try {
-      await applyAiResult(locals.db, client, id, {
-        fields,
-        allowClearing,
-        createMissingEntities,
-        addProcessedTag: aiConfig.addProcessedTag,
-        processedTagName: aiConfig.processedTagName,
-      });
-      applied++;
-    } catch {
-      failed++;
+  let jobId: string;
+  try {
+    jobId = createJob(locals.db, JobType.AI_APPLY);
+  } catch (error) {
+    if (error instanceof JobAlreadyRunningError) {
+      return apiError(ErrorCode.JOB_ALREADY_RUNNING, error.message);
     }
+    throw error;
   }
 
-  return apiSuccess({ applied, failed, total: resultIds.length });
+  const workerPath = getWorkerPath('ai-apply-worker');
+  launchWorker({
+    jobId,
+    dbPath: locals.config.DATABASE_URL,
+    workerScriptPath: workerPath,
+    taskData: { scope, fields, allowClearing, createMissingEntities },
+  });
+
+  return apiSuccess({ jobId }, undefined, 202);
 };

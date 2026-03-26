@@ -28,3 +28,7 @@ export { default as AiFilterBar } from './ai/AiFilterBar.svelte';
 export { default as AiToastContainer } from './ai/AiToastContainer.svelte';
 export { default as AiDocumentPreview } from './ai/AiDocumentPreview.svelte';
 export { default as AiKeyboardHandler } from './ai/AiKeyboardHandler.svelte';
+export { default as AiDocumentPickerModal } from './ai/AiDocumentPickerModal.svelte';
+export { default as AiPreflightDialog } from './ai/AiPreflightDialog.svelte';
+export { default as AiResultGroupedList } from './ai/AiResultGroupedList.svelte';
+export { default as AiReviewPresets } from './ai/AiReviewPresets.svelte';

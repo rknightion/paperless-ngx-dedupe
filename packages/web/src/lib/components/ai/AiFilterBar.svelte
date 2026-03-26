@@ -6,6 +6,7 @@
     status: string | undefined;
     search: string | undefined;
     sort: string | undefined;
+    groupBy: string | undefined;
     changedOnly: boolean | undefined;
     failed: boolean | undefined;
     minConfidence: number | undefined;
@@ -18,6 +19,7 @@
     status,
     search,
     sort,
+    groupBy,
     changedOnly,
     failed,
     minConfidence,
@@ -31,6 +33,7 @@
     status: status ?? '',
     search: search ?? '',
     sort: sort ?? '',
+    groupBy: groupBy ?? '',
     changedOnly: changedOnly ?? false,
     failed: failed ?? false,
     minConfidence: minConfidence ?? 0,
@@ -41,6 +44,7 @@
   let localStatus = $state(initial.status);
   let localSearch = $state(initial.search);
   let localSort = $state(initial.sort);
+  let localGroupBy = $state(initial.groupBy);
   let localChangedOnly = $state(initial.changedOnly);
   let localFailed = $state(initial.failed);
   let localMinConfidence = $state(initial.minConfidence);
@@ -53,6 +57,7 @@
       status: localStatus || undefined,
       search: localSearch || undefined,
       sort: localSort || undefined,
+      groupBy: localGroupBy || undefined,
       changedOnly: localChangedOnly ? 'true' : undefined,
       failed: localFailed ? 'true' : undefined,
       minConfidence: localMinConfidence > 0 ? String(localMinConfidence) : undefined,
@@ -105,6 +110,14 @@
       <option value="oldest">Oldest</option>
       <option value="confidence_asc">Lowest Confidence</option>
       <option value="confidence_desc">Highest Confidence</option>
+    </select>
+
+    <select bind:value={localGroupBy} onchange={handleSelectChange} class={selectClass}>
+      <option value="">No grouping</option>
+      <option value="suggestedCorrespondent">By Correspondent</option>
+      <option value="suggestedDocumentType">By Document Type</option>
+      <option value="confidenceBand">By Confidence</option>
+      <option value="failureType">By Failure Type</option>
     </select>
 
     <button

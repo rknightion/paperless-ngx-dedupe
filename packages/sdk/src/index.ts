@@ -42,10 +42,16 @@ export type {
   BatchDeleteResult,
   // AI Processing types
   AiResultSummary,
+  AiResultDetail,
   AiStats,
   AiConfig,
   AiResultFilters,
   AiProcessOptions,
   AiApplyOptions,
+  ProcessScope,
+  ApplyScope,
+  ApplyPreflightResult,
+  GroupByField,
+  AiResultGroup,
 } from './types.js';
 export { ErrorCode } from './types.js';

@@ -1,5 +1,5 @@
 import { SvelteSet, SvelteMap } from 'svelte/reactivity';
-import type { AiResultSummary, AiResultDetail } from '@paperless-dedupe/core';
+import type { AiResultSummary, AiResultDetail, AiResultFilters } from '@paperless-dedupe/core';
 
 // Re-export core types for convenience
 export type { AiResultSummary, AiResultDetail };
@@ -9,6 +9,26 @@ export interface Toast {
   type: 'success' | 'error' | 'warning';
   message: string;
   detail?: string;
+}
+
+// ── Selection Mode ──
+export type SelectionMode =
+  | { type: 'manual' }
+  | { type: 'all_matching_filter'; filters: AiResultFilters; matchCount: number };
+
+let _selectionMode = $state<SelectionMode>({ type: 'manual' });
+
+export function getSelectionMode(): SelectionMode {
+  return _selectionMode;
+}
+
+export function selectAllMatchingFilter(filters: AiResultFilters, matchCount: number): void {
+  _selectionMode = { type: 'all_matching_filter', filters, matchCount };
+  selectedIds.clear();
+}
+
+export function clearFilterSelection(): void {
+  _selectionMode = { type: 'manual' };
 }
 
 // ── Selection State ──
@@ -150,6 +170,7 @@ export function toggleField(resultId: string, field: string): void {
 // ── Cleanup ──
 export function resetStore(): void {
   selectedIds.clear();
+  _selectionMode = { type: 'manual' };
   _activeResultId = null;
   _activeResultDetail = null;
   _detailLoadState = 'idle';

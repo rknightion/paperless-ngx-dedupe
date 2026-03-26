@@ -1,18 +1,33 @@
 <script lang="ts">
   import { ConfirmDialog } from '$lib/components';
   import { Check, X } from 'lucide-svelte';
+  import type { SelectionMode } from './AiReviewStore.svelte';
 
   interface Props {
     selectedCount: number;
     pendingCount: number;
+    selectionMode: SelectionMode;
+    totalFilterMatch: number;
     onbatchapply: () => void;
     onbatchreject: () => void;
     onapplyall: () => void;
     onrejectall: () => void;
+    onselectallfilter: () => void;
+    onclearfilterselection: () => void;
   }
 
-  let { selectedCount, pendingCount, onbatchapply, onbatchreject, onapplyall, onrejectall }: Props =
-    $props();
+  let {
+    selectedCount,
+    pendingCount,
+    selectionMode,
+    totalFilterMatch,
+    onbatchapply,
+    onbatchreject,
+    onapplyall,
+    onrejectall,
+    onselectallfilter,
+    onclearfilterselection,
+  }: Props = $props();
 
   let confirmAction = $state<'apply-all' | 'reject-all' | null>(null);
 
@@ -26,10 +41,40 @@
   }
 </script>
 
-{#if selectedCount > 0 || pendingCount > 0}
+{#if selectedCount > 0 || pendingCount > 0 || selectionMode.type === 'all_matching_filter'}
   <div class="flex flex-wrap items-center gap-2">
-    {#if selectedCount > 0}
+    {#if selectionMode.type === 'all_matching_filter'}
+      <span class="text-accent text-sm font-medium">
+        All {selectionMode.matchCount.toLocaleString()} matching current filter selected
+      </span>
+      <button
+        onclick={onbatchapply}
+        class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+      >
+        <Check class="h-3.5 w-3.5" /> Apply Matching
+      </button>
+      <button
+        onclick={onbatchreject}
+        class="text-ember border-ember/20 hover:bg-ember-light flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+      >
+        <X class="h-3.5 w-3.5" /> Reject Matching
+      </button>
+      <button
+        onclick={onclearfilterselection}
+        class="text-muted hover:text-ink text-sm font-medium underline transition-colors"
+      >
+        Clear
+      </button>
+    {:else if selectedCount > 0}
       <span class="text-muted text-sm font-medium">{selectedCount} selected</span>
+      {#if totalFilterMatch > selectedCount}
+        <button
+          onclick={onselectallfilter}
+          class="text-accent text-sm font-medium underline transition-colors"
+        >
+          Select all {totalFilterMatch.toLocaleString()} matching current filter
+        </button>
+      {/if}
       <button
         onclick={onbatchapply}
         class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
@@ -44,7 +89,7 @@
       </button>
     {/if}
 
-    {#if selectedCount > 0 && pendingCount > 0}
+    {#if (selectedCount > 0 || selectionMode.type === 'all_matching_filter') && pendingCount > 0}
       <div class="border-soft mx-1 h-5 border-l"></div>
     {/if}
 

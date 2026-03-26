@@ -375,12 +375,49 @@ export interface AiResultFilters {
 export interface AiProcessOptions {
   reprocess?: boolean;
   documentIds?: string[];
+  scope?: ProcessScope;
 }
 
 export interface AiApplyOptions {
   fields?: ('correspondent' | 'documentType' | 'tags')[];
   allowClearing?: boolean;
   createMissingEntities?: boolean;
+}
+
+// ── AI Scope types ───────────────────────────────────────────────────
+
+export type ProcessScope =
+  | { type: 'new_only' }
+  | { type: 'failed_only' }
+  | { type: 'selected_document_ids'; documentIds: string[] }
+  | { type: 'current_filter'; filters: AiResultFilters }
+  | { type: 'full_reprocess' };
+
+export type ApplyScope =
+  | { type: 'selected_result_ids'; resultIds: string[] }
+  | { type: 'all_pending' }
+  | { type: 'current_filter'; filters: AiResultFilters };
+
+export interface ApplyPreflightResult {
+  totalDocuments: number;
+  fieldsChanged: { correspondent: number; documentType: number; tags: number };
+  newEntitiesCreated: { correspondents: string[]; documentTypes: string[]; tags: string[] };
+  lowConfidenceCount: number;
+  noOpCount: number;
+  destructiveClearCount: number;
+  confidenceDistribution: { high: number; medium: number; low: number };
+}
+
+export type GroupByField =
+  | 'suggestedCorrespondent'
+  | 'suggestedDocumentType'
+  | 'failureType'
+  | 'confidenceBand';
+
+export interface AiResultGroup {
+  key: string;
+  count: number;
+  resultIds: string[];
 }
 
 // ── SSE types ──────────────────────────────────────────────────────────

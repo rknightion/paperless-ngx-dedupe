@@ -9,6 +9,7 @@ export const JobType = {
   ANALYSIS: 'analysis',
   BATCH_OPERATION: 'batch_operation',
   AI_PROCESSING: 'ai_processing',
+  AI_APPLY: 'ai_apply',
   RAG_INDEXING: 'rag_indexing',
 } as const;
 export type JobType = (typeof JobType)[keyof typeof JobType];

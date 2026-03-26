@@ -1,4 +1,12 @@
-import { getAiStats, getAiResults, getAiConfig, listJobs, JobType } from '@paperless-dedupe/core';
+import {
+  getAiStats,
+  getAiResults,
+  getAiConfig,
+  getAiResultGroups,
+  listJobs,
+  JobType,
+} from '@paperless-dedupe/core';
+import type { GroupByField } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 
@@ -26,6 +34,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     : undefined;
   const provider = url.searchParams.get('provider') || undefined;
   const model = url.searchParams.get('model') || undefined;
+  const groupByParam = url.searchParams.get('groupBy') || undefined;
+  const validGroupByFields: GroupByField[] = [
+    'suggestedCorrespondent',
+    'suggestedDocumentType',
+    'confidenceBand',
+    'failureType',
+  ];
+  const groupBy = validGroupByFields.includes(groupByParam as GroupByField)
+    ? (groupByParam as GroupByField)
+    : undefined;
   const limit = Math.min(
     Math.max(parseInt(url.searchParams.get('limit') ?? '20', 10) || 20, 1),
     100,
@@ -41,6 +59,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   );
   const aiConfig = getAiConfig(locals.db);
   const jobs = listJobs(locals.db, { type: JobType.AI_PROCESSING, limit: 1 });
+  const filters = {
+    status,
+    search,
+    sort,
+    changedOnly,
+    failed,
+    minConfidence,
+    maxConfidence,
+    provider,
+    model,
+  };
+  const groups = groupBy ? getAiResultGroups(locals.db, groupBy, filters) : null;
 
   return {
     stats,
@@ -51,6 +81,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     status,
     search,
     sort,
+    groupBy: groupBy ?? null,
     changedOnly,
     failed,
     minConfidence,
@@ -59,5 +90,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     model: model ?? null,
     aiConfig,
     activeJob: jobs.find((j) => j.status === 'running' || j.status === 'pending') ?? null,
+    groups,
   };
 };

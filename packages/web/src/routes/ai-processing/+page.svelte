@@ -3,13 +3,16 @@
   import { invalidateAll, goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
-  import { ProgressBar } from '$lib/components';
+  import { ProgressBar, ConfirmDialog } from '$lib/components';
   import AiResultList from '$lib/components/ai/AiResultList.svelte';
   import AiFilterBar from '$lib/components/ai/AiFilterBar.svelte';
   import AiBulkActionBar from '$lib/components/ai/AiBulkActionBar.svelte';
   import AiResultDetailDrawer from '$lib/components/ai/AiResultDetailDrawer.svelte';
   import AiToastContainer from '$lib/components/ai/AiToastContainer.svelte';
   import AiKeyboardHandler from '$lib/components/ai/AiKeyboardHandler.svelte';
+  import AiDocumentPickerModal from '$lib/components/ai/AiDocumentPickerModal.svelte';
+  import AiPreflightDialog from '$lib/components/ai/AiPreflightDialog.svelte';
+  import AiResultGroupedList from '$lib/components/ai/AiResultGroupedList.svelte';
   import {
     selectedIds,
     getActiveResultId,
@@ -17,9 +20,12 @@
     pruneSelection,
     addToast,
     resetStore,
+    selectAllMatchingFilter,
+    clearFilterSelection,
+    getSelectionMode,
   } from '$lib/components/ai/AiReviewStore.svelte';
   import { connectJobSSE } from '$lib/sse';
-  import type { AiResultSummary } from '@paperless-dedupe/core';
+  import type { AiResultSummary, ApplyPreflightResult } from '@paperless-dedupe/core';
   import {
     Brain,
     Play,
@@ -34,6 +40,7 @@
     TriangleAlert,
     X,
     Info,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
   } from 'lucide-svelte';
@@ -54,6 +61,22 @@
   let lastInvalidateTime = 0;
   const INVALIDATE_INTERVAL_MS = 3000;
 
+  // ── Bulk Apply State ──
+  let showDocPicker = $state(false);
+  let showPreflight = $state(false);
+  let preflightData = $state<ApplyPreflightResult | null>(null);
+  let preflightLoading = $state(false);
+  let _applyJobId = $state<string | null>(null);
+  let applyProgress = $state(0);
+  let applyMessage = $state('');
+  let isApplying = $state(false);
+  let applySseConnection: ReturnType<typeof connectJobSSE> | null = null;
+  let pendingApplyScope = $state<Record<string, unknown> | null>(null);
+
+  // ── Process Scope Dropdown ──
+  let showProcessMenu = $state(false);
+  let confirmReprocessAll = $state(false);
+
   // ── Mobile Detection ──
   let isMobile = $state(false);
   if (browser) {
@@ -71,6 +94,18 @@
   const isResumable = $derived(stats.unprocessed > 0 && stats.totalProcessed > 0);
   const totalPages = $derived(Math.ceil(data.total / data.limit));
   const currentPage = $derived(Math.floor(data.offset / data.limit) + 1);
+  const selectionMode = $derived(getSelectionMode());
+  const hasActiveFilters = $derived(
+    !!(
+      data.status ||
+      data.search ||
+      data.changedOnly ||
+      data.failed ||
+      data.minConfidence ||
+      data.provider ||
+      data.model
+    ),
+  );
 
   // ── Selection Preservation ──
   $effect(() => {
@@ -136,6 +171,7 @@
   $effect(() => {
     return () => {
       sseConnection?.close();
+      applySseConnection?.close();
       resetStore();
     };
   });
@@ -168,6 +204,76 @@
       jobMessage = '';
       addToast('error', 'Failed to start processing');
     }
+  }
+
+  async function startProcessingWithScope(scope: Record<string, unknown>, label: string) {
+    isProcessing = true;
+    jobProgress = 0;
+    jobError = null;
+    jobMessage = 'Starting...';
+    showResumeHint = false;
+    showProcessMenu = false;
+    try {
+      const res = await fetch('/api/v1/ai/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope }),
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.jobId) {
+        jobId = json.data.jobId;
+        addToast('success', label);
+      } else {
+        isProcessing = false;
+        jobMessage = '';
+        addToast('error', json.error?.message ?? 'Failed to start processing');
+      }
+    } catch {
+      isProcessing = false;
+      jobMessage = '';
+      addToast('error', 'Failed to start processing');
+    }
+  }
+
+  function handleProcessNew() {
+    showProcessMenu = false;
+    startProcessing(false);
+  }
+
+  function handleRetryFailed() {
+    showProcessMenu = false;
+    startProcessingWithScope({ type: 'failed_only' }, 'Retrying failed documents');
+  }
+
+  function handleProcessSelected(documentIds: string[]) {
+    showDocPicker = false;
+    if (documentIds.length === 0) return;
+    startProcessingWithScope(
+      { type: 'selected_document_ids', documentIds },
+      `Processing ${documentIds.length} selected document${documentIds.length === 1 ? '' : 's'}`,
+    );
+  }
+
+  function handleRerunCurrentFilter() {
+    showProcessMenu = false;
+    const currentFilters: Record<string, string> = {};
+    if (data.status) currentFilters.status = data.status;
+    if (data.search) currentFilters.search = data.search;
+    if (data.changedOnly) currentFilters.changedOnly = 'true';
+    if (data.failed) currentFilters.failed = 'true';
+    if (data.minConfidence) currentFilters.minConfidence = String(data.minConfidence);
+    if (data.provider) currentFilters.provider = data.provider;
+    if (data.model) currentFilters.model = data.model;
+    startProcessingWithScope(
+      { type: 'current_filter', filters: currentFilters },
+      'Re-running on current filter',
+    );
+  }
+
+  function handleReprocessAll() {
+    confirmReprocessAll = false;
+    showProcessMenu = false;
+    startProcessing(true);
   }
 
   async function cancelCurrentJob() {
@@ -230,17 +336,96 @@
     await handleApply(id, fields, { allowClearing: false, createMissingEntities: true });
   }
 
-  async function handleBatchApply() {
+  function buildApplyScope(): Record<string, unknown> | null {
+    const mode = getSelectionMode();
+    if (mode.type === 'all_matching_filter') {
+      return { type: 'current_filter', filters: mode.filters };
+    }
     const ids = [...selectedIds];
-    if (ids.length === 0) return;
+    if (ids.length === 0) return null;
+    return { type: 'selected_result_ids', resultIds: ids };
+  }
+
+  async function runPreflight(scope: Record<string, unknown>) {
+    preflightLoading = true;
+    preflightData = null;
+    showPreflight = true;
+    pendingApplyScope = scope;
+    try {
+      const res = await fetch('/api/v1/ai/results/preflight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        preflightData = json.data;
+      } else {
+        showPreflight = false;
+        addToast('error', json.error?.message ?? 'Failed to compute preflight');
+      }
+    } catch {
+      showPreflight = false;
+      addToast('error', 'Failed to compute preflight');
+    } finally {
+      preflightLoading = false;
+    }
+  }
+
+  function connectApplySSE(id: string) {
+    applySseConnection?.close();
+    isApplying = true;
+    _applyJobId = id;
+    applyProgress = 0;
+    applyMessage = 'Applying changes...';
+    applySseConnection = connectJobSSE(id, {
+      onProgress: (d) => {
+        applyProgress = d.progress;
+        applyMessage = d.message ?? 'Applying...';
+      },
+      onComplete: (d) => {
+        isApplying = false;
+        _applyJobId = null;
+        applySseConnection = null;
+        const sseData = d as { status?: string; applied?: number; failed?: number };
+        if (sseData.status === 'failed') {
+          addToast('error', 'Bulk apply failed');
+        } else {
+          const applied = sseData.applied ?? 0;
+          const failedCount = sseData.failed ?? 0;
+          if (failedCount > 0) {
+            addToast('warning', `Bulk apply: ${applied} succeeded, ${failedCount} failed`);
+          } else {
+            addToast('success', `Applied ${applied} results`);
+          }
+        }
+        selectedIds.clear();
+        clearFilterSelection();
+        invalidateAll();
+      },
+      onError: () => {
+        isApplying = false;
+        _applyJobId = null;
+        applySseConnection = null;
+        addToast('error', 'Lost connection during bulk apply');
+        invalidateAll();
+      },
+    });
+  }
+
+  async function executeApply(scope: Record<string, unknown>) {
+    showPreflight = false;
     try {
       const res = await fetch('/api/v1/ai/results/batch-apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resultIds: ids }),
+        body: JSON.stringify({ scope }),
       });
       const json = await res.json();
-      if (res.ok) {
+      if (res.ok && json.data?.jobId) {
+        connectApplySSE(json.data.jobId);
+      } else if (res.ok) {
+        // Synchronous result (no job)
         const { applied, failed } = json.data;
         if (failed > 0) {
           addToast('warning', `Batch apply: ${applied} succeeded, ${failed} failed`);
@@ -248,6 +433,7 @@
           addToast('success', `Applied ${applied} results`);
         }
         selectedIds.clear();
+        clearFilterSelection();
         invalidateAll();
       } else {
         addToast('error', json.error?.message ?? 'Batch apply failed');
@@ -255,6 +441,24 @@
     } catch {
       addToast('error', 'Batch apply failed');
     }
+  }
+
+  function handlePreflightConfirm() {
+    if (pendingApplyScope) {
+      executeApply(pendingApplyScope);
+    }
+  }
+
+  function handlePreflightCancel() {
+    showPreflight = false;
+    preflightData = null;
+    pendingApplyScope = null;
+  }
+
+  async function handleBatchApply() {
+    const scope = buildApplyScope();
+    if (!scope) return;
+    await runPreflight(scope);
   }
 
   async function handleBatchReject() {
@@ -279,23 +483,8 @@
   }
 
   async function handleApplyAll() {
-    try {
-      const res = await fetch('/api/v1/ai/results/apply-all', { method: 'POST' });
-      const json = await res.json();
-      if (res.ok) {
-        const { applied, failed } = json.data;
-        if (failed > 0) {
-          addToast('warning', `Apply all: ${applied} succeeded, ${failed} failed`);
-        } else {
-          addToast('success', `Applied all ${applied} pending results`);
-        }
-        invalidateAll();
-      } else {
-        addToast('error', json.error?.message ?? 'Apply all failed');
-      }
-    } catch {
-      addToast('error', 'Apply all failed');
-    }
+    const scope = { type: 'all_pending' };
+    await runPreflight(scope);
   }
 
   async function handleRejectAll() {
@@ -322,6 +511,33 @@
     goto(`/ai-processing?${params.toString()}`);
   }
 
+  function handleSelectAllFilter() {
+    const filters = {
+      status: data.status,
+      search: data.search,
+      sort: data.sort,
+      changedOnly: data.changedOnly,
+      failed: data.failed,
+      minConfidence: data.minConfidence,
+      maxConfidence: data.maxConfidence,
+      provider: data.provider ?? undefined,
+      model: data.model ?? undefined,
+    };
+    selectAllMatchingFilter(filters, data.total);
+  }
+
+  function handleClearFilterSelection() {
+    clearFilterSelection();
+  }
+
+  function handleSelectGroup(resultIds: string[]) {
+    clearFilterSelection();
+    selectedIds.clear();
+    for (const id of resultIds) {
+      selectedIds.add(id);
+    }
+  }
+
   function goToPage(p: number) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
@@ -346,9 +562,9 @@
       </h1>
       <p class="text-muted text-sm">Extract and apply document metadata using AI.</p>
     </div>
-    <div class="flex gap-2">
+    <div class="relative flex gap-2">
       <button
-        onclick={() => startProcessing(false)}
+        onclick={handleProcessNew}
         disabled={isProcessing}
         class="bg-accent hover:bg-accent-hover flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
       >
@@ -360,14 +576,64 @@
           {isResumable ? 'Resume' : 'Process New'}
         {/if}
       </button>
-      <button
-        onclick={() => startProcessing(true)}
-        disabled={isProcessing}
-        class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-      >
-        <RefreshCw class="h-4 w-4" />
-        Re-process All
-      </button>
+      <div class="relative">
+        <button
+          onclick={() => (showProcessMenu = !showProcessMenu)}
+          disabled={isProcessing}
+          class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          <ChevronDown class="h-4 w-4" />
+        </button>
+        {#if showProcessMenu}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="border-soft bg-surface absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border shadow-lg"
+            onmouseleave={() => (showProcessMenu = false)}
+          >
+            <button
+              onclick={handleProcessNew}
+              class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+            >
+              <Play class="h-4 w-4" /> Process New
+            </button>
+            {#if stats.failed > 0}
+              <button
+                onclick={handleRetryFailed}
+                class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                <RefreshCw class="h-4 w-4" /> Retry Failed
+              </button>
+            {/if}
+            <button
+              onclick={() => {
+                showProcessMenu = false;
+                showDocPicker = true;
+              }}
+              class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+            >
+              <FileText class="h-4 w-4" /> Process Selected...
+            </button>
+            {#if hasActiveFilters}
+              <button
+                onclick={handleRerunCurrentFilter}
+                class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                <RefreshCw class="h-4 w-4" /> Re-run Current Filter
+              </button>
+            {/if}
+            <div class="border-soft border-t"></div>
+            <button
+              onclick={() => {
+                showProcessMenu = false;
+                confirmReprocessAll = true;
+              }}
+              class="text-ember hover:bg-ember-light flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+            >
+              <AlertCircle class="h-4 w-4" /> Re-run Entire Library
+            </button>
+          </div>
+        {/if}
+      </div>
     </div>
   </header>
 
@@ -500,6 +766,7 @@
     status={data.status}
     search={data.search}
     sort={data.sort}
+    groupBy={data.groupBy ?? undefined}
     changedOnly={data.changedOnly}
     failed={data.failed}
     minConfidence={data.minConfidence}
@@ -512,22 +779,49 @@
   <AiBulkActionBar
     selectedCount={selectedIds.size}
     pendingCount={stats.pendingReview}
+    {selectionMode}
+    totalFilterMatch={data.total}
     onbatchapply={handleBatchApply}
     onbatchreject={handleBatchReject}
     onapplyall={handleApplyAll}
     onrejectall={handleRejectAll}
+    onselectallfilter={handleSelectAllFilter}
+    onclearfilterselection={handleClearFilterSelection}
   />
+
+  <!-- Apply Progress Panel -->
+  {#if isApplying}
+    <div class="panel">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5 text-sm font-medium">
+          <Loader2 class="text-accent h-4 w-4 animate-spin" />
+          <span class="text-ink">Applying changes...</span>
+        </div>
+      </div>
+      <div class="mt-3">
+        <ProgressBar progress={applyProgress} message={applyMessage} />
+      </div>
+    </div>
+  {/if}
 
   <!-- Master-Detail Layout -->
   <div class="flex gap-4">
     <!-- List Pane -->
     <div class="min-w-0 flex-1">
-      <AiResultList
-        {results}
-        viewMode={isMobile ? 'cards' : 'table'}
-        onapply={handleApplySimple}
-        onreject={handleReject}
-      />
+      {#if data.groups && data.groupBy}
+        <AiResultGroupedList
+          groups={data.groups.groups}
+          groupBy={data.groupBy}
+          onselectgroup={handleSelectGroup}
+        />
+      {:else}
+        <AiResultList
+          {results}
+          viewMode={isMobile ? 'cards' : 'table'}
+          onapply={handleApplySimple}
+          onreject={handleReject}
+        />
+      {/if}
 
       <!-- Pagination -->
       {#if totalPages > 1}
@@ -585,4 +879,25 @@
   onapply={handleApplySimple}
   onreject={handleReject}
   searchInputRef={null}
+/>
+<AiDocumentPickerModal
+  open={showDocPicker}
+  onsubmit={handleProcessSelected}
+  oncancel={() => (showDocPicker = false)}
+/>
+<AiPreflightDialog
+  open={showPreflight}
+  preflight={preflightData}
+  loading={preflightLoading}
+  onconfirm={handlePreflightConfirm}
+  oncancel={handlePreflightCancel}
+/>
+<ConfirmDialog
+  open={confirmReprocessAll}
+  title="Re-run Entire Library?"
+  message="This will re-process all documents in your library. Existing AI results will be overwritten. This may take a significant amount of time and API usage."
+  confirmLabel="Re-run All"
+  variant="ember"
+  onconfirm={handleReprocessAll}
+  oncancel={() => (confirmReprocessAll = false)}
 />
