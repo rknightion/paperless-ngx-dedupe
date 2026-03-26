@@ -226,11 +226,7 @@ export function rejectAiResult(db: AppDatabase, resultId: string): void {
   logger.info({ resultId }, 'Rejected AI result');
 }
 
-export function rejectAiResultWithReason(
-  db: AppDatabase,
-  resultId: string,
-  reason?: string,
-): void {
+export function rejectAiResultWithReason(db: AppDatabase, resultId: string, reason?: string): void {
   markAiResultRejected(db, resultId);
   recordFeedback(db, resultId, {
     action: 'rejected',

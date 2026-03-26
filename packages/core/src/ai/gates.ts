@@ -127,9 +127,7 @@ export function evaluateGates(
         const idx = fieldsPassing.indexOf('tags');
         if (idx !== -1) fieldsPassing.splice(idx, 1);
       }
-      reasons.push(
-        `Tags [${newTags.join(', ')}] do not exist and entity creation is blocked`,
-      );
+      reasons.push(`Tags [${newTags.join(', ')}] do not exist and entity creation is blocked`);
     }
   }
 

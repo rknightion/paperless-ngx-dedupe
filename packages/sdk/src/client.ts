@@ -403,10 +403,7 @@ export class PaperlessDedupeClient {
   }
 
   async getAiFeedbackSummary(): Promise<AiFeedbackSummary> {
-    const res = await request<AiFeedbackSummary>(
-      '/api/v1/ai/feedback/summary',
-      this.httpOptions,
-    );
+    const res = await request<AiFeedbackSummary>('/api/v1/ai/feedback/summary', this.httpOptions);
     return res.data;
   }
 

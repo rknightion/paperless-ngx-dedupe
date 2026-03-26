@@ -52,6 +52,20 @@ function createMockClient() {
         Promise.resolve({ id: 99, name, slug: name.toLowerCase(), color: '#000' }),
       ),
     updateDocument: vi.fn().mockResolvedValue(undefined),
+    getDocument: vi.fn().mockResolvedValue({
+      id: 1,
+      title: 'Invoice A',
+      content: '',
+      tags: [],
+      correspondent: null,
+      documentType: null,
+      created: '2024-01-01T00:00:00Z',
+      modified: '2024-01-01T00:00:00Z',
+      added: '2024-01-01T00:00:00Z',
+      originalFileName: null,
+      archivedFileName: null,
+      archiveSerialNumber: null,
+    }),
   } as unknown as PaperlessClient;
 }
 

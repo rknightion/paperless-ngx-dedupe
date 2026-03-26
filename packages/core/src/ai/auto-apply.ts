@@ -73,9 +73,7 @@ export async function evaluateAndAutoApply(
     // Parse stored data
     const confidence: { correspondent: number; documentType: number; tags: number } | null =
       row.confidenceJson ? JSON.parse(row.confidenceJson) : null;
-    const suggestedTags: string[] = row.suggestedTagsJson
-      ? JSON.parse(row.suggestedTagsJson)
-      : [];
+    const suggestedTags: string[] = row.suggestedTagsJson ? JSON.parse(row.suggestedTagsJson) : [];
     const currentTags: string[] = row.currentTagsJson ? JSON.parse(row.currentTagsJson) : [];
 
     // The AI only processes docs with fullText (batch.ts skips docs without it)
