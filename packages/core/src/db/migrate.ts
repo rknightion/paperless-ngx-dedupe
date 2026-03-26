@@ -65,6 +65,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: split 'pending' status into 'pending_review' and 'failed'
   migrateAiResultStatus(sqlite);
 
+  // Pre-DDL migration: add discriminative_score column to duplicate_group
+  migrateDiscriminativeScore(sqlite);
+
   const { statements, snapshot } = await generateDDL();
   const currentHash = computeHash(snapshot);
 
@@ -188,4 +191,15 @@ function migrateUsageStats(sqlite: Database.Database): void {
     sqlite.exec(`ALTER TABLE sync_state DROP COLUMN cumulative_groups_resolved`);
     sqlite.exec(`ALTER TABLE sync_state DROP COLUMN cumulative_groups_reviewed`);
   })();
+}
+
+/**
+ * Add discriminative_score column to duplicate_group for v1.1.0 scoring.
+ * Existing groups get NULL, which the recalculation logic handles gracefully.
+ */
+function migrateDiscriminativeScore(sqlite: Database.Database): void {
+  if (tableHasColumn(sqlite, 'duplicate_group', 'discriminative_score')) return;
+  if (!tableHasColumn(sqlite, 'duplicate_group', 'confidence_score')) return;
+
+  sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN discriminative_score REAL`);
 }
