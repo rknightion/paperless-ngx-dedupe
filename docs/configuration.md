@@ -142,14 +142,31 @@ Change these in **Settings** or via `PUT /api/v1/config/dedup`.
 
 ### Confidence Weights
 
-Both are integers `0-100` and **must sum to 100**.
+The confidence model uses a **2-weight base score** plus a **discriminative penalty**:
 
-| Setting | Default |
-| --- | --- |
-| `confidenceWeightJaccard` | `55` |
-| `confidenceWeightFuzzy` | `45` |
+**Base weights** are integers `0-100` and **must sum to 100**:
 
-When any weight changes, existing group confidence scores are recalculated automatically.
+| Setting | Default | Notes |
+| --- | --- | --- |
+| `confidenceWeightJaccard` | `60` | Weight for Jaccard (set overlap) similarity |
+| `confidenceWeightFuzzy` | `40` | Weight for fuzzy (edit distance) similarity |
+
+**Discriminative penalty** reduces confidence when documents contain highly unique content:
+
+| Setting | Default | Range | Notes |
+| --- | --- | --- | --- |
+| `discriminativePenaltyStrength` | `50` | 0-100 | How aggressively unique content reduces confidence (0 = disabled) |
+
+The final confidence formula is:
+
+```
+base  = (jaccard × J_weight + fuzzy × F_weight) / (J_weight + F_weight)
+final = base × (1 - penalty_strength/100 × (1 - discriminative_score))
+```
+
+When the discriminative score is high (documents share distinctive content), the penalty has little effect. When it is low (documents have lots of unique content despite surface similarity), the penalty reduces the confidence score.
+
+When any weight or penalty strength changes, existing group confidence scores are recalculated automatically.
 
 ## Example API Updates
 
@@ -163,9 +180,14 @@ curl -X PUT http://localhost:3000/api/v1/config/dedup \
 curl -X PUT http://localhost:3000/api/v1/config/dedup \
   -H 'Content-Type: application/json' \
   -d '{
-    "confidenceWeightJaccard":60,
-    "confidenceWeightFuzzy":40
+    "confidenceWeightJaccard":70,
+    "confidenceWeightFuzzy":30
   }'
+
+# Adjust discriminative penalty strength (0 = disabled, 100 = maximum)
+curl -X PUT http://localhost:3000/api/v1/config/dedup \
+  -H 'Content-Type: application/json' \
+  -d '{"discriminativePenaltyStrength":75}'
 ```
 
 ## Related

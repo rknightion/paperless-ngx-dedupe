@@ -116,7 +116,8 @@ curl -X PUT http://localhost:3000/api/v1/config/dedup \
 **Fixes:**
 
 - Raise `similarityThreshold` (e.g., 0.85 or 0.90)
-- Adjust confidence weights to shift emphasis between Jaccard and fuzzy text matching
+- Adjust `confidenceWeightJaccard` and `confidenceWeightFuzzy` to shift emphasis between similarity dimensions (must sum to 100)
+- Increase `discriminativePenaltyStrength` to penalize pairs that share common boilerplate text
 - Reduce `numBands` to narrow the candidate pool
 - See [How It Works - Tuning Guide](how-it-works.md#tuning-guide) for detailed guidance
 

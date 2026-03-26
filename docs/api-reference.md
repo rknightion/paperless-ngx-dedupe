@@ -292,9 +292,12 @@ Returns effective dedup config.
 Updates dedup config (partial).
 
 - Requires `Content-Type: application/json`
-- Weight fields must sum to 100
+- `confidenceWeightJaccard` + `confidenceWeightFuzzy` must sum to 100
+- `discriminativePenaltyStrength` is independent (0..100)
 
-If weight keys change, `meta.recalculatedGroups` is included.
+If weight or penalty keys change, `meta.recalculatedGroups` is included. If any LSH/threshold parameters change in a way that makes the current analysis stale, `meta.analysisStale` is included.
+
+Legacy field name `confidenceWeightDiscriminative` is accepted and automatically converted to `discriminativePenaltyStrength`.
 
 ```json
 {
@@ -304,8 +307,9 @@ If weight keys change, `meta.recalculatedGroups` is included.
     "ngramSize": 3,
     "minWords": 20,
     "similarityThreshold": 0.75,
-    "confidenceWeightJaccard": 55,
-    "confidenceWeightFuzzy": 45,
+    "confidenceWeightJaccard": 60,
+    "confidenceWeightFuzzy": 40,
+    "discriminativePenaltyStrength": 50,
     "fuzzySampleSize": 10000,
     "autoAnalyze": true
   },
@@ -329,10 +333,26 @@ Query params:
 - `tag`
 - `processingStatus` (`pending | completed`)
 - `search` (title match)
+- `noAiResult` (`true` to filter documents without an AI result)
 
 ### GET /api/v1/documents/:id
 
 Returns one document, plus content and group memberships.
+
+### GET /api/v1/documents/:id/content
+
+Returns the text content for a single document.
+
+```json
+{
+  "data": {
+    "fullText": "...",
+    "wordCount": 450
+  }
+}
+```
+
+Returns `404 NOT_FOUND` if the document content is not available.
 
 ### GET /api/v1/documents/stats
 
@@ -495,6 +515,10 @@ Query params:
 
 - `status`: `pending`, `applied`, `rejected`, `partial`
 - `search`: title substring match
+- `failed`: `true` to show only failed results
+- `minConfidence`, `maxConfidence`: filter by confidence range (`0..1`)
+- `provider`: filter by AI provider name
+- `model`: filter by AI model name
 - `limit`, `offset`
 
 ```json
@@ -526,12 +550,16 @@ Applies AI suggestions to the document in Paperless-NGX.
 Optional JSON body:
 
 ```json
-{ "fields": ["correspondent", "tags"] }
+{
+  "fields": ["correspondent", "tags"],
+  "allowClearing": false,
+  "createMissingEntities": true
+}
 ```
 
-If `fields` is omitted, all three fields are applied. Partial field lists result in `partial` status.
-
-Missing correspondents, document types, and tags are created automatically in Paperless-NGX.
+- `fields`: if omitted, all three fields (`correspondent`, `documentType`, `tags`) are applied. Partial field lists result in `partial` status.
+- `allowClearing`: when `true`, allows setting fields to `null`. Default `false`.
+- `createMissingEntities`: when `true`, missing correspondents, document types, and tags are created automatically in Paperless-NGX. Default `true`.
 
 ```json
 { "data": { "applied": true } }
@@ -539,7 +567,15 @@ Missing correspondents, document types, and tags are created automatically in Pa
 
 ### POST /api/v1/ai/results/:id/reject
 
-Marks a result as rejected. No request body required.
+Marks a result as rejected.
+
+Optional JSON body:
+
+```json
+{ "reason": "Incorrect suggestion" }
+```
+
+- `reason`: optional string explaining why the result was rejected.
 
 ```json
 { "data": { "rejected": true } }
@@ -547,20 +583,33 @@ Marks a result as rejected. No request body required.
 
 ### POST /api/v1/ai/results/batch-apply
 
-Applies multiple results.
+Applies multiple results as a background job.
 
 ```json
 {
   "resultIds": ["id-1", "id-2"],
+  "fields": ["correspondent", "documentType", "tags"],
+  "allowClearing": false,
+  "createMissingEntities": true
+}
+```
+
+Alternatively, use a `scope` object instead of `resultIds`:
+
+```json
+{
+  "scope": { "type": "current_filter", "filters": { "status": "pending" } },
   "fields": ["correspondent", "documentType", "tags"]
 }
 ```
 
-Response:
+Response (202):
 
 ```json
-{ "data": { "applied": 2, "failed": 0, "total": 2 } }
+{ "data": { "jobId": "..." } }
 ```
+
+Returns `409 JOB_ALREADY_RUNNING` if an apply job is already active.
 
 ### POST /api/v1/ai/results/batch-reject
 
@@ -575,6 +624,140 @@ Response:
 ```json
 { "data": { "rejected": 2 } }
 ```
+
+### POST /api/v1/ai/results/reject-all
+
+Rejects all pending AI results in one call. No request body required.
+
+```json
+{ "data": { "rejected": 15 } }
+```
+
+Returns `0` if there are no pending results.
+
+### POST /api/v1/ai/results/apply-all
+
+Applies all pending AI results as a background job.
+
+Optional JSON body:
+
+```json
+{
+  "scope": { "type": "all_pending" },
+  "fields": ["correspondent", "documentType", "tags"],
+  "allowClearing": false,
+  "createMissingEntities": true
+}
+```
+
+- `scope`: defaults to `{ "type": "all_pending" }`. Can also use `{ "type": "current_filter", "filters": {...} }`.
+- `fields`: defaults to all three fields if omitted.
+
+Response (202):
+
+```json
+{ "data": { "jobId": "..." } }
+```
+
+Returns `409 JOB_ALREADY_RUNNING` if an apply job is already active.
+
+### POST /api/v1/ai/results/preflight
+
+Pre-validates what would happen if results were applied, without making changes.
+
+Request:
+
+```json
+{
+  "scope": { "type": "all_pending" },
+  "fields": ["correspondent", "documentType", "tags"],
+  "allowClearing": false,
+  "createMissingEntities": true
+}
+```
+
+- `scope` is required.
+- `fields`: defaults to all three.
+- `createMissingEntities`: default `true`.
+
+Returns a summary of entities that would be created, documents that would be modified, and any conflicts.
+
+### GET /api/v1/ai/results/groups
+
+Groups AI results by a specified field.
+
+Required query param:
+
+- `groupBy`: `suggestedCorrespondent`, `suggestedDocumentType`, `failureType`, or `confidenceBand`
+
+Optional filter query params:
+
+- `status`, `search`, `failed` (`true`), `minConfidence`, `maxConfidence`, `provider`, `model`, `changedOnly` (`true`)
+
+Returns grouped result counts and summaries.
+
+### POST /api/v1/ai/results/:id/revert
+
+Reverts a previously applied AI result, restoring the original field values in Paperless-NGX using the pre-apply snapshot.
+
+No request body required.
+
+```json
+{ "data": { "reverted": true } }
+```
+
+Error conditions:
+
+- `404 NOT_FOUND` if the result does not exist
+- `400 BAD_REQUEST` if the result was not applied or has no pre-apply snapshot
+
+### POST /api/v1/ai/results/:id/feedback
+
+Records user feedback on an AI result.
+
+Request:
+
+```json
+{
+  "action": "rejected",
+  "rejectedFields": ["correspondent"],
+  "corrections": { "correspondent": "Acme Corp" },
+  "reason": "Wrong company identified"
+}
+```
+
+- `action` (required): `rejected`, `corrected`, or `partial_applied`
+- `rejectedFields`: array of field names that were incorrect
+- `corrections`: object mapping field names to corrected values
+- `reason`: optional free-text explanation
+
+Response (201):
+
+```json
+{ "data": { "recorded": true } }
+```
+
+### GET /api/v1/ai/feedback/summary
+
+Returns an aggregate summary of all recorded AI feedback.
+
+### GET /api/v1/ai/costs
+
+Returns AI cost statistics.
+
+Optional query param:
+
+- `days`: integer, limits stats to the last N days
+
+### GET /api/v1/ai/costs/estimate
+
+Estimates the cost of processing a batch of documents.
+
+Required query param:
+
+- `documentCount`: positive integer
+
+Returns `404 NOT_FOUND` if no pricing data is available for the configured model.
 
 ### GET /api/v1/ai/stats
 
@@ -812,6 +995,12 @@ Response (202):
 ```json
 { "data": { "jobId": "..." } }
 ```
+
+### POST /api/v1/batch/purge-deleted
+
+Purges all duplicate groups with `deleted` status from the database. No request body required.
+
+Returns the count of purged groups.
 
 ## Export / Import
 

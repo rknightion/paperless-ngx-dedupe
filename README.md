@@ -7,7 +7,7 @@ A document deduplication and AI-powered metadata companion for [Paperless-NGX](h
 ### Deduplication
 
 - **Intelligent duplicate detection** -- MinHash signatures + Locality-Sensitive Hashing for efficient O(n log n) candidate discovery
-- **Similarity scoring** -- combines Jaccard similarity and fuzzy text matching for accurate duplicate detection
+- **Similarity scoring** -- weighted Jaccard similarity and fuzzy text matching with a discriminative penalty that down-scores pairs sharing only boilerplate text
 - **Side-by-side review** -- compare duplicate documents with OCR text diff and resolve them individually or in bulk
 
 ### AI Metadata Extraction
@@ -31,6 +31,7 @@ A document deduplication and AI-powered metadata companion for [Paperless-NGX](h
 - **Web UI** -- dashboard, document browser, AI results review, and RAG chat interface
 - **Batch operations** -- bulk review, apply, reject, and delete across duplicates and AI results
 - **Data export** -- CSV duplicate reports and JSON configuration backup/restore
+- **Observability** -- OpenTelemetry traces, metrics, and logs with optional Prometheus scrape endpoint and built-in Paperless-NGX system metrics collector
 - **Single container deployment** -- Docker with embedded SQLite, no external dependencies
 
 ## Quick Start
@@ -77,7 +78,7 @@ pnpm lint             # Lint
 pnpm test             # Run tests
 ```
 
-> **Note:** Background jobs (sync, analysis, batch delete) use worker threads that run outside Vite as raw Node.js processes. These do not work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `docker compose up` for local development to test the full workflow.
+> **Note:** Background jobs (sync, analysis, batch delete) use worker threads that run outside Vite as raw Node.js processes. These do not work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `pnpm docker:dev` for local development to test the full workflow.
 
 ## License
 
