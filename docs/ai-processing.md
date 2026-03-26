@@ -29,8 +29,8 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `model` | `gpt-5.4-mini` | see below | Model identifier |
 | `promptTemplate` | built-in | string | Prompt template with placeholders |
 | `maxContentLength` | `8000` | 500--100,000 | Max characters of document text sent to the model |
-| `batchSize` | `10` | 1--100 | Documents per processing run |
-| `rateDelayMs` | `500` | 0--60,000 | Delay (ms) between API calls |
+| `batchSize` | `10` | 1--100 | Maximum concurrent AI requests |
+| `rateDelayMs` | `0` | 0--60,000 | Delay (ms) between launching requests. 0 = auto-pacing |
 | `autoProcess` | `false` | boolean | Auto-start processing after sync |
 | `processedTagName` | `ai-processed` | string | Tag name added when suggestions are applied |
 | `addProcessedTag` | `false` | boolean | Whether to add the processed tag on apply |
@@ -111,10 +111,11 @@ Results move through these statuses:
 
 | Status | Meaning |
 | --- | --- |
-| `pending` | Awaiting review |
+| `pending_review` | Awaiting human review |
 | `applied` | All suggested fields applied to Paperless-NGX |
 | `partial` | Some fields applied (e.g., only correspondent and tags) |
 | `rejected` | Dismissed by user |
+| `failed` | AI extraction failed (see error message for details) |
 
 ### Applying Suggestions
 
@@ -127,6 +128,8 @@ When you apply a result:
 
 You can apply all fields at once, or select specific fields for partial application. Batch apply and batch reject are supported for bulk review.
 
+By default, applying a result will not clear existing Paperless-NGX metadata when the AI has no suggestion for a field. Pass `allowClearing: true` in the API to explicitly allow clearing. New entities (correspondents, document types, tags) are created automatically unless `createMissingEntities: false` is specified.
+
 ## Prompt Customization
 
 The built-in prompt works well for general document classification. For specialized libraries you can edit the prompt template in Settings.
@@ -135,10 +138,11 @@ The template supports these placeholders:
 
 | Placeholder | Replaced With |
 | --- | --- |
-| `{{referenceData}}` | Lists of existing correspondents, document types, and tags (when toggles are enabled) |
-| `{{examples}}` | Built-in few-shot classification examples |
-| `{{title}}` | Document title |
-| `{{content}}` | Truncated document text |
+| `{{existing_correspondents}}` | Comma-separated list of existing correspondent names (when `includeCorrespondents` is enabled) |
+| `{{existing_document_types}}` | Comma-separated list of existing document type names (when `includeDocumentTypes` is enabled) |
+| `{{existing_tags}}` | Comma-separated list of existing tag names (when `includeTags` is enabled) |
+
+The document title and text content are included automatically in the user prompt (not the system prompt template). They do not need placeholders.
 
 The prompt is automatically formatted for the active provider -- XML tags for Anthropic, markdown sections for OpenAI.
 

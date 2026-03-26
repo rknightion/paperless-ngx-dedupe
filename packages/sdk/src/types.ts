@@ -325,6 +325,15 @@ export interface AiResultSummary {
   createdAt: string;
 }
 
+export interface AiResultDetail extends AiResultSummary {
+  evidence: string | null;
+  failureType: string | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  processingTimeMs: number | null;
+  appliedFields: string[] | null;
+}
+
 export interface AiStats {
   totalProcessed: number;
   unprocessed: number;
@@ -356,6 +365,11 @@ export interface AiConfig {
 export interface AiResultFilters {
   status?: string;
   search?: string;
+  failed?: boolean;
+  minConfidence?: number;
+  maxConfidence?: number;
+  provider?: string;
+  model?: string;
 }
 
 export interface AiProcessOptions {
@@ -365,6 +379,8 @@ export interface AiProcessOptions {
 
 export interface AiApplyOptions {
   fields?: ('correspondent' | 'documentType' | 'tags')[];
+  allowClearing?: boolean;
+  createMissingEntities?: boolean;
 }
 
 // ── SSE types ──────────────────────────────────────────────────────────

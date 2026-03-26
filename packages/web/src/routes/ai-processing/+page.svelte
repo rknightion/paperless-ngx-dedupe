@@ -2,34 +2,47 @@
   import { untrack } from 'svelte';
   import { invalidateAll, goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { ProgressBar, Tooltip, ConfidenceBadge } from '$lib/components';
+  import { browser } from '$app/environment';
+  import { ProgressBar } from '$lib/components';
+  import AiResultList from '$lib/components/ai/AiResultList.svelte';
+  import AiFilterBar from '$lib/components/ai/AiFilterBar.svelte';
+  import AiBulkActionBar from '$lib/components/ai/AiBulkActionBar.svelte';
+  import AiResultDetailDrawer from '$lib/components/ai/AiResultDetailDrawer.svelte';
+  import AiToastContainer from '$lib/components/ai/AiToastContainer.svelte';
+  import AiKeyboardHandler from '$lib/components/ai/AiKeyboardHandler.svelte';
+  import {
+    selectedIds,
+    getActiveResultId,
+    closeDetail,
+    pruneSelection,
+    addToast,
+    resetStore,
+  } from '$lib/components/ai/AiReviewStore.svelte';
   import { connectJobSSE } from '$lib/sse';
+  import type { AiResultSummary } from '@paperless-dedupe/core';
   import {
     Brain,
     Play,
     Pause,
     RefreshCw,
-    Check,
-    X,
-    ChevronLeft,
-    ChevronRight,
     Loader2,
-    Sparkles,
     FileText,
     AlertCircle,
-    Search,
     CircleDot,
     CircleCheck,
     CircleX,
     TriangleAlert,
-    Settings,
+    X,
     Info,
+    ChevronLeft,
+    ChevronRight,
   } from 'lucide-svelte';
 
   let { data } = $props();
 
   const initialData = untrack(() => data);
 
+  // ── SSE State ──
   let isProcessing = $state(false);
   let jobId = $state<string | null>(initialData.activeJob?.id ?? null);
   let jobProgress = $state(initialData.activeJob?.progress ?? 0);
@@ -37,24 +50,35 @@
   let jobMessage = $state(initialData.activeJob?.progressMessage ?? '');
   let jobError = $state<string | null>(null);
   let sseConnection: { close: () => void } | null = null;
-  let selectedIds = $state<Set<string>>(new Set());
-  let selectAll = $state(false);
-  let isApplying = $state(false);
-  let isApplyingAll = $state(false);
-  let isRejectingAll = $state(false);
-  let confirmAction = $state<'apply-all' | 'reject-all' | null>(null);
   let showResumeHint = $state(false);
-  let statusFilter = $state(initialData.status ?? '');
-  let searchQuery = $state(initialData.search ?? '');
   let lastInvalidateTime = 0;
   const INVALIDATE_INTERVAL_MS = 3000;
 
-  let stats = $derived(data.stats);
-  const isResumable = $derived(stats.unprocessed > 0 && stats.totalProcessed > 0);
-  let results = $derived(data.results);
-  let totalPages = $derived(Math.ceil(data.total / data.limit));
-  let currentPage = $derived(Math.floor(data.offset / data.limit) + 1);
+  // ── Mobile Detection ──
+  let isMobile = $state(false);
+  if (browser) {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    isMobile = mq.matches;
+    mq.addEventListener('change', (e) => {
+      isMobile = e.matches;
+    });
+  }
 
+  // ── Derived ──
+  const results = $derived(data.results);
+  const stats = $derived(data.stats);
+  const activeResultId = $derived(getActiveResultId());
+  const isResumable = $derived(stats.unprocessed > 0 && stats.totalProcessed > 0);
+  const totalPages = $derived(Math.ceil(data.total / data.limit));
+  const currentPage = $derived(Math.floor(data.offset / data.limit) + 1);
+
+  // ── Selection Preservation ──
+  $effect(() => {
+    const currentIds = new Set(results.map((r: AiResultSummary) => r.id));
+    pruneSelection(currentIds);
+  });
+
+  // ── SSE Connection ──
   function connectSSE(id: string) {
     sseConnection?.close();
     isProcessing = true;
@@ -65,7 +89,6 @@
         jobPhaseProgress = d.phaseProgress;
         jobMessage = d.message ?? '';
 
-        // Live-update results table while processing runs
         const now = Date.now();
         if (now - lastInvalidateTime > INVALIDATE_INTERVAL_MS) {
           lastInvalidateTime = now;
@@ -109,12 +132,15 @@
     };
   });
 
-  // Reset selection when data changes
+  // Cleanup on unmount
   $effect(() => {
-    void data.results;
-    selectedIds = new Set();
-    selectAll = false;
+    return () => {
+      sseConnection?.close();
+      resetStore();
+    };
   });
+
+  // ── Action Handlers ──
 
   async function startProcessing(reprocess = false) {
     isProcessing = true;
@@ -131,98 +157,168 @@
       const json = await res.json();
       if (res.ok && json.data?.jobId) {
         jobId = json.data.jobId;
+        addToast('success', reprocess ? 'Re-processing started' : 'Processing started');
       } else {
         isProcessing = false;
-        jobMessage = json.error?.message ?? 'Failed to start processing';
+        jobMessage = '';
+        addToast('error', json.error?.message ?? 'Failed to start processing');
       }
     } catch {
       isProcessing = false;
-      jobMessage = 'Failed to start processing';
+      jobMessage = '';
+      addToast('error', 'Failed to start processing');
     }
   }
 
   async function cancelCurrentJob() {
     if (!jobId) return;
-    await fetch(`/api/v1/jobs/${jobId}/cancel`, { method: 'POST' });
-  }
-
-  async function applyResult(id: string) {
-    isApplying = true;
-    await fetch(`/api/v1/ai/results/${id}/apply`, { method: 'POST' });
-    await invalidateAll();
-    isApplying = false;
-  }
-
-  async function rejectResult(id: string) {
-    await fetch(`/api/v1/ai/results/${id}/reject`, { method: 'POST' });
-    await invalidateAll();
-  }
-
-  async function batchApply() {
-    if (selectedIds.size === 0) return;
-    isApplying = true;
-    await fetch('/api/v1/ai/results/batch-apply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resultIds: [...selectedIds] }),
-    });
-    selectedIds = new Set();
-    selectAll = false;
-    await invalidateAll();
-    isApplying = false;
-  }
-
-  async function batchReject() {
-    if (selectedIds.size === 0) return;
-    await fetch('/api/v1/ai/results/batch-reject', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resultIds: [...selectedIds] }),
-    });
-    selectedIds = new Set();
-    selectAll = false;
-    await invalidateAll();
-  }
-
-  async function applyAll() {
-    confirmAction = null;
-    isApplyingAll = true;
-    await fetch('/api/v1/ai/results/apply-all', { method: 'POST' });
-    await invalidateAll();
-    isApplyingAll = false;
-  }
-
-  async function rejectAll() {
-    confirmAction = null;
-    isRejectingAll = true;
-    await fetch('/api/v1/ai/results/reject-all', { method: 'POST' });
-    await invalidateAll();
-    isRejectingAll = false;
-  }
-
-  function toggleSelect(id: string) {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    selectedIds = next;
-  }
-
-  function toggleSelectAll() {
-    if (selectAll) {
-      selectedIds = new Set();
-      selectAll = false;
-    } else {
-      selectedIds = new Set(results.map((r) => r.id));
-      selectAll = true;
+    try {
+      await fetch(`/api/v1/jobs/${jobId}/cancel`, { method: 'POST' });
+      addToast('success', 'Processing cancelled');
+    } catch {
+      addToast('error', 'Failed to cancel job');
     }
   }
 
-  function applyFilters() {
+  async function handleApply(
+    id: string,
+    fields: string[],
+    options: { allowClearing: boolean; createMissingEntities: boolean },
+  ) {
+    try {
+      const res = await fetch(`/api/v1/ai/results/${id}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields, ...options }),
+      });
+      if (res.ok) {
+        addToast('success', 'Result applied successfully');
+        invalidateAll();
+      } else {
+        const json = await res.json();
+        addToast('error', json.error?.message ?? 'Failed to apply result');
+      }
+    } catch {
+      addToast('error', 'Failed to apply result');
+    }
+  }
+
+  async function handleReject(id: string) {
+    try {
+      const res = await fetch(`/api/v1/ai/results/${id}/reject`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        addToast('success', 'Result rejected');
+        invalidateAll();
+      } else {
+        addToast('error', 'Failed to reject result');
+      }
+    } catch {
+      addToast('error', 'Failed to reject result');
+    }
+  }
+
+  async function handleApplySimple(id: string) {
+    const result = results.find((r: AiResultSummary) => r.id === id);
+    if (!result) return;
+    const fields: string[] = [];
+    if (result.suggestedCorrespondent) fields.push('correspondent');
+    if (result.suggestedDocumentType) fields.push('documentType');
+    if (result.suggestedTags.length > 0) fields.push('tags');
+    if (fields.length === 0) fields.push('correspondent', 'documentType', 'tags');
+    await handleApply(id, fields, { allowClearing: false, createMissingEntities: true });
+  }
+
+  async function handleBatchApply() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch('/api/v1/ai/results/batch-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resultIds: ids }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        const { applied, failed } = json.data;
+        if (failed > 0) {
+          addToast('warning', `Batch apply: ${applied} succeeded, ${failed} failed`);
+        } else {
+          addToast('success', `Applied ${applied} results`);
+        }
+        selectedIds.clear();
+        invalidateAll();
+      } else {
+        addToast('error', json.error?.message ?? 'Batch apply failed');
+      }
+    } catch {
+      addToast('error', 'Batch apply failed');
+    }
+  }
+
+  async function handleBatchReject() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch('/api/v1/ai/results/batch-reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resultIds: ids }),
+      });
+      if (res.ok) {
+        addToast('success', `Rejected ${ids.length} results`);
+        selectedIds.clear();
+        invalidateAll();
+      } else {
+        addToast('error', 'Batch reject failed');
+      }
+    } catch {
+      addToast('error', 'Batch reject failed');
+    }
+  }
+
+  async function handleApplyAll() {
+    try {
+      const res = await fetch('/api/v1/ai/results/apply-all', { method: 'POST' });
+      const json = await res.json();
+      if (res.ok) {
+        const { applied, failed } = json.data;
+        if (failed > 0) {
+          addToast('warning', `Apply all: ${applied} succeeded, ${failed} failed`);
+        } else {
+          addToast('success', `Applied all ${applied} pending results`);
+        }
+        invalidateAll();
+      } else {
+        addToast('error', json.error?.message ?? 'Apply all failed');
+      }
+    } catch {
+      addToast('error', 'Apply all failed');
+    }
+  }
+
+  async function handleRejectAll() {
+    try {
+      const res = await fetch('/api/v1/ai/results/reject-all', { method: 'POST' });
+      const json = await res.json();
+      if (res.ok) {
+        addToast('success', `Rejected ${json.data.rejected} pending results`);
+        invalidateAll();
+      } else {
+        addToast('error', json.error?.message ?? 'Reject all failed');
+      }
+    } catch {
+      addToast('error', 'Reject all failed');
+    }
+  }
+
+  function handleFilterApply(filters: Record<string, string | undefined>) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams();
-    if (statusFilter) params.set('status', statusFilter);
-    if (searchQuery) params.set('search', searchQuery);
+    for (const [key, value] of Object.entries(filters)) {
+      if (value) params.set(key, value);
+    }
     goto(`/ai-processing?${params.toString()}`);
   }
 
@@ -231,19 +327,6 @@
     const params = new URLSearchParams($page.url.searchParams);
     params.set('offset', String((p - 1) * data.limit));
     goto(`/ai-processing?${params.toString()}`);
-  }
-
-  function statusBadgeClass(status: string): string {
-    switch (status) {
-      case 'applied':
-        return 'bg-success-light text-success';
-      case 'rejected':
-        return 'text-muted bg-canvas';
-      case 'partial':
-        return 'bg-accent-light text-accent';
-      default:
-        return 'bg-warn-light text-warn';
-    }
   }
 </script>
 
@@ -288,7 +371,7 @@
     </div>
   </header>
 
-  <!-- Stats -->
+  <!-- Stats Cards -->
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
     <div class="panel flex items-center gap-3 p-4">
       <div class="bg-accent-subtle flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
@@ -347,7 +430,7 @@
     </div>
   </div>
 
-  <!-- Progress -->
+  <!-- Progress Panel -->
   {#if isProcessing}
     <div class="panel">
       <div class="flex items-center justify-between">
@@ -412,348 +495,94 @@
     </div>
   {/if}
 
-  <!-- Filters & Batch Actions -->
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex items-center gap-2">
-      <select
-        bind:value={statusFilter}
-        onchange={applyFilters}
-        class="border-soft bg-surface text-ink rounded-lg border px-3 py-1.5 text-sm transition-colors"
-      >
-        <option value="">All statuses</option>
-        <option value="pending">Pending</option>
-        <option value="applied">Applied</option>
-        <option value="rejected">Rejected</option>
-        <option value="partial">Partial</option>
-      </select>
-      <div class="relative">
-        <Search
-          class="text-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
-        />
-        <input
-          type="text"
-          bind:value={searchQuery}
-          placeholder="Search documents..."
-          onkeydown={(e) => e.key === 'Enter' && applyFilters()}
-          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent rounded-lg border py-1.5 pr-3 pl-8 text-sm transition-colors focus:ring-1 focus:outline-none"
-        />
-      </div>
-    </div>
-    <div class="flex items-center gap-2">
-      {#if selectedIds.size > 0}
-        <span class="text-muted text-sm font-medium">{selectedIds.size} selected</span>
-        <button
-          onclick={batchApply}
-          disabled={isApplying}
-          class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-        >
-          <Check class="h-3.5 w-3.5" /> Apply
-        </button>
-        <button
-          onclick={batchReject}
-          class="text-muted hover:bg-canvas flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-        >
-          <X class="h-3.5 w-3.5" /> Reject
-        </button>
-        <div class="border-soft mx-1 h-5 border-l"></div>
-      {/if}
-      {#if stats.pendingReview > 0}
-        <button
-          onclick={() => (confirmAction = 'apply-all')}
-          disabled={isApplyingAll || isRejectingAll}
-          class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
-        >
-          {#if isApplyingAll}
-            <Loader2 class="h-3.5 w-3.5 animate-spin" />
-          {:else}
-            <Check class="h-3.5 w-3.5" />
-          {/if}
-          Accept All
-        </button>
-        <button
-          onclick={() => (confirmAction = 'reject-all')}
-          disabled={isApplyingAll || isRejectingAll}
-          class="text-muted hover:bg-canvas flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
-        >
-          {#if isRejectingAll}
-            <Loader2 class="h-3.5 w-3.5 animate-spin" />
-          {:else}
-            <X class="h-3.5 w-3.5" />
-          {/if}
-          Reject All
-        </button>
+  <!-- Filter Bar -->
+  <AiFilterBar
+    status={data.status}
+    search={data.search}
+    sort={data.sort}
+    changedOnly={data.changedOnly}
+    failed={data.failed}
+    minConfidence={data.minConfidence}
+    provider={data.provider ?? undefined}
+    model={data.model ?? undefined}
+    onapply={handleFilterApply}
+  />
+
+  <!-- Bulk Action Bar -->
+  <AiBulkActionBar
+    selectedCount={selectedIds.size}
+    pendingCount={stats.pendingReview}
+    onbatchapply={handleBatchApply}
+    onbatchreject={handleBatchReject}
+    onapplyall={handleApplyAll}
+    onrejectall={handleRejectAll}
+  />
+
+  <!-- Master-Detail Layout -->
+  <div class="flex gap-4">
+    <!-- List Pane -->
+    <div class="min-w-0 flex-1">
+      <AiResultList
+        {results}
+        viewMode={isMobile ? 'cards' : 'table'}
+        onapply={handleApplySimple}
+        onreject={handleReject}
+      />
+
+      <!-- Pagination -->
+      {#if totalPages > 1}
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
+          <p class="text-muted text-sm">
+            Showing <span class="text-ink font-medium"
+              >{data.offset + 1}&ndash;{Math.min(data.offset + data.limit, data.total)}</span
+            >
+            of <span class="text-ink font-medium">{data.total}</span>
+          </p>
+          <div class="flex items-center gap-1">
+            <button
+              onclick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
+            >
+              <ChevronLeft class="h-4 w-4" />
+            </button>
+            <span class="text-ink px-3 text-sm font-medium tabular-nums">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onclick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
+            >
+              <ChevronRight class="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       {/if}
     </div>
+
+    <!-- Desktop Detail Drawer -->
+    {#if activeResultId && !isMobile}
+      <AiResultDetailDrawer onapply={handleApply} onreject={handleReject} onclose={closeDetail} />
+    {/if}
   </div>
 
-  <!-- Confirmation Dialog -->
-  {#if confirmAction}
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="bg-surface mx-4 w-full max-w-md rounded-xl p-6 shadow-xl">
-        <h3 class="text-ink text-lg font-semibold">
-          {confirmAction === 'apply-all'
-            ? 'Accept All Pending Results?'
-            : 'Reject All Pending Results?'}
-        </h3>
-        <p class="text-muted mt-2 text-sm">
-          {#if confirmAction === 'apply-all'}
-            This will apply AI suggestions to all <strong>{stats.pendingReview}</strong> pending
-            document{stats.pendingReview === 1 ? '' : 's'}. Changes will be pushed to Paperless-NGX.
-          {:else}
-            This will reject all <strong>{stats.pendingReview}</strong> pending result{stats.pendingReview ===
-            1
-              ? ''
-              : 's'}. No changes will be made to your documents.
-          {/if}
-        </p>
-        <div class="mt-5 flex justify-end gap-2">
-          <button
-            onclick={() => (confirmAction = null)}
-            class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
-          >
-            Cancel
-          </button>
-          {#if confirmAction === 'apply-all'}
-            <button
-              onclick={applyAll}
-              class="bg-success hover:bg-success/90 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors"
-            >
-              Accept All
-            </button>
-          {:else}
-            <button
-              onclick={rejectAll}
-              class="bg-ember hover:bg-ember/90 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors"
-            >
-              Reject All
-            </button>
-          {/if}
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Results Table -->
-  {#if results.length === 0}
-    <div class="panel flex flex-col items-center py-16 text-center">
-      <div class="bg-accent-subtle mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-        <Sparkles class="text-accent h-7 w-7" />
-      </div>
-      <p class="text-ink text-base font-medium">No AI results yet</p>
-      <p class="text-muted mx-auto mt-2 max-w-sm text-sm">
-        Click "Process New" to extract metadata from your documents using AI. Make sure you've
-        configured your AI provider in
-        <a
-          href="/settings"
-          class="text-accent hover:text-accent-hover decoration-accent/30 inline-flex items-center gap-1 underline underline-offset-2"
-        >
-          <Settings class="h-3 w-3" />
-          Settings</a
-        >.
-      </p>
-    </div>
-  {:else}
-    <div class="border-soft overflow-x-auto rounded-xl border">
-      <table class="w-full text-left text-sm">
-        <thead>
-          <tr class="border-soft bg-canvas/60 border-b">
-            <th class="w-10 px-4 py-3">
-              <input
-                type="checkbox"
-                checked={selectAll}
-                onchange={toggleSelectAll}
-                class="rounded"
-              />
-            </th>
-            <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase"
-              >Document</th
-            >
-            <th
-              class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-              >Correspondent</th
-            >
-            <th
-              class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-              >Document Type</th
-            >
-            <th
-              class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
-              >Tags</th
-            >
-            <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase"
-              >Confidence</th
-            >
-            <th
-              class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase sm:table-cell"
-              >Status</th
-            >
-            <th class="text-muted w-24 px-4 py-3 text-xs font-medium tracking-wide uppercase"
-              >Actions</th
-            >
-          </tr>
-        </thead>
-        <tbody>
-          {#each results as result (result.id)}
-            <tr
-              class="border-soft group hover:bg-accent-subtle/40 border-b transition-colors last:border-b-0"
-            >
-              <td class="px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(result.id)}
-                  onchange={() => toggleSelect(result.id)}
-                  class="rounded"
-                />
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2.5">
-                  <FileText class="text-muted h-4 w-4 shrink-0" />
-                  <span class="text-ink max-w-52 truncate font-medium">
-                    {result.documentTitle}
-                  </span>
-                </div>
-              </td>
-              <td class="hidden px-4 py-3 md:table-cell">
-                {#if result.suggestedCorrespondent}
-                  <div class="space-y-0.5">
-                    {#if result.currentCorrespondent && result.currentCorrespondent !== result.suggestedCorrespondent}
-                      <div class="text-muted text-xs line-through">
-                        {result.currentCorrespondent}
-                      </div>
-                    {/if}
-                    <div class="text-ink text-sm">{result.suggestedCorrespondent}</div>
-                  </div>
-                {:else}
-                  <span class="text-soft">&mdash;</span>
-                {/if}
-              </td>
-              <td class="hidden px-4 py-3 md:table-cell">
-                {#if result.suggestedDocumentType}
-                  <div class="space-y-0.5">
-                    {#if result.currentDocumentType && result.currentDocumentType !== result.suggestedDocumentType}
-                      <div class="text-muted text-xs line-through">
-                        {result.currentDocumentType}
-                      </div>
-                    {/if}
-                    <div class="text-ink text-sm">{result.suggestedDocumentType}</div>
-                  </div>
-                {:else}
-                  <span class="text-soft">&mdash;</span>
-                {/if}
-              </td>
-              <td class="hidden px-4 py-3 lg:table-cell">
-                <div class="flex flex-wrap gap-1">
-                  {#each result.suggestedTags as tag (tag)}
-                    <span
-                      class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium"
-                    >
-                      {tag}
-                    </span>
-                  {/each}
-                  {#if result.suggestedTags.length === 0}
-                    <span class="text-soft">&mdash;</span>
-                  {/if}
-                </div>
-              </td>
-              <td class="px-4 py-3">
-                {#if result.confidence}
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                      <span class="text-muted w-9 text-[10px] font-medium uppercase">Corr</span>
-                      <ConfidenceBadge score={result.confidence.correspondent} />
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-muted w-9 text-[10px] font-medium uppercase">Type</span>
-                      <ConfidenceBadge score={result.confidence.documentType} />
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-muted w-9 text-[10px] font-medium uppercase">Tags</span>
-                      <ConfidenceBadge score={result.confidence.tags} />
-                    </div>
-                  </div>
-                {:else if result.errorMessage}
-                  <Tooltip text={result.errorMessage} position="left">
-                    <span
-                      class="bg-ember-light text-ember inline-flex cursor-help items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                    >
-                      <AlertCircle class="h-3 w-3" /> Error
-                    </span>
-                  </Tooltip>
-                {:else}
-                  <span class="text-soft">&mdash;</span>
-                {/if}
-              </td>
-              <td class="hidden px-4 py-3 sm:table-cell">
-                <span
-                  class="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize {statusBadgeClass(
-                    result.appliedStatus,
-                  )}"
-                >
-                  {result.appliedStatus}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                {#if result.appliedStatus === 'pending' && !result.errorMessage}
-                  <div class="flex items-center gap-0.5">
-                    <button
-                      onclick={() => applyResult(result.id)}
-                      disabled={isApplying}
-                      class="text-success hover:bg-success-light rounded-lg p-1.5 transition-colors"
-                      title="Apply suggestions"
-                    >
-                      <Check class="h-4 w-4" />
-                    </button>
-                    <button
-                      onclick={() => rejectResult(result.id)}
-                      class="text-muted hover:text-ink hover:bg-canvas rounded-lg p-1.5 transition-colors"
-                      title="Reject suggestions"
-                    >
-                      <X class="h-4 w-4" />
-                    </button>
-                  </div>
-                {:else}
-                  <span class="text-soft text-xs">&mdash;</span>
-                {/if}
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    {#if totalPages > 1}
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <p class="text-muted text-sm">
-          Showing <span class="text-ink font-medium"
-            >{data.offset + 1}&ndash;{Math.min(data.offset + data.limit, data.total)}</span
-          >
-          of <span class="text-ink font-medium">{data.total}</span>
-        </p>
-        <div class="flex items-center gap-1">
-          <button
-            onclick={() => goToPage(currentPage - 1)}
-            disabled={currentPage <= 1}
-            class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-          >
-            <ChevronLeft class="h-4 w-4" />
-          </button>
-          <span class="text-ink px-3 text-sm font-medium tabular-nums">
-            {currentPage} / {totalPages}
-          </span>
-          <button
-            onclick={() => goToPage(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-            class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-          >
-            <ChevronRight class="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    {/if}
+  <!-- Mobile Detail Drawer -->
+  {#if activeResultId && isMobile}
+    <AiResultDetailDrawer
+      mobile
+      onapply={handleApply}
+      onreject={handleReject}
+      onclose={closeDetail}
+    />
   {/if}
 </div>
+
+<!-- Overlays -->
+<AiToastContainer />
+<AiKeyboardHandler
+  {results}
+  onapply={handleApplySimple}
+  onreject={handleReject}
+  searchInputRef={null}
+/>

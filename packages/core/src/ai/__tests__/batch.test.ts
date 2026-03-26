@@ -135,7 +135,7 @@ describe('processBatch', () => {
     // Verify results were inserted into DB
     const dbResults = db.select().from(aiProcessingResult).all();
     expect(dbResults).toHaveLength(2);
-    expect(dbResults.every((r) => r.appliedStatus === 'pending')).toBe(true);
+    expect(dbResults.every((r) => r.appliedStatus === 'pending_review')).toBe(true);
   });
 
   it('skips documents without content (result.skipped incremented)', async () => {
@@ -229,7 +229,7 @@ describe('processBatch', () => {
         provider: 'openai',
         model: 'gpt-5.4-mini',
         suggestedCorrespondent: 'Amazon',
-        appliedStatus: 'pending',
+        appliedStatus: 'pending_review',
         createdAt: '2024-01-01T00:00:00Z',
       })
       .run();

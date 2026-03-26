@@ -62,6 +62,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: consolidate cumulative usage stats columns
   migrateUsageStats(sqlite);
 
+  // Pre-DDL migration: split 'pending' status into 'pending_review' and 'failed'
+  migrateAiResultStatus(sqlite);
+
   const { statements, snapshot } = await generateDDL();
   const currentHash = computeHash(snapshot);
 
@@ -140,6 +143,30 @@ function migrateGroupStatus(sqlite: Database.Database): void {
 
     sqlite.exec(`DROP INDEX IF EXISTS idx_dg_status`);
     sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_dg_status ON duplicate_group(status)`);
+  })();
+}
+
+/**
+ * Split AI result 'pending' status into 'pending_review' (reviewable) and 'failed' (extraction errors).
+ * Previously, both successful and failed extractions were stored as 'pending'.
+ */
+function migrateAiResultStatus(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'ai_processing_result', 'applied_status')) return;
+
+  const hasPending = sqlite
+    .prepare(`SELECT 1 FROM ai_processing_result WHERE applied_status = 'pending' LIMIT 1`)
+    .get();
+  if (!hasPending) return;
+
+  sqlite.transaction(() => {
+    sqlite.exec(`
+      UPDATE ai_processing_result SET applied_status = 'failed'
+      WHERE applied_status = 'pending' AND error_message IS NOT NULL
+    `);
+    sqlite.exec(`
+      UPDATE ai_processing_result SET applied_status = 'pending_review'
+      WHERE applied_status = 'pending'
+    `);
   })();
 }
 

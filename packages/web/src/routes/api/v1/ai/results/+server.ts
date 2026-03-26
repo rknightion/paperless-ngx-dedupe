@@ -10,8 +10,20 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     100,
   );
   const offset = Math.max(parseInt(url.searchParams.get('offset') ?? '0', 10) || 0, 0);
+  const failed = url.searchParams.get('failed') === 'true' ? true : undefined;
+  const minConfidenceParam = url.searchParams.get('minConfidence');
+  const maxConfidenceParam = url.searchParams.get('maxConfidence');
+  const minConfidence = minConfidenceParam ? parseFloat(minConfidenceParam) : undefined;
+  const maxConfidence = maxConfidenceParam ? parseFloat(maxConfidenceParam) : undefined;
+  const provider = url.searchParams.get('provider') || undefined;
+  const model = url.searchParams.get('model') || undefined;
 
-  const { items, total } = getAiResults(locals.db, { status, search }, limit, offset);
+  const { items, total } = getAiResults(
+    locals.db,
+    { status, search, failed, minConfidence, maxConfidence, provider, model },
+    limit,
+    offset,
+  );
 
   return apiSuccess(items, { total, limit, offset });
 };

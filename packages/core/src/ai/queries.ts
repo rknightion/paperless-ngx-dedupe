@@ -1,4 +1,4 @@
-import { eq, sql, desc, and } from 'drizzle-orm';
+import { eq, sql, desc, asc, and } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { document } from '../schema/sqlite/documents.js';
 import type { AppDatabase } from '../db/client.js';
@@ -6,6 +6,13 @@ import type { AppDatabase } from '../db/client.js';
 export interface AiResultFilters {
   status?: string;
   search?: string;
+  sort?: 'newest' | 'oldest' | 'confidence_asc' | 'confidence_desc';
+  changedOnly?: boolean;
+  failed?: boolean;
+  minConfidence?: number;
+  maxConfidence?: number;
+  provider?: string;
+  model?: string;
 }
 
 export interface AiResultSummary {
@@ -26,6 +33,16 @@ export interface AiResultSummary {
   appliedAt: string | null;
   errorMessage: string | null;
   createdAt: string;
+}
+
+export interface AiResultDetail extends AiResultSummary {
+  evidence: string | null;
+  failureType: string | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  processingTimeMs: number | null;
+  appliedFields: string[] | null;
+  rawResponseJson: string | null;
 }
 
 export interface AiStats {
@@ -73,8 +90,48 @@ export function getAiResults(
   if (filters.search) {
     conditions.push(sql`${document.title} LIKE ${'%' + filters.search + '%'}`);
   }
+  if (filters.failed === true) {
+    conditions.push(eq(aiProcessingResult.appliedStatus, 'failed'));
+  }
+  if (filters.minConfidence !== undefined) {
+    conditions.push(
+      sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 >= ${filters.minConfidence}`,
+    );
+  }
+  if (filters.maxConfidence !== undefined) {
+    conditions.push(
+      sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 <= ${filters.maxConfidence}`,
+    );
+  }
+  if (filters.provider) {
+    conditions.push(eq(aiProcessingResult.provider, filters.provider));
+  }
+  if (filters.model) {
+    conditions.push(eq(aiProcessingResult.model, filters.model));
+  }
+  if (filters.changedOnly) {
+    conditions.push(
+      sql`(${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+    );
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  let orderByClause;
+  switch (filters.sort) {
+    case 'oldest':
+      orderByClause = asc(aiProcessingResult.createdAt);
+      break;
+    case 'confidence_asc':
+      orderByClause = sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 asc`;
+      break;
+    case 'confidence_desc':
+      orderByClause = sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 desc`;
+      break;
+    default: // 'newest' or undefined
+      orderByClause = desc(aiProcessingResult.createdAt);
+      break;
+  }
 
   const totalResult = db
     .select({ count: sql<number>`count(*)` })
@@ -107,7 +164,7 @@ export function getAiResults(
     .from(aiProcessingResult)
     .innerJoin(document, eq(aiProcessingResult.documentId, document.id))
     .where(where)
-    .orderBy(desc(aiProcessingResult.createdAt))
+    .orderBy(orderByClause)
     .limit(limit)
     .offset(offset)
     .all();
@@ -126,7 +183,7 @@ export function getAiResults(
     currentCorrespondent: r.currentCorrespondent,
     currentDocumentType: r.currentDocumentType,
     currentTags: parseJsonArray(r.currentTagsJson),
-    appliedStatus: r.appliedStatus ?? 'pending',
+    appliedStatus: r.appliedStatus ?? 'pending_review',
     appliedAt: r.appliedAt,
     errorMessage: r.errorMessage,
     createdAt: r.createdAt,
@@ -135,7 +192,7 @@ export function getAiResults(
   return { items, total };
 }
 
-export function getAiResult(db: AppDatabase, id: string): AiResultSummary | null {
+export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null {
   const row = db
     .select({
       id: aiProcessingResult.id,
@@ -155,6 +212,9 @@ export function getAiResult(db: AppDatabase, id: string): AiResultSummary | null
       appliedAt: aiProcessingResult.appliedAt,
       appliedFieldsJson: aiProcessingResult.appliedFieldsJson,
       errorMessage: aiProcessingResult.errorMessage,
+      evidence: aiProcessingResult.evidence,
+      failureType: aiProcessingResult.failureType,
+      rawResponseJson: aiProcessingResult.rawResponseJson,
       promptTokens: aiProcessingResult.promptTokens,
       completionTokens: aiProcessingResult.completionTokens,
       processingTimeMs: aiProcessingResult.processingTimeMs,
@@ -181,10 +241,17 @@ export function getAiResult(db: AppDatabase, id: string): AiResultSummary | null
     currentCorrespondent: row.currentCorrespondent,
     currentDocumentType: row.currentDocumentType,
     currentTags: parseJsonArray(row.currentTagsJson),
-    appliedStatus: row.appliedStatus ?? 'pending',
+    appliedStatus: row.appliedStatus ?? 'pending_review',
     appliedAt: row.appliedAt,
     errorMessage: row.errorMessage,
     createdAt: row.createdAt,
+    evidence: row.evidence ?? null,
+    failureType: row.failureType ?? null,
+    promptTokens: row.promptTokens ?? null,
+    completionTokens: row.completionTokens ?? null,
+    processingTimeMs: row.processingTimeMs ?? null,
+    appliedFields: row.appliedFieldsJson ? JSON.parse(row.appliedFieldsJson) : null,
+    rawResponseJson: row.rawResponseJson ?? null,
   };
 }
 
@@ -199,12 +266,6 @@ export function getAiStats(db: AppDatabase): AiStats {
     .from(aiProcessingResult)
     .groupBy(aiProcessingResult.appliedStatus)
     .all();
-
-  const failed = db
-    .select({ count: sql<number>`count(*)` })
-    .from(aiProcessingResult)
-    .where(sql`${aiProcessingResult.errorMessage} IS NOT NULL`)
-    .get();
 
   const totalDocs = db
     .select({ count: sql<number>`count(*)` })
@@ -222,7 +283,7 @@ export function getAiStats(db: AppDatabase): AiStats {
     pendingReview: 0,
     applied: 0,
     rejected: 0,
-    failed: failed?.count ?? 0,
+    failed: 0,
     totalPromptTokens: 0,
     totalCompletionTokens: 0,
   };
@@ -233,7 +294,7 @@ export function getAiStats(db: AppDatabase): AiStats {
     stats.totalCompletionTokens += row.completionTokens;
 
     switch (row.appliedStatus) {
-      case 'pending':
+      case 'pending_review':
         stats.pendingReview += row.count;
         break;
       case 'applied':
@@ -244,6 +305,9 @@ export function getAiStats(db: AppDatabase): AiStats {
         break;
       case 'partial':
         stats.applied += row.count;
+        break;
+      case 'failed':
+        stats.failed += row.count;
         break;
     }
   }
@@ -298,12 +362,7 @@ export function getPendingAiResultIds(db: AppDatabase): string[] {
   const rows = db
     .select({ id: aiProcessingResult.id })
     .from(aiProcessingResult)
-    .where(
-      and(
-        eq(aiProcessingResult.appliedStatus, 'pending'),
-        sql`${aiProcessingResult.errorMessage} IS NULL`,
-      ),
-    )
+    .where(eq(aiProcessingResult.appliedStatus, 'pending_review'))
     .all();
 
   return rows.map((r) => r.id);

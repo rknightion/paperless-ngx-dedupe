@@ -8,9 +8,23 @@ import {
 } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ locals }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.config.AI_ENABLED) {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
+  }
+
+  let allowClearing = false;
+  let createMissingEntities = true;
+
+  const contentType = request.headers.get('content-type');
+  if (contentType?.includes('application/json')) {
+    try {
+      const body = await request.json();
+      allowClearing = body?.allowClearing === true;
+      createMissingEntities = body?.createMissingEntities !== false;
+    } catch {
+      // Use defaults
+    }
   }
 
   const resultIds = getPendingAiResultIds(locals.db);
@@ -36,6 +50,8 @@ export const POST: RequestHandler = async ({ locals }) => {
     try {
       await applyAiResult(locals.db, client, id, {
         fields,
+        allowClearing,
+        createMissingEntities,
         addProcessedTag: aiConfig.addProcessedTag,
         processedTagName: aiConfig.processedTagName,
       });

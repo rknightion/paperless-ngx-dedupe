@@ -109,60 +109,519 @@ AD-010: Pino for structured logging
   - Request logging via pino-http middleware in hooks.server.ts
 
 
+AI metadata extraction UX improvement plan
 
-================================================================================
-PHASE 9: Additional Features [COMPLETED]
-================================================================================
+Purpose
+- This file is a phased, implementation-oriented todo list for improving the AI metadata extraction and review workflow.
+- Prioritise correctness and safety first, then improve throughput and overall UX.
+- Do not treat this as a pure visual redesign. Several current backend/data-contract issues directly block a good UX.
 
-- [x] Similarity visualization
-  Graph/network view showing document clusters by similarity
-  Interactive: click nodes to see document details, edges show scores
-  Implemented: getSimilarityGraph() query, /api/v1/duplicates/graph endpoint,
-  /duplicates/graph page with ECharts force-directed graph, onChartReady prop
+High-value current-state findings
+- The main AI review surface is a single table at `packages/web/src/routes/ai-processing/+page.svelte:254-615`.
+- The page only exposes full apply/reject actions even though the API already supports partial field application:
+  - `packages/web/src/routes/api/v1/ai/results/[id]/apply/+server.ts:15-44`
+  - `packages/web/src/routes/api/v1/ai/results/batch-apply/+server.ts:17-46`
+- The process API already supports targeted processing via `documentIds`, but the UI does not expose that:
+  - `packages/web/src/routes/api/v1/ai/process/+server.ts:16-48`
+  - `docs/api-reference.md:466-488`
+- Failed AI results are currently stored as `appliedStatus = 'pending'`, which makes failure handling and review state confusing:
+  - `packages/core/src/ai/batch.ts:337-356`
+- Stats currently double-count failures as pending review:
+  - `packages/core/src/ai/queries.ts:191-249`
+  - `packages/core/src/ai/queries.ts:297-309`
+- The prompt asks the model to return `"unknown"` when unclear, but the apply path will create real Paperless metadata named `"unknown"`:
+  - Prompt: `packages/core/src/ai/types.ts:31-37`, `packages/core/src/ai/types.ts:59-68`
+  - Apply path: `packages/core/src/ai/apply.ts:55-118`
+- Full apply can clear existing metadata when the suggestion is null/empty, and the current UI does not warn about that:
+  - `packages/core/src/ai/apply.ts:55-118`
+- The docs promise evidence snippets and detailed result views, but evidence is not persisted and the result detail API does not actually return the extra detail it loads:
+  - Evidence requested by prompt: `packages/core/src/ai/types.ts:8`, `packages/core/src/ai/types.ts:36`, `packages/core/src/ai/types.ts:56-79`
+  - Schema missing evidence: `packages/core/src/schema/sqlite/ai-processing.ts:18-32`
+  - Detail query loads extra fields but drops them from the return object: `packages/core/src/ai/queries.ts:138-188`
+  - Docs promise evidence/detail: `docs/ai-processing.md:101-128`, `docs/api-reference.md:518-520`
+- Bulk apply/apply-all run synchronously in the request handler with no progress, cancellation, or large-batch UX:
+  - `packages/web/src/routes/api/v1/ai/results/batch-apply/+server.ts:37-53`
+  - `packages/web/src/routes/api/v1/ai/results/apply-all/+server.ts:32-48`
+- The current review page silently ignores most action failures; there is almost no user feedback for apply/reject/process edge cases:
+  - `packages/web/src/routes/ai-processing/+page.svelte:119-199`
+- The settings copy is now misleading because processing is concurrent and `rateDelayMs=0` means auto-calculated pacing, not “500ms default”:
+  - Concurrency in code: `packages/core/src/ai/batch.ts:62-66`, `packages/core/src/ai/batch.ts:383-405`
+  - Settings text mismatch: `packages/web/src/routes/settings/+page.svelte:945-976`
+  - Docs text mismatch: `docs/ai-processing.md:31-34`
+- The prompt editor/docs contract is also inconsistent: the docs mention placeholders that are not implemented by `buildPromptParts`:
+  - Implemented placeholders: `packages/core/src/ai/prompt.ts:22-58`
+  - Documented placeholders: `docs/ai-processing.md:134-143`
+- There is already enough server surface to build a richer review UI without hitting Paperless directly from the browser:
+  - Document list/detail APIs: `packages/web/src/routes/api/v1/documents/+server.ts:5-40`, `packages/core/src/queries/documents.ts:39-124`
+  - Paperless preview/thumb proxy APIs: `packages/web/src/routes/api/v1/paperless/documents/[paperlessId]/preview/+server.ts:4-42`, `packages/web/src/routes/api/v1/paperless/documents/[paperlessId]/thumb/+server.ts:4-42`
 
-- [x] CLI tool for running sync and analysis from command line
-  (this is a key motivator for @paperless-dedupe/core being framework-independent)
-  Implemented: packages/cli with commander.js, commands: sync, analyze, status,
-  config show/set, export duplicates/config. Global opts: --db, --env-file, --json
+Non-negotiable UX principles
+- Never silently clear existing metadata during apply.
+- Never silently create new metadata entities from placeholder/uncertain AI output.
+- Distinguish reviewable suggestions from failed extraction attempts.
+- Let users review one document deeply or action many documents quickly.
+- Make bulk actions filter-aware and preflighted.
+- Preserve mobile usability; the current dense table should not remain the only review pattern.
 
-- [x] Client SDK package (@paperless-dedupe/sdk)
-  Lightweight TypeScript HTTP client wrapping all /api/v1/* endpoints
-  Type-safe request/response types shared with the API's Zod schemas
-  Implemented: packages/sdk with zero runtime deps, PaperlessDedupeClient class,
-  SSE support, custom fetch injection, 57 tests passing
+Recommended delivery order
+- Phase 0 is mandatory before any visual overhaul.
+- Phase 1 should improve the current route without requiring a full navigation redesign.
+- Phase 2 should add the real bulk workflow.
+- Phase 3 can be the broader “AI inbox” overhaul.
+- Phase 4 is optional power-user automation.
 
+PHASE 0: Correctness and safety foundation [COMPLETED]
 
-================================================================================
-FUTURE IDEAS (UNSCHEDULED)
-================================================================================
+Goal
+- Fix the data/behavior gaps that currently make the UX unsafe or inconsistent.
 
-- AI metadata extraction using Vercel AI SDK
-  Provider-agnostic: OpenAI, Anthropic, Ollama, etc.
-  Suggest titles, correspondents, document types, tags, dates
-  Per-field confidence scores, review-before-apply workflow
-  This is a key future feature — defer until core dedup is solid
+Tasks
+- [x] Introduce explicit AI review/result states that distinguish at least:
+  - pending_review
+  - applied
+  - partial
+  - rejected
+  - failed
+  Direction:
+  - Do not model extraction failures as generic pending rows.
+  - Update the schema, query helpers, API filters, and UI copy together.
+  Files:
+  - `packages/core/src/schema/sqlite/ai-processing.ts`
+  - `packages/core/src/ai/batch.ts`
+  - `packages/core/src/ai/queries.ts`
+  - `packages/web/src/routes/api/v1/ai/results/+server.ts`
+  - `packages/web/src/routes/ai-processing/+page.server.ts`
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+  Acceptance:
+  - Failed results are visible in their own filter/tab and are not counted as pending review.
 
-- OpenTelemetry integration
-  Tracing for sync/analysis pipelines, request spans, DB query spans
-  Only if debugging production issues becomes painful
+- [x] Normalize AI suggestions before storing or applying them.
+  Direction:
+  - Map `null`, empty strings, whitespace-only strings, and `"unknown"`/`"Unknown"` to `null`.
+  - Trim tags and drop invalid placeholder tags.
+  - Keep the original raw model output only if needed for debugging, but use normalized values for UX and apply logic.
+  Files:
+  - `packages/core/src/ai/batch.ts`
+  - `packages/core/src/ai/apply.ts`
+  - `packages/core/src/ai/providers/types.ts`
+  Sample:
+  ```ts
+  function normalizeSuggestedLabel(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const cleaned = value.trim();
+    if (!cleaned) return null;
+    if (cleaned.toLowerCase() === 'unknown') return null;
+    return cleaned;
+  }
 
-- Notification system (webhook on new duplicates found)
-  POST to configurable URL when analysis completes with new groups
+  function normalizeSuggestedTags(tags: string[] | null | undefined): string[] {
+    return (tags ?? [])
+      .map((tag) => tag.trim().toLowerCase())
+      .filter((tag) => tag.length > 0 && tag !== 'unknown');
+  }
+  ```
+  Acceptance:
+  - The system can never create a Paperless correspondent/document type/tag called `unknown`.
 
-- Mobile app consuming the API (AD-006 ensures API is ready for this)
+- [x] Make apply safe by default.
+  Direction:
+  - Applying “all fields” must not clear existing metadata unless the user explicitly opts into “allow clearing”.
+  - Treat `null` suggestion as “no recommendation”, not “clear this field”.
+  - If a field has no suggestion, default to leaving the current Paperless value untouched.
+  Files:
+  - `packages/core/src/ai/apply.ts`
+  - `packages/web/src/routes/api/v1/ai/results/[id]/apply/+server.ts`
+  Suggested API evolution:
+  - Add flags like `allowClearing?: boolean` and `createMissingEntities?: boolean`.
+  Acceptance:
+  - Applying a result with no suggested correspondent does not wipe an existing correspondent.
 
-- Configurable document retention policies
-  Auto-archive resolved duplicate groups after N days
-  Compact old job records
+- [x] Persist the data required for a first-class review UI.
+  Direction:
+  - Add columns for:
+    - evidence text
+    - failure type
+    - maybe `rawResponseJson` if helpful for debugging, but keep it optional
+    - optionally a `changeSummaryJson` or `resolutionPlanJson` if you want cheap preflight later
+  Files:
+  - `packages/core/src/schema/sqlite/ai-processing.ts`
+  - `packages/core/src/ai/batch.ts`
+  - migration files
+  Acceptance:
+  - Each successful result includes evidence and enough detail to render an inspectable review drawer without a second AI call.
 
-- Multi-instance support
-  Manage duplicates across multiple Paperless-NGX instances
-  Cross-instance duplicate detection
+- [x] Return actual detailed result payloads from `GET /api/v1/ai/results/:id`.
+  Direction:
+  - The current query already loads `appliedFieldsJson`, `promptTokens`, `completionTokens`, and `processingTimeMs`, but drops them from the returned object.
+  - Expand the public type instead of overloading `AiResultSummary`.
+  Files:
+  - `packages/core/src/ai/queries.ts`
+  - `packages/sdk/src/types.ts`
+  - `packages/sdk/src/client.ts`
+  - `packages/web/src/routes/api/v1/ai/results/[id]/+server.ts`
+  Acceptance:
+  - The detail API returns evidence, token usage, processing time, applied fields, and failure metadata.
 
+- [x] Fix stats/query semantics.
+  Direction:
+  - Pending review counts should exclude failures.
+  - Add first-class filters for `failed`, `hasNewEntities`, `minConfidence`, `maxConfidence`, `changedOnly`, and `provider/model`.
+  Files:
+  - `packages/core/src/ai/queries.ts`
+  - `packages/web/src/routes/api/v1/ai/results/+server.ts`
+  Acceptance:
+  - The numbers shown in the UI match the action scopes available in the page.
+
+- [x] Align settings/docs/prompt-editor contract with actual behavior.
+  Direction:
+  - Either implement the documented placeholders (`{{title}}`, `{{content}}`, etc.) or update docs/UI to reflect the actual interpolation model.
+  - Rename “Batch Size” if it is actually concurrency.
+  - Clarify that `rateDelayMs=0` is auto pacing based on provider defaults.
+  Files:
+  - `packages/core/src/ai/prompt.ts`
+  - `packages/web/src/routes/settings/+page.svelte`
+  - `docs/ai-processing.md`
+  Acceptance:
+  - A user can understand what prompt variables, batching, and pacing actually do from the UI alone.
+
+- [x] Add tests for all of the above before moving on.
+  Tests:
+  - Unit tests for normalization.
+  - Unit tests proving `unknown` never becomes a created entity.
+  - Unit tests proving null suggestions do not clear by default.
+  - Query tests for pending vs failed counts.
+  - API tests for result detail payload shape.
+
+PHASE 1: Upgrade the current AI Processing page into a real review workspace [COMPLETED]
+
+Goal
+- Keep the `/ai-processing` route, but turn it from a thin table into a usable triage tool.
+
+Tasks
+- [x] Replace the single dense table workflow with a master-detail layout.
+  Direction:
+  - Left/main pane: result list or grouped cards.
+  - Right/detail pane or drawer: selected document review.
+  - The current table can remain as list mode, but not as the only mode.
+  Reuse:
+  - `packages/web/src/lib/components/ui/ConfidenceBadge.svelte`
+  - `packages/web/src/lib/components/ui/ProgressBar.svelte`
+  - `packages/web/src/lib/components/ui/ConfirmDialog.svelte`
+  Acceptance:
+  - Users can inspect and action a result without losing list context.
+
+- [x] Add a result detail drawer/modal with all review-critical information.
+  Detail view should include:
+  - document title and status
+  - current vs suggested values for each field
+  - evidence snippet
+  - OCR/content excerpt
+  - token usage and processing time
+  - warnings:
+    - low confidence
+    - will create new Paperless entities
+    - will clear existing values
+    - no-op suggestion
+  Files:
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+  - new AI-specific components under `packages/web/src/lib/components`
+  - result detail API/types from Phase 0
+  Acceptance:
+  - A user can explain why the AI suggested a classification without leaving the page.
+
+- [x] Show a document thumbnail/preview in review.
+  Direction:
+  - Use the existing Paperless proxy routes instead of introducing a new direct-browser integration.
+  - Use thumb in the list and preview PDF/image in the detail pane.
+  Files:
+  - `packages/web/src/routes/api/v1/paperless/documents/[paperlessId]/thumb/+server.ts`
+  - `packages/web/src/routes/api/v1/paperless/documents/[paperlessId]/preview/+server.ts`
+  Acceptance:
+  - Each result can be visually reviewed alongside the extracted OCR text.
+
+- [x] Surface partial apply in the UI.
+  Direction:
+  - Add field-level checkboxes or segmented actions in the detail pane and batch action bar.
+  - Default selected fields should be only those with non-null suggestions.
+  - If a field would create a new entity, mark it visually before apply.
+  Files:
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+  - `packages/web/src/routes/api/v1/ai/results/[id]/apply/+server.ts`
+  - `packages/web/src/routes/api/v1/ai/results/batch-apply/+server.ts`
+  Acceptance:
+  - Users can apply just tags or just correspondent/type without a custom API client.
+
+- [x] Add richer list filters and sorting.
+  Recommended filters:
+  - status
+  - failed only
+  - changed only
+  - low confidence
+  - will create new entity
+  - has existing metadata
+  - provider/model
+  - processed date
+  Recommended sorts:
+  - newest
+  - lowest confidence first
+  - changed fields count
+  - “risky first” (new entity creation / low confidence / destructive clear)
+  Files:
+  - `packages/core/src/ai/queries.ts`
+  - `packages/web/src/routes/ai-processing/+page.server.ts`
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+
+- [x] Preserve list selection and review position during refresh.
+  Direction:
+  - The current page resets selection whenever `data.results` changes.
+  - Keep selected IDs stable when possible and only prune IDs that no longer exist in the current result set.
+  Files:
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+  Acceptance:
+  - Background refresh does not destroy the user’s in-progress bulk selection.
+
+- [x] Add explicit user feedback for every action.
+  Direction:
+  - Show success/error toasts or inline notices for process/apply/reject operations.
+  - Include partial failure summaries for batch actions.
+  - Stop swallowing failed fetch responses.
+  Files:
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+
+- [x] Improve mobile review mode.
+  Direction:
+  - Replace table-only mobile UX with stacked cards + a slide-up detail panel.
+  - Do not rely on hidden columns as the only responsive adaptation.
+  Acceptance:
+  - Core review actions remain usable on narrow screens.
+
+- [x] Add keyboard-driven review shortcuts.
+  Suggested bindings:
+  - `j` / `k` next/previous result
+  - `a` apply
+  - `r` reject
+  - `1/2/3` toggle correspondent/type/tags
+  - `/` focus search
+  Acceptance:
+  - A power user can process many results without constant pointer movement.
+
+PHASE 2: Real bulk workflows and targeted processing
+
+Goal
+- Make bulk operations feel safe, visible, and genuinely high-throughput.
+
+Tasks
+- [ ] Add “process selected documents” entry points.
+  Direction:
+  - The process API already supports `documentIds`.
+  - Build a doc picker or selection-based flow rather than forcing full-library processing.
+  - Prefer a lightweight document browser/modal backed by `/api/v1/documents` before redesigning the entire `/documents` route.
+  Files:
+  - `packages/web/src/routes/api/v1/documents/+server.ts`
+  - `packages/core/src/queries/documents.ts`
+  - `packages/web/src/routes/documents/+page.svelte`
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+  Acceptance:
+  - Users can run AI on a selected subset such as “these 20 invoices” or “this filter result”.
+
+- [ ] Add “retry failed”, “re-run selected”, and “re-run current filter” actions.
+  Direction:
+  - Current “Process New” skips any document that already has an AI result.
+  - Failed rows need a first-class retry path that does not require “Re-process All”.
+  Suggested scopes:
+  - new_only
+  - failed_only
+  - selected_document_ids
+  - current_filter
+  - full_reprocess
+  Files:
+  - `packages/core/src/ai/batch.ts`
+  - `packages/web/src/routes/api/v1/ai/process/+server.ts`
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+
+- [ ] Convert bulk apply into a background job with progress and cancellation.
+  Direction:
+  - `batch-apply` and `apply-all` should not run as long synchronous requests.
+  - Use the existing jobs infrastructure and SSE progress pattern already used by sync/analysis/AI processing.
+  Files:
+  - new worker under `packages/core/src/jobs/workers`
+  - new routes or updated batch/apply-all routes under `packages/web/src/routes/api/v1/ai/results`
+  - `packages/web/src/lib/sse.ts`
+  - `packages/web/src/routes/api/v1/jobs/[jobId]/progress/+server.ts`
+  Sample worker shape:
+  ```ts
+  launchWorker({
+    jobId,
+    dbPath: locals.config.DATABASE_URL,
+    workerScriptPath: getWorkerPath('ai-apply-worker'),
+    taskData: { resultIds, fields, allowClearing: false, createMissingEntities: true },
+  });
+  ```
+  Acceptance:
+  - Large apply jobs show progress, can be cancelled, and do not rely on a long open HTTP request.
+
+- [ ] Add bulk preflight before apply.
+  Preflight output should show:
+  - documents affected
+  - fields that will be changed
+  - how many new correspondents/document types/tags will be created
+  - how many fields are low confidence
+  - how many rows are no-op or destructive-clear candidates
+  Files:
+  - likely new query/helper under `packages/core/src/ai`
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+  Acceptance:
+  - “Apply all” is never a blind action.
+
+- [ ] Support server-side bulk selection by filter, not only page-local checkbox selection.
+  Direction:
+  - Current select-all only selects the visible page.
+  - Add “select all matching current filter”.
+  - Keep the filter definition on the server side so it scales beyond the current page size.
+  Files:
+  - `packages/core/src/ai/queries.ts`
+  - `packages/web/src/routes/ai-processing/+page.server.ts`
+  - `packages/web/src/routes/ai-processing/+page.svelte`
+
+- [ ] Add result grouping to accelerate review.
+  Recommended grouping options:
+  - by suggested correspondent
+  - by suggested document type
+  - by “new entity creation required”
+  - by failure type
+  - by confidence band
+  Acceptance:
+  - Repetitive results can be reviewed and batch-actioned together.
+
+PHASE 3: Full UX overhaul into an AI inbox
+
+Goal
+- Move from “results table” to “AI classification workspace”.
+
+Tasks
+- [ ] Reframe `/ai-processing` around three top-level modes:
+  - Queue
+  - Review
+  - History/Applied
+  Direction:
+  - Queue: incoming/new/failed items
+  - Review: active inbox with current selection
+  - History: applied/rejected/partial with audit visibility
+
+- [ ] Introduce review presets.
+  Suggested presets:
+  - Fast lane: high-confidence changed-only results
+  - Needs attention: low confidence, failures, new entity creation, destructive clear candidates
+  - All pending
+  Acceptance:
+  - A user can choose between speed and caution without manually building filters every time.
+
+- [ ] Add an AI summary widget to the dashboard and documents area.
+  Direction:
+  - The dashboard currently has no AI-specific overview.
+  - Add cards/links such as:
+    - pending AI review
+    - failed AI extractions
+    - unprocessed docs
+    - recently applied AI suggestions
+  Files:
+  - `packages/web/src/routes/+page.svelte`
+  - `packages/web/src/routes/+page.server.ts`
+
+- [ ] Upgrade the documents area to include AI-ready selection flows.
+  Direction:
+  - The current `/documents` page is analytics-only even though the repo already exposes list/detail APIs.
+  - Either:
+    - add an “AI-ready document list” tab inside `/documents`, or
+    - add a modal picker launched from `/ai-processing`.
+  Note:
+  - A modal picker is the lower-risk first step.
+
+- [ ] Add undo/audit visibility for applied AI changes.
+  Direction:
+  - Store enough “before” state and apply metadata to show what changed and allow a revert flow.
+  - At minimum, record previous Paperless IDs/tag IDs for fields the app changed.
+  Acceptance:
+  - Applied AI changes are auditable and reversible.
+
+PHASE 4: Optional power-user/autopilot features
+
+Goal
+- Make the system powerful without making it reckless.
+
+Tasks
+- [ ] Add configurable confidence gates.
+  Suggested rules:
+  - global minimum confidence
+  - per-field thresholds
+  - “never auto-create new entities”
+  - “never overwrite an existing non-empty field”
+  - “tags only” auto-apply mode
+
+- [ ] Add safe auto-apply rules for a constrained subset.
+  Example:
+  - auto-apply when:
+    - all selected fields are above threshold
+    - no new entity creation is required
+    - no existing values would be cleared
+    - document already has OCR text
+  Acceptance:
+  - Autopilot is opt-in and explicitly explainable.
+
+- [ ] Add model-quality feedback loops.
+  Direction:
+  - Capture rejected reasons or correction patterns.
+  - Use them to improve the default prompt or future evaluation data.
+
+- [ ] Add token/cost visibility.
+  Direction:
+  - Per-run cost estimate
+  - Per-result token usage
+  - Provider/model breakdown
+
+Suggested component decomposition
+- `AiQueueToolbar.svelte`
+- `AiResultList.svelte`
+- `AiResultRow.svelte` or `AiResultCard.svelte`
+- `AiResultDetailDrawer.svelte`
+- `AiFieldDiffCard.svelte`
+- `AiApplyPreflightDialog.svelte`
+- `AiBulkActionBar.svelte`
+- `AiFailurePanel.svelte`
+- `AiProcessPickerModal.svelte`
+
+Suggested API/domain additions
+- Add a richer result detail type instead of overloading `AiResultSummary`.
+- Add a preflight endpoint or helper for apply actions.
+- Add first-class process scopes instead of only `reprocess` and raw `documentIds`.
+- Add explicit failure filtering in `GET /api/v1/ai/results`.
+- Add a job-backed bulk apply endpoint.
+
+Suggested UX copy changes
+- Rename `Process New` to `Process Unreviewed` only if the scope truly means “documents without AI results”.
+- Add a separate `Retry Failed` action.
+- Rename `Re-process All` to `Re-run Entire Library`.
+- Rename `Batch Size` to `Concurrency` or `Parallel Requests` if that remains the real behavior.
+- Rename `Rate Delay (ms)` to `Launch Interval (ms)` or explain auto mode inline.
+
+Implementation notes for the LLM that picks this up
+- Start with Phase 0 and do not skip the normalization/safety work.
+- Do not keep failures as a subtype of pending review.
+- Do not build the full overhaul before exposing partial apply and evidence.
+- Reuse the existing preview/thumb proxy routes instead of adding a new Paperless browser integration.
+- Reuse the existing jobs/SSE pattern for any long-running batch operation.
+- Prefer additive migrations and backwards-compatible API evolution where possible.
+
+Minimum acceptable end state
+- The user can inspect evidence and a preview for each result.
+- The user can apply only selected fields.
+- The user can bulk action all results matching a filter, with preflight visibility.
+- Failed results are visible, retryable, and not mixed into pending review.
+- The app never creates `unknown` entities or silently clears metadata by default.
 
 
 
 CLAUDE SHOULD IGNORE BELOW THIS LINE!
 
 prompt text (already at start of instruction)
-Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement Phase 9. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed and ensure this initial prompt is included on any plan produced so it is not lost during context compaction.
+Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement Phase 0. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed.

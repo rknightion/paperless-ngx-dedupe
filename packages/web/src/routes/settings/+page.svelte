@@ -943,9 +943,9 @@
             </div>
             <div>
               <label for="ai-batch" class="text-muted flex items-center gap-1.5 text-sm">
-                Batch Size
+                Concurrency
                 <InfoIcon
-                  text="Number of documents queued per processing run. Documents are still sent to the AI one at a time — this controls how many are picked up in each batch job. Default: 10."
+                  text="Number of documents processed in parallel. Documents are sent to the AI provider concurrently up to this limit. Default: 10."
                   position="top"
                 />
               </label>
@@ -962,7 +962,7 @@
               <label for="ai-delay" class="text-muted flex items-center gap-1.5 text-sm">
                 Rate Delay (ms)
                 <InfoIcon
-                  text="Milliseconds to wait between each document request to the AI provider. Prevents rate limiting when processing many documents. Default 500ms is safe for most API tiers. Set to 0 for maximum speed if your API plan allows it."
+                  text="Milliseconds between launching each AI request. Set to 0 for auto-pacing based on your provider's rate limits at 85% utilization. Default: 0 (auto)."
                   position="top"
                 />
               </label>

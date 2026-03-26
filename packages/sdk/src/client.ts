@@ -6,6 +6,7 @@ import type {
   AiConfig,
   AiProcessOptions,
   AiResultFilters,
+  AiResultDetail,
   AiResultSummary,
   AiStats,
   BatchDeleteResult,
@@ -277,8 +278,8 @@ export class PaperlessDedupeClient {
     return { data: res.data, meta: res.meta as PaginationMeta };
   }
 
-  async getAiResult(id: string): Promise<AiResultSummary> {
-    const res = await request<AiResultSummary>(`/api/v1/ai/results/${id}`, this.httpOptions);
+  async getAiResult(id: string): Promise<AiResultDetail> {
+    const res = await request<AiResultDetail>(`/api/v1/ai/results/${id}`, this.httpOptions);
     return res.data;
   }
 
