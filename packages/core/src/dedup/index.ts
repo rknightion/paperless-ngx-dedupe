@@ -3,6 +3,7 @@ export { MinHash } from './minhash.js';
 export { LSHIndex } from './lsh.js';
 export { tokenSortRatio, sampleText } from './fuzzy.js';
 export { computeSimilarityScore } from './scoring.js';
+export { computeDiscriminativeScore, extractDiscriminativeTokens } from './discriminative.js';
 export { UnionFind } from './union-find.js';
 export { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from './config.js';
 export { runAnalysis } from './analyze.js';
