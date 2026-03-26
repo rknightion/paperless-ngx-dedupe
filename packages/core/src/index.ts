@@ -138,6 +138,13 @@ export { computeSimilarityScore } from './dedup/scoring.js';
 export { computeDiscriminativeScore, extractDiscriminativeTokens } from './dedup/discriminative.js';
 export { UnionFind } from './dedup/union-find.js';
 export { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from './dedup/config.js';
+export {
+  computeAnalysisConfigHash,
+  checkAnalysisStaleness,
+  saveAnalysisConfigHash,
+  getLastAnalysisConfigHash,
+} from './dedup/analysis-hash.js';
+export type { AnalysisStalenessInfo } from './dedup/analysis-hash.js';
 export { runAnalysis } from './dedup/analyze.js';
 export {
   DEFAULT_DEDUP_CONFIG,
