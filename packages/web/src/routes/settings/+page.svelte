@@ -36,6 +36,7 @@
   let threshold = $state(Math.round(initialDedup.similarityThreshold * 100));
   let weightJaccard = $state(initialDedup.confidenceWeightJaccard);
   let weightFuzzy = $state(initialDedup.confidenceWeightFuzzy);
+  let weightDiscriminative = $state(initialDedup.confidenceWeightDiscriminative);
   let numPermutations = $state(initialDedup.numPermutations);
   let numBands = $state(initialDedup.numBands);
   let ngramSize = $state(initialDedup.ngramSize);
@@ -119,7 +120,7 @@
   let ragStats = $state(initialRagStats);
   let isRagIndexing = $state(false);
 
-  let weightSum = $derived(weightJaccard + weightFuzzy);
+  let weightSum = $derived(weightJaccard + weightFuzzy + weightDiscriminative);
   let weightsValid = $derived(weightSum === 100);
 
   async function testConnection() {
@@ -222,6 +223,7 @@
           similarityThreshold: threshold / 100,
           confidenceWeightJaccard: weightJaccard,
           confidenceWeightFuzzy: weightFuzzy,
+          confidenceWeightDiscriminative: weightDiscriminative,
           numPermutations,
           numBands,
           ngramSize,
@@ -570,14 +572,15 @@
           Sum: {weightSum}/100
         </span>
       </div>
-      <div class="mt-3 grid gap-6 sm:grid-cols-2">
+      <div class="mt-3 grid gap-6 sm:grid-cols-3">
         <div>
-          <label for="w-jaccard" class="text-muted block text-sm">
+          <label for="w-jaccard" class="text-muted flex items-center gap-1.5 text-sm">
             Jaccard: <span class="text-ink font-mono font-medium">{weightJaccard}</span>
+            <InfoIcon
+              text="Measures structural overlap using MinHash fingerprints of word n-grams. Best for catching near-identical documents, OCR re-scans, or minor edits. A value of 0 disables this factor."
+              position="top"
+            />
           </label>
-          <p class="text-muted mt-0.5 text-xs">
-            Measures structural overlap between document word patterns using MinHash fingerprints.
-          </p>
           <input
             id="w-jaccard"
             type="range"
@@ -586,29 +589,15 @@
             bind:value={weightJaccard}
             class="accent-accent mt-1 w-full"
           />
-          <details class="mt-1.5">
-            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
-              How does this work?
-            </summary>
-            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
-              Jaccard similarity estimates how much two documents share the same word sequences
-              (n-grams). It works by comparing compact fingerprints (MinHash signatures) rather than
-              raw text, making it fast even for large documents.
-              <strong class="text-ink">Higher weight</strong> means structural text overlap matters
-              more for the overall confidence score.
-              <br /><br />
-              <strong class="text-ink">Best for:</strong> catching near-identical documents, OCR re-scans,
-              or minor edits. A value of 0 disables this factor entirely.
-            </div>
-          </details>
         </div>
         <div>
-          <label for="w-fuzzy" class="text-muted block text-sm">
+          <label for="w-fuzzy" class="text-muted flex items-center gap-1.5 text-sm">
             Fuzzy: <span class="text-ink font-mono font-medium">{weightFuzzy}</span>
+            <InfoIcon
+              text="Compares document text using character-level edit distance after sorting words. Resilient to paragraph reordering. Best for catching reworded sentences, different formatting, or OCR errors."
+              position="top"
+            />
           </label>
-          <p class="text-muted mt-0.5 text-xs">
-            Compares document text using character-level edit distance after sorting words.
-          </p>
           <input
             id="w-fuzzy"
             type="range"
@@ -617,22 +606,25 @@
             bind:value={weightFuzzy}
             class="accent-accent mt-1 w-full"
           />
-          <details class="mt-1.5">
-            <summary class="text-accent hover:text-accent-hover cursor-pointer text-xs font-medium">
-              How does this work?
-            </summary>
-            <div class="text-muted bg-canvas mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed">
-              Fuzzy text matching uses a token-sort Levenshtein ratio: it alphabetically sorts all
-              words in each document, then measures the edit distance between the sorted strings.
-              This makes it resilient to paragraph reordering. It operates on a sample of the text
-              (controlled by Fuzzy Sample Size in advanced settings).
-              <strong class="text-ink">Higher weight</strong> means character-level text similarity
-              matters more.
-              <br /><br />
-              <strong class="text-ink">Best for:</strong> catching documents with reworded sentences,
-              different formatting, or OCR errors.
-            </div>
-          </details>
+        </div>
+        <div>
+          <label for="w-discriminative" class="text-muted flex items-center gap-1.5 text-sm">
+            Discriminative: <span class="text-ink font-mono font-medium"
+              >{weightDiscriminative}</span
+            >
+            <InfoIcon
+              text="Extracts and compares dates, monetary amounts, and reference numbers. Reduces false positives from template-based documents like monthly bank or credit card statements. When set to 0, the score is still computed and visible in group details."
+              position="top"
+            />
+          </label>
+          <input
+            id="w-discriminative"
+            type="range"
+            min="0"
+            max="100"
+            bind:value={weightDiscriminative}
+            class="accent-accent mt-1 w-full"
+          />
         </div>
       </div>
 
@@ -649,6 +641,11 @@
             style="width: {weightFuzzy}%; background: oklch(0.6 0.16 155);"
             title="Fuzzy: {weightFuzzy}"
           ></div>
+          <div
+            class="transition-all duration-200"
+            style="width: {weightDiscriminative}%; background: oklch(0.55 0.18 290);"
+            title="Discriminative: {weightDiscriminative}"
+          ></div>
         </div>
         <div class="text-muted mt-1.5 flex gap-4 text-xs">
           <span class="flex items-center gap-1"
@@ -660,6 +657,12 @@
           <span class="flex items-center gap-1"
             ><span class="inline-block h-2 w-2 rounded-full" style="background: oklch(0.6 0.16 155)"
             ></span> Fuzzy</span
+          >
+          <span class="flex items-center gap-1"
+            ><span
+              class="inline-block h-2 w-2 rounded-full"
+              style="background: oklch(0.55 0.18 290)"
+            ></span> Discriminative</span
           >
         </div>
       </div>
