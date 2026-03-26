@@ -97,6 +97,37 @@ describe('importConfig', () => {
     // schema_ddl_ keys from import should not overwrite existing ones
   });
 
+  it('imports 1.1.0 backup with 3-weight config (backward compat)', () => {
+    const data = {
+      version: '1.0',
+      exportedAt: '2024-01-01T00:00:00Z',
+      appConfig: {},
+      dedupConfig: {
+        numPermutations: 256,
+        numBands: 32,
+        ngramSize: 3,
+        minWords: 20,
+        similarityThreshold: 0.75,
+        confidenceWeightJaccard: 50,
+        confidenceWeightFuzzy: 35,
+        confidenceWeightDiscriminative: 15,
+        fuzzySampleSize: 10000,
+        autoAnalyze: true,
+      },
+    };
+
+    const result = importConfig(db, data);
+    expect(result.dedupConfigUpdated).toBe(true);
+
+    const dedupConfig = getDedupConfig(db);
+    // J+F redistributed to sum to 100
+    expect(dedupConfig.confidenceWeightJaccard + dedupConfig.confidenceWeightFuzzy).toBe(100);
+    // Penalty strength derived from old D weight
+    expect(dedupConfig.discriminativePenaltyStrength).toBe(50);
+    // Old field should not exist
+    expect('confidenceWeightDiscriminative' in dedupConfig).toBe(false);
+  });
+
   it('returns correct counts', () => {
     const data = {
       version: '1.0',

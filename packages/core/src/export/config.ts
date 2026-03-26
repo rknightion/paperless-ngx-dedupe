@@ -6,13 +6,46 @@ import { getDedupConfig, setDedupConfig } from '../dedup/config.js';
 import { dedupConfigSchema } from '../dedup/types.js';
 import type { ConfigBackup } from './types.js';
 
+/**
+ * Migrate a raw dedup config object from older formats before Zod validation.
+ * Mirrors the migration logic in getDedupConfig for DB rows.
+ */
+function migrateDedupConfigForImport(raw: Record<string, unknown>): Record<string, unknown> {
+  // 1.1.0 → 1.2.0: convert 3-weight to 2-weight + penalty
+  if ('confidenceWeightDiscriminative' in raw && !('discriminativePenaltyStrength' in raw)) {
+    const j = (raw.confidenceWeightJaccard as number) ?? 0;
+    const f = (raw.confidenceWeightFuzzy as number) ?? 0;
+    const d = (raw.confidenceWeightDiscriminative as number) ?? 0;
+
+    raw.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 50));
+
+    const jfSum = j + f;
+    if (jfSum > 0) {
+      raw.confidenceWeightJaccard = Math.round((j / jfSum) * 100);
+      raw.confidenceWeightFuzzy = 100 - Math.round((j / jfSum) * 100);
+    } else {
+      raw.confidenceWeightJaccard = 60;
+      raw.confidenceWeightFuzzy = 40;
+    }
+
+    delete raw.confidenceWeightDiscriminative;
+  }
+  return raw;
+}
+
 const configBackupSchema = z.object({
   version: z.string().refine((v) => v.startsWith('1.'), {
     error: 'Unsupported backup version',
   }),
   exportedAt: z.string(),
   appConfig: z.record(z.string(), z.string()),
-  dedupConfig: dedupConfigSchema,
+  dedupConfig: z.preprocess(
+    (val) =>
+      typeof val === 'object' && val !== null
+        ? migrateDedupConfigForImport(val as Record<string, unknown>)
+        : val,
+    dedupConfigSchema,
+  ),
 });
 
 function filterSchemaDdlKeys(config: Record<string, string>): Record<string, string> {
