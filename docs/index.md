@@ -16,7 +16,7 @@ MinHash signatures combined with Locality-Sensitive Hashing provide efficient O(
 
 ### :material-chart-bar: Multi-Dimensional Scoring
 
-Four similarity dimensions — Jaccard text overlap, fuzzy text matching, metadata comparison, and filename similarity — are combined into a single confidence score with configurable weights.
+Two weighted dimensions — Jaccard text overlap and fuzzy text matching — are combined into a base score, then a discriminative penalty down-scores pairs that share only boilerplate text. All weights and penalty strength are configurable.
 
 ### :material-robot-outline: AI Metadata Extraction
 
@@ -29,6 +29,10 @@ Ask natural language questions about your document library. Hybrid search combin
 ### :material-lightning-bolt: Real-Time Processing
 
 Background worker threads handle sync, analysis, AI extraction, and document indexing with real-time progress streamed via Server-Sent Events.
+
+### :material-chart-timeline-variant: Observability
+
+Optional OpenTelemetry integration provides traces, metrics, and structured logs. A built-in Prometheus scrape endpoint and Paperless-NGX system metrics collector mean no extra exporter containers are needed.
 
 ### :material-docker: Single Container
 

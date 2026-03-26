@@ -13,7 +13,7 @@ The pipeline works in three broad phases:
 
 1. **Sync** documents from Paperless-NGX and prepare their text
 2. **Index** documents using probabilistic data structures (MinHash + LSH) to find candidate pairs without comparing every document to every other
-3. **Score and group** candidates using Jaccard and fuzzy text similarity, then cluster them for review
+3. **Score and group** candidates using Jaccard similarity, fuzzy text matching, and a discriminative penalty, then cluster them for review
 
 ```mermaid
 flowchart LR
@@ -89,13 +89,33 @@ With 256 permutations and 32 bands, the effective candidate funnel is tuned for 
 
 ## Step 5: Similarity Scoring
 
-Each candidate pair from LSH is scored across two dimensions:
+Each candidate pair from LSH is scored using a **2-weight base score** with a **discriminative penalty**:
 
-1. **Jaccard Similarity** (default weight: 55%) -- Set overlap of shingle sets, estimated from MinHash signatures. Measures how much text content the two documents share.
+### Base score (weighted average)
 
-2. **Fuzzy Text Similarity** (default weight: 45%) -- Edit-distance-based ratio computed on a character sample of the normalized text (controlled by `fuzzySampleSize`). Catches cases where documents have similar content but different word order or minor variations.
+1. **Jaccard Similarity** (default weight: 60) -- Set overlap of shingle sets, estimated from MinHash signatures. Measures how much text content the two documents share.
 
-The overall confidence score is the weighted combination of both dimensions. Pairs scoring below `similarityThreshold` (default: 0.75) are discarded.
+2. **Fuzzy Text Similarity** (default weight: 40) -- Edit-distance-based ratio computed on a character sample of the normalized text (controlled by `fuzzySampleSize`). Catches cases where documents have similar content but different word order or minor variations.
+
+The two weights are normalized (they must sum to 100) to produce a base score:
+
+```
+base = (jaccard × J_weight + fuzzy × F_weight) / (J_weight + F_weight)
+```
+
+### Discriminative penalty
+
+3. **Discriminative Score** -- Measures how much unique, distinctive content each document has that the other does not. Documents that are true duplicates share most of their distinctive tokens; documents that merely share boilerplate (headers, footers, standard clauses) but differ in substance will have low discriminative scores.
+
+The discriminative score acts as a **multiplicative penalty** on the base score:
+
+```
+final = base × (1 - penalty_strength/100 × (1 - discriminative_score))
+```
+
+When `discriminativePenaltyStrength` is 0, the penalty is disabled and the final score equals the base. At the default strength of 50, a pair with a low discriminative score (e.g., 0.2) would have its base score reduced by 40%. This helps filter out false positives where documents share common templates but have different substantive content.
+
+Pairs scoring below `similarityThreshold` (default: 0.75) are discarded.
 
 ## Step 6: Clustering
 
@@ -103,9 +123,9 @@ Scored pairs are grouped into clusters using a **union-find** (disjoint-set) dat
 
 Each cluster becomes a **duplicate group** in the database with:
 
-- A confidence score (derived from the strongest pair in the group)
-- Individual similarity dimension scores
-- Member documents with a designated primary (the one to keep)
+- A confidence score (averaged across all scored pairs in the group)
+- Individual similarity dimension scores (Jaccard, fuzzy, discriminative)
+- Member documents with a designated primary (the document with the lowest Paperless-NGX ID)
 
 Groups are presented in the web UI for review, sorted by confidence.
 
@@ -114,12 +134,14 @@ Groups are presented in the web UI for review, sorted by confidence.
 ### Too many false positives (unrelated documents grouped together)
 
 - **Raise `similarityThreshold`** (e.g., 0.85 or 0.90) to require stronger matches
+- **Increase `discriminativePenaltyStrength`** (e.g., 75-100) to penalize pairs that share boilerplate but differ in substance
 - **Adjust confidence weights** to shift emphasis between Jaccard and fuzzy text matching
 - **Reduce `numBands`** to narrow the LSH candidate funnel
 
 ### Missing obvious duplicates
 
 - **Lower `similarityThreshold`** (e.g., 0.60) to allow weaker matches through
+- **Reduce `discriminativePenaltyStrength`** (e.g., 0-25) if the penalty is filtering out legitimate duplicates
 - **Increase `numBands`** to widen the candidate funnel
 - **Lower `minWords`** if short documents are being skipped
 - **Check `ngramSize`** -- a smaller value (2) is more sensitive to small differences

@@ -32,8 +32,9 @@ Thank you for considering contributing to Paperless NGX Dedupe! This guide cover
     ```
 5. **Make your changes** and verify they work:
     ```bash
-    pnpm check    # Type checking
     pnpm lint     # Linting
+    pnpm format   # Formatting check
+    pnpm check    # Type checking
     pnpm test     # Unit tests
     ```
 
@@ -62,7 +63,7 @@ type(scope): description
 | `test` | Adding or updating tests |
 | `chore` | Build, CI, or tooling changes |
 
-**Scopes:** `core`, `web`, `sdk`, `cli`, `db`, `dedup`, `sync`, `jobs`, `api`, `docs`
+**Scopes:** `core`, `web`, `sdk`, `cli`, `db`, `dedup`, `sync`, `jobs`, `api`, `docs`, `ui`, `settings`, `export`, `rag`, `ai`, `dashboard`, `schema`, `types`
 
 **Examples:**
 
@@ -74,7 +75,7 @@ docs: update API reference with batch endpoint examples
 
 ## Pull Request Process
 
-1. Ensure all checks pass: `pnpm check && pnpm lint && pnpm test`
+1. Ensure all checks pass: `pnpm lint && pnpm format && pnpm check && pnpm test`
 2. Update documentation if your change affects user-facing behavior
 3. Write clear commit messages following the convention above
 4. Open a pull request with a description of **what** and **why**

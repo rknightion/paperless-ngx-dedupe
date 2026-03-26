@@ -169,7 +169,7 @@ paperless-ngx-dedupe config set [options]
 | `--auto-analyze <bool>` | string | `true`/`false` | Auto-analyze after sync |
 
 !!! warning "Weight Constraint"
-    The two confidence weights (`--weight-jaccard`, `--weight-fuzzy`) must sum to 100.
+    The two confidence weights (`--weight-jaccard`, `--weight-fuzzy`) must sum to 100. The discriminative penalty strength is a separate parameter configured via the web UI or API (see [Configuration](configuration.md)).
 
 **Examples:**
 

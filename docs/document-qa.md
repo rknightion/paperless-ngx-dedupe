@@ -33,7 +33,7 @@ flowchart LR
 
 ### The RAG Pipeline
 
-1. **Indexing** — Your documents' OCR text is split into overlapping chunks (~400 tokens each). Each chunk is converted to a 1536-dimensional vector using OpenAI's embedding model and stored alongside a full-text search index. This happens once per document and is incremental — only new or modified documents are re-indexed.
+1. **Indexing** — Your documents' OCR text is split into overlapping chunks (~400 tokens each, configurable). Each chunk is converted to a vector using OpenAI's embedding model (default: `text-embedding-3-small` at 1536 dimensions) and stored alongside a full-text search index. This happens once per document and is incremental — only new or modified documents are re-indexed.
 
 2. **Retrieval** — When you ask a question, it's converted to a vector and compared against all stored chunks using cosine similarity (via **sqlite-vec**). Simultaneously, the same query runs against the **SQLite FTS5** full-text index. Results from both searches are combined using **Reciprocal Rank Fusion (RRF)**, which produces a single ranked list without needing to calibrate score scales.
 
@@ -93,8 +93,8 @@ After enabling, configure Q&A behavior in **Settings > Document Q&A** or via `PU
 
 | Setting | Default | Range | Description |
 | --- | --- | --- | --- |
-| `topK` | `10` | 1–50 | Number of chunks retrieved per query |
-| `maxContextTokens` | `4000` | 500–100,000 | Max tokens of retrieved context sent to the answer model |
+| `topK` | `20` | 1–100 | Number of chunks retrieved per query |
+| `maxContextTokens` | `8000` | 500–100,000 | Max tokens of retrieved context sent to the answer model |
 
 ### Answer Model
 
@@ -106,6 +106,7 @@ The model that generates answers from retrieved context is configured independen
 | `answerModel` | `gpt-5.4-mini` | see [AI Processing](ai-processing.md#available-models) | Model identifier |
 | `systemPrompt` | built-in | string | System instructions for the answer model |
 | `autoIndex` | `false` | boolean | Auto-run indexing after document sync |
+| `concurrentBatches` | `5` | 1–20 | Number of concurrent embedding API batches during indexing |
 
 ## Indexing Documents
 

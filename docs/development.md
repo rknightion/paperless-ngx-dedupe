@@ -10,7 +10,7 @@ This guide covers setting up a local development environment, running tests, and
 ## Prerequisites
 
 - **Node.js** 24 or later
-- **pnpm** 9.15 or later
+- **pnpm** 10 or later (repo uses `packageManager: pnpm@10.33.0`)
 - **Git**
 
 ## Setup
@@ -33,7 +33,7 @@ pnpm dev
 ```
 
 !!! warning "Worker Thread Limitation"
-    Background jobs (sync, analysis, batch delete) use `worker_threads` that run as raw Node.js processes outside Vite. These do **not** work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `docker compose up` to test the full workflow including background jobs.
+    Background jobs (sync, analysis, batch delete, AI processing, AI apply, RAG indexing) use `worker_threads` that run as raw Node.js processes outside Vite. These do **not** work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `pnpm docker:dev` to test the full workflow including background jobs.
 
 ## Project Structure
 
@@ -48,7 +48,10 @@ paperless-ngx-dedupe/
 │   │       ├── queries/    # Database queries (Drizzle ORM)
 │   │       ├── schema/     # Database schema definitions
 │   │       ├── paperless/  # Paperless-NGX API client
+│   │       ├── ai/         # AI metadata extraction and auto-apply
+│   │       ├── rag/        # RAG: chunking, embeddings, search
 │   │       ├── export/     # CSV and JSON export
+│   │       ├── telemetry/  # OpenTelemetry tracing and metrics
 │   │       └── config.ts   # Zod-validated environment config
 │   ├── web/            # SvelteKit 2 application
 │   │   └── src/
@@ -91,13 +94,17 @@ graph TD
 | Command | Description |
 |---------|-------------|
 | `pnpm dev` | Start SvelteKit dev server at http://localhost:5173 |
-| `pnpm build` | Build all packages (core, sdk, cli, web) |
+| `pnpm build` | Build all packages in order: core, sdk, cli, web |
 | `pnpm check` | TypeScript type-check all packages |
-| `pnpm test` | Run Vitest tests (core and sdk) |
+| `pnpm test` | Run Vitest unit tests (core and sdk) |
+| `pnpm test:e2e` | Run Playwright E2E tests (requires `pnpm build` first) |
 | `pnpm lint` | ESLint check |
 | `pnpm lint:fix` | ESLint auto-fix |
 | `pnpm format` | Prettier check |
 | `pnpm format:fix` | Prettier auto-fix |
+| `pnpm cli` | Run CLI in dev mode via tsx (not built output) |
+| `pnpm docker:dev` | Build and run in Docker via compose.dev.yml |
+| `pnpm docker:validate` | Full Docker build + compose integration test |
 
 ## Testing
 
@@ -118,17 +125,20 @@ pnpm --filter @paperless-dedupe/sdk test
 
 **Test structure:**
 
-- `packages/core/src/dedup/__tests__/` -- MinHash, LSH, shingles, scoring
+- `packages/core/src/dedup/__tests__/` -- MinHash, LSH, shingles, scoring, discriminative
 - `packages/core/src/sync/__tests__/` -- Document sync and normalization
 - `packages/core/src/queries/__tests__/` -- Database query tests
 - `packages/core/src/paperless/__tests__/` -- Paperless API client tests
 - `packages/core/src/jobs/__tests__/` -- Job management tests
+- `packages/core/src/ai/__tests__/` -- AI extraction and processing tests
+- `packages/core/src/export/__tests__/` -- Export and config backup tests
 - `packages/sdk/src/__tests__/` -- SDK client tests
+- `packages/web/src/e2e/` -- Playwright E2E tests (separate from `pnpm test`)
 
 ## Code Conventions
 
 - **Formatting**: Prettier -- 100 char width, single quotes, trailing commas, 2-space indent
-- **Path alias**: `@paperless-dedupe/core` resolves to `packages/core/src/index.ts`
+- **Path aliases**: `@paperless-dedupe/core` resolves to `packages/core/src/index.ts`; `@paperless-dedupe/sdk` resolves to `packages/sdk/src/index.ts`
 - **API routes**: SvelteKit file-based routing at `packages/web/src/routes/api/v1/`
 - **Validation**: Zod schemas for environment config and API request bodies
 - **Logging**: Pino structured JSON logging
@@ -139,20 +149,24 @@ pnpm --filter @paperless-dedupe/sdk test
 - **Engine**: SQLite via `better-sqlite3`
 - **ORM**: Drizzle ORM with schema defined in `packages/core/src/schema/`
 - **Migrations**: Auto-detected via SHA-256 hashing of DDL statements. Run on startup when `AUTO_MIGRATE=true` (the default).
-- **Tables**: `document`, `documentContent`, `documentSignature`, `duplicateGroup`, `duplicateMember`, `job`, `appConfig`, `syncState`
+- **Tables**: `document`, `documentContent`, `documentSignature`, `duplicateGroup`, `duplicateMember`, `job`, `appConfig`, `syncState`, `aiProcessingResult`, `documentChunk`, `ragConversation`, `ragMessage`
 
 ## Docker Development
 
 For testing the full workflow including background jobs:
 
 ```bash
-docker compose up
+# Quick dev mode
+pnpm docker:dev
+
+# Full integration validation (build + run)
+pnpm docker:validate
 ```
 
 The **Dockerfile** uses a 3-stage build:
 
 1. **deps** -- Install pnpm dependencies
-2. **build** -- Build core + web and bundle the CLI
-3. **production** -- Minimal runtime with flattened node_modules
+2. **build** -- Build core + web, bundle CLI via esbuild, deploy with flat node_modules
+3. **production** -- Minimal `node:24-slim` runtime with tini init, pre-compiled core (for worker threads), bundled CLI, and OTEL preload script
 
-The container runs as a non-root user using `PUID`/`PGID` (defaults: `1000:1000`). Data is persisted at `/app/data` (mounted from `./docker-data` by default).
+The container runs as a non-root user using `PUID`/`PGID` (defaults: `1000:1000`). Data is persisted at `/app/data` (mounted from `./docker-data` by default). The healthcheck hits `/api/v1/health` on port 3000.
