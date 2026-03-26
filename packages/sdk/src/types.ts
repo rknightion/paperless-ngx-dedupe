@@ -280,7 +280,9 @@ export interface DedupConfig {
   similarityThreshold: number;
   confidenceWeightJaccard: number;
   confidenceWeightFuzzy: number;
+  /** @deprecated Use discriminativePenaltyStrength instead. */
   confidenceWeightDiscriminative?: number;
+  discriminativePenaltyStrength?: number;
   fuzzySampleSize: number;
   autoAnalyze: boolean;
 }
