@@ -2,9 +2,10 @@
   interface Props {
     jaccardSimilarity: number | null;
     fuzzyTextRatio: number | null;
+    discriminativeScore: number | null;
   }
 
-  let { jaccardSimilarity, fuzzyTextRatio }: Props = $props();
+  let { jaccardSimilarity, fuzzyTextRatio, discriminativeScore }: Props = $props();
 
   function fmt(score: number | null): string {
     return score !== null ? `${Math.round(score * 100)}%` : 'N/A';
@@ -21,6 +22,7 @@
   let components = $derived([
     { label: 'Jaccard', score: jaccardSimilarity },
     { label: 'Fuzzy Text', score: fuzzyTextRatio },
+    { label: 'Discriminative', score: discriminativeScore },
   ]);
 </script>
 

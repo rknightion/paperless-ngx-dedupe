@@ -93,6 +93,7 @@
     overallScore={data.group.confidenceScore}
     jaccardSimilarity={data.group.jaccardSimilarity}
     fuzzyTextRatio={data.group.fuzzyTextRatio}
+    discriminativeScore={data.group.discriminativeScore}
     weights={data.weights}
   />
 
