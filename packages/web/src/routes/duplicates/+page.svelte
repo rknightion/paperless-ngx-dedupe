@@ -543,6 +543,7 @@
                     <ConfidenceTooltipContent
                       jaccardSimilarity={group.jaccardSimilarity}
                       fuzzyTextRatio={group.fuzzyTextRatio}
+                      discriminativeScore={group.discriminativeScore}
                     />
                   {/snippet}
                 </RichTooltip>

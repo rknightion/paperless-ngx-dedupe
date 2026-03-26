@@ -47,6 +47,7 @@
       memberCount: number;
       jaccardSimilarity: number | null;
       fuzzyTextRatio: number | null;
+      discriminativeScore: number | null;
     }>
   >([]);
   let groupsTotal = $state(0);
@@ -564,6 +565,7 @@
                   <ConfidenceTooltipContent
                     jaccardSimilarity={group.jaccardSimilarity}
                     fuzzyTextRatio={group.fuzzyTextRatio}
+                    discriminativeScore={group.discriminativeScore}
                   />
                 {/snippet}
               </RichTooltip>

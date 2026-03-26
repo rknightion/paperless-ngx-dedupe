@@ -11,6 +11,7 @@
     memberCount: number;
     jaccardSimilarity: number | null;
     fuzzyTextRatio: number | null;
+    discriminativeScore: number | null;
   }
 
   interface Props {
@@ -101,6 +102,7 @@
         <ConfidenceTooltipContent
           jaccardSimilarity={group.jaccardSimilarity}
           fuzzyTextRatio={group.fuzzyTextRatio}
+          discriminativeScore={group.discriminativeScore}
         />
       {/snippet}
     </RichTooltip>
