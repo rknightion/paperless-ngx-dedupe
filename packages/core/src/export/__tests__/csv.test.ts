@@ -99,7 +99,7 @@ describe('formatDuplicatesCsv', () => {
     expect(lines[0]).toBe(
       '\uFEFF' +
         'group_id,confidence_score,jaccard_similarity,fuzzy_text_ratio,' +
-        'group_status,' +
+        'discriminative_score,group_status,' +
         'is_primary,paperless_id,title,correspondent,document_type,tags,' +
         'created_date,word_count,group_created_at',
     );
@@ -114,6 +114,7 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.95,
       jaccardSimilarity: 0.9,
       fuzzyTextRatio: 0.88,
+      discriminativeScore: null,
       groupStatus: 'pending',
       isPrimary: true,
       paperlessId: 1,
@@ -132,7 +133,7 @@ describe('formatDuplicatesCsv', () => {
 
     const dataLine = lines[1];
     expect(dataLine).toBe(
-      'grp-1,0.95,0.9,0.88,pending,' +
+      'grp-1,0.95,0.9,0.88,,pending,' +
         'true,1,Invoice A,Alice,Invoice,' +
         'finance|tax,2024-01-01,3,2024-01-10T00:00:00Z',
     );
@@ -144,6 +145,7 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
+      discriminativeScore: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -166,6 +168,7 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
+      discriminativeScore: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -188,6 +191,7 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
+      discriminativeScore: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -210,6 +214,7 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
+      discriminativeScore: null,
       groupStatus: 'pending',
       isPrimary: false,
       paperlessId: 1,
@@ -237,6 +242,7 @@ describe('formatDuplicatesCsv', () => {
       confidenceScore: 0.5,
       jaccardSimilarity: null,
       fuzzyTextRatio: null,
+      discriminativeScore: null,
       groupStatus: 'deleted',
       isPrimary: true,
       paperlessId: 1,
