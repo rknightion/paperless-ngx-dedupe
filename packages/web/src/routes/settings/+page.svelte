@@ -682,7 +682,7 @@
             <label for="num-perms" class="text-muted flex items-center gap-1.5 text-sm">
               Permutations
               <InfoIcon
-                text="Number of hash functions in the MinHash signature. More permutations = more accurate Jaccard estimates but slower processing. Must evenly divide by LSH Bands. Default: 192."
+                text="Number of hash functions in the MinHash signature. More permutations = more accurate Jaccard estimates but slower processing. Must evenly divide by LSH Bands. Default: 256."
                 position="top"
               />
             </label>
@@ -699,7 +699,7 @@
             <label for="num-bands" class="text-muted flex items-center gap-1.5 text-sm">
               LSH Bands
               <InfoIcon
-                text="Number of bands for Locality-Sensitive Hashing. More bands = more candidate pairs found (higher recall) but more comparisons to score. Must evenly divide Permutations. Default: 20."
+                text="Number of bands for Locality-Sensitive Hashing. More bands = more candidate pairs found (higher recall) but more comparisons to score. Must evenly divide Permutations. Default: 32."
                 position="top"
               />
             </label>
@@ -750,7 +750,7 @@
             <label for="fuzzy-sample" class="text-muted flex items-center gap-1.5 text-sm">
               Fuzzy Sample Size
               <InfoIcon
-                text="Maximum number of characters sampled from each document for fuzzy text comparison. Higher values are more accurate but slower. Default: 5,000."
+                text="Maximum number of characters sampled from each document for fuzzy text comparison. Higher values are more accurate but slower. Default: 10,000."
                 position="top"
               />
             </label>

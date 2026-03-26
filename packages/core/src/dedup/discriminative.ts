@@ -22,7 +22,7 @@ const MONEY_PATTERNS = [
   // Currency symbol followed by amount: $1,234.56
   /[$£€¥]\s*[\d,]+\.?\d*/g,
   // Amount followed by currency code: 1234.56 usd
-  /[\d,]+\.\d{2}\s*(?:usd|eur|gbp|cad|aud|chf|jpy)/g,
+  /(?:\d{1,3}(?:,\d{3})*|\d{1,20})\.\d{2}\s*(?:usd|eur|gbp|cad|aud|chf|jpy)/g,
   // Standalone comma-formatted decimal: 1,234.56 (no symbol)
   /\b\d{1,3}(?:,\d{3})+\.\d{2}\b/g,
 ];
