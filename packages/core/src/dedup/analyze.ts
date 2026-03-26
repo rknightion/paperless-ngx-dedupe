@@ -648,6 +648,9 @@ export async function runAnalysis(
     })
     .run();
 
+  // Persist config hash so stale-analysis detection works on next page load
+  saveAnalysisConfigHash(db, computeAnalysisConfigHash(config));
+
   // Stage 10: Return result
   result.durationMs = Date.now() - startTime;
   await onProgress?.(1.0, `Analysis complete: ${result.groupsCreated} new groups found`);
