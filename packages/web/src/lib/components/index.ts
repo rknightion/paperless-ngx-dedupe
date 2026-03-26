@@ -32,3 +32,4 @@ export { default as AiDocumentPickerModal } from './ai/AiDocumentPickerModal.sve
 export { default as AiPreflightDialog } from './ai/AiPreflightDialog.svelte';
 export { default as AiResultGroupedList } from './ai/AiResultGroupedList.svelte';
 export { default as AiReviewPresets } from './ai/AiReviewPresets.svelte';
+export { default as StaleAnalysisBanner } from './ui/StaleAnalysisBanner.svelte';
