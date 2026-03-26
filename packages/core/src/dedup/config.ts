@@ -34,6 +34,21 @@ export function getDedupConfig(db: AppDatabase): DedupConfig {
     raw[shortKey] = parseConfigValue(row.key, row.value);
   }
 
+  // Auto-migrate pre-1.1.0 configs: redistribute 2-weight configs to include
+  // discriminative weight. Only triggers when J/F are stored but D is absent.
+  // Fresh installs (no rows) fall through to Zod defaults instead.
+  if (!('confidenceWeightDiscriminative' in raw) && 'confidenceWeightJaccard' in raw) {
+    const j = raw.confidenceWeightJaccard as number;
+    const f = (raw.confidenceWeightFuzzy as number) ?? 0;
+    if (j + f === 100) {
+      const d = 15;
+      const scale = (100 - d) / 100;
+      raw.confidenceWeightJaccard = Math.round(j * scale);
+      raw.confidenceWeightFuzzy = 100 - d - Math.round(j * scale);
+      raw.confidenceWeightDiscriminative = d;
+    }
+  }
+
   return dedupConfigSchema.parse(raw) as DedupConfig;
 }
 
@@ -75,6 +90,7 @@ export function recalculateConfidenceScores(db: AppDatabase, config: DedupConfig
   const weights = {
     jaccard: config.confidenceWeightJaccard,
     fuzzy: config.confidenceWeightFuzzy,
+    discriminative: config.confidenceWeightDiscriminative,
   };
 
   let updatedCount = 0;
@@ -88,6 +104,7 @@ export function recalculateConfidenceScores(db: AppDatabase, config: DedupConfig
       const components: { score: number | null; weight: number }[] = [
         { score: group.jaccardSimilarity, weight: weights.jaccard },
         { score: group.fuzzyTextRatio, weight: weights.fuzzy },
+        { score: group.discriminativeScore, weight: weights.discriminative },
       ];
 
       for (const { score, weight } of components) {
