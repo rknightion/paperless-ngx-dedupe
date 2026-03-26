@@ -7,7 +7,7 @@
     jaccardSimilarity: number | null;
     fuzzyTextRatio: number | null;
     discriminativeScore: number | null;
-    weights?: { jaccard: number; fuzzy: number; discriminative: number };
+    weights?: { jaccard: number; fuzzy: number; penaltyStrength: number };
   }
 
   let { overallScore, jaccardSimilarity, fuzzyTextRatio, discriminativeScore, weights }: Props =
@@ -24,7 +24,14 @@
   const components = $derived([
     { name: 'Jaccard (Shingles)', score: jaccardSimilarity, weight: weights?.jaccard },
     { name: 'Fuzzy Text', score: fuzzyTextRatio, weight: weights?.fuzzy },
-    { name: 'Discriminative', score: discriminativeScore, weight: weights?.discriminative },
+    {
+      name:
+        weights?.penaltyStrength !== undefined
+          ? `Discriminative (Penalty ${weights.penaltyStrength}%)`
+          : 'Discriminative',
+      score: discriminativeScore,
+      weight: undefined,
+    },
   ]);
 
   let chartOption: EChartsOption = $derived({
