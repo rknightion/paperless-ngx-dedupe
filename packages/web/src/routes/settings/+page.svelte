@@ -83,9 +83,7 @@
   let aiConfidenceDocType = $state(
     Math.round((initialAiConfig?.confidenceThresholdDocumentType ?? 0) * 100),
   );
-  let aiConfidenceTags = $state(
-    Math.round((initialAiConfig?.confidenceThresholdTags ?? 0) * 100),
-  );
+  let aiConfidenceTags = $state(Math.round((initialAiConfig?.confidenceThresholdTags ?? 0) * 100));
   let aiNeverAutoCreate = $state(initialAiConfig?.neverAutoCreateEntities ?? false);
   let aiNeverOverwrite = $state(initialAiConfig?.neverOverwriteNonEmpty ?? false);
   let aiTagsOnly = $state(initialAiConfig?.tagsOnlyAutoApply ?? false);
@@ -1116,8 +1114,8 @@
             </div>
           </div>
           <p class="text-muted mt-2 text-xs">
-            Per-field thresholds override the global minimum upward. The effective threshold for each
-            field is the higher of the two.
+            Per-field thresholds override the global minimum upward. The effective threshold for
+            each field is the higher of the two.
           </p>
         {/if}
 
@@ -1196,11 +1194,7 @@
               <span class="text-ink">No existing values would be cleared</span>
             </label>
             <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                bind:checked={aiAutoApplyRequireOcr}
-                class="accent-blue-500"
-              />
+              <input type="checkbox" bind:checked={aiAutoApplyRequireOcr} class="accent-blue-500" />
               <span class="text-ink">Document has OCR text</span>
             </label>
           </div>

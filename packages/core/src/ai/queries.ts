@@ -438,10 +438,7 @@ export function markAiResultApplied(
       : null;
   }
 
-  db.update(aiProcessingResult)
-    .set(setData)
-    .where(eq(aiProcessingResult.id, id))
-    .run();
+  db.update(aiProcessingResult).set(setData).where(eq(aiProcessingResult.id, id)).run();
 }
 
 export function markAiResultRejected(db: AppDatabase, id: string): void {

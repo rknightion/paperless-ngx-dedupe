@@ -68,7 +68,10 @@ export function getFeedbackSummary(db: AppDatabase): AiFeedbackSummary {
   let corrections = 0;
   let partialApplied = 0;
   const fieldCounts = new Map<string, number>();
-  const correctionCounts = new Map<string, { count: number; suggestedValue: string; correctedValue: string; field: string }>();
+  const correctionCounts = new Map<
+    string,
+    { count: number; suggestedValue: string; correctedValue: string; field: string }
+  >();
 
   for (const row of rows) {
     const entries: AiFeedback[] = JSON.parse(row.feedbackJson!);
@@ -113,7 +116,10 @@ export function getFeedbackSummary(db: AppDatabase): AiFeedbackSummary {
               });
             }
           } else {
-            const labelCorrection = correction as { suggested: string | null; corrected: string | null };
+            const labelCorrection = correction as {
+              suggested: string | null;
+              corrected: string | null;
+            };
             const key = `${field}:${labelCorrection.suggested ?? ''}→${labelCorrection.corrected ?? ''}`;
             const existing = correctionCounts.get(key);
             if (existing) {
@@ -138,8 +144,7 @@ export function getFeedbackSummary(db: AppDatabase): AiFeedbackSummary {
     .sort((a, b) => b.count - a.count);
 
   // Sort correction patterns by count descending
-  const topCorrectionPatterns = [...correctionCounts.values()]
-    .sort((a, b) => b.count - a.count);
+  const topCorrectionPatterns = [...correctionCounts.values()].sort((a, b) => b.count - a.count);
 
   return {
     totalFeedback,

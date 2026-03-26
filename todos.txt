@@ -493,13 +493,13 @@ Tasks
   Acceptance:
   - Repetitive results can be reviewed and batch-actioned together.
 
-PHASE 3: Full UX overhaul into an AI inbox
+PHASE 3: Full UX overhaul into an AI inbox [COMPLETED]
 
 Goal
 - Move from “results table” to “AI classification workspace”.
 
 Tasks
-- [ ] Reframe `/ai-processing` around three top-level modes:
+- [x] Reframe `/ai-processing` around three top-level modes:
   - Queue
   - Review
   - History/Applied
@@ -528,7 +528,7 @@ Tasks
   - `packages/web/src/routes/+page.svelte`
   - `packages/web/src/routes/+page.server.ts`
 
-- [ ] Upgrade the documents area to include AI-ready selection flows.
+- [x] Upgrade the documents area to include AI-ready selection flows.
   Direction:
   - The current `/documents` page is analytics-only even though the repo already exposes list/detail APIs.
   - Either:
@@ -537,20 +537,20 @@ Tasks
   Note:
   - A modal picker is the lower-risk first step.
 
-- [ ] Add undo/audit visibility for applied AI changes.
+- [x] Add undo/audit visibility for applied AI changes.
   Direction:
   - Store enough “before” state and apply metadata to show what changed and allow a revert flow.
   - At minimum, record previous Paperless IDs/tag IDs for fields the app changed.
   Acceptance:
   - Applied AI changes are auditable and reversible.
 
-PHASE 4: Optional power-user/autopilot features
+PHASE 4: Optional power-user/autopilot features [COMPLETED]
 
 Goal
 - Make the system powerful without making it reckless.
 
 Tasks
-- [ ] Add configurable confidence gates.
+- [x] Add configurable confidence gates.
   Suggested rules:
   - global minimum confidence
   - per-field thresholds
@@ -558,7 +558,7 @@ Tasks
   - “never overwrite an existing non-empty field”
   - “tags only” auto-apply mode
 
-- [ ] Add safe auto-apply rules for a constrained subset.
+- [x] Add safe auto-apply rules for a constrained subset.
   Example:
   - auto-apply when:
     - all selected fields are above threshold
@@ -568,12 +568,12 @@ Tasks
   Acceptance:
   - Autopilot is opt-in and explicitly explainable.
 
-- [ ] Add model-quality feedback loops.
+- [x] Add model-quality feedback loops.
   Direction:
   - Capture rejected reasons or correction patterns and store and make available this data.
   - Use them to improve the default prompt or future evaluation data.
 
-- [ ] Add token/cost visibility.
+- [x] Add token/cost visibility.
   Direction:
   - Per-run cost estimate
   - Per-result token usage

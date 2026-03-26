@@ -37,10 +37,7 @@ export interface AiCostStats {
 
 /** All known model IDs from our provider definitions */
 function getKnownModelIds(): string[] {
-  return [
-    ...OPENAI_MODELS.map((m) => m.id),
-    ...ANTHROPIC_MODELS.map((m) => m.id),
-  ];
+  return [...OPENAI_MODELS.map((m) => m.id), ...ANTHROPIC_MODELS.map((m) => m.id)];
 }
 
 /**
@@ -78,9 +75,7 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
 
       // Try prefix match: find any key that starts with our model ID
       const prefixMatch = Object.keys(data).find(
-        (key) =>
-          key.startsWith(modelId) &&
-          data[key].input_cost_per_token != null,
+        (key) => key.startsWith(modelId) && data[key].input_cost_per_token != null,
       );
       if (prefixMatch) {
         pricingMap[modelId] = {
@@ -136,10 +131,7 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
         .run();
     });
 
-    logger.info(
-      { modelCount: Object.keys(pricingMap).length },
-      'Cached LiteLLM model pricing',
-    );
+    logger.info({ modelCount: Object.keys(pricingMap).length }, 'Cached LiteLLM model pricing');
   } catch (error) {
     logger.warn({ error: (error as Error).message }, 'Failed to fetch LiteLLM pricing data');
   }
