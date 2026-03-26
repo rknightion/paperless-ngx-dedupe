@@ -149,6 +149,8 @@ export interface DashboardData {
   lastAnalysisAt: string | null;
   totalDuplicateGroups: number | null;
   topCorrespondents: { correspondent: string; groupCount: number }[];
+  analysisStale: boolean;
+  analysisStaleReason: 'config_changed' | null;
 }
 
 export interface DocumentStats {

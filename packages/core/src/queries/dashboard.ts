@@ -4,6 +4,7 @@ import type { AppDatabase } from '../db/client.js';
 import { document } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { syncState } from '../schema/sqlite/app.js';
+import { checkAnalysisStaleness } from '../dedup/analysis-hash.js';
 import type { DashboardData } from './types.js';
 
 export function getDashboard(db: AppDatabase): DashboardData {
@@ -42,6 +43,8 @@ export function getDashboard(db: AppDatabase): DashboardData {
     .limit(10)
     .all() as { correspondent: string; groupCount: number }[];
 
+  const staleness = checkAnalysisStaleness(db);
+
   return {
     totalDocuments,
     pendingGroups,
@@ -51,5 +54,7 @@ export function getDashboard(db: AppDatabase): DashboardData {
     lastAnalysisAt: syncRow?.lastAnalysisAt ?? null,
     totalDuplicateGroups: syncRow?.totalDuplicateGroups ?? null,
     topCorrespondents,
+    analysisStale: staleness.isStale,
+    analysisStaleReason: staleness.reason,
   };
 }
