@@ -1,6 +1,13 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
-  import { StatCard, JobStatusCard, EChart, ProgressBar, RichTooltip } from '$lib/components';
+  import {
+    StatCard,
+    JobStatusCard,
+    EChart,
+    ProgressBar,
+    RichTooltip,
+    StaleAnalysisBanner,
+  } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import { FileStack, AlertCircle, Clock, Brain, CheckCircle, Zap, CircleDot } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
@@ -88,7 +95,7 @@
       const res = await fetch('/api/v1/analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: analysisForce }),
+        body: JSON.stringify({ force: analysisForce || data.dashboard.analysisStale }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -363,6 +370,11 @@
         </RichTooltip>
       </h2>
       <p class="text-muted mt-1 text-sm">Run deduplication analysis on synced documents.</p>
+      {#if data.dashboard.analysisStale}
+        <div class="mt-3">
+          <StaleAnalysisBanner onrunAnalysis={startAnalysis} showRunButton={!isAnalyzing} />
+        </div>
+      {/if}
       <div class="mt-4 flex items-center gap-4">
         <button
           onclick={startAnalysis}
@@ -381,8 +393,16 @@
           {/if}
         </button>
         <label class="text-muted flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={analysisForce} class="rounded" />
+          <input
+            type="checkbox"
+            bind:checked={analysisForce}
+            disabled={data.dashboard.analysisStale}
+            class="rounded"
+          />
           Force Rebuild
+          {#if data.dashboard.analysisStale}
+            <span class="text-warn text-xs">(auto-enabled: settings changed)</span>
+          {/if}
         </label>
       </div>
       {#if isAnalyzing}
