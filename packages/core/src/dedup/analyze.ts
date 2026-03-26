@@ -15,6 +15,7 @@ import { computeSimilarityScore } from './scoring.js';
 import { sampleText } from './fuzzy.js';
 import { UnionFind } from './union-find.js';
 import { getDedupConfig } from './config.js';
+import { computeAnalysisConfigHash, saveAnalysisConfigHash } from './analysis-hash.js';
 import { ALGORITHM_VERSION } from './types.js';
 import { withSpan } from '../telemetry/spans.js';
 import {
@@ -306,7 +307,7 @@ export async function runAnalysis(
   const weights: SimilarityWeights = {
     jaccard: config.confidenceWeightJaccard,
     fuzzy: config.confidenceWeightFuzzy,
-    discriminative: config.confidenceWeightDiscriminative,
+    discriminativePenaltyStrength: config.discriminativePenaltyStrength,
   };
 
   // Pre-filter candidates by jaccard threshold
@@ -345,7 +346,7 @@ export async function runAnalysis(
   }
 
   // Load sampled text for fuzzy and discriminative scoring
-  if (weights.fuzzy > 0 || weights.discriminative > 0) {
+  if (weights.fuzzy > 0 || weights.discriminativePenaltyStrength > 0) {
     for (let i = 0; i < scoringDocIdArray.length; i += SQL_VARIABLE_LIMIT) {
       const batch = scoringDocIdArray.slice(i, i + SQL_VARIABLE_LIMIT);
       const rows = db

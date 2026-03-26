@@ -1,5 +1,9 @@
 /**
- * Multi-factor weighted similarity scoring.
+ * Multi-factor similarity scoring with discriminative penalty.
+ *
+ * Base score = weighted average of Jaccard + Fuzzy.
+ * Discriminative acts as a multiplicative penalty:
+ *   overall = base × (1 - strength × (1 - D))
  */
 
 import { tokenSortRatio, sampleText } from './fuzzy.js';
@@ -33,20 +37,23 @@ export function computeSimilarityScore(
     sampleText(doc2.normalizedText, maxChars),
   );
 
-  // Always compute discriminative score for UI visibility, even when weight=0
+  // Always compute discriminative score for UI visibility
   const discriminativeScore = computeDiscriminativeScore(doc1.normalizedText, doc2.normalizedText);
 
+  // 2-component weighted average for base score
   const components: { score: number; weight: number }[] = [];
   if (weights.jaccard > 0) components.push({ score: jaccardSimilarity, weight: weights.jaccard });
   if (weights.fuzzy > 0) components.push({ score: fuzzyScore, weight: weights.fuzzy });
-  if (weights.discriminative > 0)
-    components.push({ score: discriminativeScore, weight: weights.discriminative });
 
-  let overall = 0;
+  let base = 0;
   if (components.length > 0) {
     const totalWeight = components.reduce((sum, c) => sum + c.weight, 0);
-    overall = components.reduce((sum, c) => sum + c.score * c.weight, 0) / totalWeight;
+    base = components.reduce((sum, c) => sum + c.score * c.weight, 0) / totalWeight;
   }
+
+  // Apply discriminative penalty
+  const strength = weights.discriminativePenaltyStrength / 100;
+  const overall = base * (1 - strength * (1 - discriminativeScore));
 
   return {
     overall,
