@@ -306,6 +306,7 @@ export async function runAnalysis(
   const weights: SimilarityWeights = {
     jaccard: config.confidenceWeightJaccard,
     fuzzy: config.confidenceWeightFuzzy,
+    discriminative: config.confidenceWeightDiscriminative,
   };
 
   // Pre-filter candidates by jaccard threshold
@@ -343,8 +344,8 @@ export async function runAnalysis(
     }
   }
 
-  // Load sampled text if fuzzy matching is weighted
-  if (weights.fuzzy > 0) {
+  // Load sampled text for fuzzy and discriminative scoring
+  if (weights.fuzzy > 0 || weights.discriminative > 0) {
     for (let i = 0; i < scoringDocIdArray.length; i += SQL_VARIABLE_LIMIT) {
       const batch = scoringDocIdArray.slice(i, i + SQL_VARIABLE_LIMIT);
       const rows = db
@@ -493,16 +494,19 @@ export async function runAnalysis(
       // Average component scores across pairs
       let avgJaccard = 0;
       let avgFuzzy = 0;
+      let avgDiscriminative = 0;
       let avgOverall = 0;
 
       if (pairs.length > 0) {
         for (const pair of pairs) {
           avgJaccard += pair.similarity.jaccard;
           avgFuzzy += pair.similarity.fuzzy;
+          avgDiscriminative += pair.similarity.discriminative;
           avgOverall += pair.similarity.overall;
         }
         avgJaccard /= pairs.length;
         avgFuzzy /= pairs.length;
+        avgDiscriminative /= pairs.length;
         avgOverall /= pairs.length;
       }
 
@@ -519,6 +523,7 @@ export async function runAnalysis(
             confidenceScore: avgOverall,
             jaccardSimilarity: avgJaccard,
             fuzzyTextRatio: avgFuzzy,
+            discriminativeScore: avgDiscriminative,
             algorithmVersion: ALGORITHM_VERSION,
             updatedAt: now,
           })
@@ -536,6 +541,7 @@ export async function runAnalysis(
             confidenceScore: avgOverall,
             jaccardSimilarity: avgJaccard,
             fuzzyTextRatio: avgFuzzy,
+            discriminativeScore: avgDiscriminative,
             algorithmVersion: ALGORITHM_VERSION,
             createdAt: now,
             updatedAt: now,
