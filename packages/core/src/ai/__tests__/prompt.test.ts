@@ -81,6 +81,18 @@ describe('buildPromptParts', () => {
     expect(userPrompt).not.toContain('<document>');
     expect(systemPrompt).not.toContain('<instructions>');
   });
+
+  it('sorts reference lists alphabetically for deterministic prompts', () => {
+    const { systemPrompt } = buildPromptParts({
+      ...baseOptions,
+      existingCorrespondents: ['Zebra Corp', 'Amazon', 'barclays'],
+      existingDocumentTypes: ['Receipt', 'Invoice', 'contract'],
+      existingTags: ['shopping', 'Finance', 'auto'],
+    });
+    expect(systemPrompt).toContain('Amazon, barclays, Zebra Corp');
+    expect(systemPrompt).toContain('contract, Invoice, Receipt');
+    expect(systemPrompt).toContain('auto, Finance, shopping');
+  });
 });
 
 describe('truncateContent', () => {

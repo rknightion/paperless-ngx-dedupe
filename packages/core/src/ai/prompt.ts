@@ -24,6 +24,11 @@ export interface BuildPromptOptions {
  *
  * When provider is 'anthropic', wraps system prompt in XML tags.
  */
+/** Case-insensitive sort without mutating the original array. */
+function sortedInsensitive(arr: string[]): string[] {
+  return [...arr].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
 export function buildPromptParts(options: BuildPromptOptions): PromptParts {
   const {
     promptTemplate,
@@ -40,16 +45,18 @@ export function buildPromptParts(options: BuildPromptOptions): PromptParts {
 
   const correspondentList =
     includeCorrespondents && existingCorrespondents.length > 0
-      ? existingCorrespondents.join(', ')
+      ? sortedInsensitive(existingCorrespondents).join(', ')
       : '(none provided)';
 
   const documentTypeList =
     includeDocumentTypes && existingDocumentTypes.length > 0
-      ? existingDocumentTypes.join(', ')
+      ? sortedInsensitive(existingDocumentTypes).join(', ')
       : '(none provided)';
 
   const tagList =
-    includeTags && existingTags.length > 0 ? existingTags.join(', ') : '(none provided)';
+    includeTags && existingTags.length > 0
+      ? sortedInsensitive(existingTags).join(', ')
+      : '(none provided)';
 
   let systemPrompt = promptTemplate
     .replace('{{existing_correspondents}}', correspondentList)
