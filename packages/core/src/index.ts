@@ -278,7 +278,8 @@ export {
   batchMarkRejected,
   getPendingAiResultIds,
 } from './ai/queries.js';
-export type { AiResultFilters, AiResultSummary, AiStats } from './ai/queries.js';
+export type { AiResultFilters, AiResultSummary, AiResultDetail, AiStats } from './ai/queries.js';
+export { normalizeSuggestedLabel, normalizeSuggestedTags } from './ai/normalize.js';
 export { applyAiResult, rejectAiResult, batchRejectAiResults } from './ai/apply.js';
 export type { ApplyOptions } from './ai/apply.js';
 

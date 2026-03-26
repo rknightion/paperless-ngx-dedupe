@@ -77,7 +77,7 @@ function seedDocumentAndResult(db: AppDatabase): string {
       suggestedDocumentType: 'Invoice',
       suggestedTagsJson: '["finance","new-tag"]',
       confidenceJson: '{"correspondent":0.9,"documentType":0.95,"tags":0.8}',
-      appliedStatus: 'pending',
+      appliedStatus: 'pending_review',
       promptTokens: 100,
       completionTokens: 50,
       createdAt: '2024-01-01T00:00:00Z',
@@ -213,7 +213,7 @@ describe('applyAiResult', () => {
         suggestedCorrespondent: null,
         suggestedDocumentType: null,
         suggestedTagsJson: null,
-        appliedStatus: 'pending',
+        appliedStatus: 'pending_review',
         createdAt: '2024-01-01T00:00:00Z',
       })
       .returning()
@@ -257,6 +257,165 @@ describe('applyAiResult', () => {
 
     const result = getAiResult(db, resultId);
     expect(result!.appliedStatus).toBe('partial');
+  });
+});
+
+describe('applyAiResult - safe defaults', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+  });
+
+  function seedResultWithNullSuggestions(
+    overrides: Partial<{
+      suggestedCorrespondent: string | null;
+      suggestedDocumentType: string | null;
+      suggestedTagsJson: string | null;
+    }> = {},
+  ): string {
+    db.insert(document)
+      .values({
+        id: 'doc-safe',
+        paperlessId: 10,
+        title: 'Safe Test Doc',
+        processingStatus: 'completed',
+        syncedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+
+    const result = db
+      .insert(aiProcessingResult)
+      .values({
+        documentId: 'doc-safe',
+        paperlessId: 10,
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        suggestedCorrespondent: null,
+        suggestedDocumentType: null,
+        suggestedTagsJson: '["finance"]',
+        confidenceJson: '{"correspondent":0.5,"documentType":0.5,"tags":0.5}',
+        appliedStatus: 'pending_review',
+        createdAt: '2024-01-01T00:00:00Z',
+        ...overrides,
+      })
+      .returning()
+      .get();
+
+    return result.id;
+  }
+
+  it('does not clear existing correspondent when suggestion is null (default)', async () => {
+    const resultId = seedResultWithNullSuggestions({
+      suggestedCorrespondent: null,
+      suggestedTagsJson: '["finance"]',
+    });
+    const client = createMockClient();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['correspondent', 'tags'],
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg).not.toHaveProperty('correspondent');
+    expect(updateArg).toHaveProperty('tags');
+  });
+
+  it('does not clear existing document type when suggestion is null (default)', async () => {
+    const resultId = seedResultWithNullSuggestions({
+      suggestedDocumentType: null,
+      suggestedTagsJson: '["finance"]',
+    });
+    const client = createMockClient();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['documentType', 'tags'],
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg).not.toHaveProperty('documentType');
+  });
+
+  it('does not clear existing tags when suggestions are empty (default)', async () => {
+    const resultId = seedResultWithNullSuggestions({
+      suggestedCorrespondent: 'Amazon',
+      suggestedTagsJson: '[]',
+    });
+    const client = createMockClient();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['correspondent', 'tags'],
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg).toHaveProperty('correspondent');
+    expect(updateArg).not.toHaveProperty('tags');
+  });
+
+  it('clears correspondent when allowClearing is true and suggestion is null', async () => {
+    const resultId = seedResultWithNullSuggestions({
+      suggestedCorrespondent: null,
+      suggestedTagsJson: '["finance"]',
+    });
+    const client = createMockClient();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['correspondent', 'tags'],
+      allowClearing: true,
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg).toHaveProperty('correspondent', null);
+  });
+
+  it('does not create new entity when createMissingEntities is false', async () => {
+    const resultId = seedResultWithNullSuggestions({
+      suggestedCorrespondent: 'HMRC',
+      suggestedTagsJson: '["finance"]',
+    });
+    const client = createMockClient();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['correspondent', 'tags'],
+      createMissingEntities: false,
+    });
+
+    expect(client.createCorrespondent).not.toHaveBeenCalled();
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg).not.toHaveProperty('correspondent');
+  });
+
+  it('never creates a correspondent named "unknown"', async () => {
+    const resultId = seedResultWithNullSuggestions({
+      suggestedCorrespondent: 'unknown',
+      suggestedTagsJson: '["finance"]',
+    });
+    const client = createMockClient();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['correspondent', 'tags'],
+    });
+
+    expect(client.createCorrespondent).not.toHaveBeenCalled();
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg).not.toHaveProperty('correspondent');
+  });
+
+  it('never creates a tag named "unknown"', async () => {
+    const resultId = seedResultWithNullSuggestions({
+      suggestedCorrespondent: 'Amazon',
+      suggestedTagsJson: '["finance","unknown"]',
+    });
+    const client = createMockClient();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['correspondent', 'tags'],
+    });
+
+    expect(client.createTag).not.toHaveBeenCalledWith('unknown');
+    expect(client.createTag).not.toHaveBeenCalledWith('Unknown');
   });
 });
 
@@ -316,7 +475,7 @@ describe('batchRejectAiResults', () => {
         provider: 'openai',
         model: 'gpt-5.4-mini',
         suggestedCorrespondent: 'Test',
-        appliedStatus: 'pending',
+        appliedStatus: 'pending_review',
         createdAt: '2024-01-01T00:00:00Z',
       })
       .returning()
@@ -330,7 +489,7 @@ describe('batchRejectAiResults', () => {
         provider: 'openai',
         model: 'gpt-5.4-mini',
         suggestedCorrespondent: 'Test',
-        appliedStatus: 'pending',
+        appliedStatus: 'pending_review',
         createdAt: '2024-01-01T00:00:00Z',
       })
       .returning()

@@ -16,6 +16,7 @@ import {
 } from '../telemetry/metrics.js';
 import type { AiBatchResult } from './types.js';
 import type { AiConfig } from './types.js';
+import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
 
 const logger = createLogger('ai-batch');
 
@@ -250,6 +251,13 @@ export async function processBatch(
           const now = new Date().toISOString();
           const docDurationMs = Math.round(performance.now() - docStartMs);
 
+          // Normalize suggestions before storing
+          const normalizedCorrespondent = normalizeSuggestedLabel(
+            extraction.response.correspondent,
+          );
+          const normalizedDocumentType = normalizeSuggestedLabel(extraction.response.documentType);
+          const normalizedTags = normalizeSuggestedTags(extraction.response.tags);
+
           // Upsert result
           db.insert(aiProcessingResult)
             .values({
@@ -257,14 +265,16 @@ export async function processBatch(
               paperlessId: doc.paperlessId,
               provider: provider.provider,
               model: config.model,
-              suggestedCorrespondent: extraction.response.correspondent,
-              suggestedDocumentType: extraction.response.documentType,
-              suggestedTagsJson: JSON.stringify(extraction.response.tags),
+              suggestedCorrespondent: normalizedCorrespondent,
+              suggestedDocumentType: normalizedDocumentType,
+              suggestedTagsJson: JSON.stringify(normalizedTags),
               confidenceJson: JSON.stringify(extraction.response.confidence),
               currentCorrespondent: doc.correspondent,
               currentDocumentType: doc.documentType,
               currentTagsJson: doc.tagsJson,
-              appliedStatus: 'pending',
+              appliedStatus: 'pending_review',
+              evidence: extraction.response.evidence || null,
+              rawResponseJson: JSON.stringify(extraction.response),
               promptTokens: extraction.usage.promptTokens,
               completionTokens: extraction.usage.completionTokens,
               processingTimeMs: docDurationMs,
@@ -275,16 +285,19 @@ export async function processBatch(
               set: {
                 provider: provider.provider,
                 model: config.model,
-                suggestedCorrespondent: extraction.response.correspondent,
-                suggestedDocumentType: extraction.response.documentType,
-                suggestedTagsJson: JSON.stringify(extraction.response.tags),
+                suggestedCorrespondent: normalizedCorrespondent,
+                suggestedDocumentType: normalizedDocumentType,
+                suggestedTagsJson: JSON.stringify(normalizedTags),
                 confidenceJson: JSON.stringify(extraction.response.confidence),
                 currentCorrespondent: doc.correspondent,
                 currentDocumentType: doc.documentType,
                 currentTagsJson: doc.tagsJson,
-                appliedStatus: 'pending',
+                appliedStatus: 'pending_review',
                 appliedAt: null,
                 appliedFieldsJson: null,
+                evidence: extraction.response.evidence || null,
+                failureType: null,
+                rawResponseJson: JSON.stringify(extraction.response),
                 promptTokens: extraction.usage.promptTokens,
                 completionTokens: extraction.usage.completionTokens,
                 errorMessage: null,
@@ -335,6 +348,7 @@ export async function processBatch(
           );
 
           const now = new Date().toISOString();
+          const failureType = isAiError ? error.failureType : null;
           // Store error result
           db.insert(aiProcessingResult)
             .values({
@@ -343,14 +357,16 @@ export async function processBatch(
               provider: provider.provider,
               model: config.model,
               errorMessage: errorMsg,
-              appliedStatus: 'pending',
+              failureType,
+              appliedStatus: 'failed',
               createdAt: now,
             })
             .onConflictDoUpdate({
               target: aiProcessingResult.documentId,
               set: {
                 errorMessage: errorMsg,
-                appliedStatus: 'pending',
+                failureType,
+                appliedStatus: 'failed',
                 createdAt: now,
               },
             })

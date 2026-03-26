@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
@@ -54,7 +55,7 @@ function seedDocumentsAndResults(db: AppDatabase): string[] {
       suggestedDocumentType: 'Invoice',
       suggestedTagsJson: '["finance","shopping"]',
       confidenceJson: '{"correspondent":0.9,"documentType":0.95,"tags":0.8}',
-      appliedStatus: 'pending',
+      appliedStatus: 'pending_review',
       promptTokens: 100,
       completionTokens: 50,
       createdAt: '2024-01-01T00:00:00Z',
@@ -95,7 +96,7 @@ function seedDocumentsAndResults(db: AppDatabase): string[] {
       suggestedDocumentType: null,
       suggestedTagsJson: null,
       confidenceJson: null,
-      appliedStatus: 'rejected',
+      appliedStatus: 'failed',
       errorMessage: 'Extraction failed: timeout',
       promptTokens: 60,
       completionTokens: 0,
@@ -135,7 +136,7 @@ describe('getAiResults', () => {
   });
 
   it('filters by status', () => {
-    const { items, total } = getAiResults(db, { status: 'pending' });
+    const { items, total } = getAiResults(db, { status: 'pending_review' });
     expect(total).toBe(1);
     expect(items).toHaveLength(1);
     expect(items[0].documentId).toBe('doc-1');
@@ -164,7 +165,7 @@ describe('getAiResults', () => {
   });
 
   it('handles null suggestedTags and confidence gracefully', () => {
-    const doc3Result = getAiResults(db, { status: 'rejected' }).items[0];
+    const doc3Result = getAiResults(db, { status: 'failed' }).items[0];
     expect(doc3Result.suggestedTags).toEqual([]);
     expect(doc3Result.confidence).toBeNull();
   });
@@ -193,6 +194,158 @@ describe('getAiResult', () => {
     const result = getAiResult(db, 'nonexistent-id');
     expect(result).toBeNull();
   });
+
+  it('returns detail fields (evidence, failureType, tokens, processingTimeMs, appliedFields)', () => {
+    // Add evidence and processingTimeMs to r1
+    db.update(aiProcessingResult)
+      .set({
+        evidence: 'Invoice from Amazon dated 2024-01-01',
+        processingTimeMs: 1500,
+        appliedFieldsJson: '["correspondent","tags"]',
+      })
+      .where(eq(aiProcessingResult.id, resultIds[0]))
+      .run();
+
+    const result = getAiResult(db, resultIds[0]);
+    expect(result).not.toBeNull();
+    expect(result!.evidence).toBe('Invoice from Amazon dated 2024-01-01');
+    expect(result!.promptTokens).toBe(100);
+    expect(result!.completionTokens).toBe(50);
+    expect(result!.processingTimeMs).toBe(1500);
+    expect(result!.appliedFields).toEqual(['correspondent', 'tags']);
+  });
+
+  it('returns failureType for failed results', () => {
+    db.update(aiProcessingResult)
+      .set({ failureType: 'timeout' })
+      .where(eq(aiProcessingResult.id, resultIds[2]))
+      .run();
+
+    const result = getAiResult(db, resultIds[2]);
+    expect(result).not.toBeNull();
+    expect(result!.failureType).toBe('timeout');
+    expect(result!.errorMessage).toBe('Extraction failed: timeout');
+  });
+});
+
+describe('getAiResults - sorting', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    seedDocumentsAndResults(db);
+  });
+
+  it('sorts by newest (default)', () => {
+    const { items } = getAiResults(db);
+    expect(items[0].createdAt).toBe('2024-01-03T00:00:00Z');
+  });
+
+  it('sorts by oldest', () => {
+    const { items } = getAiResults(db, { sort: 'oldest' });
+    expect(items[0].createdAt).toBe('2024-01-01T00:00:00Z');
+  });
+
+  it('sorts by confidence ascending', () => {
+    // r1 avg: (0.9+0.95+0.8)/3 = 0.883, r2 avg: (0.85+0.9+0.7)/3 = 0.817
+    // r3 has null confidence -> NULL sorts first in ASC
+    const { items } = getAiResults(db, { sort: 'confidence_asc' });
+    const nonNullItems = items.filter((i) => i.confidence !== null);
+    expect(nonNullItems[0].documentId).toBe('doc-2');
+    expect(nonNullItems[1].documentId).toBe('doc-1');
+  });
+
+  it('sorts by confidence descending', () => {
+    const { items } = getAiResults(db, { sort: 'confidence_desc' });
+    // r1 has highest avg confidence
+    expect(items[0].documentId).toBe('doc-1');
+    expect(items[1].documentId).toBe('doc-2');
+  });
+});
+
+describe('getAiResults - changedOnly filter', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    seedDocumentsAndResults(db);
+  });
+
+  it('returns results where suggestions differ from current (null current counts as different)', () => {
+    // r1 has suggestedCorrespondent='Amazon' but currentCorrespondent=null -> IS a change
+    // r2 has suggestedCorrespondent='Tesco' but currentCorrespondent=null -> IS a change
+    // r3 has suggestedCorrespondent=null and currentCorrespondent=null -> NOT a change (but tags also null=null)
+    const { items } = getAiResults(db, { changedOnly: true });
+    // r1 and r2 should be included (suggested != current), r3 has all nulls so no diff
+    const ids = items.map((i) => i.documentId);
+    expect(ids).toContain('doc-1');
+    expect(ids).toContain('doc-2');
+    expect(ids).not.toContain('doc-3');
+  });
+
+  it('excludes results where all suggestions match current values', () => {
+    // Set current values to match suggested for doc-1
+    db.update(aiProcessingResult)
+      .set({
+        currentCorrespondent: 'Amazon',
+        currentDocumentType: 'Invoice',
+        currentTagsJson: '["finance","shopping"]',
+      })
+      .where(eq(aiProcessingResult.documentId, 'doc-1'))
+      .run();
+
+    const { items } = getAiResults(db, { changedOnly: true });
+    const ids = items.map((i) => i.documentId);
+    expect(ids).not.toContain('doc-1');
+    expect(ids).toContain('doc-2');
+  });
+});
+
+describe('getAiResults - filters', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    seedDocumentsAndResults(db);
+  });
+
+  it('filters by failed status', () => {
+    const { items, total } = getAiResults(db, { failed: true });
+    expect(total).toBe(1);
+    expect(items[0].appliedStatus).toBe('failed');
+  });
+
+  it('filters by provider', () => {
+    const { items, total } = getAiResults(db, { provider: 'anthropic' });
+    expect(total).toBe(1);
+    expect(items[0].provider).toBe('anthropic');
+  });
+
+  it('filters by model', () => {
+    const { items, total } = getAiResults(db, { model: 'claude-sonnet-4-6' });
+    expect(total).toBe(1);
+    expect(items[0].model).toBe('claude-sonnet-4-6');
+  });
+
+  it('filters by minConfidence', () => {
+    // r1 avg: (0.9+0.95+0.8)/3 = 0.883, r2 avg: (0.85+0.9+0.7)/3 = 0.817
+    // r3 has null confidence and should be excluded
+    const { items } = getAiResults(db, { minConfidence: 0.85 });
+    expect(items).toHaveLength(1);
+    expect(items[0].documentId).toBe('doc-1');
+  });
+
+  it('filters by maxConfidence', () => {
+    const { items } = getAiResults(db, { maxConfidence: 0.85 });
+    expect(items).toHaveLength(1);
+    expect(items[0].documentId).toBe('doc-2');
+  });
 });
 
 describe('getAiStats', () => {
@@ -211,12 +364,13 @@ describe('getAiStats', () => {
     expect(stats.unprocessed).toBe(0);
     expect(stats.pendingReview).toBe(1);
     expect(stats.applied).toBe(1);
-    expect(stats.rejected).toBe(1);
+    expect(stats.rejected).toBe(0);
+    expect(stats.failed).toBe(1);
   });
 
-  it('counts failed results (errorMessage IS NOT NULL)', () => {
+  it('counts failed results', () => {
     const stats = getAiStats(db);
-    expect(stats.failed).toBe(1); // doc-3 has errorMessage
+    expect(stats.failed).toBe(1); // doc-3 has appliedStatus 'failed'
   });
 
   it('sums prompt and completion tokens', () => {

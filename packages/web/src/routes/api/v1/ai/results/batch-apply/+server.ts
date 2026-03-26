@@ -26,6 +26,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     );
   }
 
+  const allowClearing = body?.allowClearing === true;
+  const createMissingEntities = body?.createMissingEntities !== false;
+
   if (resultIds.length === 0) {
     return apiError(ErrorCode.BAD_REQUEST, 'No result IDs provided');
   }
@@ -41,6 +44,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     try {
       await applyAiResult(locals.db, client, id, {
         fields,
+        allowClearing,
+        createMissingEntities,
         addProcessedTag: aiConfig.addProcessedTag,
         processedTagName: aiConfig.processedTagName,
       });

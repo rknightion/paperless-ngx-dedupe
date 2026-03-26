@@ -39,9 +39,10 @@ export const AiProvider = {
 export type AiProvider = (typeof AiProvider)[keyof typeof AiProvider];
 
 export const AiAppliedStatus = {
-  PENDING: 'pending',
+  PENDING_REVIEW: 'pending_review',
   APPLIED: 'applied',
   REJECTED: 'rejected',
   PARTIAL: 'partial',
+  FAILED: 'failed',
 } as const;
 export type AiAppliedStatus = (typeof AiAppliedStatus)[keyof typeof AiAppliedStatus];

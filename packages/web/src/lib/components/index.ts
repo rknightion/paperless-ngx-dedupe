@@ -18,3 +18,13 @@ export { default as DocumentVisualCompare } from './duplicates/DocumentVisualCom
 export { default as RecycleBinPrompt } from './duplicates/RecycleBinPrompt.svelte';
 export { default as ThumbnailPreview } from './duplicates/ThumbnailPreview.svelte';
 export { default as WizardGroupCard } from './duplicates/WizardGroupCard.svelte';
+export { default as AiResultList } from './ai/AiResultList.svelte';
+export { default as AiResultRow } from './ai/AiResultRow.svelte';
+export { default as AiResultCard } from './ai/AiResultCard.svelte';
+export { default as AiResultDetailDrawer } from './ai/AiResultDetailDrawer.svelte';
+export { default as AiFieldDiffCard } from './ai/AiFieldDiffCard.svelte';
+export { default as AiBulkActionBar } from './ai/AiBulkActionBar.svelte';
+export { default as AiFilterBar } from './ai/AiFilterBar.svelte';
+export { default as AiToastContainer } from './ai/AiToastContainer.svelte';
+export { default as AiDocumentPreview } from './ai/AiDocumentPreview.svelte';
+export { default as AiKeyboardHandler } from './ai/AiKeyboardHandler.svelte';

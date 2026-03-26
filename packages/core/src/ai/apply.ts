@@ -6,6 +6,7 @@ import { createLogger } from '../logger.js';
 import { withSpan } from '../telemetry/spans.js';
 import { aiApplyTotal } from '../telemetry/metrics.js';
 import { markAiResultApplied, markAiResultRejected, batchMarkRejected } from './queries.js';
+import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
 
 const logger = createLogger('ai-apply');
 
@@ -13,6 +14,10 @@ export interface ApplyOptions {
   fields: ('correspondent' | 'documentType' | 'tags')[];
   addProcessedTag?: boolean;
   processedTagName?: string;
+  /** Allow clearing existing Paperless metadata when suggestion is null. Default: false */
+  allowClearing?: boolean;
+  /** Allow creating new correspondents/document types/tags in Paperless. Default: true */
+  createMissingEntities?: boolean;
 }
 
 export async function applyAiResult(
@@ -35,7 +40,15 @@ export async function applyAiResult(
         .get();
 
       if (!row) throw new Error(`AI result not found: ${resultId}`);
-      if (!row.suggestedCorrespondent && !row.suggestedDocumentType && !row.suggestedTagsJson) {
+
+      // Normalize suggestions defensively (belt-and-suspenders for pre-existing data)
+      const suggestedCorrespondent = normalizeSuggestedLabel(row.suggestedCorrespondent);
+      const suggestedDocumentType = normalizeSuggestedLabel(row.suggestedDocumentType);
+      const suggestedTags = normalizeSuggestedTags(
+        row.suggestedTagsJson ? JSON.parse(row.suggestedTagsJson) : [],
+      );
+
+      if (!suggestedCorrespondent && !suggestedDocumentType && suggestedTags.length === 0) {
         throw new Error('No suggestions to apply');
       }
 
@@ -54,46 +67,63 @@ export async function applyAiResult(
 
       // Resolve correspondent
       if (options.fields.includes('correspondent')) {
-        if (row.suggestedCorrespondent) {
+        if (suggestedCorrespondent) {
           let found = correspondents.find(
-            (c) => c.name.toLowerCase() === row.suggestedCorrespondent!.toLowerCase(),
+            (c) => c.name.toLowerCase() === suggestedCorrespondent.toLowerCase(),
           );
           if (!found) {
-            found = await client.createCorrespondent(row.suggestedCorrespondent);
-            logger.info({ name: row.suggestedCorrespondent }, 'Created new correspondent');
+            if (options.createMissingEntities === false) {
+              logger.info(
+                { name: suggestedCorrespondent },
+                'Skipping: would create new correspondent',
+              );
+            } else {
+              found = await client.createCorrespondent(suggestedCorrespondent);
+              logger.info({ name: suggestedCorrespondent }, 'Created new correspondent');
+            }
           }
-          update.correspondent = found.id;
-        } else {
+          if (found) update.correspondent = found.id;
+        } else if (options.allowClearing) {
           update.correspondent = null;
         }
+        // else: no suggestion and allowClearing is false → leave untouched
       }
 
       // Resolve document type
       if (options.fields.includes('documentType')) {
-        if (row.suggestedDocumentType) {
+        if (suggestedDocumentType) {
           let found = documentTypes.find(
-            (dt) => dt.name.toLowerCase() === row.suggestedDocumentType!.toLowerCase(),
+            (dt) => dt.name.toLowerCase() === suggestedDocumentType.toLowerCase(),
           );
           if (!found) {
-            found = await client.createDocumentType(row.suggestedDocumentType);
-            logger.info({ name: row.suggestedDocumentType }, 'Created new document type');
+            if (options.createMissingEntities === false) {
+              logger.info(
+                { name: suggestedDocumentType },
+                'Skipping: would create new document type',
+              );
+            } else {
+              found = await client.createDocumentType(suggestedDocumentType);
+              logger.info({ name: suggestedDocumentType }, 'Created new document type');
+            }
           }
-          update.documentType = found.id;
-        } else {
+          if (found) update.documentType = found.id;
+        } else if (options.allowClearing) {
           update.documentType = null;
         }
+        // else: no suggestion and allowClearing is false → leave untouched
       }
 
       // Resolve tags
       if (options.fields.includes('tags')) {
-        const suggestedTags: string[] = row.suggestedTagsJson
-          ? JSON.parse(row.suggestedTagsJson)
-          : [];
         const resolvedTagIds: number[] = [];
 
         for (const tagName of suggestedTags) {
           let found = tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
           if (!found) {
+            if (options.createMissingEntities === false) {
+              logger.info({ name: tagName }, 'Skipping: would create new tag');
+              continue;
+            }
             found = await client.createTag(tagName);
             tags.push(found); // add to local cache
             logger.info({ name: tagName }, 'Created new tag');
@@ -115,7 +145,10 @@ export async function applyAiResult(
           }
         }
 
-        update.tags = resolvedTagIds;
+        if (resolvedTagIds.length > 0 || options.allowClearing) {
+          update.tags = resolvedTagIds;
+        }
+        // else: no tags resolved and allowClearing is false → leave untouched
       }
 
       // Apply to Paperless-NGX

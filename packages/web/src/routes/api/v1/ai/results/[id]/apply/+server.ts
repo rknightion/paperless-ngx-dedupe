@@ -12,6 +12,8 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
   }
 
+  let allowClearing = false;
+  let createMissingEntities = true;
   let fields: ('correspondent' | 'documentType' | 'tags')[] = [
     'correspondent',
     'documentType',
@@ -27,6 +29,8 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
           ['correspondent', 'documentType', 'tags'].includes(f),
         );
       }
+      allowClearing = body?.allowClearing === true;
+      createMissingEntities = body?.createMissingEntities !== false;
     } catch {
       // Use defaults
     }
@@ -39,6 +43,8 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
   try {
     await applyAiResult(locals.db, client, params.id, {
       fields,
+      allowClearing,
+      createMissingEntities,
       addProcessedTag: aiConfig.addProcessedTag,
       processedTagName: aiConfig.processedTagName,
     });
