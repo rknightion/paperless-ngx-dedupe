@@ -5,8 +5,14 @@ import type { AppDatabase } from '../db/client.js';
 import { createLogger } from '../logger.js';
 import { withSpan } from '../telemetry/spans.js';
 import { aiApplyTotal } from '../telemetry/metrics.js';
-import { markAiResultApplied, markAiResultRejected, batchMarkRejected } from './queries.js';
+import {
+  markAiResultApplied,
+  markAiResultRejected,
+  batchMarkRejected,
+  type ApplySnapshot,
+} from './queries.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
+import { recordFeedback } from './feedback.js';
 
 const logger = createLogger('ai-apply');
 
@@ -52,12 +58,24 @@ export async function applyAiResult(
         throw new Error('No suggestions to apply');
       }
 
-      // Fetch current reference data
-      const [correspondents, documentTypes, tags] = await Promise.all([
+      // Fetch current reference data and current document state from Paperless
+      const [correspondents, documentTypes, tags, currentDoc] = await Promise.all([
         client.getCorrespondents(),
         client.getDocumentTypes(),
         client.getTags(),
+        client.getDocument(row.paperlessId),
       ]);
+
+      // Build pre-apply snapshot from actual Paperless state
+      const preApplyCorrespondent = currentDoc.correspondent
+        ? correspondents.find((c) => c.id === currentDoc.correspondent)
+        : null;
+      const preApplyDocType = currentDoc.documentType
+        ? documentTypes.find((dt) => dt.id === currentDoc.documentType)
+        : null;
+      const preApplyTagNames = currentDoc.tags
+        .map((tid) => tags.find((t) => t.id === tid)?.name)
+        .filter((n): n is string => n !== undefined);
 
       const update: {
         correspondent?: number | null;
@@ -158,8 +176,41 @@ export async function applyAiResult(
         'Applied AI suggestions to document',
       );
 
+      // Build audit snapshot
+      const snapshot: ApplySnapshot = {
+        preApply: {
+          correspondentId: currentDoc.correspondent,
+          correspondentName: preApplyCorrespondent?.name ?? null,
+          documentTypeId: currentDoc.documentType,
+          documentTypeName: preApplyDocType?.name ?? null,
+          tagIds: currentDoc.tags.length > 0 ? currentDoc.tags : null,
+          tagNames: preApplyTagNames.length > 0 ? preApplyTagNames : null,
+        },
+        applied: {
+          correspondentId: update.correspondent !== undefined ? update.correspondent : null,
+          documentTypeId: update.documentType !== undefined ? update.documentType : null,
+          tagIds: update.tags ?? null,
+        },
+      };
+
       // Update DB status
-      markAiResultApplied(db, resultId, options.fields);
+      markAiResultApplied(db, resultId, options.fields, snapshot);
+
+      // Record feedback if only some fields were applied
+      const allFields: ('correspondent' | 'documentType' | 'tags')[] = [
+        'correspondent',
+        'documentType',
+        'tags',
+      ];
+      const excludedFields = allFields.filter((f) => !options.fields.includes(f));
+      if (excludedFields.length > 0) {
+        recordFeedback(db, resultId, {
+          action: 'partial_applied',
+          rejectedFields: excludedFields,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       aiApplyTotal().add(1, { status: 'applied' });
     },
   );
@@ -167,8 +218,27 @@ export async function applyAiResult(
 
 export function rejectAiResult(db: AppDatabase, resultId: string): void {
   markAiResultRejected(db, resultId);
+  recordFeedback(db, resultId, {
+    action: 'rejected',
+    timestamp: new Date().toISOString(),
+  });
   aiApplyTotal().add(1, { status: 'rejected' });
   logger.info({ resultId }, 'Rejected AI result');
+}
+
+export function rejectAiResultWithReason(
+  db: AppDatabase,
+  resultId: string,
+  reason?: string,
+): void {
+  markAiResultRejected(db, resultId);
+  recordFeedback(db, resultId, {
+    action: 'rejected',
+    reason,
+    timestamp: new Date().toISOString(),
+  });
+  aiApplyTotal().add(1, { status: 'rejected' });
+  logger.info({ resultId, reason }, 'Rejected AI result with reason');
 }
 
 export function batchRejectAiResults(db: AppDatabase, ids: string[]): void {

@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 import { document } from './documents.js';
@@ -33,6 +33,28 @@ export const aiProcessingResult = sqliteTable(
     errorMessage: text('error_message'),
     processingTimeMs: integer('processing_time_ms'),
     createdAt: text('created_at').notNull(),
+
+    // Audit: pre-apply snapshot (captured at apply time, not processing time)
+    preApplyCorrespondentId: integer('pre_apply_correspondent_id'),
+    preApplyCorrespondentName: text('pre_apply_correspondent_name'),
+    preApplyDocumentTypeId: integer('pre_apply_document_type_id'),
+    preApplyDocumentTypeName: text('pre_apply_document_type_name'),
+    preApplyTagIdsJson: text('pre_apply_tag_ids_json'),
+    preApplyTagNamesJson: text('pre_apply_tag_names_json'),
+
+    // Audit: what was actually written to Paperless
+    appliedCorrespondentId: integer('applied_correspondent_id'),
+    appliedDocumentTypeId: integer('applied_document_type_id'),
+    appliedTagIdsJson: text('applied_tag_ids_json'),
+
+    // Revert tracking
+    revertedAt: text('reverted_at'),
+
+    // Feedback for model quality loops
+    feedbackJson: text('feedback_json'),
+
+    // Cost tracking
+    estimatedCostUsd: real('estimated_cost_usd'),
   },
   (table) => [uniqueIndex('ai_processing_result_document_id_unique').on(table.documentId)],
 );
