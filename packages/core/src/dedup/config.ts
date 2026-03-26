@@ -34,19 +34,35 @@ export function getDedupConfig(db: AppDatabase): DedupConfig {
     raw[shortKey] = parseConfigValue(row.key, row.value);
   }
 
-  // Auto-migrate pre-1.1.0 configs: redistribute 2-weight configs to include
-  // discriminative weight. Only triggers when J/F are stored but D is absent.
-  // Fresh installs (no rows) fall through to Zod defaults instead.
-  if (!('confidenceWeightDiscriminative' in raw) && 'confidenceWeightJaccard' in raw) {
+  // Migrate 1.1.0 → 1.2.0: convert 3-weight system to 2-weight + penalty
+  if ('confidenceWeightDiscriminative' in raw && !('discriminativePenaltyStrength' in raw)) {
     const j = raw.confidenceWeightJaccard as number;
-    const f = (raw.confidenceWeightFuzzy as number) ?? 0;
-    if (j + f === 100) {
-      const d = 15;
-      const scale = (100 - d) / 100;
-      raw.confidenceWeightJaccard = Math.round(j * scale);
-      raw.confidenceWeightFuzzy = 100 - d - Math.round(j * scale);
-      raw.confidenceWeightDiscriminative = d;
+    const f = raw.confidenceWeightFuzzy as number;
+    const d = raw.confidenceWeightDiscriminative as number;
+
+    // Convert old D weight to penalty strength (old default 15 → new default 50)
+    raw.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 50));
+
+    // Redistribute J+F proportionally to sum to 100
+    const jfSum = j + f;
+    if (jfSum > 0) {
+      raw.confidenceWeightJaccard = Math.round((j / jfSum) * 100);
+      raw.confidenceWeightFuzzy = 100 - Math.round((j / jfSum) * 100);
+    } else {
+      raw.confidenceWeightJaccard = 60;
+      raw.confidenceWeightFuzzy = 40;
     }
+
+    delete raw.confidenceWeightDiscriminative;
+  }
+
+  // Migrate pre-1.1.0: J+F already sum to 100, just add default penalty strength
+  if (
+    !('confidenceWeightDiscriminative' in raw) &&
+    !('discriminativePenaltyStrength' in raw) &&
+    'confidenceWeightJaccard' in raw
+  ) {
+    raw.discriminativePenaltyStrength = 50;
   }
 
   return dedupConfigSchema.parse(raw) as DedupConfig;
