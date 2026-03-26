@@ -134,6 +134,7 @@ export interface DuplicateGroupDetail {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
+  discriminativeScore?: number | null;
   algorithmVersion: string;
   status: string;
   createdAt: string;
@@ -279,6 +280,7 @@ export interface DedupConfig {
   similarityThreshold: number;
   confidenceWeightJaccard: number;
   confidenceWeightFuzzy: number;
+  confidenceWeightDiscriminative?: number;
   fuzzySampleSize: number;
   autoAnalyze: boolean;
 }

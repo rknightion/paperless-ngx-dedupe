@@ -5,6 +5,7 @@ export interface DuplicateExportRow {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
+  discriminativeScore: number | null;
   groupStatus: string;
   isPrimary: boolean;
   paperlessId: number;

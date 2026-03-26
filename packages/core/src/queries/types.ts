@@ -85,6 +85,7 @@ export interface DuplicateGroupSummary {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
+  discriminativeScore: number | null;
   status: string;
   memberCount: number;
   primaryDocumentTitle: string | null;
@@ -114,6 +115,7 @@ export interface DuplicateGroupDetail {
   confidenceScore: number;
   jaccardSimilarity: number | null;
   fuzzyTextRatio: number | null;
+  discriminativeScore: number | null;
   algorithmVersion: string;
   status: string;
   createdAt: string;
