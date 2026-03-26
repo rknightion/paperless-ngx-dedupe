@@ -11,7 +11,15 @@ function parseConfigValue(key: string, value: string): unknown {
     shortKey === 'addProcessedTag' ||
     shortKey === 'includeCorrespondents' ||
     shortKey === 'includeDocumentTypes' ||
-    shortKey === 'includeTags'
+    shortKey === 'includeTags' ||
+    shortKey === 'neverAutoCreateEntities' ||
+    shortKey === 'neverOverwriteNonEmpty' ||
+    shortKey === 'tagsOnlyAutoApply' ||
+    shortKey === 'autoApplyEnabled' ||
+    shortKey === 'autoApplyRequireAllAboveThreshold' ||
+    shortKey === 'autoApplyRequireNoNewEntities' ||
+    shortKey === 'autoApplyRequireNoClearing' ||
+    shortKey === 'autoApplyRequireOcrText'
   ) {
     return value === 'true';
   }

@@ -1,12 +1,34 @@
-import { eq, sql, desc, asc, and } from 'drizzle-orm';
+import { eq, sql, desc, asc, and, isNull } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { document } from '../schema/sqlite/documents.js';
 import type { AppDatabase } from '../db/client.js';
 
+export interface ApplySnapshot {
+  preApply: {
+    correspondentId?: number | null;
+    correspondentName?: string | null;
+    documentTypeId?: number | null;
+    documentTypeName?: string | null;
+    tagIds?: number[] | null;
+    tagNames?: string[] | null;
+  };
+  applied: {
+    correspondentId?: number | null;
+    documentTypeId?: number | null;
+    tagIds?: number[] | null;
+  };
+}
+
 export interface AiResultFilters {
   status?: string;
   search?: string;
-  sort?: 'newest' | 'oldest' | 'confidence_asc' | 'confidence_desc';
+  sort?:
+    | 'newest'
+    | 'oldest'
+    | 'confidence_asc'
+    | 'confidence_desc'
+    | 'applied_newest'
+    | 'applied_oldest';
   changedOnly?: boolean;
   failed?: boolean;
   minConfidence?: number;
@@ -43,6 +65,16 @@ export interface AiResultDetail extends AiResultSummary {
   processingTimeMs: number | null;
   appliedFields: string[] | null;
   rawResponseJson: string | null;
+  preApplyCorrespondentId: number | null;
+  preApplyCorrespondentName: string | null;
+  preApplyDocumentTypeId: number | null;
+  preApplyDocumentTypeName: string | null;
+  preApplyTagIds: number[] | null;
+  preApplyTagNames: string[] | null;
+  appliedCorrespondentId: number | null;
+  appliedDocumentTypeId: number | null;
+  appliedTagIds: number[] | null;
+  revertedAt: string | null;
 }
 
 export interface AiStats {
@@ -51,9 +83,20 @@ export interface AiStats {
   pendingReview: number;
   applied: number;
   rejected: number;
+  reverted: number;
   failed: number;
   totalPromptTokens: number;
   totalCompletionTokens: number;
+  totalEstimatedCostUsd: number;
+}
+
+export interface UnprocessedDocument {
+  id: string;
+  paperlessId: number;
+  title: string;
+  correspondent: string | null;
+  documentType: string | null;
+  tags: string[];
 }
 
 function parseJsonArray(json: string | null): string[] {
@@ -62,6 +105,15 @@ function parseJsonArray(json: string | null): string[] {
     return JSON.parse(json);
   } catch {
     return [];
+  }
+}
+
+function parseJsonNumberArray(json: string | null): number[] | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
   }
 }
 
@@ -127,6 +179,12 @@ export function getAiResults(
       break;
     case 'confidence_desc':
       orderByClause = sql`(json_extract(${aiProcessingResult.confidenceJson}, '$.correspondent') + json_extract(${aiProcessingResult.confidenceJson}, '$.documentType') + json_extract(${aiProcessingResult.confidenceJson}, '$.tags')) / 3.0 desc`;
+      break;
+    case 'applied_newest':
+      orderByClause = desc(aiProcessingResult.appliedAt);
+      break;
+    case 'applied_oldest':
+      orderByClause = asc(aiProcessingResult.appliedAt);
       break;
     default: // 'newest' or undefined
       orderByClause = desc(aiProcessingResult.createdAt);
@@ -219,6 +277,16 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
       completionTokens: aiProcessingResult.completionTokens,
       processingTimeMs: aiProcessingResult.processingTimeMs,
       createdAt: aiProcessingResult.createdAt,
+      preApplyCorrespondentId: aiProcessingResult.preApplyCorrespondentId,
+      preApplyCorrespondentName: aiProcessingResult.preApplyCorrespondentName,
+      preApplyDocumentTypeId: aiProcessingResult.preApplyDocumentTypeId,
+      preApplyDocumentTypeName: aiProcessingResult.preApplyDocumentTypeName,
+      preApplyTagIdsJson: aiProcessingResult.preApplyTagIdsJson,
+      preApplyTagNamesJson: aiProcessingResult.preApplyTagNamesJson,
+      appliedCorrespondentId: aiProcessingResult.appliedCorrespondentId,
+      appliedDocumentTypeId: aiProcessingResult.appliedDocumentTypeId,
+      appliedTagIdsJson: aiProcessingResult.appliedTagIdsJson,
+      revertedAt: aiProcessingResult.revertedAt,
     })
     .from(aiProcessingResult)
     .innerJoin(document, eq(aiProcessingResult.documentId, document.id))
@@ -252,6 +320,16 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
     processingTimeMs: row.processingTimeMs ?? null,
     appliedFields: row.appliedFieldsJson ? JSON.parse(row.appliedFieldsJson) : null,
     rawResponseJson: row.rawResponseJson ?? null,
+    preApplyCorrespondentId: row.preApplyCorrespondentId ?? null,
+    preApplyCorrespondentName: row.preApplyCorrespondentName ?? null,
+    preApplyDocumentTypeId: row.preApplyDocumentTypeId ?? null,
+    preApplyDocumentTypeName: row.preApplyDocumentTypeName ?? null,
+    preApplyTagIds: parseJsonNumberArray(row.preApplyTagIdsJson),
+    preApplyTagNames: parseJsonArray(row.preApplyTagNamesJson),
+    appliedCorrespondentId: row.appliedCorrespondentId ?? null,
+    appliedDocumentTypeId: row.appliedDocumentTypeId ?? null,
+    appliedTagIds: parseJsonNumberArray(row.appliedTagIdsJson),
+    revertedAt: row.revertedAt ?? null,
   };
 }
 
@@ -277,15 +355,24 @@ export function getAiStats(db: AppDatabase): AiStats {
     .from(aiProcessingResult)
     .get();
 
+  const costRow = db
+    .select({
+      totalCost: sql<number>`coalesce(sum(${aiProcessingResult.estimatedCostUsd}), 0)`,
+    })
+    .from(aiProcessingResult)
+    .get();
+
   const stats: AiStats = {
     totalProcessed: 0,
     unprocessed: (totalDocs?.count ?? 0) - (processedDocs?.count ?? 0),
     pendingReview: 0,
     applied: 0,
     rejected: 0,
+    reverted: 0,
     failed: 0,
     totalPromptTokens: 0,
     totalCompletionTokens: 0,
+    totalEstimatedCostUsd: costRow?.totalCost ?? 0,
   };
 
   for (const row of rows) {
@@ -306,6 +393,9 @@ export function getAiStats(db: AppDatabase): AiStats {
       case 'partial':
         stats.applied += row.count;
         break;
+      case 'reverted':
+        stats.reverted += row.count;
+        break;
       case 'failed':
         stats.failed += row.count;
         break;
@@ -315,16 +405,41 @@ export function getAiStats(db: AppDatabase): AiStats {
   return stats;
 }
 
-export function markAiResultApplied(db: AppDatabase, id: string, appliedFields: string[]): void {
+export function markAiResultApplied(
+  db: AppDatabase,
+  id: string,
+  appliedFields: string[],
+  snapshot?: ApplySnapshot,
+): void {
   const allFields = ['correspondent', 'documentType', 'tags'];
   const status = appliedFields.length === allFields.length ? 'applied' : 'partial';
 
+  const setData: Record<string, unknown> = {
+    appliedStatus: status,
+    appliedAt: new Date().toISOString(),
+    appliedFieldsJson: JSON.stringify(appliedFields),
+  };
+
+  if (snapshot) {
+    setData.preApplyCorrespondentId = snapshot.preApply.correspondentId ?? null;
+    setData.preApplyCorrespondentName = snapshot.preApply.correspondentName ?? null;
+    setData.preApplyDocumentTypeId = snapshot.preApply.documentTypeId ?? null;
+    setData.preApplyDocumentTypeName = snapshot.preApply.documentTypeName ?? null;
+    setData.preApplyTagIdsJson = snapshot.preApply.tagIds
+      ? JSON.stringify(snapshot.preApply.tagIds)
+      : null;
+    setData.preApplyTagNamesJson = snapshot.preApply.tagNames
+      ? JSON.stringify(snapshot.preApply.tagNames)
+      : null;
+    setData.appliedCorrespondentId = snapshot.applied.correspondentId ?? null;
+    setData.appliedDocumentTypeId = snapshot.applied.documentTypeId ?? null;
+    setData.appliedTagIdsJson = snapshot.applied.tagIds
+      ? JSON.stringify(snapshot.applied.tagIds)
+      : null;
+  }
+
   db.update(aiProcessingResult)
-    .set({
-      appliedStatus: status,
-      appliedAt: new Date().toISOString(),
-      appliedFieldsJson: JSON.stringify(appliedFields),
-    })
+    .set(setData)
     .where(eq(aiProcessingResult.id, id))
     .run();
 }
@@ -471,4 +586,46 @@ export function batchMarkRejected(db: AppDatabase, ids: string[]): void {
         .run();
     }
   });
+}
+
+export function getUnprocessedDocuments(
+  db: AppDatabase,
+  limit = 20,
+  offset = 0,
+): { items: UnprocessedDocument[]; total: number } {
+  const totalResult = db
+    .select({ count: sql<number>`count(*)` })
+    .from(document)
+    .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
+    .where(isNull(aiProcessingResult.id))
+    .get();
+  const total = totalResult?.count ?? 0;
+
+  const rows = db
+    .select({
+      id: document.id,
+      paperlessId: document.paperlessId,
+      title: document.title,
+      correspondent: document.correspondent,
+      documentType: document.documentType,
+      tagsJson: document.tagsJson,
+    })
+    .from(document)
+    .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
+    .where(isNull(aiProcessingResult.id))
+    .orderBy(desc(document.paperlessId))
+    .limit(limit)
+    .offset(offset)
+    .all();
+
+  const items: UnprocessedDocument[] = rows.map((r) => ({
+    id: r.id,
+    paperlessId: r.paperlessId,
+    title: r.title,
+    correspondent: r.correspondent,
+    documentType: r.documentType,
+    tags: parseJsonArray(r.tagsJson),
+  }));
+
+  return { items, total };
 }

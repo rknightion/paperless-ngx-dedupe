@@ -17,6 +17,7 @@ import {
 import type { AiBatchResult } from './types.js';
 import type { AiConfig } from './types.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
+import { getModelPricing, estimateResultCost } from './costs.js';
 
 const logger = createLogger('ai-batch');
 
@@ -258,6 +259,16 @@ export async function processBatch(
           const normalizedDocumentType = normalizeSuggestedLabel(extraction.response.documentType);
           const normalizedTags = normalizeSuggestedTags(extraction.response.tags);
 
+          // Compute cost estimate
+          const pricing = getModelPricing(db, config.model);
+          const estimatedCostUsd = pricing
+            ? estimateResultCost(
+                pricing,
+                extraction.usage.promptTokens,
+                extraction.usage.completionTokens,
+              )
+            : null;
+
           // Upsert result
           db.insert(aiProcessingResult)
             .values({
@@ -277,6 +288,7 @@ export async function processBatch(
               rawResponseJson: JSON.stringify(extraction.response),
               promptTokens: extraction.usage.promptTokens,
               completionTokens: extraction.usage.completionTokens,
+              estimatedCostUsd,
               processingTimeMs: docDurationMs,
               createdAt: now,
             })
@@ -300,6 +312,7 @@ export async function processBatch(
                 rawResponseJson: JSON.stringify(extraction.response),
                 promptTokens: extraction.usage.promptTokens,
                 completionTokens: extraction.usage.completionTokens,
+                estimatedCostUsd,
                 errorMessage: null,
                 processingTimeMs: docDurationMs,
                 createdAt: now,

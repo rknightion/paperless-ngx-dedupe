@@ -332,6 +332,29 @@ export interface AiResultDetail extends AiResultSummary {
   completionTokens: number | null;
   processingTimeMs: number | null;
   appliedFields: string[] | null;
+  rawResponseJson: string | null;
+
+  // Audit: pre-apply snapshot
+  preApplyCorrespondentId: number | null;
+  preApplyCorrespondentName: string | null;
+  preApplyDocumentTypeId: number | null;
+  preApplyDocumentTypeName: string | null;
+  preApplyTagIds: number[] | null;
+  preApplyTagNames: string[] | null;
+
+  // Audit: what was written to Paperless
+  appliedCorrespondentId: number | null;
+  appliedDocumentTypeId: number | null;
+  appliedTagIds: number[] | null;
+
+  // Revert tracking
+  revertedAt: string | null;
+
+  // Feedback
+  feedbackJson: string | null;
+
+  // Cost
+  estimatedCostUsd: number | null;
 }
 
 export interface AiStats {
@@ -341,8 +364,10 @@ export interface AiStats {
   applied: number;
   rejected: number;
   failed: number;
+  reverted: number;
   totalPromptTokens: number;
   totalCompletionTokens: number;
+  totalEstimatedCostUsd: number;
 }
 
 export interface AiConfig {
@@ -360,6 +385,22 @@ export interface AiConfig {
   includeTags: boolean;
   reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
   maxRetries?: number;
+
+  // Confidence gates
+  confidenceThresholdGlobal?: number;
+  confidenceThresholdCorrespondent?: number;
+  confidenceThresholdDocumentType?: number;
+  confidenceThresholdTags?: number;
+  neverAutoCreateEntities?: boolean;
+  neverOverwriteNonEmpty?: boolean;
+  tagsOnlyAutoApply?: boolean;
+
+  // Auto-apply rules
+  autoApplyEnabled?: boolean;
+  autoApplyRequireAllAboveThreshold?: boolean;
+  autoApplyRequireNoNewEntities?: boolean;
+  autoApplyRequireNoClearing?: boolean;
+  autoApplyRequireOcrText?: boolean;
 }
 
 export interface AiResultFilters {
@@ -406,6 +447,11 @@ export interface ApplyPreflightResult {
   noOpCount: number;
   destructiveClearCount: number;
   confidenceDistribution: { high: number; medium: number; low: number };
+  gateResults?: {
+    wouldAutoApply: number;
+    blockedByGates: number;
+    blockReasons: { reason: string; count: number }[];
+  };
 }
 
 export type GroupByField =
@@ -441,4 +487,77 @@ export interface SSECallbacks {
 
 export interface SSESubscription {
   unsubscribe: () => void;
+}
+
+// ── AI Feedback types ────────────────────────────────────────────────
+
+export interface AiFeedback {
+  action: 'rejected' | 'corrected' | 'partial_applied';
+  rejectedFields?: ('correspondent' | 'documentType' | 'tags')[];
+  corrections?: {
+    correspondent?: { suggested: string | null; corrected: string | null };
+    documentType?: { suggested: string | null; corrected: string | null };
+    tags?: { suggested: string[]; corrected: string[] };
+  };
+  reason?: string;
+}
+
+export interface AiFeedbackSummary {
+  totalFeedback: number;
+  rejections: number;
+  corrections: number;
+  partialApplied: number;
+  topRejectedFields: { field: string; count: number }[];
+  topCorrectionPatterns: {
+    field: string;
+    suggestedValue: string;
+    correctedValue: string;
+    count: number;
+  }[];
+}
+
+// ── AI Cost types ────────────────────────────────────────────────────
+
+export interface AiCostStats {
+  totalCostUsd: number;
+  costByProvider: { provider: string; costUsd: number; tokenCount: number }[];
+  costByModel: {
+    model: string;
+    costUsd: number;
+    promptTokens: number;
+    completionTokens: number;
+  }[];
+  costOverTime: { date: string; costUsd: number; documentCount: number }[];
+}
+
+export interface AiCostEstimate {
+  estimatedCostUsd: number;
+  breakdown: { input: number; output: number };
+}
+
+// ── AI Auto-apply types ──────────────────────────────────────────────
+
+export interface AutoApplyResult {
+  totalEvaluated: number;
+  autoApplied: number;
+  skippedByGates: number;
+  details: {
+    resultId: string;
+    applied: boolean;
+    fieldsApplied: string[];
+    reasons: string[];
+  }[];
+}
+
+export interface AiBatchResult {
+  totalDocuments: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  skipped: number;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+  durationMs: number;
+  autoApplied?: number;
+  autoApplySkipped?: number;
 }

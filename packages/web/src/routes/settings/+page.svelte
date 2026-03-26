@@ -73,6 +73,33 @@
   let aiSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
   let aiModels = $state<{ id: string; name: string }[]>([]);
 
+  // Confidence gates
+  let aiConfidenceGlobal = $state(
+    Math.round((initialAiConfig?.confidenceThresholdGlobal ?? 0) * 100),
+  );
+  let aiConfidenceCorrespondent = $state(
+    Math.round((initialAiConfig?.confidenceThresholdCorrespondent ?? 0) * 100),
+  );
+  let aiConfidenceDocType = $state(
+    Math.round((initialAiConfig?.confidenceThresholdDocumentType ?? 0) * 100),
+  );
+  let aiConfidenceTags = $state(
+    Math.round((initialAiConfig?.confidenceThresholdTags ?? 0) * 100),
+  );
+  let aiNeverAutoCreate = $state(initialAiConfig?.neverAutoCreateEntities ?? false);
+  let aiNeverOverwrite = $state(initialAiConfig?.neverOverwriteNonEmpty ?? false);
+  let aiTagsOnly = $state(initialAiConfig?.tagsOnlyAutoApply ?? false);
+  let showConfidenceFields = $state(false);
+
+  // Auto-apply rules
+  let aiAutoApply = $state(initialAiConfig?.autoApplyEnabled ?? false);
+  let aiAutoApplyRequireThreshold = $state(
+    initialAiConfig?.autoApplyRequireAllAboveThreshold ?? true,
+  );
+  let aiAutoApplyRequireNoNew = $state(initialAiConfig?.autoApplyRequireNoNewEntities ?? true);
+  let aiAutoApplyRequireNoClearing = $state(initialAiConfig?.autoApplyRequireNoClearing ?? true);
+  let aiAutoApplyRequireOcr = $state(initialAiConfig?.autoApplyRequireOcrText ?? true);
+
   // RAG Settings
   const initialRagConfig = untrack(() => data.ragConfig);
   const initialRagStats = untrack(() => data.ragStats);
@@ -262,6 +289,18 @@
           includeTags: aiIncludeTags,
           reasoningEffort: aiReasoningEffort,
           maxRetries: aiMaxRetries,
+          confidenceThresholdGlobal: aiConfidenceGlobal / 100,
+          confidenceThresholdCorrespondent: aiConfidenceCorrespondent / 100,
+          confidenceThresholdDocumentType: aiConfidenceDocType / 100,
+          confidenceThresholdTags: aiConfidenceTags / 100,
+          neverAutoCreateEntities: aiNeverAutoCreate,
+          neverOverwriteNonEmpty: aiNeverOverwrite,
+          tagsOnlyAutoApply: aiTagsOnly,
+          autoApplyEnabled: aiAutoApply,
+          autoApplyRequireAllAboveThreshold: aiAutoApplyRequireThreshold,
+          autoApplyRequireNoNewEntities: aiAutoApplyRequireNoNew,
+          autoApplyRequireNoClearing: aiAutoApplyRequireNoClearing,
+          autoApplyRequireOcrText: aiAutoApplyRequireOcr,
         }),
       });
       const json = await res.json();
@@ -992,6 +1031,178 @@
                 class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
               />
             </div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Confidence Thresholds -->
+      <div class="border-soft mt-4 border-t pt-4">
+        <h3 class="text-ink text-sm font-semibold">Confidence Thresholds</h3>
+        <p class="text-muted mt-1 text-xs">
+          Set minimum confidence scores for auto-apply eligibility. Results below these thresholds
+          will require manual review.
+        </p>
+
+        <div class="mt-3">
+          <label for="ai-conf-global" class="text-muted flex items-center gap-1.5 text-sm">
+            Global Minimum
+            <InfoIcon
+              text="Results with any field below this confidence are never auto-applied. Set to 0 to disable the global gate."
+              position="top"
+            />
+          </label>
+          <div class="mt-1 flex items-center gap-3">
+            <input
+              id="ai-conf-global"
+              type="range"
+              min="0"
+              max="100"
+              bind:value={aiConfidenceGlobal}
+              class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+            />
+            <span class="text-ink w-12 text-right text-sm font-medium">{aiConfidenceGlobal}%</span>
+          </div>
+        </div>
+
+        <button
+          onclick={() => (showConfidenceFields = !showConfidenceFields)}
+          class="text-accent hover:text-accent-hover mt-3 text-sm font-medium"
+        >
+          {showConfidenceFields ? 'Hide' : 'Show'} Per-Field Thresholds
+        </button>
+        {#if showConfidenceFields}
+          <div class="mt-3 grid gap-4 sm:grid-cols-3">
+            <div>
+              <label for="ai-conf-corr" class="text-muted text-sm">Correspondent</label>
+              <div class="mt-1 flex items-center gap-2">
+                <input
+                  id="ai-conf-corr"
+                  type="range"
+                  min="0"
+                  max="100"
+                  bind:value={aiConfidenceCorrespondent}
+                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                />
+                <span class="text-ink w-12 text-right text-sm">{aiConfidenceCorrespondent}%</span>
+              </div>
+            </div>
+            <div>
+              <label for="ai-conf-type" class="text-muted text-sm">Document Type</label>
+              <div class="mt-1 flex items-center gap-2">
+                <input
+                  id="ai-conf-type"
+                  type="range"
+                  min="0"
+                  max="100"
+                  bind:value={aiConfidenceDocType}
+                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                />
+                <span class="text-ink w-12 text-right text-sm">{aiConfidenceDocType}%</span>
+              </div>
+            </div>
+            <div>
+              <label for="ai-conf-tags" class="text-muted text-sm">Tags</label>
+              <div class="mt-1 flex items-center gap-2">
+                <input
+                  id="ai-conf-tags"
+                  type="range"
+                  min="0"
+                  max="100"
+                  bind:value={aiConfidenceTags}
+                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                />
+                <span class="text-ink w-12 text-right text-sm">{aiConfidenceTags}%</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-muted mt-2 text-xs">
+            Per-field thresholds override the global minimum upward. The effective threshold for each
+            field is the higher of the two.
+          </p>
+        {/if}
+
+        <div class="mt-4 space-y-2">
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiNeverAutoCreate} class="accent-blue-500" />
+            <span class="text-ink">Never auto-create new entities</span>
+            <InfoIcon
+              text="Prevents auto-apply from creating correspondents, document types, or tags that don't already exist in Paperless-NGX."
+              position="top"
+            />
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiNeverOverwrite} class="accent-blue-500" />
+            <span class="text-ink">Never overwrite existing non-empty fields</span>
+            <InfoIcon
+              text="Prevents auto-apply from changing a field that already has a value in Paperless-NGX."
+              position="top"
+            />
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiTagsOnly} class="accent-blue-500" />
+            <span class="text-ink">Tags-only auto-apply mode</span>
+            <InfoIcon
+              text="Restricts auto-apply to only modify tags, leaving correspondent and document type untouched."
+              position="top"
+            />
+          </label>
+        </div>
+      </div>
+
+      <!-- Auto-Apply Rules -->
+      <div class="border-soft mt-4 border-t pt-4">
+        <h3 class="text-ink text-sm font-semibold">Auto-Apply Rules</h3>
+        <p class="text-muted mt-1 text-xs">
+          Automatically apply AI suggestions that meet all criteria below. Results that don't
+          qualify remain in the review queue.
+        </p>
+
+        <label class="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" bind:checked={aiAutoApply} class="accent-blue-500" />
+          <span class="text-ink font-medium">Enable auto-apply after processing</span>
+        </label>
+
+        {#if aiAutoApply}
+          <div
+            class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+          >
+            Auto-apply will modify documents in Paperless-NGX without manual review. Ensure your
+            confidence thresholds are set appropriately.
+          </div>
+
+          <div class="mt-3 space-y-2 pl-6">
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                bind:checked={aiAutoApplyRequireThreshold}
+                class="accent-blue-500"
+              />
+              <span class="text-ink">All fields above their confidence threshold</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                bind:checked={aiAutoApplyRequireNoNew}
+                class="accent-blue-500"
+              />
+              <span class="text-ink">No new entities would be created</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                bind:checked={aiAutoApplyRequireNoClearing}
+                class="accent-blue-500"
+              />
+              <span class="text-ink">No existing values would be cleared</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                bind:checked={aiAutoApplyRequireOcr}
+                class="accent-blue-500"
+              />
+              <span class="text-ink">Document has OCR text</span>
+            </label>
           </div>
         {/if}
       </div>

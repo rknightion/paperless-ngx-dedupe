@@ -115,6 +115,22 @@ export const aiConfigSchema = z.object({
   includeTags: z.boolean().default(false),
   reasoningEffort: z.enum(['none', 'low', 'medium', 'high']).default('low'),
   maxRetries: z.number().int().min(0).max(10).default(3),
+
+  // Confidence gates
+  confidenceThresholdGlobal: z.number().min(0).max(1).default(0),
+  confidenceThresholdCorrespondent: z.number().min(0).max(1).default(0),
+  confidenceThresholdDocumentType: z.number().min(0).max(1).default(0),
+  confidenceThresholdTags: z.number().min(0).max(1).default(0),
+  neverAutoCreateEntities: z.boolean().default(false),
+  neverOverwriteNonEmpty: z.boolean().default(false),
+  tagsOnlyAutoApply: z.boolean().default(false),
+
+  // Auto-apply rules (opt-in, maximally conservative defaults)
+  autoApplyEnabled: z.boolean().default(false),
+  autoApplyRequireAllAboveThreshold: z.boolean().default(true),
+  autoApplyRequireNoNewEntities: z.boolean().default(true),
+  autoApplyRequireNoClearing: z.boolean().default(true),
+  autoApplyRequireOcrText: z.boolean().default(true),
 });
 
 export type AiConfig = z.infer<typeof aiConfigSchema>;
@@ -130,4 +146,6 @@ export interface AiBatchResult {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   durationMs: number;
+  autoApplied?: number;
+  autoApplySkipped?: number;
 }

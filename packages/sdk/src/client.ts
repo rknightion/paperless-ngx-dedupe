@@ -4,6 +4,10 @@ import { subscribeToJobProgress } from './sse.js';
 import type {
   AiApplyOptions,
   AiConfig,
+  AiCostEstimate,
+  AiCostStats,
+  AiFeedback,
+  AiFeedbackSummary,
   AiProcessOptions,
   AiResultFilters,
   AiResultDetail,
@@ -371,6 +375,52 @@ export class PaperlessDedupeClient {
       method: 'PUT',
       body: config,
     });
+    return res.data;
+  }
+
+  // ── AI Revert ──────────────────────────────────────────────────────
+
+  async revertAiResult(id: string): Promise<void> {
+    await request<unknown>(`/api/v1/ai/results/${id}/revert`, this.httpOptions, {
+      method: 'POST',
+    });
+  }
+
+  async rejectAiResultWithReason(id: string, reason?: string): Promise<void> {
+    await request<unknown>(`/api/v1/ai/results/${id}/reject`, this.httpOptions, {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
+    });
+  }
+
+  // ── AI Feedback ────────────────────────────────────────────────────
+
+  async submitAiFeedback(resultId: string, feedback: AiFeedback): Promise<void> {
+    await request<unknown>(`/api/v1/ai/results/${resultId}/feedback`, this.httpOptions, {
+      method: 'POST',
+      body: feedback,
+    });
+  }
+
+  async getAiFeedbackSummary(): Promise<AiFeedbackSummary> {
+    const res = await request<AiFeedbackSummary>(
+      '/api/v1/ai/feedback/summary',
+      this.httpOptions,
+    );
+    return res.data;
+  }
+
+  // ── AI Costs ───────────────────────────────────────────────────────
+
+  async getAiCosts(days?: number): Promise<AiCostStats> {
+    const qs = days ? buildQueryString({ days }) : '';
+    const res = await request<AiCostStats>(`/api/v1/ai/costs${qs}`, this.httpOptions);
+    return res.data;
+  }
+
+  async estimateAiCost(documentCount: number): Promise<AiCostEstimate> {
+    const qs = buildQueryString({ documentCount });
+    const res = await request<AiCostEstimate>(`/api/v1/ai/costs/estimate${qs}`, this.httpOptions);
     return res.data;
   }
 }

@@ -43,6 +43,7 @@ export const documentFiltersSchema = z.object({
   tag: z.string().optional(),
   processingStatus: z.enum(['pending', 'completed']).optional(),
   search: z.string().optional(),
+  noAiResult: z.coerce.boolean().optional(),
 });
 
 export type DocumentFilters = z.infer<typeof documentFiltersSchema>;

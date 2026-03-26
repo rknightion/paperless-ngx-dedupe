@@ -277,10 +277,14 @@ export class PaperlessClient {
     }
   }
 
-  async getDocumentContent(id: number): Promise<string> {
+  async getDocument(id: number): Promise<PaperlessDocument> {
     const response = await this.fetchWithRetry(this.buildUrl(`/api/documents/${id}/`));
     const json = await response.json();
-    const doc = paperlessDocumentSchema.parse(json);
+    return paperlessDocumentSchema.parse(json);
+  }
+
+  async getDocumentContent(id: number): Promise<string> {
+    const doc = await this.getDocument(id);
     return doc.content;
   }
 

@@ -3,6 +3,7 @@ import { and, asc, avg, count, desc, eq, isNotNull, isNull, like, sql } from 'dr
 import type { AppDatabase } from '../db/client.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
+import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { parseTagsJson } from './helpers.js';
 import type {
@@ -41,6 +42,10 @@ export function getDocuments(
   filters: DocumentFilters,
   pagination: PaginationParams,
 ): PaginatedResult<DocumentSummary> {
+  if (filters.noAiResult) {
+    return getDocumentsWithoutAiResult(db, filters, pagination);
+  }
+
   const where = buildDocumentWhere(filters);
 
   const [{ value: total }] = db.select({ value: count() }).from(document).where(where).all();
@@ -49,6 +54,56 @@ export function getDocuments(
     .select()
     .from(document)
     .where(where)
+    .orderBy(desc(document.paperlessId))
+    .limit(pagination.limit)
+    .offset(pagination.offset)
+    .all();
+
+  const items: DocumentSummary[] = rows.map((row) => ({
+    id: row.id,
+    paperlessId: row.paperlessId,
+    title: row.title,
+    correspondent: row.correspondent,
+    documentType: row.documentType,
+    tags: parseTagsJson(row.tagsJson),
+    createdDate: row.createdDate,
+    addedDate: row.addedDate,
+    processingStatus: row.processingStatus,
+  }));
+
+  return { items, total, limit: pagination.limit, offset: pagination.offset };
+}
+
+function getDocumentsWithoutAiResult(
+  db: AppDatabase,
+  filters: DocumentFilters,
+  pagination: PaginationParams,
+): PaginatedResult<DocumentSummary> {
+  const baseConditions = buildDocumentWhere(filters);
+
+  const totalResult = db
+    .select({ value: count() })
+    .from(document)
+    .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
+    .where(and(baseConditions, isNull(aiProcessingResult.id)))
+    .all();
+  const total = totalResult[0]?.value ?? 0;
+
+  const rows = db
+    .select({
+      id: document.id,
+      paperlessId: document.paperlessId,
+      title: document.title,
+      correspondent: document.correspondent,
+      documentType: document.documentType,
+      tagsJson: document.tagsJson,
+      createdDate: document.createdDate,
+      addedDate: document.addedDate,
+      processingStatus: document.processingStatus,
+    })
+    .from(document)
+    .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
+    .where(and(baseConditions, isNull(aiProcessingResult.id)))
     .orderBy(desc(document.paperlessId))
     .limit(pagination.limit)
     .offset(pagination.offset)

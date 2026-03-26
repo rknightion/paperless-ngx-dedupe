@@ -22,6 +22,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     tag: url.searchParams.get('tag') ?? undefined,
     processingStatus: url.searchParams.get('processingStatus') ?? undefined,
     search: url.searchParams.get('search') ?? undefined,
+    noAiResult: url.searchParams.get('noAiResult') ?? undefined,
   });
 
   if (!filtersResult.success) {

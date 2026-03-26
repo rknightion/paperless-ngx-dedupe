@@ -570,7 +570,7 @@ Tasks
 
 - [ ] Add model-quality feedback loops.
   Direction:
-  - Capture rejected reasons or correction patterns.
+  - Capture rejected reasons or correction patterns and store and make available this data.
   - Use them to improve the default prompt or future evaluation data.
 
 - [ ] Add token/cost visibility.
@@ -624,4 +624,4 @@ Minimum acceptable end state
 CLAUDE SHOULD IGNORE BELOW THIS LINE!
 
 prompt text (already at start of instruction)
-Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement Phase 0. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed.
+Consume todos.txt and follow all instructions within it. We are now ready to plan out and implement the remaining tasks in phase 3 and the entierty of phase 4. Please make a comprehensive implementation plan for all tasks listed within the phase, ensuring we are comforming with all defined ADRs in todos.txt. Ask any follow up questions needed to guide implementation or when a UX decision is required. Make use of subagents and agent teams where appropriate during the planning and implementation phases once the plan is approved. Ensure the todos.txt file is updated to mark each phase as complete once it is completed.

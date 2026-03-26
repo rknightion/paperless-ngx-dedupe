@@ -49,7 +49,7 @@
 
   function applyPreset(preset: Preset) {
     const params = new URLSearchParams(preset.params);
-    goto(`/ai-processing?${params.toString()}`);
+    goto(`/ai-processing/review?${params.toString()}`);
   }
 </script>
 

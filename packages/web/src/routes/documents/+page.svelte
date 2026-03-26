@@ -287,6 +287,24 @@
     </div>
   {/if}
 
+  <!-- AI Classification -->
+  {#if data.aiEnabled}
+    <div class="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-ink text-lg font-semibold">AI Classification</h2>
+        <p class="text-muted mt-1 text-sm">
+          Select documents to classify with AI metadata extraction.
+        </p>
+      </div>
+      <a
+        href="/ai-processing/queue"
+        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-center text-sm font-medium text-white"
+      >
+        Go to AI Processing
+      </a>
+    </div>
+  {/if}
+
   <!-- External Link -->
   <div class="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>

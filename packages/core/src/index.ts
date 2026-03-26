@@ -279,11 +279,27 @@ export {
   getPendingAiResultIds,
   getAiResultIdsByFilter,
   getDocumentIdsByAiFilter,
+  getUnprocessedDocuments,
 } from './ai/queries.js';
-export type { AiResultFilters, AiResultSummary, AiResultDetail, AiStats } from './ai/queries.js';
+export type {
+  AiResultFilters,
+  AiResultSummary,
+  AiResultDetail,
+  AiStats,
+  ApplySnapshot,
+  UnprocessedDocument,
+} from './ai/queries.js';
 export { normalizeSuggestedLabel, normalizeSuggestedTags } from './ai/normalize.js';
-export { applyAiResult, rejectAiResult, batchRejectAiResults } from './ai/apply.js';
+export {
+  applyAiResult,
+  rejectAiResult,
+  rejectAiResultWithReason,
+  batchRejectAiResults,
+} from './ai/apply.js';
 export type { ApplyOptions } from './ai/apply.js';
+export { revertAiResult } from './ai/revert.js';
+export { recordFeedback, getFeedbackSummary } from './ai/feedback.js';
+export type { AiFeedback, AiFeedbackSummary } from './ai/feedback.js';
 export {
   getFailedDocumentIds,
   resolveProcessScope,
@@ -294,6 +310,20 @@ export { getAiResultGroups } from './ai/grouping.js';
 export type { GroupByField, AiResultGroup, AiGroupedResults } from './ai/grouping.js';
 export { computeApplyPreflight } from './ai/preflight.js';
 export type { ApplyPreflightResult } from './ai/preflight.js';
+export { evaluateGates } from './ai/gates.js';
+export type { GateEvaluation, GateInput, GateContext, AiField } from './ai/gates.js';
+export { evaluateAndAutoApply } from './ai/auto-apply.js';
+export type { AutoApplyResult } from './ai/auto-apply.js';
+export {
+  fetchAndCachePricing,
+  refreshPricingIfStale,
+  getModelPricing,
+  estimateResultCost,
+  estimateBatchCost,
+  getCostStats,
+  backfillCosts,
+} from './ai/costs.js';
+export type { ModelPricing, AiCostEstimate, AiCostStats } from './ai/costs.js';
 
 // RAG
 export { getRagConfig, setRagConfig } from './rag/config.js';

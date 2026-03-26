@@ -1,10 +1,14 @@
 import { inArray } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
+import { documentContent } from '../schema/sqlite/documents.js';
 import { type PaperlessClient } from '../paperless/client.js';
 import type { AppDatabase } from '../db/client.js';
 import { resolveResultIdsForApplyScope } from './scopes.js';
 import type { ApplyScope } from './scopes.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
+import { evaluateGates } from './gates.js';
+import type { GateInput } from './gates.js';
+import { getAiConfig } from './config.js';
 
 export interface ApplyPreflightResult {
   totalDocuments: number;
@@ -25,6 +29,11 @@ export interface ApplyPreflightResult {
     high: number;
     medium: number;
     low: number;
+  };
+  gateResults?: {
+    wouldAutoApply: number;
+    blockedByGates: number;
+    blockReasons: { reason: string; count: number }[];
   };
 }
 
@@ -184,6 +193,84 @@ export async function computeApplyPreflight(
   result.newEntitiesCreated.correspondents = Array.from(newCorrespondents);
   result.newEntitiesCreated.documentTypes = Array.from(newDocTypes);
   result.newEntitiesCreated.tags = Array.from(newTags);
+
+  // Evaluate confidence gates for each result
+  const aiConfig = getAiConfig(db);
+
+  // Build a set of document IDs that have OCR text (wordCount > 0)
+  const documentIds = allResults.map((r) => r.documentId);
+  const docIdsWithOcr = new Set<string>();
+  for (let i = 0; i < documentIds.length; i += batchSize) {
+    const batch = documentIds.slice(i, i + batchSize);
+    const contentRows = db
+      .select({ documentId: documentContent.documentId, wordCount: documentContent.wordCount })
+      .from(documentContent)
+      .where(inArray(documentContent.documentId, batch))
+      .all();
+    for (const cr of contentRows) {
+      if (cr.wordCount != null && cr.wordCount > 0) {
+        docIdsWithOcr.add(cr.documentId);
+      }
+    }
+  }
+
+  const gateContext = {
+    existingCorrespondentNames,
+    existingDocTypeNames,
+    existingTagNames,
+  };
+
+  let wouldAutoApply = 0;
+  let blockedByGates = 0;
+  const blockReasonCounts = new Map<string, number>();
+
+  for (const row of allResults) {
+    const sugCorr = normalizeSuggestedLabel(row.suggestedCorrespondent);
+    const sugDocType = normalizeSuggestedLabel(row.suggestedDocumentType);
+    const sugTags = normalizeSuggestedTags(
+      row.suggestedTagsJson ? JSON.parse(row.suggestedTagsJson) : [],
+    );
+    const currentTags: string[] = row.currentTagsJson ? JSON.parse(row.currentTagsJson) : [];
+
+    let confidence: { correspondent: number; documentType: number; tags: number } | null = null;
+    if (row.confidenceJson) {
+      try {
+        confidence = JSON.parse(row.confidenceJson);
+      } catch {
+        // ignore
+      }
+    }
+
+    const gateInput: GateInput = {
+      confidence,
+      suggestedCorrespondent: sugCorr,
+      suggestedDocumentType: sugDocType,
+      suggestedTags: sugTags,
+      currentCorrespondent: row.currentCorrespondent,
+      currentDocumentType: row.currentDocumentType,
+      currentTags: currentTags,
+      hasOcrText: docIdsWithOcr.has(row.documentId),
+    };
+
+    const evaluation = evaluateGates(aiConfig, gateInput, gateContext);
+
+    if (evaluation.autoApplyEligible) {
+      wouldAutoApply++;
+    } else {
+      blockedByGates++;
+      for (const reason of evaluation.autoApplyBlockReasons) {
+        blockReasonCounts.set(reason, (blockReasonCounts.get(reason) ?? 0) + 1);
+      }
+    }
+  }
+
+  result.gateResults = {
+    wouldAutoApply,
+    blockedByGates,
+    blockReasons: Array.from(blockReasonCounts.entries())
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count),
+  };
 
   return result;
 }
