@@ -93,6 +93,10 @@ export function setDedupConfig(db: AppDatabase, config: Partial<DedupConfig>): D
         })
         .run();
     }
+    // Clean up stale 1.1.0 key if present
+    tx.delete(appConfig)
+      .where(eq(appConfig.key, `${DEDUP_CONFIG_PREFIX}confidenceWeightDiscriminative`))
+      .run();
   });
 
   return validated;
@@ -103,26 +107,23 @@ export function recalculateConfidenceScores(db: AppDatabase, config: DedupConfig
 
   if (groups.length === 0) return 0;
 
-  const weights = {
-    jaccard: config.confidenceWeightJaccard,
-    fuzzy: config.confidenceWeightFuzzy,
-    discriminative: config.confidenceWeightDiscriminative,
-  };
+  const jWeight = config.confidenceWeightJaccard;
+  const fWeight = config.confidenceWeightFuzzy;
+  const strength = config.discriminativePenaltyStrength / 100;
 
   let updatedCount = 0;
   const now = new Date().toISOString();
 
   db.transaction((tx) => {
     for (const group of groups) {
-      let weightedSum = 0;
-      let activeWeightSum = 0;
-
+      // Compute base from J + F weighted average
       const components: { score: number | null; weight: number }[] = [
-        { score: group.jaccardSimilarity, weight: weights.jaccard },
-        { score: group.fuzzyTextRatio, weight: weights.fuzzy },
-        { score: group.discriminativeScore, weight: weights.discriminative },
+        { score: group.jaccardSimilarity, weight: jWeight },
+        { score: group.fuzzyTextRatio, weight: fWeight },
       ];
 
+      let weightedSum = 0;
+      let activeWeightSum = 0;
       for (const { score, weight } of components) {
         if (weight > 0 && score !== null) {
           weightedSum += score * weight;
@@ -130,7 +131,13 @@ export function recalculateConfidenceScores(db: AppDatabase, config: DedupConfig
         }
       }
 
-      const confidenceScore = activeWeightSum > 0 ? weightedSum / activeWeightSum : 0;
+      const base = activeWeightSum > 0 ? weightedSum / activeWeightSum : 0;
+
+      // Apply discriminative penalty
+      let confidenceScore = base;
+      if (group.discriminativeScore !== null && strength > 0) {
+        confidenceScore = base * (1 - strength * (1 - group.discriminativeScore));
+      }
 
       tx.update(duplicateGroup)
         .set({ confidenceScore, updatedAt: now })
