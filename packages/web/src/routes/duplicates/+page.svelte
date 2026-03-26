@@ -264,7 +264,7 @@
     <div class="text-muted mt-3 space-y-3 text-sm leading-relaxed">
       <p>
         Paperless NGX Dedupe identifies potential duplicates using a multi-stage pipeline that
-        compares documents across two similarity dimensions:
+        compares documents across three similarity dimensions:
       </p>
       <dl
         class="border-soft grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 rounded-lg border p-3 text-xs"
@@ -279,9 +279,14 @@
           Measures character-level edit distance after sorting words. Catches documents with minor
           wording differences or typos.
         </dd>
+        <dt class="text-ink font-semibold">Discriminative</dt>
+        <dd>
+          Extracts and compares dates, monetary amounts, and reference numbers. Reduces false
+          positives from template-based documents like monthly bank or credit card statements.
+        </dd>
       </dl>
       <p>
-        These two scores are combined into an overall
+        These three scores are combined into an overall
         <strong class="text-ink">confidence score</strong>
         using configurable weights (adjustable in
         <a href="/settings" class="text-accent hover:text-accent-hover underline">Settings</a>).

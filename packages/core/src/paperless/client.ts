@@ -41,7 +41,9 @@ export class PaperlessClient {
   private detectedPngxVersion: string | null = null;
 
   constructor(config: PaperlessConfig) {
-    this.baseUrl = config.url.replace(/\/+$/, '');
+    let end = config.url.length;
+    while (end > 0 && config.url[end - 1] === '/') end--;
+    this.baseUrl = config.url.slice(0, end);
 
     this.headers = {
       Accept: 'application/json; version=10',
