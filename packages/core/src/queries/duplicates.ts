@@ -76,7 +76,11 @@ export function getDuplicateGroups(
       ? duplicateGroup.createdAt
       : filters.sortBy === 'member_count'
         ? sql`(SELECT COUNT(*) FROM duplicate_member WHERE group_id = ${duplicateGroup.id})`
-        : duplicateGroup.confidenceScore;
+        : filters.sortBy === 'updated_at'
+          ? duplicateGroup.updatedAt
+          : filters.sortBy === 'status'
+            ? duplicateGroup.status
+            : duplicateGroup.confidenceScore;
   const orderFn = filters.sortOrder === 'asc' ? asc : desc;
 
   const groups = db
