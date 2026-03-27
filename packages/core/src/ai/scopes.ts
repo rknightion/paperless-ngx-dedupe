@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, or, isNull, ne } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import type { AppDatabase } from '../db/client.js';
 import {
@@ -30,7 +30,15 @@ export function getFailedDocumentIds(db: AppDatabase): string[] {
   const rows = db
     .select({ documentId: aiProcessingResult.documentId })
     .from(aiProcessingResult)
-    .where(eq(aiProcessingResult.appliedStatus, 'failed'))
+    .where(
+      and(
+        eq(aiProcessingResult.appliedStatus, 'failed'),
+        or(
+          isNull(aiProcessingResult.failureType),
+          ne(aiProcessingResult.failureType, 'no_suggestions'),
+        ),
+      ),
+    )
     .all();
 
   return rows.map((r) => r.documentId);
