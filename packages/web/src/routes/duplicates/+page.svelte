@@ -10,6 +10,12 @@
     GroupPreviewModal,
     RecycleBinPrompt,
   } from '$lib/components';
+  import {
+    trackDuplicatesFilterApplied,
+    trackDuplicatesBulkAction,
+    trackCsvExported,
+    trackPurgeDeleted,
+  } from '$lib/faro-events';
   import { Network, Download, Wand2, ArrowDown, ArrowUp, ArrowUpDown, Trash2 } from 'lucide-svelte';
 
   let { data } = $props();
@@ -74,6 +80,13 @@
       }
     }
     params.delete('offset');
+    trackDuplicatesFilterApplied({
+      status: params.get('status') ?? undefined,
+      minConfidence: params.get('minConfidence') ?? undefined,
+      maxConfidence: params.get('maxConfidence') ?? undefined,
+      sortBy: params.get('sortBy') ?? undefined,
+      sortOrder: params.get('sortOrder') ?? undefined,
+    });
     goto(`?${params.toString()}`, { replaceState: true });
   }
 
@@ -209,15 +222,18 @@
   }
 
   function dismissSelected() {
+    trackDuplicatesBulkAction('false_positive', selectedIds.size);
     batchAction('/api/v1/batch/status', { groupIds: [...selectedIds], status: 'false_positive' });
   }
 
   function ignoreSelected() {
+    trackDuplicatesBulkAction('ignored', selectedIds.size);
     batchAction('/api/v1/batch/status', { groupIds: [...selectedIds], status: 'ignored' });
   }
 
   async function deleteNonPrimary() {
     showDeleteConfirm = false;
+    trackDuplicatesBulkAction('delete', selectedIds.size);
     const success = await batchAction('/api/v1/batch/delete-non-primary', {
       groupIds: [...selectedIds],
       confirm: true,
@@ -235,6 +251,7 @@
       const res = await fetch('/api/v1/batch/purge-deleted', { method: 'POST' });
       const json = await res.json();
       if (res.ok) {
+        trackPurgeDeleted(json.data.purged);
         actionFeedback = {
           type: 'success',
           message: `Purged ${json.data.purged} deleted group(s) from the database.`,
@@ -290,6 +307,7 @@
       <a
         href="/api/v1/export/duplicates.csv?{$page.url.searchParams.toString()}"
         download
+        onclick={() => trackCsvExported()}
         class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
       >
         <Download class="h-4 w-4" />Export CSV
