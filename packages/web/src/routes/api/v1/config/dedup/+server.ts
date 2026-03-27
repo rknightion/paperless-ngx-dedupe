@@ -43,7 +43,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     const b = body as Record<string, unknown>;
     if (!('discriminativePenaltyStrength' in b)) {
       const d = Number(b.confidenceWeightDiscriminative) || 0;
-      b.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 50));
+      b.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 70));
     }
     delete b.confidenceWeightDiscriminative;
   }

@@ -40,8 +40,8 @@ export function getDedupConfig(db: AppDatabase): DedupConfig {
     const f = raw.confidenceWeightFuzzy as number;
     const d = raw.confidenceWeightDiscriminative as number;
 
-    // Convert old D weight to penalty strength (old default 15 → new default 50)
-    raw.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 50));
+    // Convert old D weight to penalty strength (old default 15 → new default 70)
+    raw.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 70));
 
     // Redistribute J+F proportionally to sum to 100
     const jfSum = j + f;
@@ -62,7 +62,7 @@ export function getDedupConfig(db: AppDatabase): DedupConfig {
     !('discriminativePenaltyStrength' in raw) &&
     'confidenceWeightJaccard' in raw
   ) {
-    raw.discriminativePenaltyStrength = 50;
+    raw.discriminativePenaltyStrength = 70;
   }
 
   return dedupConfigSchema.parse(raw) as DedupConfig;

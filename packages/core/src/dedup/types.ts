@@ -44,7 +44,7 @@ export const dedupConfigBaseSchema = z.object({
   similarityThreshold: z.number().min(0).max(1).default(0.75),
   confidenceWeightJaccard: z.number().int().min(0).max(100).default(60),
   confidenceWeightFuzzy: z.number().int().min(0).max(100).default(40),
-  discriminativePenaltyStrength: z.number().int().min(0).max(100).default(50),
+  discriminativePenaltyStrength: z.number().int().min(0).max(100).default(70),
   fuzzySampleSize: z.number().int().min(100).max(100000).default(10000),
   autoAnalyze: z.boolean().default(true),
 });
@@ -62,7 +62,7 @@ export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
   similarityThreshold: 0.75,
   confidenceWeightJaccard: 60,
   confidenceWeightFuzzy: 40,
-  discriminativePenaltyStrength: 50,
+  discriminativePenaltyStrength: 70,
   fuzzySampleSize: 10000,
   autoAnalyze: true,
 };
