@@ -1,6 +1,9 @@
 <script>
+  import { initFaro } from '$lib/faro';
+  import { initFaroRouteTracking } from '$lib/faro-route-tracker';
   import '../app.css';
   import { page } from '$app/stores';
+  import { untrack, onMount } from 'svelte';
   import {
     LayoutDashboard,
     FileText,
@@ -14,6 +17,18 @@
 
   let { data, children } = $props();
   let sidebarOpen = $state(false);
+
+  untrack(() => {
+    if (data.faroEnabled && data.faroCollectorUrl) {
+      initFaro(data.faroCollectorUrl);
+    }
+  });
+
+  onMount(() => {
+    if (data.faroEnabled) {
+      initFaroRouteTracking();
+    }
+  });
 
   $effect(() => {
     void $page.url.pathname;
