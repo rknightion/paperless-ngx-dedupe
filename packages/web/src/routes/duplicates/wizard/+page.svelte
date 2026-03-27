@@ -14,6 +14,12 @@
   } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import {
+    trackWizardStepChanged,
+    trackWizardThresholdSet,
+    trackWizardExecuted,
+    startTimer,
+  } from '$lib/faro-events';
+  import {
     XCircle,
     Eye,
     Trash2,
@@ -187,6 +193,7 @@
   // ── Step navigation ───────────────────────────────────────────────────
   function handleNext() {
     if (step === 1) {
+      trackWizardThresholdSet(threshold, matchCount ?? 0);
       groupsOffset = 0;
       fetchGroups();
       step = 2;
@@ -199,6 +206,7 @@
       step = 5;
       execute();
     }
+    trackWizardStepChanged(step);
   }
 
   function handleBack() {
@@ -246,6 +254,7 @@
   async function execute() {
     executionProgress = 0;
     executionMessage = 'Gathering group IDs...';
+    const stopWizardTimer = startTimer('wizard_execution_duration');
 
     const allGroupIds: string[] = [];
     let offset = 0;
@@ -294,10 +303,23 @@
               onComplete: () => {
                 executionResult = { success: true, processed: allGroupIds.length, errors: [] };
                 showRecycleBinSection = true;
+                stopWizardTimer();
+                trackWizardExecuted({
+                  action: selectedAction,
+                  groupCount: allGroupIds.length,
+                  success: true,
+                });
                 step = 6;
               },
               onError: () => {
                 executionResult = { success: false, processed: 0, errors: ['Job failed'] };
+                stopWizardTimer();
+                trackWizardExecuted({
+                  action: selectedAction,
+                  groupCount: allGroupIds.length,
+                  success: false,
+                  errors: 1,
+                });
                 step = 6;
               },
             });
@@ -335,6 +357,13 @@
       }
     }
 
+    stopWizardTimer();
+    trackWizardExecuted({
+      action: selectedAction,
+      groupCount: allGroupIds.length,
+      success: executionResult?.success ?? false,
+      errors: executionResult?.errors?.length ?? 0,
+    });
     step = 6;
   }
 
