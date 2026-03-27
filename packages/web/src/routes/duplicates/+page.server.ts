@@ -16,6 +16,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     minConfidence: url.searchParams.get('minConfidence') ?? undefined,
     maxConfidence: url.searchParams.get('maxConfidence') ?? undefined,
     status: url.searchParams.get('status') ?? undefined,
+    includeDeleted: url.searchParams.get('includeDeleted') ?? undefined,
     sortBy: url.searchParams.get('sortBy') ?? undefined,
     sortOrder: url.searchParams.get('sortOrder') ?? undefined,
   });
