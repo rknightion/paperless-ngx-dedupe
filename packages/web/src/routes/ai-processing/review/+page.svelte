@@ -12,6 +12,7 @@
   import AiPreflightDialog from '$lib/components/ai/AiPreflightDialog.svelte';
   import AiResultGroupedList from '$lib/components/ai/AiResultGroupedList.svelte';
   import AiReviewPresets from '$lib/components/ai/AiReviewPresets.svelte';
+  import { trackAiResultAction, trackAiBulkAction } from '$lib/faro-events';
   import {
     selectedIds,
     getActiveResultId,
@@ -86,6 +87,7 @@
     fields: string[],
     options: { allowClearing: boolean; createMissingEntities: boolean },
   ) {
+    trackAiResultAction('apply', { resultId: id, fieldsApplied: fields });
     try {
       const res = await fetch(`/api/v1/ai/results/${id}/apply`, {
         method: 'POST',
@@ -105,6 +107,7 @@
   }
 
   async function handleReject(id: string) {
+    trackAiResultAction('reject', { resultId: id });
     try {
       const res = await fetch(`/api/v1/ai/results/${id}/reject`, {
         method: 'POST',
@@ -252,12 +255,19 @@
   async function handleBatchApply() {
     const scope = buildApplyScope();
     if (!scope) return;
+    const mode = getSelectionMode();
+    trackAiBulkAction({
+      action: 'apply',
+      scope: mode.type === 'all_matching_filter' ? 'all_matching' : 'selected',
+      count: mode.type === 'all_matching_filter' ? 0 : selectedIds.size,
+    });
     await runPreflight(scope);
   }
 
   async function handleBatchReject() {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
+    trackAiBulkAction({ action: 'reject', scope: 'selected', count: ids.length });
     try {
       const res = await fetch('/api/v1/ai/results/batch-reject', {
         method: 'POST',
