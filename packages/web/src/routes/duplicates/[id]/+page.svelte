@@ -234,7 +234,9 @@
           secondary={selectedSecondary}
           secondaryIndex={selectedSecondaryIndex}
           secondaryCount={secondaryMembers.length}
-          onnavigate={(i) => { selectedSecondaryIndex = i; }}
+          onnavigate={(i) => {
+            selectedSecondaryIndex = i;
+          }}
         />
       {/key}
     </div>
