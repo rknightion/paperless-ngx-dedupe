@@ -309,7 +309,7 @@ Legacy field name `confidenceWeightDiscriminative` is accepted and automatically
     "similarityThreshold": 0.75,
     "confidenceWeightJaccard": 60,
     "confidenceWeightFuzzy": 40,
-    "discriminativePenaltyStrength": 50,
+    "discriminativePenaltyStrength": 70,
     "fuzzySampleSize": 10000,
     "autoAnalyze": true
   },

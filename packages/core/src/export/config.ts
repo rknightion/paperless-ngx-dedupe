@@ -17,7 +17,7 @@ function migrateDedupConfigForImport(raw: Record<string, unknown>): Record<strin
     const f = (raw.confidenceWeightFuzzy as number) ?? 0;
     const d = (raw.confidenceWeightDiscriminative as number) ?? 0;
 
-    raw.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 50));
+    raw.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 70));
 
     const jfSum = j + f;
     if (jfSum > 0) {

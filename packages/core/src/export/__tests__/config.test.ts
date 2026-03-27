@@ -123,7 +123,7 @@ describe('importConfig', () => {
     // J+F redistributed to sum to 100
     expect(dedupConfig.confidenceWeightJaccard + dedupConfig.confidenceWeightFuzzy).toBe(100);
     // Penalty strength derived from old D weight
-    expect(dedupConfig.discriminativePenaltyStrength).toBe(50);
+    expect(dedupConfig.discriminativePenaltyStrength).toBe(70);
     // Old field should not exist
     expect('confidenceWeightDiscriminative' in dedupConfig).toBe(false);
   });

@@ -38,7 +38,7 @@ describe('getDedupConfig', () => {
     expect(config.confidenceWeightFuzzy).toBe(45);
     expect(config.confidenceWeightJaccard + config.confidenceWeightFuzzy).toBe(100);
     // Default penalty strength added
-    expect(config.discriminativePenaltyStrength).toBe(50);
+    expect(config.discriminativePenaltyStrength).toBe(70);
   });
 
   it('should migrate 1.1.0 three-weight config to 2-weight + penalty', () => {
@@ -61,8 +61,8 @@ describe('getDedupConfig', () => {
     expect(config.confidenceWeightJaccard).toBe(59);
     expect(config.confidenceWeightFuzzy).toBe(41);
     expect(config.confidenceWeightJaccard + config.confidenceWeightFuzzy).toBe(100);
-    // D weight 15 → penalty strength: min(100, round(15/15*50)) = 50
-    expect(config.discriminativePenaltyStrength).toBe(50);
+    // D weight 15 → penalty strength: min(100, round(15/15*70)) = 70
+    expect(config.discriminativePenaltyStrength).toBe(70);
     // Old field should not exist
     expect('confidenceWeightDiscriminative' in config).toBe(false);
   });
