@@ -3566,6 +3566,15 @@ packages:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
     engines: {node: '>= 8'}
 
+  web-vitals@5.2.0:
+    resolution: {integrity: sha512-i2z98bEmaCqSDiHEDu+gHl/dmR4Q+TxFmG3/13KkMO+o8UxQzCqWaDRCiLgEa41nlO4VpXSI0ASa1xWmO9sBlA==}
+
+  webidl-conversions@3.0.1:
+    resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
+
+  whatwg-url@5.0.0:
+    resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
+
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
@@ -3984,6 +3993,47 @@ snapshots:
   '@fontsource-variable/jetbrains-mono@5.2.8': {}
 
   '@fontsource/geist-sans@5.2.5': {}
+
+  '@grafana/faro-bundlers-shared@0.9.0':
+    dependencies:
+      ansis: 4.2.0
+      tar: 7.5.13
+
+  '@grafana/faro-core@2.3.1':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/otlp-transformer': 0.213.0(@opentelemetry/api@1.9.1)
+
+  '@grafana/faro-rollup-plugin@0.9.0':
+    dependencies:
+      '@grafana/faro-bundlers-shared': 0.9.0
+      cross-fetch: 4.1.0
+      magic-string: 0.30.21
+      rollup: 4.60.0
+    transitivePeerDependencies:
+      - encoding
+
+  '@grafana/faro-web-sdk@2.3.1':
+    dependencies:
+      '@grafana/faro-core': 2.3.1
+      ua-parser-js: 1.0.41
+      web-vitals: 5.2.0
+
+  '@grafana/faro-web-tracing@2.3.1':
+    dependencies:
+      '@grafana/faro-web-sdk': 2.3.1
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 2.6.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/exporter-trace-otlp-http': 0.213.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/instrumentation': 0.213.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/instrumentation-fetch': 0.213.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/instrumentation-xml-http-request': 0.213.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/otlp-transformer': 0.213.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 2.6.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-web': 2.6.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/semantic-conventions': 1.40.0
+    transitivePeerDependencies:
+      - supports-color
 
   '@grpc/grpc-js@1.14.3':
     dependencies:
@@ -6613,6 +6663,15 @@ snapshots:
       - msw
 
   web-streams-polyfill@3.3.3: {}
+
+  web-vitals@5.2.0: {}
+
+  webidl-conversions@3.0.1: {}
+
+  whatwg-url@5.0.0:
+    dependencies:
+      tr46: 0.0.3
+      webidl-conversions: 3.0.1
 
   which@2.0.2:
     dependencies:
