@@ -14,7 +14,9 @@ import {
   batchSetStatus,
   purgeDeletedGroups,
   archiveAndDeleteMembers,
+  removeMemberFromGroup,
   StatusTransitionError,
+  PrimaryMemberError,
 } from '../duplicates.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
@@ -825,5 +827,56 @@ describe('getDuplicateGroup detail for archived group', () => {
     expect(detail!.archivedMemberCount).toBe(2);
     expect(detail!.archivedPrimaryTitle).toBe('Invoice A');
     expect(detail!.deletedAt).toBeTruthy();
+  });
+});
+
+describe('removeMemberFromGroup', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestData(db);
+  });
+
+  it('removes a non-primary member from the group', () => {
+    const result = removeMemberFromGroup(db, 'grp-1', 'mem-2');
+    expect(result).toBe(true);
+
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, 'grp-1'))
+      .all();
+    expect(members).toHaveLength(1);
+    expect(members[0].id).toBe('mem-1');
+  });
+
+  it('throws PrimaryMemberError when removing primary member', () => {
+    expect(() => removeMemberFromGroup(db, 'grp-1', 'mem-1')).toThrow(PrimaryMemberError);
+  });
+
+  it('returns false for non-existent member', () => {
+    expect(removeMemberFromGroup(db, 'grp-1', 'nonexistent')).toBe(false);
+  });
+
+  it('auto-sets status to false_positive when group drops below 2 members', () => {
+    removeMemberFromGroup(db, 'grp-1', 'mem-2');
+
+    const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-1')).get();
+    expect(group!.status).toBe('false_positive');
+  });
+
+  it('keeps status unchanged when group still has 2+ members', () => {
+    // Add a third member to grp-1
+    db.insert(duplicateMember)
+      .values({ id: 'mem-extra', groupId: 'grp-1', documentId: 'doc-3', isPrimary: false })
+      .run();
+
+    removeMemberFromGroup(db, 'grp-1', 'mem-2');
+
+    const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-1')).get();
+    expect(group!.status).toBe('pending');
   });
 });

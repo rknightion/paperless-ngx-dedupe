@@ -588,6 +588,55 @@ export function setPrimaryDocument(db: AppDatabase, groupId: string, documentId:
   return true;
 }
 
+export class PrimaryMemberError extends Error {
+  constructor(groupId: string, memberId: string) {
+    super(`Cannot remove primary member ${memberId} from group ${groupId}: reassign primary first`);
+    this.name = 'PrimaryMemberError';
+  }
+}
+
+export function removeMemberFromGroup(db: AppDatabase, groupId: string, memberId: string): boolean {
+  const member = db
+    .select({
+      id: duplicateMember.id,
+      isPrimary: duplicateMember.isPrimary,
+    })
+    .from(duplicateMember)
+    .where(and(eq(duplicateMember.id, memberId), eq(duplicateMember.groupId, groupId)))
+    .get();
+
+  if (!member) return false;
+
+  if (member.isPrimary) {
+    throw new PrimaryMemberError(groupId, memberId);
+  }
+
+  const now = new Date().toISOString();
+
+  db.transaction((tx) => {
+    tx.delete(duplicateMember).where(eq(duplicateMember.id, memberId)).run();
+
+    // Check remaining member count
+    const [{ remaining }] = tx
+      .select({ remaining: count() })
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, groupId))
+      .all();
+
+    if (remaining < 2) {
+      // A single document is not a duplicate — auto-resolve
+      tx.update(duplicateGroup)
+        .set({ status: 'false_positive', updatedAt: now })
+        .where(eq(duplicateGroup.id, groupId))
+        .run();
+    } else {
+      tx.update(duplicateGroup).set({ updatedAt: now }).where(eq(duplicateGroup.id, groupId)).run();
+    }
+  });
+
+  return true;
+}
+
 export function setGroupStatus(db: AppDatabase, groupId: string, status: GroupStatus): boolean {
   const group = db
     .select({ id: duplicateGroup.id, status: duplicateGroup.status })

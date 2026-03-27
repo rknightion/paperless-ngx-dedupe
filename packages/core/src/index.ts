@@ -211,7 +211,9 @@ export {
   buildGroupWhere,
   archiveAndDeleteMembers,
   backfillDeletedGroupArchives,
+  removeMemberFromGroup,
   StatusTransitionError,
+  PrimaryMemberError,
 } from './queries/duplicates.js';
 export { getConfig, setConfig, setConfigBatch } from './queries/config.js';
 
