@@ -77,7 +77,8 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
     .get(SCHEMA_HASH_KEY) as { value: string } | undefined;
 
   if (storedRow?.value === currentHash) {
-    // Schema is up to date
+    // Schema is up to date — still run post-DDL migrations
+    migrateDeletedGroupArchives(sqlite);
     return;
   }
 
@@ -113,6 +114,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   });
 
   applyStatements();
+
+  // Post-DDL migrations (require new columns to exist)
+  migrateDeletedGroupArchives(sqlite);
 }
 
 // ── Pre-DDL Migrations ──────────────────────────────────────────────────
@@ -202,4 +206,53 @@ function migrateDiscriminativeScore(sqlite: Database.Database): void {
   if (!tableHasColumn(sqlite, 'duplicate_group', 'confidence_score')) return;
 
   sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN discriminative_score REAL`);
+}
+
+/**
+ * Backfill archived fields for existing deleted groups, then strip their member rows.
+ * Runs post-DDL since it requires the archived_member_count column to exist.
+ * Idempotent: only touches groups where archived_member_count IS NULL.
+ */
+function migrateDeletedGroupArchives(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'duplicate_group', 'archived_member_count')) return;
+
+  const unarchived = sqlite
+    .prepare(
+      `SELECT id FROM duplicate_group WHERE status = 'deleted' AND archived_member_count IS NULL`,
+    )
+    .all() as { id: string }[];
+
+  if (unarchived.length === 0) return;
+
+  console.log(
+    `[migrate] Archiving ${unarchived.length} deleted duplicate group(s): snapshotting metadata and stripping member rows`,
+  );
+
+  const now = new Date().toISOString();
+
+  sqlite.transaction(() => {
+    for (const { id } of unarchived) {
+      const memberCount = sqlite
+        .prepare(`SELECT COUNT(*) as cnt FROM duplicate_member WHERE group_id = ?`)
+        .get(id) as { cnt: number };
+
+      const primaryDoc = sqlite
+        .prepare(
+          `SELECT d.title FROM duplicate_member dm
+           JOIN document d ON dm.document_id = d.id
+           WHERE dm.group_id = ? AND dm.is_primary = 1`,
+        )
+        .get(id) as { title: string } | undefined;
+
+      sqlite
+        .prepare(
+          `UPDATE duplicate_group
+           SET archived_member_count = ?, archived_primary_title = ?, deleted_at = ?, updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(memberCount.cnt, primaryDoc?.title ?? null, now, now, id);
+
+      sqlite.prepare(`DELETE FROM duplicate_member WHERE group_id = ?`).run(id);
+    }
+  })();
 }
