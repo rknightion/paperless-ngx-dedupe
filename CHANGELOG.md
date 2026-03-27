@@ -1,5 +1,73 @@
 # Changelog
 
+## [0.11.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.10.0...v0.11.0) (2026-03-27)
+
+
+### Features
+
+* add duplicate group detail tracking ([b998ef6](https://github.com/rknightion/paperless-ngx-dedupe/commit/b998ef6d39a99d7fc9a810708c1fe06dca1bdbf2))
+* add Faro route tracking integration ([94a0bd5](https://github.com/rknightion/paperless-ngx-dedupe/commit/94a0bd50cce2906d661b5621d32e064d6144fbdd))
+* add Faro tracking to dashboard operations ([e55b433](https://github.com/rknightion/paperless-ngx-dedupe/commit/e55b43326a7ee28066fd670c5a4761e4ab547b19))
+* add Grafana Faro frontend observability configuration ([a6ca4bc](https://github.com/rknightion/paperless-ngx-dedupe/commit/a6ca4bc2886698c731ad2cdf1e34143e68091dc4))
+* add RAG conversation and indexing tracking ([044ccaf](https://github.com/rknightion/paperless-ngx-dedupe/commit/044ccafc24d592889eb93311b3d13290744eaa9d))
+* add settings management tracking ([a113196](https://github.com/rknightion/paperless-ngx-dedupe/commit/a113196e165e58dacfd254d93ca1c2583bcad211))
+* add source map generation and upload for error tracking ([76fa092](https://github.com/rknightion/paperless-ngx-dedupe/commit/76fa09221725b7866c4d905b0deeb4bc03863360))
+* **ai:** add failure tracking with failure types ([daf08a6](https://github.com/rknightion/paperless-ngx-dedupe/commit/daf08a60a4559cd2e2ccc29cabb2fa096a79df58))
+* **api:** add includeDeleted parameter to duplicates endpoint ([02bbe53](https://github.com/rknightion/paperless-ngx-dedupe/commit/02bbe53959c85e93b2263a35e0880e6e29f7e73b))
+* **api:** add member removal functionality to duplicate groups ([cda43cb](https://github.com/rknightion/paperless-ngx-dedupe/commit/cda43cb09e7eb1fdc2b5127ea737b6a14c0f46c6))
+* **db:** add archived fields to duplicate_group schema ([d5c7d1c](https://github.com/rknightion/paperless-ngx-dedupe/commit/d5c7d1cac65a3f33f55f75baa634a88fff4809aa))
+* **db:** add migration for deleted group archives ([7a24416](https://github.com/rknightion/paperless-ngx-dedupe/commit/7a244162adcb05f31e908016d8f08ec6ef93d99f))
+* **dedup:** change default discriminative penalty strength from 50 to 70 ([0cebe1f](https://github.com/rknightion/paperless-ngx-dedupe/commit/0cebe1f4b3e3aa6b520adee5a6324285ee2ea8be))
+* **dedup:** enhance discriminative classifier with improved pattern detection ([c8616df](https://github.com/rknightion/paperless-ngx-dedupe/commit/c8616dff1cfbe6399e77a8f6add68a66391715b2))
+* **duplicates:** add navigation controls to document visual comparison ([64025d3](https://github.com/rknightion/paperless-ngx-dedupe/commit/64025d3d5876a3d5c98286a8f8b0210656a6d27f))
+* **duplicates:** add sortable columns with persistent preferences ([cfa1fc7](https://github.com/rknightion/paperless-ngx-dedupe/commit/cfa1fc7e02c32cf48b20c629d7693b52c9436171))
+* export new archiving functions from core package ([6bef547](https://github.com/rknightion/paperless-ngx-dedupe/commit/6bef547fcceac1c64971b808803aa4d158147333))
+* implement AI processing tracking ([f05995f](https://github.com/rknightion/paperless-ngx-dedupe/commit/f05995f65114f2b7d7cb1fa494738adbb742b27c))
+* implement duplicates management tracking ([5322087](https://github.com/rknightion/paperless-ngx-dedupe/commit/532208789c89e1c909c6ebaa06b7ae0d11fc85e4))
+* implement Grafana Faro event tracking system ([db7bffe](https://github.com/rknightion/paperless-ngx-dedupe/commit/db7bffe13edb15eee323138457b7f1687ee3a485))
+* implement wizard workflow tracking ([911b976](https://github.com/rknightion/paperless-ngx-dedupe/commit/911b9767debb99b13085f30f94e3a8ba2703e5b6))
+* initialize Faro tracking in root layout ([90099e6](https://github.com/rknightion/paperless-ngx-dedupe/commit/90099e634e3dec4a4493a050545a51864023bcfd))
+* initialize Grafana Faro Web SDK ([0375270](https://github.com/rknightion/paperless-ngx-dedupe/commit/03752707b1305a4742e5e2e2ed0c3d32d222191e))
+* integrate Faro configuration in server-side layout ([a69ef11](https://github.com/rknightion/paperless-ngx-dedupe/commit/a69ef11f7742884e24eafd4d55bd6882b7f5c52e))
+* **jobs:** update batch worker to use archiving ([b4cd5d9](https://github.com/rknightion/paperless-ngx-dedupe/commit/b4cd5d9e8e7ef259cbe2eae392c645957dc26eed))
+* **queries:** add archived fields to duplicate group types ([f14cb07](https://github.com/rknightion/paperless-ngx-dedupe/commit/f14cb07c857ba56a68a8f22db28d40d57ba4d629))
+* **queries:** implement group archiving and filtering logic ([e44fc06](https://github.com/rknightion/paperless-ngx-dedupe/commit/e44fc0698481fdfc36d42d093c62dafbdfe7a817))
+* **queries:** update setGroupStatus to archive on delete ([672a6f7](https://github.com/rknightion/paperless-ngx-dedupe/commit/672a6f7b591bc75795004fb1caf1f44beb2d6613))
+* **telemetry:** enhance OpenTelemetry configuration and trace correlation ([95ae7f0](https://github.com/rknightion/paperless-ngx-dedupe/commit/95ae7f09dcd90f33f2e2f71d62cb3c2bdeb406fc))
+* **ui:** add per-document actions for group management ([3a417a9](https://github.com/rknightion/paperless-ngx-dedupe/commit/3a417a9850ccd473d11bc154a9c2ca3bc8f5aaf7))
+* **ui:** enhance penalty strength settings with detailed guidance ([ffe78a7](https://github.com/rknightion/paperless-ngx-dedupe/commit/ffe78a7dc3d2cfbdfbe0fd32a2e5fd635ceecc07))
+* **web:** add show deleted checkbox and update UI for archived groups ([0d9e867](https://github.com/rknightion/paperless-ngx-dedupe/commit/0d9e867aa1f68022e38f298c9326b46c4f15d9bb))
+* **web:** enhance queue UI for different failure types ([c4af9b3](https://github.com/rknightion/paperless-ngx-dedupe/commit/c4af9b31cdd15704dcd8654f612d5e39c2b638bb))
+* **web:** update group detail page for archived groups ([2ae84c3](https://github.com/rknightion/paperless-ngx-dedupe/commit/2ae84c3ddfb716d7083e35976efcca874e7da21a))
+
+
+### Bug Fixes
+
+* **ai:** exclude no_suggestions failures from retry scope ([40eae4b](https://github.com/rknightion/paperless-ngx-dedupe/commit/40eae4bd1a6e1420cc65c052deb88c78f62b76bb))
+* **ai:** improve error handling in AI apply worker and API ([e659a07](https://github.com/rknightion/paperless-ngx-dedupe/commit/e659a07cb292a5a3a10998a1d57f45aef63fb717))
+* **ai:** mark results as failed with no_suggestions type when no metadata found ([c2e2c32](https://github.com/rknightion/paperless-ngx-dedupe/commit/c2e2c32b0a9f0098c016e3279315383d7d791919))
+* **db:** enable incremental database migrations with stored snapshots ([e4bf0de](https://github.com/rknightion/paperless-ngx-dedupe/commit/e4bf0de20e054a1cf435e2b64910eb17e025210d))
+
+
+### Miscellaneous
+
+* **deps:** update dependency ai to v6.0.140 ([#260](https://github.com/rknightion/paperless-ngx-dedupe/issues/260)) ([8ab5c6b](https://github.com/rknightion/paperless-ngx-dedupe/commit/8ab5c6bea1d081fea83e5237fa1dad5061ea7ca7))
+* **deps:** update github/codeql-action digest to b8bb9f2 ([#262](https://github.com/rknightion/paperless-ngx-dedupe/issues/262)) ([e611986](https://github.com/rknightion/paperless-ngx-dedupe/commit/e61198692307fb045b3c145751717eafc52d6d90))
+* update dependencies to latest versions ([9aef750](https://github.com/rknightion/paperless-ngx-dedupe/commit/9aef750315b872b6babb75f3a73ddf30c727e3db))
+
+
+### Documentation
+
+* update discriminative penalty documentation with detailed guidance ([82745a8](https://github.com/rknightion/paperless-ngx-dedupe/commit/82745a87b21d116bd596d59ff1e43b280ad2c7b2))
+
+
+### Tests
+
+* add comprehensive tests for group archiving functionality ([f1581fa](https://github.com/rknightion/paperless-ngx-dedupe/commit/f1581fae3277e2da844eb6050baf7b75cd87e6b5))
+* **ai:** add comprehensive tests for failure handling ([1333978](https://github.com/rknightion/paperless-ngx-dedupe/commit/1333978481a91b1fec611ad3da19ebd56cc99e2c))
+* **dedup:** add comprehensive tests for enhanced discriminative patterns ([5d4b0f1](https://github.com/rknightion/paperless-ngx-dedupe/commit/5d4b0f15afb78411971a5318df8785c313cd4e4c))
+* update e2e test for duplicates dropdown changes ([d14ffc0](https://github.com/rknightion/paperless-ngx-dedupe/commit/d14ffc0e5825f5d8d6937a9fc6ecd4e2c671111d))
+
 ## [0.10.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.9.0...v0.10.0) (2026-03-26)
 
 
