@@ -229,7 +229,13 @@
 
       <h3 class="text-ink text-base font-semibold">Visual Comparison</h3>
       {#key `${primaryMember.documentId}-${selectedSecondary.documentId}`}
-        <DocumentVisualCompare primary={primaryMember} secondary={selectedSecondary} />
+        <DocumentVisualCompare
+          primary={primaryMember}
+          secondary={selectedSecondary}
+          secondaryIndex={selectedSecondaryIndex}
+          secondaryCount={secondaryMembers.length}
+          onnavigate={(i) => { selectedSecondaryIndex = i; }}
+        />
       {/key}
     </div>
   {/if}

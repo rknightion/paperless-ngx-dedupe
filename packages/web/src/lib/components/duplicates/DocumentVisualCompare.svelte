@@ -1,12 +1,19 @@
 <script lang="ts">
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
+  import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 
   interface Props {
     primary: DuplicateGroupMember;
     secondary: DuplicateGroupMember;
+    secondaryIndex?: number;
+    secondaryCount?: number;
+    onnavigate?: (index: number) => void;
   }
 
-  let { primary, secondary }: Props = $props();
+  let { primary, secondary, secondaryIndex = 0, secondaryCount = 1, onnavigate }: Props = $props();
+
+  const hasPrev = $derived(secondaryIndex > 0);
+  const hasNext = $derived(secondaryIndex < secondaryCount - 1);
 
   let showPdfPrimary = $state(false);
   let showPdfSecondary = $state(false);
@@ -67,13 +74,38 @@
   <!-- Secondary -->
   <div class="panel min-w-0">
     <div class="mb-3 flex items-center justify-between">
-      <h4 class="text-ink text-sm font-semibold">Compared Document</h4>
-      <button
-        onclick={() => (showPdfSecondary = !showPdfSecondary)}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1 text-xs font-medium"
-      >
-        {showPdfSecondary ? 'Show Thumbnail' : 'View PDF'}
-      </button>
+      <div class="flex items-center gap-2">
+        <h4 class="text-ink text-sm font-semibold">Compared Document</h4>
+        {#if secondaryCount > 1}
+          <span class="text-muted text-xs">{secondaryIndex + 1}/{secondaryCount}</span>
+        {/if}
+      </div>
+      <div class="flex items-center gap-1">
+        {#if secondaryCount > 1 && onnavigate}
+          <button
+            onclick={() => onnavigate(secondaryIndex - 1)}
+            disabled={!hasPrev}
+            class="border-soft text-ink hover:bg-canvas rounded-lg border p-1 text-xs font-medium disabled:opacity-30"
+            title="Previous document"
+          >
+            <ChevronLeft class="h-4 w-4" />
+          </button>
+          <button
+            onclick={() => onnavigate(secondaryIndex + 1)}
+            disabled={!hasNext}
+            class="border-soft text-ink hover:bg-canvas rounded-lg border p-1 text-xs font-medium disabled:opacity-30"
+            title="Next document"
+          >
+            <ChevronRight class="h-4 w-4" />
+          </button>
+        {/if}
+        <button
+          onclick={() => (showPdfSecondary = !showPdfSecondary)}
+          class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1 text-xs font-medium"
+        >
+          {showPdfSecondary ? 'Show Thumbnail' : 'View PDF'}
+        </button>
+      </div>
     </div>
 
     {#if showPdfSecondary}
