@@ -13,6 +13,7 @@ import {
   deleteDuplicateGroup,
   batchSetStatus,
   purgeDeletedGroups,
+  archiveAndDeleteMembers,
   StatusTransitionError,
 } from '../duplicates.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
@@ -683,5 +684,146 @@ describe('getSimilarityGraph', () => {
     expect(doc1Node!.title).toBe('Invoice A');
     expect(doc1Node!.correspondent).toBe('Alice');
     expect(doc1Node!.documentType).toBe('Invoice');
+  });
+});
+
+describe('archiveAndDeleteMembers', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestData(db);
+  });
+
+  it('snapshots member count and primary title, strips members', () => {
+    archiveAndDeleteMembers(db, 'grp-1');
+
+    const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-1')).get();
+    expect(group).toBeDefined();
+    expect(group!.status).toBe('deleted');
+    expect(group!.archivedMemberCount).toBe(2);
+    expect(group!.archivedPrimaryTitle).toBe('Invoice A');
+    expect(group!.deletedAt).toBeTruthy();
+
+    // Members should be gone
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, 'grp-1'))
+      .all();
+    expect(members).toHaveLength(0);
+  });
+
+  it('handles group with no primary document', () => {
+    // grp-2 has no primary set
+    archiveAndDeleteMembers(db, 'grp-2');
+
+    const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-2')).get();
+    expect(group!.archivedMemberCount).toBe(2);
+    expect(group!.archivedPrimaryTitle).toBeNull();
+  });
+
+  it('returns false for non-existent group', () => {
+    expect(archiveAndDeleteMembers(db, 'nonexistent')).toBe(false);
+  });
+});
+
+describe('getDuplicateGroups with includeDeleted', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestData(db);
+    // Archive grp-1 to make it deleted
+    archiveAndDeleteMembers(db, 'grp-1');
+  });
+
+  it('excludes deleted groups by default', () => {
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).toBe('grp-2');
+    expect(result.total).toBe(1);
+  });
+
+  it('includes deleted groups when includeDeleted is true', () => {
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc', includeDeleted: true },
+      { limit: 50, offset: 0 },
+    );
+    expect(result.items).toHaveLength(2);
+    const deleted = result.items.find((g) => g.id === 'grp-1');
+    expect(deleted).toBeDefined();
+    expect(deleted!.status).toBe('deleted');
+    expect(deleted!.memberCount).toBe(0);
+    expect(deleted!.archivedMemberCount).toBe(2);
+    expect(deleted!.primaryDocumentTitle).toBe('Invoice A');
+  });
+
+  it('shows deleted groups when explicit status filter includes deleted', () => {
+    const result = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc', status: ['deleted'] },
+      { limit: 50, offset: 0 },
+    );
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).toBe('grp-1');
+  });
+});
+
+describe('setGroupStatus archives on delete', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestData(db);
+  });
+
+  it('archives and strips members when setting status to deleted', () => {
+    setGroupStatus(db, 'grp-1', 'deleted');
+
+    const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-1')).get();
+    expect(group!.status).toBe('deleted');
+    expect(group!.archivedMemberCount).toBe(2);
+    expect(group!.archivedPrimaryTitle).toBe('Invoice A');
+
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, 'grp-1'))
+      .all();
+    expect(members).toHaveLength(0);
+  });
+});
+
+describe('getDuplicateGroup detail for archived group', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestData(db);
+    archiveAndDeleteMembers(db, 'grp-1');
+  });
+
+  it('returns archived fields with empty members', () => {
+    const detail = getDuplicateGroup(db, 'grp-1');
+    expect(detail).toBeDefined();
+    expect(detail!.status).toBe('deleted');
+    expect(detail!.members).toHaveLength(0);
+    expect(detail!.archivedMemberCount).toBe(2);
+    expect(detail!.archivedPrimaryTitle).toBe('Invoice A');
+    expect(detail!.deletedAt).toBeTruthy();
   });
 });
