@@ -62,7 +62,8 @@ test.describe('Duplicates List Page', () => {
       'False Positive',
     );
     await expect(statusFilter.locator('option[value="ignored"]')).toHaveText('Ignored');
-    await expect(statusFilter.locator('option[value="deleted"]')).toHaveText('Deleted');
+    // "Deleted" is no longer in the dropdown — controlled by "Show deleted" toggle instead
+    await expect(statusFilter.locator('option[value="deleted"]')).toHaveCount(0);
   });
 
   test('sort controls exist', async ({ page }) => {
