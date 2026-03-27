@@ -108,6 +108,7 @@ export interface DuplicateGroupSummary {
   confidenceScore: number;
   status: string;
   memberCount: number;
+  archivedMemberCount?: number | null;
   primaryDocumentTitle: string | null;
   createdAt: string;
   updatedAt: string;
@@ -137,6 +138,9 @@ export interface DuplicateGroupDetail {
   discriminativeScore?: number | null;
   algorithmVersion: string;
   status: string;
+  archivedMemberCount?: number | null;
+  archivedPrimaryTitle?: string | null;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   members: DuplicateGroupMember[];
@@ -163,6 +167,7 @@ export interface DuplicateGroupFilters {
   minConfidence?: number;
   maxConfidence?: number;
   status?: string;
+  includeDeleted?: boolean;
   sortBy?: 'confidence' | 'created_at' | 'member_count';
   sortOrder?: 'asc' | 'desc';
 }
