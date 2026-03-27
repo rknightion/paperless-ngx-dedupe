@@ -218,7 +218,7 @@ interface DedupConfig {
 }
 ```
 
-The dedup scoring model uses two confidence weights (`confidenceWeightJaccard` + `confidenceWeightFuzzy`, summing to 100) plus an independent `discriminativePenaltyStrength` (0--100) that penalises common-token matches. The old `confidenceWeightDiscriminative` field is deprecated and accepted only for backward compatibility.
+The dedup scoring model uses two confidence weights (`confidenceWeightJaccard` + `confidenceWeightFuzzy`, summing to 100) plus an independent `discriminativePenaltyStrength` (0--100, default 70) that penalizes pairs sharing a template but differing in dates, amounts, invoice numbers, or routes. The old `confidenceWeightDiscriminative` field is deprecated and accepted only for backward compatibility.
 
 ### AI Types
 

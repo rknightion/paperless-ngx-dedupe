@@ -151,11 +151,11 @@ The confidence model uses a **2-weight base score** plus a **discriminative pena
 | `confidenceWeightJaccard` | `60` | Weight for Jaccard (set overlap) similarity |
 | `confidenceWeightFuzzy` | `40` | Weight for fuzzy (edit distance) similarity |
 
-**Discriminative penalty** reduces confidence when documents contain highly unique content:
+**Discriminative penalty** reduces confidence when template-based documents have different structured data (dates, amounts, invoice numbers, routes):
 
 | Setting | Default | Range | Notes |
 | --- | --- | --- | --- |
-| `discriminativePenaltyStrength` | `50` | 0-100 | How aggressively unique content reduces confidence (0 = disabled) |
+| `discriminativePenaltyStrength` | `70` | 0-100 | How aggressively differing structured data reduces confidence (0 = disabled) |
 
 The final confidence formula is:
 
@@ -164,7 +164,13 @@ base  = (jaccard × J_weight + fuzzy × F_weight) / (J_weight + F_weight)
 final = base × (1 - penalty_strength/100 × (1 - discriminative_score))
 ```
 
-When the discriminative score is high (documents share distinctive content), the penalty has little effect. When it is low (documents have lots of unique content despite surface similarity), the penalty reduces the confidence score.
+When the discriminative score is high (documents share the same dates, amounts, and references), the penalty has little effect. When it is low (documents have different dates, amounts, invoice numbers, or routes despite sharing a template), the penalty reduces the confidence score.
+
+**Strength guidelines:**
+
+- **Low (0-30%):** Minimal impact. Monthly invoices or train tickets with different dates may still appear as duplicates.
+- **Medium (40-70%):** Recommended for most libraries. Catches template-based false positives while keeping true duplicates intact.
+- **High (80-100%):** Aggressive. Best for libraries with many monthly invoices, bank statements, or train/flight tickets. May over-penalize minor OCR differences in dates or amounts.
 
 When any weight or penalty strength changes, existing group confidence scores are recalculated automatically.
 

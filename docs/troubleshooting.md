@@ -117,7 +117,7 @@ curl -X PUT http://localhost:3000/api/v1/config/dedup \
 
 - Raise `similarityThreshold` (e.g., 0.85 or 0.90)
 - Adjust `confidenceWeightJaccard` and `confidenceWeightFuzzy` to shift emphasis between similarity dimensions (must sum to 100)
-- Increase `discriminativePenaltyStrength` to penalize pairs that share common boilerplate text
+- Increase `discriminativePenaltyStrength` (e.g., 80-100) to penalize pairs that share common boilerplate text but have different dates, amounts, or reference numbers. This is particularly effective for monthly invoices, bank statements, and train/flight tickets
 - Reduce `numBands` to narrow the candidate pool
 - See [How It Works - Tuning Guide](how-it-works.md#tuning-guide) for detailed guidance
 

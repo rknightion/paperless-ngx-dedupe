@@ -300,7 +300,7 @@ function setJaccard(a: Set<string>, b: Set<string>): number {
  *   penalize documents without structured data).
  * - 0.5 when only one document has tokens (ambiguous).
  * - Weighted Jaccard of token-set categories otherwise.
- *   Dates 3x, times 2x, amounts 2x, identifiers 2x, references 1x.
+ *   Dates 3x, times 2x, amounts 2x, identifiers 2x, references 1x, routes 3x.
  */
 export function computeDiscriminativeScore(text1: string, text2: string): number {
   const tokens1 = extractDiscriminativeTokens(text1);
