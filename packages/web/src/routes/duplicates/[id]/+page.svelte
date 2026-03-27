@@ -10,7 +10,8 @@
     GroupActionBar,
     DocumentVisualCompare,
   } from '$lib/components';
-  import { ArrowLeft, ExternalLink } from 'lucide-svelte';
+  import { ConfirmDialog } from '$lib/components';
+  import { ArrowLeft, ExternalLink, Trash2, UserMinus } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -30,6 +31,11 @@
   let returnParams = $derived($page.url.searchParams.get('returnParams') ?? '');
   let returnUrl = $derived(returnParams ? `/duplicates?${returnParams}` : '/duplicates');
 
+  let isMemberAction = $state(false);
+  let memberActionError = $state<string | null>(null);
+  let showDeleteFromPaperless = $state(false);
+  let showRemoveFromGroup = $state(false);
+
   async function setPrimary(documentId: string) {
     isSettingPrimary = true;
     try {
@@ -41,6 +47,61 @@
       invalidateAll();
     } finally {
       isSettingPrimary = false;
+    }
+  }
+
+  async function removeMember(memberId: string) {
+    const res = await fetch(`/api/v1/duplicates/${data.group.id}/members/${memberId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const json = await res.json();
+      throw new Error(json.error?.message ?? 'Failed to remove member');
+    }
+  }
+
+  async function handleRemoveFromGroup() {
+    if (!selectedSecondary) return;
+    showRemoveFromGroup = false;
+    isMemberAction = true;
+    memberActionError = null;
+    try {
+      await removeMember(selectedSecondary.memberId);
+      if (selectedSecondaryIndex >= secondaryMembers.length - 1 && selectedSecondaryIndex > 0) {
+        selectedSecondaryIndex--;
+      }
+      await invalidateAll();
+    } catch (e) {
+      memberActionError = e instanceof Error ? e.message : 'Unknown error';
+    } finally {
+      isMemberAction = false;
+    }
+  }
+
+  async function handleDeleteFromPaperless() {
+    if (!selectedSecondary) return;
+    showDeleteFromPaperless = false;
+    isMemberAction = true;
+    memberActionError = null;
+    try {
+      // Delete from Paperless first
+      const res = await fetch(`/api/v1/paperless/documents/${selectedSecondary.paperlessId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error?.message ?? 'Failed to delete from Paperless');
+      }
+      // Then remove from group
+      await removeMember(selectedSecondary.memberId);
+      if (selectedSecondaryIndex >= secondaryMembers.length - 1 && selectedSecondaryIndex > 0) {
+        selectedSecondaryIndex--;
+      }
+      await invalidateAll();
+    } catch (e) {
+      memberActionError = e instanceof Error ? e.message : 'Unknown error';
+    } finally {
+      isMemberAction = false;
     }
   }
 </script>
@@ -233,6 +294,43 @@
           {/if}
         {/if}
 
+        <!-- Per-document actions -->
+        {#if groupStatus !== 'deleted'}
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-muted text-xs">
+              Actions for <strong class="text-ink"
+                >{selectedSecondary.title.length > 40
+                  ? selectedSecondary.title.slice(0, 40) + '...'
+                  : selectedSecondary.title}</strong
+              >:
+            </span>
+            <button
+              onclick={() => (showRemoveFromGroup = true)}
+              disabled={isMemberAction}
+              class="border-soft text-ink hover:bg-canvas inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+            >
+              <UserMinus class="h-3.5 w-3.5" />
+              Remove from Group
+            </button>
+            <button
+              onclick={() => (showDeleteFromPaperless = true)}
+              disabled={isMemberAction}
+              class="bg-ember inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              <Trash2 class="h-3.5 w-3.5" />
+              Delete from Paperless
+            </button>
+            {#if isMemberAction}
+              <span
+                class="border-accent inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+              ></span>
+            {/if}
+            {#if memberActionError}
+              <span class="text-ember text-xs">{memberActionError}</span>
+            {/if}
+          </div>
+        {/if}
+
         <DocumentCompare
           primary={primaryMember}
           secondary={selectedSecondary}
@@ -265,3 +363,23 @@
     {/if}
   {/if}
 </div>
+
+<ConfirmDialog
+  open={showRemoveFromGroup}
+  title="Remove from Group"
+  message="This will remove the document from this duplicate group. The document will remain in Paperless-NGX."
+  confirmLabel="Remove"
+  variant="accent"
+  onconfirm={handleRemoveFromGroup}
+  oncancel={() => (showRemoveFromGroup = false)}
+/>
+
+<ConfirmDialog
+  open={showDeleteFromPaperless}
+  title="Delete from Paperless"
+  message="This will delete the document from Paperless-NGX (moved to recycle bin) and remove it from this group. This can be undone from the Paperless-NGX recycle bin."
+  confirmLabel="Delete Document"
+  variant="ember"
+  onconfirm={handleDeleteFromPaperless}
+  oncancel={() => (showDeleteFromPaperless = false)}
+/>
