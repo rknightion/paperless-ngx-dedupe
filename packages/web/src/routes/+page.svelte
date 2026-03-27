@@ -9,6 +9,15 @@
     StaleAnalysisBanner,
   } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
+  import {
+    trackSyncStarted,
+    trackSyncCompleted,
+    trackSyncFailed,
+    trackAnalysisStarted,
+    trackAnalysisCompleted,
+    trackAnalysisFailed,
+    startTimer,
+  } from '$lib/faro-events';
   import { FileStack, AlertCircle, Clock, Brain, CheckCircle, Zap, CircleDot } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
@@ -51,6 +60,8 @@
     isSyncing = true;
     syncProgress = 0;
     syncMessage = 'Starting sync...';
+    trackSyncStarted({ force: syncForce, purge: syncPurge });
+    const stopSyncTimer = startTimer('sync_duration');
     try {
       const res = await fetch('/api/v1/sync', {
         method: 'POST',
@@ -61,6 +72,7 @@
       if (!res.ok) {
         syncMessage = json.error?.message ?? 'Failed to start sync';
         isSyncing = false;
+        trackSyncFailed(syncMessage);
         return;
       }
       syncSSE = connectJobSSE(json.data.jobId, {
@@ -74,16 +86,20 @@
           syncProgress = 1;
           syncPhaseProgress = undefined;
           syncMessage = 'Sync complete';
+          trackSyncCompleted();
+          stopSyncTimer();
           invalidateAll();
         },
         onError: () => {
           isSyncing = false;
           syncMessage = 'Connection lost';
+          trackSyncFailed('Connection lost');
         },
       });
     } catch {
       isSyncing = false;
       syncMessage = 'Failed to start sync';
+      trackSyncFailed('Failed to start sync');
     }
   }
 
@@ -91,6 +107,8 @@
     isAnalyzing = true;
     analysisProgress = 0;
     analysisMessage = 'Starting analysis...';
+    trackAnalysisStarted({ force: analysisForce || data.dashboard.analysisStale });
+    const stopAnalysisTimer = startTimer('analysis_duration');
     try {
       const res = await fetch('/api/v1/analysis', {
         method: 'POST',
@@ -101,6 +119,7 @@
       if (!res.ok) {
         analysisMessage = json.error?.message ?? 'Failed to start analysis';
         isAnalyzing = false;
+        trackAnalysisFailed(analysisMessage);
         return;
       }
       analysisSSE = connectJobSSE(json.data.jobId, {
@@ -114,16 +133,20 @@
           analysisProgress = 1;
           analysisPhaseProgress = undefined;
           analysisMessage = 'Analysis complete';
+          trackAnalysisCompleted();
+          stopAnalysisTimer();
           invalidateAll();
         },
         onError: () => {
           isAnalyzing = false;
           analysisMessage = 'Connection lost';
+          trackAnalysisFailed('Connection lost');
         },
       });
     } catch {
       isAnalyzing = false;
       analysisMessage = 'Failed to start analysis';
+      trackAnalysisFailed('Failed to start analysis');
     }
   }
 
