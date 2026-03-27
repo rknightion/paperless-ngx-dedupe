@@ -29,7 +29,9 @@ export const duplicateGroupFiltersSchema = z.object({
     .string()
     .transform((v) => v.split(',').filter((s) => GROUP_STATUS_VALUES.includes(s as GroupStatus)))
     .optional(),
-  sortBy: z.enum(['confidence', 'created_at', 'member_count']).default('confidence'),
+  sortBy: z
+    .enum(['confidence', 'created_at', 'member_count', 'updated_at', 'status'])
+    .default('confidence'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 

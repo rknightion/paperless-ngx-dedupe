@@ -10,7 +10,7 @@
     GroupPreviewModal,
     RecycleBinPrompt,
   } from '$lib/components';
-  import { Network, Download, Wand2, ArrowDown, ArrowUp, Trash2 } from 'lucide-svelte';
+  import { Network, Download, Wand2, ArrowDown, ArrowUp, ArrowUpDown, Trash2 } from 'lucide-svelte';
 
   let { data } = $props();
 
@@ -95,14 +95,69 @@
     applyFilters({ maxConfidence: value ? String(Number(value) / 100) : '' });
   }
 
+  const SORT_STORAGE_KEY = 'paperless-dedupe:duplicates:sort';
+
+  function saveSortPreference(sortBy: string, sortOrder: string) {
+    try {
+      localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortBy, sortOrder }));
+    } catch {
+      // localStorage unavailable
+    }
+  }
+
+  function loadSortPreference(): { sortBy: string; sortOrder: string } | null {
+    try {
+      const raw = localStorage.getItem(SORT_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.sortBy === 'string' && typeof parsed.sortOrder === 'string') {
+        return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
+  // Restore sort preference from localStorage on first load (no sort params in URL)
+  $effect(() => {
+    if (!$page.url.searchParams.has('sortBy') && !$page.url.searchParams.has('sortOrder')) {
+      const saved = loadSortPreference();
+      if (saved && (saved.sortBy !== 'confidence' || saved.sortOrder !== 'desc')) {
+        applyFilters({ sortBy: saved.sortBy, sortOrder: saved.sortOrder });
+      }
+    }
+  });
+
   function handleSortChange(e: Event) {
     const value = (e.target as HTMLSelectElement).value;
+    const order = $page.url.searchParams.get('sortOrder') ?? 'desc';
+    saveSortPreference(value, order);
     applyFilters({ sortBy: value });
   }
 
   function toggleSortOrder() {
     const current = $page.url.searchParams.get('sortOrder') ?? 'desc';
-    applyFilters({ sortOrder: current === 'desc' ? 'asc' : 'desc' });
+    const next = current === 'desc' ? 'asc' : 'desc';
+    const sortBy = $page.url.searchParams.get('sortBy') ?? 'confidence';
+    saveSortPreference(sortBy, next);
+    applyFilters({ sortOrder: next });
+  }
+
+  let currentSortBy = $derived($page.url.searchParams.get('sortBy') ?? 'confidence');
+  let currentSortOrder = $derived($page.url.searchParams.get('sortOrder') ?? 'desc');
+
+  function sortByColumn(column: string) {
+    if (currentSortBy === column) {
+      // Toggle direction
+      const next = currentSortOrder === 'desc' ? 'asc' : 'desc';
+      saveSortPreference(column, next);
+      applyFilters({ sortBy: column, sortOrder: next });
+    } else {
+      // New column, default to desc
+      saveSortPreference(column, 'desc');
+      applyFilters({ sortBy: column, sortOrder: 'desc' });
+    }
   }
 
   // Selection helpers
@@ -382,19 +437,21 @@
           <select
             id="sort-by"
             onchange={handleSortChange}
-            value={$page.url.searchParams.get('sortBy') ?? 'confidence'}
+            value={currentSortBy}
             class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
           >
             <option value="confidence">Confidence</option>
             <option value="created_at">Created</option>
             <option value="member_count">Members</option>
+            <option value="status">Status</option>
+            <option value="updated_at">Updated</option>
           </select>
           <button
             onclick={toggleSortOrder}
             class="border-soft text-ink hover:bg-canvas rounded-lg border px-2 py-2 text-sm"
             title="Toggle sort order"
           >
-            {#if ($page.url.searchParams.get('sortOrder') ?? 'desc') === 'desc'}
+            {#if currentSortOrder === 'desc'}
               <ArrowDown class="h-4 w-4" />
             {:else}
               <ArrowUp class="h-4 w-4" />
@@ -495,10 +552,66 @@
               />
             </th>
             <th class="text-muted px-4 py-3 font-medium">Primary Doc Title</th>
-            <th class="text-muted hidden px-4 py-3 font-medium md:table-cell">Members</th>
-            <th class="text-muted px-4 py-3 font-medium">Confidence</th>
-            <th class="text-muted hidden px-4 py-3 font-medium sm:table-cell">Status</th>
-            <th class="text-muted hidden px-4 py-3 font-medium lg:table-cell">Updated</th>
+            <th class="text-muted hidden px-4 py-3 font-medium md:table-cell">
+              <button
+                onclick={() => sortByColumn('member_count')}
+                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
+              >
+                Members
+                {#if currentSortBy === 'member_count'}
+                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
+                      class="h-3 w-3"
+                    />{/if}
+                {:else}
+                  <ArrowUpDown class="h-3 w-3 opacity-40" />
+                {/if}
+              </button>
+            </th>
+            <th class="text-muted px-4 py-3 font-medium">
+              <button
+                onclick={() => sortByColumn('confidence')}
+                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
+              >
+                Confidence
+                {#if currentSortBy === 'confidence'}
+                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
+                      class="h-3 w-3"
+                    />{/if}
+                {:else}
+                  <ArrowUpDown class="h-3 w-3 opacity-40" />
+                {/if}
+              </button>
+            </th>
+            <th class="text-muted hidden px-4 py-3 font-medium sm:table-cell">
+              <button
+                onclick={() => sortByColumn('status')}
+                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
+              >
+                Status
+                {#if currentSortBy === 'status'}
+                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
+                      class="h-3 w-3"
+                    />{/if}
+                {:else}
+                  <ArrowUpDown class="h-3 w-3 opacity-40" />
+                {/if}
+              </button>
+            </th>
+            <th class="text-muted hidden px-4 py-3 font-medium lg:table-cell">
+              <button
+                onclick={() => sortByColumn('updated_at')}
+                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
+              >
+                Updated
+                {#if currentSortBy === 'updated_at'}
+                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
+                      class="h-3 w-3"
+                    />{/if}
+                {:else}
+                  <ArrowUpDown class="h-3 w-3 opacity-40" />
+                {/if}
+              </button>
+            </th>
           </tr>
         </thead>
         <tbody>
