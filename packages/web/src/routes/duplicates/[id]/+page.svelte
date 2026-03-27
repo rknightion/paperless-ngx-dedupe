@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import {
@@ -11,6 +12,7 @@
     DocumentVisualCompare,
   } from '$lib/components';
   import { ConfirmDialog } from '$lib/components';
+  import { trackGroupViewed, trackMemberAction } from '$lib/faro-events';
   import { ArrowLeft, ExternalLink, Trash2, UserMinus } from 'lucide-svelte';
 
   let { data } = $props();
@@ -31,6 +33,15 @@
   let returnParams = $derived($page.url.searchParams.get('returnParams') ?? '');
   let returnUrl = $derived(returnParams ? `/duplicates?${returnParams}` : '/duplicates');
 
+  untrack(() =>
+    trackGroupViewed({
+      groupId: data.group.id,
+      memberCount: data.group.members.length,
+      confidenceScore: data.group.confidenceScore,
+      status: data.group.status,
+    }),
+  );
+
   let isMemberAction = $state(false);
   let memberActionError = $state<string | null>(null);
   let showDeleteFromPaperless = $state(false);
@@ -38,6 +49,7 @@
 
   async function setPrimary(documentId: string) {
     isSettingPrimary = true;
+    trackMemberAction('set_primary', { groupId: data.group.id, memberId: documentId });
     try {
       await fetch(`/api/v1/duplicates/${data.group.id}/primary`, {
         method: 'PUT',
@@ -65,6 +77,7 @@
     showRemoveFromGroup = false;
     isMemberAction = true;
     memberActionError = null;
+    trackMemberAction('remove', { groupId: data.group.id, memberId: selectedSecondary.memberId });
     try {
       await removeMember(selectedSecondary.memberId);
       if (selectedSecondaryIndex >= secondaryMembers.length - 1 && selectedSecondaryIndex > 0) {
@@ -83,6 +96,10 @@
     showDeleteFromPaperless = false;
     isMemberAction = true;
     memberActionError = null;
+    trackMemberAction('delete_from_paperless', {
+      groupId: data.group.id,
+      memberId: selectedSecondary.memberId,
+    });
     try {
       // Delete from Paperless first
       const res = await fetch(`/api/v1/paperless/documents/${selectedSecondary.paperlessId}`, {
