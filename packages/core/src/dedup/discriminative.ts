@@ -11,11 +11,17 @@
 
 // ── Regex patterns (operate on lowercased, whitespace-collapsed text) ───
 
+const MONTH_NAMES =
+  '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+
 const DATE_PATTERNS = [
   // DD/MM/YYYY, MM/DD/YYYY, DD-MM-YY, etc.
   /\b\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}\b/g,
+  // DD Mon YYYY, DD-Mon-YYYY, DD.Mon.YYYY (e.g. "22-nov-2024", "15 aug 2019", "30-apr-2016")
+  // Must appear before Month-DD pattern to avoid misparsing "15 aug 2019" as "aug 20, 19"
+  new RegExp(`\\b\\d{1,2}[\\s/\\-.]+${MONTH_NAMES}[\\s/\\-.,]*\\d{2,4}\\b`, 'g'),
   // Month DD, YYYY or Month DD YYYY (e.g. "january 15, 2024")
-  /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2},?\s*\d{2,4}\b/g,
+  new RegExp(`\\b${MONTH_NAMES}\\s+\\d{1,2},?\\s*\\d{2,4}\\b`, 'g'),
   // ISO format: YYYY-MM-DD or YYYY/MM/DD
   /\b\d{4}[/\-.]\d{1,2}[/\-.]\d{1,2}\b/g,
 ];
@@ -114,17 +120,24 @@ const MONEY_PATTERNS = [
   /\b\d{1,3}(?:,\d{3})+\.\d{2}\b/g,
 ];
 
+// Amounts near financial keywords without currency symbols (capture group).
+// Gap uses [^0-9] to avoid eating into the number; \d+ allows 4+ digit amounts like 5000.00.
+const CONTEXTUAL_MONEY_PATTERNS = [
+  /\b(?:total|subtotal|sub-total|amount|balance|net|gross|price|fee|charge|cost|due|payment)\b[^0-9]{0,30}?(\d+(?:,\d{3})*\.\d{2})\b/g,
+];
+
 const IDENTIFIER_PATTERNS = [
-  // Invoice/receipt/order numbers: "invoice 12345", "inv-2024-001", "order #ab123"
-  /\b(?:invoice|inv|receipt|order|po|bill|quote|estimate|credit\s+note)\b\s*(?:no\.?\s*|#\s*|:\s*)?([a-z0-9][-a-z0-9./]{2,20})\b/g,
+  // Invoice/receipt/order/ticket numbers: "invoice 12345", "inv-2024-001", "order #ab123"
+  // Handles multi-word labels: "invoice number: xyz", "ticket number xyz"
+  /\b(?:invoice|inv|receipt|order|po|bill|quote|estimate|credit\s+note|ticket|transaction)\b\s*(?:number|num|nr)?\s*(?:no\.?\s*|#\s*|:\s*)?([a-z0-9][-a-z0-9./]{2,20})\b/g,
   // Flight numbers: "flight ba1234", "flt ua567"
   /\b(?:flight|flt)\b\s*(?:no\.?\s*|#\s*|:\s*)?([a-z0-9]{2}\d{1,4})\b/g,
   // Booking/confirmation codes: "booking ref xkcd42", "confirmation: abc123", "pnr: abcdef"
   /\b(?:booking|confirmation|conf|pnr|reservation|itinerary)\b\s*(?:ref(?:erence)?\s*)?(?:no\.?\s*|#\s*|:\s*)?([a-z0-9]{4,10})\b/g,
   // Policy/claim/case numbers: "policy no. abc-123456", "claim #789012"
   /\b(?:policy|claim|case|file|docket|permit|licen[sc]e)\b\s*(?:no\.?\s*|#\s*|:\s*)?([a-z0-9][-a-z0-9./]{2,20})\b/g,
-  // Account/customer IDs: "account: 12345678", "customer id abc123"
-  /\b(?:account|acct|customer|member|patient|employee|subscriber)\b\s*(?:id|no\.?|#|:)\s*:?\s*([a-z0-9][-a-z0-9./]{2,20})\b/g,
+  // Account/customer IDs: "account: 12345678", "customer number 1234567", "customer id abc123"
+  /\b(?:account|acct|customer|member|patient|employee|subscriber)\b\s*(?:number|num|nr|id|no\.?|#|:)\s*:?\s*([a-z0-9][-a-z0-9./]{2,20})\b/g,
   // Gate/seat/zone: "gate b12", "seat 14a", "zone 3"
   /\b(?:gate|seat|zone|boarding\s+group)\b\s*:?\s*([a-z]?\d{1,3}[a-z]?)\b/g,
   // Card last-4 digits: "****1234", "xxxx5678"
@@ -136,6 +149,18 @@ const IDENTIFIER_PATTERNS = [
 const REFERENCE_PATTERNS = [
   // 6+ digit sequences (account numbers, statement numbers, reference IDs)
   /\b\d{6,}\b/g,
+  // Dash/dot-separated digit groups: "7846-3149-2683", "6148-3520-5426-7949"
+  // First segment 3+ digits to avoid matching dates like 01-15-2024
+  /\b\d{3,}(?:[-./]\d{2,})+\b/g,
+];
+
+// ── Route/direction patterns ────────────────────────────────────────────
+
+const ROUTE_PATTERNS = [
+  // Direction-prefixed: "out: bsk - lon", "ret: lon - bsk", "depart: lhr - jfk"
+  /\b(?:out|outbound|outward|ret|return|inbound|depart(?:ure|ing)?|arriv(?:al|ing)?)\s*:?\s*([a-z]{2,5})\s*[-–—]\s*([a-z]{2,5})\b/g,
+  // From-to: "from lhr to jfk"
+  /\bfrom\s+([a-z]{2,5})\s+to\s+([a-z]{2,5})\b/g,
 ];
 
 // ── Token extraction ────────────────────────────────────────────────────
@@ -195,27 +220,48 @@ function normalizeReference(token: string): string {
   return token.replace(/[^0-9]/g, '');
 }
 
+/** Extract route tokens preserving directionality: "bsk>lon" ≠ "lon>bsk". */
+function extractRoutes(text: string, patterns: RegExp[]): string[] {
+  const tokens: string[] = [];
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      if (match[1] && match[2]) {
+        tokens.push(`${match[1].toLowerCase()}>${match[2].toLowerCase()}`);
+      }
+    }
+  }
+  return tokens;
+}
+
 export interface DiscriminativeTokens {
   dates: Set<string>;
   times: Set<string>;
   amounts: Set<string>;
   identifiers: Set<string>;
   references: Set<string>;
+  routes: Set<string>;
   total: number;
 }
 
 export function extractDiscriminativeTokens(text: string): DiscriminativeTokens {
   const rawDates = extractByPatterns(text, DATE_PATTERNS);
   const rawTimes = extractByPatterns(text, TIME_PATTERNS);
-  const rawAmounts = extractByPatterns(text, MONEY_PATTERNS);
+  const rawAmounts = [
+    ...extractByPatterns(text, MONEY_PATTERNS),
+    ...extractByCaptureGroups(text, CONTEXTUAL_MONEY_PATTERNS),
+  ];
   const rawIdentifiers = extractByCaptureGroups(text, IDENTIFIER_PATTERNS);
   const rawReferences = extractByPatterns(text, REFERENCE_PATTERNS);
+  const rawRoutes = extractRoutes(text, ROUTE_PATTERNS);
 
   const dates = new Set(rawDates.map(normalizeDate).filter((t) => t.length > 0));
   const times = new Set(rawTimes.map(normalizeTime).filter((t) => t.length > 0));
   const amounts = new Set(rawAmounts.map(normalizeAmount).filter((t) => t.length > 0));
   const identifiers = new Set(rawIdentifiers.map(normalizeIdentifier).filter((t) => t.length > 0));
   const references = new Set(rawReferences.map(normalizeReference).filter((t) => t.length > 0));
+  const routes = new Set(rawRoutes);
 
   return {
     dates,
@@ -223,7 +269,9 @@ export function extractDiscriminativeTokens(text: string): DiscriminativeTokens 
     amounts,
     identifiers,
     references,
-    total: dates.size + times.size + amounts.size + identifiers.size + references.size,
+    routes,
+    total:
+      dates.size + times.size + amounts.size + identifiers.size + references.size + routes.size,
   };
 }
 
@@ -287,6 +335,10 @@ export function computeDiscriminativeScore(text1: string, text2: string): number
   if (tokens1.references.size > 0 || tokens2.references.size > 0) {
     weightedSum += setJaccard(tokens1.references, tokens2.references) * 1;
     totalWeight += 1;
+  }
+  if (tokens1.routes.size > 0 || tokens2.routes.size > 0) {
+    weightedSum += setJaccard(tokens1.routes, tokens2.routes) * 3;
+    totalWeight += 3;
   }
 
   return totalWeight > 0 ? weightedSum / totalWeight : 1.0;
