@@ -29,6 +29,7 @@ export const duplicateGroupFiltersSchema = z.object({
     .string()
     .transform((v) => v.split(',').filter((s) => GROUP_STATUS_VALUES.includes(s as GroupStatus)))
     .optional(),
+  includeDeleted: z.coerce.boolean().optional(),
   sortBy: z
     .enum(['confidence', 'created_at', 'member_count', 'updated_at', 'status'])
     .default('confidence'),
@@ -90,6 +91,7 @@ export interface DuplicateGroupSummary {
   discriminativeScore: number | null;
   status: string;
   memberCount: number;
+  archivedMemberCount: number | null;
   primaryDocumentTitle: string | null;
   primaryPaperlessId: number | null;
   createdAt: string;
@@ -120,6 +122,9 @@ export interface DuplicateGroupDetail {
   discriminativeScore: number | null;
   algorithmVersion: string;
   status: string;
+  archivedMemberCount: number | null;
+  archivedPrimaryTitle: string | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
   members: DuplicateGroupMember[];
