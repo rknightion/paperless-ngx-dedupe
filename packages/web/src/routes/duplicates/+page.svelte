@@ -49,7 +49,8 @@
   let hasFilters = $derived(
     $page.url.searchParams.has('status') ||
       $page.url.searchParams.has('minConfidence') ||
-      $page.url.searchParams.has('maxConfidence'),
+      $page.url.searchParams.has('maxConfidence') ||
+      $page.url.searchParams.get('includeDeleted') === 'true',
   );
 
   let allSelected = $derived(data.groups.length > 0 && selectedIds.size === data.groups.length);
@@ -393,7 +394,6 @@
           <option value="pending">Pending</option>
           <option value="false_positive">False Positive</option>
           <option value="ignored">Ignored</option>
-          <option value="deleted">Deleted</option>
         </select>
       </div>
 
@@ -459,6 +459,21 @@
           </button>
         </div>
       </div>
+
+      <div class="flex items-end">
+        <label class="text-ink flex items-center gap-2 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={$page.url.searchParams.get('includeDeleted') === 'true'}
+            onchange={(e) => {
+              const checked = (e.target as HTMLInputElement).checked;
+              applyFilters({ includeDeleted: checked ? 'true' : '' });
+            }}
+            class="rounded"
+          />
+          Show deleted
+        </label>
+      </div>
     </div>
   </div>
 
@@ -494,6 +509,17 @@
           Max: {Math.round(Number($page.url.searchParams.get('maxConfidence')) * 100)}%
           <button
             onclick={() => applyFilters({ maxConfidence: '' })}
+            class="hover:text-accent-hover">&times;</button
+          >
+        </span>
+      {/if}
+      {#if $page.url.searchParams.get('includeDeleted') === 'true'}
+        <span
+          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+        >
+          Showing deleted
+          <button
+            onclick={() => applyFilters({ includeDeleted: '' })}
             class="hover:text-accent-hover">&times;</button
           >
         </span>
@@ -621,7 +647,7 @@
                 2 ===
               0
                 ? 'bg-surface'
-                : 'bg-canvas'}"
+                : 'bg-canvas'} {group.status === 'deleted' ? 'opacity-60' : ''}"
               onclick={() => {
                 const returnParams = $page.url.searchParams.toString();
                 const url = returnParams
@@ -643,16 +669,20 @@
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </td>
               <td class="text-ink hidden px-4 py-3 md:table-cell">
-                <button
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    openPreview(group);
-                  }}
-                  class="text-accent hover:text-accent-hover font-medium underline decoration-dotted underline-offset-2"
-                  title="Preview members"
-                >
-                  {group.memberCount}
-                </button>
+                {#if group.status === 'deleted'}
+                  <span class="text-muted">&mdash;</span>
+                {:else}
+                  <button
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      openPreview(group);
+                    }}
+                    class="text-accent hover:text-accent-hover font-medium underline decoration-dotted underline-offset-2"
+                    title="Preview members"
+                  >
+                    {group.memberCount}
+                  </button>
+                {/if}
               </td>
               <td class="px-4 py-3">
                 <RichTooltip position="left">
