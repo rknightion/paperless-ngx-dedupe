@@ -1,9 +1,10 @@
 import { runWorkerTask } from '../worker-entry.js';
 import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js';
-import { duplicateMember, duplicateGroup } from '../../schema/sqlite/duplicates.js';
+import { duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { document } from '../../schema/sqlite/documents.js';
 import { eq, and } from 'drizzle-orm';
 import { incrementUsageStats } from '../../queries/documents.js';
+import { archiveAndDeleteMembers } from '../../queries/duplicates.js';
 
 interface BatchTaskData {
   groupIds: string[];
@@ -67,12 +68,8 @@ runWorkerTask(async (ctx, onProgress) => {
     }
 
     if (groupSuccess) {
-      // Mark group as deleted instead of removing it (preserves history)
-      ctx.db
-        .update(duplicateGroup)
-        .set({ status: 'deleted', updatedAt: new Date().toISOString() })
-        .where(eq(duplicateGroup.id, groupId))
-        .run();
+      // Archive group and strip member rows
+      archiveAndDeleteMembers(ctx.db, groupId);
       deletedGroups++;
     }
   }
