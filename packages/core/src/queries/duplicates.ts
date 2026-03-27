@@ -605,6 +605,11 @@ export function setGroupStatus(db: AppDatabase, groupId: string, status: GroupSt
     throw new StatusTransitionError(groupId, group.status);
   }
 
+  // Archive and strip members when transitioning to deleted
+  if (status === 'deleted') {
+    return archiveAndDeleteMembers(db, groupId);
+  }
+
   const result = db
     .update(duplicateGroup)
     .set({ status, updatedAt: new Date().toISOString() })
