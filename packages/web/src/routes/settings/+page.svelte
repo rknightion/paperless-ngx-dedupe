@@ -3,6 +3,12 @@
   import { invalidateAll } from '$app/navigation';
   import { InfoIcon, StaleAnalysisBanner } from '$lib/components';
   import {
+    trackSettingsSaved,
+    trackConnectionTested,
+    trackConfigExported,
+    trackConfigImported,
+  } from '$lib/faro-events';
+  import {
     Link,
     SlidersHorizontal,
     Info,
@@ -140,17 +146,20 @@
       });
       const json = await res.json();
       if (res.ok && json.data?.connected) {
+        trackConnectionTested(true);
         connectionStatus = {
           type: 'success',
           message: `Connected! Paperless v${json.data.version} — ${json.data.documentCount} documents`,
         };
       } else {
+        trackConnectionTested(false);
         connectionStatus = {
           type: 'error',
           message: json.error?.message ?? 'Connection failed',
         };
       }
     } catch {
+      trackConnectionTested(false);
       connectionStatus = { type: 'error', message: 'Request failed' };
     }
     isTesting = false;
@@ -171,6 +180,7 @@
         body: JSON.stringify({ settings }),
       });
       if (res.ok) {
+        trackSettingsSaved('connection');
         connectionStatus = { type: 'success', message: 'Settings saved' };
       } else {
         const json = await res.json();
@@ -196,6 +206,7 @@
       });
       const result = await res.json();
       if (res.ok) {
+        trackConfigImported(true);
         const d = result.data;
         importStatus = {
           type: 'success',
@@ -204,9 +215,11 @@
         importFile = null;
         await invalidateAll();
       } else {
+        trackConfigImported(false);
         importStatus = { type: 'error', message: result.error?.message ?? 'Import failed' };
       }
     } catch {
+      trackConfigImported(false);
       importStatus = { type: 'error', message: 'Failed to read or parse file' };
     }
     isImporting = false;
@@ -235,6 +248,7 @@
       });
       const json = await res.json();
       if (res.ok) {
+        trackSettingsSaved('dedup');
         const meta = json.meta;
         let msg = 'Configuration saved';
         if (meta?.recalculatedGroups !== undefined) {
@@ -307,6 +321,7 @@
       });
       const json = await res.json();
       if (res.ok) {
+        trackSettingsSaved('ai');
         aiSaveStatus = { type: 'success', message: 'AI configuration saved' };
       } else {
         aiSaveStatus = { type: 'error', message: json.error?.message ?? 'Save failed' };
@@ -355,6 +370,7 @@
       });
       const json = await res.json();
       if (res.ok) {
+        trackSettingsSaved('rag');
         ragSaveStatus = { type: 'success', message: 'Document Q&A configuration saved' };
       } else {
         ragSaveStatus = { type: 'error', message: json.error?.message ?? 'Save failed' };
@@ -1579,6 +1595,7 @@
         <a
           href="/api/v1/export/config.json"
           download
+          onclick={() => trackConfigExported()}
           class="border-soft text-ink hover:bg-canvas mt-2 inline-block rounded-lg border px-4 py-2 text-sm font-medium"
         >
           Download Backup
