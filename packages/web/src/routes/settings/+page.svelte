@@ -650,7 +650,7 @@
         <label for="w-penalty" class="text-muted flex items-center gap-1.5 text-sm">
           Strength: <span class="text-ink font-mono font-medium">{penaltyStrength}</span>
           <InfoIcon
-            text="Penalizes the base score when documents have different dates, monetary amounts, or reference numbers. Reduces false positives from template-based documents like monthly bank statements. At 0% the penalty is disabled. At 100% the discriminative score is applied at full strength."
+            text="Controls how strongly the discriminative classifier reduces the confidence score when documents have different dates, amounts, invoice numbers, or routes. Targets false positives from template-based documents like monthly invoices, bank statements, and travel tickets."
             position="top"
           />
         </label>
@@ -662,6 +662,21 @@
           bind:value={penaltyStrength}
           class="accent-accent mt-1 w-full"
         />
+        <div class="text-muted mt-2 space-y-1 text-xs">
+          <p>
+            <strong class="text-ink">Low (0-30%):</strong> Minimal impact. Template documents (e.g. monthly
+            invoices with different dates) may still appear as duplicates.
+          </p>
+          <p>
+            <strong class="text-ink">Medium (40-70%):</strong> Recommended. Catches most template-based
+            false positives while keeping true duplicates intact.
+          </p>
+          <p>
+            <strong class="text-ink">High (80-100%):</strong> Aggressive. Documents with any differing
+            structured data are heavily penalized. May over-penalize minor OCR differences in dates or
+            amounts.
+          </p>
+        </div>
       </div>
     </div>
 
