@@ -8,6 +8,7 @@ import { aiApplyTotal } from '../telemetry/metrics.js';
 import {
   markAiResultApplied,
   markAiResultRejected,
+  markAiResultFailed,
   batchMarkRejected,
   type ApplySnapshot,
 } from './queries.js';
@@ -55,6 +56,7 @@ export async function applyAiResult(
       );
 
       if (!suggestedCorrespondent && !suggestedDocumentType && suggestedTags.length === 0) {
+        markAiResultFailed(db, resultId, 'No suggestions to apply', 'no_suggestions');
         throw new Error('No suggestions to apply');
       }
 
