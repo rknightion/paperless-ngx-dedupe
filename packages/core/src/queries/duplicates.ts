@@ -33,7 +33,9 @@ import type {
 // ── List queries ────────────────────────────────────────────────────────
 
 export function buildGroupWhere(
-  filters: Pick<DuplicateGroupFilters, 'minConfidence' | 'maxConfidence' | 'status'>,
+  filters: Pick<DuplicateGroupFilters, 'minConfidence' | 'maxConfidence' | 'status'> & {
+    includeDeleted?: boolean;
+  },
 ) {
   const conditions = [];
 
@@ -49,6 +51,9 @@ export function buildGroupWhere(
     } else {
       conditions.push(inArray(duplicateGroup.status, filters.status));
     }
+  } else if (!filters.includeDeleted) {
+    // When no explicit status filter and includeDeleted is false, exclude deleted groups
+    conditions.push(ne(duplicateGroup.status, 'deleted'));
   }
 
   return conditions.length > 0 ? and(...conditions) : undefined;
@@ -141,7 +146,8 @@ export function getDuplicateGroups(
       discriminativeScore: g.discriminativeScore,
       status: g.status,
       memberCount: countMap.get(g.id) ?? 0,
-      primaryDocumentTitle: primary?.title ?? null,
+      archivedMemberCount: g.archivedMemberCount,
+      primaryDocumentTitle: primary?.title ?? g.archivedPrimaryTitle ?? null,
       primaryPaperlessId: primary?.paperlessId ?? null,
       createdAt: g.createdAt,
       updatedAt: g.updatedAt,
@@ -232,6 +238,9 @@ function fetchGroupWithMembers(
     discriminativeScore: group.discriminativeScore,
     algorithmVersion: group.algorithmVersion,
     status: group.status,
+    archivedMemberCount: group.archivedMemberCount,
+    archivedPrimaryTitle: group.archivedPrimaryTitle,
+    deletedAt: group.deletedAt,
     createdAt: group.createdAt,
     updatedAt: group.updatedAt,
     members,
@@ -445,6 +454,97 @@ export function getSimilarityGraph(
   }
 
   return { nodes, edges, totalGroupsMatched, groupsIncluded: groups.length };
+}
+
+// ── Archive helpers ─────────────────────────────────────────────────────
+
+export function archiveAndDeleteMembers(db: AppDatabase, groupId: string): boolean {
+  const group = db
+    .select({ id: duplicateGroup.id, status: duplicateGroup.status })
+    .from(duplicateGroup)
+    .where(eq(duplicateGroup.id, groupId))
+    .get();
+
+  if (!group) return false;
+
+  // Snapshot member count and primary title before stripping
+  const [{ memberCount }] = db
+    .select({ memberCount: count() })
+    .from(duplicateMember)
+    .where(eq(duplicateMember.groupId, groupId))
+    .all();
+
+  const primaryDoc = db
+    .select({ title: document.title })
+    .from(duplicateMember)
+    .innerJoin(document, eq(duplicateMember.documentId, document.id))
+    .where(and(eq(duplicateMember.groupId, groupId), eq(duplicateMember.isPrimary, true)))
+    .get();
+
+  const now = new Date().toISOString();
+
+  db.transaction((tx) => {
+    tx.update(duplicateGroup)
+      .set({
+        status: 'deleted',
+        archivedMemberCount: memberCount,
+        archivedPrimaryTitle: primaryDoc?.title ?? null,
+        deletedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(duplicateGroup.id, groupId))
+      .run();
+
+    tx.delete(duplicateMember).where(eq(duplicateMember.groupId, groupId)).run();
+  });
+
+  incrementUsageStats(db, { groupsActioned: 1 });
+
+  return true;
+}
+
+export function backfillDeletedGroupArchives(db: AppDatabase): number {
+  // One-time backfill: for existing deleted groups that haven't been archived yet
+  const unarchived = db
+    .select({ id: duplicateGroup.id })
+    .from(duplicateGroup)
+    .where(
+      and(eq(duplicateGroup.status, 'deleted'), sql`${duplicateGroup.archivedMemberCount} IS NULL`),
+    )
+    .all();
+
+  for (const group of unarchived) {
+    const [{ memberCount }] = db
+      .select({ memberCount: count() })
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, group.id))
+      .all();
+
+    const primaryDoc = db
+      .select({ title: document.title })
+      .from(duplicateMember)
+      .innerJoin(document, eq(duplicateMember.documentId, document.id))
+      .where(and(eq(duplicateMember.groupId, group.id), eq(duplicateMember.isPrimary, true)))
+      .get();
+
+    const now = new Date().toISOString();
+
+    db.transaction((tx) => {
+      tx.update(duplicateGroup)
+        .set({
+          archivedMemberCount: memberCount,
+          archivedPrimaryTitle: primaryDoc?.title ?? null,
+          deletedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(duplicateGroup.id, group.id))
+        .run();
+
+      tx.delete(duplicateMember).where(eq(duplicateMember.groupId, group.id)).run();
+    });
+  }
+
+  return unarchived.length;
 }
 
 // ── Mutations ───────────────────────────────────────────────────────────
