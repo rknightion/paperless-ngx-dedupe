@@ -247,6 +247,26 @@ jobs:
         if: always()
         run: docker rm -f ci-test 2>/dev/null || true
 
+  source-maps:
+    needs: [quality, unit-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Build with source maps
+        run: pnpm build
+        env:
+          FARO_SOURCEMAP_API_KEY: ${{ secrets.FARO_SOURCEMAP_API_KEY }}
+
+      - name: Upload source maps as artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: source-maps
+          path: packages/web/build/**/*.map
+          retention-days: 90
+
   docker:
     needs: [quality, unit-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
