@@ -15,13 +15,20 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
   if (process.env.OTEL_ENABLED !== 'true') return;
 
   // Dynamic imports to avoid loading heavy SDK packages when telemetry is disabled
+  const { randomUUID } = await import('node:crypto');
   const { NodeSDK } = await import('@opentelemetry/sdk-node');
   const { resourceFromAttributes } = await import('@opentelemetry/resources');
-  const { ATTR_SERVICE_NAME } = await import('@opentelemetry/semantic-conventions');
+  const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } =
+    await import('@opentelemetry/semantic-conventions');
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-ngx-dedupe',
+      [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
+      'deployment.environment':
+        process.env.OTEL_DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || 'development',
+      'service.instance.id':
+        process.env.OTEL_SERVICE_INSTANCE_ID || process.env.HOSTNAME || randomUUID(),
       'worker.name': workerName,
       'worker.type': 'worker_thread',
     }),

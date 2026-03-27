@@ -81,6 +81,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: add discriminative_score column to duplicate_group
   migrateDiscriminativeScore(sqlite);
 
+  // Pre-DDL migration: add archive columns for deleted duplicate groups
+  migrateArchiveColumns(sqlite);
+
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
     .prepare('SELECT value FROM app_config WHERE key = ?')
@@ -233,6 +236,19 @@ function migrateDiscriminativeScore(sqlite: Database.Database): void {
   if (!tableHasColumn(sqlite, 'duplicate_group', 'confidence_score')) return;
 
   sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN discriminative_score REAL`);
+}
+
+/**
+ * Add archive columns to duplicate_group for lightweight deleted group records.
+ * Existing groups get NULL, which is correct (only populated when a group is deleted).
+ */
+function migrateArchiveColumns(sqlite: Database.Database): void {
+  if (tableHasColumn(sqlite, 'duplicate_group', 'archived_member_count')) return;
+  if (!tableHasColumn(sqlite, 'duplicate_group', 'status')) return;
+
+  sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN archived_member_count INTEGER`);
+  sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN archived_primary_title TEXT`);
+  sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN deleted_at TEXT`);
 }
 
 /**

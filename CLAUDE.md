@@ -58,7 +58,12 @@ Run `pnpm lint && pnpm format && pnpm check && pnpm test` before pushing. CI add
 - `pnpm test` runs **only unit tests** (core + sdk).
 - **`packages/sdk` is a public package.** Its exported API surface is a breaking-change boundary — treat it like a published library.
 - All `/api/v1/*` routes must return JSON with consistent error shapes and correct HTTP status codes. SvelteKit page `.server.ts` load functions must call the same core query functions as the corresponding API routes — not duplicate logic independently.
-- Database schema changes: modify Drizzle table definitions in `packages/core/src/schema/sqlite/`; there are no migration files. The app detects changes via SHA-256 hash at startup and applies DDL automatically (`AUTO_MIGRATE=true` by default).
+- **Database schema changes require TWO steps** (just editing the Drizzle table definition is NOT enough):
+  1. Edit the Drizzle table definition in `packages/core/src/schema/sqlite/`.
+  2. Add a **pre-DDL migration function** in `packages/core/src/db/migrate.ts` that uses `ALTER TABLE ADD COLUMN` with a `tableHasColumn` guard. Call it from `migrateDatabase()` alongside the other pre-DDL migrations. See `migrateArchiveColumns` or `migrateDiscriminativeScore` for the exact pattern.
+
+  **Why both steps are needed:** The auto-migration system stores a schema hash after "applying" DDL, but it generates `CREATE TABLE IF NOT EXISTS` statements that skip existing tables — so new columns on existing tables are never added. The pre-DDL migration runs before the hash check and handles this reliably.
+
 - The CLI uses esbuild with `--external:better-sqlite3`. Adding a native module to `packages/cli` requires adding it to the esbuild externals list in the CLI build config.
 
 ## Key Files & References
