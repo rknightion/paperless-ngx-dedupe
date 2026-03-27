@@ -18,6 +18,7 @@ if (!otelEnabled && !prometheusEnabled) {
   return;
 }
 
+const { randomUUID } = require('node:crypto');
 const { NodeSDK } = require('@opentelemetry/sdk-node');
 const { resourceFromAttributes } = require('@opentelemetry/resources');
 const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = require('@opentelemetry/semantic-conventions');
@@ -54,7 +55,15 @@ const instrumentations = otelEnabled
         '@opentelemetry/instrumentation-fs': {
           requireParentSpan: true,
         },
-        '@opentelemetry/instrumentation-pino': {},
+        '@opentelemetry/instrumentation-pino': {
+          // Trace correlation fields (trace_id, span_id) are handled by the
+          // explicit mixin in logger.ts. Keep enabled here as a secondary path.
+          disableLogCorrelation: false,
+          // Pipes pino records → OTEL Logs SDK → OTLP exporter.
+          // Controlled by OTEL_LOGS_EXPORTER env var (default: otlp).
+          // Set OTEL_LOGS_EXPORTER=none to disable.
+          disableLogSending: false,
+        },
       }),
     ]
   : [];
@@ -63,6 +72,10 @@ const sdk = new NodeSDK({
   resource: resourceFromAttributes({
     [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-dedupe',
     [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
+    'deployment.environment':
+      process.env.OTEL_DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || 'development',
+    'service.instance.id':
+      process.env.OTEL_SERVICE_INSTANCE_ID || process.env.HOSTNAME || randomUUID(),
   }),
   metricReaders,
   instrumentations,

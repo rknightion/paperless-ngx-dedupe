@@ -1,5 +1,5 @@
 import { sequence } from '@sveltejs/kit/hooks';
-import { trace } from '@opentelemetry/api';
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 import {
   parseConfig,
   initLogger,
@@ -122,6 +122,10 @@ const handleRequest: Handle = async ({ event, resolve }) => {
     const routeId = event.route.id ?? event.url.pathname;
     span.setAttribute('http.route', routeId);
     span.updateName(`${event.request.method} ${routeId}`);
+
+    if (response.status >= 500) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: `HTTP ${response.status}` });
+    }
   }
 
   logger.info(
