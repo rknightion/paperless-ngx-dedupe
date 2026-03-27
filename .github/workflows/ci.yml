@@ -248,7 +248,7 @@ jobs:
         run: docker rm -f ci-test 2>/dev/null || true
 
   source-maps:
-    needs: [quality, unit-tests]
+    needs: install
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     steps:
@@ -268,7 +268,6 @@ jobs:
           retention-days: 90
 
   docker:
-    needs: [quality, unit-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:

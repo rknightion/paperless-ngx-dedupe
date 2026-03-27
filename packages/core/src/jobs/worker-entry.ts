@@ -3,6 +3,8 @@ import { context } from '@opentelemetry/api';
 import { createDatabaseWithHandle } from '../db/client.js';
 import { updateJobProgress, completeJob, failJob, getJob } from './manager.js';
 import { createLogger } from '../logger.js';
+import { job as jobTable } from '../schema/sqlite/jobs.js';
+import { eq } from 'drizzle-orm';
 import {
   initWorkerTelemetry,
   shutdownWorkerTelemetry,
@@ -45,9 +47,6 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   const { db, sqlite } = createDatabaseWithHandle(dbPath);
 
   // Set job to running
-  const { job: jobTable } = await import('../schema/sqlite/jobs.js');
-  const { eq } = await import('drizzle-orm');
-
   db.update(jobTable)
     .set({
       status: 'running',
