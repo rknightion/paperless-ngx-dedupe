@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getContext } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import { SvelteSet } from 'svelte/reactivity';
   import type { AiStats, UnprocessedDocument } from '@paperless-dedupe/core';
@@ -14,7 +14,9 @@
     Square,
     Play,
     Inbox,
+    CircleX,
   } from 'lucide-svelte';
+  import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
 
   let { data } = $props();
 
@@ -93,6 +95,20 @@
       { type: 'selected_result_ids', resultIds: [resultId] },
       'Retrying failed document',
     );
+  }
+
+  async function handleDismissOne(resultId: string) {
+    try {
+      const res = await fetch(`/api/v1/ai/results/${resultId}/reject`, { method: 'POST' });
+      if (res.ok) {
+        addToast('success', 'Result dismissed');
+        invalidateAll();
+      } else {
+        addToast('error', 'Failed to dismiss result');
+      }
+    } catch {
+      addToast('error', 'Failed to dismiss result');
+    }
   }
 </script>
 
@@ -289,22 +305,43 @@
             <div class="min-w-0 flex-1 space-y-1">
               <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
               <div class="flex flex-wrap items-center gap-2">
-                <span class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
-                  >Failed</span
-                >
-                {#if result.errorMessage}
-                  <span class="text-muted truncate text-xs">{result.errorMessage}</span>
+                {#if result.failureType === 'no_suggestions'}
+                  <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
+                    >No Suggestions</span
+                  >
+                  <span class="text-muted truncate text-xs"
+                    >AI could not suggest metadata for this document</span
+                  >
+                {:else}
+                  <span
+                    class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
+                    >Failed</span
+                  >
+                  {#if result.errorMessage}
+                    <span class="text-muted truncate text-xs">{result.errorMessage}</span>
+                  {/if}
                 {/if}
               </div>
             </div>
-            <button
-              onclick={() => handleRetryOne(result.id)}
-              disabled={layoutCtx.isProcessing}
-              class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <RefreshCw class="h-3.5 w-3.5" />
-              Retry
-            </button>
+            {#if result.failureType === 'no_suggestions'}
+              <button
+                onclick={() => handleDismissOne(result.id)}
+                disabled={layoutCtx.isProcessing}
+                class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                <CircleX class="h-3.5 w-3.5" />
+                Dismiss
+              </button>
+            {:else}
+              <button
+                onclick={() => handleRetryOne(result.id)}
+                disabled={layoutCtx.isProcessing}
+                class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                <RefreshCw class="h-3.5 w-3.5" />
+                Retry
+              </button>
+            {/if}
           </div>
         {/each}
       </div>
