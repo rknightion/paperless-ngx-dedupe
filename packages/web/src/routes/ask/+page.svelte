@@ -2,6 +2,13 @@
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import {
+    trackRagQuestionAsked,
+    trackRagConversationStarted,
+    trackRagConversationDeleted,
+    trackRagIndexingStarted,
+    startTimer,
+  } from '$lib/faro-events';
+  import {
     MessageCircleQuestion,
     Send,
     Plus,
@@ -114,6 +121,7 @@
     messages = [];
     inputText = '';
     expandedSources.clear();
+    trackRagConversationStarted();
   }
 
   async function deleteConversation(id: string, event: MouseEvent) {
@@ -121,6 +129,7 @@
     try {
       const res = await fetch(`/api/v1/rag/conversations/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        trackRagConversationDeleted();
         conversations = conversations.filter((c) => c.id !== id);
         if (activeConversationId === id) {
           startNewConversation();
@@ -135,6 +144,8 @@
     const question = inputText.trim();
     if (!question || isStreaming) return;
 
+    trackRagQuestionAsked(question.length);
+    const stopRagTimer = startTimer('rag_response_time');
     inputText = '';
     isStreaming = true;
     streamingText = '';
@@ -225,6 +236,7 @@
     }
 
     isStreaming = false;
+    stopRagTimer();
     scrollToBottom();
   }
 
@@ -245,6 +257,7 @@
 
   async function startIndexing() {
     isIndexing = true;
+    trackRagIndexingStarted();
     try {
       const res = await fetch('/api/v1/rag/index', {
         method: 'POST',
