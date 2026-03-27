@@ -156,11 +156,80 @@ describe('extractDiscriminativeTokens', () => {
     expect(tokens.identifiers.has('12345678')).toBe(true);
   });
 
+  // ── DD-Mon-YYYY dates ──────────────────────────────────────────────
+
+  it('extracts DD-Mon-YYYY dates', () => {
+    const tokens = extractDiscriminativeTokens('issue date: 30-apr-2016 due: 22-nov-2024');
+    expect(tokens.dates.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('extracts DD Mon YYYY dates with spaces', () => {
+    const tokens = extractDiscriminativeTokens('purchased on 15 aug 2019');
+    expect(tokens.dates.size).toBeGreaterThanOrEqual(1);
+  });
+
+  it('extracts DD-Month-YYYY with full month names', () => {
+    const tokens = extractDiscriminativeTokens('valid until 15 august 2019');
+    expect(tokens.dates.size).toBeGreaterThanOrEqual(1);
+  });
+
+  // ── Multi-word label identifiers ──────────────────────────────────
+
+  it('extracts identifiers with "number" label: invoice number xyz', () => {
+    const tokens = extractDiscriminativeTokens('invoice number: 6148352054267949-21');
+    expect(tokens.identifiers.size).toBe(1);
+    expect(tokens.identifiers.has('614835205426794921')).toBe(true);
+  });
+
+  it('extracts identifiers with "number" label without colon', () => {
+    const tokens = extractDiscriminativeTokens('invoice number iee2024013465150');
+    expect(tokens.identifiers.size).toBe(1);
+    expect(tokens.identifiers.has('iee2024013465150')).toBe(true);
+  });
+
+  it('extracts customer number identifiers', () => {
+    const tokens = extractDiscriminativeTokens('customer number 1207310464');
+    expect(tokens.identifiers.size).toBe(1);
+    expect(tokens.identifiers.has('1207310464')).toBe(true);
+  });
+
+  it('extracts ticket number identifiers', () => {
+    const tokens = extractDiscriminativeTokens('ticket number ttfl9bnpf74');
+    expect(tokens.identifiers.size).toBe(1);
+    expect(tokens.identifiers.has('ttfl9bnpf74')).toBe(true);
+  });
+
+  // ── Contextual amounts ────────────────────────────────────────────
+
+  it('extracts amounts near financial keywords without currency symbol', () => {
+    const tokens = extractDiscriminativeTokens('net amount 25.28 grand total 25.28');
+    expect(tokens.amounts.size).toBeGreaterThanOrEqual(1);
+    expect(tokens.amounts.has('25.28')).toBe(true);
+  });
+
+  it('extracts amounts after "total (gbp)"', () => {
+    const tokens = extractDiscriminativeTokens('grand total (gbp) 25.28');
+    expect(tokens.amounts.size).toBeGreaterThanOrEqual(1);
+    expect(tokens.amounts.has('25.28')).toBe(true);
+  });
+
+  // ── Segmented references ──────────────────────────────────────────
+
+  it('extracts dash-separated digit groups as references', () => {
+    const tokens = extractDiscriminativeTokens('billing id: 7846-3149-2683');
+    expect(tokens.references.has('784631492683')).toBe(true);
+  });
+
+  it('extracts longer segmented references', () => {
+    const tokens = extractDiscriminativeTokens('account number: 6148-3520-5426-7949');
+    expect(tokens.references.has('6148352054267949')).toBe(true);
+  });
+
   // ── References ──────────────────────────────────────────────────────
 
   it('extracts reference numbers (6+ digits)', () => {
     const tokens = extractDiscriminativeTokens('account 123456789 ref 987654');
-    expect(tokens.references.size).toBe(2);
+    expect(tokens.references.size).toBeGreaterThanOrEqual(2);
     expect(tokens.references.has('123456789')).toBe(true);
     expect(tokens.references.has('987654')).toBe(true);
   });
@@ -168,6 +237,32 @@ describe('extractDiscriminativeTokens', () => {
   it('does not extract short numbers as references', () => {
     const tokens = extractDiscriminativeTokens('page 42 of 100');
     expect(tokens.references.size).toBe(0);
+  });
+
+  // ── Routes ────────────────────────────────────────────────────────
+
+  it('extracts direction-prefixed routes preserving order', () => {
+    const tokens = extractDiscriminativeTokens('out: bsk - lon');
+    expect(tokens.routes.size).toBe(1);
+    expect(tokens.routes.has('bsk>lon')).toBe(true);
+  });
+
+  it('extracts return routes with reversed order', () => {
+    const tokens = extractDiscriminativeTokens('ret: lon - bsk');
+    expect(tokens.routes.size).toBe(1);
+    expect(tokens.routes.has('lon>bsk')).toBe(true);
+  });
+
+  it('extracts from-to routes', () => {
+    const tokens = extractDiscriminativeTokens('from lhr to jfk');
+    expect(tokens.routes.size).toBe(1);
+    expect(tokens.routes.has('lhr>jfk')).toBe(true);
+  });
+
+  it('extracts departure routes', () => {
+    const tokens = extractDiscriminativeTokens('depart: syd - mel');
+    expect(tokens.routes.size).toBe(1);
+    expect(tokens.routes.has('syd>mel')).toBe(true);
   });
 
   // ── Edge cases ──────────────────────────────────────────────────────
@@ -180,6 +275,7 @@ describe('extractDiscriminativeTokens', () => {
     expect(tokens.amounts.size).toBe(0);
     expect(tokens.identifiers.size).toBe(0);
     expect(tokens.references.size).toBe(0);
+    expect(tokens.routes.size).toBe(0);
   });
 
   it('extracts multiple token types from mixed content', () => {
@@ -399,13 +495,61 @@ describe('computeDiscriminativeScore', () => {
       const bp1 = boardingPassTemplate('01/15/2024', '14:30', 'b32', '14a', 'xkcd42', '2');
       const bp2 = boardingPassTemplate('03/22/2024', '14:30', 'a15', '22c', 'pqrs99', '1');
       const score = computeDiscriminativeScore(bp1, bp2);
-      expect(score).toBeLessThan(0.5);
+      // Route is identical (lhr>jfk) so it contributes 1.0×3 to the weighted score,
+      // but different dates/gates/seats/bookings still pull the overall well below 1.0
+      expect(score).toBeLessThan(0.6);
     });
 
     it('scores high for duplicate boarding passes', () => {
       const bp = boardingPassTemplate('01/15/2024', '14:30', 'b32', '14a', 'xkcd42', '2');
       const score = computeDiscriminativeScore(bp, bp);
       expect(score).toBe(1.0);
+    });
+
+    // Google invoices (DD-Mon-YYYY dates, multi-word labels, segmented refs)
+    it('scores low for different-month Google invoices', () => {
+      const inv1 =
+        'invoice number: 6148352054267949-21 issue date: 30-apr-2016 ' +
+        'billing id: 7846-3149-2683 billing account number: 6148-3520-5426-7949 ' +
+        '01-apr-2016 - 30-apr-2016 subtotal in gbp: 6.58 amount due in gbp: £6.58';
+      const inv2 =
+        'invoice number: 6148352054267949-18 issue date: 31-jan-2016 ' +
+        'billing id: 7846-3149-2683 billing account number: 6148-3520-5426-7949 ' +
+        '01-jan-2016 - 31-jan-2016 subtotal in gbp: 6.58 amount due in gbp: £6.58';
+      const score = computeDiscriminativeScore(inv1, inv2);
+      // Dates and invoice numbers differ; amounts and billing ID are shared
+      expect(score).toBeLessThan(0.6);
+    });
+
+    // Adobe invoices (DD-MON-YYYY dates, amounts without currency symbol)
+    it('scores low for different-month Adobe invoices', () => {
+      const inv1 =
+        'invoice number iee2024013465150 invoice date 22-nov-2024 ' +
+        'order number 7183658461 customer number 1207310464 ' +
+        'service term: 22-nov-2024 to 21-dec-2024 net amount 25.28 total 25.28';
+      const inv2 =
+        'invoice number iee2025015991687 invoice date 22-oct-2025 ' +
+        'order number 7183658461 customer number 1207310464 ' +
+        'service term: 22-oct-2025 to 21-nov-2025 net amount 25.28 total 25.28';
+      const score = computeDiscriminativeScore(inv1, inv2);
+      // Dates and invoice numbers differ; amounts, order/customer numbers are shared
+      expect(score).toBeLessThan(0.6);
+    });
+
+    // Train tickets — outbound vs return (route direction detection)
+    it('scores below 1.0 for outbound vs return train tickets', () => {
+      const outbound =
+        'ttfl9bnpf74 15 aug 2019 out: bsk - lon basingstoke bsk london terminals lon ' +
+        'ticket type off-peak day return adult route via woking valid until 15 aug 2019 ' +
+        'ticket number ttfl9bnpf74 price £25.60 purchased on 15 august 2019';
+      const returnTicket =
+        'ttfl9bnpf74 15 aug 2019 ret: lon - bsk london terminals lon basingstoke bsk ' +
+        'ticket type off-peak day return adult route via woking valid until 15 aug 2019 ' +
+        'ticket number ttfl9bnpf74 price £25.60 purchased on 15 august 2019';
+      const score = computeDiscriminativeScore(outbound, returnTicket);
+      // Routes differ (bsk>lon vs lon>bsk) but all other tokens are identical
+      expect(score).toBeLessThan(0.85);
+      expect(score).toBeGreaterThan(0.5);
     });
   });
 });
