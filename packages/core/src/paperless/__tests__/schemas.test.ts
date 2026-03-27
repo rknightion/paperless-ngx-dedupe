@@ -299,6 +299,7 @@ describe('toPaperlessConfig bridge function', () => {
       PAPERLESS_METRICS_ENABLED: false,
       AI_ENABLED: false,
       RAG_ENABLED: false,
+      FARO_ENABLED: false,
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');
@@ -321,6 +322,7 @@ describe('toPaperlessConfig bridge function', () => {
       PAPERLESS_METRICS_ENABLED: false,
       AI_ENABLED: false,
       RAG_ENABLED: false,
+      FARO_ENABLED: false,
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');

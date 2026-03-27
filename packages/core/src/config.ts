@@ -29,6 +29,11 @@ const configSchema = z
       .string()
       .default('false')
       .transform((v) => v === 'true'),
+    FARO_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
+    FARO_COLLECTOR_URL: z.string().optional(),
   })
   .refine(
     (data) => data.PAPERLESS_API_TOKEN || (data.PAPERLESS_USERNAME && data.PAPERLESS_PASSWORD),
@@ -46,6 +51,10 @@ const configSchema = z
   .refine((data) => !data.RAG_ENABLED || data.AI_OPENAI_API_KEY, {
     error: 'When RAG_ENABLED=true, AI_OPENAI_API_KEY is required for generating embeddings',
     path: ['RAG_ENABLED'],
+  })
+  .refine((data) => !data.FARO_ENABLED || data.FARO_COLLECTOR_URL, {
+    error: 'When FARO_ENABLED=true, FARO_COLLECTOR_URL is required',
+    path: ['FARO_ENABLED'],
   });
 
 export type AppConfig = z.infer<typeof configSchema>;
