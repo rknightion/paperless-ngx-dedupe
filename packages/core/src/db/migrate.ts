@@ -27,12 +27,25 @@ const allTables = {
   ragMessage,
 };
 
-async function generateDDL(): Promise<{ statements: string[]; snapshot: string }> {
+async function generateDDL(
+  storedSnapshot?: string,
+): Promise<{ statements: string[]; snapshot: string }> {
   // Use createRequire for ESM compat with drizzle-kit
   const require = createRequire(import.meta.url);
   const { generateSQLiteDrizzleJson, generateSQLiteMigration } = require('drizzle-kit/api');
 
-  const prevSnapshot = await generateSQLiteDrizzleJson({});
+  let prevSnapshot;
+  if (storedSnapshot) {
+    try {
+      prevSnapshot = JSON.parse(storedSnapshot);
+    } catch {
+      console.log('[migrate] Stored schema snapshot is invalid, regenerating from scratch');
+      prevSnapshot = await generateSQLiteDrizzleJson({});
+    }
+  } else {
+    prevSnapshot = await generateSQLiteDrizzleJson({});
+  }
+
   const currentSnapshot = await generateSQLiteDrizzleJson(allTables);
   const migration = await generateSQLiteMigration(prevSnapshot, currentSnapshot);
 
@@ -68,7 +81,12 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: add discriminative_score column to duplicate_group
   migrateDiscriminativeScore(sqlite);
 
-  const { statements, snapshot } = await generateDDL();
+  // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
+  const storedSnapshotRow = sqlite
+    .prepare('SELECT value FROM app_config WHERE key = ?')
+    .get(SCHEMA_SNAPSHOT_KEY) as { value: string } | undefined;
+
+  const { statements, snapshot } = await generateDDL(storedSnapshotRow?.value);
   const currentHash = computeHash(snapshot);
 
   // Check if schema has already been applied
@@ -89,7 +107,16 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
       const safeStatement = statement
         .replace(/CREATE TABLE(?! IF NOT EXISTS)/gi, 'CREATE TABLE IF NOT EXISTS')
         .replace(/CREATE( UNIQUE)? INDEX(?! IF NOT EXISTS)/gi, 'CREATE$1 INDEX IF NOT EXISTS');
-      sqlite.exec(safeStatement);
+      try {
+        sqlite.exec(safeStatement);
+      } catch (err: unknown) {
+        // ALTER TABLE ADD COLUMN fails if column already exists (snapshot out of sync)
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('duplicate column name')) {
+          continue;
+        }
+        throw err;
+      }
     }
 
     const now = new Date().toISOString();
