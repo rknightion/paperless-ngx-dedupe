@@ -2,6 +2,7 @@ import { runWorkerTask } from '../worker-entry.js';
 import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js';
 import { getAiConfig } from '../../ai/config.js';
 import { applyAiResult } from '../../ai/apply.js';
+import { markAiResultFailed } from '../../ai/queries.js';
 import { resolveResultIdsForApplyScope } from '../../ai/scopes.js';
 import type { ApplyScope } from '../../ai/scopes.js';
 
@@ -48,10 +49,14 @@ runWorkerTask(async (ctx, onProgress) => {
       applied++;
     } catch (error) {
       failed++;
-      errors.push({
-        resultId: resultIds[i],
-        error: error instanceof Error ? error.message : String(error),
-      });
+      const errMsg = error instanceof Error ? error.message : String(error);
+      errors.push({ resultId: resultIds[i], error: errMsg });
+      // Mark as failed in DB if not already marked by applyAiResult
+      try {
+        markAiResultFailed(ctx.db, resultIds[i], errMsg);
+      } catch {
+        // DB update failed — original error already logged
+      }
     }
   }
 

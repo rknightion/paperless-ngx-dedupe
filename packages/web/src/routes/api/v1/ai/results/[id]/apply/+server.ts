@@ -2,6 +2,7 @@ import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
   applyAiResult,
   getAiConfig,
+  markAiResultFailed,
   PaperlessClient,
   toPaperlessConfig,
 } from '@paperless-dedupe/core';
@@ -50,6 +51,13 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
     });
     return apiSuccess({ applied: true });
   } catch (error) {
-    return apiError(ErrorCode.INTERNAL_ERROR, (error as Error).message);
+    const errMsg = (error as Error).message;
+    // Mark as failed in DB if not already marked by applyAiResult
+    try {
+      markAiResultFailed(locals.db, params.id, errMsg);
+    } catch {
+      // DB update failed — original error already logged
+    }
+    return apiError(ErrorCode.INTERNAL_ERROR, errMsg);
   }
 };
