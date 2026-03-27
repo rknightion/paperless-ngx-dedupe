@@ -54,6 +54,7 @@ export interface AiResultSummary {
   appliedStatus: string;
   appliedAt: string | null;
   errorMessage: string | null;
+  failureType: string | null;
   createdAt: string;
 }
 
@@ -217,6 +218,7 @@ export function getAiResults(
       appliedStatus: aiProcessingResult.appliedStatus,
       appliedAt: aiProcessingResult.appliedAt,
       errorMessage: aiProcessingResult.errorMessage,
+      failureType: aiProcessingResult.failureType,
       createdAt: aiProcessingResult.createdAt,
     })
     .from(aiProcessingResult)
@@ -244,6 +246,7 @@ export function getAiResults(
     appliedStatus: r.appliedStatus ?? 'pending_review',
     appliedAt: r.appliedAt,
     errorMessage: r.errorMessage,
+    failureType: r.failureType ?? null,
     createdAt: r.createdAt,
   }));
 
@@ -446,6 +449,22 @@ export function markAiResultRejected(db: AppDatabase, id: string): void {
     .set({
       appliedStatus: 'rejected',
       appliedAt: new Date().toISOString(),
+    })
+    .where(eq(aiProcessingResult.id, id))
+    .run();
+}
+
+export function markAiResultFailed(
+  db: AppDatabase,
+  id: string,
+  errorMessage: string,
+  failureType?: string,
+): void {
+  db.update(aiProcessingResult)
+    .set({
+      appliedStatus: 'failed',
+      errorMessage,
+      failureType: failureType ?? null,
     })
     .where(eq(aiProcessingResult.id, id))
     .run();

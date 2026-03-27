@@ -282,6 +282,7 @@ export {
   getAiStats,
   markAiResultApplied,
   markAiResultRejected,
+  markAiResultFailed,
   batchMarkApplied,
   batchMarkRejected,
   getPendingAiResultIds,
