@@ -105,7 +105,15 @@ base = (jaccard × J_weight + fuzzy × F_weight) / (J_weight + F_weight)
 
 ### Discriminative penalty
 
-3. **Discriminative Score** -- Measures how much unique, distinctive content each document has that the other does not. Documents that are true duplicates share most of their distinctive tokens; documents that merely share boilerplate (headers, footers, standard clauses) but differ in substance will have low discriminative scores.
+3. **Discriminative Score** -- Extracts structured data from both documents and compares the token sets. This targets template-based documents that share most of their text but differ in key details. The classifier detects:
+
+      - **Dates** (all common formats including DD-Mon-YYYY, ISO, month names)
+      - **Monetary amounts** (with currency symbols, codes, or near financial keywords)
+      - **Identifiers** (invoice/order/ticket/tracking numbers, booking refs, account IDs)
+      - **Reference numbers** (6+ digit sequences, dash-separated digit groups)
+      - **Routes** (directional travel codes like `Out: BSK - LON` vs `Ret: LON - BSK`)
+
+      This is particularly effective for monthly invoices, bank statements, utility bills, and train/flight tickets where the template is identical but dates, amounts, reference numbers, or routes differ between documents.
 
 The discriminative score acts as a **multiplicative penalty** on the base score:
 
@@ -113,7 +121,10 @@ The discriminative score acts as a **multiplicative penalty** on the base score:
 final = base × (1 - penalty_strength/100 × (1 - discriminative_score))
 ```
 
-When `discriminativePenaltyStrength` is 0, the penalty is disabled and the final score equals the base. At the default strength of 50, a pair with a low discriminative score (e.g., 0.2) would have its base score reduced by 40%. This helps filter out false positives where documents share common templates but have different substantive content.
+When `discriminativePenaltyStrength` is 0, the penalty is disabled and the final score equals the base. At the default strength of 70, a pair with a low discriminative score (e.g., 0.2) would have its base score reduced by 56%. This helps filter out false positives where documents share common templates but have different substantive content.
+
+!!! tip "Train and flight tickets"
+    Outbound and return tickets from the same journey often share 95%+ of their text, differing only in route direction. The discriminative classifier detects reversed route codes (e.g., `BSK - LON` vs `LON - BSK`) and penalizes these pairs. If your library contains many travel documents, consider increasing the penalty strength to 80-90%.
 
 Pairs scoring below `similarityThreshold` (default: 0.75) are discarded.
 
@@ -134,14 +145,14 @@ Groups are presented in the web UI for review, sorted by confidence.
 ### Too many false positives (unrelated documents grouped together)
 
 - **Raise `similarityThreshold`** (e.g., 0.85 or 0.90) to require stronger matches
-- **Increase `discriminativePenaltyStrength`** (e.g., 75-100) to penalize pairs that share boilerplate but differ in substance
+- **Increase `discriminativePenaltyStrength`** (e.g., 80-100) to penalize pairs that share boilerplate but differ in dates, amounts, or references. Especially useful for monthly invoices and train/flight tickets
 - **Adjust confidence weights** to shift emphasis between Jaccard and fuzzy text matching
 - **Reduce `numBands`** to narrow the LSH candidate funnel
 
 ### Missing obvious duplicates
 
 - **Lower `similarityThreshold`** (e.g., 0.60) to allow weaker matches through
-- **Reduce `discriminativePenaltyStrength`** (e.g., 0-25) if the penalty is filtering out legitimate duplicates
+- **Reduce `discriminativePenaltyStrength`** (e.g., 0-30) if the penalty is filtering out legitimate duplicates that happen to have minor OCR differences in dates or amounts
 - **Increase `numBands`** to widen the candidate funnel
 - **Lower `minWords`** if short documents are being skipped
 - **Check `ngramSize`** -- a smaller value (2) is more sensitive to small differences
