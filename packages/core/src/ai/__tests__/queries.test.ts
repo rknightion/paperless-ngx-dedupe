@@ -11,6 +11,7 @@ import {
   getAiStats,
   markAiResultApplied,
   markAiResultRejected,
+  markAiResultFailed,
   batchMarkApplied,
   batchMarkRejected,
 } from '../queries.js';
@@ -454,6 +455,40 @@ describe('markAiResultRejected', () => {
     const result = getAiResult(db, resultIds[0]);
     expect(result!.appliedStatus).toBe('rejected');
     expect(result!.appliedAt).toBeTruthy();
+  });
+});
+
+describe('markAiResultFailed', () => {
+  let db: AppDatabase;
+  let resultIds: string[];
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    resultIds = seedDocumentsAndResults(db);
+  });
+
+  it('sets status to "failed" with error message and failure type', () => {
+    markAiResultFailed(db, resultIds[0], 'No suggestions to apply', 'no_suggestions');
+    const result = getAiResult(db, resultIds[0]);
+    expect(result!.appliedStatus).toBe('failed');
+    expect(result!.errorMessage).toBe('No suggestions to apply');
+    expect(result!.failureType).toBe('no_suggestions');
+  });
+
+  it('sets failureType to null when not provided', () => {
+    markAiResultFailed(db, resultIds[0], 'Paperless API error');
+    const result = getAiResult(db, resultIds[0]);
+    expect(result!.appliedStatus).toBe('failed');
+    expect(result!.errorMessage).toBe('Paperless API error');
+    expect(result!.failureType).toBeNull();
+  });
+
+  it('is counted in failed stats', () => {
+    markAiResultFailed(db, resultIds[0], 'No suggestions to apply', 'no_suggestions');
+    const stats = getAiStats(db);
+    expect(stats.failed).toBeGreaterThanOrEqual(1);
   });
 });
 

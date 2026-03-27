@@ -238,6 +238,44 @@ describe('applyAiResult', () => {
     ).rejects.toThrow('No suggestions to apply');
   });
 
+  it('marks DB as failed with no_suggestions failure type when no suggestions', async () => {
+    const client = createMockClient();
+    db.insert(document)
+      .values({
+        id: 'doc-empty2',
+        paperlessId: 100,
+        title: 'Empty 2',
+        processingStatus: 'completed',
+        syncedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+
+    const emptyResult = db
+      .insert(aiProcessingResult)
+      .values({
+        documentId: 'doc-empty2',
+        paperlessId: 100,
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        suggestedCorrespondent: null,
+        suggestedDocumentType: null,
+        suggestedTagsJson: null,
+        appliedStatus: 'pending_review',
+        createdAt: '2024-01-01T00:00:00Z',
+      })
+      .returning()
+      .get();
+
+    await expect(
+      applyAiResult(db, client, emptyResult.id, { fields: ['correspondent'] }),
+    ).rejects.toThrow('No suggestions to apply');
+
+    const result = getAiResult(db, emptyResult.id);
+    expect(result!.appliedStatus).toBe('failed');
+    expect(result!.failureType).toBe('no_suggestions');
+    expect(result!.errorMessage).toBe('No suggestions to apply');
+  });
+
   it('adds ai-processed tag when addProcessedTag is true', async () => {
     const client = createMockClient();
     await applyAiResult(db, client, resultId, {
