@@ -209,6 +209,8 @@ export {
   purgeDeletedGroups,
   batchSetStatus,
   buildGroupWhere,
+  archiveAndDeleteMembers,
+  backfillDeletedGroupArchives,
   StatusTransitionError,
 } from './queries/duplicates.js';
 export { getConfig, setConfig, setConfigBatch } from './queries/config.js';
