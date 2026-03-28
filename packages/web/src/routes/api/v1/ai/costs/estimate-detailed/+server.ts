@@ -29,7 +29,7 @@ export const GET: RequestHandler = async ({ locals }) => {
       : Promise.resolve([] as string[]),
   ]);
 
-  const estimate = estimateProcessingCost(locals.db, {
+  const estimate = await estimateProcessingCost(locals.db, {
     config: aiConfig,
     existingCorrespondents: correspondents,
     existingDocumentTypes: documentTypes,
