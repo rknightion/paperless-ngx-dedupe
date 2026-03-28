@@ -4,7 +4,7 @@ import { duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { document } from '../../schema/sqlite/documents.js';
 import { eq, and } from 'drizzle-orm';
 import { incrementUsageStats } from '../../queries/documents.js';
-import { archiveAndDeleteMembers } from '../../queries/duplicates.js';
+import { archiveAndDeleteMembers, removeDocumentFromAllGroups } from '../../queries/duplicates.js';
 
 interface BatchTaskData {
   groupIds: string[];
@@ -31,10 +31,7 @@ runWorkerTask(async (ctx, onProgress) => {
 
   for (let i = 0; i < groupIds.length; i++) {
     const groupId = groupIds[i];
-    await onProgress(
-      Math.round((i / groupIds.length) * 100),
-      `Processing group ${i + 1} of ${groupIds.length}`,
-    );
+    await onProgress(i / groupIds.length, `Processing group ${i + 1} of ${groupIds.length}`);
 
     // Get non-primary members for this group
     const members = ctx.db
@@ -51,11 +48,13 @@ runWorkerTask(async (ctx, onProgress) => {
       .all();
 
     let groupSuccess = true;
+    const deletedDocumentIds: string[] = [];
 
     for (const member of members) {
       try {
         await client.deleteDocument(member.paperlessId);
         deletedDocuments++;
+        deletedDocumentIds.push(member.documentId);
       } catch (error) {
         groupSuccess = false;
         errors.push({
@@ -71,6 +70,11 @@ runWorkerTask(async (ctx, onProgress) => {
       // Archive group and strip member rows
       archiveAndDeleteMembers(ctx.db, groupId);
       deletedGroups++;
+
+      // Clean up other groups that referenced the same deleted documents
+      for (const docId of deletedDocumentIds) {
+        removeDocumentFromAllGroups(ctx.db, docId);
+      }
     }
   }
 
