@@ -55,6 +55,39 @@
         return null; // Handled by analysisParts for richer rendering
       }
 
+      if (type === 'batch_operation') {
+        const parts: string[] = [];
+        if (result.deletedDocuments > 0) parts.push(`${result.deletedDocuments} documents deleted`);
+        if (result.deletedGroups > 0) parts.push(`${result.deletedGroups} groups resolved`);
+        if (result.errors?.length > 0) parts.push(`${result.errors.length} errors`);
+        return parts.length > 0 ? parts.join(', ') : 'No changes';
+      }
+
+      if (type === 'ai_processing') {
+        const parts: string[] = [];
+        if (result.processed > 0) parts.push(`${result.processed} processed`);
+        if (result.succeeded > 0) parts.push(`${result.succeeded} succeeded`);
+        if (result.failed > 0) parts.push(`${result.failed} failed`);
+        if (result.autoApplied > 0) parts.push(`${result.autoApplied} auto-applied`);
+        return parts.length > 0 ? parts.join(', ') : 'No documents to process';
+      }
+
+      if (type === 'ai_apply') {
+        const parts: string[] = [];
+        if (result.total > 0) parts.push(`${result.applied} of ${result.total} applied`);
+        if (result.failed > 0) parts.push(`${result.failed} failed`);
+        return parts.length > 0 ? parts.join(', ') : 'No results to apply';
+      }
+
+      if (type === 'rag_indexing') {
+        const parts: string[] = [];
+        if (result.indexed > 0)
+          parts.push(`${result.indexed} indexed (${result.totalChunks} chunks)`);
+        if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
+        if (result.failed > 0) parts.push(`${result.failed} failed`);
+        return parts.length > 0 ? parts.join(', ') : 'No documents to index';
+      }
+
       return null;
     } catch {
       return null;
@@ -113,9 +146,10 @@
   const typeLabels: Record<string, string> = {
     sync: 'Sync',
     analysis: 'Analysis',
-    batch_review: 'Batch Review',
-    batch_resolve: 'Batch Resolve',
-    batch_delete: 'Batch Delete',
+    batch_operation: 'Batch Delete',
+    ai_processing: 'AI Processing',
+    ai_apply: 'AI Apply',
+    rag_indexing: 'RAG Indexing',
   };
 </script>
 
