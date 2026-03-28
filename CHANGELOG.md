@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.12.0...v0.12.1) (2026-03-28)
+
+
+### Bug Fixes
+
+* **duplicates:** add real-time progress tracking for bulk delete operations ([5750c87](https://github.com/rknightion/paperless-ngx-dedupe/commit/5750c871a6f5474c2c13736911102648aec65fed))
+
 ## [0.12.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.11.0...v0.12.0) (2026-03-28)
 
 
