@@ -94,21 +94,6 @@ See the [Getting Started Guide](getting-started.md) for a full walkthrough.
 
     [:octicons-arrow-right-24: Learn more](how-it-works.md)
 
--   :material-language-typescript:{ .lg .middle } **SDK Reference**
-
-    ---
-
-    TypeScript client library for programmatic access to the Paperless NGX Dedupe API
-
-    [:octicons-arrow-right-24: SDK docs](sdk-reference.md)
-
--   :material-console:{ .lg .middle } **CLI Reference**
-
-    ---
-
-    Command-line interface for sync, analysis, configuration, and data export
-
-    [:octicons-arrow-right-24: CLI docs](cli-reference.md)
 
 </div>
 
