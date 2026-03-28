@@ -449,7 +449,12 @@
   <!-- Recent Jobs -->
   {#if data.jobs.length > 0}
     <div class="panel">
-      <h2 class="text-ink mb-4 text-lg font-semibold">Recent Jobs</h2>
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-ink text-lg font-semibold">Recent Jobs</h2>
+        <a href="/jobs" class="text-accent hover:text-accent-hover text-sm font-medium">
+          View all &rarr;
+        </a>
+      </div>
       <div class="space-y-3">
         {#each data.jobs as j (j.id)}
           <JobStatusCard
