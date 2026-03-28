@@ -15,9 +15,7 @@
     "sourceMap": true,
     "paths": {
       "@paperless-dedupe/core": ["./packages/core/src/index.ts"],
-      "@paperless-dedupe/core/*": ["./packages/core/src/*"],
-      "@paperless-dedupe/sdk": ["./packages/sdk/src/index.ts"],
-      "@paperless-dedupe/sdk/*": ["./packages/sdk/src/*"]
+      "@paperless-dedupe/core/*": ["./packages/core/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "build", ".svelte-kit"]
