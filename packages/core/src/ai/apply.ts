@@ -25,6 +25,10 @@ export interface ApplyOptions {
   allowClearing?: boolean;
   /** Allow creating new correspondents/document types/tags in Paperless. Default: true */
   createMissingEntities?: boolean;
+  /** Whether protected tags filtering is active */
+  protectedTagsEnabled?: boolean;
+  /** Tag names that should never be added or removed by AI */
+  protectedTagNames?: string[];
 }
 
 export async function applyAiResult(
@@ -137,7 +141,18 @@ export async function applyAiResult(
       if (options.fields.includes('tags')) {
         const resolvedTagIds: number[] = [];
 
+        // Build protected tag set (case-insensitive)
+        const protectedTagSet = new Set(
+          options.protectedTagsEnabled && options.protectedTagNames
+            ? options.protectedTagNames.map((n) => n.toLowerCase())
+            : [],
+        );
+
         for (const tagName of suggestedTags) {
+          if (protectedTagSet.has(tagName.toLowerCase())) {
+            logger.info({ name: tagName }, 'Skipping protected tag from AI suggestion');
+            continue;
+          }
           let found = tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
           if (!found) {
             if (options.createMissingEntities === false) {
@@ -162,6 +177,19 @@ export async function applyAiResult(
           }
           if (!resolvedTagIds.includes(processedTag.id)) {
             resolvedTagIds.push(processedTag.id);
+          }
+        }
+
+        // Preserve protected tags already on the document
+        if (protectedTagSet.size > 0) {
+          for (const existingTagId of currentDoc.tags) {
+            const existingTag = tags.find((t) => t.id === existingTagId);
+            if (existingTag && protectedTagSet.has(existingTag.name.toLowerCase())) {
+              if (!resolvedTagIds.includes(existingTagId)) {
+                resolvedTagIds.push(existingTagId);
+                logger.info({ name: existingTag.name }, 'Preserving protected tag on document');
+              }
+            }
           }
         }
 
