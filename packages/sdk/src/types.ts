@@ -225,12 +225,23 @@ export interface Job {
   type: string;
   status: string | null;
   progress: number | null;
+  phaseProgress: number | null;
   progressMessage: string | null;
   startedAt: string | null;
   completedAt: string | null;
   errorMessage: string | null;
   resultJson: string | null;
   createdAt: string;
+}
+
+export interface JobFilters {
+  type?: string;
+  status?: string;
+  limit?: number;
+}
+
+export interface ClearJobHistoryResult {
+  deleted: number;
 }
 
 // ── Sync types ─────────────────────────────────────────────────────────
