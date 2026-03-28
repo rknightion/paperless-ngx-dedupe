@@ -45,6 +45,8 @@ runWorkerTask(async (ctx, onProgress) => {
         createMissingEntities: taskData.createMissingEntities,
         addProcessedTag: aiConfig.addProcessedTag,
         processedTagName: aiConfig.processedTagName,
+        protectedTagsEnabled: aiConfig.protectedTagsEnabled,
+        protectedTagNames: aiConfig.protectedTagNames,
       });
       applied++;
     } catch (error) {
