@@ -63,7 +63,7 @@ type(scope): description
 | `test` | Adding or updating tests |
 | `chore` | Build, CI, or tooling changes |
 
-**Scopes:** `core`, `web`, `sdk`, `cli`, `db`, `dedup`, `sync`, `jobs`, `api`, `docs`, `ui`, `settings`, `export`, `rag`, `ai`, `dashboard`, `schema`, `types`
+**Scopes:** `core`, `web`, `db`, `dedup`, `sync`, `jobs`, `api`, `docs`, `ui`, `settings`, `export`, `rag`, `ai`, `dashboard`, `schema`, `types`
 
 **Examples:**
 
