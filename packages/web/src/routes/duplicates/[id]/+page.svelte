@@ -109,8 +109,16 @@
         const json = await res.json();
         throw new Error(json.error?.message ?? 'Failed to delete from Paperless');
       }
-      // Then remove from group
-      await removeMember(selectedSecondary.memberId);
+      // Clean up all groups that reference this document (not just the current one)
+      const cleanupRes = await fetch('/api/v1/duplicates/cleanup-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: selectedSecondary.documentId }),
+      });
+      if (!cleanupRes.ok) {
+        // Fall back to single-group removal if cleanup endpoint fails
+        await removeMember(selectedSecondary.memberId);
+      }
       if (selectedSecondaryIndex >= secondaryMembers.length - 1 && selectedSecondaryIndex > 0) {
         selectedSecondaryIndex--;
       }
