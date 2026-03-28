@@ -41,10 +41,9 @@ AD-002: Drizzle ORM with dialect-switching pattern
 AD-003: pnpm monorepo with two packages
   - @paperless-dedupe/core: pure TS library (no web deps)
     - Deduplication engine, Paperless client, database schema, queries
-    - Framework-agnostic, enabling future CLI tools and external clients
+    - Framework-agnostic
   - @paperless-dedupe/web: SvelteKit application
     - UI pages, API routes, SSE endpoints, hooks
-  - Core can be imported by future CLI tools or SDK packages
 
 AD-004: Single Docker container by default
   - SQLite volume mount for data persistence (no external database needed)
@@ -256,8 +255,6 @@ Tasks
   - Expand the public type instead of overloading `AiResultSummary`.
   Files:
   - `packages/core/src/ai/queries.ts`
-  - `packages/sdk/src/types.ts`
-  - `packages/sdk/src/client.ts`
   - `packages/web/src/routes/api/v1/ai/results/[id]/+server.ts`
   Acceptance:
   - The detail API returns evidence, token usage, processing time, applied fields, and failure metadata.
