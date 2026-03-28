@@ -31,7 +31,9 @@ import type {
   DuplicateGroupSummary,
   DuplicateStats,
   GroupByField,
+  ClearJobHistoryResult,
   Job,
+  JobFilters,
   PaginationMeta,
   PaginationParams,
   SSECallbacks,
@@ -238,8 +240,21 @@ export class PaperlessDedupeClient {
 
   // ── Jobs ─────────────────────────────────────────────────────────────
 
+  async listJobs(filters?: JobFilters): Promise<Job[]> {
+    const qs = buildQueryString({ ...filters });
+    const res = await request<Job[]>(`/api/v1/jobs${qs}`, this.httpOptions);
+    return res.data;
+  }
+
   async getJob(jobId: string): Promise<Job> {
     const res = await request<Job>(`/api/v1/jobs/${jobId}`, this.httpOptions);
+    return res.data;
+  }
+
+  async clearJobHistory(): Promise<ClearJobHistoryResult> {
+    const res = await request<ClearJobHistoryResult>('/api/v1/jobs', this.httpOptions, {
+      method: 'DELETE',
+    });
     return res.data;
   }
 
