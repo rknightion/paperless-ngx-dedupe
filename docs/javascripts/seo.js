@@ -55,8 +55,7 @@ function addStructuredData() {
       "MinHash/LSH duplicate detection",
       "Multi-dimensional similarity scoring",
       "Real-time SSE progress tracking",
-      "REST API with TypeScript SDK",
-      "Command-line interface",
+      "REST API",
       "Docker single-container deployment",
       "Side-by-side document comparison",
       "Batch operations for bulk processing"
@@ -186,8 +185,6 @@ function addMetaTag(attribute, name, content) {
 function getDocumentationSection() {
   const path = window.location.pathname;
   if (path.includes('/api-reference/')) return 'API Reference';
-  if (path.includes('/sdk-reference/')) return 'SDK Reference';
-  if (path.includes('/cli-reference/')) return 'CLI Reference';
   if (path.includes('/how-it-works/')) return 'How It Works';
   if (path.includes('/architecture/')) return 'Architecture';
   if (path.includes('/configuration/')) return 'Configuration';
@@ -205,8 +202,6 @@ function getPageKeywords() {
   let keywords = ['paperless-ngx', 'deduplication', 'minhash', 'lsh', 'document-management'];
 
   if (path.includes('/api-reference/')) keywords.push('rest-api', 'endpoints', 'curl');
-  if (path.includes('/sdk-reference/')) keywords.push('typescript', 'sdk', 'client-library');
-  if (path.includes('/cli-reference/')) keywords.push('cli', 'command-line', 'terminal');
   if (path.includes('/how-it-works/')) keywords.push('algorithm', 'minhash', 'locality-sensitive-hashing', 'shingling');
   if (path.includes('/architecture/')) keywords.push('monorepo', 'sveltekit', 'sqlite', 'drizzle');
   if (path.includes('/configuration/')) keywords.push('configuration', 'environment-variables', 'docker');

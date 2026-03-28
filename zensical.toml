@@ -20,9 +20,7 @@ nav = [
       { "Document Q&A" = "document-qa.md" }
     ] },
   { Reference = [
-      { "API Reference" = "api-reference.md" },
-      { "SDK Reference" = "sdk-reference.md" },
-      { "CLI Reference" = "cli-reference.md" }
+      { "API Reference" = "api-reference.md" }
     ] },
   { Development = [
       "development.md",
@@ -275,8 +273,6 @@ Deduplication = "deduplication"
 MinHash = "minhash"
 LSH = "lsh"
 API = "api"
-SDK = "sdk"
-CLI = "cli"
 Docker = "docker"
 Configuration = "config"
 Troubleshooting = "troubleshooting"
