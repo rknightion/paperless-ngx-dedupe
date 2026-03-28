@@ -475,6 +475,7 @@ describe('markAiResultFailed', () => {
     expect(result!.appliedStatus).toBe('failed');
     expect(result!.errorMessage).toBe('No suggestions to apply');
     expect(result!.failureType).toBe('no_suggestions');
+    expect(result!.appliedAt).toBeTruthy();
   });
 
   it('sets failureType to null when not provided', () => {
@@ -483,6 +484,7 @@ describe('markAiResultFailed', () => {
     expect(result!.appliedStatus).toBe('failed');
     expect(result!.errorMessage).toBe('Paperless API error');
     expect(result!.failureType).toBeNull();
+    expect(result!.appliedAt).toBeTruthy();
   });
 
   it('is counted in failed stats', () => {
