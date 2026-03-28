@@ -101,6 +101,7 @@ export {
   completeJob,
   failJob,
   cancelJob,
+  clearJobHistory,
   recoverStaleJobs,
   JobAlreadyRunningError,
 } from './jobs/manager.js';
