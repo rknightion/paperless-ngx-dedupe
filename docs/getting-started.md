@@ -66,6 +66,4 @@ Now that you have completed your first run:
 - [Configuration Reference](configuration.md) -- tune algorithm parameters and confidence weights
 - [How It Works](how-it-works.md) -- understand the deduplication pipeline in detail
 - [API Reference](api-reference.md) -- automate workflows with the REST API
-- [SDK Reference](sdk-reference.md) -- use the TypeScript client library
-- [CLI Reference](cli-reference.md) -- run operations from the command line
 - [Troubleshooting](troubleshooting.md) -- common issues and solutions
