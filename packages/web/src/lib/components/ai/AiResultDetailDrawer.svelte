@@ -167,8 +167,12 @@
   {#if mobile}
     <!-- Mobile drawer -->
     <div class="fixed inset-0 z-40">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="absolute inset-0 bg-black/40" onclick={onclose}></div>
+      <button
+        type="button"
+        class="absolute inset-0 bg-black/40"
+        aria-label="Close drawer"
+        onclick={onclose}
+      ></button>
       <div
         class="bg-surface absolute inset-x-0 bottom-0 h-[85dvh] overflow-y-auto rounded-t-2xl shadow-xl"
       >
