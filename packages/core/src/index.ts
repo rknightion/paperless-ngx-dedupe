@@ -212,6 +212,7 @@ export {
   archiveAndDeleteMembers,
   backfillDeletedGroupArchives,
   removeMemberFromGroup,
+  removeDocumentFromAllGroups,
   StatusTransitionError,
   PrimaryMemberError,
 } from './queries/duplicates.js';
