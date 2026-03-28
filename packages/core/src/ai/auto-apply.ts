@@ -113,6 +113,8 @@ export async function evaluateAndAutoApply(
         createMissingEntities: !config.neverAutoCreateEntities,
         addProcessedTag: config.addProcessedTag,
         processedTagName: config.processedTagName,
+        protectedTagsEnabled: config.protectedTagsEnabled,
+        protectedTagNames: config.protectedTagNames,
       });
       autoApplied++;
       details.push({
