@@ -48,6 +48,8 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
       createMissingEntities,
       addProcessedTag: aiConfig.addProcessedTag,
       processedTagName: aiConfig.processedTagName,
+      protectedTagsEnabled: aiConfig.protectedTagsEnabled,
+      protectedTagNames: aiConfig.protectedTagNames,
     });
     return apiSuccess({ applied: true });
   } catch (error) {
