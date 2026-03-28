@@ -1,5 +1,5 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { listJobs } from '@paperless-dedupe/core';
+import { listJobs, clearJobHistory } from '@paperless-dedupe/core';
 import type { JobType, JobStatus } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
@@ -20,4 +20,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   });
 
   return apiSuccess(jobs);
+};
+
+export const DELETE: RequestHandler = async ({ locals }) => {
+  const deleted = clearJobHistory(locals.db);
+  return apiSuccess({ deleted });
 };
