@@ -66,6 +66,8 @@
   let aiAutoProcess = $state(initialAiConfig?.autoProcess ?? false);
   let aiAddProcessedTag = $state(initialAiConfig?.addProcessedTag ?? false);
   let aiProcessedTagName = $state(initialAiConfig?.processedTagName ?? 'ai-processed');
+  let aiProtectedTagsEnabled = $state(initialAiConfig?.protectedTagsEnabled ?? false);
+  let aiProtectedTagsInput = $state((initialAiConfig?.protectedTagNames ?? ['email']).join(', '));
   let aiPromptTemplate = $state(initialAiConfig?.promptTemplate ?? '');
   let aiMaxContentLength = $state(initialAiConfig?.maxContentLength ?? 8000);
   let aiBatchSize = $state(initialAiConfig?.batchSize ?? 10);
@@ -312,6 +314,11 @@
           neverAutoCreateEntities: aiNeverAutoCreate,
           neverOverwriteNonEmpty: aiNeverOverwrite,
           tagsOnlyAutoApply: aiTagsOnly,
+          protectedTagsEnabled: aiProtectedTagsEnabled,
+          protectedTagNames: aiProtectedTagsInput
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter((s: string) => s.length > 0),
           autoApplyEnabled: aiAutoApply,
           autoApplyRequireAllAboveThreshold: aiAutoApplyRequireThreshold,
           autoApplyRequireNoNewEntities: aiAutoApplyRequireNoNew,
@@ -937,6 +944,23 @@
             bind:value={aiProcessedTagName}
             disabled={!aiAddProcessedTag}
             class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-40 rounded-lg border px-3 py-1.5 text-sm focus:ring-1 focus:outline-none disabled:opacity-50"
+          />
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiProtectedTagsEnabled} class="rounded" />
+            Protected tags:
+          </label>
+          <input
+            type="text"
+            bind:value={aiProtectedTagsInput}
+            disabled={!aiProtectedTagsEnabled}
+            placeholder="email, inbox"
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-64 rounded-lg border px-3 py-1.5 text-sm focus:ring-1 focus:outline-none disabled:opacity-50"
+          />
+          <InfoIcon
+            text="Tags listed here will never be added or removed by AI. If a document already has one of these tags (e.g. 'email' added by Paperless-NGX mail rules), it will be preserved. Comma-separated, case-insensitive."
+            position="top"
           />
         </div>
       </div>
