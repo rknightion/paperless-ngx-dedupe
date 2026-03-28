@@ -110,4 +110,21 @@ describe('setAiConfig', () => {
     expect(config.processedTagName).toBe('ai-processed-v2');
     expect(typeof config.processedTagName).toBe('string');
   });
+
+  it('round-trips protectedTagNames array', () => {
+    setAiConfig(db, {
+      protectedTagsEnabled: true,
+      protectedTagNames: ['email', 'inbox'],
+    });
+
+    const config = getAiConfig(db);
+    expect(config.protectedTagsEnabled).toBe(true);
+    expect(config.protectedTagNames).toEqual(['email', 'inbox']);
+  });
+
+  it('defaults protectedTagNames to ["email"] and protectedTagsEnabled to false', () => {
+    const config = getAiConfig(db);
+    expect(config.protectedTagsEnabled).toBe(false);
+    expect(config.protectedTagNames).toEqual(['email']);
+  });
 });
