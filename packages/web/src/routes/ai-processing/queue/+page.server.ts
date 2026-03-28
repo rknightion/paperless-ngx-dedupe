@@ -1,4 +1,4 @@
-import { getAiResults, getUnprocessedDocuments } from '@paperless-dedupe/core';
+import { getAiResults, getUnprocessedDocuments, getAiConfig } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -10,6 +10,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const unprocessed = getUnprocessedDocuments(locals.db, limit, offset);
   const failed = getAiResults(locals.db, { status: 'failed' }, 50, 0);
+  const aiConfig = getAiConfig(locals.db);
 
-  return { unprocessed, failed };
+  return { unprocessed, failed, reasoningEffort: aiConfig.reasoningEffort };
 };

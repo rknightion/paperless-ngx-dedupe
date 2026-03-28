@@ -16,6 +16,8 @@ const PRICING_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export interface ModelPricing {
   inputPerToken: number;
   outputPerToken: number;
+  cacheReadPerToken: number | null;
+  cacheCreationPerToken: number | null;
 }
 
 export interface AiCostEstimate {
@@ -57,19 +59,30 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
 
     const data = (await response.json()) as Record<
       string,
-      { input_cost_per_token?: number; output_cost_per_token?: number }
+      {
+        input_cost_per_token?: number;
+        output_cost_per_token?: number;
+        cache_read_input_token_cost?: number;
+        cache_creation_input_token_cost?: number;
+      }
     >;
 
     const knownIds = getKnownModelIds();
     const pricingMap: Record<string, ModelPricing> = {};
 
+    function toPricing(entry: (typeof data)[string]): ModelPricing {
+      return {
+        inputPerToken: entry.input_cost_per_token!,
+        outputPerToken: entry.output_cost_per_token ?? 0,
+        cacheReadPerToken: entry.cache_read_input_token_cost ?? null,
+        cacheCreationPerToken: entry.cache_creation_input_token_cost ?? null,
+      };
+    }
+
     for (const modelId of knownIds) {
       // Try exact match first
       if (data[modelId] && data[modelId].input_cost_per_token != null) {
-        pricingMap[modelId] = {
-          inputPerToken: data[modelId].input_cost_per_token!,
-          outputPerToken: data[modelId].output_cost_per_token ?? 0,
-        };
+        pricingMap[modelId] = toPricing(data[modelId]);
         continue;
       }
 
@@ -78,10 +91,7 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
         (key) => key.startsWith(modelId) && data[key].input_cost_per_token != null,
       );
       if (prefixMatch) {
-        pricingMap[modelId] = {
-          inputPerToken: data[prefixMatch].input_cost_per_token!,
-          outputPerToken: data[prefixMatch].output_cost_per_token ?? 0,
-        };
+        pricingMap[modelId] = toPricing(data[prefixMatch]);
         continue;
       }
 
@@ -90,10 +100,7 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
       const providerPrefix = isOpenai ? 'openai/' : 'anthropic/';
       const prefixed = providerPrefix + modelId;
       if (data[prefixed] && data[prefixed].input_cost_per_token != null) {
-        pricingMap[modelId] = {
-          inputPerToken: data[prefixed].input_cost_per_token!,
-          outputPerToken: data[prefixed].output_cost_per_token ?? 0,
-        };
+        pricingMap[modelId] = toPricing(data[prefixed]);
       }
     }
 
@@ -207,6 +214,26 @@ export function getModelPricing(db: AppDatabase, model: string): ModelPricing | 
   }
 
   return fallback;
+}
+
+/**
+ * Return the full cached pricing map for all known models.
+ * Returns null if no pricing data has been cached yet.
+ */
+export function getAllModelPricing(db: AppDatabase): Record<string, ModelPricing> | null {
+  const row = db
+    .select({ value: appConfig.value })
+    .from(appConfig)
+    .where(eq(appConfig.key, PRICING_CACHE_KEY))
+    .get();
+
+  if (!row) return null;
+
+  try {
+    return JSON.parse(row.value) as Record<string, ModelPricing>;
+  } catch {
+    return null;
+  }
 }
 
 /**

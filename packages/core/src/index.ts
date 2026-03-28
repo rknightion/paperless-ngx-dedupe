@@ -333,12 +333,19 @@ export {
   fetchAndCachePricing,
   refreshPricingIfStale,
   getModelPricing,
+  getAllModelPricing,
   estimateResultCost,
   estimateBatchCost,
   getCostStats,
   backfillCosts,
 } from './ai/costs.js';
 export type { ModelPricing, AiCostEstimate, AiCostStats } from './ai/costs.js';
+export { estimateProcessingCost } from './ai/cost-estimate.js';
+export type {
+  DetailedCostEstimate,
+  ModelCostEstimate,
+  EstimateProcessingCostOptions,
+} from './ai/cost-estimate.js';
 
 // RAG
 export { getRagConfig, setRagConfig } from './rag/config.js';

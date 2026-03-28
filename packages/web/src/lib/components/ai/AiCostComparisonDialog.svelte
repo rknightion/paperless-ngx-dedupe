@@ -76,7 +76,7 @@
       </div>
       <button
         onclick={onclose}
-        class="text-muted hover:text-ink -mt-1 -mr-1 rounded-lg p-1.5 transition-colors"
+        class="text-muted hover:text-ink -mr-1 -mt-1 rounded-lg p-1.5 transition-colors"
       >
         <X class="h-5 w-5" />
       </button>
@@ -96,8 +96,7 @@
                   <tr class="border-soft border-b">
                     <th class="text-muted px-4 py-2.5 text-left text-xs font-medium">Model</th>
                     <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">Best Case</th>
-                    <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">Worst Case</th
-                    >
+                    <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">Worst Case</th>
                     <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">
                       Cache Savings
                     </th>
