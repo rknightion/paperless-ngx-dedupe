@@ -44,5 +44,6 @@ export const duplicateMember = sqliteTable(
   },
   (table) => [
     uniqueIndex('duplicate_member_group_document_unique').on(table.groupId, table.documentId),
+    index('idx_dm_document_id').on(table.documentId),
   ],
 );
