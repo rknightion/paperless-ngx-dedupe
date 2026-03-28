@@ -1,4 +1,4 @@
-import { eq, sql, desc, asc, and, isNull } from 'drizzle-orm';
+import { eq, sql, desc, asc, and, isNull, isNotNull, like } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { document } from '../schema/sqlite/documents.js';
 import type { AppDatabase } from '../db/client.js';
@@ -98,6 +98,15 @@ export interface UnprocessedDocument {
   correspondent: string | null;
   documentType: string | null;
   tags: string[];
+}
+
+export interface UnprocessedDocumentFilters {
+  search?: string;
+  correspondent?: string;
+  documentType?: string;
+  tag?: string;
+  sort?: 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'random';
+  seed?: number;
 }
 
 function parseJsonArray(json: string | null): string[] {
@@ -608,14 +617,52 @@ export function getUnprocessedDocuments(
   db: AppDatabase,
   limit = 20,
   offset = 0,
+  filters?: UnprocessedDocumentFilters,
 ): { items: UnprocessedDocument[]; total: number } {
+  const conditions = [isNull(aiProcessingResult.id)];
+
+  if (filters?.search) {
+    conditions.push(like(document.title, `%${filters.search}%`));
+  }
+  if (filters?.correspondent) {
+    conditions.push(eq(document.correspondent, filters.correspondent));
+  }
+  if (filters?.documentType) {
+    conditions.push(eq(document.documentType, filters.documentType));
+  }
+  if (filters?.tag) {
+    conditions.push(like(document.tagsJson, `%${filters.tag}%`));
+  }
+
+  const where = and(...conditions);
+
   const totalResult = db
     .select({ count: sql<number>`count(*)` })
     .from(document)
     .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
-    .where(isNull(aiProcessingResult.id))
+    .where(where)
     .get();
   const total = totalResult?.count ?? 0;
+
+  let orderBy;
+  switch (filters?.sort) {
+    case 'oldest':
+      orderBy = asc(document.paperlessId);
+      break;
+    case 'title_asc':
+      orderBy = asc(document.title);
+      break;
+    case 'title_desc':
+      orderBy = desc(document.title);
+      break;
+    case 'random': {
+      const seed = filters.seed ?? 1;
+      orderBy = sql`(${document.paperlessId} * ${seed}) % 2147483647`;
+      break;
+    }
+    default:
+      orderBy = desc(document.paperlessId);
+  }
 
   const rows = db
     .select({
@@ -628,8 +675,8 @@ export function getUnprocessedDocuments(
     })
     .from(document)
     .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
-    .where(isNull(aiProcessingResult.id))
-    .orderBy(desc(document.paperlessId))
+    .where(where)
+    .orderBy(orderBy)
     .limit(limit)
     .offset(offset)
     .all();
@@ -644,4 +691,30 @@ export function getUnprocessedDocuments(
   }));
 
   return { items, total };
+}
+
+export function getUnprocessedDocumentFacets(db: AppDatabase): {
+  correspondents: string[];
+  documentTypes: string[];
+} {
+  const correspondentRows = db
+    .selectDistinct({ value: document.correspondent })
+    .from(document)
+    .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
+    .where(and(isNull(aiProcessingResult.id), isNotNull(document.correspondent)))
+    .orderBy(asc(document.correspondent))
+    .all();
+
+  const documentTypeRows = db
+    .selectDistinct({ value: document.documentType })
+    .from(document)
+    .leftJoin(aiProcessingResult, eq(document.id, aiProcessingResult.documentId))
+    .where(and(isNull(aiProcessingResult.id), isNotNull(document.documentType)))
+    .orderBy(asc(document.documentType))
+    .all();
+
+  return {
+    correspondents: correspondentRows.map((r) => r.value!),
+    documentTypes: documentTypeRows.map((r) => r.value!),
+  };
 }
