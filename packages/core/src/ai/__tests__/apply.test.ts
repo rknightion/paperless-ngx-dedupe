@@ -471,6 +471,164 @@ describe('applyAiResult - safe defaults', () => {
   });
 });
 
+describe('applyAiResult - protected tags', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+  });
+
+  function seedForProtectedTags(suggestedTags: string[]): string {
+    db.insert(document)
+      .values({
+        id: 'doc-pt',
+        paperlessId: 1,
+        title: 'Protected Tag Test',
+        processingStatus: 'completed',
+        syncedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+
+    const result = db
+      .insert(aiProcessingResult)
+      .values({
+        documentId: 'doc-pt',
+        paperlessId: 1,
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        suggestedCorrespondent: 'Amazon',
+        suggestedDocumentType: 'Invoice',
+        suggestedTagsJson: JSON.stringify(suggestedTags),
+        confidenceJson: '{"correspondent":0.9,"documentType":0.95,"tags":0.8}',
+        appliedStatus: 'pending_review',
+        promptTokens: 100,
+        completionTokens: 50,
+        createdAt: '2024-01-01T00:00:00Z',
+      })
+      .returning()
+      .get();
+
+    return result.id;
+  }
+
+  function createMockClientWithTags(currentTags: number[] = []) {
+    return {
+      getCorrespondents: vi
+        .fn()
+        .mockResolvedValue([{ id: 1, name: 'Amazon', slug: 'amazon', matchingAlgorithm: 0 }]),
+      getDocumentTypes: vi
+        .fn()
+        .mockResolvedValue([{ id: 1, name: 'Invoice', slug: 'invoice', matchingAlgorithm: 0 }]),
+      getTags: vi.fn().mockResolvedValue([
+        { id: 1, name: 'finance', slug: 'finance', color: '#000' },
+        { id: 2, name: 'shopping', slug: 'shopping', color: '#000' },
+        { id: 3, name: 'email', slug: 'email', color: '#000' },
+      ]),
+      createCorrespondent: vi.fn(),
+      createDocumentType: vi.fn(),
+      createTag: vi
+        .fn()
+        .mockImplementation((name: string) =>
+          Promise.resolve({ id: 99, name, slug: name.toLowerCase(), color: '#000' }),
+        ),
+      updateDocument: vi.fn().mockResolvedValue(undefined),
+      getDocument: vi.fn().mockResolvedValue({
+        id: 1,
+        title: 'Protected Tag Test',
+        content: '',
+        tags: currentTags,
+        correspondent: null,
+        documentType: null,
+        created: '2024-01-01T00:00:00Z',
+        modified: '2024-01-01T00:00:00Z',
+        added: '2024-01-01T00:00:00Z',
+        originalFileName: null,
+        archivedFileName: null,
+        archiveSerialNumber: null,
+      }),
+    } as unknown as PaperlessClient;
+  }
+
+  it('filters protected tag from AI suggestions', async () => {
+    const resultId = seedForProtectedTags(['finance', 'email']);
+    const client = createMockClientWithTags();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['tags'],
+      protectedTagsEnabled: true,
+      protectedTagNames: ['email'],
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg.tags).toContain(1); // finance
+    expect(updateArg.tags).not.toContain(3); // email filtered
+  });
+
+  it('preserves protected tag already on document', async () => {
+    const resultId = seedForProtectedTags(['finance']);
+    const client = createMockClientWithTags([3]); // document has email tag
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['tags'],
+      protectedTagsEnabled: true,
+      protectedTagNames: ['email'],
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg.tags).toContain(1); // finance (from AI)
+    expect(updateArg.tags).toContain(3); // email (preserved)
+  });
+
+  it('matches protected tags case-insensitively', async () => {
+    const resultId = seedForProtectedTags(['finance', 'Email']);
+    const client = createMockClientWithTags([3]); // document has email tag (id 3)
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['tags'],
+      protectedTagsEnabled: true,
+      protectedTagNames: ['EMAIL'], // uppercase in config
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg.tags).toContain(1); // finance
+    expect(updateArg.tags).toContain(3); // email preserved
+    // 'Email' from suggestions should have been filtered (case-insensitive)
+    expect(updateArg.tags).toHaveLength(2);
+  });
+
+  it('does not filter when protectedTagsEnabled is false', async () => {
+    const resultId = seedForProtectedTags(['finance', 'email']);
+    const client = createMockClientWithTags();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['tags'],
+      protectedTagsEnabled: false,
+      protectedTagNames: ['email'],
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg.tags).toContain(1); // finance
+    expect(updateArg.tags).toContain(3); // email NOT filtered when disabled
+  });
+
+  it('does not filter when protectedTagNames is empty', async () => {
+    const resultId = seedForProtectedTags(['finance', 'email']);
+    const client = createMockClientWithTags();
+
+    await applyAiResult(db, client, resultId, {
+      fields: ['tags'],
+      protectedTagsEnabled: true,
+      protectedTagNames: [],
+    });
+
+    const updateArg = vi.mocked(client.updateDocument).mock.calls[0][1];
+    expect(updateArg.tags).toContain(1); // finance
+    expect(updateArg.tags).toContain(3); // email not filtered (empty list)
+  });
+});
+
 describe('rejectAiResult', () => {
   let db: AppDatabase;
   let resultId: string;
