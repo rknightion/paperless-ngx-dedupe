@@ -19,9 +19,17 @@ function parseConfigValue(key: string, value: string): unknown {
     shortKey === 'autoApplyRequireAllAboveThreshold' ||
     shortKey === 'autoApplyRequireNoNewEntities' ||
     shortKey === 'autoApplyRequireNoClearing' ||
-    shortKey === 'autoApplyRequireOcrText'
+    shortKey === 'autoApplyRequireOcrText' ||
+    shortKey === 'protectedTagsEnabled'
   ) {
     return value === 'true';
+  }
+  if (shortKey === 'protectedTagNames') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return [];
+    }
   }
   const num = Number(value);
   if (
@@ -63,16 +71,17 @@ export function setAiConfig(db: AppDatabase, config: Partial<AiConfig>): AiConfi
   db.transaction((tx) => {
     for (const [key, value] of Object.entries(validated)) {
       const prefixedKey = `${AI_CONFIG_PREFIX}${key}`;
+      const serialized = Array.isArray(value) ? JSON.stringify(value) : String(value);
       tx.insert(appConfig)
         .values({
           key: prefixedKey,
-          value: String(value),
+          value: serialized,
           updatedAt: now,
         })
         .onConflictDoUpdate({
           target: appConfig.key,
           set: {
-            value: String(value),
+            value: serialized,
             updatedAt: now,
           },
         })
