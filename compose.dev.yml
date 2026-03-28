@@ -31,8 +31,6 @@ services:
       # Preserve pnpm-installed node_modules from the image (volume mount above overwrites them)
       - /app/packages/core/node_modules
       - /app/packages/web/node_modules
-      - /app/packages/sdk/node_modules
-      - /app/packages/cli/node_modules
     env_file:
       - .env
     environment:
