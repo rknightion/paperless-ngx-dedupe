@@ -133,6 +133,14 @@ export function recoverStaleJobs(db: AppDatabase): number {
   return result.changes;
 }
 
+export function clearJobHistory(db: AppDatabase): number {
+  const result = db
+    .delete(job)
+    .where(or(eq(job.status, 'completed'), eq(job.status, 'failed'), eq(job.status, 'cancelled')))
+    .run();
+  return result.changes;
+}
+
 export function cancelJob(db: AppDatabase, id: string): boolean {
   const existing = db.select({ status: job.status }).from(job).where(eq(job.id, id)).get();
 
