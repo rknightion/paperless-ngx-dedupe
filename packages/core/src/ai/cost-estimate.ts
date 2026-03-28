@@ -1,5 +1,4 @@
 import { sql, eq, isNull, and, isNotNull } from 'drizzle-orm';
-import { encodingForModel, type TiktokenModel } from 'js-tiktoken';
 import type { AppDatabase } from '../db/client.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
@@ -37,7 +36,7 @@ export interface EstimateProcessingCostOptions {
 }
 
 /** Map model IDs to tiktoken model names for encoding selection */
-function getTiktokenModel(modelId: string): TiktokenModel {
+function getTiktokenModel(modelId: string): string {
   if (OPENAI_MODELS.some((m) => m.id === modelId)) {
     return 'gpt-4o'; // o200k_base encoding, closest match for GPT-5.4 family
   }
@@ -45,7 +44,13 @@ function getTiktokenModel(modelId: string): TiktokenModel {
   return 'gpt-4'; // cl100k_base encoding
 }
 
-function countTokens(text: string, modelId: string): number {
+/**
+ * Count tokens using js-tiktoken. Loaded lazily via dynamic import to avoid
+ * pulling the WASM module into worker processes that don't need it.
+ */
+async function countTokens(text: string, modelId: string): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { encodingForModel } = (await import('js-tiktoken')) as any;
   const enc = encodingForModel(getTiktokenModel(modelId));
   return enc.encode(text).length;
 }
@@ -112,10 +117,10 @@ function computeModelEstimate(
  * Uses js-tiktoken for accurate system prompt tokenization and SQL aggregates
  * for user prompt estimation.
  */
-export function estimateProcessingCost(
+export async function estimateProcessingCost(
   db: AppDatabase,
   options: EstimateProcessingCostOptions,
-): DetailedCostEstimate | null {
+): Promise<DetailedCostEstimate | null> {
   const { config } = options;
 
   const pricingMap = getAllModelPricing(db);
@@ -145,7 +150,7 @@ export function estimateProcessingCost(
     includeTags: config.includeTags,
     provider: config.provider,
   });
-  const systemPromptTokens = countTokens(systemPrompt, config.model);
+  const systemPromptTokens = await countTokens(systemPrompt, config.model);
 
   // Aggregate user prompt character count for unprocessed documents
   // Each document's content is capped at maxContentLength, plus ~50 chars overhead for title + wrapping
