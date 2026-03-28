@@ -13,6 +13,7 @@
     Menu,
     Brain,
     MessageCircleQuestion,
+    History,
   } from 'lucide-svelte';
 
   let { data, children } = $props();
@@ -135,6 +136,19 @@
           </span>
         </a>
       {/if}
+      <a
+        href="/jobs"
+        class="px-3 py-2 text-sm font-medium transition-colors {$page.url.pathname.startsWith(
+          '/jobs',
+        )
+          ? 'bg-sidebar-active rounded-lg text-white'
+          : 'hover:bg-sidebar-hover rounded-lg text-white/70 hover:text-white'}"
+      >
+        <span class="flex items-center gap-3">
+          <History class="h-4 w-4" />
+          Jobs
+        </span>
+      </a>
       <a
         href="/settings"
         class="px-3 py-2 text-sm font-medium transition-colors {$page.url.pathname.startsWith(
