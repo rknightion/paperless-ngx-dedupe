@@ -202,7 +202,9 @@
         class="border-soft bg-surface flex flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <div class="flex items-start gap-3">
-          <div class="bg-accent-light mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+          <div
+            class="bg-accent-light mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          >
             <DollarSign class="text-accent h-4 w-4" />
           </div>
           <div>
@@ -211,13 +213,12 @@
               <span class="text-muted font-normal">with {costEstimate.currentModel.modelName}</span>
             </p>
             <p class="text-muted mt-0.5 text-xs">
-              {costEstimate.documentCount.toLocaleString()} document{costEstimate.documentCount === 1
+              {costEstimate.documentCount.toLocaleString()} document{costEstimate.documentCount ===
+              1
                 ? ''
-                : 's'},
-              ~{Math.round(
+                : 's'}, ~{Math.round(
                 (costEstimate.tokenBreakdown.systemPromptTokens +
-                  costEstimate.tokenBreakdown.totalUserPromptTokens /
-                    costEstimate.documentCount) /
+                  costEstimate.tokenBreakdown.totalUserPromptTokens / costEstimate.documentCount) /
                   1,
               ).toLocaleString()} tokens per document avg
             </p>
