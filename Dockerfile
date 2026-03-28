@@ -9,8 +9,6 @@ ENV CI=true
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json ./packages/core/
-COPY packages/sdk/package.json ./packages/sdk/
-COPY packages/cli/package.json ./packages/cli/
 COPY packages/web/package.json ./packages/web/
 
 RUN pnpm install --frozen-lockfile
@@ -24,16 +22,6 @@ RUN pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedup
 
 # Create standalone deployment with flat node_modules (no pnpm symlinks)
 RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
-
-# Bundle CLI into a single file (resolves TS source + all non-native deps)
-RUN pnpm dlx esbuild packages/cli/src/bin.ts \
-  --bundle --platform=node --format=esm \
-  --outfile=/app/cli-bundle/paperless-ngx-dedupe.mjs \
-  --external:better-sqlite3 \
-  --external:sqlite-vec \
-  --external:pino \
-  --external:pino-pretty \
-  --banner:js='import{createRequire as _cr}from"module";const require=_cr(import.meta.url);'
 
 # Stage 3: Production runtime
 FROM node:24-slim AS production
@@ -52,16 +40,11 @@ COPY --from=build /app/package.json ./
 # Copy pre-compiled core package (worker threads run outside SvelteKit's bundle)
 COPY --from=build /app/packages/core/dist ./core
 
-# Copy bundled CLI (uses node_modules for native deps like better-sqlite3)
-COPY --from=build /app/cli-bundle/paperless-ngx-dedupe.mjs ./cli/paperless-ngx-dedupe.mjs
-
 # Copy OTEL preload script (loaded via --require when OTEL_ENABLED=true)
 COPY --from=build /app/packages/web/telemetry.cjs ./telemetry.cjs
 
-# Create data directory and CLI wrapper
-RUN mkdir -p /app/data && \
-    printf '#!/bin/sh\nexec node /app/cli/paperless-ngx-dedupe.mjs "$@"\n' > /usr/local/bin/paperless-ngx-dedupe && \
-    chmod +x /usr/local/bin/paperless-ngx-dedupe
+# Create data directory
+RUN mkdir -p /app/data
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
