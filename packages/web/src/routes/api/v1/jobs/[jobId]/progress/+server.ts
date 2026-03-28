@@ -1,6 +1,15 @@
 import { getJob } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
+function parseResultJson(raw: string | null | undefined): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 export const GET: RequestHandler = async ({ params, locals }) => {
   const jobId = params.jobId;
   const db = locals.db;
@@ -22,7 +31,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (terminalStates.includes(initialJob.status!)) {
     const body = [
       `event: complete`,
-      `data: ${JSON.stringify({ progress: initialJob.progress, phaseProgress: initialJob.phaseProgress, message: initialJob.progressMessage, status: initialJob.status, errorMessage: initialJob.errorMessage })}`,
+      `data: ${JSON.stringify({ progress: initialJob.progress, phaseProgress: initialJob.phaseProgress, message: initialJob.progressMessage, status: initialJob.status, errorMessage: initialJob.errorMessage, ...parseResultJson(initialJob.resultJson) })}`,
       '',
       '',
     ].join('\n');
@@ -82,6 +91,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
               message: currentJob.progressMessage,
               status: currentJob.status,
               errorMessage: currentJob.errorMessage,
+              ...parseResultJson(currentJob.resultJson),
             });
             cleanup();
             controller.close();

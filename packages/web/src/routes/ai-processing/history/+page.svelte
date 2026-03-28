@@ -42,6 +42,7 @@
     { value: 'partial', label: 'Partial', icon: AlertCircle, colorClass: 'text-accent' },
     { value: 'rejected', label: 'Rejected', icon: CircleX, colorClass: 'text-muted' },
     { value: 'reverted', label: 'Reverted', icon: Undo2, colorClass: 'text-accent' },
+    { value: 'failed', label: 'Failed', icon: AlertCircle, colorClass: 'text-ember' },
   ] as const;
 
   function statusBadgeClass(status: string): string {
@@ -54,6 +55,8 @@
         return 'text-muted bg-canvas';
       case 'reverted':
         return 'bg-accent-light text-accent';
+      case 'failed':
+        return 'bg-ember-light text-ember';
       default:
         return 'bg-canvas text-muted';
     }

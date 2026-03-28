@@ -84,6 +84,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: add archive columns for deleted duplicate groups
   migrateArchiveColumns(sqlite);
 
+  // Pre-DDL migration: backfill appliedAt for failed AI results
+  migrateFailedResultAppliedAt(sqlite);
+
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
     .prepare('SELECT value FROM app_config WHERE key = ?')
@@ -249,6 +252,20 @@ function migrateArchiveColumns(sqlite: Database.Database): void {
   sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN archived_member_count INTEGER`);
   sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN archived_primary_title TEXT`);
   sqlite.exec(`ALTER TABLE duplicate_group ADD COLUMN deleted_at TEXT`);
+}
+
+/**
+ * Backfill applied_at for failed AI results so they sort chronologically in history.
+ * Previously markAiResultFailed() did not set applied_at, leaving it NULL.
+ */
+function migrateFailedResultAppliedAt(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'ai_processing_result', 'applied_at')) return;
+
+  sqlite.exec(`
+    UPDATE ai_processing_result
+    SET applied_at = created_at
+    WHERE applied_status = 'failed' AND applied_at IS NULL
+  `);
 }
 
 /**

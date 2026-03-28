@@ -472,6 +472,7 @@ export function markAiResultFailed(
   db.update(aiProcessingResult)
     .set({
       appliedStatus: 'failed',
+      appliedAt: new Date().toISOString(),
       errorMessage,
       failureType: failureType ?? null,
     })
