@@ -57,14 +57,6 @@ paperless-ngx-dedupe/
 │   │   └── src/
 │   │       ├── routes/     # UI pages and API endpoints
 │   │       └── lib/        # Shared components and utilities
-│   ├── sdk/            # TypeScript API client library
-│   │   └── src/
-│   │       ├── client.ts   # PaperlessDedupeClient class
-│   │       └── types.ts    # Exported type definitions
-│   └── cli/            # Command-line interface
-│       └── src/
-│           ├── commands/   # sync, analyze, status, config, export
-│           └── lib/        # CLI utilities
 ├── docs/               # Documentation (this site)
 ├── Dockerfile          # Multi-stage Docker build
 ├── compose.yml         # Development/production compose
@@ -76,33 +68,26 @@ paperless-ngx-dedupe/
 ```mermaid
 graph TD
     Web["packages/web<br/>SvelteKit App"] --> Core["packages/core<br/>Business Logic"]
-    CLI["packages/cli<br/>CLI Tool"] --> Core
-    SDK["packages/sdk<br/>API Client"] -.->|"HTTP"| Web
     style Core fill:#e8eaf6,stroke:#3f51b5
     style Web fill:#e8f5e9,stroke:#4caf50
-    style SDK fill:#fff3e0,stroke:#ff9800
-    style CLI fill:#fce4ec,stroke:#e91e63
 ```
 
 - **core**: No framework dependencies. All business logic lives here.
 - **web**: Imports `@paperless-dedupe/core` directly. Serves both the UI and REST API.
-- **cli**: Imports `@paperless-dedupe/core` directly. Runs operations without the web server.
-- **sdk**: Communicates with the web server over HTTP. Zero dependencies on core.
 
 ## Build Commands
 
 | Command | Description |
 |---------|-------------|
 | `pnpm dev` | Start SvelteKit dev server at http://localhost:5173 |
-| `pnpm build` | Build all packages in order: core, sdk, cli, web |
+| `pnpm build` | Build all packages in order: core, web |
 | `pnpm check` | TypeScript type-check all packages |
-| `pnpm test` | Run Vitest unit tests (core and sdk) |
+| `pnpm test` | Run Vitest unit tests (core) |
 | `pnpm test:e2e` | Run Playwright E2E tests (requires `pnpm build` first) |
 | `pnpm lint` | ESLint check |
 | `pnpm lint:fix` | ESLint auto-fix |
 | `pnpm format` | Prettier check |
 | `pnpm format:fix` | Prettier auto-fix |
-| `pnpm cli` | Run CLI in dev mode via tsx (not built output) |
 | `pnpm docker:dev` | Build and run in Docker via compose.dev.yml |
 | `pnpm docker:validate` | Full Docker build + compose integration test |
 
@@ -114,13 +99,11 @@ Tests use **Vitest** and are co-located with source files as `*.test.ts` or in `
 # Run all tests once
 pnpm test
 
-# Watch mode (per package)
+# Watch mode
 pnpm --filter @paperless-dedupe/core test:watch
-pnpm --filter @paperless-dedupe/sdk test:watch
 
 # Run tests for a specific package
 pnpm --filter @paperless-dedupe/core test
-pnpm --filter @paperless-dedupe/sdk test
 ```
 
 **Test structure:**
@@ -132,13 +115,12 @@ pnpm --filter @paperless-dedupe/sdk test
 - `packages/core/src/jobs/__tests__/` -- Job management tests
 - `packages/core/src/ai/__tests__/` -- AI extraction and processing tests
 - `packages/core/src/export/__tests__/` -- Export and config backup tests
-- `packages/sdk/src/__tests__/` -- SDK client tests
 - `packages/web/src/e2e/` -- Playwright E2E tests (separate from `pnpm test`)
 
 ## Code Conventions
 
 - **Formatting**: Prettier -- 100 char width, single quotes, trailing commas, 2-space indent
-- **Path aliases**: `@paperless-dedupe/core` resolves to `packages/core/src/index.ts`; `@paperless-dedupe/sdk` resolves to `packages/sdk/src/index.ts`
+- **Path aliases**: `@paperless-dedupe/core` resolves to `packages/core/src/index.ts`
 - **API routes**: SvelteKit file-based routing at `packages/web/src/routes/api/v1/`
 - **Validation**: Zod schemas for environment config and API request bodies
 - **Logging**: Pino structured JSON logging
@@ -166,7 +148,7 @@ pnpm docker:validate
 The **Dockerfile** uses a 3-stage build:
 
 1. **deps** -- Install pnpm dependencies
-2. **build** -- Build core + web, bundle CLI via esbuild, deploy with flat node_modules
-3. **production** -- Minimal `node:24-slim` runtime with tini init, pre-compiled core (for worker threads), bundled CLI, and OTEL preload script
+2. **build** -- Build core + web, deploy with flat node_modules
+3. **production** -- Minimal `node:24-slim` runtime with tini init, pre-compiled core (for worker threads), and OTEL preload script
 
 The container runs as a non-root user using `PUID`/`PGID` (defaults: `1000:1000`). Data is persisted at `/app/data` (mounted from `./docker-data` by default). The healthcheck hits `/api/v1/health` on port 3000.
