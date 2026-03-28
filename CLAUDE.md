@@ -15,7 +15,7 @@ Path aliases: `@paperless-dedupe/core` → `packages/core/src/index.ts`; `@paper
 
 ## Quality Checks
 
-Always run the full build and type-check (`npm run build` or equivalent) after completing any code changes. Do not consider a task done until the build passes cleanly with zero errors.
+Always run the full build and type-check (`pnpm build` or equivalent) after completing any code changes. Do not consider a task done until the build passes cleanly with zero errors.
 
 After editing files, check for duplicate imports and stale references from the previous code. Run ESLint or the project linter to catch these before proceeding.
 
@@ -64,7 +64,7 @@ Run `pnpm lint && pnpm format && pnpm check && pnpm test` before pushing. CI add
 
   **Why both steps are needed:** The auto-migration system stores a schema hash after "applying" DDL, but it generates `CREATE TABLE IF NOT EXISTS` statements that skip existing tables — so new columns on existing tables are never added. The pre-DDL migration runs before the hash check and handles this reliably.
 
-- The CLI uses esbuild with `--external:better-sqlite3`. Adding a native module to `packages/cli` requires adding it to the esbuild externals list in the CLI build config.
+- The CLI is compiled with `tsc`. Native modules like `better-sqlite3` are resolved at runtime via Node.js.
 
 ## Key Files & References
 
