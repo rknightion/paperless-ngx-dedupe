@@ -5,7 +5,7 @@ description: Technical architecture of the Paperless NGX Dedupe monorepo — pac
 
 # Architecture
 
-Paperless NGX Dedupe is a pnpm monorepo with four packages that separate concerns cleanly between business logic, web interface, programmatic access, and CLI tooling.
+Paperless NGX Dedupe is a pnpm monorepo with two packages that separate concerns cleanly between business logic and the web interface.
 
 ## Monorepo Overview
 
@@ -14,33 +14,23 @@ graph TD
     subgraph "packages/"
         Core["core<br/><small>Business logic, algorithms, DB</small>"]
         Web["web<br/><small>SvelteKit 2 app (UI + API)</small>"]
-        SDK["sdk<br/><small>TypeScript API client</small>"]
-        CLI["cli<br/><small>Command-line interface</small>"]
     end
 
     Web -->|"imports"| Core
-    CLI -->|"imports"| Core
-    SDK -.->|"HTTP requests"| Web
 
     Paperless["Paperless-NGX"]
     Browser["Browser"]
-    Terminal["Terminal"]
-    Script["Scripts / Apps"]
 
     Browser -->|"HTTP"| Web
-    Terminal --> CLI
-    Script --> SDK
     Core -->|"REST API"| Paperless
 
     style Core fill:#e8eaf6,stroke:#3f51b5
     style Web fill:#e8f5e9,stroke:#4caf50
-    style SDK fill:#fff3e0,stroke:#ff9800
-    style CLI fill:#fce4ec,stroke:#e91e63
 ```
 
 ### packages/core
 
-Framework-agnostic TypeScript library containing all business logic. No web framework dependencies — can be reused by the CLI, future tools, or SDKs that operate directly on the database.
+Framework-agnostic TypeScript library containing all business logic. No web framework dependencies.
 
 **Key modules:**
 
@@ -68,23 +58,6 @@ SvelteKit 2 application (Svelte 5 runes) that serves both the web UI and the RES
 - `lib/server/` -- Server-side utilities (database connection, API helpers)
 - `hooks.server.ts` -- SvelteKit server hooks for request processing
 
-### packages/sdk
-
-Typed TypeScript client for the REST API. Zero dependencies on `core` — communicates over HTTP.
-
-- `client.ts` -- `PaperlessDedupeClient` class with methods for every API endpoint
-- `types.ts` -- Full type definitions for all request/response shapes
-- `errors.ts` -- Typed error classes (API errors, network errors)
-- `sse.ts` -- Server-Sent Events subscription for job progress
-
-### packages/cli
-
-Command-line interface using Commander.js. Imports `core` directly (no web server required).
-
-- Commands: `sync`, `analyze`, `status`, `config show/set`, `export duplicates/config`
-- Supports `--json` flag for machine-readable output
-- See [CLI Reference](cli-reference.md) for full documentation
-
 ## Key Technical Choices
 
 | Area | Choice | Rationale |
@@ -106,7 +79,7 @@ Command-line interface using Commander.js. Imports `core` directly (no web serve
 
 ```mermaid
 sequenceDiagram
-    participant UI as Web UI / CLI
+    participant UI as Web UI
     participant API as API Layer
     participant JM as Job Manager
     participant W as Worker Thread
@@ -129,7 +102,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant UI as Web UI / CLI
+    participant UI as Web UI
     participant API as API Layer
     participant W as Worker Thread
     participant DB as SQLite
