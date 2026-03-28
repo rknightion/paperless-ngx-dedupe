@@ -2,6 +2,7 @@ import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
   getAiConfig,
   estimateProcessingCost,
+  refreshPricingIfStale,
   PaperlessClient,
   toPaperlessConfig,
 } from '@paperless-dedupe/core';
@@ -11,6 +12,9 @@ export const GET: RequestHandler = async ({ locals }) => {
   if (!locals.config.AI_ENABLED) {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
   }
+
+  // Ensure pricing cache is populated
+  await refreshPricingIfStale(locals.db);
 
   const aiConfig = getAiConfig(locals.db);
   const paperlessConfig = toPaperlessConfig(locals.config);

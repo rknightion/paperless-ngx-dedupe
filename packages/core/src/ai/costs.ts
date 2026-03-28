@@ -95,12 +95,40 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
         continue;
       }
 
-      // Try with provider prefix: "openai/model" or "anthropic/model"
+      // Try with provider prefix using both "/" and "." separators
+      // LiteLLM uses "anthropic." prefix (e.g. "anthropic.claude-opus-4-6-v1")
       const isOpenai = OPENAI_MODELS.some((m) => m.id === modelId);
-      const providerPrefix = isOpenai ? 'openai/' : 'anthropic/';
-      const prefixed = providerPrefix + modelId;
-      if (data[prefixed] && data[prefixed].input_cost_per_token != null) {
-        pricingMap[modelId] = toPricing(data[prefixed]);
+      const providerSlash = isOpenai ? 'openai/' : 'anthropic/';
+      const providerDot = isOpenai ? 'openai.' : 'anthropic.';
+
+      const slashPrefixed = providerSlash + modelId;
+      if (data[slashPrefixed] && data[slashPrefixed].input_cost_per_token != null) {
+        pricingMap[modelId] = toPricing(data[slashPrefixed]);
+        continue;
+      }
+
+      // Try dot-prefixed exact match, then dot-prefixed prefix match
+      // (handles keys like "anthropic.claude-opus-4-6-v1")
+      const dotPrefixed = providerDot + modelId;
+      if (data[dotPrefixed] && data[dotPrefixed].input_cost_per_token != null) {
+        pricingMap[modelId] = toPricing(data[dotPrefixed]);
+        continue;
+      }
+
+      const dotPrefixMatch = Object.keys(data).find(
+        (key) => key.startsWith(dotPrefixed) && data[key].input_cost_per_token != null,
+      );
+      if (dotPrefixMatch) {
+        pricingMap[modelId] = toPricing(data[dotPrefixMatch]);
+        continue;
+      }
+
+      // Last resort: find any key that contains the model ID
+      const containsMatch = Object.keys(data).find(
+        (key) => key.includes(modelId) && data[key].input_cost_per_token != null,
+      );
+      if (containsMatch) {
+        pricingMap[modelId] = toPricing(data[containsMatch]);
       }
     }
 
@@ -145,8 +173,8 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
 }
 
 /**
- * Refresh pricing if the cached data is stale (older than 24 hours) or missing.
- * Intended to be called on app startup.
+ * Refresh pricing if the cached data is stale (older than 24 hours), missing,
+ * or empty (no models matched during a previous fetch).
  */
 export async function refreshPricingIfStale(db: AppDatabase): Promise<void> {
   const row = db
@@ -156,6 +184,13 @@ export async function refreshPricingIfStale(db: AppDatabase): Promise<void> {
     .get();
 
   if (!row) {
+    await fetchAndCachePricing(db);
+    return;
+  }
+
+  // Force re-fetch if the cached map is empty (previous fetch matched no models)
+  const pricingMap = getAllModelPricing(db);
+  if (!pricingMap || Object.keys(pricingMap).length === 0) {
     await fetchAndCachePricing(db);
     return;
   }
