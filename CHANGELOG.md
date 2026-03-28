@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.12.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.11.0...v0.12.0) (2026-03-28)
+
+
+### Features
+
+* **ai:** add protected tags configuration schema ([e434f13](https://github.com/rknightion/paperless-ngx-dedupe/commit/e434f13c32de02d0bd880955880ba3f1f9bf2aa6))
+* **ai:** implement protected tags config storage and parsing ([210bbe5](https://github.com/rknightion/paperless-ngx-dedupe/commit/210bbe566a452600d184c5fa66a9555c6ecf46d2))
+* **ai:** implement protected tags filtering in applyAiResult ([320f8f3](https://github.com/rknightion/paperless-ngx-dedupe/commit/320f8f33b2ba0809427ec0236420d4f6b6802995))
+* **ai:** integrate protected tags into auto-apply workflows ([bc36bb6](https://github.com/rknightion/paperless-ngx-dedupe/commit/bc36bb6fde017878409fb2f10e507faae69b3cde))
+* **api:** add job history management endpoints ([5e4bdd5](https://github.com/rknightion/paperless-ngx-dedupe/commit/5e4bdd58f200ca4fcecf9ee8d50632a4e81f99b6))
+* **api:** add protected tags to AI result apply endpoint ([45ed955](https://github.com/rknightion/paperless-ngx-dedupe/commit/45ed9559165074b1bcb875d6d9523fbe8f8a53f3))
+* **batch-worker:** integrate cross-group cleanup and improve progress reporting ([15fc0eb](https://github.com/rknightion/paperless-ngx-dedupe/commit/15fc0ebb019274defb4c56b1aa98172c40c523af))
+* **core:** add database index for document cleanup optimization ([77dd475](https://github.com/rknightion/paperless-ngx-dedupe/commit/77dd475b065bee63844c5f73284c3636eeb7845c))
+* **core:** implement cross-group document cleanup functionality ([3e9ff81](https://github.com/rknightion/paperless-ngx-dedupe/commit/3e9ff81e5cf51f4270a8f0b811c7b0d4dbbca493))
+* **jobs:** add clearJobHistory function to manager ([63530b1](https://github.com/rknightion/paperless-ngx-dedupe/commit/63530b108b785b38e0119329ddbbc4c8a678c883))
+* **sdk:** extend Job interface and add job management methods ([a7b6250](https://github.com/rknightion/paperless-ngx-dedupe/commit/a7b62507334462cb96ce00464df2e99c34b00895))
+* **web:** add API endpoint for document cleanup across groups ([7fee819](https://github.com/rknightion/paperless-ngx-dedupe/commit/7fee819ea2d4cfbc7fa88dae69d04b85c5174cf9))
+* **web:** add Jobs navigation item to layout ([6601200](https://github.com/rknightion/paperless-ngx-dedupe/commit/66012000958feaf047b597e91da26f988e23bfec))
+* **web:** add jobs page with filtering and history management ([75fb964](https://github.com/rknightion/paperless-ngx-dedupe/commit/75fb96458eec06279efeb53a1e728f9e72a6032f))
+* **web:** add protected tags settings UI ([f597a85](https://github.com/rknightion/paperless-ngx-dedupe/commit/f597a851a7e0cf0c8644b5a45df54af1457cf1a6))
+* **web:** enhance dashboard with jobs section link ([4e5df27](https://github.com/rknightion/paperless-ngx-dedupe/commit/4e5df27f0ed4f6790079c691982c30c0bbb1820e))
+* **web:** enhance JobStatusCard with detailed result formatting ([c46ea07](https://github.com/rknightion/paperless-ngx-dedupe/commit/c46ea076da9db08d1cc3522a8647d61adb9c3495))
+* **web:** use cross-group cleanup in duplicate management UI ([2a085fc](https://github.com/rknightion/paperless-ngx-dedupe/commit/2a085fc9470acd37b82930c3078279535360edaf))
+
+
+### Bug Fixes
+
+* **ui:** replace div with button element for drawer overlay ([bea1127](https://github.com/rknightion/paperless-ngx-dedupe/commit/bea11277a2f097937e998aa1d04ef1050f067a2c))
+
+
+### Miscellaneous
+
+* **deps:** update dependency ai to v6.0.141 ([#265](https://github.com/rknightion/paperless-ngx-dedupe/issues/265)) ([f155dfe](https://github.com/rknightion/paperless-ngx-dedupe/commit/f155dfece07c36e615d396674f88047f6c51468b))
+* **deps:** update dependency drizzle-orm to v0.45.2 ([#266](https://github.com/rknightion/paperless-ngx-dedupe/issues/266)) ([c1b2381](https://github.com/rknightion/paperless-ngx-dedupe/commit/c1b23817eb2ac3bcf0f62ca8c18f3a9836b47562))
+* **deps:** update github/codeql-action digest to c10b806 ([#263](https://github.com/rknightion/paperless-ngx-dedupe/issues/263)) ([c880aeb](https://github.com/rknightion/paperless-ngx-dedupe/commit/c880aeb2586e066fc1a8bb403768f33bb91f901a))
+
+
+### Documentation
+
+* remove CLI and SDK references from getting started guide ([ba09889](https://github.com/rknightion/paperless-ngx-dedupe/commit/ba0988930f3a8ce5bf87a0cc531df51c0e972e84))
+* remove CLI reference documentation ([55b10be](https://github.com/rknightion/paperless-ngx-dedupe/commit/55b10be227752f0a2f8eec66c70b5684b2deced2))
+* remove SDK reference documentation ([5d0036d](https://github.com/rknightion/paperless-ngx-dedupe/commit/5d0036dc3f6ca18070198c80d7e04ac5d1aae143))
+* update architecture documentation for two-package structure ([9207b56](https://github.com/rknightion/paperless-ngx-dedupe/commit/9207b563ac21e0fdeae5b8cdd32d7fa7f6dfc7ff))
+* update CLAUDE.md documentation for simplified architecture ([f462374](https://github.com/rknightion/paperless-ngx-dedupe/commit/f462374f8734d891cb4dbf6bce20128b33bd55e9))
+* update contributing guide for simplified package structure ([f339bfa](https://github.com/rknightion/paperless-ngx-dedupe/commit/f339bfa99139ab5180403e9f5d0f4eb90b4143a8))
+* update development guide for two-package workflow ([e519113](https://github.com/rknightion/paperless-ngx-dedupe/commit/e519113ba4caf7e18d683194cfdf600a5bcc030b))
+* update documentation for package structure ([e52d851](https://github.com/rknightion/paperless-ngx-dedupe/commit/e52d8510251b16bda886a6be39a51e7a35b7ba63))
+* update main documentation index and navigation ([33e8d33](https://github.com/rknightion/paperless-ngx-dedupe/commit/33e8d33a385fc65b32ab26f7c5ea53c1df9a28d2))
+* update task documentation to remove SDK references ([325ecbc](https://github.com/rknightion/paperless-ngx-dedupe/commit/325ecbcffa4fc4a8a7cd8ac02877e6ebfe4f3d0d))
+
+
+### Refactoring
+
+* remove SDK and CLI packages from monorepo ([2ebfdeb](https://github.com/rknightion/paperless-ngx-dedupe/commit/2ebfdebb02a6bd363c123c74208a2086537779af))
+
+
+### Tests
+
+* **ai:** add comprehensive protected tags test suite ([bd7890c](https://github.com/rknightion/paperless-ngx-dedupe/commit/bd7890c328c573d1610737928533b7ad1d3e2182))
+* **ai:** add protected tags configuration tests ([d3f17b5](https://github.com/rknightion/paperless-ngx-dedupe/commit/d3f17b58e5c75b9718879077c0940b8fdb512741))
+
 ## [0.11.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.10.0...v0.11.0) (2026-03-27)
 
 
