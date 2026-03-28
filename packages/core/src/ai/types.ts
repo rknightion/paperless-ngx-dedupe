@@ -125,6 +125,10 @@ export const aiConfigSchema = z.object({
   neverOverwriteNonEmpty: z.boolean().default(false),
   tagsOnlyAutoApply: z.boolean().default(false),
 
+  // Protected tags — never add or remove these tags during AI apply
+  protectedTagsEnabled: z.boolean().default(false),
+  protectedTagNames: z.array(z.string()).default(['email']),
+
   // Auto-apply rules (opt-in, maximally conservative defaults)
   autoApplyEnabled: z.boolean().default(false),
   autoApplyRequireAllAboveThreshold: z.boolean().default(true),
