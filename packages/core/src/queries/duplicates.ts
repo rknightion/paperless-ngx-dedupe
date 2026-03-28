@@ -719,3 +719,78 @@ export function purgeDeletedGroups(db: AppDatabase): { purged: number } {
   const result = db.delete(duplicateGroup).where(eq(duplicateGroup.status, 'deleted')).run();
   return { purged: result.changes };
 }
+
+// ── Cross-group cleanup ────────────────────────────────────────────────
+
+export function removeDocumentFromAllGroups(
+  db: AppDatabase,
+  documentId: string,
+): { groupsAffected: number; groupsAutoResolved: number } {
+  // Find all groups that contain this document
+  const memberships = db
+    .select({
+      memberId: duplicateMember.id,
+      groupId: duplicateMember.groupId,
+      isPrimary: duplicateMember.isPrimary,
+    })
+    .from(duplicateMember)
+    .where(eq(duplicateMember.documentId, documentId))
+    .all();
+
+  if (memberships.length === 0) return { groupsAffected: 0, groupsAutoResolved: 0 };
+
+  const now = new Date().toISOString();
+  let groupsAutoResolved = 0;
+
+  db.transaction((tx) => {
+    // Delete all member rows for this document across all groups
+    tx.delete(duplicateMember).where(eq(duplicateMember.documentId, documentId)).run();
+
+    // Process each affected group
+    for (const membership of memberships) {
+      const [{ remaining }] = tx
+        .select({ remaining: count() })
+        .from(duplicateMember)
+        .where(eq(duplicateMember.groupId, membership.groupId))
+        .all();
+
+      if (remaining < 2) {
+        // Auto-resolve: fewer than 2 members means it's no longer a duplicate
+        tx.update(duplicateGroup)
+          .set({ status: 'false_positive', updatedAt: now })
+          .where(
+            and(eq(duplicateGroup.id, membership.groupId), ne(duplicateGroup.status, 'deleted')),
+          )
+          .run();
+        groupsAutoResolved++;
+      } else if (membership.isPrimary) {
+        // The deleted document was primary in this group — promote the first remaining member
+        const nextPrimary = tx
+          .select({ id: duplicateMember.id })
+          .from(duplicateMember)
+          .where(eq(duplicateMember.groupId, membership.groupId))
+          .limit(1)
+          .get();
+
+        if (nextPrimary) {
+          tx.update(duplicateMember)
+            .set({ isPrimary: true })
+            .where(eq(duplicateMember.id, nextPrimary.id))
+            .run();
+        }
+
+        tx.update(duplicateGroup)
+          .set({ updatedAt: now })
+          .where(eq(duplicateGroup.id, membership.groupId))
+          .run();
+      } else {
+        tx.update(duplicateGroup)
+          .set({ updatedAt: now })
+          .where(eq(duplicateGroup.id, membership.groupId))
+          .run();
+      }
+    }
+  });
+
+  return { groupsAffected: memberships.length, groupsAutoResolved };
+}

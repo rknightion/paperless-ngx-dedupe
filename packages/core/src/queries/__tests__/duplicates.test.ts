@@ -15,6 +15,7 @@ import {
   purgeDeletedGroups,
   archiveAndDeleteMembers,
   removeMemberFromGroup,
+  removeDocumentFromAllGroups,
   StatusTransitionError,
   PrimaryMemberError,
 } from '../duplicates.js';
@@ -878,5 +879,110 @@ describe('removeMemberFromGroup', () => {
 
     const group = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-1')).get();
     expect(group!.status).toBe('pending');
+  });
+});
+
+describe('removeDocumentFromAllGroups', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestData(db);
+  });
+
+  it('removes a document from multiple groups and auto-resolves', () => {
+    // Put doc-2 in grp-2 as well (it's already in grp-1)
+    db.insert(duplicateMember)
+      .values({ id: 'mem-cross', groupId: 'grp-2', documentId: 'doc-2', isPrimary: false })
+      .run();
+
+    const result = removeDocumentFromAllGroups(db, 'doc-2');
+
+    expect(result.groupsAffected).toBe(2);
+    // grp-1 had 2 members (doc-1, doc-2), now 1 → auto-resolved
+    // grp-2 had 3 members (doc-3, doc-4, doc-2), now 2 → NOT auto-resolved
+    expect(result.groupsAutoResolved).toBe(1);
+
+    const grp1 = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-1')).get();
+    expect(grp1!.status).toBe('false_positive');
+
+    const grp2 = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-2')).get();
+    expect(grp2!.status).toBe('pending');
+
+    // doc-2 should have no member rows anywhere
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.documentId, 'doc-2'))
+      .all();
+    expect(members).toHaveLength(0);
+  });
+
+  it('promotes a new primary when the deleted doc was primary in another group', () => {
+    // Put doc-1 (primary of grp-1) into grp-2 as well, also as primary
+    db.insert(duplicateMember)
+      .values({ id: 'mem-cross-primary', groupId: 'grp-2', documentId: 'doc-1', isPrimary: true })
+      .run();
+
+    removeDocumentFromAllGroups(db, 'doc-1');
+
+    // grp-2 still has doc-3 and doc-4, one of them should now be primary
+    const grp2Members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, 'grp-2'))
+      .all();
+    expect(grp2Members).toHaveLength(2);
+    expect(grp2Members.some((m) => m.isPrimary)).toBe(true);
+  });
+
+  it('returns zero for unknown documentId', () => {
+    const result = removeDocumentFromAllGroups(db, 'nonexistent');
+    expect(result).toEqual({ groupsAffected: 0, groupsAutoResolved: 0 });
+  });
+
+  it('skips groups already in deleted status', () => {
+    // Mark grp-1 as deleted
+    archiveAndDeleteMembers(db, 'grp-1');
+
+    // doc-2 is no longer a member of grp-1 (members stripped), but is still in test data
+    // Put doc-3 in a new group along with doc-4 being in grp-2
+    const result = removeDocumentFromAllGroups(db, 'doc-2');
+
+    // doc-2 was only in grp-1, which was already archived (members stripped)
+    expect(result.groupsAffected).toBe(0);
+
+    // grp-1 should remain deleted
+    const grp1 = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-1')).get();
+    expect(grp1!.status).toBe('deleted');
+  });
+
+  it('works after archiveAndDeleteMembers for cross-group cleanup', () => {
+    // Simulate doc-2 appearing in both grp-1 and grp-2
+    db.insert(duplicateMember)
+      .values({ id: 'mem-cross', groupId: 'grp-2', documentId: 'doc-2', isPrimary: false })
+      .run();
+
+    // Archive grp-1 (as the batch worker would)
+    archiveAndDeleteMembers(db, 'grp-1');
+
+    // Now clean up doc-2 from other groups (as the batch worker would after archiving)
+    const result = removeDocumentFromAllGroups(db, 'doc-2');
+
+    // grp-2 had doc-3, doc-4, doc-2 → now doc-3, doc-4 (still 2 members, no auto-resolve)
+    expect(result.groupsAffected).toBe(1);
+    expect(result.groupsAutoResolved).toBe(0);
+
+    const grp2 = db.select().from(duplicateGroup).where(eq(duplicateGroup.id, 'grp-2')).get();
+    expect(grp2!.status).toBe('pending');
+
+    const grp2Members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, 'grp-2'))
+      .all();
+    expect(grp2Members).toHaveLength(2);
   });
 });
