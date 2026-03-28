@@ -3,7 +3,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import { SvelteSet } from 'svelte/reactivity';
-  import type { AiStats, UnprocessedDocument } from '@paperless-dedupe/core';
+  import type { AiStats, UnprocessedDocument, DetailedCostEstimate } from '@paperless-dedupe/core';
   import {
     FileText,
     AlertCircle,
@@ -15,8 +15,11 @@
     Play,
     Inbox,
     CircleX,
+    DollarSign,
+    BarChart3,
   } from 'lucide-svelte';
   import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
+  import AiCostComparisonDialog from '$lib/components/ai/AiCostComparisonDialog.svelte';
 
   let { data } = $props();
 
@@ -110,6 +113,40 @@
       addToast('error', 'Failed to dismiss result');
     }
   }
+
+  // ── Cost estimation ──
+  let costEstimate: DetailedCostEstimate | null = $state(null);
+  let costLoading = $state(false);
+  let costError = $state(false);
+  let showCostComparison = $state(false);
+
+  $effect(() => {
+    if (data.unprocessed.total > 0) {
+      costLoading = true;
+      costError = false;
+      fetch('/api/v1/ai/costs/estimate-detailed')
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((json) => {
+          costEstimate = json.data as DetailedCostEstimate;
+          costLoading = false;
+        })
+        .catch(() => {
+          costEstimate = null;
+          costLoading = false;
+          costError = true;
+        });
+    } else {
+      costEstimate = null;
+    }
+  });
+
+  function formatCostRange(est: DetailedCostEstimate): string {
+    const best = est.currentModel.bestCase.totalCostUsd;
+    const worst = est.currentModel.worstCase.totalCostUsd;
+    const fmt = (v: number) => (v < 0.01 ? '<$0.01' : `$${v.toFixed(2)}`);
+    if (best === worst) return fmt(worst);
+    return `${fmt(best)} – ${fmt(worst)}`;
+  }
 </script>
 
 <div class="space-y-6">
@@ -150,6 +187,56 @@
         {/if}
       </div>
     </div>
+
+    <!-- Cost estimate banner -->
+    {#if costLoading}
+      <div class="border-soft bg-surface flex items-center gap-3 rounded-lg border px-4 py-3">
+        <div class="bg-canvas-alt h-4 w-4 animate-pulse rounded"></div>
+        <div class="flex-1 space-y-1.5">
+          <div class="bg-canvas-alt h-4 w-32 animate-pulse rounded"></div>
+          <div class="bg-canvas-alt h-3 w-48 animate-pulse rounded"></div>
+        </div>
+      </div>
+    {:else if costEstimate}
+      <div
+        class="border-soft bg-surface flex flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div class="flex items-start gap-3">
+          <div class="bg-accent-light mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+            <DollarSign class="text-accent h-4 w-4" />
+          </div>
+          <div>
+            <p class="text-ink text-sm font-medium">
+              Estimated cost: <span class="tabular-nums">{formatCostRange(costEstimate)}</span>
+              <span class="text-muted font-normal">with {costEstimate.currentModel.modelName}</span>
+            </p>
+            <p class="text-muted mt-0.5 text-xs">
+              {costEstimate.documentCount.toLocaleString()} document{costEstimate.documentCount === 1
+                ? ''
+                : 's'},
+              ~{Math.round(
+                (costEstimate.tokenBreakdown.systemPromptTokens +
+                  costEstimate.tokenBreakdown.totalUserPromptTokens /
+                    costEstimate.documentCount) /
+                  1,
+              ).toLocaleString()} tokens per document avg
+            </p>
+          </div>
+        </div>
+        <button
+          onclick={() => (showCostComparison = true)}
+          class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+        >
+          <BarChart3 class="h-3.5 w-3.5" />
+          Compare Models
+        </button>
+      </div>
+    {:else if costError}
+      <div class="border-soft bg-surface flex items-center gap-3 rounded-lg border px-4 py-3">
+        <DollarSign class="text-muted h-4 w-4" />
+        <p class="text-muted text-sm">Cost estimate unavailable</p>
+      </div>
+    {/if}
 
     {#if data.unprocessed.items.length === 0}
       <div class="panel flex flex-col items-center py-12 text-center">
@@ -348,3 +435,14 @@
     </section>
   {/if}
 </div>
+
+{#if costEstimate}
+  <AiCostComparisonDialog
+    open={showCostComparison}
+    documentCount={costEstimate.documentCount}
+    allModels={costEstimate.allModels}
+    currentModelId={costEstimate.currentModel.modelId}
+    reasoningEffort={data.reasoningEffort ?? 'low'}
+    onclose={() => (showCostComparison = false)}
+  />
+{/if}
