@@ -65,7 +65,6 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           pnpm --filter @paperless-dedupe/core exec vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
-          pnpm --filter @paperless-dedupe/sdk exec vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
 
       - name: Upload test results
         if: ${{ !cancelled() }}
@@ -74,7 +73,6 @@ jobs:
           name: unit-test-results
           path: |
             packages/core/test-results/junit.xml
-            packages/sdk/test-results/junit.xml
           retention-days: 7
 
       - name: Upload coverage reports
@@ -84,7 +82,6 @@ jobs:
           name: coverage-reports
           path: |
             packages/core/coverage/
-            packages/sdk/coverage/
           retention-days: 7
 
       - name: Unit test report
@@ -183,13 +180,6 @@ jobs:
           json-summary-path: coverage/core/coverage/coverage-summary.json
           json-final-path: coverage/core/coverage/coverage-final.json
           name: Core Package Coverage
-
-      - name: SDK coverage summary
-        uses: davelosert/vitest-coverage-report-action@2500dafcee7dd64f85ab689c0b83798a8359770e # v2
-        with:
-          json-summary-path: coverage/sdk/coverage/coverage-summary.json
-          json-final-path: coverage/sdk/coverage/coverage-final.json
-          name: SDK Package Coverage
 
   docker-build-verify:
     if: github.event_name == 'pull_request'
