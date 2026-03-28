@@ -20,6 +20,7 @@
   } from 'lucide-svelte';
   import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
   import AiCostComparisonDialog from '$lib/components/ai/AiCostComparisonDialog.svelte';
+  import QueueFilterBar from '$lib/components/ai/QueueFilterBar.svelte';
 
   let { data } = $props();
 
@@ -140,6 +141,34 @@
     }
   });
 
+  // ── Filters ──
+  const hasActiveFilters = $derived(
+    !!(
+      data.filters.search ||
+      data.filters.correspondent ||
+      data.filters.documentType ||
+      data.filters.tag ||
+      data.filters.sort
+    ),
+  );
+
+  function handleFilterApply(filters: Record<string, string | undefined>) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined) params.set(key, value);
+    }
+    goto(`/ai-processing/queue?${params.toString()}`);
+  }
+
+  // Clear stale selections when items change
+  $effect(() => {
+    const currentIds = new Set(data.unprocessed.items.map((d: UnprocessedDocument) => d.id));
+    for (const id of selectedDocIds) {
+      if (!currentIds.has(id)) selectedDocIds.delete(id);
+    }
+  });
+
   function formatCostRange(est: DetailedCostEstimate): string {
     const best = est.currentModel.bestCase.totalCostUsd;
     const worst = est.currentModel.worstCase.totalCostUsd;
@@ -187,6 +216,19 @@
         {/if}
       </div>
     </div>
+
+    <!-- Filter bar -->
+    <QueueFilterBar
+      search={data.filters.search}
+      sort={data.filters.sort}
+      correspondent={data.filters.correspondent}
+      documentType={data.filters.documentType}
+      tag={data.filters.tag}
+      seed={data.filters.seed}
+      correspondents={data.facets.correspondents}
+      documentTypes={data.facets.documentTypes}
+      onapply={handleFilterApply}
+    />
 
     <!-- Cost estimate banner -->
     {#if costLoading}
@@ -244,10 +286,15 @@
         <div class="bg-success-light mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
           <FileText class="text-success h-7 w-7" />
         </div>
-        <p class="text-ink text-sm font-medium">All documents have been processed</p>
-        <p class="text-muted mt-1 text-sm">
-          There are no unprocessed documents remaining in the queue.
-        </p>
+        {#if hasActiveFilters}
+          <p class="text-ink text-sm font-medium">No documents match your filters</p>
+          <p class="text-muted mt-1 text-sm">Try adjusting your search or filter criteria.</p>
+        {:else}
+          <p class="text-ink text-sm font-medium">All documents have been processed</p>
+          <p class="text-muted mt-1 text-sm">
+            There are no unprocessed documents remaining in the queue.
+          </p>
+        {/if}
       </div>
     {:else}
       <div class="panel overflow-hidden">

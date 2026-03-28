@@ -295,6 +295,7 @@ export {
   getAiResultIdsByFilter,
   getDocumentIdsByAiFilter,
   getUnprocessedDocuments,
+  getUnprocessedDocumentFacets,
 } from './ai/queries.js';
 export type {
   AiResultFilters,
@@ -303,6 +304,7 @@ export type {
   AiStats,
   ApplySnapshot,
   UnprocessedDocument,
+  UnprocessedDocumentFilters,
 } from './ai/queries.js';
 export { normalizeSuggestedLabel, normalizeSuggestedTags } from './ai/normalize.js';
 export {
