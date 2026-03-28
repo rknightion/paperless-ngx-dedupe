@@ -10,6 +10,7 @@
     GroupPreviewModal,
     RecycleBinPrompt,
   } from '$lib/components';
+  import { connectJobSSE } from '$lib/sse';
   import {
     trackDuplicatesFilterApplied,
     trackDuplicatesBulkAction,
@@ -25,6 +26,7 @@
   let actionFeedback: { type: 'success' | 'error'; message: string } | null = $state(null);
   let showDeleteConfirm = $state(false);
   let showRecycleBinPrompt = $state(false);
+  let deleteProgress = $state<{ progress: number; message: string } | null>(null);
   let showPurgeConfirm = $state(false);
   let previewGroupId: string | null = $state(null);
   let previewGroupTitle = $state('');
@@ -234,12 +236,47 @@
   async function deleteNonPrimary() {
     showDeleteConfirm = false;
     trackDuplicatesBulkAction('delete', selectedIds.size);
-    const success = await batchAction('/api/v1/batch/delete-non-primary', {
-      groupIds: [...selectedIds],
-      confirm: true,
-    });
-    if (success) {
-      showRecycleBinPrompt = true;
+    isSubmitting = true;
+    actionFeedback = null;
+    try {
+      const res = await fetch('/api/v1/batch/delete-non-primary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupIds: [...selectedIds], confirm: true }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        actionFeedback = { type: 'error', message: json.error?.message ?? 'Action failed' };
+        isSubmitting = false;
+        return;
+      }
+      const json = await res.json();
+      const jobId = json.data?.jobId;
+      if (jobId) {
+        deleteProgress = { progress: 0, message: 'Starting...' };
+        connectJobSSE(jobId, {
+          onProgress: (d) => {
+            deleteProgress = { progress: d.progress, message: d.message ?? '' };
+          },
+          onComplete: async () => {
+            deleteProgress = null;
+            isSubmitting = false;
+            selectedIds = new Set();
+            await invalidateAll();
+            showRecycleBinPrompt = true;
+          },
+          onError: () => {
+            deleteProgress = null;
+            isSubmitting = false;
+            actionFeedback = { type: 'error', message: 'Delete operation failed' };
+          },
+        });
+      } else {
+        isSubmitting = false;
+      }
+    } catch {
+      isSubmitting = false;
+      actionFeedback = { type: 'error', message: 'Request failed' };
     }
   }
 
@@ -578,6 +615,14 @@
       <button onclick={() => (selectedIds = new Set())} class="text-muted hover:text-ink text-sm">
         Clear selection
       </button>
+      {#if deleteProgress}
+        <div class="text-muted flex items-center gap-2 text-sm">
+          <span
+            class="border-accent inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+          ></span>
+          {deleteProgress.message || `${Math.round(deleteProgress.progress * 100)}%`}
+        </div>
+      {/if}
     </div>
   {/if}
 
