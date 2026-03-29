@@ -16,7 +16,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   let allowClearing = false;
   let createMissingEntities = true;
-  let fields: ('correspondent' | 'documentType' | 'tags')[] = [
+  let fields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
+    'title',
     'correspondent',
     'documentType',
     'tags',
@@ -32,7 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
       if (Array.isArray(body?.fields)) {
         fields = body.fields.filter((f: string) =>
-          ['correspondent', 'documentType', 'tags'].includes(f),
+          ['title', 'correspondent', 'documentType', 'tags'].includes(f),
         );
       }
 

@@ -37,10 +37,11 @@ function createMockProvider(
 ): AiProviderInterface {
   const defaultResult: AiExtractionResult = {
     response: {
+      title: 'Amazon Invoice - Jan 2024',
       correspondent: 'Amazon',
       documentType: 'Invoice',
       tags: ['finance'],
-      confidence: { correspondent: 0.9, documentType: 0.95, tags: 0.8 },
+      confidence: { title: 0.9, correspondent: 0.9, documentType: 0.95, tags: 0.8 },
       evidence: 'Amazon header',
     },
     usage: { promptTokens: 100, completionTokens: 50 },

@@ -77,6 +77,10 @@
   let aiIncludeTags = $state(initialAiConfig?.includeTags ?? false);
   let aiReasoningEffort = $state(initialAiConfig?.reasoningEffort ?? 'low');
   let aiMaxRetries = $state(initialAiConfig?.maxRetries ?? 3);
+  let aiExtractTitle = $state(initialAiConfig?.extractTitle ?? true);
+  let aiExtractCorrespondent = $state(initialAiConfig?.extractCorrespondent ?? true);
+  let aiExtractDocumentType = $state(initialAiConfig?.extractDocumentType ?? true);
+  let aiExtractTags = $state(initialAiConfig?.extractTags ?? true);
   let showPrompt = $state(false);
   let showAiAdvanced = $state(false);
   let isSavingAi = $state(false);
@@ -86,6 +90,9 @@
   // Confidence gates
   let aiConfidenceGlobal = $state(
     Math.round((initialAiConfig?.confidenceThresholdGlobal ?? 0) * 100),
+  );
+  let aiConfidenceTitle = $state(
+    Math.round((initialAiConfig?.confidenceThresholdTitle ?? 0) * 100),
   );
   let aiConfidenceCorrespondent = $state(
     Math.round((initialAiConfig?.confidenceThresholdCorrespondent ?? 0) * 100),
@@ -307,7 +314,12 @@
           includeTags: aiIncludeTags,
           reasoningEffort: aiReasoningEffort,
           maxRetries: aiMaxRetries,
+          extractTitle: aiExtractTitle,
+          extractCorrespondent: aiExtractCorrespondent,
+          extractDocumentType: aiExtractDocumentType,
+          extractTags: aiExtractTags,
           confidenceThresholdGlobal: aiConfidenceGlobal / 100,
+          confidenceThresholdTitle: aiConfidenceTitle / 100,
           confidenceThresholdCorrespondent: aiConfidenceCorrespondent / 100,
           confidenceThresholdDocumentType: aiConfidenceDocType / 100,
           confidenceThresholdTags: aiConfidenceTags / 100,
@@ -965,6 +977,33 @@
         </div>
       </div>
 
+      <!-- Metadata Field Toggles -->
+      <div class="border-soft mt-6 border-t pt-4">
+        <h3 class="text-ink text-sm font-medium">Enabled Metadata Fields</h3>
+        <p class="text-muted mt-1 text-xs">
+          Control which metadata fields are active. Disabled fields are still extracted by the AI
+          but will be ignored during review and never applied to documents.
+        </p>
+        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiExtractTitle} class="rounded" />
+            Document Title
+          </label>
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiExtractCorrespondent} class="rounded" />
+            Correspondent
+          </label>
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiExtractDocumentType} class="rounded" />
+            Document Type
+          </label>
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiExtractTags} class="rounded" />
+            Tags
+          </label>
+        </div>
+      </div>
+
       <!-- Reference Data Toggles -->
       <div class="border-soft mt-6 border-t pt-4">
         <h3 class="text-ink text-sm font-medium">Include Existing Metadata in Prompt</h3>
@@ -1133,7 +1172,21 @@
           {showConfidenceFields ? 'Hide' : 'Show'} Per-Field Thresholds
         </button>
         {#if showConfidenceFields}
-          <div class="mt-3 grid gap-4 sm:grid-cols-3">
+          <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label for="ai-conf-title" class="text-muted text-sm">Title</label>
+              <div class="mt-1 flex items-center gap-2">
+                <input
+                  id="ai-conf-title"
+                  type="range"
+                  min="0"
+                  max="100"
+                  bind:value={aiConfidenceTitle}
+                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                />
+                <span class="text-ink w-12 text-right text-sm">{aiConfidenceTitle}%</span>
+              </div>
+            </div>
             <div>
               <label for="ai-conf-corr" class="text-muted text-sm">Correspondent</label>
               <div class="mt-1 flex items-center gap-2">

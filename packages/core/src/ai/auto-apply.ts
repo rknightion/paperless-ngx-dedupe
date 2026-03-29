@@ -59,9 +59,15 @@ export async function evaluateAndAutoApply(
   };
 
   // Determine which fields auto-apply is allowed to touch
-  const allowedFields: ('correspondent' | 'documentType' | 'tags')[] = config.tagsOnlyAutoApply
-    ? ['tags']
-    : ['correspondent', 'documentType', 'tags'];
+  const allowedFields: ('title' | 'correspondent' | 'documentType' | 'tags')[] =
+    config.tagsOnlyAutoApply
+      ? ['tags']
+      : [
+          ...(config.extractTitle ? (['title'] as const) : []),
+          ...(config.extractCorrespondent ? (['correspondent'] as const) : []),
+          ...(config.extractDocumentType ? (['documentType'] as const) : []),
+          ...(config.extractTags ? (['tags'] as const) : []),
+        ];
 
   const details: AutoApplyResult['details'] = [];
   let autoApplied = 0;
@@ -71,8 +77,8 @@ export async function evaluateAndAutoApply(
     const row = results[i];
 
     // Parse stored data
-    const confidence: { correspondent: number; documentType: number; tags: number } | null =
-      row.confidenceJson ? JSON.parse(row.confidenceJson) : null;
+    const rawConfidence = row.confidenceJson ? JSON.parse(row.confidenceJson) : null;
+    const confidence = rawConfidence ? { title: rawConfidence.title ?? 0, ...rawConfidence } : null;
     const suggestedTags: string[] = row.suggestedTagsJson ? JSON.parse(row.suggestedTagsJson) : [];
     const currentTags: string[] = row.currentTagsJson ? JSON.parse(row.currentTagsJson) : [];
 
@@ -83,9 +89,11 @@ export async function evaluateAndAutoApply(
       config,
       {
         confidence,
+        suggestedTitle: row.suggestedTitle ?? null,
         suggestedCorrespondent: row.suggestedCorrespondent,
         suggestedDocumentType: row.suggestedDocumentType,
         suggestedTags,
+        currentTitle: row.currentTitle ?? null,
         currentCorrespondent: row.currentCorrespondent,
         currentDocumentType: row.currentDocumentType,
         currentTags,

@@ -18,7 +18,7 @@ import { recordFeedback } from './feedback.js';
 const logger = createLogger('ai-apply');
 
 export interface ApplyOptions {
-  fields: ('correspondent' | 'documentType' | 'tags')[];
+  fields: ('title' | 'correspondent' | 'documentType' | 'tags')[];
   addProcessedTag?: boolean;
   processedTagName?: string;
   /** Allow clearing existing Paperless metadata when suggestion is null. Default: false */
@@ -53,13 +53,19 @@ export async function applyAiResult(
       if (!row) throw new Error(`AI result not found: ${resultId}`);
 
       // Normalize suggestions defensively (belt-and-suspenders for pre-existing data)
+      const suggestedTitle = normalizeSuggestedLabel(row.suggestedTitle);
       const suggestedCorrespondent = normalizeSuggestedLabel(row.suggestedCorrespondent);
       const suggestedDocumentType = normalizeSuggestedLabel(row.suggestedDocumentType);
       const suggestedTags = normalizeSuggestedTags(
         row.suggestedTagsJson ? JSON.parse(row.suggestedTagsJson) : [],
       );
 
-      if (!suggestedCorrespondent && !suggestedDocumentType && suggestedTags.length === 0) {
+      if (
+        !suggestedTitle &&
+        !suggestedCorrespondent &&
+        !suggestedDocumentType &&
+        suggestedTags.length === 0
+      ) {
         markAiResultFailed(db, resultId, 'No suggestions to apply', 'no_suggestions');
         throw new Error('No suggestions to apply');
       }
@@ -84,10 +90,19 @@ export async function applyAiResult(
         .filter((n): n is string => n !== undefined);
 
       const update: {
+        title?: string;
         correspondent?: number | null;
         documentType?: number | null;
         tags?: number[];
       } = {};
+
+      // Resolve title (simple string — no entity resolution needed)
+      if (options.fields.includes('title')) {
+        if (suggestedTitle) {
+          update.title = suggestedTitle;
+        }
+        // Title is required in Paperless, so we never clear it (even with allowClearing)
+      }
 
       // Resolve correspondent
       if (options.fields.includes('correspondent')) {
@@ -209,6 +224,7 @@ export async function applyAiResult(
       // Build audit snapshot
       const snapshot: ApplySnapshot = {
         preApply: {
+          title: currentDoc.title ?? null,
           correspondentId: currentDoc.correspondent,
           correspondentName: preApplyCorrespondent?.name ?? null,
           documentTypeId: currentDoc.documentType,
@@ -217,6 +233,7 @@ export async function applyAiResult(
           tagNames: preApplyTagNames.length > 0 ? preApplyTagNames : null,
         },
         applied: {
+          title: update.title ?? null,
           correspondentId: update.correspondent !== undefined ? update.correspondent : null,
           documentTypeId: update.documentType !== undefined ? update.documentType : null,
           tagIds: update.tags ?? null,
@@ -227,7 +244,8 @@ export async function applyAiResult(
       markAiResultApplied(db, resultId, options.fields, snapshot);
 
       // Record feedback if only some fields were applied
-      const allFields: ('correspondent' | 'documentType' | 'tags')[] = [
+      const allFields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
+        'title',
         'correspondent',
         'documentType',
         'tags',

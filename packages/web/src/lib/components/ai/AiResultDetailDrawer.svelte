@@ -23,6 +23,12 @@
 
   interface Props {
     mobile?: boolean;
+    extractEnabled?: {
+      title: boolean;
+      correspondent: boolean;
+      documentType: boolean;
+      tags: boolean;
+    };
     onapply: (
       id: string,
       fields: string[],
@@ -32,7 +38,13 @@
     onclose: () => void;
   }
 
-  let { mobile = false, onapply, onreject, onclose }: Props = $props();
+  let {
+    mobile = false,
+    extractEnabled = { title: true, correspondent: true, documentType: true, tags: true },
+    onapply,
+    onreject,
+    onclose,
+  }: Props = $props();
 
   let contentText = $state<string | null>(null);
   let contentLoading = $state(false);
@@ -271,6 +283,17 @@
       <div class="space-y-3">
         <h3 class="text-ink text-sm font-semibold">Suggestions</h3>
         <AiFieldDiffCard
+          fieldName="title"
+          fieldLabel="Title"
+          currentValue={detail.currentTitle}
+          suggestedValue={detail.suggestedTitle}
+          confidence={detail.confidence?.title ?? null}
+          checked={isFieldChecked('title')}
+          oncheck={(c) => handleFieldCheck('title', c)}
+          disabled={detail.appliedStatus !== 'pending_review'}
+          fieldDisabledByConfig={!extractEnabled.title}
+        />
+        <AiFieldDiffCard
           fieldName="correspondent"
           fieldLabel="Correspondent"
           currentValue={detail.currentCorrespondent}
@@ -279,6 +302,7 @@
           checked={isFieldChecked('correspondent')}
           oncheck={(c) => handleFieldCheck('correspondent', c)}
           disabled={detail.appliedStatus !== 'pending_review'}
+          fieldDisabledByConfig={!extractEnabled.correspondent}
         />
         <AiFieldDiffCard
           fieldName="documentType"
@@ -289,6 +313,7 @@
           checked={isFieldChecked('documentType')}
           oncheck={(c) => handleFieldCheck('documentType', c)}
           disabled={detail.appliedStatus !== 'pending_review'}
+          fieldDisabledByConfig={!extractEnabled.documentType}
         />
         <AiFieldDiffCard
           fieldName="tags"
@@ -299,6 +324,7 @@
           checked={isFieldChecked('tags')}
           oncheck={(c) => handleFieldCheck('tags', c)}
           disabled={detail.appliedStatus !== 'pending_review'}
+          fieldDisabledByConfig={!extractEnabled.tags}
         />
       </div>
 

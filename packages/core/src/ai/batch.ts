@@ -253,6 +253,7 @@ export async function processBatch(
           const docDurationMs = Math.round(performance.now() - docStartMs);
 
           // Normalize suggestions before storing
+          const normalizedTitle = normalizeSuggestedLabel(extraction.response.title);
           const normalizedCorrespondent = normalizeSuggestedLabel(
             extraction.response.correspondent,
           );
@@ -276,10 +277,12 @@ export async function processBatch(
               paperlessId: doc.paperlessId,
               provider: provider.provider,
               model: config.model,
+              suggestedTitle: normalizedTitle,
               suggestedCorrespondent: normalizedCorrespondent,
               suggestedDocumentType: normalizedDocumentType,
               suggestedTagsJson: JSON.stringify(normalizedTags),
               confidenceJson: JSON.stringify(extraction.response.confidence),
+              currentTitle: doc.title,
               currentCorrespondent: doc.correspondent,
               currentDocumentType: doc.documentType,
               currentTagsJson: doc.tagsJson,
@@ -297,10 +300,12 @@ export async function processBatch(
               set: {
                 provider: provider.provider,
                 model: config.model,
+                suggestedTitle: normalizedTitle,
                 suggestedCorrespondent: normalizedCorrespondent,
                 suggestedDocumentType: normalizedDocumentType,
                 suggestedTagsJson: JSON.stringify(normalizedTags),
                 confidenceJson: JSON.stringify(extraction.response.confidence),
+                currentTitle: doc.title,
                 currentCorrespondent: doc.correspondent,
                 currentDocumentType: doc.documentType,
                 currentTagsJson: doc.tagsJson,

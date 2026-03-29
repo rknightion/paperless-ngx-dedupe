@@ -5,15 +5,24 @@ export const AI_CONFIG_PREFIX = 'ai.';
 export const DEFAULT_EXTRACTION_PROMPT = `You are a document classification assistant for Paperless-NGX, a document management system.
 Analyze the document and extract classification metadata.
 
-Output format: Return a single JSON object with keys: correspondent, documentType, tags, confidence (per-field scores 0.0-1.0), and evidence (short snippet).
+Output format: Return a single JSON object with keys: title, correspondent, documentType, tags, confidence (per-field scores 0.0-1.0), and evidence (short snippet).
 
 Task
 Given the document text, determine:
-1) Correspondent: The person or organization this document relates to (sender/author/primary entity)
-2) Document Type: The category/kind of document
-3) Tags: Up to 5 relevant descriptive labels
+1) Title: A clear, descriptive document name
+2) Correspondent: The person or organization this document relates to (sender/author/primary entity)
+3) Document Type: The category/kind of document
+4) Tags: Up to 5 relevant descriptive labels
 
 Naming guidelines
+- Title:
+  - Create a concise, descriptive title that captures the document's purpose and key identifying details.
+  - Include relevant identifiers when present: reference numbers, invoice numbers, dates, account numbers (e.g., "Amazon Invoice INV-2024-0391 - Jan 2024").
+  - Include the correspondent name when it adds clarity (e.g., "British Gas Energy Bill Q1 2024").
+  - Keep titles under 100 characters; prefer brevity over completeness.
+  - Do not include file extensions or generic prefixes like "Document -".
+  - Use title case (capitalize major words).
+  - Set to null if the document content is too fragmentary to determine a meaningful title.
 - Correspondents:
   - When a provided existing_correspondents entry clearly matches (by brand/equivalent name), use that exact entry.
   - Otherwise (no clear match provided), default to the primary header name exactly as written on the document or the most suitable inferred correspondent name from the document content, excluding any suffixes (Ltd, PLC, PBC, GmBH). Prefer using the widely known brand name over legal entity or 'trading as' names (e.g use "Amazon" instead of "AWS" or "Amazon Web Services" or "Apple" instead of "Apple Store Ireland LTD"). Prefer popular acronyms when they are more commonly used than the full name (e.g., "HMRC" instead of "HM Revenue and Customs"). For correspondents that have a geography indicated in the text this should be excluded from the correspondent name and instead added as a tag (e.g., "Barclays UK" -> correspondent: "Barclays", tag: "uk" or NOVOTEL MADRID CENTER -> correspondent: "NOVOTEL", tag: "madrid-center").
@@ -49,10 +58,11 @@ Document text: "Amazon.co.uk\\nInvoice #INV-2024-0391\\nDate: 10 Jan 2024\\nTota
 Existing correspondents: Amazon, Barclays, HMRC
 Response:
 {
+  "title": "Amazon Invoice INV-2024-0391 - Jan 2024",
   "correspondent": "Amazon",
   "documentType": "Invoice",
   "tags": ["shopping"],
-  "confidence": { "correspondent": 0.95, "documentType": 0.95, "tags": 0.7 },
+  "confidence": { "title": 0.9, "correspondent": 0.95, "documentType": 0.95, "tags": 0.7 },
   "evidence": "Amazon.co.uk header, Invoice #INV-2024-0391"
 }
 
@@ -60,10 +70,11 @@ Example 2: Weak evidence — return unknown
 Document text: "Page 3 of 7 ... continued from previous page."
 Response:
 {
+  "title": null,
   "correspondent": "unknown",
   "documentType": "unknown",
   "tags": [],
-  "confidence": { "correspondent": 0.05, "documentType": 0.1, "tags": 0.05 },
+  "confidence": { "title": 0.05, "correspondent": 0.05, "documentType": 0.1, "tags": 0.05 },
   "evidence": "Fragment with no identifying information"
 }
 
@@ -72,10 +83,11 @@ Document text: "British Gas\\nEnergy Bill\\nPeriod: 1 Jan - 31 Mar 2024"
 Existing tags: utilities, energy, quarterly
 Response:
 {
+  "title": "British Gas Energy Bill Q1 2024",
   "correspondent": "British Gas",
   "documentType": "Utility Bill",
   "tags": ["utilities", "energy", "quarterly"],
-  "confidence": { "correspondent": 0.95, "documentType": 0.9, "tags": 0.85 },
+  "confidence": { "title": 0.9, "correspondent": 0.95, "documentType": 0.9, "tags": 0.85 },
   "evidence": "British Gas header, Energy Bill, period 1 Jan - 31 Mar 2024"
 }
 
@@ -116,8 +128,15 @@ export const aiConfigSchema = z.object({
   reasoningEffort: z.enum(['none', 'low', 'medium', 'high']).default('low'),
   maxRetries: z.number().int().min(0).max(10).default(3),
 
+  // Per-field extraction enable/disable (prompt always extracts all; disabled fields are ignored in review/apply)
+  extractTitle: z.boolean().default(true),
+  extractCorrespondent: z.boolean().default(true),
+  extractDocumentType: z.boolean().default(true),
+  extractTags: z.boolean().default(true),
+
   // Confidence gates
   confidenceThresholdGlobal: z.number().min(0).max(1).default(0),
+  confidenceThresholdTitle: z.number().min(0).max(1).default(0),
   confidenceThresholdCorrespondent: z.number().min(0).max(1).default(0),
   confidenceThresholdDocumentType: z.number().min(0).max(1).default(0),
   confidenceThresholdTags: z.number().min(0).max(1).default(0),

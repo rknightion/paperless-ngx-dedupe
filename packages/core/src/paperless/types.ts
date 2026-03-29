@@ -109,6 +109,7 @@ export interface PaperlessRemoteVersion {
 }
 
 export interface DocumentUpdate {
+  title?: string;
   correspondent?: number | null;
   documentType?: number | null;
   tags?: number[];

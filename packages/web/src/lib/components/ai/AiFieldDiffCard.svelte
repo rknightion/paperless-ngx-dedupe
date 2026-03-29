@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ConfidenceBadge } from '$lib/components';
-  import { TriangleAlert, Plus, Minus, Equal } from 'lucide-svelte';
+  import { TriangleAlert, Plus, Minus, Equal, Ban } from 'lucide-svelte';
 
   interface Props {
     fieldName: string;
@@ -11,6 +11,8 @@
     checked: boolean;
     oncheck: (checked: boolean) => void;
     disabled?: boolean;
+    /** When true, the field is disabled by settings — shows a badge and greys out */
+    fieldDisabledByConfig?: boolean;
   }
 
   let {
@@ -22,6 +24,7 @@
     checked,
     oncheck,
     disabled = false,
+    fieldDisabledByConfig = false,
   }: Props = $props();
 
   const isArrayField = $derived(Array.isArray(currentValue) || Array.isArray(suggestedValue));
@@ -57,18 +60,25 @@
   });
 </script>
 
-<div class="border-soft space-y-2 rounded-lg border p-3">
+<div class="border-soft space-y-2 rounded-lg border p-3" class:opacity-50={fieldDisabledByConfig}>
   <!-- Header row -->
   <div class="flex items-center gap-2">
     <input
       type="checkbox"
-      {checked}
-      {disabled}
+      checked={fieldDisabledByConfig ? false : checked}
+      disabled={disabled || fieldDisabledByConfig}
       onchange={(e) => oncheck((e.target as HTMLInputElement).checked)}
       class="rounded"
     />
     <span class="text-ink flex-1 text-sm font-bold">{fieldLabel}</span>
-    {#if confidence !== null}
+    {#if fieldDisabledByConfig}
+      <span
+        class="bg-canvas text-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+      >
+        <Ban class="h-3 w-3" />
+        Disabled
+      </span>
+    {:else if confidence !== null}
       <ConfidenceBadge score={confidence} />
     {/if}
   </div>

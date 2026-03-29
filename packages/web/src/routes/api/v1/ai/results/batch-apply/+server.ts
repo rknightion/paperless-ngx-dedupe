@@ -16,7 +16,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   const body = await request.json();
   const resultIds: string[] = body?.resultIds ?? [];
-  let fields: ('correspondent' | 'documentType' | 'tags')[] = [
+  let fields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
+    'title',
     'correspondent',
     'documentType',
     'tags',
@@ -24,7 +25,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   if (Array.isArray(body?.fields)) {
     fields = body.fields.filter((f: string) =>
-      ['correspondent', 'documentType', 'tags'].includes(f),
+      ['title', 'correspondent', 'documentType', 'tags'].includes(f),
     );
   }
 

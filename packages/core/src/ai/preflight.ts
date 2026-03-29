@@ -13,6 +13,7 @@ import { getAiConfig } from './config.js';
 export interface ApplyPreflightResult {
   totalDocuments: number;
   fieldsChanged: {
+    title: number;
     correspondent: number;
     documentType: number;
     tags: number;
@@ -42,7 +43,7 @@ export async function computeApplyPreflight(
   client: PaperlessClient,
   scope: ApplyScope,
   options: {
-    fields: ('correspondent' | 'documentType' | 'tags')[];
+    fields: ('title' | 'correspondent' | 'documentType' | 'tags')[];
     allowClearing: boolean;
     createMissingEntities: boolean;
   },
@@ -52,7 +53,7 @@ export async function computeApplyPreflight(
   if (resultIds.length === 0) {
     return {
       totalDocuments: 0,
-      fieldsChanged: { correspondent: 0, documentType: 0, tags: 0 },
+      fieldsChanged: { title: 0, correspondent: 0, documentType: 0, tags: 0 },
       newEntitiesCreated: { correspondents: [], documentTypes: [], tags: [] },
       lowConfidenceCount: 0,
       noOpCount: 0,
@@ -87,7 +88,7 @@ export async function computeApplyPreflight(
 
   const result: ApplyPreflightResult = {
     totalDocuments: allResults.length,
-    fieldsChanged: { correspondent: 0, documentType: 0, tags: 0 },
+    fieldsChanged: { title: 0, correspondent: 0, documentType: 0, tags: 0 },
     newEntitiesCreated: { correspondents: [], documentTypes: [], tags: [] },
     lowConfidenceCount: 0,
     noOpCount: 0,
@@ -100,13 +101,14 @@ export async function computeApplyPreflight(
   const newTags = new Set<string>();
 
   for (const row of allResults) {
+    const sugTitle = normalizeSuggestedLabel(row.suggestedTitle);
     const sugCorr = normalizeSuggestedLabel(row.suggestedCorrespondent);
     const sugDocType = normalizeSuggestedLabel(row.suggestedDocumentType);
     const sugTags = normalizeSuggestedTags(
       row.suggestedTagsJson ? JSON.parse(row.suggestedTagsJson) : [],
     );
 
-    let confidence: { correspondent: number; documentType: number; tags: number } | null = null;
+    let confidence: Record<string, number> | null = null;
     if (row.confidenceJson) {
       try {
         confidence = JSON.parse(row.confidenceJson);
@@ -115,9 +117,11 @@ export async function computeApplyPreflight(
       }
     }
 
-    // Compute average confidence
+    // Compute average confidence (backward compat: handle 3 or 4 fields)
     if (confidence) {
-      const avg = (confidence.correspondent + confidence.documentType + confidence.tags) / 3;
+      const fields = ['title', 'correspondent', 'documentType', 'tags'];
+      const scores = fields.map((f) => confidence![f] ?? 0).filter((s) => s > 0);
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       if (avg >= 0.8) result.confidenceDistribution.high++;
       else if (avg >= 0.5) result.confidenceDistribution.medium++;
       else result.confidenceDistribution.low++;
@@ -130,6 +134,17 @@ export async function computeApplyPreflight(
 
     let isNoOp = true;
     let hasDestructiveClear = false;
+
+    // Check title
+    if (options.fields.includes('title')) {
+      if (sugTitle) {
+        if (sugTitle.toLowerCase() !== (row.currentTitle ?? '').toLowerCase()) {
+          result.fieldsChanged.title++;
+          isNoOp = false;
+        }
+      }
+      // Title cannot be cleared (Paperless requires it)
+    }
 
     // Check correspondent
     if (options.fields.includes('correspondent')) {
@@ -225,6 +240,7 @@ export async function computeApplyPreflight(
   const blockReasonCounts = new Map<string, number>();
 
   for (const row of allResults) {
+    const sugTitle2 = normalizeSuggestedLabel(row.suggestedTitle);
     const sugCorr = normalizeSuggestedLabel(row.suggestedCorrespondent);
     const sugDocType = normalizeSuggestedLabel(row.suggestedDocumentType);
     const sugTags = normalizeSuggestedTags(
@@ -232,10 +248,16 @@ export async function computeApplyPreflight(
     );
     const currentTags: string[] = row.currentTagsJson ? JSON.parse(row.currentTagsJson) : [];
 
-    let confidence: { correspondent: number; documentType: number; tags: number } | null = null;
+    let confidence: {
+      title: number;
+      correspondent: number;
+      documentType: number;
+      tags: number;
+    } | null = null;
     if (row.confidenceJson) {
       try {
-        confidence = JSON.parse(row.confidenceJson);
+        const parsed = JSON.parse(row.confidenceJson);
+        confidence = { title: parsed.title ?? 0, ...parsed };
       } catch {
         // ignore
       }
@@ -243,9 +265,11 @@ export async function computeApplyPreflight(
 
     const gateInput: GateInput = {
       confidence,
+      suggestedTitle: sugTitle2,
       suggestedCorrespondent: sugCorr,
       suggestedDocumentType: sugDocType,
       suggestedTags: sugTags,
+      currentTitle: row.currentTitle ?? null,
       currentCorrespondent: row.currentCorrespondent,
       currentDocumentType: row.currentDocumentType,
       currentTags: currentTags,

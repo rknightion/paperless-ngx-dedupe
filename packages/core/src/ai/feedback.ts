@@ -7,7 +7,7 @@ const logger = createLogger('ai-feedback');
 
 export interface AiFeedback {
   action: 'rejected' | 'corrected' | 'partial_applied';
-  rejectedFields?: ('correspondent' | 'documentType' | 'tags')[];
+  rejectedFields?: ('title' | 'correspondent' | 'documentType' | 'tags')[];
   corrections?: {
     correspondent?: { suggested: string | null; corrected: string | null };
     documentType?: { suggested: string | null; corrected: string | null };

@@ -130,6 +130,7 @@ describe('getAiResults', () => {
     expect(doc1Result.suggestedCorrespondent).toBe('Amazon');
     expect(doc1Result.suggestedTags).toEqual(['finance', 'shopping']);
     expect(doc1Result.confidence).toEqual({
+      title: 0,
       correspondent: 0.9,
       documentType: 0.95,
       tags: 0.8,
@@ -425,8 +426,8 @@ describe('markAiResultApplied', () => {
     resultIds = seedDocumentsAndResults(db);
   });
 
-  it('sets status to "applied" when all 3 fields are provided', () => {
-    markAiResultApplied(db, resultIds[0], ['correspondent', 'documentType', 'tags']);
+  it('sets status to "applied" when all 4 fields are provided', () => {
+    markAiResultApplied(db, resultIds[0], ['title', 'correspondent', 'documentType', 'tags']);
     const result = getAiResult(db, resultIds[0]);
     expect(result!.appliedStatus).toBe('applied');
     expect(result!.appliedAt).toBeTruthy();
@@ -506,7 +507,11 @@ describe('batchMarkApplied', () => {
   });
 
   it('updates all provided IDs', () => {
-    batchMarkApplied(db, [resultIds[0], resultIds[2]], ['correspondent', 'documentType', 'tags']);
+    batchMarkApplied(
+      db,
+      [resultIds[0], resultIds[2]],
+      ['title', 'correspondent', 'documentType', 'tags'],
+    );
     const r1 = getAiResult(db, resultIds[0]);
     const r3 = getAiResult(db, resultIds[2]);
     expect(r1!.appliedStatus).toBe('applied');

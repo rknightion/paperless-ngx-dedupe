@@ -7,10 +7,12 @@ export interface AiExtractionRequest {
 }
 
 export interface AiExtractionResponse {
+  title: string | null;
   correspondent: string | null;
   documentType: string | null;
   tags: string[];
   confidence: {
+    title: number;
     correspondent: number;
     documentType: number;
     tags: number;
@@ -48,10 +50,12 @@ export class AiExtractionError extends Error {
 }
 
 export const aiExtractionResponseSchema = z.object({
+  title: z.string().nullable(),
   correspondent: z.string().nullable(),
   documentType: z.string().nullable(),
   tags: z.array(z.string()).max(5),
   confidence: z.object({
+    title: z.number().min(0).max(1),
     correspondent: z.number().min(0).max(1),
     documentType: z.number().min(0).max(1),
     tags: z.number().min(0).max(1),
@@ -62,6 +66,11 @@ export const aiExtractionResponseSchema = z.object({
 export const EXTRACTION_JSON_SCHEMA = {
   type: 'object' as const,
   properties: {
+    title: {
+      type: ['string', 'null'] as const,
+      description:
+        'A clear, descriptive document name/title, or null if no meaningful title can be determined',
+    },
     correspondent: {
       type: ['string', 'null'] as const,
       description: 'The person or organization this document relates to, or null if unclear',
@@ -80,6 +89,12 @@ export const EXTRACTION_JSON_SCHEMA = {
     confidence: {
       type: 'object' as const,
       properties: {
+        title: {
+          type: 'number' as const,
+          description: 'Confidence score for the suggested title (0.0 to 1.0)',
+          minimum: 0,
+          maximum: 1,
+        },
         correspondent: {
           type: 'number' as const,
           description: 'Confidence score for the correspondent classification (0.0 to 1.0)',
@@ -99,7 +114,7 @@ export const EXTRACTION_JSON_SCHEMA = {
           maximum: 1,
         },
       },
-      required: ['correspondent', 'documentType', 'tags'] as const,
+      required: ['title', 'correspondent', 'documentType', 'tags'] as const,
       additionalProperties: false,
     },
     evidence: {
@@ -109,6 +124,6 @@ export const EXTRACTION_JSON_SCHEMA = {
       maxLength: 500,
     },
   },
-  required: ['correspondent', 'documentType', 'tags', 'confidence', 'evidence'] as const,
+  required: ['title', 'correspondent', 'documentType', 'tags', 'confidence', 'evidence'] as const,
   additionalProperties: false,
 };

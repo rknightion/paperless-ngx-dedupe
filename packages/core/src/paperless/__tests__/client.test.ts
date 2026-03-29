@@ -146,7 +146,7 @@ describe('PaperlessClient', () => {
       expect(options.headers['Authorization']).toBeUndefined();
     });
 
-    it('should include Accept header without hardcoded version', async () => {
+    it('should send Accept: application/json without a pinned API version', async () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
       mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
 
@@ -154,6 +154,9 @@ describe('PaperlessClient', () => {
 
       const [, options] = mockFetch.mock.calls[0];
       expect(options.headers['Accept']).toBe('application/json');
+      // Guard against re-introducing a pinned version (e.g. "; version=10") which
+      // breaks Paperless-NGX instances that don't support that specific API version.
+      expect(options.headers['Accept']).not.toMatch(/version=/);
     });
   });
 
@@ -197,6 +200,25 @@ describe('PaperlessClient', () => {
 
       expect(client.apiVersion).toBe('9');
       expect(client.paperlessVersion).toBe('2.14.0');
+    });
+
+    it('should pin Accept header to detected version after first response', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+      mockFetch
+        .mockResolvedValueOnce(
+          mockResponse({ ok: true }, 200, { 'X-Api-Version': '9', 'X-Version': '2.14.0' }),
+        )
+        .mockResolvedValueOnce(mockResponse({ ok: true }));
+
+      // First request: no version in Accept header
+      await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
+      const [, firstOptions] = mockFetch.mock.calls[0];
+      expect(firstOptions.headers['Accept']).toBe('application/json');
+
+      // Second request: Accept header should now include the detected version
+      await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
+      const [, secondOptions] = mockFetch.mock.calls[1];
+      expect(secondOptions.headers['Accept']).toBe('application/json; version=9');
     });
   });
 
