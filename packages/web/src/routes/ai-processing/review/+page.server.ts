@@ -1,8 +1,9 @@
-import { getAiResults, getAiResultGroups } from '@paperless-dedupe/core';
+import { getAiResults, getAiResultGroups, getAiConfig } from '@paperless-dedupe/core';
 import type { GroupByField } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
+  const aiConfig = getAiConfig(locals.db);
   const status = url.searchParams.get('status') || undefined;
   const search = url.searchParams.get('search') || undefined;
   const sort =
@@ -73,5 +74,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     provider: provider ?? null,
     model: model ?? null,
     groups,
+    extractEnabled: {
+      title: aiConfig.extractTitle,
+      correspondent: aiConfig.extractCorrespondent,
+      documentType: aiConfig.extractDocumentType,
+      tags: aiConfig.extractTags,
+    },
   };
 };

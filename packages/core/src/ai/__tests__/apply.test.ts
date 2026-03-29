@@ -294,7 +294,7 @@ describe('applyAiResult', () => {
   it('marks result as applied in DB after successful apply', async () => {
     const client = createMockClient();
     await applyAiResult(db, client, resultId, {
-      fields: ['correspondent', 'documentType', 'tags'],
+      fields: ['title', 'correspondent', 'documentType', 'tags'],
     });
 
     const result = getAiResult(db, resultId);

@@ -8,7 +8,7 @@ import type { ApplyScope } from '../../ai/scopes.js';
 
 interface ApplyTaskData {
   scope: ApplyScope;
-  fields: ('correspondent' | 'documentType' | 'tags')[];
+  fields: ('title' | 'correspondent' | 'documentType' | 'tags')[];
   allowClearing: boolean;
   createMissingEntities: boolean;
 }

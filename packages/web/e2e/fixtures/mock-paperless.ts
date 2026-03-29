@@ -124,6 +124,18 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
     return;
   }
 
+  // Simulate Paperless-NGX API version validation: accept the mock's own
+  // version (negotiated from X-Api-Version response header) or no version,
+  // but reject any other hardcoded version — just like :latest rejects
+  // unsupported versions with 406.
+  const accept = req.headers.accept ?? '';
+  const versionMatch = accept.match(/version=(\d+)/);
+  if (versionMatch && versionMatch[1] !== '5') {
+    res.writeHead(406, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ detail: 'Invalid version in "Accept" header.' }));
+    return;
+  }
+
   // Auth check for all other routes
   if (!checkAuth(req)) {
     return jsonResponse(res, { detail: 'Authentication credentials were not provided.' }, 401);

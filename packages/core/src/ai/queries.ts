@@ -5,6 +5,7 @@ import type { AppDatabase } from '../db/client.js';
 
 export interface ApplySnapshot {
   preApply: {
+    title?: string | null;
     correspondentId?: number | null;
     correspondentName?: string | null;
     documentTypeId?: number | null;
@@ -13,6 +14,7 @@ export interface ApplySnapshot {
     tagNames?: string[] | null;
   };
   applied: {
+    title?: string | null;
     correspondentId?: number | null;
     documentTypeId?: number | null;
     tagIds?: number[] | null;
@@ -44,10 +46,17 @@ export interface AiResultSummary {
   documentTitle: string;
   provider: string;
   model: string;
+  suggestedTitle: string | null;
   suggestedCorrespondent: string | null;
   suggestedDocumentType: string | null;
   suggestedTags: string[];
-  confidence: { correspondent: number; documentType: number; tags: number } | null;
+  confidence: {
+    title: number;
+    correspondent: number;
+    documentType: number;
+    tags: number;
+  } | null;
+  currentTitle: string | null;
   currentCorrespondent: string | null;
   currentDocumentType: string | null;
   currentTags: string[];
@@ -66,12 +75,14 @@ export interface AiResultDetail extends AiResultSummary {
   processingTimeMs: number | null;
   appliedFields: string[] | null;
   rawResponseJson: string | null;
+  preApplyTitle: string | null;
   preApplyCorrespondentId: number | null;
   preApplyCorrespondentName: string | null;
   preApplyDocumentTypeId: number | null;
   preApplyDocumentTypeName: string | null;
   preApplyTagIds: number[] | null;
   preApplyTagNames: string[] | null;
+  appliedTitle: string | null;
   appliedCorrespondentId: number | null;
   appliedDocumentTypeId: number | null;
   appliedTagIds: number[] | null;
@@ -129,10 +140,12 @@ function parseJsonNumberArray(json: string | null): number[] | null {
 
 function parseConfidence(
   json: string | null,
-): { correspondent: number; documentType: number; tags: number } | null {
+): { title: number; correspondent: number; documentType: number; tags: number } | null {
   if (!json) return null;
   try {
-    return JSON.parse(json);
+    const parsed = JSON.parse(json);
+    // Backward compat: older results may lack 'title' confidence
+    return { title: parsed.title ?? 0, ...parsed };
   } catch {
     return null;
   }
@@ -173,7 +186,7 @@ export function getAiResults(
   }
   if (filters.changedOnly) {
     conditions.push(
-      sql`(${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
     );
   }
 
@@ -217,10 +230,12 @@ export function getAiResults(
       documentTitle: document.title,
       provider: aiProcessingResult.provider,
       model: aiProcessingResult.model,
+      suggestedTitle: aiProcessingResult.suggestedTitle,
       suggestedCorrespondent: aiProcessingResult.suggestedCorrespondent,
       suggestedDocumentType: aiProcessingResult.suggestedDocumentType,
       suggestedTagsJson: aiProcessingResult.suggestedTagsJson,
       confidenceJson: aiProcessingResult.confidenceJson,
+      currentTitle: aiProcessingResult.currentTitle,
       currentCorrespondent: aiProcessingResult.currentCorrespondent,
       currentDocumentType: aiProcessingResult.currentDocumentType,
       currentTagsJson: aiProcessingResult.currentTagsJson,
@@ -245,10 +260,12 @@ export function getAiResults(
     documentTitle: r.documentTitle,
     provider: r.provider,
     model: r.model,
+    suggestedTitle: r.suggestedTitle ?? null,
     suggestedCorrespondent: r.suggestedCorrespondent,
     suggestedDocumentType: r.suggestedDocumentType,
     suggestedTags: parseJsonArray(r.suggestedTagsJson),
     confidence: parseConfidence(r.confidenceJson),
+    currentTitle: r.currentTitle ?? null,
     currentCorrespondent: r.currentCorrespondent,
     currentDocumentType: r.currentDocumentType,
     currentTags: parseJsonArray(r.currentTagsJson),
@@ -271,10 +288,12 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
       documentTitle: document.title,
       provider: aiProcessingResult.provider,
       model: aiProcessingResult.model,
+      suggestedTitle: aiProcessingResult.suggestedTitle,
       suggestedCorrespondent: aiProcessingResult.suggestedCorrespondent,
       suggestedDocumentType: aiProcessingResult.suggestedDocumentType,
       suggestedTagsJson: aiProcessingResult.suggestedTagsJson,
       confidenceJson: aiProcessingResult.confidenceJson,
+      currentTitle: aiProcessingResult.currentTitle,
       currentCorrespondent: aiProcessingResult.currentCorrespondent,
       currentDocumentType: aiProcessingResult.currentDocumentType,
       currentTagsJson: aiProcessingResult.currentTagsJson,
@@ -289,12 +308,14 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
       completionTokens: aiProcessingResult.completionTokens,
       processingTimeMs: aiProcessingResult.processingTimeMs,
       createdAt: aiProcessingResult.createdAt,
+      preApplyTitle: aiProcessingResult.preApplyTitle,
       preApplyCorrespondentId: aiProcessingResult.preApplyCorrespondentId,
       preApplyCorrespondentName: aiProcessingResult.preApplyCorrespondentName,
       preApplyDocumentTypeId: aiProcessingResult.preApplyDocumentTypeId,
       preApplyDocumentTypeName: aiProcessingResult.preApplyDocumentTypeName,
       preApplyTagIdsJson: aiProcessingResult.preApplyTagIdsJson,
       preApplyTagNamesJson: aiProcessingResult.preApplyTagNamesJson,
+      appliedTitle: aiProcessingResult.appliedTitle,
       appliedCorrespondentId: aiProcessingResult.appliedCorrespondentId,
       appliedDocumentTypeId: aiProcessingResult.appliedDocumentTypeId,
       appliedTagIdsJson: aiProcessingResult.appliedTagIdsJson,
@@ -314,10 +335,12 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
     documentTitle: row.documentTitle,
     provider: row.provider,
     model: row.model,
+    suggestedTitle: row.suggestedTitle ?? null,
     suggestedCorrespondent: row.suggestedCorrespondent,
     suggestedDocumentType: row.suggestedDocumentType,
     suggestedTags: parseJsonArray(row.suggestedTagsJson),
     confidence: parseConfidence(row.confidenceJson),
+    currentTitle: row.currentTitle ?? null,
     currentCorrespondent: row.currentCorrespondent,
     currentDocumentType: row.currentDocumentType,
     currentTags: parseJsonArray(row.currentTagsJson),
@@ -332,12 +355,14 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
     processingTimeMs: row.processingTimeMs ?? null,
     appliedFields: row.appliedFieldsJson ? JSON.parse(row.appliedFieldsJson) : null,
     rawResponseJson: row.rawResponseJson ?? null,
+    preApplyTitle: row.preApplyTitle ?? null,
     preApplyCorrespondentId: row.preApplyCorrespondentId ?? null,
     preApplyCorrespondentName: row.preApplyCorrespondentName ?? null,
     preApplyDocumentTypeId: row.preApplyDocumentTypeId ?? null,
     preApplyDocumentTypeName: row.preApplyDocumentTypeName ?? null,
     preApplyTagIds: parseJsonNumberArray(row.preApplyTagIdsJson),
     preApplyTagNames: parseJsonArray(row.preApplyTagNamesJson),
+    appliedTitle: row.appliedTitle ?? null,
     appliedCorrespondentId: row.appliedCorrespondentId ?? null,
     appliedDocumentTypeId: row.appliedDocumentTypeId ?? null,
     appliedTagIds: parseJsonNumberArray(row.appliedTagIdsJson),
@@ -423,7 +448,7 @@ export function markAiResultApplied(
   appliedFields: string[],
   snapshot?: ApplySnapshot,
 ): void {
-  const allFields = ['correspondent', 'documentType', 'tags'];
+  const allFields = ['title', 'correspondent', 'documentType', 'tags'];
   const status = appliedFields.length === allFields.length ? 'applied' : 'partial';
 
   const setData: Record<string, unknown> = {
@@ -433,6 +458,7 @@ export function markAiResultApplied(
   };
 
   if (snapshot) {
+    setData.preApplyTitle = snapshot.preApply.title ?? null;
     setData.preApplyCorrespondentId = snapshot.preApply.correspondentId ?? null;
     setData.preApplyCorrespondentName = snapshot.preApply.correspondentName ?? null;
     setData.preApplyDocumentTypeId = snapshot.preApply.documentTypeId ?? null;
@@ -443,6 +469,7 @@ export function markAiResultApplied(
     setData.preApplyTagNamesJson = snapshot.preApply.tagNames
       ? JSON.stringify(snapshot.preApply.tagNames)
       : null;
+    setData.appliedTitle = snapshot.applied.title ?? null;
     setData.appliedCorrespondentId = snapshot.applied.correspondentId ?? null;
     setData.appliedDocumentTypeId = snapshot.applied.documentTypeId ?? null;
     setData.appliedTagIdsJson = snapshot.applied.tagIds
@@ -481,7 +508,7 @@ export function markAiResultFailed(
 }
 
 export function batchMarkApplied(db: AppDatabase, ids: string[], appliedFields: string[]): void {
-  const allFields = ['correspondent', 'documentType', 'tags'];
+  const allFields = ['title', 'correspondent', 'documentType', 'tags'];
   const status = appliedFields.length === allFields.length ? 'applied' : 'partial';
   const now = new Date().toISOString();
 
@@ -539,7 +566,7 @@ export function getAiResultIdsByFilter(db: AppDatabase, filters: AiResultFilters
   }
   if (filters.changedOnly) {
     conditions.push(
-      sql`(${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
     );
   }
 
@@ -585,7 +612,7 @@ export function getDocumentIdsByAiFilter(db: AppDatabase, filters: AiResultFilte
   }
   if (filters.changedOnly) {
     conditions.push(
-      sql`(${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
     );
   }
 

@@ -20,7 +20,11 @@ function parseConfigValue(key: string, value: string): unknown {
     shortKey === 'autoApplyRequireNoNewEntities' ||
     shortKey === 'autoApplyRequireNoClearing' ||
     shortKey === 'autoApplyRequireOcrText' ||
-    shortKey === 'protectedTagsEnabled'
+    shortKey === 'protectedTagsEnabled' ||
+    shortKey === 'extractTitle' ||
+    shortKey === 'extractCorrespondent' ||
+    shortKey === 'extractDocumentType' ||
+    shortKey === 'extractTags'
   ) {
     return value === 'true';
   }

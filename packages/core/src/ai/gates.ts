@@ -1,6 +1,6 @@
 import type { AiConfig } from './types.js';
 
-export type AiField = 'correspondent' | 'documentType' | 'tags';
+export type AiField = 'title' | 'correspondent' | 'documentType' | 'tags';
 
 export interface GateEvaluation {
   /** Whether the result passes all mandatory gates */
@@ -18,10 +18,12 @@ export interface GateEvaluation {
 }
 
 export interface GateInput {
-  confidence: { correspondent: number; documentType: number; tags: number } | null;
+  confidence: { title: number; correspondent: number; documentType: number; tags: number } | null;
+  suggestedTitle: string | null;
   suggestedCorrespondent: string | null;
   suggestedDocumentType: string | null;
   suggestedTags: string[];
+  currentTitle: string | null;
   currentCorrespondent: string | null;
   currentDocumentType: string | null;
   currentTags: string[];
@@ -50,6 +52,7 @@ export function evaluateGates(
 
   // 1. Compute effective threshold per field
   const thresholds: Record<AiField, number> = {
+    title: Math.max(config.confidenceThresholdGlobal, config.confidenceThresholdTitle),
     correspondent: Math.max(
       config.confidenceThresholdGlobal,
       config.confidenceThresholdCorrespondent,
@@ -63,6 +66,7 @@ export function evaluateGates(
 
   // 2. Check each field's confidence against its effective threshold
   const fieldsToCheck: AiField[] = [];
+  if (input.suggestedTitle != null) fieldsToCheck.push('title');
   if (input.suggestedCorrespondent != null) fieldsToCheck.push('correspondent');
   if (input.suggestedDocumentType != null) fieldsToCheck.push('documentType');
   if (input.suggestedTags.length > 0) fieldsToCheck.push('tags');
@@ -75,7 +79,7 @@ export function evaluateGates(
     }
   } else {
     for (const field of fieldsToCheck) {
-      const score = input.confidence[field];
+      const score = (input.confidence as Record<string, number>)[field] ?? 0;
       const threshold = thresholds[field];
       if (score >= threshold) {
         fieldsPassing.push(field);
@@ -134,6 +138,21 @@ export function evaluateGates(
   // 4. neverOverwriteNonEmpty gate
   if (config.neverOverwriteNonEmpty) {
     if (
+      input.currentTitle != null &&
+      input.suggestedTitle != null &&
+      input.currentTitle.toLowerCase() !== input.suggestedTitle.toLowerCase()
+    ) {
+      if (!fieldsFailing.includes('title')) {
+        fieldsFailing.push('title');
+        const idx = fieldsPassing.indexOf('title');
+        if (idx !== -1) fieldsPassing.splice(idx, 1);
+      }
+      reasons.push(
+        `Title would overwrite existing value "${input.currentTitle}" with "${input.suggestedTitle}"`,
+      );
+    }
+
+    if (
       input.currentCorrespondent != null &&
       input.suggestedCorrespondent != null &&
       input.currentCorrespondent.toLowerCase() !== input.suggestedCorrespondent.toLowerCase()
@@ -183,7 +202,7 @@ export function evaluateGates(
 
   // 5. tagsOnlyAutoApply gate
   if (config.tagsOnlyAutoApply) {
-    for (const field of ['correspondent', 'documentType'] as const) {
+    for (const field of ['title', 'correspondent', 'documentType'] as const) {
       if (fieldsPassing.includes(field)) {
         const idx = fieldsPassing.indexOf(field);
         if (idx !== -1) fieldsPassing.splice(idx, 1);
@@ -273,6 +292,7 @@ function checkForNewEntities(input: GateInput, context: GateContext): boolean {
 
 /** Check whether applying suggestions would clear an existing non-null/non-empty value. */
 function checkForClearing(input: GateInput): boolean {
+  // Title clearing is not applicable — Paperless requires a title, so we never clear it
   if (input.suggestedCorrespondent == null && input.currentCorrespondent != null) {
     return true;
   }

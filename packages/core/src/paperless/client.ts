@@ -185,6 +185,9 @@ export class PaperlessClient {
       if (apiVer) {
         this.detectedApiVersion = apiVer;
         this.detectedPngxVersion = pngxVer;
+        // Pin subsequent requests to the server's reported API version so we
+        // always get the latest format without requesting an unsupported version.
+        this.headers['Accept'] = `application/json; version=${apiVer}`;
         this.logger.info(
           { apiVersion: apiVer, pngxVersion: pngxVer },
           'Detected Paperless-NGX API version',
@@ -338,6 +341,7 @@ export class PaperlessClient {
 
   async updateDocument(id: number, update: DocumentUpdate): Promise<void> {
     const body: Record<string, unknown> = {};
+    if (update.title !== undefined) body.title = update.title;
     if (update.correspondent !== undefined) body.correspondent = update.correspondent;
     if (update.documentType !== undefined) body.document_type = update.documentType;
     if (update.tags !== undefined) body.tags = update.tags;

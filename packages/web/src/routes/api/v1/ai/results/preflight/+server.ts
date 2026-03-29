@@ -16,14 +16,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   const scope: ApplyScope = body.scope;
 
-  let fields: ('correspondent' | 'documentType' | 'tags')[] = [
+  let fields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
+    'title',
     'correspondent',
     'documentType',
     'tags',
   ];
   if (Array.isArray(body.fields)) {
     fields = body.fields.filter((f: string) =>
-      ['correspondent', 'documentType', 'tags'].includes(f),
+      ['title', 'correspondent', 'documentType', 'tags'].includes(f),
     );
   }
 

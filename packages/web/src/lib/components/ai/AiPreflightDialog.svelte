@@ -94,6 +94,10 @@
           <h3 class="text-ink mb-2 text-sm font-medium">Fields changed</h3>
           <div class="space-y-1.5">
             <div class="flex items-center justify-between text-sm">
+              <span class="text-muted">Title</span>
+              <span class="text-ink font-medium">{preflight.fieldsChanged.title}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
               <span class="text-muted">Correspondent</span>
               <span class="text-ink font-medium">{preflight.fieldsChanged.correspondent}</span>
             </div>

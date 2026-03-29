@@ -87,6 +87,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: backfill appliedAt for failed AI results
   migrateFailedResultAppliedAt(sqlite);
 
+  // Pre-DDL migration: add title-related columns to ai_processing_result
+  migrateAiTitleColumns(sqlite);
+
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
     .prepare('SELECT value FROM app_config WHERE key = ?')
@@ -266,6 +269,27 @@ function migrateFailedResultAppliedAt(sqlite: Database.Database): void {
     SET applied_at = created_at
     WHERE applied_status = 'failed' AND applied_at IS NULL
   `);
+}
+
+/**
+ * Add title-related columns to ai_processing_result for document name extraction.
+ * Existing rows get NULL, which is correct (title extraction is new).
+ */
+function migrateAiTitleColumns(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'ai_processing_result', 'applied_status')) return;
+
+  if (!tableHasColumn(sqlite, 'ai_processing_result', 'suggested_title')) {
+    sqlite.exec(`ALTER TABLE ai_processing_result ADD COLUMN suggested_title TEXT`);
+  }
+  if (!tableHasColumn(sqlite, 'ai_processing_result', 'current_title')) {
+    sqlite.exec(`ALTER TABLE ai_processing_result ADD COLUMN current_title TEXT`);
+  }
+  if (!tableHasColumn(sqlite, 'ai_processing_result', 'pre_apply_title')) {
+    sqlite.exec(`ALTER TABLE ai_processing_result ADD COLUMN pre_apply_title TEXT`);
+  }
+  if (!tableHasColumn(sqlite, 'ai_processing_result', 'applied_title')) {
+    sqlite.exec(`ALTER TABLE ai_processing_result ADD COLUMN applied_title TEXT`);
+  }
 }
 
 /**

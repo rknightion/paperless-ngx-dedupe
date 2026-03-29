@@ -35,6 +35,7 @@ export async function revertAiResult(
 
       // Validate pre-apply snapshot exists
       const hasSnapshot =
+        row.preApplyTitle !== null ||
         row.preApplyCorrespondentId !== null ||
         row.preApplyCorrespondentName !== null ||
         row.preApplyDocumentTypeId !== null ||
@@ -53,11 +54,23 @@ export async function revertAiResult(
         ? JSON.parse(row.preApplyTagIdsJson)
         : [];
 
-      await client.updateDocument(row.paperlessId, {
+      const revertUpdate: {
+        title?: string;
+        correspondent: number | null;
+        documentType: number | null;
+        tags: number[];
+      } = {
         correspondent: row.preApplyCorrespondentId ?? null,
         documentType: row.preApplyDocumentTypeId ?? null,
         tags: preApplyTagIds,
-      });
+      };
+
+      // Only revert title if we have a pre-apply title snapshot
+      if (row.preApplyTitle) {
+        revertUpdate.title = row.preApplyTitle;
+      }
+
+      await client.updateDocument(row.paperlessId, revertUpdate);
 
       // Atomically update status to reverted
       const result = db

@@ -15,10 +15,12 @@ export const aiProcessingResult = sqliteTable(
     paperlessId: integer('paperless_id').notNull(),
     provider: text('provider').notNull(),
     model: text('model').notNull(),
+    suggestedTitle: text('suggested_title'),
     suggestedCorrespondent: text('suggested_correspondent'),
     suggestedDocumentType: text('suggested_document_type'),
     suggestedTagsJson: text('suggested_tags_json'),
     confidenceJson: text('confidence_json'),
+    currentTitle: text('current_title'),
     currentCorrespondent: text('current_correspondent'),
     currentDocumentType: text('current_document_type'),
     currentTagsJson: text('current_tags_json'),
@@ -35,6 +37,7 @@ export const aiProcessingResult = sqliteTable(
     createdAt: text('created_at').notNull(),
 
     // Audit: pre-apply snapshot (captured at apply time, not processing time)
+    preApplyTitle: text('pre_apply_title'),
     preApplyCorrespondentId: integer('pre_apply_correspondent_id'),
     preApplyCorrespondentName: text('pre_apply_correspondent_name'),
     preApplyDocumentTypeId: integer('pre_apply_document_type_id'),
@@ -43,6 +46,7 @@ export const aiProcessingResult = sqliteTable(
     preApplyTagNamesJson: text('pre_apply_tag_names_json'),
 
     // Audit: what was actually written to Paperless
+    appliedTitle: text('applied_title'),
     appliedCorrespondentId: integer('applied_correspondent_id'),
     appliedDocumentTypeId: integer('applied_document_type_id'),
     appliedTagIdsJson: text('applied_tag_ids_json'),

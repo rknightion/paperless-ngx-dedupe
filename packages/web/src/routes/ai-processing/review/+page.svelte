@@ -126,11 +126,18 @@
   async function handleApplySimple(id: string) {
     const result = results.find((r: AiResultSummary) => r.id === id);
     if (!result) return;
+    const enabled = data.extractEnabled;
     const fields: string[] = [];
-    if (result.suggestedCorrespondent) fields.push('correspondent');
-    if (result.suggestedDocumentType) fields.push('documentType');
-    if (result.suggestedTags.length > 0) fields.push('tags');
-    if (fields.length === 0) fields.push('correspondent', 'documentType', 'tags');
+    if (result.suggestedTitle && enabled.title) fields.push('title');
+    if (result.suggestedCorrespondent && enabled.correspondent) fields.push('correspondent');
+    if (result.suggestedDocumentType && enabled.documentType) fields.push('documentType');
+    if (result.suggestedTags.length > 0 && enabled.tags) fields.push('tags');
+    if (fields.length === 0) {
+      const allEnabled = ['title', 'correspondent', 'documentType', 'tags'].filter(
+        (f) => enabled[f as keyof typeof enabled],
+      );
+      fields.push(...allEnabled);
+    }
     await handleApply(id, fields, { allowClearing: false, createMissingEntities: true });
   }
 
@@ -460,7 +467,12 @@
 
   <!-- Desktop Detail Drawer -->
   {#if activeResultId && !isMobile}
-    <AiResultDetailDrawer onapply={handleApply} onreject={handleReject} onclose={closeDetail} />
+    <AiResultDetailDrawer
+      extractEnabled={data.extractEnabled}
+      onapply={handleApply}
+      onreject={handleReject}
+      onclose={closeDetail}
+    />
   {/if}
 </div>
 
@@ -468,6 +480,7 @@
 {#if activeResultId && isMobile}
   <AiResultDetailDrawer
     mobile
+    extractEnabled={data.extractEnabled}
     onapply={handleApply}
     onreject={handleReject}
     onclose={closeDetail}
