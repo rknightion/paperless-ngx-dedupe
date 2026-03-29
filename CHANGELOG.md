@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.13.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.12.1...v0.13.0) (2026-03-29)
+
+
+### Features
+
+* **ai:** add cost comparison dialog for AI model selection ([eb834c7](https://github.com/rknightion/paperless-ngx-dedupe/commit/eb834c71ff849ae53491ec5b0acb0d665f312c00))
+* **ai:** add filtering and search capabilities to unprocessed document queue ([1950c07](https://github.com/rknightion/paperless-ngx-dedupe/commit/1950c0794fc4aae5b3da14ce6bdbc901403538b3))
+* **ai:** include failed AI results in processing history ([3ccf99e](https://github.com/rknightion/paperless-ngx-dedupe/commit/3ccf99e6f1ddd4d92e66a14f5a06de6f42c6168b))
+
+
+### Bug Fixes
+
+* **ai:** improve model pricing lookup with fallback matching strategies ([64c6da4](https://github.com/rknightion/paperless-ngx-dedupe/commit/64c6da4dfa45e4daeda9afdb40911b51d5c62315))
+* **paperless:** remove API version specification from Accept header ([dfe438c](https://github.com/rknightion/paperless-ngx-dedupe/commit/dfe438c035d1ae9f5422d83189b3b1e5b0ac206a)), closes [#269](https://github.com/rknightion/paperless-ngx-dedupe/issues/269)
+
+
+### Refactoring
+
+* **ai:** convert cost estimation to async with lazy tiktoken loading ([258e069](https://github.com/rknightion/paperless-ngx-dedupe/commit/258e069329ac7717cad0a8664d53167d5f2b6846))
+
 ## [0.12.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.12.0...v0.12.1) (2026-03-28)
 
 
