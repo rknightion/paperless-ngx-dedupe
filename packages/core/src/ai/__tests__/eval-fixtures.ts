@@ -7,10 +7,16 @@ export interface EvalFixture {
     tags: string[];
   };
   expected: {
+    title: string | null;
     correspondent: string | null;
     documentType: string | null;
     tags: string[];
-    minConfidence?: { correspondent?: number; documentType?: number; tags?: number };
+    minConfidence?: {
+      title?: number;
+      correspondent?: number;
+      documentType?: number;
+      tags?: number;
+    };
   };
 }
 
@@ -49,10 +55,11 @@ Payment Method: Visa ending 4521`,
       tags: ['tax-2024', 'electronics', 'home', 'medical', 'utilities'],
     },
     expected: {
+      title: 'Amazon Invoice INV-2024-0847 - Mar 2024',
       correspondent: 'Amazon',
       documentType: 'Invoice',
       tags: ['electronics'],
-      minConfidence: { correspondent: 0.8, documentType: 0.9 },
+      minConfidence: { title: 0.7, correspondent: 0.8, documentType: 0.9 },
     },
   },
   {
@@ -76,10 +83,11 @@ See appendix for methodology details.`,
       tags: ['tax-2024', 'finance', 'medical'],
     },
     expected: {
+      title: null,
       correspondent: null,
       documentType: null,
       tags: [],
-      minConfidence: { correspondent: 0, documentType: 0 },
+      minConfidence: { title: 0, correspondent: 0, documentType: 0 },
     },
   },
   {
@@ -112,6 +120,7 @@ Reg: Tesco Stores Ltd`,
       tags: ['groceries', 'food', 'tax-2024'],
     },
     expected: {
+      title: 'Tesco Express Receipt - Mar 2024',
       correspondent: 'Tesco',
       documentType: 'Receipt',
       tags: ['groceries'],
@@ -147,6 +156,7 @@ Date        Description                  Debit      Credit     Balance
       tags: ['finance', 'banking', 'tax-2024', 'monthly'],
     },
     expected: {
+      title: 'Barclays Current Account Statement - Mar 2024',
       correspondent: 'Barclays',
       documentType: 'Bank Statement',
       tags: ['finance', 'banking', 'monthly'],
@@ -194,6 +204,7 @@ Aviva Customer Services
       tags: ['insurance', 'home', 'renewal', 'annual', 'property'],
     },
     expected: {
+      title: 'Aviva Home Insurance Renewal - Apr 2024',
       correspondent: 'Aviva',
       documentType: 'Insurance Policy',
       tags: ['insurance', 'home', 'renewal'],
@@ -238,6 +249,7 @@ Tax Credit Office`,
       tags: ['tax-2024', 'government', 'benefits', 'annual'],
     },
     expected: {
+      title: 'HMRC Tax Credits Notice 2024/25',
       correspondent: 'HMRC',
       documentType: 'Notification',
       tags: ['tax-2024', 'government'],

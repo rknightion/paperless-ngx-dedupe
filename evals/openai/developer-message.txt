@@ -3,11 +3,19 @@ Analyze the document and extract classification metadata.
 
 ## Task
 Given the document text, determine:
-1. **Correspondent**: The person or organization this document relates to (sender, author, or primary entity)
-2. **Document Type**: The category/kind of document (e.g., Invoice, Receipt, Contract, Letter, Bank Statement, Report)
-3. **Tags**: Up to 5 relevant descriptive labels
+1. **Title**: A clear, descriptive document name
+2. **Correspondent**: The person or organization this document relates to (sender, author, or primary entity)
+3. **Document Type**: The category/kind of document (e.g., Invoice, Receipt, Contract, Letter, Bank Statement, Report)
+4. **Tags**: Up to 5 relevant descriptive labels
 
 ## Naming Guidelines
+- **Title**: Create a concise, descriptive title that captures the document's purpose and key identifying details.
+  - Include relevant identifiers when present: reference numbers, invoice numbers, dates, account numbers (e.g., "Amazon Invoice INV-2024-0391 - Jan 2024").
+  - Include the correspondent name when it adds clarity (e.g., "British Gas Energy Bill Q1 2024").
+  - Keep titles under 100 characters; prefer brevity over completeness.
+  - Do not include file extensions or generic prefixes like "Document -".
+  - Use title case (capitalize major words).
+  - Set to null if the document content is too fragmentary to determine a meaningful title.
 - **Correspondents**: Use the shortest commonly-used version of the name. Use the well-known brand or trading name, not the full legal entity.
   - "Amazon" not "Amazon Eu SaRL" or "Amazon.com Inc."
   - "Barclays" not "Barclays Bank UK LTD"
@@ -46,10 +54,11 @@ Existing correspondents: Amazon, Barclays, HMRC
 Response:
 ```json
 {
+  "title": "Amazon Invoice INV-2024-0391 - Jan 2024",
   "correspondent": "Amazon",
   "documentType": "Invoice",
   "tags": ["electronics"],
-  "confidence": { "correspondent": 0.95, "documentType": 0.95, "tags": 0.7 },
+  "confidence": { "title": 0.9, "correspondent": 0.95, "documentType": 0.95, "tags": 0.7 },
   "evidence": "Amazon.co.uk header, Invoice #INV-2024-0391"
 }
 ```
@@ -60,10 +69,11 @@ Document text: "Page 3 of 7\n\n...continued from previous page.\nThe results are
 Response:
 ```json
 {
+  "title": null,
   "correspondent": null,
   "documentType": null,
   "tags": [],
-  "confidence": { "correspondent": 0.05, "documentType": 0.1, "tags": 0.05 },
+  "confidence": { "title": 0.05, "correspondent": 0.05, "documentType": 0.1, "tags": 0.05 },
   "evidence": "Fragment of a larger document with no identifying information"
 }
 ```
@@ -75,10 +85,11 @@ Existing tags: utilities, energy, quarterly, tax-2024
 Response:
 ```json
 {
+  "title": "British Gas Energy Bill Q1 2024",
   "correspondent": "British Gas",
   "documentType": "Utility Bill",
   "tags": ["utilities", "energy", "quarterly"],
-  "confidence": { "correspondent": 0.95, "documentType": 0.9, "tags": 0.85 },
+  "confidence": { "title": 0.9, "correspondent": 0.95, "documentType": 0.9, "tags": 0.85 },
   "evidence": "British Gas header, Energy Bill, period 1 Jan - 31 Mar 2024"
 }
 ```

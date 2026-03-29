@@ -43,6 +43,7 @@ export function isValidSchema(response: unknown): boolean {
   const r = response as Record<string, unknown>;
 
   // Check required fields
+  if (!('title' in r)) return false;
   if (!('correspondent' in r)) return false;
   if (!('documentType' in r)) return false;
   if (!('tags' in r) || !Array.isArray(r.tags)) return false;
@@ -52,17 +53,19 @@ export function isValidSchema(response: unknown): boolean {
 
   // Check confidence sub-fields
   const conf = r.confidence as Record<string, unknown>;
+  if (typeof conf.title !== 'number') return false;
   if (typeof conf.correspondent !== 'number') return false;
   if (typeof conf.documentType !== 'number') return false;
   if (typeof conf.tags !== 'number') return false;
 
   // Check confidence bounds
-  for (const key of ['correspondent', 'documentType', 'tags'] as const) {
+  for (const key of ['title', 'correspondent', 'documentType', 'tags'] as const) {
     const val = conf[key] as number;
     if (val < 0 || val > 1) return false;
   }
 
   // Check types
+  if (r.title !== null && typeof r.title !== 'string') return false;
   if (r.correspondent !== null && typeof r.correspondent !== 'string') return false;
   if (r.documentType !== null && typeof r.documentType !== 'string') return false;
   if (!r.tags.every((t: unknown) => typeof t === 'string')) return false;
@@ -122,22 +125,24 @@ describe('eval metric functions', () => {
     it('accepts valid response', () => {
       expect(
         isValidSchema({
+          title: 'Amazon Invoice INV-2024-0847',
           correspondent: 'Amazon',
           documentType: 'Invoice',
           tags: ['electronics'],
-          confidence: { correspondent: 0.9, documentType: 0.95, tags: 0.8 },
+          confidence: { title: 0.9, correspondent: 0.9, documentType: 0.95, tags: 0.8 },
           evidence: 'Amazon.co.uk, Invoice #INV-2024-0847',
         }),
       ).toBe(true);
     });
 
-    it('accepts null correspondent/documentType', () => {
+    it('accepts null title/correspondent/documentType', () => {
       expect(
         isValidSchema({
+          title: null,
           correspondent: null,
           documentType: null,
           tags: [],
-          confidence: { correspondent: 0.1, documentType: 0.1, tags: 0.1 },
+          confidence: { title: 0.1, correspondent: 0.1, documentType: 0.1, tags: 0.1 },
           evidence: 'No clear information',
         }),
       ).toBe(true);
@@ -152,10 +157,11 @@ describe('eval metric functions', () => {
     it('rejects out-of-bounds confidence', () => {
       expect(
         isValidSchema({
+          title: 'Test',
           correspondent: 'Amazon',
           documentType: 'Invoice',
           tags: [],
-          confidence: { correspondent: 1.5, documentType: 0.5, tags: 0.5 },
+          confidence: { title: 0.5, correspondent: 1.5, documentType: 0.5, tags: 0.5 },
           evidence: 'test',
         }),
       ).toBe(false);

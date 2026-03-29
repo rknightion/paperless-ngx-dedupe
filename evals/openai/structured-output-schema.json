@@ -4,6 +4,10 @@
   "schema": {
     "type": "object",
     "properties": {
+      "title": {
+        "type": ["string", "null"],
+        "description": "A clear, descriptive document name/title, or null if no meaningful title can be determined"
+      },
       "correspondent": {
         "type": ["string", "null"],
         "description": "The person or organization this document relates to, or null if unclear"
@@ -21,6 +25,12 @@
       "confidence": {
         "type": "object",
         "properties": {
+          "title": {
+            "type": "number",
+            "description": "Confidence score for the suggested title (0.0 to 1.0)",
+            "minimum": 0,
+            "maximum": 1
+          },
           "correspondent": {
             "type": "number",
             "description": "Confidence score for the correspondent classification (0.0 to 1.0)",
@@ -40,7 +50,7 @@
             "maximum": 1
           }
         },
-        "required": ["correspondent", "documentType", "tags"],
+        "required": ["title", "correspondent", "documentType", "tags"],
         "additionalProperties": false
       },
       "evidence": {
@@ -49,7 +59,7 @@
         "maxLength": 500
       }
     },
-    "required": ["correspondent", "documentType", "tags", "confidence", "evidence"],
+    "required": ["title", "correspondent", "documentType", "tags", "confidence", "evidence"],
     "additionalProperties": false
   }
 }
