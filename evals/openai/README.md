@@ -113,18 +113,22 @@ substitution in the prompt produces the same format as the live app.
 
 Start narrow. OpenAI recommends small, precise graders.
 
-1. `Correspondent exact match`
+1. `Title quality`
+   Semantic similarity or fuzzy match against `expected_title`. Titles are
+   descriptive free-text so exact match is too strict — use a model grader or
+   fuzzy string comparison instead.
+2. `Correspondent exact match`
    String check against `expected_correspondent`.
-2. `Document type exact match`
+3. `Document type exact match`
    String check against `expected_document_type`.
-3. `Tags exact set`
+4. `Tags exact set`
    Python grader that normalizes case, splits the model output tags, and
    compares them to `expected_tags`.
-4. `Derived flags correct`
+5. `Derived flags correct`
    Python grader for `expected_correspondent_is_new`,
    `expected_document_type_is_new`, and `expected_new_tags` if you still keep
    those fields in the model output.
-5. `Grounded / no hallucination`
+6. `Grounded / no hallucination`
    Human annotation first; later add a model grader that checks whether the
    chosen labels are supported by the document text.
 
