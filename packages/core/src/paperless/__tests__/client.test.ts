@@ -153,7 +153,7 @@ describe('PaperlessClient', () => {
       await (client as any).fetchWithRetry('http://localhost:8000/api/test/');
 
       const [, options] = mockFetch.mock.calls[0];
-      expect(options.headers['Accept']).toBe('application/json; version=10');
+      expect(options.headers['Accept']).toBe('application/json');
     });
   });
 
