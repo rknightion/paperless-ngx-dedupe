@@ -1152,9 +1152,7 @@
       <!-- Reset Processing History -->
       <div class="border-soft mt-4 border-t pt-4">
         {#if resetConfirmCount !== null}
-          <div
-            class="bg-ember-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
-          >
+          <div class="bg-ember-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm">
             <AlertTriangle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p>
