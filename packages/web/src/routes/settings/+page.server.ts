@@ -5,6 +5,7 @@ import {
   getAiConfig,
   getRagConfig,
   getRagStats,
+  DEFAULT_EXTRACTION_PROMPT,
 } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
@@ -24,6 +25,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     },
     aiEnabled: locals.config.AI_ENABLED,
     aiConfig: locals.config.AI_ENABLED ? getAiConfig(locals.db) : null,
+    isDefaultPrompt: locals.config.AI_ENABLED
+      ? getAiConfig(locals.db).promptTemplate === DEFAULT_EXTRACTION_PROMPT
+      : true,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
     hasAnthropicKey: !!locals.config.AI_ANTHROPIC_API_KEY,
     ragEnabled: locals.config.RAG_ENABLED,
