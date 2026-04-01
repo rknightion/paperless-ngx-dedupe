@@ -16,6 +16,7 @@
     Brain,
     MessageCircleQuestion,
     AlertTriangle,
+    Check,
   } from 'lucide-svelte';
 
   let { data } = $props();
@@ -87,6 +88,7 @@
   let showAiAdvanced = $state(false);
   let resetConfirmCount = $state<number | null>(null);
   let isResetting = $state(false);
+  let showRevertResetPrompt = $state(false);
   let isSavingAi = $state(false);
   let aiSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
   let aiModels = $state<{ id: string; name: string }[]>([]);
@@ -435,7 +437,7 @@
           aiPromptTemplate = freshJson.data?.promptTemplate ?? '';
         }
         isDefaultPrompt = true;
-        aiSaveStatus = { type: 'success', message: 'Prompt reverted to default' };
+        showRevertResetPrompt = true;
       }
     } catch {
       aiSaveStatus = { type: 'error', message: 'Failed to revert prompt' };
@@ -1094,6 +1096,39 @@
                   >
                     Revert to Default
                   </button>
+                </div>
+              </div>
+            {/if}
+            {#if showRevertResetPrompt}
+              <div
+                class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+              >
+                <Check class="text-success mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p>
+                    Prompt reverted to default. Reset processing history so documents can be
+                    reprocessed with the updated prompt?
+                  </p>
+                  <div class="mt-2 flex gap-2">
+                    <button
+                      onclick={async () => {
+                        showRevertResetPrompt = false;
+                        await showResetConfirmation();
+                      }}
+                      class="text-accent hover:text-accent-hover text-xs font-medium"
+                    >
+                      Reset History
+                    </button>
+                    <button
+                      onclick={() => {
+                        showRevertResetPrompt = false;
+                        aiSaveStatus = { type: 'success', message: 'Prompt reverted to default' };
+                      }}
+                      class="text-muted hover:text-ink text-xs font-medium"
+                    >
+                      Skip
+                    </button>
+                  </div>
                 </div>
               </div>
             {/if}
