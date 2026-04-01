@@ -84,6 +84,20 @@
     </div>
   </td>
   <td class="hidden px-4 py-3 md:table-cell">
+    {#if result.suggestedTitle}
+      <div class="space-y-0.5">
+        {#if result.currentTitle && result.currentTitle !== result.suggestedTitle}
+          <div class="text-muted max-w-52 truncate text-xs line-through">
+            {result.currentTitle}
+          </div>
+        {/if}
+        <div class="text-ink max-w-52 truncate text-sm">{result.suggestedTitle}</div>
+      </div>
+    {:else}
+      <span class="text-soft">&mdash;</span>
+    {/if}
+  </td>
+  <td class="hidden px-4 py-3 md:table-cell">
     {#if result.suggestedCorrespondent}
       <div class="space-y-0.5">
         {#if result.currentCorrespondent && result.currentCorrespondent !== result.suggestedCorrespondent}
@@ -126,6 +140,10 @@
   <td class="px-4 py-3">
     {#if result.confidence}
       <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="text-muted w-9 text-[10px] font-medium uppercase">Title</span>
+          <ConfidenceBadge score={result.confidence.title} />
+        </div>
         <div class="flex items-center gap-2">
           <span class="text-muted w-9 text-[10px] font-medium uppercase">Corr</span>
           <ConfidenceBadge score={result.confidence.correspondent} />
