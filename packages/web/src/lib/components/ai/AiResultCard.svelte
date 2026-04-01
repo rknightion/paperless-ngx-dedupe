@@ -100,6 +100,7 @@
         </span>
         {#if result.confidence}
           <div class="flex items-center gap-1.5">
+            <ConfidenceBadge score={result.confidence.title} />
             <ConfidenceBadge score={result.confidence.correspondent} />
             <ConfidenceBadge score={result.confidence.documentType} />
             <ConfidenceBadge score={result.confidence.tags} />
@@ -119,6 +120,20 @@
 
   <!-- Middle: correspondent + document type -->
   <div class="border-soft flex flex-wrap gap-x-4 gap-y-1 border-t px-4 py-2.5 text-sm">
+    <div class="min-w-0">
+      <span class="text-muted text-xs font-medium uppercase">Title</span>
+      {#if result.suggestedTitle}
+        <div class="flex items-center gap-1.5">
+          {#if result.currentTitle && result.currentTitle !== result.suggestedTitle}
+            <span class="text-muted truncate text-xs line-through">{result.currentTitle}</span>
+            <span class="text-muted text-xs">&rarr;</span>
+          {/if}
+          <span class="text-ink truncate">{result.suggestedTitle}</span>
+        </div>
+      {:else}
+        <p class="text-soft">&mdash;</p>
+      {/if}
+    </div>
     <div class="min-w-0">
       <span class="text-muted text-xs font-medium uppercase">Correspondent</span>
       {#if result.suggestedCorrespondent}

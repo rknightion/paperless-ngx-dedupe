@@ -59,6 +59,10 @@
           <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">Document</th>
           <th
             class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
+            >Suggested Title</th
+          >
+          <th
+            class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
             >Correspondent</th
           >
           <th
