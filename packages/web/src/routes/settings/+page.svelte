@@ -15,6 +15,7 @@
     Archive,
     Brain,
     MessageCircleQuestion,
+    AlertTriangle,
   } from 'lucide-svelte';
 
   let { data } = $props();
@@ -81,6 +82,7 @@
   let aiExtractCorrespondent = $state(initialAiConfig?.extractCorrespondent ?? true);
   let aiExtractDocumentType = $state(initialAiConfig?.extractDocumentType ?? true);
   let aiExtractTags = $state(initialAiConfig?.extractTags ?? true);
+  let isDefaultPrompt = $state(untrack(() => data.isDefaultPrompt) ?? true);
   let showPrompt = $state(false);
   let showAiAdvanced = $state(false);
   let isSavingAi = $state(false);
@@ -430,6 +432,7 @@
         if (freshRes.ok) {
           aiPromptTemplate = freshJson.data?.promptTemplate ?? '';
         }
+        isDefaultPrompt = true;
         aiSaveStatus = { type: 'success', message: 'Prompt reverted to default' };
       }
     } catch {
@@ -1035,21 +1038,46 @@
           onclick={() => (showPrompt = !showPrompt)}
           class="text-accent hover:text-accent-hover text-sm font-medium"
         >
-          {showPrompt ? 'Hide' : 'Show'} Prompt Template
+          {showPrompt ? 'Hide' : 'Show'}
+          {isDefaultPrompt ? '' : 'Custom '}Prompt Template
         </button>
+        {#if !isDefaultPrompt && !showPrompt}
+          <p class="text-warn mt-1 text-xs">Differs from recommended default</p>
+        {/if}
         {#if showPrompt}
-          <div class="mt-3">
+          <div class="mt-3 space-y-3">
+            {#if !isDefaultPrompt}
+              <div
+                class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+              >
+                <AlertTriangle class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p>
+                    Your prompt template has been customised and differs from the latest recommended
+                    default. Newer features may not work as expected.
+                  </p>
+                  <button
+                    onclick={revertPrompt}
+                    class="text-accent hover:text-accent-hover mt-2 text-xs font-medium"
+                  >
+                    Revert to Default
+                  </button>
+                </div>
+              </div>
+            {/if}
             <textarea
               bind:value={aiPromptTemplate}
               rows="12"
               class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none"
             ></textarea>
-            <button
-              onclick={revertPrompt}
-              class="text-accent hover:text-accent-hover mt-2 text-xs font-medium"
-            >
-              Revert to Default
-            </button>
+            {#if isDefaultPrompt}
+              <button
+                onclick={revertPrompt}
+                class="text-accent hover:text-accent-hover text-xs font-medium"
+              >
+                Revert to Default
+              </button>
+            {/if}
           </div>
         {/if}
       </div>
