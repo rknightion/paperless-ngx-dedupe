@@ -1137,14 +1137,6 @@
               rows="12"
               class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none"
             ></textarea>
-            {#if isDefaultPrompt}
-              <button
-                onclick={revertPrompt}
-                class="text-accent hover:text-accent-hover text-xs font-medium"
-              >
-                Revert to Default
-              </button>
-            {/if}
           </div>
         {/if}
       </div>
