@@ -85,6 +85,8 @@
   let isDefaultPrompt = $state(untrack(() => data.isDefaultPrompt) ?? true);
   let showPrompt = $state(false);
   let showAiAdvanced = $state(false);
+  let resetConfirmCount = $state<number | null>(null);
+  let isResetting = $state(false);
   let isSavingAi = $state(false);
   let aiSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
   let aiModels = $state<{ id: string; name: string }[]>([]);
@@ -437,6 +439,36 @@
       }
     } catch {
       aiSaveStatus = { type: 'error', message: 'Failed to revert prompt' };
+    }
+  }
+
+  async function resetProcessingHistory() {
+    isResetting = true;
+    try {
+      const res = await fetch('/api/v1/ai/results/clear', { method: 'POST' });
+      const json = await res.json();
+      if (res.ok) {
+        aiSaveStatus = {
+          type: 'success',
+          message: `${json.data?.deleted ?? 0} AI processing results cleared`,
+        };
+      } else {
+        aiSaveStatus = { type: 'error', message: json.error?.message ?? 'Reset failed' };
+      }
+    } catch {
+      aiSaveStatus = { type: 'error', message: 'Reset failed' };
+    }
+    isResetting = false;
+    resetConfirmCount = null;
+  }
+
+  async function showResetConfirmation() {
+    try {
+      const res = await fetch('/api/v1/ai/stats');
+      const json = await res.json();
+      resetConfirmCount = json.data?.totalProcessed ?? 0;
+    } catch {
+      resetConfirmCount = 0;
     }
   }
 </script>
@@ -1079,6 +1111,49 @@
               </button>
             {/if}
           </div>
+        {/if}
+      </div>
+
+      <!-- Reset Processing History -->
+      <div class="border-soft mt-4 border-t pt-4">
+        {#if resetConfirmCount !== null}
+          <div
+            class="bg-ember-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+          >
+            <AlertTriangle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p>
+                This will delete {resetConfirmCount} AI processing result{resetConfirmCount === 1
+                  ? ''
+                  : 's'}. Documents will become eligible for reprocessing. This cannot be undone.
+              </p>
+              <div class="mt-2 flex gap-2">
+                <button
+                  onclick={resetProcessingHistory}
+                  disabled={isResetting}
+                  class="bg-ember hover:bg-ember/90 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                >
+                  {isResetting ? 'Resetting...' : 'Confirm Reset'}
+                </button>
+                <button
+                  onclick={() => (resetConfirmCount = null)}
+                  class="text-muted hover:text-ink text-xs font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        {:else}
+          <button
+            onclick={showResetConfirmation}
+            class="text-ember hover:text-ember/80 text-sm font-medium"
+          >
+            Reset Processing History
+          </button>
+          <p class="text-muted mt-1 text-xs">
+            Delete all AI results so documents can be reprocessed.
+          </p>
         {/if}
       </div>
 
