@@ -9,6 +9,7 @@ import {
   getAiResults,
   getAiResult,
   getAiStats,
+  clearAllAiResults,
   markAiResultApplied,
   markAiResultRejected,
   markAiResultFailed,
@@ -412,6 +413,38 @@ describe('getAiStats', () => {
     expect(stats.failed).toBe(0);
     expect(stats.totalPromptTokens).toBe(0);
     expect(stats.totalCompletionTokens).toBe(0);
+  });
+});
+
+describe('clearAllAiResults', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    seedDocumentsAndResults(db);
+  });
+
+  it('deletes all AI results and returns the count', () => {
+    const deleted = clearAllAiResults(db);
+    expect(deleted).toBe(3);
+    const stats = getAiStats(db);
+    expect(stats.totalProcessed).toBe(0);
+  });
+
+  it('returns 0 when no results exist', async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    const emptyDb = handle.db;
+    await migrateDatabase(handle.sqlite);
+    const deleted = clearAllAiResults(emptyDb);
+    expect(deleted).toBe(0);
+  });
+
+  it('makes documents eligible for reprocessing', () => {
+    clearAllAiResults(db);
+    const stats = getAiStats(db);
+    expect(stats.unprocessed).toBe(3);
   });
 });
 
