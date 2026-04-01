@@ -442,6 +442,11 @@ export function getAiStats(db: AppDatabase): AiStats {
   return stats;
 }
 
+export function clearAllAiResults(db: AppDatabase): number {
+  const result = db.delete(aiProcessingResult).run();
+  return result.changes;
+}
+
 export function markAiResultApplied(
   db: AppDatabase,
   id: string,

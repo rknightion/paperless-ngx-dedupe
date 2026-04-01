@@ -286,6 +286,7 @@ export {
   getAiResults,
   getAiResult,
   getAiStats,
+  clearAllAiResults,
   markAiResultApplied,
   markAiResultRejected,
   markAiResultFailed,
