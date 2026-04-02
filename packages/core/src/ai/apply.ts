@@ -265,10 +265,7 @@ export async function applyAiResult(
         docUpdate.tagsJson = JSON.stringify(tagNames);
       }
       if (Object.keys(docUpdate).length > 0) {
-        db.update(document)
-          .set(docUpdate)
-          .where(eq(document.paperlessId, row.paperlessId))
-          .run();
+        db.update(document).set(docUpdate).where(eq(document.paperlessId, row.paperlessId)).run();
       }
 
       // Record feedback if only some fields were applied
