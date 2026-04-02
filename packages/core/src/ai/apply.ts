@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
+import { document } from '../schema/sqlite/documents.js';
 import { type PaperlessClient } from '../paperless/client.js';
 import type { AppDatabase } from '../db/client.js';
 import { createLogger } from '../logger.js';
@@ -242,6 +243,33 @@ export async function applyAiResult(
 
       // Update DB status
       markAiResultApplied(db, resultId, options.fields, snapshot);
+
+      // Sync applied values back to the local document table so re-running
+      // AI processing uses the updated metadata instead of stale values
+      const docUpdate: Record<string, unknown> = {};
+      if (update.title) {
+        docUpdate.title = update.title;
+      }
+      if (update.correspondent !== undefined) {
+        const c = correspondents.find((cr) => cr.id === update.correspondent);
+        docUpdate.correspondent = c?.name ?? null;
+      }
+      if (update.documentType !== undefined) {
+        const dt = documentTypes.find((d) => d.id === update.documentType);
+        docUpdate.documentType = dt?.name ?? null;
+      }
+      if (update.tags) {
+        const tagNames = update.tags
+          .map((id) => tags.find((t) => t.id === id)?.name)
+          .filter((n): n is string => n !== undefined);
+        docUpdate.tagsJson = JSON.stringify(tagNames);
+      }
+      if (Object.keys(docUpdate).length > 0) {
+        db.update(document)
+          .set(docUpdate)
+          .where(eq(document.paperlessId, row.paperlessId))
+          .run();
+      }
 
       // Record feedback if only some fields were applied
       const allFields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [

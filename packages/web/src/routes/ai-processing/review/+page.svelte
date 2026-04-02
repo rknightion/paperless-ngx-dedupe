@@ -468,6 +468,7 @@
   <!-- Desktop Detail Drawer -->
   {#if activeResultId && !isMobile}
     <AiResultDetailDrawer
+      paperlessUrl={data.paperlessUrl}
       extractEnabled={data.extractEnabled}
       onapply={handleApply}
       onreject={handleReject}
@@ -480,6 +481,7 @@
 {#if activeResultId && isMobile}
   <AiResultDetailDrawer
     mobile
+    paperlessUrl={data.paperlessUrl}
     extractEnabled={data.extractEnabled}
     onapply={handleApply}
     onreject={handleReject}
