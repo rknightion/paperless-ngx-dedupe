@@ -316,7 +316,9 @@
 
     <!-- Detail Drawer -->
     {#if activeResultId}
-      <aside class="panel sticky top-24 max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto">
+      <aside
+        class="panel sticky top-24 max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto"
+      >
         {#if detailLoadState === 'loading'}
           <div class="space-y-4 p-4">
             <div class="flex items-center justify-between">
