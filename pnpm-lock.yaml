@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: ^0.81.0
-        version: 0.81.0(zod@4.3.6)
+        specifier: ^0.82.0
+        version: 0.82.0(zod@4.3.6)
       openai:
         specifier: ^6.33.0
         version: 6.33.0(zod@4.3.6)
@@ -70,8 +70,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.48(zod@4.3.6)
       '@anthropic-ai/sdk':
-        specifier: ^0.79.0 || ^0.80.0 || ^0.81.0
-        version: 0.81.0(zod@4.3.6)
+        specifier: ^0.79.0 || ^0.80.0 || ^0.81.0 || ^0.82.0
+        version: 0.82.0(zod@4.3.6)
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
@@ -128,7 +128,7 @@ importers:
         version: 10.3.1
       sqlite-vec:
         specifier: ^0.1.7
-        version: 0.1.8
+        version: 0.1.9
       zod:
         specifier: ^4.0.0
         version: 4.3.6
@@ -153,13 +153,13 @@ importers:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^3.0.63
-        version: 3.0.64(zod@4.3.6)
+        version: 3.0.65(zod@4.3.6)
       '@ai-sdk/openai':
         specifier: ^3.0.48
         version: 3.0.49(zod@4.3.6)
       '@anthropic-ai/sdk':
-        specifier: ^0.81.0
-        version: 0.81.0(zod@4.3.6)
+        specifier: ^0.82.0
+        version: 0.82.0(zod@4.3.6)
       '@grafana/faro-web-sdk':
         specifier: ^2.3.1
         version: 2.3.1
@@ -201,7 +201,7 @@ importers:
         version: link:../core
       ai:
         specifier: ^6.0.136
-        version: 6.0.142(zod@4.3.6)
+        version: 6.0.143(zod@4.3.6)
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.8.0
@@ -237,7 +237,7 @@ importers:
         version: 10.3.1
       sqlite-vec:
         specifier: ^0.1.7
-        version: 0.1.8
+        version: 0.1.9
       zod:
         specifier: ^4.0.0
         version: 4.3.6
@@ -296,14 +296,20 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/anthropic@3.0.65':
+    resolution: {integrity: sha512-wUSTNKk5NWjETqNtUT3kBHl+ic0ZSTgGB/Go8A5URRt4Zb1nMLH1135uZT3xnjrCZra0teMq9BhmfZ4Jfw6SdQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/gateway@3.0.83':
     resolution: {integrity: sha512-LvlWujbSdEkTBXBLFtF7GS6riXdHhH0O+DpDrCaNQvXeHmSF2jKsOg7JWXiCgygAHM5cWFAO3JYmZp83DjiuBQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/gateway@3.0.84':
-    resolution: {integrity: sha512-RnUw6UNvkaw9MEaJU9cIjA+WBP+ZR5+M/9nfbfJHcGKtTbcWXijJuYKx9nYRnm+qU+iiakb0XvQA/vvho6lTsw==}
+  '@ai-sdk/gateway@3.0.85':
+    resolution: {integrity: sha512-oPvs3bYnxndBY/O0gFSFuc5aA/QKCJbk/CaJaRnKgA/ZPH17jeVvEtiUBE6/N8hWhK7XgX53NFI7F3CGmDfm1g==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -330,8 +336,8 @@ packages:
     resolution: {integrity: sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ==}
     engines: {node: '>=18'}
 
-  '@anthropic-ai/sdk@0.81.0':
-    resolution: {integrity: sha512-D4K5PvEV6wPiRtVlVsJHIUhHAmOZ6IT/I9rKlTf84gR7GyyAurPJK7z9BOf/AZqC5d1DhYQGJNKRmV+q8dGhgw==}
+  '@anthropic-ai/sdk@0.82.0':
+    resolution: {integrity: sha512-xdHTjL1GlUlDugHq/I47qdOKp/ROPvuHl7ROJCgUQigbvPu7asf9KcAcU1EqdrP2LuVhEKaTs7Z+ShpZDRzHdQ==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -2118,8 +2124,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  ai@6.0.142:
-    resolution: {integrity: sha512-ZoxAsnTL/dFg5WdcwC8QNhKVlLtqwwT3I7p/4i8IJJP+6ZwqF1ljuwMsAsPYYvppZ+RzUxjxxFGb1cbEhNH3dg==}
+  ai@6.0.143:
+    resolution: {integrity: sha512-wVDb7StQ1EPQ9GDAOmi1AsuAXQRSii+zZT2sFK+MCisH4vV7XNEAdzXL+sKsUAFhhq+EtVFWWlB4mCk4hcoIMw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3247,33 +3253,33 @@ packages:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
 
-  sqlite-vec-darwin-arm64@0.1.8:
-    resolution: {integrity: sha512-EoHyjPgX8uhWWcYSWbLwJHU6j8AQvwYbwDXFaT1ocdNtJy5qAGtX6LLsBR3vuWOyosMnULF6+DExjldku23h7A==}
+  sqlite-vec-darwin-arm64@0.1.9:
+    resolution: {integrity: sha512-jSsZpE42OfBkGL/ItyJTVCUwl6o6Ka3U5rc4j+UBDIQzC1ulSSKMEhQLthsOnF/MdAf1MuAkYhkdKmmcjaIZQg==}
     cpu: [arm64]
     os: [darwin]
 
-  sqlite-vec-darwin-x64@0.1.8:
-    resolution: {integrity: sha512-IafNV502w90y1BvWQXaRZ2AyyqNINmZ+7LEvkfL45Gf7kC182EFKxn9vbCy6UrY6QYXN/XQo7aICpTO7MIZBqw==}
+  sqlite-vec-darwin-x64@0.1.9:
+    resolution: {integrity: sha512-KDlVyqQT7pnOhU1ymB9gs7dMbSoVmKHitT+k1/xkjarcX8bBqPxWrGlK/R+C5WmWkfvWwyq5FfXfiBYCBs6PlA==}
     cpu: [x64]
     os: [darwin]
 
-  sqlite-vec-linux-arm64@0.1.8:
-    resolution: {integrity: sha512-R/zogzxQ4LEAgju3knhZuWs8MKdIqN6Bq+ORhLYz5S4eQ98F+rYqilHQ8vsE3Ouy347yxNB2HyldDMcwzgfTyQ==}
+  sqlite-vec-linux-arm64@0.1.9:
+    resolution: {integrity: sha512-5wXVJ9c9kR4CHm/wVqXb/R+XUHTdpZ4nWbPHlS+gc9qQFVHs92Km4bPnCKX4rtcPMzvNis+SIzMJR1SCEwpuUw==}
     cpu: [arm64]
     os: [linux]
 
-  sqlite-vec-linux-x64@0.1.8:
-    resolution: {integrity: sha512-DBIf2d2mvDb1M//snAKljpIsNQNqXX2AXWNBua0YCj40F/ygFJJ8j3k1pbcJfaEoaP21B+VquH0Gc6RIwZvXig==}
+  sqlite-vec-linux-x64@0.1.9:
+    resolution: {integrity: sha512-w3tCH8xK2finW8fQJ/m8uqKodXUZ9KAuAar2UIhz4BHILfpE0WM/MTGCRfa7RjYbrYim5Luk3guvMOGI7T7JQA==}
     cpu: [x64]
     os: [linux]
 
-  sqlite-vec-windows-x64@0.1.8:
-    resolution: {integrity: sha512-+fBb7kzTpSAvoO/06YMDefnM5PpRhnPVqAYiUvLfBnUCRILDq2F9lcjQQIRjhobrb3eoJWzsGHwnqdVfaIUNxQ==}
+  sqlite-vec-windows-x64@0.1.9:
+    resolution: {integrity: sha512-y3gEIyy/17bq2QFPQOWLE68TYWcRZkBQVA2XLrTPHNTOp55xJi/BBBmOm40tVMDMjtP+Elpk6UBUXdaq+46b0Q==}
     cpu: [x64]
     os: [win32]
 
-  sqlite-vec@0.1.8:
-    resolution: {integrity: sha512-L3xKhQUYQ7kcb3v31KPyPaEigE2upETMSx/5K3vTwm8HRsbci9PKGklXU+mxEYVogojpkenM0TZK5Sz/2FXTQw==}
+  sqlite-vec@0.1.9:
+    resolution: {integrity: sha512-L7XJWRIBNvR9O5+vh1FQ+IGkh/3D2AzVksW5gdtk28m78Hy8skFD0pqReKH1Yp0/BUKRGcffgKvyO/EON5JXpA==}
 
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
@@ -3591,6 +3597,12 @@ snapshots:
       '@ai-sdk/provider-utils': 4.0.21(zod@4.3.6)
       zod: 4.3.6
 
+  '@ai-sdk/anthropic@3.0.65(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.8
+      '@ai-sdk/provider-utils': 4.0.21(zod@4.3.6)
+      zod: 4.3.6
+
   '@ai-sdk/gateway@3.0.83(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
@@ -3598,7 +3610,7 @@ snapshots:
       '@vercel/oidc': 3.1.0
       zod: 4.3.6
 
-  '@ai-sdk/gateway@3.0.84(zod@4.3.6)':
+  '@ai-sdk/gateway@3.0.85(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.21(zod@4.3.6)
@@ -3628,7 +3640,7 @@ snapshots:
     dependencies:
       json-schema: 0.4.0
 
-  '@anthropic-ai/sdk@0.81.0(zod@4.3.6)':
+  '@anthropic-ai/sdk@0.82.0(zod@4.3.6)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
@@ -5361,9 +5373,9 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       zod: 4.3.6
 
-  ai@6.0.142(zod@4.3.6):
+  ai@6.0.143(zod@4.3.6):
     dependencies:
-      '@ai-sdk/gateway': 3.0.84(zod@4.3.6)
+      '@ai-sdk/gateway': 3.0.85(zod@4.3.6)
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.21(zod@4.3.6)
       '@opentelemetry/api': 1.9.1
@@ -6373,28 +6385,28 @@ snapshots:
 
   split2@4.2.0: {}
 
-  sqlite-vec-darwin-arm64@0.1.8:
+  sqlite-vec-darwin-arm64@0.1.9:
     optional: true
 
-  sqlite-vec-darwin-x64@0.1.8:
+  sqlite-vec-darwin-x64@0.1.9:
     optional: true
 
-  sqlite-vec-linux-arm64@0.1.8:
+  sqlite-vec-linux-arm64@0.1.9:
     optional: true
 
-  sqlite-vec-linux-x64@0.1.8:
+  sqlite-vec-linux-x64@0.1.9:
     optional: true
 
-  sqlite-vec-windows-x64@0.1.8:
+  sqlite-vec-windows-x64@0.1.9:
     optional: true
 
-  sqlite-vec@0.1.8:
+  sqlite-vec@0.1.9:
     optionalDependencies:
-      sqlite-vec-darwin-arm64: 0.1.8
-      sqlite-vec-darwin-x64: 0.1.8
-      sqlite-vec-linux-arm64: 0.1.8
-      sqlite-vec-linux-x64: 0.1.8
-      sqlite-vec-windows-x64: 0.1.8
+      sqlite-vec-darwin-arm64: 0.1.9
+      sqlite-vec-darwin-x64: 0.1.9
+      sqlite-vec-linux-arm64: 0.1.9
+      sqlite-vec-linux-x64: 0.1.9
+      sqlite-vec-windows-x64: 0.1.9
 
   stackback@0.0.2: {}
 
