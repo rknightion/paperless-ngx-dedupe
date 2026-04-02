@@ -23,6 +23,7 @@
 
   interface Props {
     mobile?: boolean;
+    paperlessUrl?: string;
     extractEnabled?: {
       title: boolean;
       correspondent: boolean;
@@ -40,6 +41,7 @@
 
   let {
     mobile = false,
+    paperlessUrl = '',
     extractEnabled = { title: true, correspondent: true, documentType: true, tags: true },
     onapply,
     onreject,
@@ -197,7 +199,7 @@
     </div>
   {:else}
     <!-- Desktop aside -->
-    <aside class="panel max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto">
+    <aside class="panel sticky top-24 max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto">
       {@render drawerContent()}
     </aside>
   {/if}
@@ -257,7 +259,7 @@
               {statusDisplayText(detail.appliedStatus)}
             </span>
             <a
-              href="/api/v1/paperless/documents/{detail.paperlessId}/preview"
+              href="{paperlessUrl}/documents/{detail.paperlessId}/details"
               target="_blank"
               rel="noopener noreferrer"
               class="text-accent hover:text-accent-hover flex items-center gap-1 text-xs font-medium"

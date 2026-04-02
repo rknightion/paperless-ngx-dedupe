@@ -316,7 +316,7 @@
 
     <!-- Detail Drawer -->
     {#if activeResultId}
-      <aside class="panel max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto">
+      <aside class="panel sticky top-24 max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto">
         {#if detailLoadState === 'loading'}
           <div class="space-y-4 p-4">
             <div class="flex items-center justify-between">
@@ -365,7 +365,7 @@
                     {statusDisplayText(activeResultDetail.appliedStatus)}
                   </span>
                   <a
-                    href="/api/v1/paperless/documents/{activeResultDetail.paperlessId}/preview"
+                    href="{data.paperlessUrl}/documents/{activeResultDetail.paperlessId}/details"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="text-accent hover:text-accent-hover flex items-center gap-1 text-xs font-medium"

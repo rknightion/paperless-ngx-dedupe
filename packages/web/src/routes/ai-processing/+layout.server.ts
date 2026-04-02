@@ -15,5 +15,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     stats,
     aiConfig,
     activeJob: jobs.find((j) => j.status === 'running' || j.status === 'pending') ?? null,
+    paperlessUrl: locals.config.PAPERLESS_URL.replace(/\/+$/, ''),
   };
 };
