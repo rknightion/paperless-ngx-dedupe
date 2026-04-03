@@ -160,6 +160,9 @@ export const aiConfigSchema = z.object({
   autoApplyRequireNoNewEntities: z.boolean().default(true),
   autoApplyRequireNoClearing: z.boolean().default(true),
   autoApplyRequireOcrText: z.boolean().default(true),
+
+  // Concurrency for applying results to Paperless-NGX
+  applyConcurrency: z.number().int().min(1).max(50).default(5),
 });
 
 export type AiConfig = z.infer<typeof aiConfigSchema>;

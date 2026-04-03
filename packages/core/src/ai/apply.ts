@@ -2,6 +2,11 @@ import { eq } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { document } from '../schema/sqlite/documents.js';
 import { type PaperlessClient } from '../paperless/client.js';
+import type {
+  PaperlessCorrespondent,
+  PaperlessDocumentType,
+  PaperlessTag,
+} from '../paperless/types.js';
 import type { AppDatabase } from '../db/client.js';
 import { createLogger } from '../logger.js';
 import { withSpan } from '../telemetry/spans.js';
@@ -18,6 +23,13 @@ import { recordFeedback } from './feedback.js';
 
 const logger = createLogger('ai-apply');
 
+/** Pre-fetched reference data to avoid redundant API calls in batch mode. */
+export interface ReferenceData {
+  correspondents: PaperlessCorrespondent[];
+  documentTypes: PaperlessDocumentType[];
+  tags: PaperlessTag[];
+}
+
 export interface ApplyOptions {
   fields: ('title' | 'correspondent' | 'documentType' | 'tags')[];
   addProcessedTag?: boolean;
@@ -30,6 +42,8 @@ export interface ApplyOptions {
   protectedTagsEnabled?: boolean;
   /** Tag names that should never be added or removed by AI */
   protectedTagNames?: string[];
+  /** Pre-fetched reference data — when provided, skips per-document API fetches. */
+  referenceData?: ReferenceData;
 }
 
 export async function applyAiResult(
@@ -71,24 +85,61 @@ export async function applyAiResult(
         throw new Error('No suggestions to apply');
       }
 
-      // Fetch current reference data and current document state from Paperless
-      const [correspondents, documentTypes, tags, currentDoc] = await Promise.all([
-        client.getCorrespondents(),
-        client.getDocumentTypes(),
-        client.getTags(),
-        client.getDocument(row.paperlessId),
-      ]);
+      // Use pre-fetched reference data when available (batch mode), otherwise fetch per-document
+      let correspondents: PaperlessCorrespondent[];
+      let documentTypes: PaperlessDocumentType[];
+      let tags: PaperlessTag[];
 
-      // Build pre-apply snapshot from actual Paperless state
-      const preApplyCorrespondent = currentDoc.correspondent
-        ? correspondents.find((c) => c.id === currentDoc.correspondent)
-        : null;
-      const preApplyDocType = currentDoc.documentType
-        ? documentTypes.find((dt) => dt.id === currentDoc.documentType)
-        : null;
-      const preApplyTagNames = currentDoc.tags
-        .map((tid) => tags.find((t) => t.id === tid)?.name)
-        .filter((n): n is string => n !== undefined);
+      if (options.referenceData) {
+        correspondents = options.referenceData.correspondents;
+        documentTypes = options.referenceData.documentTypes;
+        tags = options.referenceData.tags;
+      } else {
+        [correspondents, documentTypes, tags] = await Promise.all([
+          client.getCorrespondents(),
+          client.getDocumentTypes(),
+          client.getTags(),
+        ]);
+      }
+
+      // Build pre-apply snapshot: use local DB data in batch mode, live API in single-doc mode
+      let preApplyCorrespondent: PaperlessCorrespondent | null | undefined;
+      let preApplyDocType: PaperlessDocumentType | null | undefined;
+      let preApplyTagNames: string[];
+      let currentDocTagIds: number[];
+
+      if (options.referenceData) {
+        // Reconstruct from AI result row's stored current* values + reference data
+        preApplyCorrespondent = row.currentCorrespondent
+          ? correspondents.find(
+              (c) => c.name.toLowerCase() === row.currentCorrespondent!.toLowerCase(),
+            )
+          : null;
+        preApplyDocType = row.currentDocumentType
+          ? documentTypes.find(
+              (dt) => dt.name.toLowerCase() === row.currentDocumentType!.toLowerCase(),
+            )
+          : null;
+        const currentTagNames: string[] = row.currentTagsJson
+          ? JSON.parse(row.currentTagsJson)
+          : [];
+        preApplyTagNames = currentTagNames;
+        currentDocTagIds = currentTagNames
+          .map((name) => tags.find((t) => t.name.toLowerCase() === name.toLowerCase())?.id)
+          .filter((id): id is number => id !== undefined);
+      } else {
+        const currentDoc = await client.getDocument(row.paperlessId);
+        preApplyCorrespondent = currentDoc.correspondent
+          ? correspondents.find((c) => c.id === currentDoc.correspondent)
+          : null;
+        preApplyDocType = currentDoc.documentType
+          ? documentTypes.find((dt) => dt.id === currentDoc.documentType)
+          : null;
+        preApplyTagNames = currentDoc.tags
+          .map((tid) => tags.find((t) => t.id === tid)?.name)
+          .filter((n): n is string => n !== undefined);
+        currentDocTagIds = currentDoc.tags;
+      }
 
       const update: {
         title?: string;
@@ -119,6 +170,7 @@ export async function applyAiResult(
               );
             } else {
               found = await client.createCorrespondent(suggestedCorrespondent);
+              correspondents.push(found);
               logger.info({ name: suggestedCorrespondent }, 'Created new correspondent');
             }
           }
@@ -143,6 +195,7 @@ export async function applyAiResult(
               );
             } else {
               found = await client.createDocumentType(suggestedDocumentType);
+              documentTypes.push(found);
               logger.info({ name: suggestedDocumentType }, 'Created new document type');
             }
           }
@@ -198,7 +251,7 @@ export async function applyAiResult(
 
         // Preserve protected tags already on the document
         if (protectedTagSet.size > 0) {
-          for (const existingTagId of currentDoc.tags) {
+          for (const existingTagId of currentDocTagIds) {
             const existingTag = tags.find((t) => t.id === existingTagId);
             if (existingTag && protectedTagSet.has(existingTag.name.toLowerCase())) {
               if (!resolvedTagIds.includes(existingTagId)) {
@@ -225,12 +278,12 @@ export async function applyAiResult(
       // Build audit snapshot
       const snapshot: ApplySnapshot = {
         preApply: {
-          title: currentDoc.title ?? null,
-          correspondentId: currentDoc.correspondent,
+          title: row.currentTitle ?? null,
+          correspondentId: preApplyCorrespondent?.id ?? null,
           correspondentName: preApplyCorrespondent?.name ?? null,
-          documentTypeId: currentDoc.documentType,
+          documentTypeId: preApplyDocType?.id ?? null,
           documentTypeName: preApplyDocType?.name ?? null,
-          tagIds: currentDoc.tags.length > 0 ? currentDoc.tags : null,
+          tagIds: currentDocTagIds.length > 0 ? currentDocTagIds : null,
           tagNames: preApplyTagNames.length > 0 ? preApplyTagNames : null,
         },
         applied: {
