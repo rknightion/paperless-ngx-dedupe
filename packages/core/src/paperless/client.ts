@@ -397,6 +397,18 @@ export class PaperlessClient {
     }
   }
 
+  async bulkEdit(
+    documentIds: number[],
+    method: string,
+    parameters: Record<string, unknown>,
+  ): Promise<void> {
+    await this.fetchWithRetry(this.buildUrl('/api/documents/bulk_edit/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents: documentIds, method, parameters }),
+    });
+  }
+
   private async fetchAllPaginated<T>(path: string, schema: ZodType): Promise<T[]> {
     const paginatedSchema = paginatedResponseSchema(schema);
     const allResults: T[] = [];

@@ -123,6 +123,7 @@ export async function evaluateAndAutoApply(
         processedTagName: config.processedTagName,
         protectedTagsEnabled: config.protectedTagsEnabled,
         protectedTagNames: config.protectedTagNames,
+        referenceData: { correspondents, documentTypes, tags },
       });
       autoApplied++;
       details.push({

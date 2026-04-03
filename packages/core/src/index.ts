@@ -314,7 +314,7 @@ export {
   rejectAiResultWithReason,
   batchRejectAiResults,
 } from './ai/apply.js';
-export type { ApplyOptions } from './ai/apply.js';
+export type { ApplyOptions, ReferenceData } from './ai/apply.js';
 export { revertAiResult } from './ai/revert.js';
 export { recordFeedback, getFeedbackSummary } from './ai/feedback.js';
 export type { AiFeedback, AiFeedbackSummary } from './ai/feedback.js';
