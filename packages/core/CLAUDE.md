@@ -11,7 +11,7 @@ The library is organized into these major subsystems (all re-exported from `src/
 - **dedup** — MinHash/LSH fingerprinting, shingle generation, scoring, and duplicate analysis
 - **jobs** — SQLite-backed job queue with worker thread infrastructure
 - **queries** — Dashboard, documents, duplicates, and config queries
-- **ai** — AI-powered duplicate analysis (OpenAI + Anthropic providers, batch processing, auto-apply)
+- **ai** — AI-powered metadata extraction (OpenAI provider, batch processing, flex processing, auto-apply)
 - **rag** — RAG pipeline (vector store, chunking, embeddings, search, conversations)
 - **telemetry** — OpenTelemetry tracing, metrics, and Paperless metrics coordinator
 - **config** — Zod-validated environment config (`parseConfig`)
