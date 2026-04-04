@@ -1,5 +1,90 @@
 # Changelog
 
+## [0.14.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.13.0...v0.14.0) (2026-04-04)
+
+
+### Features
+
+* add clearAllAiResults function to delete all AI processing results ([36b6ff6](https://github.com/rknightion/paperless-ngx-dedupe/commit/36b6ff69ff38fb5cc4504fc0a06ed9b483c8b5b5))
+* add contextual reset prompt after prompt revert ([ec740b8](https://github.com/rknightion/paperless-ngx-dedupe/commit/ec740b874ea62ea125911ca8c4a85ab1dda95024))
+* add document cleanup and 404 error handling for orphaned records ([aefd5c1](https://github.com/rknightion/paperless-ngx-dedupe/commit/aefd5c1ed8c26c4d05d57b28d97672f9a8fb000f))
+* add POST /api/v1/ai/results/clear endpoint ([dcc0abb](https://github.com/rknightion/paperless-ngx-dedupe/commit/dcc0abbcc5dd3218c8fd911dba9a6ee16f3154f7))
+* add standalone Reset Processing History button with confirmation ([6ad4e23](https://github.com/rknightion/paperless-ngx-dedupe/commit/6ad4e233db3ba818e169640bb3096c79de2b5998))
+* **ai:** add title extraction and management to AI processing ([0c6c771](https://github.com/rknightion/paperless-ngx-dedupe/commit/0c6c77184c3e51381d4a90311c4c0313cdff8c4a))
+* **ai:** add title suggestions to AI result displays ([de790cb](https://github.com/rknightion/paperless-ngx-dedupe/commit/de790cb5cde38495a8de30a39bdc28f20211c4c6))
+* **ai:** add visual indicator for custom prompt templates ([62385e2](https://github.com/rknightion/paperless-ngx-dedupe/commit/62385e29f1555c3eb9f9e5ffdd6979ae5cb84081))
+* sync applied AI results to local document table and improve UI navigation ([e153f3e](https://github.com/rknightion/paperless-ngx-dedupe/commit/e153f3e287d55967fa5383bd0050ca773e207ec2))
+* **telemetry:** add Faro User Actions to multi-step interactions ([6d001f5](https://github.com/rknightion/paperless-ngx-dedupe/commit/6d001f52aa56b7f44aa23222dc36dbd5c16377b3))
+* **telemetry:** add Pyroscope continuous profiling support ([f18ebc6](https://github.com/rknightion/paperless-ngx-dedupe/commit/f18ebc6bd076d24d91138344fcff6f74f78ccef8))
+* **telemetry:** add Pyroscope operation labels to hot code paths ([286d0e4](https://github.com/rknightion/paperless-ngx-dedupe/commit/286d0e40ad7b78839e41f6096ee4e808e6faaa7b))
+* **telemetry:** add service.namespace, resource detectors, and Pyroscope config ([fc66c1d](https://github.com/rknightion/paperless-ngx-dedupe/commit/fc66c1dbf768cfa6c52fcf34c18cff0308822d6a))
+* **telemetry:** wire Faro TracingInstrumentation for end-to-end trace correlation ([e26ac0b](https://github.com/rknightion/paperless-ngx-dedupe/commit/e26ac0b38e94e46f12896490d5a56b93c605ada8))
+* **ui:** add error banner and retry button to AiResultDetailDrawer ([62d40eb](https://github.com/rknightion/paperless-ngx-dedupe/commit/62d40eb1da646f89e19abe4ef9d6839466b9c60d))
+* **ui:** add error banner and retry to history page drawer ([0c048e0](https://github.com/rknightion/paperless-ngx-dedupe/commit/0c048e06faabceb3acf62973f474a0dc988dbf7c))
+* **ui:** allow error messages to wrap in queue page failed section ([72027b8](https://github.com/rknightion/paperless-ngx-dedupe/commit/72027b87516662f75ed62ac1c121d9158e1e8777))
+* **ui:** show inline error message in AiResultCard instead of tooltip ([5913619](https://github.com/rknightion/paperless-ngx-dedupe/commit/5913619922fab487cb276afc3db5b0a33ab6c328))
+* **ui:** show inline error message in AiResultRow instead of tooltip ([404c7c6](https://github.com/rknightion/paperless-ngx-dedupe/commit/404c7c6af81e68efbe517531170cf242dde940fa))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @anthropic-ai/sdk to v0.81.0 ([#279](https://github.com/rknightion/paperless-ngx-dedupe/issues/279)) ([a79fc2a](https://github.com/rknightion/paperless-ngx-dedupe/commit/a79fc2a8a4a305bd4db671d56891cbfc184d289c))
+* **deps:** update dependency @anthropic-ai/sdk to v0.82.0 ([#283](https://github.com/rknightion/paperless-ngx-dedupe/issues/283)) ([2cdd8b3](https://github.com/rknightion/paperless-ngx-dedupe/commit/2cdd8b3e5578f5d4b2481994f63b1b40dbf0ac84))
+* remove redundant Revert to Default button shown when prompt is already default ([28241c0](https://github.com/rknightion/paperless-ngx-dedupe/commit/28241c016e1f5482e7b7865f4ba1d72bdfba5205))
+* **telemetry:** add @opentelemetry/api-logs to web package dependencies ([1945165](https://github.com/rknightion/paperless-ngx-dedupe/commit/194516543cda5b6c4cd0e4b5e91f3ae511a83c24))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#272](https://github.com/rknightion/paperless-ngx-dedupe/issues/272)) ([0e8902a](https://github.com/rknightion/paperless-ngx-dedupe/commit/0e8902ab26a3aa8b09131094a0df1037c017e4d9))
+* **deps:** lock file maintenance ([#273](https://github.com/rknightion/paperless-ngx-dedupe/issues/273)) ([6eca07d](https://github.com/rknightion/paperless-ngx-dedupe/commit/6eca07da868ec9721980878f4c5cc5d7a5d85062))
+* **deps:** update davelosert/vitest-coverage-report-action digest to bd52af5 ([#274](https://github.com/rknightion/paperless-ngx-dedupe/issues/274)) ([e127a53](https://github.com/rknightion/paperless-ngx-dedupe/commit/e127a536913fe75a4f37c79dc47e1e4b2c6a57df))
+* **deps:** update davelosert/vitest-coverage-report-action digest to c0c9b09 ([#277](https://github.com/rknightion/paperless-ngx-dedupe/issues/277)) ([876fc48](https://github.com/rknightion/paperless-ngx-dedupe/commit/876fc48b51354c2aa1d1599348db959080cf3c9c))
+* **deps:** update davelosert/vitest-coverage-report-action digest to d63aa97 ([#285](https://github.com/rknightion/paperless-ngx-dedupe/issues/285)) ([0eabb62](https://github.com/rknightion/paperless-ngx-dedupe/commit/0eabb6277f485983610f432d5b49bdc9d62e071d))
+* **deps:** update dependency @ai-sdk/anthropic to v3.0.65 ([#286](https://github.com/rknightion/paperless-ngx-dedupe/issues/286)) ([e9244c4](https://github.com/rknightion/paperless-ngx-dedupe/commit/e9244c48a567443683991cfaecb21b47a802c3d9))
+* **deps:** update dependency @ai-sdk/anthropic to v3.0.66 ([#288](https://github.com/rknightion/paperless-ngx-dedupe/issues/288)) ([d8b2b85](https://github.com/rknightion/paperless-ngx-dedupe/commit/d8b2b858c2aa4a2378d5e78b950faaad3d87dd94))
+* **deps:** update dependency @ai-sdk/openai to v3.0.49 ([#276](https://github.com/rknightion/paperless-ngx-dedupe/issues/276)) ([fc7644b](https://github.com/rknightion/paperless-ngx-dedupe/commit/fc7644b2e33e16596b0979fec68dbe3aef703e09))
+* **deps:** update dependency @ai-sdk/openai to v3.0.50 ([#290](https://github.com/rknightion/paperless-ngx-dedupe/issues/290)) ([3caf239](https://github.com/rknightion/paperless-ngx-dedupe/commit/3caf239bd95d2d7faa057803a6fde76795008822))
+* **deps:** update dependency @playwright/test to v1.59.0 ([#278](https://github.com/rknightion/paperless-ngx-dedupe/issues/278)) ([cec0b9b](https://github.com/rknightion/paperless-ngx-dedupe/commit/cec0b9b364291c89b0070b83800164f3a2696706))
+* **deps:** update dependency @playwright/test to v1.59.1 ([#281](https://github.com/rknightion/paperless-ngx-dedupe/issues/281)) ([f983c3d](https://github.com/rknightion/paperless-ngx-dedupe/commit/f983c3d99d0fe82a7272f14c0f42dde5a201083d))
+* **deps:** update dependency @sveltejs/kit to v2.56.0 ([#293](https://github.com/rknightion/paperless-ngx-dedupe/issues/293)) ([e24a210](https://github.com/rknightion/paperless-ngx-dedupe/commit/e24a2104a5a52677bc731f7dfe79fccf13516ace))
+* **deps:** update dependency @sveltejs/kit to v2.56.1 ([#295](https://github.com/rknightion/paperless-ngx-dedupe/issues/295)) ([c333b6c](https://github.com/rknightion/paperless-ngx-dedupe/commit/c333b6c82f741c99c04b8a056b20f84c6a9c52d9))
+* **deps:** update dependency @types/node to v25.5.1 ([#291](https://github.com/rknightion/paperless-ngx-dedupe/issues/291)) ([859039a](https://github.com/rknightion/paperless-ngx-dedupe/commit/859039ad1a70e69881c0cb1a19e76b2307667663))
+* **deps:** update dependency @types/node to v25.5.2 ([#292](https://github.com/rknightion/paperless-ngx-dedupe/issues/292)) ([08b16f3](https://github.com/rknightion/paperless-ngx-dedupe/commit/08b16f396226e8c6c5255208e52d81f5d173bd12))
+* **deps:** update dependency ai to v6.0.142 ([#280](https://github.com/rknightion/paperless-ngx-dedupe/issues/280)) ([4b53114](https://github.com/rknightion/paperless-ngx-dedupe/commit/4b53114b06fc876f17b3e06a830385aedf07ae57))
+* **deps:** update dependency ai to v6.0.143 ([#284](https://github.com/rknightion/paperless-ngx-dedupe/issues/284)) ([cd5a838](https://github.com/rknightion/paperless-ngx-dedupe/commit/cd5a8382579312f450df4b517da1ae7ffce2d498))
+* **deps:** update dependency ai to v6.0.145 ([#289](https://github.com/rknightion/paperless-ngx-dedupe/issues/289)) ([6263fe7](https://github.com/rknightion/paperless-ngx-dedupe/commit/6263fe7d0a1a150052113d9adeb395160ac1f486))
+* **deps:** update dependency ai to v6.0.146 ([#296](https://github.com/rknightion/paperless-ngx-dedupe/issues/296)) ([0018b93](https://github.com/rknightion/paperless-ngx-dedupe/commit/0018b9385ec99302b5e4236f968d09c1962981a6))
+* **deps:** update dependency eslint to v10.2.0 ([#294](https://github.com/rknightion/paperless-ngx-dedupe/issues/294)) ([cdee552](https://github.com/rknightion/paperless-ngx-dedupe/commit/cdee5523f86ef9a1a14e7af5d6f9d04352ed7479))
+* **deps:** update dependency eslint-plugin-svelte to v3.17.0 ([#287](https://github.com/rknightion/paperless-ngx-dedupe/issues/287)) ([0668e1a](https://github.com/rknightion/paperless-ngx-dedupe/commit/0668e1a00847ff1a7df9749aa0b2ec3ed35afbb2))
+* **deps:** update dependency sqlite-vec to v0.1.9 ([#282](https://github.com/rknightion/paperless-ngx-dedupe/issues/282)) ([a426d9c](https://github.com/rknightion/paperless-ngx-dedupe/commit/a426d9c1c3448241a8e56c83e7aaa98fdec90902))
+* **deps:** update dependency svelte to v5.55.1 ([#271](https://github.com/rknightion/paperless-ngx-dedupe/issues/271)) ([e1dc582](https://github.com/rknightion/paperless-ngx-dedupe/commit/e1dc5821f5727ccc9646ee952fdfa653f68f72a0))
+* **deps:** update typescript-eslint monorepo to v8.58.0 ([#275](https://github.com/rknightion/paperless-ngx-dedupe/issues/275)) ([36f6c04](https://github.com/rknightion/paperless-ngx-dedupe/commit/36f6c049248fd4a515a739a12920402a71b174f7))
+
+
+### Documentation
+
+* add AI apply failure visibility design spec ([b419a87](https://github.com/rknightion/paperless-ngx-dedupe/commit/b419a87e9cb28b1d72ae80c42d9c46a4bdfb46fc))
+* add implementation plan for AI apply failure visibility ([7443a30](https://github.com/rknightion/paperless-ngx-dedupe/commit/7443a307eb20630651ac13d3eea01d957234884a))
+* add observability guide, Pyroscope setup, and updated env vars ([19375c9](https://github.com/rknightion/paperless-ngx-dedupe/commit/19375c9def0522133c167f309f36c1a60dae0566))
+* add observability improvements design spec ([b290db2](https://github.com/rknightion/paperless-ngx-dedupe/commit/b290db2592a229fe381e3bc0fdc0a6a8129da56e))
+* add observability improvements implementation plan ([b1a3aa9](https://github.com/rknightion/paperless-ngx-dedupe/commit/b1a3aa9ebed12318c4030ee7009ac1216b8bbb5e))
+* expand project documentation with code style, Docker commands, and API conventions ([60df091](https://github.com/rknightion/paperless-ngx-dedupe/commit/60df091513eeab824e19e0674b398bc8def3df8b))
+
+
+### Refactoring
+
+* **core:** fix indentation in batch processing and analysis modules ([435b3db](https://github.com/rknightion/paperless-ngx-dedupe/commit/435b3dbdf4934263cee35fad2b974a86c6f91801))
+* **telemetry:** add unit annotations to all metric instruments ([fadba89](https://github.com/rknightion/paperless-ngx-dedupe/commit/fadba89e453bf48d7ca24e06367d0b4c866a5c2c))
+* **telemetry:** migrate AI batch to GenAI semantic conventions ([4e204c7](https://github.com/rknightion/paperless-ngx-dedupe/commit/4e204c7c1be6f565c7f6facf37300fff322f7c47))
+* **telemetry:** migrate drizzle logger to log-based events and stable DB semconv ([d29b283](https://github.com/rknightion/paperless-ngx-dedupe/commit/d29b283306d7a129069389d484e7b0ab8848ab72))
+* **telemetry:** replace span.recordException with log-based exception events ([03d28bc](https://github.com/rknightion/paperless-ngx-dedupe/commit/03d28bcc152f26f38b2d6a20836c6d867e0ca3f4))
+
+
+### Performance
+
+* **ai:** optimize batch apply with reference data caching and bulk operations ([381e92d](https://github.com/rknightion/paperless-ngx-dedupe/commit/381e92d0262122de94c4ce24764b57fbb4f11fa5))
+
 ## [0.13.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.12.1...v0.13.0) (2026-03-29)
 
 
