@@ -127,6 +127,7 @@ export const aiConfigSchema = z.object({
   includeTags: z.boolean().default(false),
   reasoningEffort: z.enum(['none', 'low', 'medium', 'high']).default('low'),
   maxRetries: z.number().int().min(0).max(20).default(10),
+  flexProcessing: z.boolean().default(true),
 
   // Per-field extraction enable/disable (prompt always extracts all; disabled fields are ignored in review/apply)
   extractTitle: z.boolean().default(true),
