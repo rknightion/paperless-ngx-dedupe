@@ -13,7 +13,6 @@ export interface BuildPromptOptions {
   includeCorrespondents: boolean;
   includeDocumentTypes: boolean;
   includeTags: boolean;
-  provider?: 'openai' | 'anthropic';
 }
 
 /**
@@ -21,8 +20,6 @@ export interface BuildPromptOptions {
  *
  * Replaces {{existing_correspondents}}, {{existing_document_types}}, and
  * {{existing_tags}} in the template with the provided reference data.
- *
- * When provider is 'anthropic', wraps system prompt in XML tags.
  */
 /** Case-insensitive sort without mutating the original array. */
 function sortedInsensitive(arr: string[]): string[] {
@@ -40,7 +37,6 @@ export function buildPromptParts(options: BuildPromptOptions): PromptParts {
     includeCorrespondents,
     includeDocumentTypes,
     includeTags,
-    provider,
   } = options;
 
   const correspondentList =
@@ -58,21 +54,13 @@ export function buildPromptParts(options: BuildPromptOptions): PromptParts {
       ? sortedInsensitive(existingTags).join(', ')
       : '(none provided)';
 
-  let systemPrompt = promptTemplate
+  const systemPrompt = promptTemplate
     .replace('{{existing_correspondents}}', correspondentList)
     .replace('{{existing_document_types}}', documentTypeList)
     .replace('{{existing_tags}}', tagList)
     .trim();
 
-  const isAnthropic = provider === 'anthropic';
-
-  if (isAnthropic) {
-    systemPrompt = `<instructions>\n${systemPrompt}\n</instructions>`;
-  }
-
-  const userPrompt = isAnthropic
-    ? `<document>\n<title>${documentTitle}</title>\n<content>\n${documentContent}\n</content>\n</document>`
-    : `Document Title\n${documentTitle}\n\nDocument Text\n${documentContent}`;
+  const userPrompt = `Document Title\n${documentTitle}\n\nDocument Text\n${documentContent}`;
 
   return { systemPrompt, userPrompt };
 }

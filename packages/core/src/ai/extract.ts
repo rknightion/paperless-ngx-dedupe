@@ -34,7 +34,6 @@ export async function processDocument(
     includeCorrespondents: options.includeCorrespondents,
     includeDocumentTypes: options.includeDocumentTypes,
     includeTags: options.includeTags,
-    provider: options.provider.provider,
   });
 
   const startMs = performance.now();

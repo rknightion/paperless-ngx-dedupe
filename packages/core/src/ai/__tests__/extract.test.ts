@@ -95,9 +95,9 @@ describe('processDocument', () => {
     );
   });
 
-  it('builds prompt with correct provider type', async () => {
+  it('builds prompt with plain text format', async () => {
     const provider: AiProviderInterface = {
-      provider: 'anthropic',
+      provider: 'openai',
       extract: vi.fn().mockResolvedValue({
         response: {
           correspondent: 'Amazon',
@@ -113,8 +113,9 @@ describe('processDocument', () => {
     await processDocument({ ...baseOptions, provider });
 
     const call = vi.mocked(provider.extract).mock.calls[0][0];
-    // Anthropic provider should produce XML-wrapped prompts
-    expect(call.systemPrompt).toContain('<instructions>');
-    expect(call.userPrompt).toContain('<document>');
+    // Provider should produce plain text prompts
+    expect(call.systemPrompt).not.toContain('<instructions>');
+    expect(call.userPrompt).toContain('Document Title');
+    expect(call.userPrompt).not.toContain('<document>');
   });
 });

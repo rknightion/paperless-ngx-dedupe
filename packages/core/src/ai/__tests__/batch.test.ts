@@ -48,7 +48,7 @@ function createMockProvider(
   };
 
   return {
-    provider: (overrides?.providerName ?? 'openai') as 'openai' | 'anthropic',
+    provider: (overrides?.providerName ?? 'openai') as 'openai',
     extract: overrides?.extractFn ?? vi.fn().mockResolvedValue(defaultResult),
   };
 }
@@ -389,15 +389,8 @@ describe('computeRequestInterval', () => {
     expect(interval).toBe(15);
   });
 
-  it('auto-calculates interval for Anthropic at 85% of 50 RPM', () => {
-    const interval = computeRequestInterval('anthropic', 0);
-    // floor(50 * 0.85) = 42 RPM → ceil(60000/42) = 1429ms
-    expect(interval).toBe(1429);
-  });
-
   it('uses rateDelayMs override when explicitly set', () => {
     expect(computeRequestInterval('openai', 1000)).toBe(1000);
-    expect(computeRequestInterval('anthropic', 200)).toBe(200);
   });
 
   it('falls back to OpenAI limits for unknown providers', () => {

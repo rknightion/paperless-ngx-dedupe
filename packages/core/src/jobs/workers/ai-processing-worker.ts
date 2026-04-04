@@ -20,15 +20,13 @@ runWorkerTask(async (ctx, onProgress) => {
       }
     | undefined;
 
-  const apiKey =
-    aiConfig.provider === 'openai' ? config.AI_OPENAI_API_KEY : config.AI_ANTHROPIC_API_KEY;
+  const apiKey = config.AI_OPENAI_API_KEY;
 
   if (!apiKey) {
-    throw new Error(`No API key configured for provider: ${aiConfig.provider}`);
+    throw new Error('No OpenAI API key configured (AI_OPENAI_API_KEY)');
   }
 
   const provider = await createAiProvider(
-    aiConfig.provider,
     apiKey,
     aiConfig.model,
     aiConfig.maxRetries,

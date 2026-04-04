@@ -3,7 +3,7 @@ import type { AppDatabase } from '../db/client.js';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { buildPromptParts } from './prompt.js';
-import { OPENAI_MODELS, ANTHROPIC_MODELS } from './types.js';
+import { OPENAI_MODELS } from './types.js';
 import { getAllModelPricing } from './costs.js';
 import type { ModelPricing } from './costs.js';
 import type { AiConfig } from './types.js';
@@ -11,7 +11,7 @@ import type { AiConfig } from './types.js';
 export interface ModelCostEstimate {
   modelId: string;
   modelName: string;
-  provider: 'openai' | 'anthropic';
+  provider: 'openai';
   bestCase: { totalCostUsd: number; perDocumentCostUsd: number };
   worstCase: { totalCostUsd: number; perDocumentCostUsd: number };
   hasCachePricing: boolean;
@@ -36,12 +36,8 @@ export interface EstimateProcessingCostOptions {
 }
 
 /** Map model IDs to tiktoken model names for encoding selection */
-function getTiktokenModel(modelId: string): string {
-  if (OPENAI_MODELS.some((m) => m.id === modelId)) {
-    return 'gpt-4o'; // o200k_base encoding, closest match for GPT-5.4 family
-  }
-  // Anthropic models use a similar tokenizer; cl100k_base is a close approximation
-  return 'gpt-4'; // cl100k_base encoding
+function getTiktokenModel(_modelId: string): string {
+  return 'gpt-4o'; // o200k_base encoding, closest match for GPT-5.4 family
 }
 
 /**
@@ -58,7 +54,7 @@ async function countTokens(text: string, modelId: string): Promise<number> {
 function computeModelEstimate(
   modelId: string,
   modelName: string,
-  provider: 'openai' | 'anthropic',
+  provider: 'openai',
   pricing: ModelPricing,
   systemPromptTokens: number,
   totalUserPromptTokens: number,
@@ -148,7 +144,6 @@ export async function estimateProcessingCost(
     includeCorrespondents: config.includeCorrespondents,
     includeDocumentTypes: config.includeDocumentTypes,
     includeTags: config.includeTags,
-    provider: config.provider,
   });
   const systemPromptTokens = await countTokens(systemPrompt, config.model);
 
@@ -191,23 +186,6 @@ export async function estimateProcessingCost(
         model.id,
         model.name,
         'openai',
-        pricing,
-        systemPromptTokens,
-        totalUserPromptTokens,
-        avgCompletionTokens,
-        documentCount,
-      ),
-    );
-  }
-
-  for (const model of ANTHROPIC_MODELS) {
-    const pricing = pricingMap[model.id];
-    if (!pricing) continue;
-    allModels.push(
-      computeModelEstimate(
-        model.id,
-        model.name,
-        'anthropic',
         pricing,
         systemPromptTokens,
         totalUserPromptTokens,
