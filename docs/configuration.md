@@ -74,6 +74,21 @@ OpenTelemetry is off unless `OTEL_ENABLED=true`. Common vars:
 
 See `.env.example` for the full list.
 
+| `OTEL_SERVICE_NAMESPACE` | No | `paperless-dedupe` | Groups frontend and backend as one app in Grafana Cloud App Observability |
+| `OTEL_EXPORTER_OTLP_COMPRESSION` | No | (none) | Set to `gzip` for Grafana Cloud (recommended) |
+| `OTEL_SEMCONV_STABILITY_OPT_IN` | No | (none) | Set to `database` to use stable DB semantic conventions |
+
+### Continuous Profiling (Optional)
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `PYROSCOPE_ENABLED` | No | `false` | Enable wall-time and heap profiling |
+| `PYROSCOPE_SERVER_ADDRESS` | When Pyroscope enabled | - | Grafana Cloud Pyroscope endpoint or self-hosted URL |
+| `PYROSCOPE_BASIC_AUTH_USER` | For Grafana Cloud | - | Grafana Cloud instance ID |
+| `PYROSCOPE_BASIC_AUTH_PASSWORD` | For Grafana Cloud | - | Grafana Cloud API key |
+
+Profiles are labeled by operation (`sync`, `analysis`, `ai_batch`, `worker`) for flame graph filtering.
+
 ### Prometheus Scrape Endpoint (Optional)
 
 | Variable | Required | Default | Notes |
