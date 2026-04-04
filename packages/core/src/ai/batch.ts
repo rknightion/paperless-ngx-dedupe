@@ -7,6 +7,7 @@ import { type AiProviderInterface, AiExtractionError } from './providers/types.j
 import { processDocument } from './extract.js';
 import { createLogger } from '../logger.js';
 import { withSpan } from '../telemetry/spans.js';
+import { withPyroscopeLabels } from '../telemetry/pyroscope.js';
 import {
   aiDocumentsTotal,
   aiTokensTotal,
@@ -59,6 +60,7 @@ export async function processBatch(
   db: AppDatabase,
   options: BatchProcessOptions,
 ): Promise<AiBatchResult> {
+  return withPyroscopeLabels({ operation: 'ai_batch' }, async () => {
   const { provider, client, config, reprocess = false, documentIds, onProgress } = options;
 
   const maxConcurrency = config.batchSize;
@@ -483,4 +485,5 @@ export async function processBatch(
       return result;
     },
   );
+  });
 }

@@ -18,6 +18,7 @@ import { getDedupConfig } from './config.js';
 import { computeAnalysisConfigHash, saveAnalysisConfigHash } from './analysis-hash.js';
 import { ALGORITHM_VERSION } from './types.js';
 import { withSpan } from '../telemetry/spans.js';
+import { withPyroscopeLabels } from '../telemetry/pyroscope.js';
 import {
   analysisRunsTotal,
   analysisDuration,
@@ -39,6 +40,7 @@ export async function runAnalysis(
   db: AppDatabase,
   options?: AnalysisOptions,
 ): Promise<AnalysisResult> {
+  return withPyroscopeLabels({ operation: 'analysis' }, async () => {
   const logger = createLogger('analysis');
   const startTime = Date.now();
   const force = options?.force ?? false;
@@ -663,4 +665,5 @@ export async function runAnalysis(
   analysisDuration().record(result.durationMs / 1000);
 
   return result;
+  });
 }

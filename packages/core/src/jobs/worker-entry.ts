@@ -12,6 +12,7 @@ import {
   extractTraceContext,
 } from '../telemetry/worker.js';
 import { withSpan } from '../telemetry/spans.js';
+import { withPyroscopeLabels } from '../telemetry/pyroscope.js';
 import type { AppDatabase } from '../db/client.js';
 
 export type ProgressCallback = (
@@ -89,10 +90,12 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   try {
     // Run task within the parent trace context so spans are linked
     await context.with(parentContext, async () => {
-      await withSpan('dedupe.worker.task', { 'app.job.id': jobId }, async () => {
-        const result = await taskFn({ db, sqlite, jobId, taskData }, onProgress);
-        completeJob(db, jobId, result);
-        logger.info({ jobId }, 'Worker task completed successfully');
+      await withPyroscopeLabels({ operation: 'worker' }, async () => {
+        await withSpan('dedupe.worker.task', { 'app.job.id': jobId }, async () => {
+          const result = await taskFn({ db, sqlite, jobId, taskData }, onProgress);
+          completeJob(db, jobId, result);
+          logger.info({ jobId }, 'Worker task completed successfully');
+        });
       });
     });
   } catch (error) {
