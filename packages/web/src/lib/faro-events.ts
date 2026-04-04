@@ -6,6 +6,15 @@ function pushEvent(name: string, attributes?: Record<string, string>) {
   faro.api?.pushEvent(name, attributes);
 }
 
+/**
+ * Start a Faro User Action — groups all subsequent signals (fetch calls,
+ * errors, logs, traces) that occur during a multi-step user interaction
+ * into one correlated unit. The action auto-completes when signal activity stops.
+ */
+function startAction(name: string, attributes?: Record<string, string>) {
+  faro.api?.startUserAction?.(name, attributes);
+}
+
 function pushMeasurement(type: string, values: Record<string, number>) {
   faro.api?.pushMeasurement({ type, values });
 }
@@ -25,6 +34,7 @@ export function startTimer(measurementType: string): () => void {
 // ── Sync ─────────────────────────────────────────────────────────────
 
 export function trackSyncStarted(opts: { force: boolean; purge: boolean }) {
+  startAction('sync', { force: str(opts.force), purge: str(opts.purge) });
   pushEvent('sync_started', { force: str(opts.force), purge: str(opts.purge) });
 }
 
@@ -39,6 +49,7 @@ export function trackSyncFailed(error: string) {
 // ── Analysis ─────────────────────────────────────────────────────────
 
 export function trackAnalysisStarted(opts: { force: boolean }) {
+  startAction('analysis', { force: str(opts.force) });
   pushEvent('analysis_started', { force: str(opts.force) });
 }
 
@@ -77,6 +88,7 @@ export function trackCsvExported() {
 }
 
 export function trackPurgeDeleted(count: number) {
+  startAction('purge_deleted', { count: str(count) });
   pushEvent('purge_deleted', { count: str(count) });
 }
 
@@ -126,6 +138,7 @@ export function trackWizardExecuted(opts: {
   success: boolean;
   errors?: number;
 }) {
+  startAction('wizard_execute', { action: opts.action, group_count: str(opts.groupCount) });
   pushEvent('wizard_executed', {
     action: opts.action,
     group_count: str(opts.groupCount),
@@ -152,6 +165,7 @@ export function trackAiBulkAction(opts: {
   scope: 'selected' | 'all_matching';
   count: number;
 }) {
+  startAction(`ai_bulk_${opts.action}`, { scope: opts.scope, count: str(opts.count) });
   pushEvent('ai_bulk_action', {
     action: opts.action,
     scope: opts.scope,
@@ -162,6 +176,7 @@ export function trackAiBulkAction(opts: {
 // ── RAG / Ask ────────────────────────────────────────────────────────
 
 export function trackRagQuestionAsked(questionLength: number) {
+  startAction('rag_ask', { question_length: str(questionLength) });
   pushEvent('rag_question_asked', { question_length: str(questionLength) });
 }
 
