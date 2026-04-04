@@ -1,6 +1,5 @@
 import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import type Database from 'better-sqlite3';
 import type { AppDatabase } from '../db/client.js';
 import { hybridSearch } from './search.js';
@@ -12,7 +11,6 @@ interface AskOptions {
   conversationId?: string;
   config: RagConfig;
   openaiApiKey: string;
-  anthropicApiKey?: string;
 }
 
 export interface AskResult {
@@ -37,12 +35,7 @@ function buildContext(results: SearchResult[], maxTokens: number): string {
   return parts.join('\n\n');
 }
 
-function createLlmModel(config: RagConfig, openaiApiKey: string, anthropicApiKey?: string) {
-  if (config.answerProvider === 'anthropic') {
-    if (!anthropicApiKey) throw new Error('Anthropic API key required for RAG answers');
-    const anthropic = createAnthropic({ apiKey: anthropicApiKey });
-    return anthropic(config.answerModel);
-  }
+function createLlmModel(config: RagConfig, openaiApiKey: string) {
   const openai = createOpenAI({ apiKey: openaiApiKey });
   return openai(config.answerModel);
 }
@@ -52,7 +45,6 @@ export async function askDocuments(
   sqlite: Database.Database,
   opts: AskOptions,
 ): Promise<AskResult> {
-  // Retrieve relevant chunks
   const searchResults = await hybridSearch(
     sqlite,
     db,
@@ -68,17 +60,14 @@ export async function askDocuments(
     score: r.score,
   }));
 
-  // Build context from search results
   const context = buildContext(searchResults, opts.config.maxContextTokens);
 
-  // Get or create conversation
   let conversationId = opts.conversationId;
   if (!conversationId) {
     const conversation = createConversation(db, opts.question.slice(0, 80));
     conversationId = conversation.id;
   }
 
-  // Load conversation history for multi-turn
   const history = getConversationMessages(db, conversationId);
   const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   for (const msg of history) {
@@ -88,24 +77,20 @@ export async function askDocuments(
     });
   }
 
-  // Add current question with context
   const userPrompt = context
     ? `Context from your documents:\n${context}\n\nQuestion: ${opts.question}`
     : opts.question;
   messages.push({ role: 'user', content: userPrompt });
 
-  // Save user message
   addMessage(db, conversationId, 'user', opts.question, JSON.stringify(sources));
 
-  // Stream LLM response
-  const model = createLlmModel(opts.config, opts.openaiApiKey, opts.anthropicApiKey);
+  const model = createLlmModel(opts.config, opts.openaiApiKey);
   const streamResult = streamText({
     model,
     system: opts.config.systemPrompt,
     messages,
   });
 
-  // Provide a callback to save the assistant response after streaming completes
   const saveResponse = (text: string, totalTokens?: number) => {
     addMessage(db, conversationId, 'assistant', text, undefined, totalTokens);
   };

@@ -20,7 +20,6 @@ describe('getRagConfig', () => {
     expect(config.chunkSize).toBe(400);
     expect(config.chunkOverlap).toBe(40);
     expect(config.topK).toBe(20);
-    expect(config.answerProvider).toBe('openai');
     expect(config.answerModel).toBe('gpt-5.4-mini');
     expect(config.autoIndex).toBe(false);
   });
