@@ -19,7 +19,7 @@ describe('getAiConfig', () => {
     expect(config.provider).toBe('openai');
     expect(config.model).toBe('gpt-5.4-mini');
     expect(config.maxContentLength).toBe(8000);
-    expect(config.batchSize).toBe(10);
+    expect(config.batchSize).toBe(100);
     expect(config.autoProcess).toBe(false);
     expect(config.addProcessedTag).toBe(false);
     expect(config.includeCorrespondents).toBe(false);
@@ -27,7 +27,7 @@ describe('getAiConfig', () => {
     expect(config.includeTags).toBe(false);
     expect(config.rateDelayMs).toBe(0);
     expect(config.reasoningEffort).toBe('low');
-    expect(config.maxRetries).toBe(3);
+    expect(config.maxRetries).toBe(10);
   });
 
   it('matches DEFAULT_AI_CONFIG for a fresh database', () => {
@@ -61,7 +61,7 @@ describe('setAiConfig', () => {
     expect(config.model).toBe('claude-haiku-4-5');
     // Other defaults should remain
     expect(config.maxContentLength).toBe(8000);
-    expect(config.batchSize).toBe(10);
+    expect(config.batchSize).toBe(100);
   });
 
   it('parses boolean values correctly', () => {
