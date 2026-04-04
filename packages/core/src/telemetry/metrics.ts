@@ -14,6 +14,7 @@ export function syncDocumentsTotal(): Counter {
     'paperless_ngx_dedupe.sync.documents_total',
     {
       description: 'Total documents processed during sync operations',
+      unit: '{document}',
     },
   ));
 }
@@ -22,6 +23,7 @@ let _syncRunsTotal: Counter | undefined;
 export function syncRunsTotal(): Counter {
   return (_syncRunsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.sync.runs_total', {
     description: 'Total sync runs',
+    unit: '{run}',
   }));
 }
 
@@ -31,6 +33,7 @@ export function analysisRunsTotal(): Counter {
     'paperless_ngx_dedupe.analysis.runs_total',
     {
       description: 'Total analysis runs',
+      unit: '{run}',
     },
   ));
 }
@@ -39,6 +42,7 @@ let _jobsTotal: Counter | undefined;
 export function jobsTotal(): Counter {
   return (_jobsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.jobs_total', {
     description: 'Total jobs by type and outcome',
+    unit: '{job}',
   }));
 }
 
@@ -48,6 +52,7 @@ export function paperlessRequestsTotal(): Counter {
     'paperless_ngx_dedupe.paperless.requests_total',
     {
       description: 'Total HTTP requests to Paperless-NGX API',
+      unit: '{request}',
     },
   ));
 }
@@ -95,6 +100,7 @@ export function aiDocumentsTotal(): Counter {
     'paperless_ngx_dedupe.ai.documents_total',
     {
       description: 'Total documents processed by AI, by outcome and provider',
+      unit: '{document}',
     },
   ));
 }
@@ -103,6 +109,7 @@ let _aiTokensTotal: Counter | undefined;
 export function aiTokensTotal(): Counter {
   return (_aiTokensTotal ??= getMeter().createCounter('paperless_ngx_dedupe.ai.tokens_total', {
     description: 'Total AI tokens consumed, by type and provider',
+    unit: '{token}',
   }));
 }
 
@@ -110,6 +117,7 @@ let _aiRunsTotal: Counter | undefined;
 export function aiRunsTotal(): Counter {
   return (_aiRunsTotal ??= getMeter().createCounter('paperless_ngx_dedupe.ai.runs_total', {
     description: 'Total AI batch runs',
+    unit: '{run}',
   }));
 }
 
@@ -117,6 +125,7 @@ let _aiApplyTotal: Counter | undefined;
 export function aiApplyTotal(): Counter {
   return (_aiApplyTotal ??= getMeter().createCounter('paperless_ngx_dedupe.ai.apply_total', {
     description: 'Total AI results applied or rejected',
+    unit: '{result}',
   }));
 }
 
@@ -163,6 +172,7 @@ export function registerObservableGauges(
   meter
     .createObservableGauge('paperless_ngx_dedupe.documents_count', {
       description: 'Total number of synced documents',
+      unit: '{document}',
     })
     .addCallback((result) => {
       result.observe(getStats().documentsCount);
@@ -171,6 +181,7 @@ export function registerObservableGauges(
   meter
     .createObservableGauge('paperless_ngx_dedupe.duplicates.unresolved_count', {
       description: 'Number of unresolved duplicate groups',
+      unit: '{group}',
     })
     .addCallback((result) => {
       result.observe(getStats().unresolvedDuplicatesCount);
@@ -179,6 +190,7 @@ export function registerObservableGauges(
   meter
     .createObservableGauge('paperless_ngx_dedupe.jobs.active_count', {
       description: 'Number of currently running jobs',
+      unit: '{job}',
     })
     .addCallback((result) => {
       result.observe(getStats().activeJobsCount);
@@ -187,6 +199,7 @@ export function registerObservableGauges(
   meter
     .createObservableGauge('paperless_ngx_dedupe.ai.pending_count', {
       description: 'Number of AI results pending review',
+      unit: '{result}',
     })
     .addCallback((result) => {
       result.observe(getStats().aiPendingCount ?? 0);
