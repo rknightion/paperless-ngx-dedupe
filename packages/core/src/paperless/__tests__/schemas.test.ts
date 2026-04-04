@@ -300,6 +300,8 @@ describe('toPaperlessConfig bridge function', () => {
       AI_ENABLED: false,
       RAG_ENABLED: false,
       FARO_ENABLED: false,
+      PYROSCOPE_ENABLED: false,
+      OTEL_SERVICE_NAMESPACE: 'paperless-dedupe',
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');
@@ -323,6 +325,8 @@ describe('toPaperlessConfig bridge function', () => {
       AI_ENABLED: false,
       RAG_ENABLED: false,
       FARO_ENABLED: false,
+      PYROSCOPE_ENABLED: false,
+      OTEL_SERVICE_NAMESPACE: 'paperless-dedupe',
     };
     const result = toPaperlessConfig(appConfig);
     expect(result.url).toBe('https://paperless.example.com');

@@ -25,6 +25,7 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-ngx-dedupe',
       [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
+      'service.namespace': process.env.OTEL_SERVICE_NAMESPACE || 'paperless-dedupe',
       'deployment.environment':
         process.env.OTEL_DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || 'development',
       'service.instance.id':

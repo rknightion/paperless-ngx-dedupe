@@ -72,11 +72,19 @@ const sdk = new NodeSDK({
   resource: resourceFromAttributes({
     [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-dedupe',
     [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
+    'service.namespace': process.env.OTEL_SERVICE_NAMESPACE || 'paperless-dedupe',
     'deployment.environment':
       process.env.OTEL_DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || 'development',
     'service.instance.id':
       process.env.OTEL_SERVICE_INSTANCE_ID || process.env.HOSTNAME || randomUUID(),
   }),
+  // Resource detectors: env vars, host, OS, process info
+  resourceDetectors: [
+    require('@opentelemetry/resources').envDetector,
+    require('@opentelemetry/resources').hostDetector,
+    require('@opentelemetry/resources').osDetector,
+    require('@opentelemetry/resources').processDetector,
+  ],
   metricReaders,
   instrumentations,
 });

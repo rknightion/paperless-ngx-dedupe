@@ -34,6 +34,14 @@ const configSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     FARO_COLLECTOR_URL: z.string().optional(),
+    PYROSCOPE_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
+    PYROSCOPE_SERVER_ADDRESS: z.string().optional(),
+    PYROSCOPE_BASIC_AUTH_USER: z.string().optional(),
+    PYROSCOPE_BASIC_AUTH_PASSWORD: z.string().optional(),
+    OTEL_SERVICE_NAMESPACE: z.string().default('paperless-dedupe'),
   })
   .refine(
     (data) => data.PAPERLESS_API_TOKEN || (data.PAPERLESS_USERNAME && data.PAPERLESS_PASSWORD),
@@ -55,6 +63,10 @@ const configSchema = z
   .refine((data) => !data.FARO_ENABLED || data.FARO_COLLECTOR_URL, {
     error: 'When FARO_ENABLED=true, FARO_COLLECTOR_URL is required',
     path: ['FARO_ENABLED'],
+  })
+  .refine((data) => !data.PYROSCOPE_ENABLED || data.PYROSCOPE_SERVER_ADDRESS, {
+    error: 'When PYROSCOPE_ENABLED=true, PYROSCOPE_SERVER_ADDRESS is required',
+    path: ['PYROSCOPE_ENABLED'],
   });
 
 export type AppConfig = z.infer<typeof configSchema>;
