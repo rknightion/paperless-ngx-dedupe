@@ -26,7 +26,6 @@
   });
 
   const openaiModels = $derived(allModels.filter((m) => m.provider === 'openai'));
-  const anthropicModels = $derived(allModels.filter((m) => m.provider === 'anthropic'));
 
   function formatCost(usd: number): string {
     if (usd < 0.001) return '<$0.001';
@@ -84,7 +83,7 @@
 
     <!-- Content -->
     <div class="flex-1 overflow-auto px-6 py-5">
-      {#each [{ label: 'OpenAI', models: openaiModels }, { label: 'Anthropic', models: anthropicModels }] as group (group.label)}
+      {#each [{ label: 'OpenAI', models: openaiModels }] as group (group.label)}
         {#if group.models.length > 0}
           <div class="mb-5 last:mb-0">
             <h3 class="text-muted mb-2 text-xs font-medium tracking-wider uppercase">

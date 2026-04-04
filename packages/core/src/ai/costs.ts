@@ -106,7 +106,7 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
       }
 
       // Try dot-prefixed exact match, then dot-prefixed prefix match
-      // (handles keys like "anthropic.claude-opus-4-6-v1")
+      // (handles keys like "openai.gpt-5.4")
       const dotPrefixed = providerDot + modelId;
       if (data[dotPrefixed] && data[dotPrefixed].input_cost_per_token != null) {
         pricingMap[modelId] = toPricing(data[dotPrefixed]);
@@ -225,9 +225,7 @@ export function getModelPricing(db: AppDatabase, model: string): ModelPricing | 
   }
 
   // Fallback: find the most expensive model in the same provider family
-  const familyIds = OPENAI_MODELS.some((m) => m.id === model)
-    ? OPENAI_MODELS.map((m) => m.id)
-    : [];
+  const familyIds = OPENAI_MODELS.some((m) => m.id === model) ? OPENAI_MODELS.map((m) => m.id) : [];
 
   let maxCost = 0;
   let fallback: ModelPricing | null = null;

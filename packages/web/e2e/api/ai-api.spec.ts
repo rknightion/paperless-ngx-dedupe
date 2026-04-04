@@ -38,16 +38,6 @@ test.describe('AI API', () => {
     expect(body.data.length).toBeGreaterThan(0);
   });
 
-  test('GET /api/v1/ai/models?provider=anthropic returns anthropic models', async ({ request }) => {
-    const response = await request.get('/api/v1/ai/models?provider=anthropic');
-
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body.data).toBeDefined();
-    expect(Array.isArray(body.data)).toBe(true);
-    expect(body.data.length).toBeGreaterThan(0);
-  });
-
   // ── Results (no AI_ENABLED check) ───────────────────────────────────
 
   test('GET /api/v1/ai/results returns paginated results', async ({ request }) => {

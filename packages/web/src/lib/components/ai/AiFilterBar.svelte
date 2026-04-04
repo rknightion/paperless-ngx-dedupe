@@ -174,8 +174,6 @@
       <select bind:value={localProvider} onchange={handleSelectChange} class={selectClass}>
         <option value="">All providers</option>
         <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
-        <option value="ollama">Ollama</option>
       </select>
 
       <input
