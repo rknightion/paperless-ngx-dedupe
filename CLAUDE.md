@@ -17,6 +17,11 @@ Always run the full build and type-check (`pnpm build` or equivalent) after comp
 
 After editing files, check for duplicate imports and stale references from the previous code. Run ESLint or the project linter to catch these before proceeding.
 
+## Code Style
+
+- **Inline type imports enforced** by ESLint: use `import { type Foo }` not `import type { Foo }`.
+- **Unused variables**: prefix with `_` (e.g., `_unused`) — the linter ignores `_`-prefixed names.
+
 ## Svelte 5 Conventions
 
 When working in Svelte 5 files (.svelte, .svelte.ts): use `SvelteMap` and `SvelteSet` instead of native `Map`/`Set`, use `const` (not `let`) for `$derived` runes, avoid deprecated `svelte:component` syntax, and ensure all `{#each}` blocks have unique keys.
@@ -32,15 +37,17 @@ When creating implementation plans from todos.txt, keep the planning phase brief
 ## Commands
 
 ```bash
-pnpm dev           # SvelteKit dev server (http://localhost:5173)
-pnpm build         # Build all packages in dependency order: core → web
-pnpm check         # Type-check all packages
-pnpm test          # Vitest unit tests for core
-pnpm test:e2e      # Playwright E2E tests against a built web package
-pnpm lint          # ESLint
-pnpm lint:fix      # ESLint auto-fix
-pnpm format        # Prettier check
-pnpm format:fix    # Prettier auto-fix
+pnpm dev              # SvelteKit dev server (http://localhost:5173)
+pnpm build            # Build all packages in dependency order: core → web
+pnpm check            # Type-check all packages
+pnpm test             # Vitest unit tests for core
+pnpm test:e2e         # Playwright E2E tests against a built web package
+pnpm lint             # ESLint
+pnpm lint:fix         # ESLint auto-fix
+pnpm format           # Prettier check
+pnpm format:fix       # Prettier auto-fix
+pnpm docker:validate  # Docker build + compose up with health check
+pnpm docker:dev       # Docker compose dev profile with live rebuild
 ```
 
 Single-package variant: `pnpm --filter @paperless-dedupe/core test`, etc.
@@ -53,7 +60,7 @@ Run `pnpm lint && pnpm format && pnpm check && pnpm test` before pushing. CI add
 
 - **Node >=24.0.0 is required.** Do not test or build with older Node versions.
 - `pnpm test` runs **only unit tests** (core).
-- All `/api/v1/*` routes must return JSON with consistent error shapes and correct HTTP status codes. SvelteKit page `.server.ts` load functions must call the same core query functions as the corresponding API routes — not duplicate logic independently.
+- All `/api/v1/*` routes must return JSON with consistent error shapes and correct HTTP status codes. Use the `apiSuccess(data, meta?, status)` and `apiError(code, message, details?)` helpers — responses follow `{ data, meta? }` for success and `{ error: { code, message, details? } }` for errors. Error codes are defined in the `ErrorCode` enum. SvelteKit page `.server.ts` load functions must call the same core query functions as the corresponding API routes — not duplicate logic independently.
 - **Database schema changes require TWO steps** (just editing the Drizzle table definition is NOT enough):
   1. Edit the Drizzle table definition in `packages/core/src/schema/sqlite/`.
   2. Add a **pre-DDL migration function** in `packages/core/src/db/migrate.ts` that uses `ALTER TABLE ADD COLUMN` with a `tableHasColumn` guard. Call it from `migrateDatabase()` alongside the other pre-DDL migrations. See `migrateArchiveColumns` or `migrateDiscriminativeScore` for the exact pattern.
