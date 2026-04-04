@@ -14,10 +14,9 @@ AI processing is disabled by default. Enable it with two environment variables:
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `AI_ENABLED` | No | `false` | Master switch for all AI features |
-| `AI_OPENAI_API_KEY` | When using OpenAI | - | OpenAI API key |
-| `AI_ANTHROPIC_API_KEY` | When using Anthropic | - | Anthropic API key |
+| `AI_OPENAI_API_KEY` | When AI enabled | - | OpenAI API key |
 
-At least one API key is required when `AI_ENABLED=true`. If both keys are provided, the active provider is selected in the Settings page.
+The API key is required when `AI_ENABLED=true`.
 
 ## Configuration
 
@@ -25,7 +24,7 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 
 | Setting | Default | Range | Description |
 | --- | --- | --- | --- |
-| `provider` | `openai` | `openai`, `anthropic` | LLM provider to use |
+| `provider` | `openai` | `openai` | LLM provider to use |
 | `model` | `gpt-5.4-mini` | see below | Model identifier |
 | `promptTemplate` | built-in | string | Prompt template with placeholders |
 | `maxContentLength` | `8000` | 500--100,000 | Max characters of document text sent to the model |
@@ -37,7 +36,8 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `includeCorrespondents` | `false` | boolean | Send existing correspondents as reference data |
 | `includeDocumentTypes` | `false` | boolean | Send existing document types as reference data |
 | `includeTags` | `false` | boolean | Send existing tags as reference data |
-| `reasoningEffort` | `low` | `none`, `low`, `medium`, `high` | Reasoning effort for both OpenAI and Anthropic |
+| `flexProcessing` | `true` | boolean | Use OpenAI Flex Processing for ~50% lower costs |
+| `reasoningEffort` | `low` | `none`, `low`, `medium`, `high` | Reasoning effort level |
 | `maxRetries` | `3` | 0--10 | Retry count on transient API failures |
 | `confidenceThresholdGlobal` | `0` | 0--1 | Minimum confidence for all fields (floor) |
 | `confidenceThresholdCorrespondent` | `0` | 0--1 | Per-field override for correspondent |
@@ -54,21 +54,11 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 
 ### Available Models
 
-=== "OpenAI"
-
-    | Model ID | Name |
-    | --- | --- |
-    | `gpt-5.4` | GPT-5.4 |
-    | `gpt-5.4-mini` | GPT-5.4 Mini |
-    | `gpt-5.4-nano` | GPT-5.4 Nano |
-
-=== "Anthropic"
-
-    | Model ID | Name |
-    | --- | --- |
-    | `claude-opus-4-6` | Claude Opus 4.6 |
-    | `claude-sonnet-4-6` | Claude Sonnet 4.6 |
-    | `claude-haiku-4-5` | Claude Haiku 4.5 |
+| Model ID | Name |
+| --- | --- |
+| `gpt-5.4` | GPT-5.4 |
+| `gpt-5.4-mini` | GPT-5.4 Mini |
+| `gpt-5.4-nano` | GPT-5.4 Nano |
 
 ## How Processing Works
 
@@ -232,26 +222,15 @@ The feedback summary (`GET /api/v1/ai/feedback`) shows aggregate statistics incl
 
 ## Provider Implementation Details
 
-=== "OpenAI"
+OpenAI extraction uses the **Responses API** (`responses.parse()`) with Zod-based structured output. This ensures the model returns a valid JSON object matching the extraction schema. The `reasoningEffort` setting controls the effort parameter when supported.
 
-    OpenAI extraction uses the **Responses API** (`responses.parse()`) with Zod-based structured output. This ensures the model returns a valid JSON object matching the extraction schema. The `reasoningEffort` setting controls the effort parameter when supported.
+Key details:
 
-    Key details:
-
-    - Uses `developer` role for the system prompt
-    - Structured output via `zodTextFormat`
-    - Handles refusal detection and incomplete response detection
-    - Reports cached token counts when available
-
-=== "Anthropic"
-
-    Anthropic extraction uses `messages.create()` with `output_config` containing a JSON schema for structured output. Prompt caching is enabled via `cache_control: { type: 'ephemeral' }` on the system prompt.
-
-    Key details:
-
-    - Uses `output_config.format.type = 'json_schema'` for structured output
-    - The `reasoningEffort` setting maps to `output_config.effort` for extended thinking
-    - Reports cache read and creation token counts
+- Uses `developer` role for the system prompt
+- Structured output via `zodTextFormat`
+- Handles refusal detection and incomplete response detection
+- Reports cached token counts when available
+- When `flexProcessing` is enabled, requests are submitted to OpenAI's Flex Processing tier for ~50% lower costs (with relaxed latency SLA)
 
 ## Prompt Customization
 
@@ -267,7 +246,7 @@ The template supports these placeholders:
 
 The document title and text content are included automatically in the user prompt (not the system prompt template). They do not need placeholders.
 
-The prompt is automatically formatted for the active provider -- XML tags for Anthropic, markdown sections for OpenAI.
+The prompt uses markdown sections for structure.
 
 !!! tip "Enable reference data for better matching"
     Turning on `includeCorrespondents`, `includeDocumentTypes`, and `includeTags` helps the model reuse your existing names rather than inventing new ones. This is especially useful for established libraries.
@@ -278,7 +257,7 @@ The prompt is automatically formatted for the active provider -- XML tags for An
     - **Start small** -- Process a handful of documents first to verify the prompt produces good results before running a full batch.
     - **Tune `maxContentLength`** -- Lower values reduce cost; higher values give the model more context. 8,000 characters is a good default for most documents.
     - **Use `rateDelayMs`** -- Provider rate limits vary by plan. Increase the delay if you hit 429 errors.
-    - **`reasoningEffort`** -- Affects both OpenAI (via reasoning effort parameter) and Anthropic (via extended thinking effort). Higher effort may improve accuracy at the cost of latency and tokens.
+    - **`reasoningEffort`** -- Controls the OpenAI reasoning effort parameter. Higher effort may improve accuracy at the cost of latency and tokens.
     - **Review before applying** -- AI suggestions are not always correct. The confidence scores help prioritize review, but always verify before applying to Paperless-NGX.
 
 ## See Also

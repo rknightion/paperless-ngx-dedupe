@@ -11,18 +11,26 @@ export class OpenAiProvider implements AiProviderInterface {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private client: any;
   private model: string;
+  private flexProcessing: boolean;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private constructor(client: any, model: string) {
+  private constructor(client: any, model: string, flexProcessing: boolean) {
     this.client = client;
     this.model = model;
+    this.flexProcessing = flexProcessing;
   }
 
-  static async create(apiKey: string, model: string, maxRetries = 3): Promise<OpenAiProvider> {
+  static async create(
+    apiKey: string,
+    model: string,
+    maxRetries = 3,
+    flexProcessing = true,
+  ): Promise<OpenAiProvider> {
     try {
       const { default: OpenAI } = await import('openai');
-      const client = new OpenAI({ apiKey, maxRetries, timeout: 60_000 });
-      return new OpenAiProvider(client, model);
+      const timeout = flexProcessing ? 900_000 : 60_000;
+      const client = new OpenAI({ apiKey, maxRetries, timeout });
+      return new OpenAiProvider(client, model, flexProcessing);
     } catch {
       throw new Error('OpenAI SDK not installed. Install it with: pnpm add openai');
     }
@@ -40,6 +48,8 @@ export class OpenAiProvider implements AiProviderInterface {
       ],
       text: { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') },
     };
+
+    params.service_tier = this.flexProcessing ? 'flex' : 'default';
 
     if (request.reasoningEffort && request.reasoningEffort !== 'none') {
       params.reasoning = { effort: request.reasoningEffort };

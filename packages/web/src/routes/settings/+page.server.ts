@@ -29,7 +29,6 @@ export const load: PageServerLoad = async ({ locals }) => {
       ? getAiConfig(locals.db).promptTemplate === DEFAULT_EXTRACTION_PROMPT
       : true,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
-    hasAnthropicKey: !!locals.config.AI_ANTHROPIC_API_KEY,
     ragEnabled: locals.config.RAG_ENABLED,
     ragConfig: locals.config.RAG_ENABLED ? getRagConfig(locals.db) : null,
     ragStats: locals.config.RAG_ENABLED ? getRagStats(locals.db) : null,

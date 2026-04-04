@@ -12,7 +12,7 @@ A document deduplication and AI-powered metadata companion for [Paperless-NGX](h
 
 ### AI Metadata Extraction
 
-- **Automatic classification** -- extract correspondents, document types, and tags from document text using OpenAI or Anthropic models
+- **Automatic classification** -- extract correspondents, document types, and tags from document text using OpenAI models
 - **Confidence scoring** -- per-field confidence scores with supporting evidence snippets so you can review before applying
 - **Reference-aware** -- optionally feeds your existing correspondents, document types, and tags to the LLM to avoid creating duplicates
 - **Batch processing** -- process your entire library or new documents automatically in configurable batches

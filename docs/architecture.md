@@ -40,7 +40,7 @@ Framework-agnostic TypeScript library containing all business logic. No web fram
 - `queries/` -- Database queries via Drizzle ORM (documents, duplicates, dashboard, config)
 - `schema/` -- Drizzle ORM table definitions and relations
 - `paperless/` -- Paperless-NGX REST API client with Zod schema validation
-- `ai/` -- AI-powered metadata extraction (OpenAI, Anthropic), auto-apply, cost tracking, feedback
+- `ai/` -- AI-powered metadata extraction (OpenAI), auto-apply, cost tracking, feedback
 - `rag/` -- Retrieval-augmented generation: document chunking, embeddings, vector search, conversations
 - `export/` -- CSV and JSON export utilities
 - `telemetry/` -- OpenTelemetry tracing and metrics instrumentation
@@ -67,7 +67,7 @@ SvelteKit 2 application (Svelte 5 runes) that serves both the web UI and the RES
 | **Real-time Progress** | Server-Sent Events (SSE) | Simpler than WebSockets for unidirectional progress streams |
 | **Dedup Algorithms** | Pure TypeScript MinHash/LSH | No native dependencies beyond `better-sqlite3`. Defaults: 256 permutations, 32 bands |
 | **Vector Search** | `sqlite-vec` | SQLite extension for RAG embedding storage and similarity search |
-| **AI Providers** | OpenAI + Anthropic (via Vercel AI SDK) | Optional metadata extraction and RAG conversations |
+| **AI Providers** | OpenAI (via Vercel AI SDK) | Optional metadata extraction and RAG conversations |
 | **Validation** | Zod | TypeScript-first schemas for env config and API requests |
 | **Logging** | Pino | Fast structured JSON logging |
 | **Telemetry** | OpenTelemetry | Distributed tracing and metrics (optional) |

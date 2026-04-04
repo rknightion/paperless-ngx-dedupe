@@ -172,13 +172,8 @@ describe('eval metric functions', () => {
 // --- Integration eval suite (requires API key + AI_EVAL=true) ---
 
 describe.skipIf(!process.env.AI_EVAL)('AI eval suite', () => {
-  const provider = process.env.AI_EVAL_PROVIDER ?? 'openai';
-  const apiKey =
-    provider === 'anthropic' ? process.env.AI_ANTHROPIC_API_KEY : process.env.AI_OPENAI_API_KEY;
-  const model =
-    provider === 'anthropic'
-      ? (process.env.AI_EVAL_MODEL ?? 'claude-haiku-4-5')
-      : (process.env.AI_EVAL_MODEL ?? 'gpt-5.4-mini');
+  const apiKey = process.env.AI_OPENAI_API_KEY;
+  const model = process.env.AI_EVAL_MODEL ?? 'gpt-5.4-mini';
 
   it('should have a valid API key', () => {
     expect(apiKey).toBeTruthy();
@@ -191,7 +186,7 @@ describe.skipIf(!process.env.AI_EVAL)('AI eval suite', () => {
   });
 
   async function runFixture(fixture: EvalFixture) {
-    const aiProvider = await createAiProvider(provider as 'openai' | 'anthropic', apiKey!, model);
+    const aiProvider = await createAiProvider(apiKey!, model);
 
     const result = await processDocument({
       provider: aiProvider,
@@ -241,7 +236,7 @@ describe.skipIf(!process.env.AI_EVAL)('AI eval suite', () => {
     const avgTagF1 = tagF1Scores.reduce((a, b) => a + b, 0) / tagF1Scores.length;
 
     console.log(
-      `\nEval Results (prompt hash: ${promptHash()}, provider: ${provider}, model: ${model}):`,
+      `\nEval Results (prompt hash: ${promptHash()}, provider: openai, model: ${model}):`,
     );
     console.log(
       `  Schema valid: ${schemaValid}/${total} (${((schemaValid / total) * 100).toFixed(0)}%)`,

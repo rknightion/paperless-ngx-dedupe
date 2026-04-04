@@ -48,9 +48,7 @@
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
-    "@ai-sdk/anthropic": "^3.0.0",
     "@ai-sdk/openai": "^3.0.0",
-    "@anthropic-ai/sdk": "^0.79.0 || ^0.80.0 || ^0.81.0 || ^0.82.0",
     "ai": "^6.0.0",
     "openai": "^6.0.0"
   },
@@ -58,16 +56,10 @@
     "openai": {
       "optional": true
     },
-    "@anthropic-ai/sdk": {
-      "optional": true
-    },
     "ai": {
       "optional": true
     },
     "@ai-sdk/openai": {
-      "optional": true
-    },
-    "@ai-sdk/anthropic": {
       "optional": true
     }
   }
