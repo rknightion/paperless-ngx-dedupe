@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
-  import { InfoIcon, StaleAnalysisBanner } from '$lib/components';
+  import { InfoIcon, RichTooltip, StaleAnalysisBanner } from '$lib/components';
   import {
     trackSettingsSaved,
     trackConnectionTested,
@@ -78,6 +78,7 @@
   let aiIncludeTags = $state(initialAiConfig?.includeTags ?? false);
   let aiReasoningEffort = $state(initialAiConfig?.reasoningEffort ?? 'low');
   let aiMaxRetries = $state(initialAiConfig?.maxRetries ?? 3);
+  let aiFlexProcessing = $state(initialAiConfig?.flexProcessing ?? true);
   let aiExtractTitle = $state(initialAiConfig?.extractTitle ?? true);
   let aiExtractCorrespondent = $state(initialAiConfig?.extractCorrespondent ?? true);
   let aiExtractDocumentType = $state(initialAiConfig?.extractDocumentType ?? true);
@@ -317,6 +318,7 @@
           includeTags: aiIncludeTags,
           reasoningEffort: aiReasoningEffort,
           maxRetries: aiMaxRetries,
+          flexProcessing: aiFlexProcessing,
           extractTitle: aiExtractTitle,
           extractCorrespondent: aiExtractCorrespondent,
           extractDocumentType: aiExtractDocumentType,
@@ -934,6 +936,39 @@
           <option value="medium">Medium</option>
           <option value="high">High</option>
         </select>
+      </div>
+
+      <!-- Flex Processing -->
+      <div class="mt-4 flex items-center gap-2">
+        <label class="text-muted flex items-center gap-2 text-sm">
+          <input type="checkbox" bind:checked={aiFlexProcessing} class="rounded" />
+          Flex Processing
+        </label>
+        <RichTooltip position="bottom">
+          {#snippet children()}
+            <svg
+              class="text-muted hover:text-accent inline-block h-4 w-4 shrink-0 cursor-help transition-colors"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          {/snippet}
+          {#snippet content()}
+            Uses OpenAI's Flex Processing for ~50% lower costs. Requests may take longer or be temporarily unavailable during high demand. Recommended for background processing.
+            <a
+              href="https://developers.openai.com/api/docs/guides/flex-processing"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-300 underline hover:text-blue-200"
+            >Learn more</a>
+          {/snippet}
+        </RichTooltip>
       </div>
 
       <!-- Auto-Process & Tag -->
