@@ -319,7 +319,11 @@
 
   <!-- Stats Cards -->
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-    <div class="panel flex items-center gap-3 p-4">
+    <a
+      href="/ai-processing/history"
+      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+      data-sveltekit-preload-data
+    >
       <div class="bg-accent-subtle flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <FileText class="text-accent h-4 w-4" />
       </div>
@@ -329,8 +333,12 @@
           {stats.totalProcessed.toLocaleString()}
         </p>
       </div>
-    </div>
-    <div class="panel flex items-center gap-3 p-4">
+    </a>
+    <a
+      href="/ai-processing/review"
+      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+      data-sveltekit-preload-data
+    >
       <div class="bg-warn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <CircleDot class="text-warn h-4 w-4" />
       </div>
@@ -340,8 +348,12 @@
           {stats.pendingReview.toLocaleString()}
         </p>
       </div>
-    </div>
-    <div class="panel flex items-center gap-3 p-4">
+    </a>
+    <a
+      href="/ai-processing/history?status=applied"
+      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+      data-sveltekit-preload-data
+    >
       <div class="bg-success-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <CircleCheck class="text-success h-4 w-4" />
       </div>
@@ -351,8 +363,12 @@
           {stats.applied.toLocaleString()}
         </p>
       </div>
-    </div>
-    <div class="panel flex items-center gap-3 p-4">
+    </a>
+    <a
+      href="/ai-processing/history?status=rejected"
+      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+      data-sveltekit-preload-data
+    >
       <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100">
         <CircleX class="text-muted h-4 w-4" />
       </div>
@@ -362,8 +378,12 @@
           {stats.rejected.toLocaleString()}
         </p>
       </div>
-    </div>
-    <div class="panel flex items-center gap-3 p-4">
+    </a>
+    <a
+      href="/ai-processing/history?status=reverted"
+      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+      data-sveltekit-preload-data
+    >
       <div class="bg-accent-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <Undo2 class="text-accent h-4 w-4" />
       </div>
@@ -373,8 +393,12 @@
           {stats.reverted.toLocaleString()}
         </p>
       </div>
-    </div>
-    <div class="panel flex items-center gap-3 p-4">
+    </a>
+    <a
+      href="/ai-processing/history?status=failed"
+      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+      data-sveltekit-preload-data
+    >
       <div class="bg-ember-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <TriangleAlert class="text-ember h-4 w-4" />
       </div>
@@ -384,7 +408,7 @@
           {stats.failed.toLocaleString()}
         </p>
       </div>
-    </div>
+    </a>
   </div>
 
   <!-- Progress Panel -->
