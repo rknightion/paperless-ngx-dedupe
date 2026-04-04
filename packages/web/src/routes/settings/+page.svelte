@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
-  import { InfoIcon, StaleAnalysisBanner } from '$lib/components';
+  import { InfoIcon, RichTooltip, StaleAnalysisBanner } from '$lib/components';
   import {
     trackSettingsSaved,
     trackConnectionTested,
@@ -63,7 +63,6 @@
 
   // AI Settings
   const initialAiConfig = untrack(() => data.aiConfig);
-  let aiProvider = $state(initialAiConfig?.provider ?? 'openai');
   let aiModel = $state(initialAiConfig?.model ?? 'gpt-5-mini');
   let aiAutoProcess = $state(initialAiConfig?.autoProcess ?? false);
   let aiAddProcessedTag = $state(initialAiConfig?.addProcessedTag ?? false);
@@ -79,6 +78,7 @@
   let aiIncludeTags = $state(initialAiConfig?.includeTags ?? false);
   let aiReasoningEffort = $state(initialAiConfig?.reasoningEffort ?? 'low');
   let aiMaxRetries = $state(initialAiConfig?.maxRetries ?? 3);
+  let aiFlexProcessing = $state(initialAiConfig?.flexProcessing ?? true);
   let aiExtractTitle = $state(initialAiConfig?.extractTitle ?? true);
   let aiExtractCorrespondent = $state(initialAiConfig?.extractCorrespondent ?? true);
   let aiExtractDocumentType = $state(initialAiConfig?.extractDocumentType ?? true);
@@ -129,7 +129,6 @@
   let ragChunkSize = $state(initialRagConfig?.chunkSize ?? 400);
   let ragChunkOverlap = $state(initialRagConfig?.chunkOverlap ?? 40);
   let ragTopK = $state(initialRagConfig?.topK ?? 20);
-  let ragAnswerProvider = $state(initialRagConfig?.answerProvider ?? 'openai');
   let ragAnswerModel = $state(initialRagConfig?.answerModel ?? 'gpt-5.4-mini');
   let ragSystemPrompt = $state(initialRagConfig?.systemPrompt ?? '');
   let ragMaxContextTokens = $state(initialRagConfig?.maxContextTokens ?? 8000);
@@ -280,9 +279,9 @@
     isSavingDedup = false;
   }
 
-  async function fetchAiModels(provider: string) {
+  async function fetchAiModels() {
     try {
-      const res = await fetch(`/api/v1/ai/models?provider=${provider}`);
+      const res = await fetch('/api/v1/ai/models');
       const json = await res.json();
       if (res.ok) {
         aiModels = json.data ?? [];
@@ -294,7 +293,7 @@
 
   $effect(() => {
     if (data.aiEnabled) {
-      fetchAiModels(aiProvider);
+      fetchAiModels();
     }
   });
 
@@ -306,7 +305,6 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: aiProvider,
           model: aiModel,
           autoProcess: aiAutoProcess,
           addProcessedTag: aiAddProcessedTag,
@@ -320,6 +318,7 @@
           includeTags: aiIncludeTags,
           reasoningEffort: aiReasoningEffort,
           maxRetries: aiMaxRetries,
+          flexProcessing: aiFlexProcessing,
           extractTitle: aiExtractTitle,
           extractCorrespondent: aiExtractCorrespondent,
           extractDocumentType: aiExtractDocumentType,
@@ -357,9 +356,9 @@
     isSavingAi = false;
   }
 
-  async function fetchRagModels(provider: string) {
+  async function fetchRagModels() {
     try {
-      const res = await fetch(`/api/v1/ai/models?provider=${provider}`);
+      const res = await fetch('/api/v1/ai/models');
       const json = await res.json();
       if (res.ok) ragModels = json.data ?? [];
     } catch {
@@ -369,7 +368,7 @@
 
   $effect(() => {
     if (data.ragEnabled) {
-      fetchRagModels(ragAnswerProvider);
+      fetchRagModels();
     }
   });
 
@@ -386,7 +385,6 @@
           chunkSize: ragChunkSize,
           chunkOverlap: ragChunkOverlap,
           topK: ragTopK,
-          answerProvider: ragAnswerProvider,
           answerModel: ragAnswerModel,
           systemPrompt: ragSystemPrompt,
           maxContextTokens: ragMaxContextTokens,
@@ -902,41 +900,6 @@
         AI Processing
       </h2>
 
-      <!-- Provider Selection -->
-      <div class="mt-4">
-        <span class="text-ink block text-sm font-medium">AI Provider</span>
-        <div class="mt-2 flex gap-4">
-          <label class="flex items-center gap-2 text-sm {!data.hasOpenAiKey ? 'opacity-50' : ''}">
-            <input
-              type="radio"
-              bind:group={aiProvider}
-              value="openai"
-              disabled={!data.hasOpenAiKey}
-              onchange={() => fetchAiModels('openai')}
-            />
-            OpenAI
-            {#if !data.hasOpenAiKey}
-              <span class="text-muted text-xs">(no key)</span>
-            {/if}
-          </label>
-          <label
-            class="flex items-center gap-2 text-sm {!data.hasAnthropicKey ? 'opacity-50' : ''}"
-          >
-            <input
-              type="radio"
-              bind:group={aiProvider}
-              value="anthropic"
-              disabled={!data.hasAnthropicKey}
-              onchange={() => fetchAiModels('anthropic')}
-            />
-            Anthropic
-            {#if !data.hasAnthropicKey}
-              <span class="text-muted text-xs">(no key)</span>
-            {/if}
-          </label>
-        </div>
-      </div>
-
       <!-- Model Selection -->
       <div class="mt-4">
         <label for="ai-model" class="text-ink block text-sm font-medium">Model</label>
@@ -959,7 +922,7 @@
         >
           Reasoning Effort
           <InfoIcon
-            text="Controls how much the model reasons before answering. For OpenAI, this sets the reasoning effort parameter. For Anthropic, this enables extended thinking mode. 'Low' (default) is recommended — fast and cost-effective for classification. Higher levels increase thinking tokens which are billed as output tokens, potentially doubling costs at 'High'. 'None' disables reasoning/thinking entirely."
+            text="Controls how much the model reasons before answering. 'Low' (default) is recommended — fast and cost-effective for classification. Higher levels increase thinking tokens which are billed as output tokens, potentially doubling costs at 'High'. 'None' disables reasoning entirely."
             position="bottom"
           />
         </label>
@@ -973,6 +936,38 @@
           <option value="medium">Medium</option>
           <option value="high">High</option>
         </select>
+      </div>
+
+      <!-- Flex Processing -->
+      <div class="mt-4 flex items-center gap-2">
+        <label class="text-muted flex items-center gap-2 text-sm">
+          <input type="checkbox" bind:checked={aiFlexProcessing} class="rounded" />
+          Flex Processing
+        </label>
+        <RichTooltip position="bottom">
+          <svg
+            class="text-muted hover:text-accent inline-block h-4 w-4 shrink-0 cursor-help transition-colors"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          {#snippet content()}
+            Uses OpenAI's Flex Processing for ~50% lower costs. Requests may take longer or be
+            temporarily unavailable during high demand. Recommended for background processing.
+            <a
+              href="https://developers.openai.com/api/docs/guides/flex-processing"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-300 underline hover:text-blue-200">Learn more</a
+            >
+          {/snippet}
+        </RichTooltip>
       </div>
 
       <!-- Auto-Process & Tag -->
@@ -1519,48 +1514,17 @@
           The AI model used to generate answers from retrieved document context. Independent from
           the AI Processing model.
         </p>
-        <div class="mt-3 grid gap-4 sm:grid-cols-2">
-          <div>
-            <span class="text-ink block text-sm font-medium">Provider</span>
-            <div class="mt-2 flex gap-4">
-              <label
-                class="flex items-center gap-2 text-sm {!data.hasOpenAiKey ? 'opacity-50' : ''}"
-              >
-                <input
-                  type="radio"
-                  bind:group={ragAnswerProvider}
-                  value="openai"
-                  disabled={!data.hasOpenAiKey}
-                  onchange={() => fetchRagModels('openai')}
-                />
-                OpenAI
-              </label>
-              <label
-                class="flex items-center gap-2 text-sm {!data.hasAnthropicKey ? 'opacity-50' : ''}"
-              >
-                <input
-                  type="radio"
-                  bind:group={ragAnswerProvider}
-                  value="anthropic"
-                  disabled={!data.hasAnthropicKey}
-                  onchange={() => fetchRagModels('anthropic')}
-                />
-                Anthropic
-              </label>
-            </div>
-          </div>
-          <div>
-            <label for="rag-model" class="text-ink block text-sm font-medium">Model</label>
-            <select
-              id="rag-model"
-              bind:value={ragAnswerModel}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-            >
-              {#each ragModels as model (model.id)}
-                <option value={model.id}>{model.name}</option>
-              {/each}
-            </select>
-          </div>
+        <div class="mt-3">
+          <label for="rag-model" class="text-ink block text-sm font-medium">Model</label>
+          <select
+            id="rag-model"
+            bind:value={ragAnswerModel}
+            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none sm:w-64"
+          >
+            {#each ragModels as model (model.id)}
+              <option value={model.id}>{model.name}</option>
+            {/each}
+          </select>
         </div>
       </div>
 

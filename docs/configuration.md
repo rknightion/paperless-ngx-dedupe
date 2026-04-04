@@ -48,20 +48,18 @@ If both token and username/password are set, token is used first.
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `AI_ENABLED` | No | `false` | Enable AI-powered document classification |
-| `AI_OPENAI_API_KEY` | When using OpenAI | - | OpenAI API key |
-| `AI_ANTHROPIC_API_KEY` | When using Anthropic | - | Anthropic API key |
+| `AI_OPENAI_API_KEY` | When AI enabled | - | OpenAI API key |
 
-At least one API key is required when `AI_ENABLED=true`. Runtime settings (provider, model, prompt, etc.) are configured in the Settings page or via API. See [AI Processing](ai-processing.md) for full details.
+The API key is required when `AI_ENABLED=true`. Runtime settings (model, prompt, etc.) are configured in the Settings page or via API. See [AI Processing](ai-processing.md) for full details.
 
 ### Document Q&A / RAG (Optional)
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `RAG_ENABLED` | No | `false` | Enable natural language Q&A across your documents |
-| `AI_OPENAI_API_KEY` | When RAG enabled | - | Required for generating embeddings (always uses OpenAI) |
-| `AI_ANTHROPIC_API_KEY` | No | - | Required only if using Anthropic as the answer model |
+| `AI_OPENAI_API_KEY` | When RAG enabled | - | Required for generating embeddings and answers |
 
-`RAG_ENABLED` is independent of `AI_ENABLED` — you can use Q&A without AI classification, or both. The OpenAI key is always required when RAG is enabled because embeddings use OpenAI models. Runtime settings (embedding model, chunk size, answer model, etc.) are configured in the Settings page or via API. See [Document Q&A](document-qa.md) for full details.
+`RAG_ENABLED` is independent of `AI_ENABLED` — you can use Q&A without AI classification, or both. The OpenAI key is always required when RAG is enabled. Runtime settings (embedding model, chunk size, answer model, etc.) are configured in the Settings page or via API. See [Document Q&A](document-qa.md) for full details.
 
 ### Observability (Optional)
 

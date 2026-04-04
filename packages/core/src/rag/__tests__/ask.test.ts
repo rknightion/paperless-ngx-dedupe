@@ -21,10 +21,6 @@ vi.mock('ai', () => ({
 vi.mock('@ai-sdk/openai', () => ({
   createOpenAI: vi.fn(() => vi.fn(() => 'openai-model')),
 }));
-vi.mock('@ai-sdk/anthropic', () => ({
-  createAnthropic: vi.fn(() => vi.fn(() => 'anthropic-model')),
-}));
-
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
@@ -107,16 +103,6 @@ describe('askDocuments', () => {
     });
 
     expect(result.conversationId).toBe(conv.id);
-  });
-
-  it('throws when anthropic provider but no anthropic API key', async () => {
-    const opts = {
-      ...defaultOpts,
-      config: { ...DEFAULT_RAG_CONFIG, answerProvider: 'anthropic' as const },
-      // No anthropicApiKey provided
-    };
-
-    await expect(askDocuments(db, sqlite, opts)).rejects.toThrow('Anthropic API key required');
   });
 
   it('returns streamResult from streamText', async () => {

@@ -54,7 +54,7 @@ Single-package variant: `pnpm --filter @paperless-dedupe/core test`, etc.
 
 ## Workflow
 
-Run `pnpm lint && pnpm format && pnpm check && pnpm test` before pushing. CI additionally runs `pnpm audit --audit-level=high` and a Docker build-verify job on every PR.
+Run `pnpm lint && pnpm format --write && pnpm check && pnpm test` after completing work or before pushing. CI additionally runs `pnpm audit --audit-level=high` and a Docker build-verify job on every PR.
 
 ## Gotchas & Constraints
 

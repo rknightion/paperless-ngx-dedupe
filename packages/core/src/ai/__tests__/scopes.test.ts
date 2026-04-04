@@ -74,8 +74,8 @@ function seedData(db: AppDatabase): string[] {
     .values({
       documentId: 'doc-3',
       paperlessId: 3,
-      provider: 'anthropic',
-      model: 'claude-sonnet-4-6',
+      provider: 'openai',
+      model: 'gpt-5.4-mini',
       appliedStatus: 'failed',
       errorMessage: 'Extraction failed',
       createdAt: '2024-01-03T00:00:00Z',

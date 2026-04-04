@@ -457,8 +457,8 @@ Partial update of AI config. Validated against the config schema.
 
 ```json
 {
-  "provider": "anthropic",
-  "model": "claude-sonnet-4-6",
+  "provider": "openai",
+  "model": "gpt-5.4-mini",
   "includeCorrespondents": true
 }
 ```
@@ -471,7 +471,7 @@ Returns available models for a provider.
 
 Query params:
 
-- `provider`: `openai` or `anthropic` (required)
+- `provider`: `openai` (required)
 
 ```json
 {

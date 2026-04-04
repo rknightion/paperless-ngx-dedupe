@@ -20,7 +20,7 @@ Two weighted dimensions — Jaccard text overlap and fuzzy text matching — are
 
 ### :material-robot-outline: AI Metadata Extraction
 
-Automatically extract correspondents, document types, and tags from document text using OpenAI or Anthropic models. Each suggestion includes a confidence score and evidence snippet, so you can review and apply results individually or in bulk.
+Automatically extract correspondents, document types, and tags from document text using OpenAI models. Each suggestion includes a confidence score and evidence snippet, so you can review and apply results individually or in bulk.
 
 ### :material-forum: RAG Document Q&A
 

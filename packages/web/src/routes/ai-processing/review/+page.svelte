@@ -331,7 +331,6 @@
       failed: data.failed,
       minConfidence: data.minConfidence,
       maxConfidence: data.maxConfidence,
-      provider: data.provider ?? undefined,
       model: data.model ?? undefined,
     };
     selectAllMatchingFilter(filters, data.total);
@@ -371,7 +370,6 @@
     changedOnly: data.changedOnly ? 'true' : '',
     failed: data.failed ? 'true' : '',
     minConfidence: data.minConfidence ? String(data.minConfidence) : '',
-    provider: data.provider ?? '',
     model: data.model ?? '',
   });
 </script>
@@ -388,7 +386,6 @@
   changedOnly={data.changedOnly}
   failed={data.failed}
   minConfidence={data.minConfidence}
-  provider={data.provider ?? undefined}
   model={data.model ?? undefined}
   onapply={handleFilterApply}
 />

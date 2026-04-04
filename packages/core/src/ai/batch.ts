@@ -25,7 +25,6 @@ const logger = createLogger('ai-batch');
 /** RPM limits per provider (requests per minute) */
 const PROVIDER_RPM: Record<string, number> = {
   openai: 5_000,
-  anthropic: 50,
 };
 
 /** Target utilization of rate limits */

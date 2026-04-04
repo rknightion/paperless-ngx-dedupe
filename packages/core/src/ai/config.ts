@@ -24,7 +24,8 @@ function parseConfigValue(key: string, value: string): unknown {
     shortKey === 'extractTitle' ||
     shortKey === 'extractCorrespondent' ||
     shortKey === 'extractDocumentType' ||
-    shortKey === 'extractTags'
+    shortKey === 'extractTags' ||
+    shortKey === 'flexProcessing'
   ) {
     return value === 'true';
   }

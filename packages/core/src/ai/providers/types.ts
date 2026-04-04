@@ -32,7 +32,7 @@ export interface AiExtractionResult {
 }
 
 export interface AiProviderInterface {
-  readonly provider: 'openai' | 'anthropic';
+  readonly provider: 'openai';
   extract(request: AiExtractionRequest): Promise<AiExtractionResult>;
 }
 

@@ -46,19 +46,19 @@ describe('setAiConfig', () => {
   });
 
   it('persists and retrieves config', () => {
-    setAiConfig(db, { provider: 'anthropic', model: 'claude-sonnet-4-6' });
+    setAiConfig(db, { provider: 'openai', model: 'gpt-5.4' });
     const config = getAiConfig(db);
-    expect(config.provider).toBe('anthropic');
-    expect(config.model).toBe('claude-sonnet-4-6');
+    expect(config.provider).toBe('openai');
+    expect(config.model).toBe('gpt-5.4');
   });
 
   it('merges partial updates with existing config', () => {
-    setAiConfig(db, { provider: 'anthropic' });
-    setAiConfig(db, { model: 'claude-haiku-4-5' });
+    setAiConfig(db, { provider: 'openai' });
+    setAiConfig(db, { model: 'gpt-5.4-nano' });
 
     const config = getAiConfig(db);
-    expect(config.provider).toBe('anthropic');
-    expect(config.model).toBe('claude-haiku-4-5');
+    expect(config.provider).toBe('openai');
+    expect(config.model).toBe('gpt-5.4-nano');
     // Other defaults should remain
     expect(config.maxContentLength).toBe(8000);
     expect(config.batchSize).toBe(100);
@@ -97,8 +97,8 @@ describe('setAiConfig', () => {
   });
 
   it('returns the validated config', () => {
-    const result = setAiConfig(db, { provider: 'anthropic', batchSize: 50 });
-    expect(result.provider).toBe('anthropic');
+    const result = setAiConfig(db, { provider: 'openai', batchSize: 50 });
+    expect(result.provider).toBe('openai');
     expect(result.batchSize).toBe(50);
     expect(result.model).toBe('gpt-5.4-mini'); // default preserved
   });

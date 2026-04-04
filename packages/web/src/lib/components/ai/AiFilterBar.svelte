@@ -10,7 +10,6 @@
     changedOnly: boolean | undefined;
     failed: boolean | undefined;
     minConfidence: number | undefined;
-    provider: string | undefined;
     model: string | undefined;
     onapply: (filters: Record<string, string | undefined>) => void;
   }
@@ -23,7 +22,6 @@
     changedOnly,
     failed,
     minConfidence,
-    provider,
     model,
     onapply,
   }: Props = $props();
@@ -37,7 +35,6 @@
     changedOnly: changedOnly ?? false,
     failed: failed ?? false,
     minConfidence: minConfidence ?? 0,
-    provider: provider ?? '',
     model: model ?? '',
   }));
 
@@ -48,7 +45,6 @@
   let localChangedOnly = $state(initial.changedOnly);
   let localFailed = $state(initial.failed);
   let localMinConfidence = $state(initial.minConfidence);
-  let localProvider = $state(initial.provider);
   let localModel = $state(initial.model);
   let showAdvanced = $state(false);
 
@@ -61,7 +57,6 @@
       changedOnly: localChangedOnly ? 'true' : undefined,
       failed: localFailed ? 'true' : undefined,
       minConfidence: localMinConfidence > 0 ? String(localMinConfidence) : undefined,
-      provider: localProvider || undefined,
       model: localModel || undefined,
     });
   }
@@ -170,13 +165,6 @@
           class="{inputClass} w-20"
         />
       </div>
-
-      <select bind:value={localProvider} onchange={handleSelectChange} class={selectClass}>
-        <option value="">All providers</option>
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
-        <option value="ollama">Ollama</option>
-      </select>
 
       <input
         type="text"
