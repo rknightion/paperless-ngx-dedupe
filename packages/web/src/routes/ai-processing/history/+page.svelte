@@ -15,6 +15,7 @@
     AlertCircle,
     ExternalLink,
     Loader2,
+    RefreshCw,
     X,
     History,
   } from 'lucide-svelte';
@@ -31,6 +32,7 @@
   let activeResultDetail = $state<AiResultDetail | null>(null);
   let detailLoadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   let isReverting = $state(false);
+  let isRetryingApply = $state(false);
 
   // ── Derived ──
   const totalPages = $derived(Math.ceil(data.total / data.limit));
@@ -146,6 +148,33 @@
       isReverting = false;
     }
   }
+
+  async function handleRetryApply(id: string) {
+    isRetryingApply = true;
+    try {
+      const res = await fetch(`/api/v1/ai/results/${id}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: ['title', 'correspondent', 'documentType', 'tags'],
+          allowClearing: false,
+          createMissingEntities: true,
+        }),
+      });
+      if (res.ok) {
+        addToast('success', 'Apply retried successfully');
+        closeDetail();
+        invalidateAll();
+      } else {
+        const json = await res.json();
+        addToast('error', json.error?.message ?? 'Retry failed');
+      }
+    } catch {
+      addToast('error', 'Retry failed');
+    } finally {
+      isRetryingApply = false;
+    }
+  }
 </script>
 
 <div class="space-y-4">
@@ -251,13 +280,18 @@
                     </div>
                   </td>
                   <td class="hidden p-3 sm:table-cell">
-                    <span
-                      class="rounded-full px-2.5 py-0.5 text-xs font-medium {statusBadgeClass(
-                        result.appliedStatus,
-                      )}"
-                    >
-                      {statusDisplayText(result.appliedStatus)}
-                    </span>
+                    <div class="space-y-1">
+                      <span
+                        class="rounded-full px-2.5 py-0.5 text-xs font-medium {statusBadgeClass(
+                          result.appliedStatus,
+                        )}"
+                      >
+                        {statusDisplayText(result.appliedStatus)}
+                      </span>
+                      {#if result.appliedStatus === 'failed' && result.errorMessage}
+                        <p class="text-muted line-clamp-2 text-xs">{result.errorMessage}</p>
+                      {/if}
+                    </div>
                   </td>
                   <td class="hidden p-3 md:table-cell">
                     <div class="text-muted space-y-0.5 text-xs">
@@ -386,6 +420,24 @@
               </button>
             </div>
 
+            <!-- Error Banner -->
+            {#if activeResultDetail.appliedStatus === 'failed' && activeResultDetail.errorMessage}
+              <div class="bg-ember-light/30 border-ember/20 space-y-2 rounded-lg border p-4">
+                <div class="flex items-start gap-2">
+                  <AlertCircle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+                  <div class="min-w-0 space-y-1">
+                    <p class="text-ember text-sm font-semibold">Apply Failed</p>
+                    {#if activeResultDetail.failureType}
+                      <span class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium">
+                        {activeResultDetail.failureType}
+                      </span>
+                    {/if}
+                  </div>
+                </div>
+                <pre class="text-ink bg-canvas whitespace-pre-wrap rounded p-3 text-xs">{activeResultDetail.errorMessage}</pre>
+              </div>
+            {/if}
+
             <!-- Suggestions Summary -->
             <div class="space-y-2">
               <h3 class="text-ink text-sm font-semibold">AI Suggestions</h3>
@@ -450,6 +502,23 @@
                 {:else}
                   <Undo2 class="h-4 w-4" />
                   Revert Changes
+                {/if}
+              </button>
+            </div>
+          {/if}
+          {#if activeResultDetail.appliedStatus === 'failed'}
+            <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
+              <button
+                onclick={() => activeResultDetail && handleRetryApply(activeResultDetail.id)}
+                disabled={isRetryingApply}
+                class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+              >
+                {#if isRetryingApply}
+                  <Loader2 class="h-4 w-4 animate-spin" />
+                  Retrying...
+                {:else}
+                  <RefreshCw class="h-4 w-4" />
+                  Retry Apply
                 {/if}
               </button>
             </div>
