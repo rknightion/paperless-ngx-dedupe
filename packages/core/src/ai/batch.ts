@@ -70,11 +70,11 @@ export async function processBatch(
   return withSpan(
     'dedupe.ai.batch',
     {
-      'ai.provider': provider.provider,
-      'ai.model': config.model,
-      'ai.reprocess': reprocess,
-      'ai.batch_size': maxConcurrency,
-      'ai.target_rpm': targetRpm,
+      'gen_ai.system': provider.provider,
+      'gen_ai.request.model': config.model,
+      'app.ai.reprocess': reprocess,
+      'gen_ai.request.batch_size': maxConcurrency,
+      'gen_ai.request.target_rpm': targetRpm,
     },
     async (span) => {
       const startMs = performance.now();
@@ -159,7 +159,7 @@ export async function processBatch(
       }
 
       const totalDocs = docs.length;
-      span.setAttribute('ai.total_documents', totalDocs);
+      span.setAttribute('app.ai.total_documents', totalDocs);
 
       const result: AiBatchResult = {
         totalDocuments: totalDocs,
@@ -199,7 +199,7 @@ export async function processBatch(
         if (!doc.fullText) {
           result.skipped++;
           result.processed++;
-          aiDocumentsTotal().add(1, { outcome: 'skipped', provider: provider.provider });
+          aiDocumentsTotal().add(1, { outcome: 'skipped', 'gen_ai.system': provider.provider });
           logger.warn(
             { documentId: doc.id, title: doc.title },
             'Skipping document with no content',
@@ -330,20 +330,20 @@ export async function processBatch(
           result.totalCompletionTokens += extraction.usage.completionTokens;
 
           // Record per-document metrics
-          aiDocumentsTotal().add(1, { outcome: 'succeeded', provider: provider.provider });
-          aiDocumentDuration().record(docDurationMs / 1000, { provider: provider.provider });
+          aiDocumentsTotal().add(1, { outcome: 'succeeded', 'gen_ai.system': provider.provider });
+          aiDocumentDuration().record(docDurationMs / 1000, { 'gen_ai.system': provider.provider });
           aiTokensTotal().add(extraction.usage.promptTokens, {
-            type: 'prompt',
-            provider: provider.provider,
+            'gen_ai.token.type': 'input',
+            'gen_ai.system': provider.provider,
           });
           aiTokensTotal().add(extraction.usage.completionTokens, {
-            type: 'completion',
-            provider: provider.provider,
+            'gen_ai.token.type': 'output',
+            'gen_ai.system': provider.provider,
           });
           if (extraction.usage.cachedTokens) {
             aiTokensTotal().add(extraction.usage.cachedTokens, {
-              type: 'cached',
-              provider: provider.provider,
+              'gen_ai.token.type': 'cached',
+              'gen_ai.system': provider.provider,
             });
           }
 
@@ -391,7 +391,7 @@ export async function processBatch(
             .run();
 
           result.failed++;
-          aiDocumentsTotal().add(1, { outcome: 'failed', provider: provider.provider });
+          aiDocumentsTotal().add(1, { outcome: 'failed', 'gen_ai.system': provider.provider });
 
           // Circuit breaker: track consecutive same errors
           if (errorMsg === lastErrorMsg) {
@@ -458,10 +458,10 @@ export async function processBatch(
       aiBatchDuration().record(result.durationMs / 1000);
 
       span.setAttributes({
-        'batch.succeeded': result.succeeded,
-        'batch.failed': result.failed,
-        'batch.skipped': result.skipped,
-        'batch.circuit_breaker': circuitBroken,
+        'app.batch.succeeded': result.succeeded,
+        'app.batch.failed': result.failed,
+        'app.batch.skipped': result.skipped,
+        'app.batch.circuit_breaker': circuitBroken,
       });
 
       logger.info(
