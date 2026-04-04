@@ -5,6 +5,7 @@ import { createLogger } from '../logger.js';
 import { normalizeText } from './normalize.js';
 import { computeFingerprint } from './fingerprint.js';
 import { withSpan } from '../telemetry/spans.js';
+import { withPyroscopeLabels } from '../telemetry/pyroscope.js';
 import { syncDocumentsTotal, syncRunsTotal, syncDuration } from '../telemetry/metrics.js';
 import { purgeAllDocumentData } from './purge.js';
 import { deleteDocumentLocally } from '../queries/documents.js';
@@ -21,6 +22,7 @@ export async function syncDocuments(
   deps: SyncDependencies,
   options?: SyncOptions,
 ): Promise<SyncResult> {
+  return withPyroscopeLabels({ operation: 'sync' }, async () => {
   const logger = createLogger('sync');
   const startTime = Date.now();
   const { db, client } = deps;
@@ -180,6 +182,7 @@ export async function syncDocuments(
   syncDuration().record(result.durationMs / 1000);
 
   return result;
+  });
 }
 
 async function fetchReferenceMaps(client: PaperlessClient): Promise<ReferenceMaps> {
