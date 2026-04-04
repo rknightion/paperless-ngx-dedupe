@@ -69,7 +69,7 @@ const handleCors: Handle = async ({ event, resolve }) => {
   if (event.request.method === 'OPTIONS') {
     const headers: Record<string, string> = {
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, traceparent, tracestate',
       'Access-Control-Max-Age': '86400',
     };
 

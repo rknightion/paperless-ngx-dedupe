@@ -21,7 +21,7 @@
 
   untrack(() => {
     if (data.faroEnabled && data.faroCollectorUrl) {
-      initFaro(data.faroCollectorUrl);
+      initFaro(data.faroCollectorUrl, data.faroServiceNamespace);
     }
   });
 
