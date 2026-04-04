@@ -59,6 +59,11 @@
     return $page.url.pathname.startsWith(path);
   }
 
+  function tabHref(path: string): string {
+    const limit = $page.url.searchParams.get('limit');
+    return limit ? `${path}?limit=${limit}` : path;
+  }
+
   // ── SSE Connection ──
   function connectSSE(id: string) {
     sseConnection?.close();
@@ -450,7 +455,7 @@
   <!-- Tab Bar -->
   <nav class="flex border-b border-zinc-200 dark:border-zinc-700">
     <a
-      href="/ai-processing/queue"
+      href={tabHref('/ai-processing/queue')}
       class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/queue')
         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
         : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
@@ -464,7 +469,7 @@
       {/if}
     </a>
     <a
-      href="/ai-processing/review"
+      href={tabHref('/ai-processing/review')}
       class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/review')
         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
         : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
@@ -477,7 +482,7 @@
       {/if}
     </a>
     <a
-      href="/ai-processing/history"
+      href={tabHref('/ai-processing/history')}
       class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/history')
         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
         : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
