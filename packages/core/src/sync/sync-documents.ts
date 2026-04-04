@@ -23,165 +23,165 @@ export async function syncDocuments(
   options?: SyncOptions,
 ): Promise<SyncResult> {
   return withPyroscopeLabels({ operation: 'sync' }, async () => {
-  const logger = createLogger('sync');
-  const startTime = Date.now();
-  const { db, client } = deps;
-  const pageSize = options?.pageSize ?? DEFAULT_PAGE_SIZE;
-  const maxOcrLength = options?.maxOcrLength ?? DEFAULT_MAX_OCR_LENGTH;
-  const onProgress = options?.onProgress;
+    const logger = createLogger('sync');
+    const startTime = Date.now();
+    const { db, client } = deps;
+    const pageSize = options?.pageSize ?? DEFAULT_PAGE_SIZE;
+    const maxOcrLength = options?.maxOcrLength ?? DEFAULT_MAX_OCR_LENGTH;
+    const onProgress = options?.onProgress;
 
-  // 1. Purge all local data if requested (before determining sync type)
-  if (options?.purgeBeforeSync) {
-    logger.info('Purging all local document data before sync');
-    await onProgress?.(0, 'Purging existing data...');
-    const purgeResult = purgeAllDocumentData(db);
-    logger.info(purgeResult, 'Purge complete');
-  }
-
-  // 2. Determine sync type (full vs incremental)
-  const state = db.select().from(syncState).where(eq(syncState.id, 'singleton')).get();
-  const lastSyncAt = state?.lastSyncAt ?? null;
-  const isFullSync = options?.forceFullSync || !lastSyncAt;
-  const syncType = isFullSync ? 'full' : 'incremental';
-
-  logger.info({ syncType, lastSyncAt }, 'Starting document sync');
-  await onProgress?.(0, `Starting ${syncType} sync...`);
-
-  // 3. Fetch reference data
-  const refMaps = await withSpan('dedupe.sync.fetch_references', {}, async () =>
-    fetchReferenceMaps(client),
-  );
-  await onProgress?.(0.02, 'Loaded reference data');
-
-  // 4. Load local documents for O(1) lookup
-  const localDocs = loadLocalDocuments(db);
-
-  // 5. Iterate through Paperless documents
-  const result: SyncResult = {
-    totalFetched: 0,
-    inserted: 0,
-    updated: 0,
-    skipped: 0,
-    failed: 0,
-    reconciled: 0,
-    errors: [],
-    durationMs: 0,
-    syncType,
-  };
-
-  const seenPaperlessIds = new Set<number>();
-  let shouldStop = false;
-  let totalCount: number | undefined;
-
-  for await (const page of client.getDocuments({ ordering: '-modified', pageSize })) {
-    if (shouldStop) break;
-
-    totalCount ??= page.totalCount;
-
-    for (const doc of page.results) {
-      result.totalFetched++;
-      seenPaperlessIds.add(doc.id);
-
-      try {
-        const fingerprint = computeFingerprint(doc);
-        const localDoc = localDocs.get(doc.id);
-
-        if (!localDoc) {
-          // New document - insert
-          insertDocument(db, doc, fingerprint, refMaps, maxOcrLength);
-          result.inserted++;
-        } else if (localDoc.fingerprint !== fingerprint) {
-          // Modified - update
-          updateDocument(db, localDoc.id, doc, fingerprint, refMaps, maxOcrLength);
-          result.updated++;
-        } else {
-          // Unchanged - skip
-          result.skipped++;
-        }
-      } catch (error) {
-        result.failed++;
-        const errorMsg = `Document ${doc.id} (${doc.title}): ${error instanceof Error ? error.message : String(error)}`;
-        result.errors.push(errorMsg);
-        logger.warn({ paperlessId: doc.id, error: errorMsg }, 'Failed to sync document');
-      }
+    // 1. Purge all local data if requested (before determining sync type)
+    if (options?.purgeBeforeSync) {
+      logger.info('Purging all local document data before sync');
+      await onProgress?.(0, 'Purging existing data...');
+      const purgeResult = purgeAllDocumentData(db);
+      logger.info(purgeResult, 'Purge complete');
     }
 
-    // Report progress
-    const docPhase = totalCount && totalCount > 0 ? result.totalFetched / totalCount : 0;
-    const progress = 0.02 + 0.93 * docPhase;
-    await onProgress?.(
-      Math.min(progress, 0.95),
-      `Syncing documents: ${result.totalFetched}/${totalCount ?? '?'} (${result.inserted} new, ${result.updated} updated)`,
-      docPhase,
+    // 2. Determine sync type (full vs incremental)
+    const state = db.select().from(syncState).where(eq(syncState.id, 'singleton')).get();
+    const lastSyncAt = state?.lastSyncAt ?? null;
+    const isFullSync = options?.forceFullSync || !lastSyncAt;
+    const syncType = isFullSync ? 'full' : 'incremental';
+
+    logger.info({ syncType, lastSyncAt }, 'Starting document sync');
+    await onProgress?.(0, `Starting ${syncType} sync...`);
+
+    // 3. Fetch reference data
+    const refMaps = await withSpan('dedupe.sync.fetch_references', {}, async () =>
+      fetchReferenceMaps(client),
     );
+    await onProgress?.(0.02, 'Loaded reference data');
 
-    // Incremental sync cutoff: stop when oldest doc in batch is older than lastSyncAt
-    if (!isFullSync && lastSyncAt && page.results.length > 0) {
-      const oldestInBatch = page.results[page.results.length - 1];
-      if (oldestInBatch.modified < lastSyncAt) {
-        shouldStop = true;
+    // 4. Load local documents for O(1) lookup
+    const localDocs = loadLocalDocuments(db);
+
+    // 5. Iterate through Paperless documents
+    const result: SyncResult = {
+      totalFetched: 0,
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      reconciled: 0,
+      errors: [],
+      durationMs: 0,
+      syncType,
+    };
+
+    const seenPaperlessIds = new Set<number>();
+    let shouldStop = false;
+    let totalCount: number | undefined;
+
+    for await (const page of client.getDocuments({ ordering: '-modified', pageSize })) {
+      if (shouldStop) break;
+
+      totalCount ??= page.totalCount;
+
+      for (const doc of page.results) {
+        result.totalFetched++;
+        seenPaperlessIds.add(doc.id);
+
+        try {
+          const fingerprint = computeFingerprint(doc);
+          const localDoc = localDocs.get(doc.id);
+
+          if (!localDoc) {
+            // New document - insert
+            insertDocument(db, doc, fingerprint, refMaps, maxOcrLength);
+            result.inserted++;
+          } else if (localDoc.fingerprint !== fingerprint) {
+            // Modified - update
+            updateDocument(db, localDoc.id, doc, fingerprint, refMaps, maxOcrLength);
+            result.updated++;
+          } else {
+            // Unchanged - skip
+            result.skipped++;
+          }
+        } catch (error) {
+          result.failed++;
+          const errorMsg = `Document ${doc.id} (${doc.title}): ${error instanceof Error ? error.message : String(error)}`;
+          result.errors.push(errorMsg);
+          logger.warn({ paperlessId: doc.id, error: errorMsg }, 'Failed to sync document');
+        }
+      }
+
+      // Report progress
+      const docPhase = totalCount && totalCount > 0 ? result.totalFetched / totalCount : 0;
+      const progress = 0.02 + 0.93 * docPhase;
+      await onProgress?.(
+        Math.min(progress, 0.95),
+        `Syncing documents: ${result.totalFetched}/${totalCount ?? '?'} (${result.inserted} new, ${result.updated} updated)`,
+        docPhase,
+      );
+
+      // Incremental sync cutoff: stop when oldest doc in batch is older than lastSyncAt
+      if (!isFullSync && lastSyncAt && page.results.length > 0) {
+        const oldestInBatch = page.results[page.results.length - 1];
+        if (oldestInBatch.modified < lastSyncAt) {
+          shouldStop = true;
+        }
       }
     }
-  }
 
-  // 6. Reconcile orphaned documents (full sync only)
-  if (isFullSync) {
-    for (const [paperlessId, localDoc] of localDocs) {
-      if (!seenPaperlessIds.has(paperlessId)) {
-        logger.info(
-          { paperlessId, localDocId: localDoc.id },
-          'Removing orphaned document no longer in Paperless',
-        );
-        removeDocumentFromAllGroups(db, localDoc.id);
-        deleteDocumentLocally(db, localDoc.id);
-        result.reconciled++;
+    // 6. Reconcile orphaned documents (full sync only)
+    if (isFullSync) {
+      for (const [paperlessId, localDoc] of localDocs) {
+        if (!seenPaperlessIds.has(paperlessId)) {
+          logger.info(
+            { paperlessId, localDocId: localDoc.id },
+            'Removing orphaned document no longer in Paperless',
+          );
+          removeDocumentFromAllGroups(db, localDoc.id);
+          deleteDocumentLocally(db, localDoc.id);
+          result.reconciled++;
+        }
       }
     }
-  }
 
-  // 7. Update sync state
-  const now = new Date().toISOString();
-  const totalDocsCount = db.select().from(document).all().length;
+    // 7. Update sync state
+    const now = new Date().toISOString();
+    const totalDocsCount = db.select().from(document).all().length;
 
-  db.insert(syncState)
-    .values({
-      id: 'singleton',
-      lastSyncAt: now,
-      lastSyncDocumentCount: result.inserted + result.updated,
-      totalDocuments: totalDocsCount,
-    })
-    .onConflictDoUpdate({
-      target: syncState.id,
-      set: {
+    db.insert(syncState)
+      .values({
+        id: 'singleton',
         lastSyncAt: now,
         lastSyncDocumentCount: result.inserted + result.updated,
         totalDocuments: totalDocsCount,
-      },
-    })
-    .run();
+      })
+      .onConflictDoUpdate({
+        target: syncState.id,
+        set: {
+          lastSyncAt: now,
+          lastSyncDocumentCount: result.inserted + result.updated,
+          totalDocuments: totalDocsCount,
+        },
+      })
+      .run();
 
-  result.durationMs = Date.now() - startTime;
-  await onProgress?.(
-    1,
-    `Sync complete: ${result.inserted} new, ${result.updated} updated, ${result.skipped} unchanged`,
-  );
+    result.durationMs = Date.now() - startTime;
+    await onProgress?.(
+      1,
+      `Sync complete: ${result.inserted} new, ${result.updated} updated, ${result.skipped} unchanged`,
+    );
 
-  logger.info(
-    { ...result },
-    `Sync complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed, ${result.reconciled} reconciled`,
-  );
+    logger.info(
+      { ...result },
+      `Sync complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed, ${result.reconciled} reconciled`,
+    );
 
-  // Record OTEL metrics
-  syncDocumentsTotal().add(result.inserted, { status: 'inserted' });
-  syncDocumentsTotal().add(result.updated, { status: 'updated' });
-  syncDocumentsTotal().add(result.skipped, { status: 'skipped' });
-  syncDocumentsTotal().add(result.failed, { status: 'failed' });
-  syncRunsTotal().add(1, {
-    outcome: result.failed > 0 && result.inserted === 0 ? 'failure' : 'success',
-  });
-  syncDuration().record(result.durationMs / 1000);
+    // Record OTEL metrics
+    syncDocumentsTotal().add(result.inserted, { status: 'inserted' });
+    syncDocumentsTotal().add(result.updated, { status: 'updated' });
+    syncDocumentsTotal().add(result.skipped, { status: 'skipped' });
+    syncDocumentsTotal().add(result.failed, { status: 'failed' });
+    syncRunsTotal().add(1, {
+      outcome: result.failed > 0 && result.inserted === 0 ? 'failure' : 'success',
+    });
+    syncDuration().record(result.durationMs / 1000);
 
-  return result;
+    return result;
   });
 }
 

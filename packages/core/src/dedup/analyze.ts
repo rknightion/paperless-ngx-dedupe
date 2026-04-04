@@ -41,629 +41,633 @@ export async function runAnalysis(
   options?: AnalysisOptions,
 ): Promise<AnalysisResult> {
   return withPyroscopeLabels({ operation: 'analysis' }, async () => {
-  const logger = createLogger('analysis');
-  const startTime = Date.now();
-  const force = options?.force ?? false;
-  const onProgress = options?.onProgress;
+    const logger = createLogger('analysis');
+    const startTime = Date.now();
+    const force = options?.force ?? false;
+    const onProgress = options?.onProgress;
 
-  const result: AnalysisResult = {
-    totalDocuments: 0,
-    documentsAnalyzed: 0,
-    documentsSkipped: 0,
-    isFullRebuild: force,
-    signaturesGenerated: 0,
-    signaturesReused: 0,
-    candidatePairsFound: 0,
-    candidatePairsScored: 0,
-    groupsCreated: 0,
-    groupsUpdated: 0,
-    groupsRemoved: 0,
-    durationMs: 0,
-  };
+    const result: AnalysisResult = {
+      totalDocuments: 0,
+      documentsAnalyzed: 0,
+      documentsSkipped: 0,
+      isFullRebuild: force,
+      signaturesGenerated: 0,
+      signaturesReused: 0,
+      candidatePairsFound: 0,
+      candidatePairsScored: 0,
+      groupsCreated: 0,
+      groupsUpdated: 0,
+      groupsRemoved: 0,
+      durationMs: 0,
+    };
 
-  // Stage 1: Load config
-  await onProgress?.(0.0, 'Loading configuration...');
-  const config = getDedupConfig(db);
-  logger.info({ config, force }, 'Analysis started');
+    // Stage 1: Load config
+    await onProgress?.(0.0, 'Loading configuration...');
+    const config = getDedupConfig(db);
+    logger.info({ config, force }, 'Analysis started');
 
-  // Stage 2: Load documents
-  await onProgress?.(0.02, 'Loading documents...');
+    // Stage 2: Load documents
+    await onProgress?.(0.02, 'Loading documents...');
 
-  const allDocs = db
-    .select({
-      id: document.id,
-      paperlessId: document.paperlessId,
-      processingStatus: document.processingStatus,
-    })
-    .from(document)
-    .all();
-
-  result.totalDocuments = allDocs.length;
-
-  if (allDocs.length === 0) {
-    logger.info('No documents to analyze');
-    await onProgress?.(1.0, 'No documents to analyze');
-    result.durationMs = Date.now() - startTime;
-    return result;
-  }
-
-  const allDocIds = new Set(allDocs.map((d) => d.id));
-
-  // Docs to process: pending-only or all if force
-  const docsToProcess = force ? allDocs : allDocs.filter((d) => d.processingStatus === 'pending');
-
-  const docsToProcessIds = new Set(docsToProcess.map((d) => d.id));
-
-  logger.info({ total: allDocs.length, toProcess: docsToProcess.length }, 'Documents loaded');
-  await onProgress?.(
-    0.05,
-    `Loaded ${allDocs.length} documents, ${docsToProcess.length} to process`,
-  );
-
-  // Stage 3: Generate MinHash signatures
-  let sigGenerated = 0;
-  let sigReused = 0;
-
-  // Load existing signatures for reuse check
-  const existingSignatures = new Map<string, number>();
-  if (!force) {
-    const sigs = db
+    const allDocs = db
       .select({
-        documentId: documentSignature.documentId,
-        numPermutations: documentSignature.numPermutations,
+        id: document.id,
+        paperlessId: document.paperlessId,
+        processingStatus: document.processingStatus,
       })
-      .from(documentSignature)
+      .from(document)
       .all();
-    for (const sig of sigs) {
-      existingSignatures.set(sig.documentId, sig.numPermutations);
+
+    result.totalDocuments = allDocs.length;
+
+    if (allDocs.length === 0) {
+      logger.info('No documents to analyze');
+      await onProgress?.(1.0, 'No documents to analyze');
+      result.durationMs = Date.now() - startTime;
+      return result;
     }
-  }
 
-  const processedDocIds: string[] = [];
-  const skippedDocIds: string[] = [];
-  let skipNoContent = 0;
-  let skipTooShort = 0;
-  let skipShinglesFailed = 0;
+    const allDocIds = new Set(allDocs.map((d) => d.id));
 
-  for (let i = 0; i < docsToProcess.length; i++) {
-    const doc = docsToProcess[i];
+    // Docs to process: pending-only or all if force
+    const docsToProcess = force ? allDocs : allDocs.filter((d) => d.processingStatus === 'pending');
 
-    // Check if signature already exists with matching numPermutations
+    const docsToProcessIds = new Set(docsToProcess.map((d) => d.id));
+
+    logger.info({ total: allDocs.length, toProcess: docsToProcess.length }, 'Documents loaded');
+    await onProgress?.(
+      0.05,
+      `Loaded ${allDocs.length} documents, ${docsToProcess.length} to process`,
+    );
+
+    // Stage 3: Generate MinHash signatures
+    let sigGenerated = 0;
+    let sigReused = 0;
+
+    // Load existing signatures for reuse check
+    const existingSignatures = new Map<string, number>();
     if (!force) {
-      const existingNumPerm = existingSignatures.get(doc.id);
-      if (existingNumPerm === config.numPermutations) {
-        sigReused++;
-        processedDocIds.push(doc.id);
-        if (i % PROGRESS_BATCH_SIZE === 0) {
-          const sigPhase = i / docsToProcess.length;
-          await onProgress?.(
-            0.05 + 0.35 * sigPhase,
-            `Processing signatures: ${i}/${docsToProcess.length}`,
-            sigPhase,
-          );
-        }
-        continue;
+      const sigs = db
+        .select({
+          documentId: documentSignature.documentId,
+          numPermutations: documentSignature.numPermutations,
+        })
+        .from(documentSignature)
+        .all();
+      for (const sig of sigs) {
+        existingSignatures.set(sig.documentId, sig.numPermutations);
       }
     }
 
-    // Load content
-    const content = db
-      .select({
-        normalizedText: documentContent.normalizedText,
-        wordCount: documentContent.wordCount,
-      })
-      .from(documentContent)
-      .where(eq(documentContent.documentId, doc.id))
-      .get();
+    const processedDocIds: string[] = [];
+    const skippedDocIds: string[] = [];
+    let skipNoContent = 0;
+    let skipTooShort = 0;
+    let skipShinglesFailed = 0;
 
-    if (!content || !content.normalizedText) {
-      skippedDocIds.push(doc.id);
-      skipNoContent++;
-      continue;
-    }
+    for (let i = 0; i < docsToProcess.length; i++) {
+      const doc = docsToProcess[i];
 
-    if ((content.wordCount ?? 0) < config.minWords) {
-      skippedDocIds.push(doc.id);
-      skipTooShort++;
-      continue;
-    }
+      // Check if signature already exists with matching numPermutations
+      if (!force) {
+        const existingNumPerm = existingSignatures.get(doc.id);
+        if (existingNumPerm === config.numPermutations) {
+          sigReused++;
+          processedDocIds.push(doc.id);
+          if (i % PROGRESS_BATCH_SIZE === 0) {
+            const sigPhase = i / docsToProcess.length;
+            await onProgress?.(
+              0.05 + 0.35 * sigPhase,
+              `Processing signatures: ${i}/${docsToProcess.length}`,
+              sigPhase,
+            );
+          }
+          continue;
+        }
+      }
 
-    const shingles = textToShingles(content.normalizedText, config.ngramSize, config.minWords);
-    if (!shingles) {
-      skippedDocIds.push(doc.id);
-      skipShinglesFailed++;
-      continue;
-    }
+      // Load content
+      const content = db
+        .select({
+          normalizedText: documentContent.normalizedText,
+          wordCount: documentContent.wordCount,
+        })
+        .from(documentContent)
+        .where(eq(documentContent.documentId, doc.id))
+        .get();
 
-    const mh = new MinHash(config.numPermutations);
-    mh.update(shingles);
-    const serialized = mh.serialize();
-    const now = new Date().toISOString();
+      if (!content || !content.normalizedText) {
+        skippedDocIds.push(doc.id);
+        skipNoContent++;
+        continue;
+      }
 
-    // Upsert signature
-    db.insert(documentSignature)
-      .values({
-        documentId: doc.id,
-        minhashSignature: serialized,
-        algorithmVersion: ALGORITHM_VERSION,
-        numPermutations: config.numPermutations,
-        createdAt: now,
-      })
-      .onConflictDoUpdate({
-        target: documentSignature.documentId,
-        set: {
+      if ((content.wordCount ?? 0) < config.minWords) {
+        skippedDocIds.push(doc.id);
+        skipTooShort++;
+        continue;
+      }
+
+      const shingles = textToShingles(content.normalizedText, config.ngramSize, config.minWords);
+      if (!shingles) {
+        skippedDocIds.push(doc.id);
+        skipShinglesFailed++;
+        continue;
+      }
+
+      const mh = new MinHash(config.numPermutations);
+      mh.update(shingles);
+      const serialized = mh.serialize();
+      const now = new Date().toISOString();
+
+      // Upsert signature
+      db.insert(documentSignature)
+        .values({
+          documentId: doc.id,
           minhashSignature: serialized,
           algorithmVersion: ALGORITHM_VERSION,
           numPermutations: config.numPermutations,
           createdAt: now,
-        },
-      })
-      .run();
-
-    sigGenerated++;
-    processedDocIds.push(doc.id);
-
-    if (i % PROGRESS_BATCH_SIZE === 0) {
-      const sigPhase = i / docsToProcess.length;
-      await onProgress?.(
-        0.05 + 0.35 * sigPhase,
-        `Processing signatures: ${i}/${docsToProcess.length}`,
-        sigPhase,
-      );
-    }
-  }
-
-  result.signaturesGenerated = sigGenerated;
-  result.signaturesReused = sigReused;
-  result.documentsAnalyzed = processedDocIds.length;
-  result.documentsSkipped = skippedDocIds.length;
-  result.skipReasons = {
-    noContent: skipNoContent,
-    tooShort: skipTooShort,
-    shinglesFailed: skipShinglesFailed,
-  };
-
-  logger.info(
-    { generated: sigGenerated, reused: sigReused, skipped: skippedDocIds.length },
-    'Signatures processed',
-  );
-  await onProgress?.(0.4, `Signatures: ${sigGenerated} generated, ${sigReused} reused`);
-
-  // Stage 4: Build LSH index from ALL signatures
-  await onProgress?.(0.4, 'Building LSH index...');
-
-  const { lshIndex, signatureMap } = await withSpan(
-    'dedupe.analysis.build_lsh_index',
-    {},
-    async (span) => {
-      const allSignatureRows = db
-        .select({
-          documentId: documentSignature.documentId,
-          minhashSignature: documentSignature.minhashSignature,
         })
-        .from(documentSignature)
-        .where(eq(documentSignature.numPermutations, config.numPermutations))
-        .all();
+        .onConflictDoUpdate({
+          target: documentSignature.documentId,
+          set: {
+            minhashSignature: serialized,
+            algorithmVersion: ALGORITHM_VERSION,
+            numPermutations: config.numPermutations,
+            createdAt: now,
+          },
+        })
+        .run();
 
-      const idx = new LSHIndex(config.numPermutations, config.numBands);
-      const sigMap = new Map<string, Uint32Array>();
+      sigGenerated++;
+      processedDocIds.push(doc.id);
 
-      for (const row of allSignatureRows) {
-        if (!row.minhashSignature) continue;
-        const sig = new Uint32Array(
-          row.minhashSignature.buffer.slice(
-            row.minhashSignature.byteOffset,
-            row.minhashSignature.byteOffset + row.minhashSignature.byteLength,
-          ),
+      if (i % PROGRESS_BATCH_SIZE === 0) {
+        const sigPhase = i / docsToProcess.length;
+        await onProgress?.(
+          0.05 + 0.35 * sigPhase,
+          `Processing signatures: ${i}/${docsToProcess.length}`,
+          sigPhase,
         );
-        idx.insert(row.documentId, sig);
-        sigMap.set(row.documentId, sig);
-      }
-
-      span.setAttribute('index.size', sigMap.size);
-      return { lshIndex: idx, signatureMap: sigMap };
-    },
-  );
-
-  logger.info({ indexedSignatures: signatureMap.size }, 'LSH index built');
-  await onProgress?.(0.5, `LSH index built with ${signatureMap.size} signatures`);
-
-  // Stage 5: Find candidate pairs
-  await onProgress?.(0.5, 'Finding candidate pairs...');
-
-  const searchDocIds = force
-    ? [...allDocIds]
-    : processedDocIds.filter((id) => docsToProcessIds.has(id));
-
-  const candidatePairs = new Map<string, { docId1: string; docId2: string; jaccard: number }>();
-
-  for (const docId of searchDocIds) {
-    const sig = signatureMap.get(docId);
-    if (!sig) continue;
-
-    const candidates = lshIndex.getCandidates(sig);
-    candidates.delete(docId); // Remove self
-
-    for (const candidateId of candidates) {
-      // Canonical ordering
-      const [id1, id2] = docId < candidateId ? [docId, candidateId] : [candidateId, docId];
-      const pairKey = `${id1}|${id2}`;
-
-      if (!candidatePairs.has(pairKey)) {
-        const candidateSig = signatureMap.get(candidateId);
-        if (!candidateSig) continue;
-        const jaccard = MinHash.jaccardFromArrays(sig, candidateSig);
-        candidatePairs.set(pairKey, { docId1: id1, docId2: id2, jaccard });
       }
     }
-  }
 
-  result.candidatePairsFound = candidatePairs.size;
-  logger.info({ candidatePairs: candidatePairs.size }, 'Candidate pairs found');
-  await onProgress?.(0.55, `Found ${candidatePairs.size} candidate pairs`);
+    result.signaturesGenerated = sigGenerated;
+    result.signaturesReused = sigReused;
+    result.documentsAnalyzed = processedDocIds.length;
+    result.documentsSkipped = skippedDocIds.length;
+    result.skipReasons = {
+      noContent: skipNoContent,
+      tooShort: skipTooShort,
+      shinglesFailed: skipShinglesFailed,
+    };
 
-  // Stage 6: Score candidates
-  const scoringStart = Date.now();
-  await onProgress?.(0.55, 'Scoring candidate pairs...');
+    logger.info(
+      { generated: sigGenerated, reused: sigReused, skipped: skippedDocIds.length },
+      'Signatures processed',
+    );
+    await onProgress?.(0.4, `Signatures: ${sigGenerated} generated, ${sigReused} reused`);
 
-  const weights: SimilarityWeights = {
-    jaccard: config.confidenceWeightJaccard,
-    fuzzy: config.confidenceWeightFuzzy,
-    discriminativePenaltyStrength: config.discriminativePenaltyStrength,
-  };
+    // Stage 4: Build LSH index from ALL signatures
+    await onProgress?.(0.4, 'Building LSH index...');
 
-  // Pre-filter candidates by jaccard threshold
-  const jaccardPreFilter = config.similarityThreshold * 0.8;
-  const filteredPairs = [...candidatePairs.values()].filter((p) => p.jaccard >= jaccardPreFilter);
+    const { lshIndex, signatureMap } = await withSpan(
+      'dedupe.analysis.build_lsh_index',
+      {},
+      async (span) => {
+        const allSignatureRows = db
+          .select({
+            documentId: documentSignature.documentId,
+            minhashSignature: documentSignature.minhashSignature,
+          })
+          .from(documentSignature)
+          .where(eq(documentSignature.numPermutations, config.numPermutations))
+          .all();
 
-  // Collect all document IDs needed for scoring
-  const scoringDocIds = new Set<string>();
-  for (const pair of filteredPairs) {
-    scoringDocIds.add(pair.docId1);
-    scoringDocIds.add(pair.docId2);
-  }
+        const idx = new LSHIndex(config.numPermutations, config.numBands);
+        const sigMap = new Map<string, Uint32Array>();
 
-  // Load document metadata in batches
-  const docDataMap = new Map<string, DocumentScoringData>();
-  const scoringDocIdArray = [...scoringDocIds];
+        for (const row of allSignatureRows) {
+          if (!row.minhashSignature) continue;
+          const sig = new Uint32Array(
+            row.minhashSignature.buffer.slice(
+              row.minhashSignature.byteOffset,
+              row.minhashSignature.byteOffset + row.minhashSignature.byteLength,
+            ),
+          );
+          idx.insert(row.documentId, sig);
+          sigMap.set(row.documentId, sig);
+        }
 
-  for (let i = 0; i < scoringDocIdArray.length; i += SQL_VARIABLE_LIMIT) {
-    const batch = scoringDocIdArray.slice(i, i + SQL_VARIABLE_LIMIT);
-    const rows = db
-      .select({
-        id: document.id,
-        title: document.title,
-      })
-      .from(document)
-      .where(inArray(document.id, batch))
-      .all();
+        span.setAttribute('index.size', sigMap.size);
+        return { lshIndex: idx, signatureMap: sigMap };
+      },
+    );
 
-    for (const row of rows) {
-      docDataMap.set(row.id, {
-        id: row.id,
-        title: row.title,
-        normalizedText: '',
-      });
+    logger.info({ indexedSignatures: signatureMap.size }, 'LSH index built');
+    await onProgress?.(0.5, `LSH index built with ${signatureMap.size} signatures`);
+
+    // Stage 5: Find candidate pairs
+    await onProgress?.(0.5, 'Finding candidate pairs...');
+
+    const searchDocIds = force
+      ? [...allDocIds]
+      : processedDocIds.filter((id) => docsToProcessIds.has(id));
+
+    const candidatePairs = new Map<string, { docId1: string; docId2: string; jaccard: number }>();
+
+    for (const docId of searchDocIds) {
+      const sig = signatureMap.get(docId);
+      if (!sig) continue;
+
+      const candidates = lshIndex.getCandidates(sig);
+      candidates.delete(docId); // Remove self
+
+      for (const candidateId of candidates) {
+        // Canonical ordering
+        const [id1, id2] = docId < candidateId ? [docId, candidateId] : [candidateId, docId];
+        const pairKey = `${id1}|${id2}`;
+
+        if (!candidatePairs.has(pairKey)) {
+          const candidateSig = signatureMap.get(candidateId);
+          if (!candidateSig) continue;
+          const jaccard = MinHash.jaccardFromArrays(sig, candidateSig);
+          candidatePairs.set(pairKey, { docId1: id1, docId2: id2, jaccard });
+        }
+      }
     }
-  }
 
-  // Load sampled text for fuzzy and discriminative scoring
-  if (weights.fuzzy > 0 || weights.discriminativePenaltyStrength > 0) {
+    result.candidatePairsFound = candidatePairs.size;
+    logger.info({ candidatePairs: candidatePairs.size }, 'Candidate pairs found');
+    await onProgress?.(0.55, `Found ${candidatePairs.size} candidate pairs`);
+
+    // Stage 6: Score candidates
+    const scoringStart = Date.now();
+    await onProgress?.(0.55, 'Scoring candidate pairs...');
+
+    const weights: SimilarityWeights = {
+      jaccard: config.confidenceWeightJaccard,
+      fuzzy: config.confidenceWeightFuzzy,
+      discriminativePenaltyStrength: config.discriminativePenaltyStrength,
+    };
+
+    // Pre-filter candidates by jaccard threshold
+    const jaccardPreFilter = config.similarityThreshold * 0.8;
+    const filteredPairs = [...candidatePairs.values()].filter((p) => p.jaccard >= jaccardPreFilter);
+
+    // Collect all document IDs needed for scoring
+    const scoringDocIds = new Set<string>();
+    for (const pair of filteredPairs) {
+      scoringDocIds.add(pair.docId1);
+      scoringDocIds.add(pair.docId2);
+    }
+
+    // Load document metadata in batches
+    const docDataMap = new Map<string, DocumentScoringData>();
+    const scoringDocIdArray = [...scoringDocIds];
+
     for (let i = 0; i < scoringDocIdArray.length; i += SQL_VARIABLE_LIMIT) {
       const batch = scoringDocIdArray.slice(i, i + SQL_VARIABLE_LIMIT);
       const rows = db
         .select({
-          documentId: documentContent.documentId,
-          normalizedText: documentContent.normalizedText,
+          id: document.id,
+          title: document.title,
         })
-        .from(documentContent)
-        .where(inArray(documentContent.documentId, batch))
+        .from(document)
+        .where(inArray(document.id, batch))
         .all();
 
       for (const row of rows) {
-        const data = docDataMap.get(row.documentId);
-        if (data && row.normalizedText) {
-          data.normalizedText = sampleText(row.normalizedText, config.fuzzySampleSize);
+        docDataMap.set(row.id, {
+          id: row.id,
+          title: row.title,
+          normalizedText: '',
+        });
+      }
+    }
+
+    // Load sampled text for fuzzy and discriminative scoring
+    if (weights.fuzzy > 0 || weights.discriminativePenaltyStrength > 0) {
+      for (let i = 0; i < scoringDocIdArray.length; i += SQL_VARIABLE_LIMIT) {
+        const batch = scoringDocIdArray.slice(i, i + SQL_VARIABLE_LIMIT);
+        const rows = db
+          .select({
+            documentId: documentContent.documentId,
+            normalizedText: documentContent.normalizedText,
+          })
+          .from(documentContent)
+          .where(inArray(documentContent.documentId, batch))
+          .all();
+
+        for (const row of rows) {
+          const data = docDataMap.get(row.documentId);
+          if (data && row.normalizedText) {
+            data.normalizedText = sampleText(row.normalizedText, config.fuzzySampleSize);
+          }
         }
       }
     }
-  }
 
-  // Score each pair
-  const scoredPairs: ScoredPair[] = [];
+    // Score each pair
+    const scoredPairs: ScoredPair[] = [];
 
-  for (let i = 0; i < filteredPairs.length; i++) {
-    const pair = filteredPairs[i];
-    const doc1 = docDataMap.get(pair.docId1);
-    const doc2 = docDataMap.get(pair.docId2);
+    for (let i = 0; i < filteredPairs.length; i++) {
+      const pair = filteredPairs[i];
+      const doc1 = docDataMap.get(pair.docId1);
+      const doc2 = docDataMap.get(pair.docId2);
 
-    if (!doc1 || !doc2) continue;
+      if (!doc1 || !doc2) continue;
 
-    const similarity = computeSimilarityScore(doc1, doc2, pair.jaccard, weights, {
-      fuzzySampleSize: config.fuzzySampleSize,
-    });
+      const similarity = computeSimilarityScore(doc1, doc2, pair.jaccard, weights, {
+        fuzzySampleSize: config.fuzzySampleSize,
+      });
 
-    if (similarity.overall >= config.similarityThreshold) {
-      scoredPairs.push({
-        docId1: pair.docId1,
-        docId2: pair.docId2,
-        similarity,
+      if (similarity.overall >= config.similarityThreshold) {
+        scoredPairs.push({
+          docId1: pair.docId1,
+          docId2: pair.docId2,
+          similarity,
+        });
+      }
+
+      if (i % PROGRESS_BATCH_SIZE === 0) {
+        const scorePhase = i / filteredPairs.length;
+        await onProgress?.(
+          0.55 + 0.25 * scorePhase,
+          `Scoring: ${i}/${filteredPairs.length}`,
+          scorePhase,
+        );
+      }
+    }
+
+    result.candidatePairsScored = scoredPairs.length;
+    analysisStageDuration().record((Date.now() - scoringStart) / 1000, { stage: 'scoring' });
+    logger.info({ scoredPairs: scoredPairs.length }, 'Pairs scored');
+    await onProgress?.(0.8, `Scored ${scoredPairs.length} pairs above threshold`);
+
+    // Stage 7: Form groups via union-find
+    await onProgress?.(0.8, 'Forming duplicate groups...');
+
+    const uf = new UnionFind<string>();
+
+    for (const pair of scoredPairs) {
+      uf.union(pair.docId1, pair.docId2);
+    }
+
+    // Group scored pairs by their union-find root
+    const groupedPairs = new Map<string, ScoredPair[]>();
+    for (const pair of scoredPairs) {
+      const root = uf.find(pair.docId1);
+      if (!groupedPairs.has(root)) {
+        groupedPairs.set(root, []);
+      }
+      groupedPairs.get(root)!.push(pair);
+    }
+
+    // Build member sets for each group
+    const groupMembers = new Map<string, Set<string>>();
+    for (const [root, pairs] of groupedPairs) {
+      const members = new Set<string>();
+      for (const pair of pairs) {
+        members.add(pair.docId1);
+        members.add(pair.docId2);
+      }
+      groupMembers.set(root, members);
+    }
+
+    logger.info({ groups: groupMembers.size }, 'Groups formed');
+    await onProgress?.(0.85, `Formed ${groupMembers.size} duplicate groups`);
+
+    // Stage 8: Write results in transaction
+    await onProgress?.(0.85, 'Writing results...');
+
+    // Build paperlessId lookup for primary selection
+    const paperlessIdMap = new Map<string, number>();
+    for (const doc of allDocs) {
+      paperlessIdMap.set(doc.id, doc.paperlessId);
+    }
+
+    // Load existing groups to match by member set
+    const existingGroups = db.select().from(duplicateGroup).all();
+
+    const existingGroupMembers = new Map<
+      string,
+      { groupId: string; memberIds: Set<string>; status: string }
+    >();
+    for (const group of existingGroups) {
+      const members = db
+        .select({ documentId: duplicateMember.documentId })
+        .from(duplicateMember)
+        .where(eq(duplicateMember.groupId, group.id))
+        .all();
+      const memberIds = new Set(members.map((m) => m.documentId));
+      const memberKey = [...memberIds].sort().join('|');
+      existingGroupMembers.set(memberKey, {
+        groupId: group.id,
+        memberIds,
+        status: group.status,
       });
     }
 
-    if (i % PROGRESS_BATCH_SIZE === 0) {
-      const scorePhase = i / filteredPairs.length;
-      await onProgress?.(
-        0.55 + 0.25 * scorePhase,
-        `Scoring: ${i}/${filteredPairs.length}`,
-        scorePhase,
-      );
+    // Build groupId -> memberIds lookup for deletion scope check
+    const existingGroupMemberIds = new Map<string, Set<string>>();
+    for (const entry of existingGroupMembers.values()) {
+      existingGroupMemberIds.set(entry.groupId, entry.memberIds);
     }
-  }
 
-  result.candidatePairsScored = scoredPairs.length;
-  analysisStageDuration().record((Date.now() - scoringStart) / 1000, { stage: 'scoring' });
-  logger.info({ scoredPairs: scoredPairs.length }, 'Pairs scored');
-  await onProgress?.(0.8, `Scored ${scoredPairs.length} pairs above threshold`);
-
-  // Stage 7: Form groups via union-find
-  await onProgress?.(0.8, 'Forming duplicate groups...');
-
-  const uf = new UnionFind<string>();
-
-  for (const pair of scoredPairs) {
-    uf.union(pair.docId1, pair.docId2);
-  }
-
-  // Group scored pairs by their union-find root
-  const groupedPairs = new Map<string, ScoredPair[]>();
-  for (const pair of scoredPairs) {
-    const root = uf.find(pair.docId1);
-    if (!groupedPairs.has(root)) {
-      groupedPairs.set(root, []);
-    }
-    groupedPairs.get(root)!.push(pair);
-  }
-
-  // Build member sets for each group
-  const groupMembers = new Map<string, Set<string>>();
-  for (const [root, pairs] of groupedPairs) {
-    const members = new Set<string>();
-    for (const pair of pairs) {
-      members.add(pair.docId1);
-      members.add(pair.docId2);
-    }
-    groupMembers.set(root, members);
-  }
-
-  logger.info({ groups: groupMembers.size }, 'Groups formed');
-  await onProgress?.(0.85, `Formed ${groupMembers.size} duplicate groups`);
-
-  // Stage 8: Write results in transaction
-  await onProgress?.(0.85, 'Writing results...');
-
-  // Build paperlessId lookup for primary selection
-  const paperlessIdMap = new Map<string, number>();
-  for (const doc of allDocs) {
-    paperlessIdMap.set(doc.id, doc.paperlessId);
-  }
-
-  // Load existing groups to match by member set
-  const existingGroups = db.select().from(duplicateGroup).all();
-
-  const existingGroupMembers = new Map<
-    string,
-    { groupId: string; memberIds: Set<string>; status: string }
-  >();
-  for (const group of existingGroups) {
-    const members = db
-      .select({ documentId: duplicateMember.documentId })
-      .from(duplicateMember)
-      .where(eq(duplicateMember.groupId, group.id))
-      .all();
-    const memberIds = new Set(members.map((m) => m.documentId));
-    const memberKey = [...memberIds].sort().join('|');
-    existingGroupMembers.set(memberKey, {
-      groupId: group.id,
-      memberIds,
-      status: group.status,
-    });
-  }
-
-  // Build groupId -> memberIds lookup for deletion scope check
-  const existingGroupMemberIds = new Map<string, Set<string>>();
-  for (const entry of existingGroupMembers.values()) {
-    existingGroupMemberIds.set(entry.groupId, entry.memberIds);
-  }
-
-  // Build document -> new group members lookup for subsumption check
-  const docToNewGroupMembers = new Map<string, Set<string>>();
-  for (const [, members] of groupMembers) {
-    for (const docId of members) {
-      docToNewGroupMembers.set(docId, members);
-    }
-  }
-
-  // Track which existing groups are still active
-  const activeExistingGroupIds = new Set<string>();
-
-  db.transaction((tx) => {
-    const now = new Date().toISOString();
-
-    for (const [root, members] of groupMembers) {
-      const pairs = groupedPairs.get(root) ?? [];
-      const memberArray = [...members];
-
-      // Average component scores across pairs
-      let avgJaccard = 0;
-      let avgFuzzy = 0;
-      let avgDiscriminative = 0;
-      let avgOverall = 0;
-
-      if (pairs.length > 0) {
-        for (const pair of pairs) {
-          avgJaccard += pair.similarity.jaccard;
-          avgFuzzy += pair.similarity.fuzzy;
-          avgDiscriminative += pair.similarity.discriminative;
-          avgOverall += pair.similarity.overall;
-        }
-        avgJaccard /= pairs.length;
-        avgFuzzy /= pairs.length;
-        avgDiscriminative /= pairs.length;
-        avgOverall /= pairs.length;
+    // Build document -> new group members lookup for subsumption check
+    const docToNewGroupMembers = new Map<string, Set<string>>();
+    for (const [, members] of groupMembers) {
+      for (const docId of members) {
+        docToNewGroupMembers.set(docId, members);
       }
+    }
 
-      // Check if matches existing group by member set
-      const memberKey = memberArray.sort().join('|');
-      const existing = existingGroupMembers.get(memberKey);
+    // Track which existing groups are still active
+    const activeExistingGroupIds = new Set<string>();
 
-      if (existing) {
-        // Update existing group scores (preserve user-set status)
-        activeExistingGroupIds.add(existing.groupId);
+    db.transaction((tx) => {
+      const now = new Date().toISOString();
 
-        tx.update(duplicateGroup)
-          .set({
-            confidenceScore: avgOverall,
-            jaccardSimilarity: avgJaccard,
-            fuzzyTextRatio: avgFuzzy,
-            discriminativeScore: avgDiscriminative,
-            algorithmVersion: ALGORITHM_VERSION,
-            updatedAt: now,
-          })
-          .where(eq(duplicateGroup.id, existing.groupId))
-          .run();
+      for (const [root, members] of groupMembers) {
+        const pairs = groupedPairs.get(root) ?? [];
+        const memberArray = [...members];
 
-        result.groupsUpdated++;
-      } else {
-        // Create new group
-        const groupId = nanoid();
+        // Average component scores across pairs
+        let avgJaccard = 0;
+        let avgFuzzy = 0;
+        let avgDiscriminative = 0;
+        let avgOverall = 0;
 
-        tx.insert(duplicateGroup)
-          .values({
-            id: groupId,
-            confidenceScore: avgOverall,
-            jaccardSimilarity: avgJaccard,
-            fuzzyTextRatio: avgFuzzy,
-            discriminativeScore: avgDiscriminative,
-            algorithmVersion: ALGORITHM_VERSION,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .run();
+        if (pairs.length > 0) {
+          for (const pair of pairs) {
+            avgJaccard += pair.similarity.jaccard;
+            avgFuzzy += pair.similarity.fuzzy;
+            avgDiscriminative += pair.similarity.discriminative;
+            avgOverall += pair.similarity.overall;
+          }
+          avgJaccard /= pairs.length;
+          avgFuzzy /= pairs.length;
+          avgDiscriminative /= pairs.length;
+          avgOverall /= pairs.length;
+        }
 
-        // Primary = lowest paperlessId
-        const sortedByPaperlessId = memberArray.sort((a, b) => {
-          return (paperlessIdMap.get(a) ?? Infinity) - (paperlessIdMap.get(b) ?? Infinity);
-        });
+        // Check if matches existing group by member set
+        const memberKey = memberArray.sort().join('|');
+        const existing = existingGroupMembers.get(memberKey);
 
-        for (let i = 0; i < sortedByPaperlessId.length; i++) {
-          tx.insert(duplicateMember)
+        if (existing) {
+          // Update existing group scores (preserve user-set status)
+          activeExistingGroupIds.add(existing.groupId);
+
+          tx.update(duplicateGroup)
+            .set({
+              confidenceScore: avgOverall,
+              jaccardSimilarity: avgJaccard,
+              fuzzyTextRatio: avgFuzzy,
+              discriminativeScore: avgDiscriminative,
+              algorithmVersion: ALGORITHM_VERSION,
+              updatedAt: now,
+            })
+            .where(eq(duplicateGroup.id, existing.groupId))
+            .run();
+
+          result.groupsUpdated++;
+        } else {
+          // Create new group
+          const groupId = nanoid();
+
+          tx.insert(duplicateGroup)
             .values({
-              groupId,
-              documentId: sortedByPaperlessId[i],
-              isPrimary: i === 0,
+              id: groupId,
+              confidenceScore: avgOverall,
+              jaccardSimilarity: avgJaccard,
+              fuzzyTextRatio: avgFuzzy,
+              discriminativeScore: avgDiscriminative,
+              algorithmVersion: ALGORITHM_VERSION,
+              createdAt: now,
+              updatedAt: now,
             })
             .run();
+
+          // Primary = lowest paperlessId
+          const sortedByPaperlessId = memberArray.sort((a, b) => {
+            return (paperlessIdMap.get(a) ?? Infinity) - (paperlessIdMap.get(b) ?? Infinity);
+          });
+
+          for (let i = 0; i < sortedByPaperlessId.length; i++) {
+            tx.insert(duplicateMember)
+              .values({
+                groupId,
+                documentId: sortedByPaperlessId[i],
+                isPrimary: i === 0,
+              })
+              .run();
+          }
+
+          result.groupsCreated++;
+        }
+      }
+
+      // Delete stale groups that are still pending (preserve user-actioned groups).
+      // Two deletion criteria:
+      // 1. Subsumed: all members appear in a newly-formed expanded group
+      // 2. Stale: at least one member was in the search scope but group wasn't re-detected
+      const searchDocIdSet = new Set(searchDocIds);
+      for (const group of existingGroups) {
+        if (activeExistingGroupIds.has(group.id)) continue;
+        if (group.status !== 'pending') continue;
+
+        const memberIds = existingGroupMemberIds.get(group.id);
+        if (!memberIds || memberIds.size === 0) continue;
+
+        // Check if subsumed by a newly-formed group (all members in same new group)
+        const firstMember = [...memberIds][0];
+        const newGroupMembers = docToNewGroupMembers.get(firstMember);
+        const isSubsumed = newGroupMembers && [...memberIds].every((id) => newGroupMembers.has(id));
+
+        if (!isSubsumed) {
+          // Not subsumed — only delete if at least one member was in search scope
+          const wasEvaluated = [...memberIds].some((id) => searchDocIdSet.has(id));
+          if (!wasEvaluated) continue;
         }
 
-        result.groupsCreated++;
+        tx.delete(duplicateMember).where(eq(duplicateMember.groupId, group.id)).run();
+        tx.delete(duplicateGroup).where(eq(duplicateGroup.id, group.id)).run();
+
+        result.groupsRemoved++;
       }
+    });
+
+    logger.info(
+      {
+        created: result.groupsCreated,
+        updated: result.groupsUpdated,
+        removed: result.groupsRemoved,
+      },
+      'Groups written',
+    );
+    await onProgress?.(
+      0.95,
+      `Groups: ${result.groupsCreated} created, ${result.groupsUpdated} updated, ${result.groupsRemoved} removed`,
+    );
+
+    // Stage 9: Update processing status and sync state
+    await onProgress?.(0.95, 'Updating processing status...');
+
+    // Update processingStatus in batches
+    for (let i = 0; i < processedDocIds.length; i += SQL_VARIABLE_LIMIT) {
+      const batch = processedDocIds.slice(i, i + SQL_VARIABLE_LIMIT);
+      db.update(document)
+        .set({ processingStatus: 'completed' })
+        .where(inArray(document.id, batch))
+        .run();
     }
 
-    // Delete stale groups that are still pending (preserve user-actioned groups).
-    // Two deletion criteria:
-    // 1. Subsumed: all members appear in a newly-formed expanded group
-    // 2. Stale: at least one member was in the search scope but group wasn't re-detected
-    const searchDocIdSet = new Set(searchDocIds);
-    for (const group of existingGroups) {
-      if (activeExistingGroupIds.has(group.id)) continue;
-      if (group.status !== 'pending') continue;
-
-      const memberIds = existingGroupMemberIds.get(group.id);
-      if (!memberIds || memberIds.size === 0) continue;
-
-      // Check if subsumed by a newly-formed group (all members in same new group)
-      const firstMember = [...memberIds][0];
-      const newGroupMembers = docToNewGroupMembers.get(firstMember);
-      const isSubsumed = newGroupMembers && [...memberIds].every((id) => newGroupMembers.has(id));
-
-      if (!isSubsumed) {
-        // Not subsumed — only delete if at least one member was in search scope
-        const wasEvaluated = [...memberIds].some((id) => searchDocIdSet.has(id));
-        if (!wasEvaluated) continue;
-      }
-
-      tx.delete(duplicateMember).where(eq(duplicateMember.groupId, group.id)).run();
-      tx.delete(duplicateGroup).where(eq(duplicateGroup.id, group.id)).run();
-
-      result.groupsRemoved++;
+    // Mark skipped documents as completed — they've been evaluated but lack sufficient content
+    for (let i = 0; i < skippedDocIds.length; i += SQL_VARIABLE_LIMIT) {
+      const batch = skippedDocIds.slice(i, i + SQL_VARIABLE_LIMIT);
+      db.update(document)
+        .set({ processingStatus: 'completed' })
+        .where(inArray(document.id, batch))
+        .run();
     }
-  });
 
-  logger.info(
-    { created: result.groupsCreated, updated: result.groupsUpdated, removed: result.groupsRemoved },
-    'Groups written',
-  );
-  await onProgress?.(
-    0.95,
-    `Groups: ${result.groupsCreated} created, ${result.groupsUpdated} updated, ${result.groupsRemoved} removed`,
-  );
+    // Count total duplicate groups
+    const groupCountResult = db.select({ value: count() }).from(duplicateGroup).get();
+    const totalDuplicateGroups = groupCountResult?.value ?? 0;
 
-  // Stage 9: Update processing status and sync state
-  await onProgress?.(0.95, 'Updating processing status...');
-
-  // Update processingStatus in batches
-  for (let i = 0; i < processedDocIds.length; i += SQL_VARIABLE_LIMIT) {
-    const batch = processedDocIds.slice(i, i + SQL_VARIABLE_LIMIT);
-    db.update(document)
-      .set({ processingStatus: 'completed' })
-      .where(inArray(document.id, batch))
-      .run();
-  }
-
-  // Mark skipped documents as completed — they've been evaluated but lack sufficient content
-  for (let i = 0; i < skippedDocIds.length; i += SQL_VARIABLE_LIMIT) {
-    const batch = skippedDocIds.slice(i, i + SQL_VARIABLE_LIMIT);
-    db.update(document)
-      .set({ processingStatus: 'completed' })
-      .where(inArray(document.id, batch))
-      .run();
-  }
-
-  // Count total duplicate groups
-  const groupCountResult = db.select({ value: count() }).from(duplicateGroup).get();
-  const totalDuplicateGroups = groupCountResult?.value ?? 0;
-
-  const now = new Date().toISOString();
-  db.insert(syncState)
-    .values({
-      id: 'singleton',
-      lastAnalysisAt: now,
-      totalDuplicateGroups,
-    })
-    .onConflictDoUpdate({
-      target: syncState.id,
-      set: {
+    const now = new Date().toISOString();
+    db.insert(syncState)
+      .values({
+        id: 'singleton',
         lastAnalysisAt: now,
         totalDuplicateGroups,
-      },
-    })
-    .run();
+      })
+      .onConflictDoUpdate({
+        target: syncState.id,
+        set: {
+          lastAnalysisAt: now,
+          totalDuplicateGroups,
+        },
+      })
+      .run();
 
-  // Persist config hash so stale-analysis detection works on next page load
-  saveAnalysisConfigHash(db, computeAnalysisConfigHash(config));
+    // Persist config hash so stale-analysis detection works on next page load
+    saveAnalysisConfigHash(db, computeAnalysisConfigHash(config));
 
-  // Stage 10: Return result
-  result.durationMs = Date.now() - startTime;
-  await onProgress?.(1.0, `Analysis complete: ${result.groupsCreated} new groups found`);
+    // Stage 10: Return result
+    result.durationMs = Date.now() - startTime;
+    await onProgress?.(1.0, `Analysis complete: ${result.groupsCreated} new groups found`);
 
-  logger.info({ ...result }, 'Analysis complete');
+    logger.info({ ...result }, 'Analysis complete');
 
-  // Record OTEL metrics
-  const outcome = result.durationMs > 0 ? 'success' : 'failure';
-  analysisRunsTotal().add(1, { outcome });
-  analysisDuration().record(result.durationMs / 1000);
+    // Record OTEL metrics
+    const outcome = result.durationMs > 0 ? 'success' : 'failure';
+    analysisRunsTotal().add(1, { outcome });
+    analysisDuration().record(result.durationMs / 1000);
 
-  return result;
+    return result;
   });
 }
