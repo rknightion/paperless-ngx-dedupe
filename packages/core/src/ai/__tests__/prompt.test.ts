@@ -49,37 +49,12 @@ describe('buildPromptParts', () => {
     expect(systemPrompt).toContain('Tags: (none provided)');
   });
 
-  it('wraps system prompt in XML tags for Anthropic provider', () => {
-    const { systemPrompt, userPrompt } = buildPromptParts({
-      ...baseOptions,
-      provider: 'anthropic',
-    });
-    expect(systemPrompt).toMatch(/^<instructions>\n/);
-    expect(systemPrompt).toMatch(/\n<\/instructions>$/);
-    expect(userPrompt).toContain('<document>');
-    expect(userPrompt).toContain('<title>Invoice #123</title>');
-    expect(userPrompt).toContain('<content>');
-    expect(userPrompt).toContain('Amazon order total £42.99');
-    expect(userPrompt).toContain('</content>');
-    expect(userPrompt).toContain('</document>');
-  });
-
-  it('formats user prompt as plain text for OpenAI provider', () => {
-    const { userPrompt } = buildPromptParts({
-      ...baseOptions,
-      provider: 'openai',
-    });
+  it('formats user prompt as plain text', () => {
+    const { userPrompt } = buildPromptParts(baseOptions);
     expect(userPrompt).toBe(
       'Document Title\nInvoice #123\n\nDocument Text\nAmazon order total £42.99',
     );
     expect(userPrompt).not.toContain('<document>');
-  });
-
-  it('defaults to OpenAI format when provider is not specified', () => {
-    const { systemPrompt, userPrompt } = buildPromptParts(baseOptions);
-    expect(userPrompt).toContain('Document Title');
-    expect(userPrompt).not.toContain('<document>');
-    expect(systemPrompt).not.toContain('<instructions>');
   });
 
   it('sorts reference lists alphabetically for deterministic prompts', () => {

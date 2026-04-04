@@ -92,8 +92,8 @@ function seedDocumentsAndResults(db: AppDatabase): string[] {
     .values({
       documentId: 'doc-3',
       paperlessId: 3,
-      provider: 'anthropic',
-      model: 'claude-sonnet-4-6',
+      provider: 'openai',
+      model: 'gpt-5.4-mini',
       suggestedCorrespondent: null,
       suggestedDocumentType: null,
       suggestedTagsJson: null,
@@ -325,15 +325,15 @@ describe('getAiResults - filters', () => {
   });
 
   it('filters by provider', () => {
-    const { items, total } = getAiResults(db, { provider: 'anthropic' });
-    expect(total).toBe(1);
-    expect(items[0].provider).toBe('anthropic');
+    const { items, total } = getAiResults(db, { provider: 'openai' });
+    expect(total).toBe(3);
+    expect(items.every((i) => i.provider === 'openai')).toBe(true);
   });
 
   it('filters by model', () => {
-    const { items, total } = getAiResults(db, { model: 'claude-sonnet-4-6' });
-    expect(total).toBe(1);
-    expect(items[0].model).toBe('claude-sonnet-4-6');
+    const { items, total } = getAiResults(db, { model: 'gpt-5.4-mini' });
+    expect(total).toBe(3);
+    expect(items.every((i) => i.model === 'gpt-5.4-mini')).toBe(true);
   });
 
   it('filters by minConfidence', () => {

@@ -3,7 +3,7 @@ import type { AppDatabase } from '../db/client.js';
 import { appConfig } from '../schema/sqlite/app.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { createLogger } from '../logger.js';
-import { OPENAI_MODELS, ANTHROPIC_MODELS } from './types.js';
+import { OPENAI_MODELS } from './types.js';
 
 const logger = createLogger('ai-costs');
 
@@ -39,7 +39,7 @@ export interface AiCostStats {
 
 /** All known model IDs from our provider definitions */
 function getKnownModelIds(): string[] {
-  return [...OPENAI_MODELS.map((m) => m.id), ...ANTHROPIC_MODELS.map((m) => m.id)];
+  return OPENAI_MODELS.map((m) => m.id);
 }
 
 /**
@@ -96,10 +96,8 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
       }
 
       // Try with provider prefix using both "/" and "." separators
-      // LiteLLM uses "anthropic." prefix (e.g. "anthropic.claude-opus-4-6-v1")
-      const isOpenai = OPENAI_MODELS.some((m) => m.id === modelId);
-      const providerSlash = isOpenai ? 'openai/' : 'anthropic/';
-      const providerDot = isOpenai ? 'openai.' : 'anthropic.';
+      const providerSlash = 'openai/';
+      const providerDot = 'openai.';
 
       const slashPrefixed = providerSlash + modelId;
       if (data[slashPrefixed] && data[slashPrefixed].input_cost_per_token != null) {
@@ -227,13 +225,9 @@ export function getModelPricing(db: AppDatabase, model: string): ModelPricing | 
   }
 
   // Fallback: find the most expensive model in the same provider family
-  const isOpenai = OPENAI_MODELS.some((m) => m.id === model);
-  const isAnthropic = ANTHROPIC_MODELS.some((m) => m.id === model);
-  const familyIds = isOpenai
+  const familyIds = OPENAI_MODELS.some((m) => m.id === model)
     ? OPENAI_MODELS.map((m) => m.id)
-    : isAnthropic
-      ? ANTHROPIC_MODELS.map((m) => m.id)
-      : [];
+    : [];
 
   let maxCost = 0;
   let fallback: ModelPricing | null = null;
