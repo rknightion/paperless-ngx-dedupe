@@ -444,9 +444,7 @@
                   <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
                     >No Suggestions</span
                   >
-                  <p class="text-muted text-xs"
-                    >AI could not suggest metadata for this document</p
-                  >
+                  <p class="text-muted text-xs">AI could not suggest metadata for this document</p>
                 {:else}
                   <span
                     class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
