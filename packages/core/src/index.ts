@@ -197,6 +197,7 @@ export {
   getDocumentContent,
   getDocumentStats,
   incrementUsageStats,
+  deleteDocumentLocally,
 } from './queries/documents.js';
 export {
   getDuplicateGroups,

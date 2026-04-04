@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { document } from '../schema/sqlite/documents.js';
 import { type PaperlessClient } from '../paperless/client.js';
+import { PaperlessApiError } from '../paperless/errors.js';
 import type {
   PaperlessCorrespondent,
   PaperlessDocumentType,
@@ -128,7 +129,19 @@ export async function applyAiResult(
           .map((name) => tags.find((t) => t.name.toLowerCase() === name.toLowerCase())?.id)
           .filter((id): id is number => id !== undefined);
       } else {
-        const currentDoc = await client.getDocument(row.paperlessId);
+        let currentDoc;
+        try {
+          currentDoc = await client.getDocument(row.paperlessId);
+        } catch (err) {
+          if (err instanceof PaperlessApiError && err.statusCode === 404) {
+            const msg = `Document no longer exists in Paperless (paperlessId=${row.paperlessId})`;
+            logger.warn({ resultId, paperlessId: row.paperlessId }, msg);
+            markAiResultFailed(db, resultId, msg, 'document_not_found');
+            aiApplyTotal().add(1, { status: 'failed' });
+            return;
+          }
+          throw err;
+        }
         preApplyCorrespondent = currentDoc.correspondent
           ? correspondents.find((c) => c.id === currentDoc.correspondent)
           : null;

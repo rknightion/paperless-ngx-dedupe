@@ -22,6 +22,7 @@ export interface SyncResult {
   updated: number;
   skipped: number;
   failed: number;
+  reconciled: number;
   errors: string[];
   durationMs: number;
   syncType: 'full' | 'incremental';

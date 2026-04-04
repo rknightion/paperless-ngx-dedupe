@@ -3,7 +3,7 @@ import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js'
 import { duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { document } from '../../schema/sqlite/documents.js';
 import { eq, and } from 'drizzle-orm';
-import { incrementUsageStats } from '../../queries/documents.js';
+import { incrementUsageStats, deleteDocumentLocally } from '../../queries/documents.js';
 import { archiveAndDeleteMembers, removeDocumentFromAllGroups } from '../../queries/duplicates.js';
 
 interface BatchTaskData {
@@ -71,9 +71,11 @@ runWorkerTask(async (ctx, onProgress) => {
       archiveAndDeleteMembers(ctx.db, groupId);
       deletedGroups++;
 
-      // Clean up other groups that referenced the same deleted documents
+      // Clean up other groups that referenced the same deleted documents,
+      // then remove the document row and all its dependent data
       for (const docId of deletedDocumentIds) {
         removeDocumentFromAllGroups(ctx.db, docId);
+        deleteDocumentLocally(ctx.db, docId);
       }
     }
   }

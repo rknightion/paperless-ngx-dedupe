@@ -1,9 +1,10 @@
 import { and, asc, avg, count, desc, eq, isNotNull, isNull, like, sql } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
-import { document, documentContent } from '../schema/sqlite/documents.js';
+import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
+import { documentChunk } from '../schema/sqlite/rag.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { parseTagsJson } from './helpers.js';
 import type {
@@ -403,4 +404,19 @@ export function getDocumentStats(db: AppDatabase): DocumentStats {
     },
     usageStats,
   };
+}
+
+/**
+ * Delete a document and all its FK-dependent rows from the local database.
+ * Order follows the FK-safe pattern from purge.ts.
+ */
+export function deleteDocumentLocally(db: AppDatabase, documentId: string): void {
+  db.transaction((tx) => {
+    tx.delete(duplicateMember).where(eq(duplicateMember.documentId, documentId)).run();
+    tx.delete(documentSignature).where(eq(documentSignature.documentId, documentId)).run();
+    tx.delete(documentContent).where(eq(documentContent.documentId, documentId)).run();
+    tx.delete(aiProcessingResult).where(eq(aiProcessingResult.documentId, documentId)).run();
+    tx.delete(documentChunk).where(eq(documentChunk.documentId, documentId)).run();
+    tx.delete(document).where(eq(document.id, documentId)).run();
+  });
 }
