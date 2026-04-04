@@ -19,6 +19,7 @@ import type { AiBatchResult } from './types.js';
 import type { AiConfig } from './types.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
 import { getModelPricing, estimateResultCost } from './costs.js';
+import { TpmThrottle } from './tpm-throttle.js';
 
 const logger = createLogger('ai-batch');
 
@@ -171,6 +172,8 @@ export async function processBatch(
           totalPromptTokens: 0,
           totalCompletionTokens: 0,
           durationMs: 0,
+          rateLimitRetries: 0,
+          rateLimitPauses: 0,
         };
 
         if (totalDocs === 0) {
@@ -230,6 +233,9 @@ export async function processBatch(
         let lastErrorMsg = '';
         let circuitBroken = false;
         let circuitBreakerError: Error | undefined;
+        const throttle = new TpmThrottle();
+        const retryQueue: typeof processableDocs = [];
+        const MAX_RETRY_PASSES = 3;
 
         // Process a single document: API call, DB upsert, telemetry
         async function processOne(doc: (typeof processableDocs)[0]): Promise<void> {
@@ -329,6 +335,10 @@ export async function processBatch(
               .run();
 
             result.succeeded++;
+            // Update throttle from rate limit headers
+            if (extraction.rateLimit) {
+              throttle.update(extraction.rateLimit);
+            }
             result.totalPromptTokens += extraction.usage.promptTokens;
             result.totalCompletionTokens += extraction.usage.completionTokens;
 
@@ -360,6 +370,21 @@ export async function processBatch(
             const errorMsg = isAiError
               ? `[${error.failureType}] ${error.message}`
               : (error as Error).message;
+
+            // Rate limit errors: queue for retry instead of recording as failure
+            const isRateLimit = isAiError && error.failureType === 'rate_limit';
+            if (isRateLimit) {
+              retryQueue.push(doc);
+              result.rateLimitRetries++;
+              const retryAfterMs = error.retryAfterMs ?? 5000;
+              throttle.recordRateLimit(retryAfterMs);
+              result.rateLimitPauses++;
+              logger.warn(
+                { documentId: doc.id, retryAfterMs },
+                'Document rate-limited — queued for retry',
+              );
+              return;
+            }
 
             logger.error(
               {
@@ -398,15 +423,12 @@ export async function processBatch(
             result.failed++;
             aiDocumentsTotal().add(1, { outcome: 'failed', 'gen_ai.system': provider.provider });
 
-            // Circuit breaker: track consecutive same errors (skip rate limits — the SDK retries handle those)
-            const isRateLimit = isAiError && error.failureType === 'rate_limit';
-            if (!isRateLimit) {
-              if (errorMsg === lastErrorMsg) {
-                consecutiveSameError++;
-              } else {
-                consecutiveSameError = 1;
-                lastErrorMsg = errorMsg;
-              }
+            // Circuit breaker: track consecutive same errors (skip rate limits)
+            if (errorMsg === lastErrorMsg) {
+              consecutiveSameError++;
+            } else {
+              consecutiveSameError = 1;
+              lastErrorMsg = errorMsg;
             }
 
             if (consecutiveSameError >= CIRCUIT_BREAKER_THRESHOLD) {
@@ -424,10 +446,14 @@ export async function processBatch(
           }
 
           result.processed++;
-          await onProgress?.(
-            result.processed / totalDocs,
-            `Processed ${result.processed} of ${totalDocs} documents (${result.succeeded} succeeded, ${result.failed} failed)`,
-          );
+          const status = throttle.getStatus();
+          let progressMsg = `Processed ${result.processed} of ${totalDocs} documents (${result.succeeded} succeeded, ${result.failed} failed)`;
+          if (status.paused) {
+            progressMsg = `Paused for rate limit — resuming in ${Math.ceil(status.pauseRemainingMs / 1000)}s (${result.processed} of ${totalDocs} processed)`;
+          } else if (status.pressure >= 0.5) {
+            progressMsg += ` [throttled: ${Math.round(status.pressure * 100)}% TPM used]`;
+          }
+          await onProgress?.(result.processed / totalDocs, progressMsg);
         }
 
         // Rate-limited concurrent pool
@@ -449,14 +475,82 @@ export async function processBatch(
           pending.add(promise);
           promise.finally(() => pending.delete(promise));
 
-          // Rate-limit: pause before launching the next request
-          if (i < processableDocs.length - 1 && intervalMs > 0) {
-            await sleep(intervalMs);
+          // Rate-limit: pause before launching the next request (throttle-aware)
+          if (i < processableDocs.length - 1) {
+            const delay = Math.max(throttle.getDelay(), intervalMs);
+            if (delay > 0) await sleep(delay);
           }
         }
 
         // Drain remaining in-flight requests
         await Promise.allSettled(pending);
+
+        // Retry rate-limited documents (up to MAX_RETRY_PASSES)
+        for (let pass = 0; pass < MAX_RETRY_PASSES && retryQueue.length > 0; pass++) {
+          const retryDocs = retryQueue.splice(0);
+
+          logger.info(
+            { retryPass: pass + 1, count: retryDocs.length },
+            'Retrying rate-limited documents',
+          );
+          await onProgress?.(
+            result.processed / totalDocs,
+            `Retry pass ${pass + 1}: re-processing ${retryDocs.length} rate-limited documents`,
+          );
+
+          // Wait for any active throttle pause to expire
+          const pauseDelay = throttle.getDelay();
+          if (pauseDelay > 0) await sleep(pauseDelay);
+
+          for (let i = 0; i < retryDocs.length; i++) {
+            if (circuitBroken) break;
+
+            if (pending.size >= maxConcurrency) {
+              await Promise.race(pending);
+            }
+            if (circuitBroken) break;
+
+            const delay = Math.max(throttle.getDelay(), intervalMs);
+            if (delay > 0) await sleep(delay);
+
+            const doc = retryDocs[i];
+            const promise = processOne(doc);
+            pending.add(promise);
+            promise.finally(() => pending.delete(promise));
+          }
+
+          await Promise.allSettled(pending);
+        }
+
+        // Record permanent failures for docs that exhausted all retry passes
+        for (const doc of retryQueue) {
+          const now = new Date().toISOString();
+          db.insert(aiProcessingResult)
+            .values({
+              documentId: doc.id,
+              paperlessId: doc.paperlessId,
+              provider: provider.provider,
+              model: config.model,
+              errorMessage: 'Rate limit exceeded after all retry passes',
+              failureType: 'rate_limit',
+              appliedStatus: 'failed',
+              createdAt: now,
+            })
+            .onConflictDoUpdate({
+              target: aiProcessingResult.documentId,
+              set: {
+                errorMessage: 'Rate limit exceeded after all retry passes',
+                failureType: 'rate_limit',
+                appliedStatus: 'failed',
+                createdAt: now,
+              },
+            })
+            .run();
+
+          result.failed++;
+          result.processed++;
+          aiDocumentsTotal().add(1, { outcome: 'failed', 'gen_ai.system': provider.provider });
+        }
 
         result.durationMs = Math.round(performance.now() - startMs);
 

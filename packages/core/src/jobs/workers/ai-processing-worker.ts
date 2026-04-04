@@ -26,10 +26,14 @@ runWorkerTask(async (ctx, onProgress) => {
     throw new Error('No OpenAI API key configured (AI_OPENAI_API_KEY)');
   }
 
+  // Cap SDK retries to 2 for batch processing — the batch-level retry queue
+  // handles rate limit recovery globally, so we want fast 429 detection
+  const batchMaxRetries = Math.min(aiConfig.maxRetries, 2);
+
   const provider = await createAiProvider(
     apiKey,
     aiConfig.model,
-    aiConfig.maxRetries,
+    batchMaxRetries,
     aiConfig.flexProcessing,
   );
 

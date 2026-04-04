@@ -26,9 +26,16 @@ export interface AiProviderUsage {
   cachedTokens?: number;
 }
 
+export interface RateLimitInfo {
+  limitTokens: number;
+  remainingTokens: number;
+  resetTokensMs: number;
+}
+
 export interface AiExtractionResult {
   response: AiExtractionResponse;
   usage: AiProviderUsage;
+  rateLimit?: RateLimitInfo;
 }
 
 export interface AiProviderInterface {
@@ -43,6 +50,7 @@ export class AiExtractionError extends Error {
     public readonly failureType: AiFailureType,
     message: string,
     public readonly requestId?: string,
+    public readonly retryAfterMs?: number,
   ) {
     super(message);
     this.name = 'AiExtractionError';

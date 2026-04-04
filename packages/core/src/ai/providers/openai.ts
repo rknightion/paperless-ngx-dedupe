@@ -3,8 +3,63 @@ import type {
   AiExtractionRequest,
   AiExtractionResult,
   AiExtractionResponse,
+  RateLimitInfo,
 } from './types.js';
 import { AiExtractionError, aiExtractionResponseSchema } from './types.js';
+
+/** Parse OpenAI's x-ratelimit-reset-tokens duration string (e.g., "6ms", "1.5s", "1m30s") to ms. */
+export function parseResetDuration(value: string): number | null {
+  if (!value) return null;
+
+  let totalMs = 0;
+  let matched = false;
+
+  const minMatch = value.match(/(\d+)m(?!s)/);
+  if (minMatch) {
+    totalMs += parseInt(minMatch[1], 10) * 60_000;
+    matched = true;
+  }
+
+  const secMatch = value.match(/([\d.]+)s/);
+  if (secMatch) {
+    totalMs += parseFloat(secMatch[1]) * 1000;
+    matched = true;
+  }
+
+  const msMatch = value.match(/(\d+)ms/);
+  if (msMatch) {
+    totalMs += parseInt(msMatch[1], 10);
+    matched = true;
+  }
+
+  return matched ? Math.round(totalMs) : null;
+}
+
+/** Parse retry-after header (float seconds) to ms. Returns 5000ms default if missing/unparseable. */
+export function parseRetryAfterMs(value: string | null): number {
+  if (!value) return 5000;
+  const seconds = parseFloat(value);
+  if (isNaN(seconds)) return 5000;
+  return Math.round(seconds * 1000);
+}
+
+/** Parse rate limit headers from an OpenAI response. Returns undefined if any required header is missing. */
+export function parseRateLimitHeaders(headers: Headers): RateLimitInfo | undefined {
+  const limitStr = headers.get('x-ratelimit-limit-tokens');
+  const remainingStr = headers.get('x-ratelimit-remaining-tokens');
+  const resetStr = headers.get('x-ratelimit-reset-tokens');
+
+  if (!limitStr || !remainingStr) return undefined;
+
+  const limitTokens = parseInt(limitStr, 10);
+  const remainingTokens = parseInt(remainingStr, 10);
+
+  if (isNaN(limitTokens) || isNaN(remainingTokens)) return undefined;
+
+  const resetTokensMs = resetStr ? (parseResetDuration(resetStr) ?? 0) : 0;
+
+  return { limitTokens, remainingTokens, resetTokensMs };
+}
 
 export class OpenAiProvider implements AiProviderInterface {
   readonly provider = 'openai' as const;
@@ -55,7 +110,33 @@ export class OpenAiProvider implements AiProviderInterface {
       params.reasoning = { effort: request.reasoningEffort };
     }
 
-    const response = await this.client.responses.parse(params);
+    let response;
+    let rateLimit: RateLimitInfo | undefined;
+
+    try {
+      const { data, response: httpResponse } = await this.client.responses
+        .parse(params)
+        .withResponse();
+      response = data;
+      rateLimit = parseRateLimitHeaders(httpResponse.headers);
+    } catch (error) {
+      // Catch OpenAI SDK RateLimitError and wrap it
+      if (error && typeof error === 'object' && 'status' in error && error.status === 429) {
+        const sdkError = error as unknown as {
+          message: string;
+          headers?: Headers;
+          requestID?: string;
+        };
+        const retryAfterMs = parseRetryAfterMs(sdkError.headers?.get('retry-after') ?? null);
+        throw new AiExtractionError(
+          'rate_limit',
+          sdkError.message,
+          sdkError.requestID,
+          retryAfterMs,
+        );
+      }
+      throw error;
+    }
 
     // Check for refusal
     if (response.refusal) {
@@ -85,6 +166,7 @@ export class OpenAiProvider implements AiProviderInterface {
           completionTokens: response.usage?.output_tokens ?? 0,
           cachedTokens: response.usage?.input_tokens_details?.cached_tokens,
         },
+        rateLimit,
       };
     } catch (error) {
       throw new AiExtractionError(

@@ -220,7 +220,7 @@ describe('processBatch', () => {
   it('rate_limit errors do not trip the circuit breaker', async () => {
     seedDocs(db);
 
-    const error = new AiExtractionError('rate_limit', 'Rate limited');
+    const error = new AiExtractionError('rate_limit', 'Rate limited', undefined, 10);
     const provider = createMockProvider({
       extractFn: vi.fn().mockRejectedValue(error),
     });
@@ -228,10 +228,14 @@ describe('processBatch', () => {
 
     const seqConfig: AiConfig = { ...config, batchSize: 1 };
 
-    // Both processable docs should be attempted — circuit breaker should NOT fire for rate limits
+    // Rate-limited docs are retried (up to 3 passes) then permanently failed
+    // Circuit breaker should NOT fire
     const result = await processBatch(db, { provider, client, config: seqConfig });
-    expect(result.processed).toBe(3); // 2 failed + 1 skipped (no content)
+    // 2 processable docs, each retried 3 times + 1 initial = 4 attempts each
+    // Both end as failed after retry exhaustion, plus 1 skipped (no content)
     expect(result.failed).toBe(2);
+    expect(result.skipped).toBe(1);
+    expect(result.rateLimitRetries).toBeGreaterThan(0);
   });
 
   it('only processes unprocessed docs (already-processed excluded)', async () => {
@@ -573,5 +577,128 @@ describe('concurrent processing', () => {
 
     // With rateDelayMs: 100 and 2 docs, there should be at least ~100ms delay
     expect(durationMs).toBeGreaterThanOrEqual(80); // Allow some timer imprecision
+  });
+});
+
+describe('rate limit retry queue', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+  });
+
+  function seedManyDocs(db: AppDatabase, count: number) {
+    const docs = [];
+    const contents = [];
+    for (let i = 1; i <= count; i++) {
+      docs.push({
+        id: `doc-${i}`,
+        paperlessId: i,
+        title: `Doc ${i}`,
+        processingStatus: 'completed' as const,
+        syncedAt: '2024-01-01T00:00:00Z',
+      });
+      contents.push({
+        documentId: `doc-${i}`,
+        fullText: `Content for document ${i}`,
+        contentHash: `hash${i}`,
+      });
+    }
+    db.insert(document).values(docs).run();
+    db.insert(documentContent).values(contents).run();
+  }
+
+  it('retries rate-limited documents instead of marking them as failed', async () => {
+    seedManyDocs(db, 3);
+
+    let callCount = 0;
+    const extractFn = vi.fn().mockImplementation(async () => {
+      callCount++;
+      if (callCount <= 3) {
+        throw new AiExtractionError('rate_limit', 'Rate limited', undefined, 50);
+      }
+      return {
+        response: {
+          title: 'Test',
+          correspondent: 'Test',
+          documentType: 'Invoice',
+          tags: [],
+          confidence: { title: 0.9, correspondent: 0.9, documentType: 0.9, tags: 0.5 },
+          evidence: 'test',
+        },
+        usage: { promptTokens: 10, completionTokens: 5 },
+      };
+    });
+
+    const provider = createMockProvider({ extractFn });
+    const client = createMockClient();
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    const result = await processBatch(db, { provider, client, config: seqConfig });
+
+    expect(result.succeeded).toBe(3);
+    expect(result.failed).toBe(0);
+    expect(result.rateLimitRetries).toBe(3);
+    expect(result.rateLimitPauses).toBeGreaterThan(0);
+    expect(extractFn).toHaveBeenCalledTimes(6);
+  });
+
+  it('records permanent failure after max retry passes', async () => {
+    seedManyDocs(db, 1);
+
+    const extractFn = vi
+      .fn()
+      .mockRejectedValue(new AiExtractionError('rate_limit', 'Rate limited', undefined, 10));
+
+    const provider = createMockProvider({ extractFn });
+    const client = createMockClient();
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    const result = await processBatch(db, { provider, client, config: seqConfig });
+
+    expect(result.failed).toBe(1);
+    expect(result.succeeded).toBe(0);
+    expect(extractFn).toHaveBeenCalledTimes(4);
+
+    const dbResults = db.select().from(aiProcessingResult).all();
+    expect(dbResults).toHaveLength(1);
+    expect(dbResults[0].appliedStatus).toBe('failed');
+    expect(dbResults[0].failureType).toBe('rate_limit');
+  });
+
+  it('tracks rateLimitRetries and rateLimitPauses in result', async () => {
+    seedManyDocs(db, 2);
+
+    let callCount = 0;
+    const extractFn = vi.fn().mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        throw new AiExtractionError('rate_limit', 'Rate limited', undefined, 10);
+      }
+      return {
+        response: {
+          title: 'Test',
+          correspondent: 'Test',
+          documentType: 'Invoice',
+          tags: [],
+          confidence: { title: 0.9, correspondent: 0.9, documentType: 0.9, tags: 0.5 },
+          evidence: 'test',
+        },
+        usage: { promptTokens: 10, completionTokens: 5 },
+      };
+    });
+
+    const provider = createMockProvider({ extractFn });
+    const client = createMockClient();
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    const result = await processBatch(db, { provider, client, config: seqConfig });
+
+    expect(result.rateLimitRetries).toBe(1);
+    expect(result.rateLimitPauses).toBe(1);
+    expect(result.succeeded).toBe(2);
+    expect(result.failed).toBe(0);
   });
 });

@@ -175,4 +175,6 @@ export interface AiBatchResult {
   durationMs: number;
   autoApplied?: number;
   autoApplySkipped?: number;
+  rateLimitRetries: number;
+  rateLimitPauses: number;
 }
