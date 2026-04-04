@@ -273,6 +273,7 @@ export type {
   AiExtractionResult,
   AiProviderInterface,
   AiFailureType,
+  RateLimitInfo,
 } from './ai/providers/types.js';
 export { AiExtractionError, aiExtractionResponseSchema } from './ai/providers/types.js';
 export { createAiProvider } from './ai/providers/factory.js';
@@ -282,6 +283,8 @@ export { processDocument } from './ai/extract.js';
 export type { ProcessDocumentOptions } from './ai/extract.js';
 export { processBatch } from './ai/batch.js';
 export type { BatchProcessOptions } from './ai/batch.js';
+export { TpmThrottle } from './ai/tpm-throttle.js';
+export type { TpmThrottleStatus } from './ai/tpm-throttle.js';
 export {
   getAiResults,
   getAiResult,
