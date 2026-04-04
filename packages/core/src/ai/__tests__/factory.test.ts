@@ -24,6 +24,18 @@ describe('createAiProvider', () => {
   it('passes maxRetries to provider constructor', async () => {
     const { OpenAiProvider } = await import('../providers/openai.js');
     await createAiProvider('sk-test-key', 'gpt-5.4-mini', 5);
-    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 5);
+    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 5, true);
+  });
+
+  it('passes maxRetries and flexProcessing to provider constructor', async () => {
+    const { OpenAiProvider } = await import('../providers/openai.js');
+    await createAiProvider('sk-test-key', 'gpt-5.4-mini', 5, false);
+    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 5, false);
+  });
+
+  it('defaults flexProcessing to true', async () => {
+    const { OpenAiProvider } = await import('../providers/openai.js');
+    await createAiProvider('sk-test-key', 'gpt-5.4-mini', 3);
+    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 3, true);
   });
 });

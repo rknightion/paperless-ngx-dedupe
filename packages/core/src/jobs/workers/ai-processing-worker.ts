@@ -30,6 +30,7 @@ runWorkerTask(async (ctx, onProgress) => {
     apiKey,
     aiConfig.model,
     aiConfig.maxRetries,
+    aiConfig.flexProcessing,
   );
 
   const result = await processBatch(ctx.db, {
