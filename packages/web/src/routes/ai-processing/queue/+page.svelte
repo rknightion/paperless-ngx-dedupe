@@ -439,13 +439,13 @@
           <div class="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0 flex-1 space-y-1">
               <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="space-y-1">
                 {#if result.failureType === 'no_suggestions'}
                   <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
                     >No Suggestions</span
                   >
-                  <span class="text-muted truncate text-xs"
-                    >AI could not suggest metadata for this document</span
+                  <p class="text-muted text-xs"
+                    >AI could not suggest metadata for this document</p
                   >
                 {:else}
                   <span
@@ -453,7 +453,7 @@
                     >Failed</span
                   >
                   {#if result.errorMessage}
-                    <span class="text-muted truncate text-xs">{result.errorMessage}</span>
+                    <p class="text-muted line-clamp-3 text-xs">{result.errorMessage}</p>
                   {/if}
                 {/if}
               </div>
