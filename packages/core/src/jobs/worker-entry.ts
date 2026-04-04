@@ -89,7 +89,7 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   try {
     // Run task within the parent trace context so spans are linked
     await context.with(parentContext, async () => {
-      await withSpan('dedupe.worker.task', { 'job.id': jobId }, async () => {
+      await withSpan('dedupe.worker.task', { 'app.job.id': jobId }, async () => {
         const result = await taskFn({ db, sqlite, jobId, taskData }, onProgress);
         completeJob(db, jobId, result);
         logger.info({ jobId }, 'Worker task completed successfully');
