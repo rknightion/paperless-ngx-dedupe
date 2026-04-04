@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   }
 
   const aiConfig = getAiConfig(locals.db);
-  const estimate = estimateBatchCost(locals.db, aiConfig.model, documentCount);
+  const estimate = estimateBatchCost(locals.db, aiConfig.model, documentCount, aiConfig.flexProcessing);
 
   if (!estimate) {
     return apiError(ErrorCode.NOT_FOUND, 'No pricing data available for the configured model');

@@ -60,6 +60,7 @@ function computeModelEstimate(
   totalUserPromptTokens: number,
   avgCompletionTokens: number,
   documentCount: number,
+  flexProcessing: boolean,
 ): ModelCostEstimate {
   const totalInputTokens = systemPromptTokens * documentCount + totalUserPromptTokens;
   const totalOutputTokens = avgCompletionTokens * documentCount;
@@ -92,6 +93,11 @@ function computeModelEstimate(
     bestCost = worstCost;
   }
 
+  // Flex processing uses Batch API rates (~50% of standard pricing)
+  const flexDiscount = flexProcessing ? 0.5 : 1;
+  bestCost *= flexDiscount;
+  const adjustedWorstCost = worstCost * flexDiscount;
+
   return {
     modelId,
     modelName,
@@ -101,8 +107,8 @@ function computeModelEstimate(
       perDocumentCostUsd: documentCount > 0 ? bestCost / documentCount : 0,
     },
     worstCase: {
-      totalCostUsd: worstCost,
-      perDocumentCostUsd: documentCount > 0 ? worstCost / documentCount : 0,
+      totalCostUsd: adjustedWorstCost,
+      perDocumentCostUsd: documentCount > 0 ? adjustedWorstCost / documentCount : 0,
     },
     hasCachePricing,
   };
@@ -191,6 +197,7 @@ export async function estimateProcessingCost(
         totalUserPromptTokens,
         avgCompletionTokens,
         documentCount,
+        config.flexProcessing,
       ),
     );
   }
