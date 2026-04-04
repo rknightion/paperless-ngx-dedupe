@@ -53,6 +53,7 @@
   let contentExpanded = $state(false);
   let isApplying = $state(false);
   let isRejecting = $state(false);
+  let isRetrying = $state(false);
 
   const activeId = $derived(getActiveResultId());
   const detail = $derived(getActiveResultDetail());
@@ -162,6 +163,19 @@
       await onreject(activeId);
     } finally {
       isRejecting = false;
+    }
+  }
+
+  async function handleRetry(): Promise<void> {
+    if (!activeId) return;
+    isRetrying = true;
+    try {
+      await onapply(activeId, ['title', 'correspondent', 'documentType', 'tags'], {
+        allowClearing: false,
+        createMissingEntities: true,
+      });
+    } finally {
+      isRetrying = false;
     }
   }
 
@@ -277,6 +291,24 @@
           <X class="h-4 w-4" />
         </button>
       </div>
+
+      <!-- Error Banner -->
+      {#if detail.appliedStatus === 'failed' && detail.errorMessage}
+        <div class="bg-ember-light/30 border-ember/20 space-y-2 rounded-lg border p-4">
+          <div class="flex items-start gap-2">
+            <AlertCircle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+            <div class="min-w-0 space-y-1">
+              <p class="text-ember text-sm font-semibold">Apply Failed</p>
+              {#if detail.failureType}
+                <span class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium">
+                  {detail.failureType}
+                </span>
+              {/if}
+            </div>
+          </div>
+          <pre class="text-ink bg-canvas whitespace-pre-wrap rounded p-3 text-xs">{detail.errorMessage}</pre>
+        </div>
+      {/if}
 
       <!-- Document Preview -->
       <AiDocumentPreview paperlessId={detail.paperlessId} mode="preview" />
@@ -419,6 +451,24 @@
           {:else}
             <X class="h-4 w-4" />
             Reject
+          {/if}
+        </button>
+      </div>
+    {/if}
+
+    {#if detail.appliedStatus === 'failed'}
+      <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
+        <button
+          onclick={handleRetry}
+          disabled={isRetrying}
+          class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+        >
+          {#if isRetrying}
+            <Loader2 class="h-4 w-4 animate-spin" />
+            Retrying...
+          {:else}
+            <RefreshCw class="h-4 w-4" />
+            Retry Apply
           {/if}
         </button>
       </div>
