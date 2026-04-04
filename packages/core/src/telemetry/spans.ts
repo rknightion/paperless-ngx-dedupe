@@ -1,9 +1,31 @@
-import { trace, SpanStatusCode, type Span } from '@opentelemetry/api';
+import { trace, SpanStatusCode, context, type Span } from '@opentelemetry/api';
+import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 
 const TRACER_NAME = 'paperless-ngx-dedupe';
+const LOGGER_NAME = 'paperless-ngx-dedupe.exceptions';
 
 export function getTracer() {
   return trace.getTracer(TRACER_NAME);
+}
+
+const otelLogger = logs.getLogger(LOGGER_NAME);
+
+/**
+ * Emit an exception as a log record correlated with the active span.
+ * Replaces deprecated Span.recordException() per OTel March 2026 guidance.
+ */
+function emitExceptionLog(error: Error): void {
+  otelLogger.emit({
+    severityNumber: SeverityNumber.ERROR,
+    severityText: 'ERROR',
+    body: error.message,
+    context: context.active(),
+    attributes: {
+      'exception.type': error.name,
+      'exception.message': error.message,
+      'exception.stacktrace': error.stack ?? '',
+    },
+  });
 }
 
 /**
@@ -22,7 +44,7 @@ export async function withSpan<T>(
       return result;
     } catch (error) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: String(error) });
-      span.recordException(error as Error);
+      emitExceptionLog(error as Error);
       throw error;
     } finally {
       span.end();
@@ -45,7 +67,7 @@ export function withSpanSync<T>(
       return result;
     } catch (error) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: String(error) });
-      span.recordException(error as Error);
+      emitExceptionLog(error as Error);
       throw error;
     } finally {
       span.end();
