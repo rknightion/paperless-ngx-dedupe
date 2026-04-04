@@ -30,7 +30,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       conversationId: body.conversationId,
       config,
       openaiApiKey: locals.config.AI_OPENAI_API_KEY,
-      anthropicApiKey: locals.config.AI_ANTHROPIC_API_KEY,
     });
 
     // Collect the full response text for saving
