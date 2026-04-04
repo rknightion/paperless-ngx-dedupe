@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ConfidenceBadge, Tooltip } from '$lib/components';
+  import { ConfidenceBadge } from '$lib/components';
   import { Check, X, FileText, AlertCircle } from 'lucide-svelte';
   import type { AiResultSummary } from './AiReviewStore.svelte';
 
@@ -158,13 +158,18 @@
         </div>
       </div>
     {:else if result.errorMessage}
-      <Tooltip text={result.errorMessage} position="left">
-        <span
-          class="bg-ember-light text-ember inline-flex cursor-help items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-        >
-          <AlertCircle class="h-3 w-3" /> Error
-        </span>
-      </Tooltip>
+      <div class="space-y-1">
+        {#if result.failureType === 'no_suggestions'}
+          <span class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+            <AlertCircle class="h-3 w-3" /> No Suggestions
+          </span>
+        {:else}
+          <span class="bg-ember-light text-ember inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+            <AlertCircle class="h-3 w-3" /> Failed
+          </span>
+        {/if}
+        <p class="text-muted line-clamp-2 text-xs">{result.errorMessage}</p>
+      </div>
     {:else}
       <span class="text-soft">&mdash;</span>
     {/if}
