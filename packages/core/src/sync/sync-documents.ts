@@ -7,6 +7,8 @@ import { computeFingerprint } from './fingerprint.js';
 import { withSpan } from '../telemetry/spans.js';
 import { syncDocumentsTotal, syncRunsTotal, syncDuration } from '../telemetry/metrics.js';
 import { purgeAllDocumentData } from './purge.js';
+import { deleteDocumentLocally } from '../queries/documents.js';
+import { removeDocumentFromAllGroups } from '../queries/duplicates.js';
 import type { SyncDependencies, SyncOptions, SyncResult, ReferenceMaps } from './types.js';
 import type { PaperlessDocument } from '../paperless/types.js';
 import type { PaperlessClient } from '../paperless/client.js';
@@ -59,11 +61,13 @@ export async function syncDocuments(
     updated: 0,
     skipped: 0,
     failed: 0,
+    reconciled: 0,
     errors: [],
     durationMs: 0,
     syncType,
   };
 
+  const seenPaperlessIds = new Set<number>();
   let shouldStop = false;
   let totalCount: number | undefined;
 
@@ -74,6 +78,7 @@ export async function syncDocuments(
 
     for (const doc of page.results) {
       result.totalFetched++;
+      seenPaperlessIds.add(doc.id);
 
       try {
         const fingerprint = computeFingerprint(doc);
@@ -117,7 +122,22 @@ export async function syncDocuments(
     }
   }
 
-  // 6. Update sync state
+  // 6. Reconcile orphaned documents (full sync only)
+  if (isFullSync) {
+    for (const [paperlessId, localDoc] of localDocs) {
+      if (!seenPaperlessIds.has(paperlessId)) {
+        logger.info(
+          { paperlessId, localDocId: localDoc.id },
+          'Removing orphaned document no longer in Paperless',
+        );
+        removeDocumentFromAllGroups(db, localDoc.id);
+        deleteDocumentLocally(db, localDoc.id);
+        result.reconciled++;
+      }
+    }
+  }
+
+  // 7. Update sync state
   const now = new Date().toISOString();
   const totalDocsCount = db.select().from(document).all().length;
 
@@ -146,7 +166,7 @@ export async function syncDocuments(
 
   logger.info(
     { ...result },
-    `Sync complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed`,
+    `Sync complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed, ${result.reconciled} reconciled`,
   );
 
   // Record OTEL metrics

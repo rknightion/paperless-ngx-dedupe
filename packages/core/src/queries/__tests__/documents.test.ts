@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import { getDocuments, getDocument, getDocumentStats } from '../documents.js';
-import { document, documentContent } from '../../schema/sqlite/documents.js';
+import { getDocuments, getDocument, getDocumentStats, deleteDocumentLocally } from '../documents.js';
+import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
+import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
+import { documentChunk } from '../../schema/sqlite/rag.js';
 
 function insertTestDocuments(db: AppDatabase) {
   db.insert(document)
@@ -444,5 +447,90 @@ describe('getDocumentStats', () => {
     const stats = getDocumentStats(db);
     expect(stats.duplicateInvolvement.documentsInGroups).toBe(3); // doc-1, doc-2, doc-3
     expect(stats.duplicateInvolvement.percentage).toBe(100);
+  });
+});
+
+describe('deleteDocumentLocally', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    insertTestDocuments(db);
+  });
+
+  it('deletes a document and all dependent rows', () => {
+    // Insert dependent data for doc-1
+    db.insert(documentContent)
+      .values({ id: 'c-1', documentId: 'doc-1', fullText: 'text', wordCount: 1 })
+      .run();
+    db.insert(documentSignature)
+      .values({
+        id: 'sig-1',
+        documentId: 'doc-1',
+        minhashSignature: Buffer.from('sig'),
+        algorithmVersion: 'v1',
+        numPermutations: 128,
+        createdAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    db.insert(aiProcessingResult)
+      .values({
+        id: 'ai-1',
+        documentId: 'doc-1',
+        paperlessId: 1,
+        provider: 'test',
+        model: 'test-model',
+        processingTimeMs: 100,
+        createdAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    db.insert(documentChunk)
+      .values({
+        id: 'chunk-1',
+        documentId: 'doc-1',
+        chunkIndex: 0,
+        content: 'chunk text',
+        tokenCount: 2,
+        contentHash: 'hash',
+        embeddingModel: 'test',
+        createdAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    db.insert(duplicateGroup)
+      .values({
+        id: 'grp-1',
+        confidenceScore: 0.9,
+        algorithmVersion: 'v1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    db.insert(duplicateMember)
+      .values({ id: 'dm-1', groupId: 'grp-1', documentId: 'doc-1', isPrimary: true })
+      .run();
+
+    deleteDocumentLocally(db, 'doc-1');
+
+    // Document row gone
+    expect(getDocument(db, 'doc-1')).toBeNull();
+
+    // Dependent rows gone
+    expect(db.select().from(documentContent).where(eq(documentContent.documentId, 'doc-1')).all()).toHaveLength(0);
+    expect(db.select().from(documentSignature).where(eq(documentSignature.documentId, 'doc-1')).all()).toHaveLength(0);
+    expect(db.select().from(aiProcessingResult).where(eq(aiProcessingResult.documentId, 'doc-1')).all()).toHaveLength(0);
+    expect(db.select().from(documentChunk).where(eq(documentChunk.documentId, 'doc-1')).all()).toHaveLength(0);
+    expect(db.select().from(duplicateMember).where(eq(duplicateMember.documentId, 'doc-1')).all()).toHaveLength(0);
+
+    // Other documents unaffected
+    expect(getDocument(db, 'doc-2')).not.toBeNull();
+  });
+
+  it('is a no-op for a non-existent document ID', () => {
+    expect(() => deleteDocumentLocally(db, 'nonexistent')).not.toThrow();
+    // All original documents still present
+    const result = getDocuments(db, {}, { limit: 50, offset: 0 });
+    expect(result.total).toBe(3);
   });
 });
