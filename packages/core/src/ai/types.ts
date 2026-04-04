@@ -112,14 +112,8 @@ export const OPENAI_MODELS = [
   { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano' },
 ] as const;
 
-export const ANTHROPIC_MODELS = [
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6' },
-  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6' },
-  { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5' },
-] as const;
-
 export const aiConfigSchema = z.object({
-  provider: z.enum(['openai', 'anthropic']).default('openai'),
+  provider: z.literal('openai').default('openai'),
   model: z.string().default('gpt-5.4-mini'),
   promptTemplate: z.string().default(DEFAULT_EXTRACTION_PROMPT),
   maxContentLength: z.number().int().min(500).max(100000).default(8000),

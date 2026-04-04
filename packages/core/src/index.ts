@@ -263,7 +263,6 @@ export {
   DEFAULT_EXTRACTION_PROMPT,
   DEFAULT_AI_CONFIG,
   OPENAI_MODELS,
-  ANTHROPIC_MODELS,
   AI_CONFIG_PREFIX,
 } from './ai/types.js';
 export type { AiConfig, AiBatchResult } from './ai/types.js';

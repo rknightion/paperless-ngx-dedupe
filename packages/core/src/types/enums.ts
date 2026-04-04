@@ -35,7 +35,6 @@ export const GROUP_STATUS_VALUES: readonly GroupStatus[] = Object.values(GroupSt
 
 export const AiProvider = {
   OPENAI: 'openai',
-  ANTHROPIC: 'anthropic',
 } as const;
 export type AiProvider = (typeof AiProvider)[keyof typeof AiProvider];
 
