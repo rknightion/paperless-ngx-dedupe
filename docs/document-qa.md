@@ -37,7 +37,7 @@ flowchart LR
 
 2. **Retrieval** — When you ask a question, it's converted to a vector and compared against all stored chunks using cosine similarity (via **sqlite-vec**). Simultaneously, the same query runs against the **SQLite FTS5** full-text index. Results from both searches are combined using **Reciprocal Rank Fusion (RRF)**, which produces a single ranked list without needing to calibrate score scales.
 
-3. **Generation** — The top-ranked chunks are assembled into a context prompt and sent to your configured LLM (OpenAI or Anthropic). The model generates an answer grounded in the retrieved context, and the response is streamed token-by-token to the UI.
+3. **Generation** — The top-ranked chunks are assembled into a context prompt and sent to your configured OpenAI model. The model generates an answer grounded in the retrieved context, and the response is streamed token-by-token to the UI.
 
 4. **Citations** — Each answer includes source citations showing which documents contributed to the response, with relevance scores and text excerpts.
 
@@ -56,11 +56,10 @@ Document Q&A is disabled by default. Enable it with environment variables:
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `RAG_ENABLED` | No | `false` | Master switch for Document Q&A |
-| `AI_OPENAI_API_KEY` | Yes (when enabled) | - | Required for generating embeddings |
-| `AI_ANTHROPIC_API_KEY` | No | - | Required only if using Anthropic as the answer model |
+| `AI_OPENAI_API_KEY` | Yes (when enabled) | - | Required for generating embeddings and answers |
 
-!!! note "OpenAI key always required"
-    Embeddings always use OpenAI's `text-embedding-3-small` model, regardless of which provider you choose for generating answers. The OpenAI key is therefore mandatory when `RAG_ENABLED=true`.
+!!! note "OpenAI key required"
+    Both embeddings and answer generation use OpenAI models. The OpenAI key is mandatory when `RAG_ENABLED=true`.
 
 `RAG_ENABLED` is independent of `AI_ENABLED` — you can use Document Q&A without enabling AI classification, or vice versa.
 
@@ -102,7 +101,7 @@ The model that generates answers from retrieved context is configured independen
 
 | Setting | Default | Range | Description |
 | --- | --- | --- | --- |
-| `answerProvider` | `openai` | `openai`, `anthropic` | LLM provider for answers |
+| `answerProvider` | `openai` | `openai` | LLM provider for answers |
 | `answerModel` | `gpt-5.4-mini` | see [AI Processing](ai-processing.md#available-models) | Model identifier |
 | `systemPrompt` | built-in | string | System instructions for the answer model |
 | `autoIndex` | `false` | boolean | Auto-run indexing after document sync |
@@ -177,7 +176,7 @@ Multi-turn conversations maintain context — follow-up questions can reference 
     - **Start with the default settings** — The defaults work well for most document libraries. Tune only if retrieval quality is poor.
     - **Increase `topK` for broad questions** — Questions spanning many documents benefit from more retrieved chunks (15–20). Narrow questions work fine with fewer (5–10).
     - **Increase `maxContextTokens` for detailed answers** — If answers are too brief or miss details, increase the context budget. Be aware this increases per-query token costs.
-    - **Use a powerful answer model** — Unlike batch classification where cost matters, Q&A is interactive and benefits from stronger models. Consider `gpt-5.4` or `claude-sonnet-4-6` for best results.
+    - **Use a powerful answer model** — Unlike batch classification where cost matters, Q&A is interactive and benefits from stronger models. Consider `gpt-5.4` for best results.
     - **Enable auto-index** — If you sync documents regularly, enabling auto-index keeps the search index up to date automatically.
 
 !!! tip "Hybrid search for OCR documents"
