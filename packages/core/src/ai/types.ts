@@ -123,7 +123,7 @@ export const aiConfigSchema = z.object({
   model: z.string().default('gpt-5.4-mini'),
   promptTemplate: z.string().default(DEFAULT_EXTRACTION_PROMPT),
   maxContentLength: z.number().int().min(500).max(100000).default(8000),
-  batchSize: z.number().int().min(1).max(100).default(10),
+  batchSize: z.number().int().min(1).max(500).default(100),
   rateDelayMs: z.number().int().min(0).max(60000).default(0),
   autoProcess: z.boolean().default(false),
   processedTagName: z.string().default('ai-processed'),
@@ -132,7 +132,7 @@ export const aiConfigSchema = z.object({
   includeDocumentTypes: z.boolean().default(false),
   includeTags: z.boolean().default(false),
   reasoningEffort: z.enum(['none', 'low', 'medium', 'high']).default('low'),
-  maxRetries: z.number().int().min(0).max(10).default(3),
+  maxRetries: z.number().int().min(0).max(20).default(10),
 
   // Per-field extraction enable/disable (prompt always extracts all; disabled fields are ignored in review/apply)
   extractTitle: z.boolean().default(true),

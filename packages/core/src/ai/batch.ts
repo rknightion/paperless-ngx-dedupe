@@ -22,13 +22,13 @@ import { getModelPricing, estimateResultCost } from './costs.js';
 
 const logger = createLogger('ai-batch');
 
-/** Tier 1 RPM limits per provider (requests per minute) */
-const TIER1_RPM: Record<string, number> = {
-  openai: 500,
+/** RPM limits per provider (requests per minute) */
+const PROVIDER_RPM: Record<string, number> = {
+  openai: 5_000,
   anthropic: 50,
 };
 
-/** Target utilization of Tier 1 rate limits */
+/** Target utilization of rate limits */
 const TARGET_UTILIZATION = 0.85;
 
 export interface BatchProcessOptions {
@@ -47,11 +47,11 @@ function sleep(ms: number): Promise<void> {
 /**
  * Compute the inter-request launch interval in ms from provider rate limits.
  * When rateDelayMs is explicitly set (> 0), uses that as an override.
- * Otherwise auto-calculates from Tier 1 RPM at 85% utilization.
+ * Otherwise auto-calculates from provider RPM limits at 85% utilization.
  */
 export function computeRequestInterval(provider: string, rateDelayMs: number): number {
   if (rateDelayMs > 0) return rateDelayMs;
-  const rpm = TIER1_RPM[provider] ?? TIER1_RPM.openai;
+  const rpm = PROVIDER_RPM[provider] ?? PROVIDER_RPM.openai;
   const targetRpm = Math.floor(rpm * TARGET_UTILIZATION);
   return Math.ceil(60_000 / targetRpm);
 }
@@ -66,7 +66,7 @@ export async function processBatch(
     const maxConcurrency = config.batchSize;
     const intervalMs = computeRequestInterval(provider.provider, config.rateDelayMs);
     const targetRpm = Math.floor(
-      (TIER1_RPM[provider.provider] ?? TIER1_RPM.openai) * TARGET_UTILIZATION,
+      (PROVIDER_RPM[provider.provider] ?? PROVIDER_RPM.openai) * TARGET_UTILIZATION,
     );
 
     return withSpan(
@@ -399,12 +399,15 @@ export async function processBatch(
             result.failed++;
             aiDocumentsTotal().add(1, { outcome: 'failed', 'gen_ai.system': provider.provider });
 
-            // Circuit breaker: track consecutive same errors
-            if (errorMsg === lastErrorMsg) {
-              consecutiveSameError++;
-            } else {
-              consecutiveSameError = 1;
-              lastErrorMsg = errorMsg;
+            // Circuit breaker: track consecutive same errors (skip rate limits — the SDK retries handle those)
+            const isRateLimit = isAiError && error.failureType === 'rate_limit';
+            if (!isRateLimit) {
+              if (errorMsg === lastErrorMsg) {
+                consecutiveSameError++;
+              } else {
+                consecutiveSameError = 1;
+                lastErrorMsg = errorMsg;
+              }
             }
 
             if (consecutiveSameError >= CIRCUIT_BREAKER_THRESHOLD) {

@@ -203,7 +203,7 @@ describe('processBatch', () => {
       ])
       .run();
 
-    const error = new AiExtractionError('rate_limit', 'Rate limited');
+    const error = new AiExtractionError('timeout', 'Request timed out');
     const provider = createMockProvider({
       extractFn: vi.fn().mockRejectedValue(error),
     });
@@ -215,6 +215,23 @@ describe('processBatch', () => {
     await expect(processBatch(db, { provider, client, config: seqConfig })).rejects.toThrow(
       /Processing stopped.*3 consecutive documents failed/,
     );
+  });
+
+  it('rate_limit errors do not trip the circuit breaker', async () => {
+    seedDocs(db);
+
+    const error = new AiExtractionError('rate_limit', 'Rate limited');
+    const provider = createMockProvider({
+      extractFn: vi.fn().mockRejectedValue(error),
+    });
+    const client = createMockClient();
+
+    const seqConfig: AiConfig = { ...config, batchSize: 1 };
+
+    // Both processable docs should be attempted — circuit breaker should NOT fire for rate limits
+    const result = await processBatch(db, { provider, client, config: seqConfig });
+    expect(result.processed).toBe(3); // 2 failed + 1 skipped (no content)
+    expect(result.failed).toBe(2);
   });
 
   it('only processes unprocessed docs (already-processed excluded)', async () => {
@@ -366,13 +383,13 @@ describe('processBatch', () => {
 });
 
 describe('computeRequestInterval', () => {
-  it('auto-calculates interval for OpenAI at 85% of Tier 1 (500 RPM)', () => {
+  it('auto-calculates interval for OpenAI at 85% of 5000 RPM', () => {
     const interval = computeRequestInterval('openai', 0);
-    // floor(500 * 0.85) = 425 RPM → ceil(60000/425) = 142ms
-    expect(interval).toBe(142);
+    // floor(5000 * 0.85) = 4250 RPM → ceil(60000/4250) = 15ms
+    expect(interval).toBe(15);
   });
 
-  it('auto-calculates interval for Anthropic at 85% of Tier 1 (50 RPM)', () => {
+  it('auto-calculates interval for Anthropic at 85% of 50 RPM', () => {
     const interval = computeRequestInterval('anthropic', 0);
     // floor(50 * 0.85) = 42 RPM → ceil(60000/42) = 1429ms
     expect(interval).toBe(1429);
@@ -385,7 +402,7 @@ describe('computeRequestInterval', () => {
 
   it('falls back to OpenAI limits for unknown providers', () => {
     const interval = computeRequestInterval('unknown-provider', 0);
-    expect(interval).toBe(142);
+    expect(interval).toBe(15);
   });
 });
 
@@ -495,7 +512,7 @@ describe('concurrent processing', () => {
   it('circuit breaker fires across concurrent requests', async () => {
     seedManyDocs(db, 6);
 
-    const error = new AiExtractionError('rate_limit', 'Rate limited');
+    const error = new AiExtractionError('timeout', 'Request timed out');
     const provider = createMockProvider({
       extractFn: vi.fn().mockRejectedValue(error),
     });
@@ -517,7 +534,7 @@ describe('concurrent processing', () => {
     seedManyDocs(db, 5);
 
     let callCount = 0;
-    const error = new AiExtractionError('rate_limit', 'Rate limited');
+    const error = new AiExtractionError('timeout', 'Request timed out');
     const extractFn = vi.fn().mockImplementation(async () => {
       callCount++;
       // Fail on calls 1, 2; succeed on 3; fail on 4, 5

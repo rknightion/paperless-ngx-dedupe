@@ -62,16 +62,24 @@
   }
 
   // ── Pagination ──
-  const totalPages = $derived(Math.ceil(data.unprocessed.total / 20));
+  const totalPages = $derived(Math.ceil(data.unprocessed.total / data.limit));
   const offset = $derived(
     Math.max(parseInt($page.url.searchParams.get('offset') ?? '0', 10) || 0, 0),
   );
-  const currentPage = $derived(Math.floor(offset / 20) + 1);
+  const currentPage = $derived(Math.floor(offset / data.limit) + 1);
 
   function goToPage(p: number) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
-    params.set('offset', String((p - 1) * 20));
+    params.set('offset', String((p - 1) * data.limit));
+    goto(`/ai-processing/queue?${params.toString()}`);
+  }
+
+  function changePageSize(e: Event) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const params = new URLSearchParams($page.url.searchParams);
+    params.set('limit', (e.target as HTMLSelectElement).value);
+    params.set('offset', '0');
     goto(`/ai-processing/queue?${params.toString()}`);
   }
 
@@ -377,33 +385,46 @@
       </div>
 
       <!-- Pagination -->
-      {#if totalPages > 1}
+      {#if data.unprocessed.total > 0}
         <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
-          <p class="text-muted text-sm">
-            Showing <span class="text-ink font-medium"
-              >{offset + 1}&ndash;{Math.min(offset + 20, data.unprocessed.total)}</span
+          <div class="flex items-center gap-3">
+            <p class="text-muted text-sm">
+              Showing <span class="text-ink font-medium"
+                >{offset + 1}&ndash;{Math.min(offset + data.limit, data.unprocessed.total)}</span
+              >
+              of <span class="text-ink font-medium">{data.unprocessed.total}</span>
+            </p>
+            <select
+              value={data.limit}
+              onchange={changePageSize}
+              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1 text-sm focus:ring-1 focus:outline-none"
             >
-            of <span class="text-ink font-medium">{data.unprocessed.total}</span>
-          </p>
-          <div class="flex items-center gap-1">
-            <button
-              onclick={() => goToPage(currentPage - 1)}
-              disabled={currentPage <= 1}
-              class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-            >
-              <ChevronLeft class="h-4 w-4" />
-            </button>
-            <span class="text-ink px-3 text-sm font-medium tabular-nums">
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              onclick={() => goToPage(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-              class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-            >
-              <ChevronRight class="h-4 w-4" />
-            </button>
+              <option value="20">20 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
           </div>
+          {#if totalPages > 1}
+            <div class="flex items-center gap-1">
+              <button
+                onclick={() => goToPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
+              >
+                <ChevronLeft class="h-4 w-4" />
+              </button>
+              <span class="text-ink px-3 text-sm font-medium tabular-nums">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onclick={() => goToPage(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
+              >
+                <ChevronRight class="h-4 w-4" />
+              </button>
+            </div>
+          {/if}
         </div>
       {/if}
     {/if}

@@ -36,5 +36,5 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const aiConfig = getAiConfig(locals.db);
   const facets = getUnprocessedDocumentFacets(locals.db);
 
-  return { unprocessed, failed, reasoningEffort: aiConfig.reasoningEffort, facets, filters };
+  return { unprocessed, failed, reasoningEffort: aiConfig.reasoningEffort, facets, filters, limit };
 };
