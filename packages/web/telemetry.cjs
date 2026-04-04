@@ -91,6 +91,33 @@ const sdk = new NodeSDK({
 
 sdk.start();
 
+// --- Pyroscope continuous profiling (opt-in) ---
+if (process.env.PYROSCOPE_ENABLED === 'true' && process.env.PYROSCOPE_SERVER_ADDRESS) {
+  try {
+    const Pyroscope = require('@pyroscope/nodejs');
+
+    Pyroscope.init({
+      serverAddress: process.env.PYROSCOPE_SERVER_ADDRESS,
+      appName: process.env.OTEL_SERVICE_NAME || 'paperless-dedupe',
+      tags: {
+        'service.namespace': process.env.OTEL_SERVICE_NAMESPACE || 'paperless-dedupe',
+        'deployment.environment':
+          process.env.OTEL_DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || 'development',
+      },
+      basicAuthUser: process.env.PYROSCOPE_BASIC_AUTH_USER || '',
+      basicAuthPassword: process.env.PYROSCOPE_BASIC_AUTH_PASSWORD || '',
+      wall: { collectCpuTime: true },
+    });
+
+    Pyroscope.start();
+
+    // Make Pyroscope available to core's withPyroscopeLabels() helper
+    globalThis.__pyroscopeModule = Pyroscope;
+  } catch (err) {
+    console.warn('Failed to initialize Pyroscope:', err.message);
+  }
+}
+
 if (otelEnabled) {
   // Force RITM hooks to fire for built-in modules that were loaded during SDK
   // initialization (before hooks were registered). The SDK transitively requires
