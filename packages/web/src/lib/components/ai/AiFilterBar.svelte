@@ -14,17 +14,8 @@
     onapply: (filters: Record<string, string | undefined>) => void;
   }
 
-  let {
-    status,
-    search,
-    sort,
-    groupBy,
-    changedOnly,
-    failed,
-    minConfidence,
-    model,
-    onapply,
-  }: Props = $props();
+  let { status, search, sort, groupBy, changedOnly, failed, minConfidence, model, onapply }: Props =
+    $props();
 
   // Local state copies (intentionally capture initial values only)
   const initial = untrack(() => ({
