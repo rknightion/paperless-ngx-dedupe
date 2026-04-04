@@ -300,13 +300,16 @@
             <div class="min-w-0 space-y-1">
               <p class="text-ember text-sm font-semibold">Apply Failed</p>
               {#if detail.failureType}
-                <span class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium">
+                <span
+                  class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
+                >
                   {detail.failureType}
                 </span>
               {/if}
             </div>
           </div>
-          <pre class="text-ink bg-canvas whitespace-pre-wrap rounded p-3 text-xs">{detail.errorMessage}</pre>
+          <pre
+            class="text-ink bg-canvas rounded p-3 text-xs whitespace-pre-wrap">{detail.errorMessage}</pre>
         </div>
       {/if}
 

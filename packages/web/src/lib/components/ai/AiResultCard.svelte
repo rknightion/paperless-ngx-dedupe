@@ -108,11 +108,15 @@
         {:else if result.errorMessage}
           <div class="space-y-1">
             {#if result.failureType === 'no_suggestions'}
-              <span class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+              <span
+                class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+              >
                 <AlertCircle class="h-3 w-3" /> No Suggestions
               </span>
             {:else}
-              <span class="bg-ember-light text-ember inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+              <span
+                class="bg-ember-light text-ember inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+              >
                 <AlertCircle class="h-3 w-3" /> Failed
               </span>
             {/if}

@@ -3,7 +3,12 @@ import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import { getDocuments, getDocument, getDocumentStats, deleteDocumentLocally } from '../documents.js';
+import {
+  getDocuments,
+  getDocument,
+  getDocumentStats,
+  deleteDocumentLocally,
+} from '../documents.js';
 import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
@@ -517,11 +522,21 @@ describe('deleteDocumentLocally', () => {
     expect(getDocument(db, 'doc-1')).toBeNull();
 
     // Dependent rows gone
-    expect(db.select().from(documentContent).where(eq(documentContent.documentId, 'doc-1')).all()).toHaveLength(0);
-    expect(db.select().from(documentSignature).where(eq(documentSignature.documentId, 'doc-1')).all()).toHaveLength(0);
-    expect(db.select().from(aiProcessingResult).where(eq(aiProcessingResult.documentId, 'doc-1')).all()).toHaveLength(0);
-    expect(db.select().from(documentChunk).where(eq(documentChunk.documentId, 'doc-1')).all()).toHaveLength(0);
-    expect(db.select().from(duplicateMember).where(eq(duplicateMember.documentId, 'doc-1')).all()).toHaveLength(0);
+    expect(
+      db.select().from(documentContent).where(eq(documentContent.documentId, 'doc-1')).all(),
+    ).toHaveLength(0);
+    expect(
+      db.select().from(documentSignature).where(eq(documentSignature.documentId, 'doc-1')).all(),
+    ).toHaveLength(0);
+    expect(
+      db.select().from(aiProcessingResult).where(eq(aiProcessingResult.documentId, 'doc-1')).all(),
+    ).toHaveLength(0);
+    expect(
+      db.select().from(documentChunk).where(eq(documentChunk.documentId, 'doc-1')).all(),
+    ).toHaveLength(0);
+    expect(
+      db.select().from(duplicateMember).where(eq(duplicateMember.documentId, 'doc-1')).all(),
+    ).toHaveLength(0);
 
     // Other documents unaffected
     expect(getDocument(db, 'doc-2')).not.toBeNull();
