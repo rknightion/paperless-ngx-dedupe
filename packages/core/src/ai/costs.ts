@@ -282,6 +282,7 @@ export function estimateBatchCost(
   db: AppDatabase,
   model: string,
   documentCount: number,
+  flexProcessing = true,
 ): AiCostEstimate | null {
   const pricing = getModelPricing(db, model);
   if (!pricing) return null;
@@ -307,8 +308,10 @@ export function estimateBatchCost(
   const avgPrompt = avgRow && avgRow.avgPrompt > 0 ? avgRow.avgPrompt : 2000;
   const avgCompletion = avgRow && avgRow.avgCompletion > 0 ? avgRow.avgCompletion : 200;
 
-  const inputCost = avgPrompt * documentCount * pricing.inputPerToken;
-  const outputCost = avgCompletion * documentCount * pricing.outputPerToken;
+  // Flex processing uses Batch API rates (~50% of standard pricing)
+  const flexDiscount = flexProcessing ? 0.5 : 1;
+  const inputCost = avgPrompt * documentCount * pricing.inputPerToken * flexDiscount;
+  const outputCost = avgCompletion * documentCount * pricing.outputPerToken * flexDiscount;
 
   return {
     estimatedCostUsd: inputCost + outputCost,
