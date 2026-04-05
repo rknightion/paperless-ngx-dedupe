@@ -310,8 +310,8 @@
   async function saveAiConfig() {
     isSavingAi = true;
     aiSaveStatus = null;
-    // Validate tag alias YAML before saving
-    if (aiTagAliasesEnabled && aiTagAliasMap.trim()) {
+    // Validate tag alias YAML before saving (always validate — server rejects invalid YAML regardless of toggle)
+    if (aiTagAliasMap.trim()) {
       const validation = validateTagAliasYaml(aiTagAliasMap);
       if (!validation.valid) {
         tagAliasValidationError = validation.error ?? 'Invalid YAML';
