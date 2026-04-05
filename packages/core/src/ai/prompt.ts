@@ -20,8 +20,9 @@ export interface BuildPromptOptions {
 /**
  * Builds split system/user prompts from the template and options.
  *
- * Replaces {{existing_correspondents}}, {{existing_document_types}}, and
- * {{existing_tags}} in the template with the provided reference data.
+ * Replaces {{existing_correspondents}}, {{existing_document_types}},
+ * {{existing_tags}}, and {{tag_aliases}} in the template with the
+ * provided reference data.
  */
 /** Case-insensitive sort without mutating the original array. */
 function sortedInsensitive(arr: string[]): string[] {

@@ -15,6 +15,8 @@ export const load: PageServerLoad = async ({ locals }) => {
   const dedupConfig = getDedupConfig(locals.db);
   const dashboard = getDashboard(locals.db);
 
+  const aiConfig = locals.config.AI_ENABLED ? getAiConfig(locals.db) : null;
+
   return {
     config,
     dedupConfig,
@@ -25,12 +27,12 @@ export const load: PageServerLoad = async ({ locals }) => {
       duplicateGroups: dashboard.pendingGroups,
     },
     aiEnabled: locals.config.AI_ENABLED,
-    aiConfig: locals.config.AI_ENABLED ? getAiConfig(locals.db) : null,
-    isDefaultPrompt: locals.config.AI_ENABLED
-      ? getAiConfig(locals.db).promptTemplate === DEFAULT_EXTRACTION_PROMPT
+    aiConfig,
+    isDefaultPrompt: aiConfig
+      ? aiConfig.promptTemplate === DEFAULT_EXTRACTION_PROMPT
       : true,
-    isDefaultTagAliasMap: locals.config.AI_ENABLED
-      ? getAiConfig(locals.db).tagAliasMap === DEFAULT_TAG_ALIAS_MAP
+    isDefaultTagAliasMap: aiConfig
+      ? aiConfig.tagAliasMap === DEFAULT_TAG_ALIAS_MAP
       : true,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
     ragEnabled: locals.config.RAG_ENABLED,
