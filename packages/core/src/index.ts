@@ -268,6 +268,9 @@ export {
   AI_CONFIG_PREFIX,
 } from './ai/types.js';
 export type { AiConfig, AiBatchResult } from './ai/types.js';
+export { DEFAULT_TAG_ALIAS_MAP } from './ai/tag-alias-defaults.js';
+export { validateTagAliasYaml } from './ai/tag-alias-validation.js';
+export type { TagAliasValidationResult } from './ai/tag-alias-validation.js';
 export type {
   AiExtractionRequest,
   AiExtractionResponse,
