@@ -285,6 +285,8 @@ export { processDocument } from './ai/extract.js';
 export type { ProcessDocumentOptions } from './ai/extract.js';
 export { processBatch } from './ai/batch.js';
 export type { BatchProcessOptions } from './ai/batch.js';
+export { reprocessSingleResult } from './ai/reprocess.js';
+export type { ReprocessSingleResultOptions } from './ai/reprocess.js';
 export { TpmThrottle } from './ai/tpm-throttle.js';
 export type { TpmThrottleStatus } from './ai/tpm-throttle.js';
 export {

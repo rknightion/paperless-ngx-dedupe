@@ -106,6 +106,22 @@
     }
   }
 
+  async function handleReprocess(id: string) {
+    trackAiResultAction('reprocess', { resultId: id });
+    try {
+      const res = await fetch(`/api/v1/ai/results/${id}/reprocess`, { method: 'POST' });
+      if (res.ok) {
+        addToast('success', 'Extraction retried successfully');
+        invalidateAll();
+      } else {
+        const json = await res.json();
+        addToast('error', json.error?.message ?? 'Retry extraction failed');
+      }
+    } catch {
+      addToast('error', 'Retry extraction failed');
+    }
+  }
+
   async function handleReject(id: string) {
     trackAiResultAction('reject', { resultId: id });
     try {
@@ -490,6 +506,7 @@
       extractEnabled={data.extractEnabled}
       onapply={handleApply}
       onreject={handleReject}
+      onreprocess={handleReprocess}
       onclose={closeDetail}
     />
   {/if}
@@ -503,6 +520,7 @@
     extractEnabled={data.extractEnabled}
     onapply={handleApply}
     onreject={handleReject}
+    onreprocess={handleReprocess}
     onclose={closeDetail}
   />
 {/if}
