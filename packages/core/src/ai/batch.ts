@@ -383,6 +383,12 @@ export async function processBatch(
                 { documentId: doc.id, retryAfterMs },
                 'Document rate-limited — queued for retry',
               );
+              // Call onProgress so the cancellation check in the worker can fire
+              const status = throttle.getStatus();
+              await onProgress?.(
+                result.processed / totalDocs,
+                `Paused for rate limit — resuming in ${Math.ceil(status.pauseRemainingMs / 1000)}s (${result.processed} of ${totalDocs} processed)`,
+              );
               return;
             }
 
