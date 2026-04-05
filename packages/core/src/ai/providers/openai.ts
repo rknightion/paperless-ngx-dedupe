@@ -124,9 +124,20 @@ export class OpenAiProvider implements AiProviderInterface {
       if (error && typeof error === 'object' && 'status' in error && error.status === 429) {
         const sdkError = error as unknown as {
           message: string;
+          code?: string | null;
           headers?: Headers;
           requestID?: string;
         };
+
+        // Quota exhaustion is permanent — don't retry
+        const isQuotaError =
+          sdkError.code === 'insufficient_quota' ||
+          sdkError.message.includes('exceeded your current quota');
+
+        if (isQuotaError) {
+          throw new AiExtractionError('quota_exceeded', sdkError.message, sdkError.requestID);
+        }
+
         const retryAfterMs = parseRetryAfterMs(sdkError.headers?.get('retry-after') ?? null);
         throw new AiExtractionError(
           'rate_limit',
