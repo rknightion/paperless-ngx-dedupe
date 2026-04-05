@@ -43,7 +43,13 @@ export interface AiProviderInterface {
   extract(request: AiExtractionRequest): Promise<AiExtractionResult>;
 }
 
-export type AiFailureType = 'refusal' | 'schema_mismatch' | 'timeout' | 'max_tokens' | 'rate_limit';
+export type AiFailureType =
+  | 'refusal'
+  | 'schema_mismatch'
+  | 'timeout'
+  | 'max_tokens'
+  | 'rate_limit'
+  | 'quota_exceeded';
 
 export class AiExtractionError extends Error {
   constructor(
