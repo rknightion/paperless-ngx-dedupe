@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_TAG_ALIAS_MAP } from './tag-alias-defaults.js';
 
 export const AI_CONFIG_PREFIX = 'ai.';
 
@@ -148,6 +149,10 @@ export const aiConfigSchema = z.object({
   // Protected tags — never add or remove these tags during AI apply
   protectedTagsEnabled: z.boolean().default(false),
   protectedTagNames: z.array(z.string()).default(['email']),
+
+  // Tag alias mapping — normalise LLM tag suggestions via canonical→alias YAML map
+  tagAliasesEnabled: z.boolean().default(false),
+  tagAliasMap: z.string().default(DEFAULT_TAG_ALIAS_MAP),
 
   // Auto-apply rules (opt-in, maximally conservative defaults)
   autoApplyEnabled: z.boolean().default(false),
