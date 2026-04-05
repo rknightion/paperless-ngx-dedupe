@@ -13,6 +13,8 @@ describe('buildPromptParts', () => {
     includeCorrespondents: true,
     includeDocumentTypes: true,
     includeTags: true,
+    tagAliasesEnabled: false,
+    tagAliasMap: '',
   };
 
   it('substitutes reference data into the template', () => {
@@ -55,6 +57,41 @@ describe('buildPromptParts', () => {
       'Document Title\nInvoice #123\n\nDocument Text\nAmazon order total £42.99',
     );
     expect(userPrompt).not.toContain('<document>');
+  });
+
+  it('injects tag alias map when enabled', () => {
+    const aliasYaml = 'nhs:\n  - national-health-service';
+    const { systemPrompt } = buildPromptParts({
+      ...baseOptions,
+      promptTemplate: 'Tags: {{existing_tags}}\n\n{{tag_aliases}}',
+      tagAliasesEnabled: true,
+      tagAliasMap: aliasYaml,
+    });
+    expect(systemPrompt).toContain('<alias_map>');
+    expect(systemPrompt).toContain('nhs:');
+    expect(systemPrompt).toContain('national-health-service');
+    expect(systemPrompt).toContain('</alias_map>');
+  });
+
+  it('injects disabled message when tag aliases are off', () => {
+    const { systemPrompt } = buildPromptParts({
+      ...baseOptions,
+      promptTemplate: '{{tag_aliases}}',
+      tagAliasesEnabled: false,
+      tagAliasMap: 'nhs:\n  - national-health-service',
+    });
+    expect(systemPrompt).toContain('No tag alias mappings are configured.');
+    expect(systemPrompt).not.toContain('<alias_map>');
+  });
+
+  it('leaves prompt unchanged when no {{tag_aliases}} placeholder exists', () => {
+    const { systemPrompt } = buildPromptParts({
+      ...baseOptions,
+      promptTemplate: 'No placeholder here',
+      tagAliasesEnabled: true,
+      tagAliasMap: 'nhs:\n  - national-health-service',
+    });
+    expect(systemPrompt).toBe('No placeholder here');
   });
 
   it('sorts reference lists alphabetically for deterministic prompts', () => {
