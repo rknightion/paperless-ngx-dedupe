@@ -71,12 +71,25 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
 
     const now = Date.now();
 
-    // Check for cancellation every 2 seconds
+    // Check for cancellation/pause every 2 seconds
     if (now - lastCancelCheck >= 2000) {
       lastCancelCheck = now;
       const currentJob = getJob(db, jobId);
       if (currentJob?.status === 'cancelled') {
         throw new CancellationError('Job was cancelled');
+      }
+      if (currentJob?.status === 'paused') {
+        // Block until resumed or cancelled
+        while (true) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const checkJob = getJob(db, jobId);
+          if (!checkJob || checkJob.status === 'cancelled') {
+            throw new CancellationError('Job was cancelled while paused');
+          }
+          if (checkJob.status === 'running') {
+            break;
+          }
+        }
       }
     }
 
