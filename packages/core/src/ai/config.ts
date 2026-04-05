@@ -25,7 +25,8 @@ function parseConfigValue(key: string, value: string): unknown {
     shortKey === 'extractCorrespondent' ||
     shortKey === 'extractDocumentType' ||
     shortKey === 'extractTags' ||
-    shortKey === 'flexProcessing'
+    shortKey === 'flexProcessing' ||
+    shortKey === 'tagAliasesEnabled'
   ) {
     return value === 'true';
   }
@@ -43,7 +44,8 @@ function parseConfigValue(key: string, value: string): unknown {
     shortKey !== 'provider' &&
     shortKey !== 'model' &&
     shortKey !== 'processedTagName' &&
-    shortKey !== 'reasoningEffort'
+    shortKey !== 'reasoningEffort' &&
+    shortKey !== 'tagAliasMap'
   ) {
     return num;
   }
