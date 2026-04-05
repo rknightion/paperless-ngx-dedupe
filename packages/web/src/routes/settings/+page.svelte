@@ -18,6 +18,7 @@
     AlertTriangle,
     Check,
   } from 'lucide-svelte';
+  import { validateTagAliasYaml } from '@paperless-dedupe/core';
 
   let { data } = $props();
 
@@ -89,6 +90,15 @@
   let resetConfirmCount = $state<number | null>(null);
   let isResetting = $state(false);
   let showRevertResetPrompt = $state(false);
+
+  // Tag alias mapping
+  let aiTagAliasesEnabled = $state(initialAiConfig?.tagAliasesEnabled ?? false);
+  let aiTagAliasMap = $state(initialAiConfig?.tagAliasMap ?? '');
+  let isDefaultTagAliasMap = $state(untrack(() => data.isDefaultTagAliasMap) ?? true);
+  let showTagAliases = $state(false);
+  let tagAliasValidationError = $state<string | null>(null);
+  let showRevertResetTagAliases = $state(false);
+
   let isSavingAi = $state(false);
   let aiSaveStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
   let aiModels = $state<{ id: string; name: string }[]>([]);
@@ -300,6 +310,16 @@
   async function saveAiConfig() {
     isSavingAi = true;
     aiSaveStatus = null;
+    // Validate tag alias YAML before saving
+    if (aiTagAliasesEnabled && aiTagAliasMap.trim()) {
+      const validation = validateTagAliasYaml(aiTagAliasMap);
+      if (!validation.valid) {
+        tagAliasValidationError = validation.error ?? 'Invalid YAML';
+        isSavingAi = false;
+        return;
+      }
+    }
+    tagAliasValidationError = null;
     try {
       const res = await fetch('/api/v1/ai/config', {
         method: 'PUT',
@@ -336,6 +356,8 @@
             .split(',')
             .map((s: string) => s.trim())
             .filter((s: string) => s.length > 0),
+          tagAliasesEnabled: aiTagAliasesEnabled,
+          tagAliasMap: aiTagAliasMap,
           autoApplyEnabled: aiAutoApply,
           autoApplyRequireAllAboveThreshold: aiAutoApplyRequireThreshold,
           autoApplyRequireNoNewEntities: aiAutoApplyRequireNoNew,
@@ -439,6 +461,28 @@
       }
     } catch {
       aiSaveStatus = { type: 'error', message: 'Failed to revert prompt' };
+    }
+  }
+
+  async function revertTagAliases() {
+    try {
+      aiTagAliasMap = '';
+      const saveRes = await fetch('/api/v1/ai/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagAliasMap: undefined }),
+      });
+      if (saveRes.ok) {
+        const freshRes = await fetch('/api/v1/ai/config');
+        const freshJson = await freshRes.json();
+        if (freshRes.ok) {
+          aiTagAliasMap = freshJson.data?.tagAliasMap ?? '';
+        }
+        isDefaultTagAliasMap = true;
+        showRevertResetTagAliases = true;
+      }
+    } catch {
+      aiSaveStatus = { type: 'error', message: 'Failed to revert tag alias map' };
     }
   }
 
@@ -1132,6 +1176,92 @@
               rows="12"
               class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none"
             ></textarea>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Tag Alias Mapping -->
+      <div class="border-soft mt-6 border-t pt-4">
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" bind:checked={aiTagAliasesEnabled} class="accent-accent h-4 w-4 rounded" />
+            <span class="text-ink text-sm font-medium">Enable Tag Alias Mapping</span>
+          </label>
+        </div>
+        <p class="text-muted mt-1 text-xs">
+          Maps variant tag names to canonical tags in the LLM prompt. When enabled, the alias map is included in the system prompt to normalise tag suggestions.
+        </p>
+
+        {#if aiTagAliasesEnabled}
+          <div class="mt-3">
+            <button
+              onclick={() => (showTagAliases = !showTagAliases)}
+              class="text-accent hover:text-accent-hover text-sm font-medium"
+            >
+              {showTagAliases ? 'Hide' : 'Show'}
+              {isDefaultTagAliasMap ? '' : 'Custom '}Tag Alias Map
+            </button>
+            {#if !isDefaultTagAliasMap && !showTagAliases}
+              <p class="text-warn mt-1 text-xs">Differs from recommended default</p>
+            {/if}
+            {#if showTagAliases}
+              <div class="mt-3 space-y-3">
+                {#if !isDefaultTagAliasMap}
+                  <div class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm">
+                    <AlertTriangle class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                      <p>
+                        Your tag alias map has been customised and differs from the latest recommended default.
+                      </p>
+                      <button
+                        onclick={revertTagAliases}
+                        class="text-accent hover:text-accent-hover mt-2 text-xs font-medium"
+                      >
+                        Revert to Default
+                      </button>
+                    </div>
+                  </div>
+                {/if}
+                {#if showRevertResetTagAliases}
+                  <div class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm">
+                    <Check class="text-success mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                      <p>
+                        Tag alias map reverted to default. Reset processing history so documents can be reprocessed with the updated aliases?
+                      </p>
+                      <div class="mt-2 flex gap-2">
+                        <button
+                          onclick={async () => {
+                            showRevertResetTagAliases = false;
+                            await showResetConfirmation();
+                          }}
+                          class="text-accent hover:text-accent-hover text-xs font-medium"
+                        >
+                          Reset History
+                        </button>
+                        <button
+                          onclick={() => {
+                            showRevertResetTagAliases = false;
+                            aiSaveStatus = { type: 'success', message: 'Tag alias map reverted to default' };
+                          }}
+                          class="text-muted hover:text-ink text-xs font-medium"
+                        >
+                          Skip
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                {/if}
+                <textarea
+                  bind:value={aiTagAliasMap}
+                  rows="16"
+                  class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none {tagAliasValidationError ? 'border-red-500' : ''}"
+                ></textarea>
+                {#if tagAliasValidationError}
+                  <p class="text-xs text-red-600">{tagAliasValidationError}</p>
+                {/if}
+              </div>
+            {/if}
           </div>
         {/if}
       </div>
