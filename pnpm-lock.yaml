@@ -123,6 +123,9 @@ importers:
       sqlite-vec:
         specifier: ^0.1.7
         version: 0.1.9
+      yaml:
+        specifier: ^2.8.3
+        version: 2.8.3
       zod:
         specifier: ^4.0.0
         version: 4.3.6
