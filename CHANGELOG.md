@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.15.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.14.0...v0.15.0) (2026-04-04)
+
+
+### Features
+
+* **ai-processing:** make stats cards clickable with navigation links ([fd52af7](https://github.com/rknightion/paperless-ngx-dedupe/commit/fd52af770693d233df5dc80f859a39bb078ca257))
+* **ai-processing:** preserve limit query parameter when navigating between tabs ([ebead51](https://github.com/rknightion/paperless-ngx-dedupe/commit/ebead51539145ee205789f6206e92820b0a12d47))
+* **ai:** adaptive TPM throttle for batch processing ([68b43d2](https://github.com/rknightion/paperless-ngx-dedupe/commit/68b43d212399a5c829a1684edea193fa23d1f7c6))
+* **ai:** add flex processing support — ~50% cost reduction for background extraction ([54cc852](https://github.com/rknightion/paperless-ngx-dedupe/commit/54cc852a59363acb229ccd7247b7cf25b946d3c0))
+* **ai:** apply ~50% flex processing discount to cost estimates ([8eeff19](https://github.com/rknightion/paperless-ngx-dedupe/commit/8eeff1964af2db6cbdcecb6aeeb2090466289fb1))
+* remove Anthropic API support, add OpenAI flex processing ([912e185](https://github.com/rknightion/paperless-ngx-dedupe/commit/912e185d833e5e0037b5765f1a0bacfd9fd62445))
+* **ui:** add flex processing toggle with tooltip to AI settings ([ffddc25](https://github.com/rknightion/paperless-ngx-dedupe/commit/ffddc255c1bb36ac961f8f943c2986f4c12074ca))
+
+
+### Miscellaneous
+
+* remove remaining Anthropic references from root package.json, e2e tests, and UI components ([8a25e12](https://github.com/rknightion/paperless-ngx-dedupe/commit/8a25e12e8ba1425dba2c104f6138596664236759))
+
+
+### Documentation
+
+* add design spec for removing Anthropic and adding flex processing ([1d0e30b](https://github.com/rknightion/paperless-ngx-dedupe/commit/1d0e30bbc4c3b5e29a4cd8dcd3bb7f519e4304ee))
+* add implementation plan for removing Anthropic and adding flex processing ([6d0d766](https://github.com/rknightion/paperless-ngx-dedupe/commit/6d0d76622fe7f71d969b55fd5e19f84fc08078e4))
+* remove Anthropic references and document flex processing ([3dba4a0](https://github.com/rknightion/paperless-ngx-dedupe/commit/3dba4a008976de7152d444758afd7cfdbb86bfae))
+
+
+### Refactoring
+
+* **ai:** remove Anthropic provider and simplify factory to OpenAI-only ([a2a22df](https://github.com/rknightion/paperless-ngx-dedupe/commit/a2a22dfd71afac055a358fc219a8798832f832a5))
+* **ai:** remove Anthropic references from config, batch, prompt, costs, and tests ([0567fed](https://github.com/rknightion/paperless-ngx-dedupe/commit/0567fedbf4e0a6a64a01fd111e9225f2244c1091))
+* format multi-line destructuring and function calls for consistency ([8602238](https://github.com/rknightion/paperless-ngx-dedupe/commit/8602238a88f1dfdc8d4c781e0d27835804bf1208))
+* **rag:** remove Anthropic provider support, always use OpenAI ([88533ef](https://github.com/rknightion/paperless-ngx-dedupe/commit/88533eff3ff8fe0d1274d82c49148a0157e6e137))
+* **ui:** remove provider filter dropdown — only OpenAI is supported ([4b0acc2](https://github.com/rknightion/paperless-ngx-dedupe/commit/4b0acc26bd7550e6bfdb4037e1034dc0f4424f8e))
+* **web:** remove Anthropic from UI, endpoints, and dependencies ([06752b6](https://github.com/rknightion/paperless-ngx-dedupe/commit/06752b68452cd5bd48332c5ab3163d9fe8143979))
+
 ## [0.14.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.13.0...v0.14.0) (2026-04-04)
 
 
