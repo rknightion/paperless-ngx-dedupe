@@ -33,6 +33,7 @@
   let detailLoadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   let isReverting = $state(false);
   let isRetryingApply = $state(false);
+  let isRetryingExtraction = $state(false);
 
   // ── Derived ──
   const totalPages = $derived(Math.ceil(data.total / data.limit));
@@ -71,6 +72,16 @@
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '--';
     return new Date(dateStr).toLocaleString();
+  }
+
+  function isExtractionFailure(result: AiResultDetail): boolean {
+    if (result.appliedStatus !== 'failed') return false;
+    return (
+      !result.suggestedTitle &&
+      !result.suggestedCorrespondent &&
+      !result.suggestedDocumentType &&
+      result.suggestedTags.length === 0
+    );
   }
 
   // ── Navigation ──
@@ -181,6 +192,25 @@
       addToast('error', 'Retry failed');
     } finally {
       isRetryingApply = false;
+    }
+  }
+
+  async function handleRetryExtraction(id: string) {
+    isRetryingExtraction = true;
+    try {
+      const res = await fetch(`/api/v1/ai/results/${id}/reprocess`, { method: 'POST' });
+      if (res.ok) {
+        addToast('success', 'Extraction retried successfully');
+        closeDetail();
+        invalidateAll();
+      } else {
+        const json = await res.json();
+        addToast('error', json.error?.message ?? 'Retry extraction failed');
+      }
+    } catch {
+      addToast('error', 'Retry extraction failed');
+    } finally {
+      isRetryingExtraction = false;
     }
   }
 </script>
@@ -447,7 +477,11 @@
                 <div class="flex items-start gap-2">
                   <AlertCircle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
                   <div class="min-w-0 space-y-1">
-                    <p class="text-ember text-sm font-semibold">Apply Failed</p>
+                    <p class="text-ember text-sm font-semibold">
+                      {isExtractionFailure(activeResultDetail)
+                        ? 'Extraction Failed'
+                        : 'Apply Failed'}
+                    </p>
                     {#if activeResultDetail.failureType}
                       <span
                         class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
@@ -532,19 +566,35 @@
           {/if}
           {#if activeResultDetail.appliedStatus === 'failed'}
             <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
-              <button
-                onclick={() => activeResultDetail && handleRetryApply(activeResultDetail.id)}
-                disabled={isRetryingApply}
-                class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
-              >
-                {#if isRetryingApply}
-                  <Loader2 class="h-4 w-4 animate-spin" />
-                  Retrying...
-                {:else}
-                  <RefreshCw class="h-4 w-4" />
-                  Retry Apply
-                {/if}
-              </button>
+              {#if isExtractionFailure(activeResultDetail)}
+                <button
+                  onclick={() => activeResultDetail && handleRetryExtraction(activeResultDetail.id)}
+                  disabled={isRetryingExtraction}
+                  class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {#if isRetryingExtraction}
+                    <Loader2 class="h-4 w-4 animate-spin" />
+                    Retrying Extraction...
+                  {:else}
+                    <RefreshCw class="h-4 w-4" />
+                    Retry Extraction
+                  {/if}
+                </button>
+              {:else}
+                <button
+                  onclick={() => activeResultDetail && handleRetryApply(activeResultDetail.id)}
+                  disabled={isRetryingApply}
+                  class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {#if isRetryingApply}
+                    <Loader2 class="h-4 w-4 animate-spin" />
+                    Retrying...
+                  {:else}
+                    <RefreshCw class="h-4 w-4" />
+                    Retry Apply
+                  {/if}
+                </button>
+              {/if}
             </div>
           {/if}
         {/if}

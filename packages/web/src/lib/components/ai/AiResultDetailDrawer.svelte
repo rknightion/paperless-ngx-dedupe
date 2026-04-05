@@ -36,6 +36,7 @@
       options: { allowClearing: boolean; createMissingEntities: boolean },
     ) => Promise<void>;
     onreject: (id: string) => Promise<void>;
+    onreprocess: (id: string) => Promise<void>;
     onclose: () => void;
   }
 
@@ -45,6 +46,7 @@
     extractEnabled = { title: true, correspondent: true, documentType: true, tags: true },
     onapply,
     onreject,
+    onreprocess,
     onclose,
   }: Props = $props();
 
@@ -54,6 +56,7 @@
   let isApplying = $state(false);
   let isRejecting = $state(false);
   let isRetrying = $state(false);
+  let isReprocessing = $state(false);
 
   const activeId = $derived(getActiveResultId());
   const detail = $derived(getActiveResultDetail());
@@ -66,6 +69,16 @@
   });
 
   const checkedCount = $derived(checkedFields().length);
+
+  const isExtractionFailure = $derived(() => {
+    if (!detail || detail.appliedStatus !== 'failed') return false;
+    return (
+      !detail.suggestedTitle &&
+      !detail.suggestedCorrespondent &&
+      !detail.suggestedDocumentType &&
+      detail.suggestedTags.length === 0
+    );
+  });
 
   // Fetch document content when active result changes
   $effect(() => {
@@ -176,6 +189,16 @@
       });
     } finally {
       isRetrying = false;
+    }
+  }
+
+  async function handleReprocess(): Promise<void> {
+    if (!activeId) return;
+    isReprocessing = true;
+    try {
+      await onreprocess(activeId);
+    } finally {
+      isReprocessing = false;
     }
   }
 
@@ -298,7 +321,9 @@
           <div class="flex items-start gap-2">
             <AlertCircle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
             <div class="min-w-0 space-y-1">
-              <p class="text-ember text-sm font-semibold">Apply Failed</p>
+              <p class="text-ember text-sm font-semibold">
+                {isExtractionFailure() ? 'Extraction Failed' : 'Apply Failed'}
+              </p>
               {#if detail.failureType}
                 <span
                   class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
@@ -461,19 +486,35 @@
 
     {#if detail.appliedStatus === 'failed'}
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
-        <button
-          onclick={handleRetry}
-          disabled={isRetrying}
-          class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
-        >
-          {#if isRetrying}
-            <Loader2 class="h-4 w-4 animate-spin" />
-            Retrying...
-          {:else}
-            <RefreshCw class="h-4 w-4" />
-            Retry Apply
-          {/if}
-        </button>
+        {#if isExtractionFailure()}
+          <button
+            onclick={handleReprocess}
+            disabled={isReprocessing}
+            class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+          >
+            {#if isReprocessing}
+              <Loader2 class="h-4 w-4 animate-spin" />
+              Retrying Extraction...
+            {:else}
+              <RefreshCw class="h-4 w-4" />
+              Retry Extraction
+            {/if}
+          </button>
+        {:else}
+          <button
+            onclick={handleRetry}
+            disabled={isRetrying}
+            class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+          >
+            {#if isRetrying}
+              <Loader2 class="h-4 w-4 animate-spin" />
+              Retrying...
+            {:else}
+              <RefreshCw class="h-4 w-4" />
+              Retry Apply
+            {/if}
+          </button>
+        {/if}
       </div>
     {/if}
   {/if}

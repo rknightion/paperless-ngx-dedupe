@@ -174,7 +174,7 @@ export function trackWizardExecuted(opts: {
 // ── AI Processing ────────────────────────────────────────────────────
 
 export function trackAiResultAction(
-  action: 'apply' | 'reject',
+  action: 'apply' | 'reject' | 'reprocess',
   opts: { resultId: string; fieldsApplied?: string[] },
 ) {
   pushEvent('ai_result_action', {
