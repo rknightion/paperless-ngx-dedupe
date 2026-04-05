@@ -97,6 +97,7 @@ export interface AiStats {
   rejected: number;
   reverted: number;
   failed: number;
+  skipped: number;
   totalPromptTokens: number;
   totalCompletionTokens: number;
   totalEstimatedCostUsd: number;
@@ -407,6 +408,7 @@ export function getAiStats(db: AppDatabase): AiStats {
     rejected: 0,
     reverted: 0,
     failed: 0,
+    skipped: 0,
     totalPromptTokens: 0,
     totalCompletionTokens: 0,
     totalEstimatedCostUsd: costRow?.totalCost ?? 0,
@@ -435,6 +437,9 @@ export function getAiStats(db: AppDatabase): AiStats {
         break;
       case 'failed':
         stats.failed += row.count;
+        break;
+      case 'skipped':
+        stats.skipped += row.count;
         break;
     }
   }

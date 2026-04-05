@@ -501,6 +501,48 @@
       </div>
     </section>
   {/if}
+
+  {#if data.skipped.items.length > 0}
+    <section class="space-y-3">
+      <div class="space-y-0.5">
+        <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+          <AlertCircle class="text-warn h-5 w-5" />
+          Skipped Documents
+        </h2>
+        <p class="text-muted text-sm">
+          {data.skipped.total} document{data.skipped.total === 1 ? '' : 's'} skipped due to missing OCR
+          text
+        </p>
+      </div>
+
+      <div class="space-y-2">
+        {#each data.skipped.items as result (result.id)}
+          <div class="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0 flex-1 space-y-1">
+              <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
+              <div class="space-y-1">
+                <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
+                  >No OCR Text</span
+                >
+                <p class="text-muted text-xs">
+                  This document has no text content. Run OCR in Paperless-NGX, then re-sync and
+                  retry.
+                </p>
+              </div>
+            </div>
+            <button
+              onclick={() => handleDismissOne(result.id)}
+              disabled={layoutCtx.isProcessing}
+              class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              <CircleX class="h-3.5 w-3.5" />
+              Dismiss
+            </button>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
 </div>
 
 {#if costEstimate}

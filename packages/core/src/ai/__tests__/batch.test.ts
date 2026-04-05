@@ -133,10 +133,14 @@ describe('processBatch', () => {
     expect(result.failed).toBe(0);
     expect(result.processed).toBe(3);
 
-    // Verify results were inserted into DB
+    // Verify results were inserted into DB (2 succeeded + 1 skipped)
     const dbResults = db.select().from(aiProcessingResult).all();
-    expect(dbResults).toHaveLength(2);
-    expect(dbResults.every((r) => r.appliedStatus === 'pending_review')).toBe(true);
+    expect(dbResults).toHaveLength(3);
+    const succeeded = dbResults.filter((r) => r.appliedStatus === 'pending_review');
+    const skipped = dbResults.filter((r) => r.appliedStatus === 'skipped');
+    expect(succeeded).toHaveLength(2);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0].failureType).toBe('no_content');
   });
 
   it('skips documents without content (result.skipped incremented)', async () => {
@@ -159,6 +163,13 @@ describe('processBatch', () => {
     expect(result.skipped).toBe(1);
     expect(result.succeeded).toBe(0);
     expect(provider.extract).not.toHaveBeenCalled();
+
+    // Verify a skipped record was written to the DB
+    const dbResults = db.select().from(aiProcessingResult).all();
+    expect(dbResults).toHaveLength(1);
+    expect(dbResults[0].appliedStatus).toBe('skipped');
+    expect(dbResults[0].failureType).toBe('no_content');
+    expect(dbResults[0].errorMessage).toContain('no OCR text');
   });
 
   it('returns zero-document result for empty DB', async () => {

@@ -117,6 +117,8 @@
         return 'text-muted bg-canvas';
       case 'failed':
         return 'bg-ember-light text-ember';
+      case 'skipped':
+        return 'bg-warn-light text-warn';
       default:
         return 'bg-canvas text-muted';
     }
@@ -128,6 +130,8 @@
         return 'Pending Review';
       case 'failed':
         return 'Failed';
+      case 'skipped':
+        return 'Skipped';
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -314,6 +318,21 @@
           <X class="h-4 w-4" />
         </button>
       </div>
+
+      <!-- Skipped Banner -->
+      {#if detail.appliedStatus === 'skipped' && detail.errorMessage}
+        <div class="bg-warn-light/30 border-warn/20 space-y-2 rounded-lg border p-4">
+          <div class="flex items-start gap-2">
+            <AlertCircle class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+            <div class="min-w-0 space-y-1">
+              <p class="text-warn text-sm font-semibold">No OCR Text</p>
+              <p class="text-muted text-xs">
+                This document has no text content. Run OCR in Paperless-NGX, then re-sync and retry.
+              </p>
+            </div>
+          </div>
+        </div>
+      {/if}
 
       <!-- Error Banner -->
       {#if detail.appliedStatus === 'failed' && detail.errorMessage}

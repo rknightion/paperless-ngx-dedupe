@@ -28,12 +28,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     },
     aiEnabled: locals.config.AI_ENABLED,
     aiConfig,
-    isDefaultPrompt: aiConfig
-      ? aiConfig.promptTemplate === DEFAULT_EXTRACTION_PROMPT
-      : true,
-    isDefaultTagAliasMap: aiConfig
-      ? aiConfig.tagAliasMap === DEFAULT_TAG_ALIAS_MAP
-      : true,
+    isDefaultPrompt: aiConfig ? aiConfig.promptTemplate === DEFAULT_EXTRACTION_PROMPT : true,
+    isDefaultTagAliasMap: aiConfig ? aiConfig.tagAliasMap === DEFAULT_TAG_ALIAS_MAP : true,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
     ragEnabled: locals.config.RAG_ENABLED,
     ragConfig: locals.config.RAG_ENABLED ? getRagConfig(locals.db) : null,

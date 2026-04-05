@@ -45,5 +45,6 @@ export const AiAppliedStatus = {
   REJECTED: 'rejected',
   PARTIAL: 'partial',
   FAILED: 'failed',
+  SKIPPED: 'skipped',
 } as const;
 export type AiAppliedStatus = (typeof AiAppliedStatus)[keyof typeof AiAppliedStatus];

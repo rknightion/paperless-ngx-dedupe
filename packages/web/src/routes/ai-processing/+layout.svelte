@@ -51,7 +51,7 @@
   const isResumable = $derived(stats.unprocessed > 0 && stats.totalProcessed > 0);
 
   // Tab badge counts
-  const queueCount = $derived(stats.unprocessed + stats.failed);
+  const queueCount = $derived(stats.unprocessed + stats.failed + stats.skipped);
   const pendingReviewCount = $derived(stats.pendingReview);
   const historyCount = $derived(stats.applied + stats.rejected + stats.reverted);
 
@@ -409,6 +409,23 @@
         </p>
       </div>
     </a>
+    {#if stats.skipped > 0}
+      <a
+        href="/ai-processing/queue"
+        class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+        data-sveltekit-preload-data
+      >
+        <div class="bg-warn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+          <AlertCircle class="text-warn h-4 w-4" />
+        </div>
+        <div class="min-w-0">
+          <p class="text-muted text-xs font-medium">Skipped</p>
+          <p class="text-ink text-lg font-semibold tabular-nums">
+            {stats.skipped.toLocaleString()}
+          </p>
+        </div>
+      </a>
+    {/if}
   </div>
 
   <!-- Progress Panel -->

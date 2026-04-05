@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
+# Bulk-create correspondents in Paperless-NGX.
+# Each correspondent is created with matching_algorithm=0 (None) so Paperless
+# won't auto-assign it to documents.
 set -euo pipefail
 
+# Replace these with your own Paperless-NGX instance URL and API token. Yeah, I inadvertedly committed mine to git but dw they're long since rotated :) 
 PAPERLESS_URL="https://paperless.rob-knight.net"
 PAPERLESS_TOKEN="1b0da29518f40d117070765c0df588049a7c0073"
 
