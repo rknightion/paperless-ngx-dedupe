@@ -11,6 +11,7 @@
     running: 'bg-accent-light text-accent',
     completed: 'bg-success-light text-success',
     failed: 'bg-ember-light text-ember',
+    paused: 'bg-violet-100 text-violet-700',
     cancelled: 'bg-gray-100 text-gray-600',
     false_positive: 'bg-gray-100 text-gray-600',
     ignored: 'bg-accent-light text-accent',

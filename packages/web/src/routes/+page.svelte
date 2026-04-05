@@ -13,12 +13,29 @@
     trackSyncStarted,
     trackSyncCompleted,
     trackSyncFailed,
+    trackSyncPaused,
+    trackSyncResumed,
+    trackSyncCancelled,
     trackAnalysisStarted,
     trackAnalysisCompleted,
     trackAnalysisFailed,
+    trackAnalysisPaused,
+    trackAnalysisResumed,
+    trackAnalysisCancelled,
     startTimer,
   } from '$lib/faro-events';
-  import { FileStack, AlertCircle, Clock, Brain, CheckCircle, Zap, CircleDot } from 'lucide-svelte';
+  import {
+    FileStack,
+    AlertCircle,
+    Clock,
+    Brain,
+    CheckCircle,
+    Zap,
+    CircleDot,
+    Pause,
+    Play,
+    X,
+  } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -31,6 +48,9 @@
   let syncForce = $state(false);
   let syncPurge = $state(false);
   let syncSSE: { close: () => void } | null = null;
+  let syncJobId = $state<string | null>(null);
+  let syncJobStatus = $state<string>('');
+  const isSyncPaused = $derived(syncJobStatus === 'paused');
 
   // Analysis state
   let isAnalyzing = $state(false);
@@ -39,6 +59,9 @@
   let analysisMessage = $state('');
   let analysisForce = $state(false);
   let analysisSSE: { close: () => void } | null = null;
+  let analysisJobId = $state<string | null>(null);
+  let analysisJobStatus = $state<string>('');
+  const isAnalysisPaused = $derived(analysisJobStatus === 'paused');
 
   function formatDate(iso: string | null): string {
     if (!iso) return 'Never';
@@ -75,23 +98,34 @@
         trackSyncFailed(syncMessage);
         return;
       }
+      syncJobId = json.data.jobId;
+      syncJobStatus = 'running';
       syncSSE = connectJobSSE(json.data.jobId, {
         onProgress: (d) => {
           syncProgress = d.progress;
           syncPhaseProgress = d.phaseProgress;
           syncMessage = d.message ?? '';
+          syncJobStatus = d.status ?? 'running';
         },
-        onComplete: () => {
+        onComplete: (d) => {
           isSyncing = false;
-          syncProgress = 1;
+          syncJobId = null;
+          syncJobStatus = '';
+          if (d.status === 'cancelled') {
+            syncMessage = 'Sync cancelled';
+          } else {
+            syncProgress = 1;
+            syncMessage = 'Sync complete';
+            trackSyncCompleted();
+          }
           syncPhaseProgress = undefined;
-          syncMessage = 'Sync complete';
-          trackSyncCompleted();
           stopSyncTimer();
           invalidateAll();
         },
         onError: () => {
           isSyncing = false;
+          syncJobId = null;
+          syncJobStatus = '';
           syncMessage = 'Connection lost';
           trackSyncFailed('Connection lost');
         },
@@ -122,23 +156,34 @@
         trackAnalysisFailed(analysisMessage);
         return;
       }
+      analysisJobId = json.data.jobId;
+      analysisJobStatus = 'running';
       analysisSSE = connectJobSSE(json.data.jobId, {
         onProgress: (d) => {
           analysisProgress = d.progress;
           analysisPhaseProgress = d.phaseProgress;
           analysisMessage = d.message ?? '';
+          analysisJobStatus = d.status ?? 'running';
         },
-        onComplete: () => {
+        onComplete: (d) => {
           isAnalyzing = false;
-          analysisProgress = 1;
+          analysisJobId = null;
+          analysisJobStatus = '';
+          if (d.status === 'cancelled') {
+            analysisMessage = 'Analysis cancelled';
+          } else {
+            analysisProgress = 1;
+            analysisMessage = 'Analysis complete';
+            trackAnalysisCompleted();
+          }
           analysisPhaseProgress = undefined;
-          analysisMessage = 'Analysis complete';
-          trackAnalysisCompleted();
           stopAnalysisTimer();
           invalidateAll();
         },
         onError: () => {
           isAnalyzing = false;
+          analysisJobId = null;
+          analysisJobStatus = '';
           analysisMessage = 'Connection lost';
           trackAnalysisFailed('Connection lost');
         },
@@ -147,6 +192,27 @@
       isAnalyzing = false;
       analysisMessage = 'Failed to start analysis';
       trackAnalysisFailed('Failed to start analysis');
+    }
+  }
+
+  async function togglePause(jobId: string, isPaused: boolean, type: 'sync' | 'analysis') {
+    const endpoint = isPaused ? 'resume' : 'pause';
+    await fetch(`/api/v1/jobs/${jobId}/${endpoint}`, { method: 'POST' });
+    if (type === 'sync') {
+      if (isPaused) trackSyncResumed();
+      else trackSyncPaused();
+    } else {
+      if (isPaused) trackAnalysisResumed();
+      else trackAnalysisPaused();
+    }
+  }
+
+  async function cancelActiveJob(jobId: string, type: 'sync' | 'analysis') {
+    await fetch(`/api/v1/jobs/${jobId}/cancel`, { method: 'POST' });
+    if (type === 'sync') {
+      trackSyncCancelled();
+    } else {
+      trackAnalysisCancelled();
     }
   }
 
@@ -162,22 +228,29 @@
 
       if (syncStatus.data?.isSyncing && syncStatus.data?.currentJobId) {
         isSyncing = true;
-        syncMessage = 'Sync in progress...';
+        syncJobId = syncStatus.data.currentJobId;
+        syncJobStatus = syncStatus.data.isPaused ? 'paused' : 'running';
+        syncMessage = syncStatus.data.isPaused ? 'Sync paused' : 'Sync in progress...';
         syncSSE = connectJobSSE(syncStatus.data.currentJobId, {
           onProgress: (d) => {
             syncProgress = d.progress;
             syncPhaseProgress = d.phaseProgress;
             syncMessage = d.message ?? '';
+            syncJobStatus = d.status ?? 'running';
           },
-          onComplete: () => {
+          onComplete: (d) => {
             isSyncing = false;
-            syncProgress = 1;
+            syncJobId = null;
+            syncJobStatus = '';
+            syncMessage = d.status === 'cancelled' ? 'Sync cancelled' : 'Sync complete';
+            syncProgress = d.status === 'cancelled' ? syncProgress : 1;
             syncPhaseProgress = undefined;
-            syncMessage = 'Sync complete';
             invalidateAll();
           },
           onError: () => {
             isSyncing = false;
+            syncJobId = null;
+            syncJobStatus = '';
             syncMessage = 'Connection lost';
           },
         });
@@ -185,22 +258,31 @@
 
       if (analysisStatus.data?.isAnalyzing && analysisStatus.data?.currentJobId) {
         isAnalyzing = true;
-        analysisMessage = 'Analysis in progress...';
+        analysisJobId = analysisStatus.data.currentJobId;
+        analysisJobStatus = analysisStatus.data.isPaused ? 'paused' : 'running';
+        analysisMessage = analysisStatus.data.isPaused
+          ? 'Analysis paused'
+          : 'Analysis in progress...';
         analysisSSE = connectJobSSE(analysisStatus.data.currentJobId, {
           onProgress: (d) => {
             analysisProgress = d.progress;
             analysisPhaseProgress = d.phaseProgress;
             analysisMessage = d.message ?? '';
+            analysisJobStatus = d.status ?? 'running';
           },
-          onComplete: () => {
+          onComplete: (d) => {
             isAnalyzing = false;
-            analysisProgress = 1;
+            analysisJobId = null;
+            analysisJobStatus = '';
+            analysisMessage = d.status === 'cancelled' ? 'Analysis cancelled' : 'Analysis complete';
+            analysisProgress = d.status === 'cancelled' ? analysisProgress : 1;
             analysisPhaseProgress = undefined;
-            analysisMessage = 'Analysis complete';
             invalidateAll();
           },
           onError: () => {
             isAnalyzing = false;
+            analysisJobId = null;
+            analysisJobStatus = '';
             analysisMessage = 'Connection lost';
           },
         });
@@ -345,8 +427,29 @@
             progress={syncProgress}
             phaseProgress={syncPhaseProgress}
             message={syncMessage}
+            paused={isSyncPaused}
           />
         </div>
+        {#if syncJobId}
+          <div class="mt-2 flex items-center gap-2">
+            <button
+              onclick={() => togglePause(syncJobId!, isSyncPaused, 'sync')}
+              class="border-soft text-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition"
+            >
+              {#if isSyncPaused}
+                <Play class="h-3.5 w-3.5" /> Resume
+              {:else}
+                <Pause class="h-3.5 w-3.5" /> Pause
+              {/if}
+            </button>
+            <button
+              onclick={() => cancelActiveJob(syncJobId!, 'sync')}
+              class="text-ember hover:bg-ember/10 inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-xs font-medium transition"
+            >
+              <X class="h-3.5 w-3.5" /> Cancel
+            </button>
+          </div>
+        {/if}
       {/if}
       <div class="text-muted mt-3 text-xs">
         Last sync: {formatDate(data.dashboard.lastSyncAt)}
@@ -434,8 +537,29 @@
             progress={analysisProgress}
             phaseProgress={analysisPhaseProgress}
             message={analysisMessage}
+            paused={isAnalysisPaused}
           />
         </div>
+        {#if analysisJobId}
+          <div class="mt-2 flex items-center gap-2">
+            <button
+              onclick={() => togglePause(analysisJobId!, isAnalysisPaused, 'analysis')}
+              class="border-soft text-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition"
+            >
+              {#if isAnalysisPaused}
+                <Play class="h-3.5 w-3.5" /> Resume
+              {:else}
+                <Pause class="h-3.5 w-3.5" /> Pause
+              {/if}
+            </button>
+            <button
+              onclick={() => cancelActiveJob(analysisJobId!, 'analysis')}
+              class="text-ember hover:bg-ember/10 inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-xs font-medium transition"
+            >
+              <X class="h-3.5 w-3.5" /> Cancel
+            </button>
+          </div>
+        {/if}
       {/if}
       <div class="text-muted mt-3 text-xs">
         Last analysis: {formatDate(data.dashboard.lastAnalysisAt)}

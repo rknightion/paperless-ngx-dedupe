@@ -46,6 +46,18 @@ export function trackSyncFailed(error: string) {
   pushEvent('sync_failed', { error });
 }
 
+export function trackSyncPaused() {
+  pushEvent('sync_paused');
+}
+
+export function trackSyncResumed() {
+  pushEvent('sync_resumed');
+}
+
+export function trackSyncCancelled() {
+  pushEvent('sync_cancelled');
+}
+
 // ── Analysis ─────────────────────────────────────────────────────────
 
 export function trackAnalysisStarted(opts: { force: boolean }) {
@@ -59,6 +71,18 @@ export function trackAnalysisCompleted() {
 
 export function trackAnalysisFailed(error: string) {
   pushEvent('analysis_failed', { error });
+}
+
+export function trackAnalysisPaused() {
+  pushEvent('analysis_paused');
+}
+
+export function trackAnalysisResumed() {
+  pushEvent('analysis_resumed');
+}
+
+export function trackAnalysisCancelled() {
+  pushEvent('analysis_cancelled');
 }
 
 // ── Duplicates ───────────────────────────────────────────────────────
