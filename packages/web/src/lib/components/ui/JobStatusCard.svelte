@@ -159,12 +159,13 @@
       <span class="text-ink text-sm font-medium">{typeLabels[type] ?? type}</span>
       <StatusBadge {status} />
     </div>
-    {#if status === 'running' && progress !== undefined}
+    {#if (status === 'running' || status === 'paused') && progress !== undefined}
       <div class="mt-2">
         <ProgressBar
           {progress}
           phaseProgress={phaseProgress ?? undefined}
           message={progressMessage ?? ''}
+          paused={status === 'paused'}
         />
       </div>
     {/if}

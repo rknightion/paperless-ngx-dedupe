@@ -4,9 +4,10 @@
     phaseProgress?: number;
     message?: string;
     animated?: boolean;
+    paused?: boolean;
   }
 
-  let { progress, phaseProgress, message = '', animated = true }: Props = $props();
+  let { progress, phaseProgress, message = '', animated = true, paused = false }: Props = $props();
 
   // Bar width uses overall progress (never jumps backward)
   let barPct = $derived(Math.round(Math.min(1, Math.max(0, progress)) * 100));
@@ -17,12 +18,21 @@
   );
 
   let isIndeterminate = $derived(barPct === 0 && animated);
-  let barColor = $derived(barPct >= 100 ? 'bg-success' : 'bg-accent');
+  let barColor = $derived(barPct >= 100 ? 'bg-success' : paused ? 'bg-amber-400' : 'bg-accent');
 
   // ETA calculation from phaseProgress rate
   let etaStartTime = $state<number | null>(null);
   let etaStartPhase = $state<number | null>(null);
   let etaText = $state('');
+
+  // Reset ETA when paused so it recalculates fresh after resume
+  $effect(() => {
+    if (paused) {
+      etaStartTime = null;
+      etaStartPhase = null;
+      etaText = '';
+    }
+  });
 
   $effect(() => {
     if (phaseProgress == null || phaseProgress <= 0 || phaseProgress >= 1) {
