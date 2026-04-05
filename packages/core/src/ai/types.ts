@@ -42,6 +42,9 @@ Naming guidelines
   - Use periodicity tags when indicated and available: "monthly", "quarterly", "annual"; use "renewal" when the document is a renewal/reminder.
   - Avoid redundant tags that duplicate the correspondent or document type text; avoid over-broad or synonymous tags when a more specific existing tag fits.
   - You may return up to 5 tags only when no suitable existing tag covers a clear, document-specific concept. Tags must be concise, lowercase, and hyphenated (e.g., "tax-2024", "insurance", "medical", "home-improvement").
+  - When suggesting tags, consult the alias map below. If a tag you would suggest appears as an alias (listed under a key), use the key instead.
+
+{{tag_aliases}}
 
 Rules
 - STRONGLY prefer matching existing entries from the provided lists (correspondents, document types, tags). Only suggest NEW correspondents/types when there is clearly no match.
