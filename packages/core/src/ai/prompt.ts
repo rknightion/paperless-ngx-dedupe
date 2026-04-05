@@ -13,6 +13,8 @@ export interface BuildPromptOptions {
   includeCorrespondents: boolean;
   includeDocumentTypes: boolean;
   includeTags: boolean;
+  tagAliasesEnabled: boolean;
+  tagAliasMap: string;
 }
 
 /**
@@ -37,6 +39,8 @@ export function buildPromptParts(options: BuildPromptOptions): PromptParts {
     includeCorrespondents,
     includeDocumentTypes,
     includeTags,
+    tagAliasesEnabled,
+    tagAliasMap,
   } = options;
 
   const correspondentList =
@@ -54,10 +58,15 @@ export function buildPromptParts(options: BuildPromptOptions): PromptParts {
       ? sortedInsensitive(existingTags).join(', ')
       : '(none provided)';
 
+  const tagAliasBlock = tagAliasesEnabled
+    ? `Tag Alias Map:\n<alias_map>\n${tagAliasMap}\n</alias_map>`
+    : 'No tag alias mappings are configured.';
+
   const systemPrompt = promptTemplate
     .replace('{{existing_correspondents}}', correspondentList)
     .replace('{{existing_document_types}}', documentTypeList)
     .replace('{{existing_tags}}', tagList)
+    .replace('{{tag_aliases}}', tagAliasBlock)
     .trim();
 
   const userPrompt = `Document Title\n${documentTitle}\n\nDocument Text\n${documentContent}`;
