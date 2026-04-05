@@ -25,7 +25,12 @@ export function createJob(db: AppDatabase, type: JobType): string {
   const existing = db
     .select({ id: job.id })
     .from(job)
-    .where(and(eq(job.type, type), or(eq(job.status, 'running'), eq(job.status, 'pending'))))
+    .where(
+      and(
+        eq(job.type, type),
+        or(eq(job.status, 'running'), eq(job.status, 'pending'), eq(job.status, 'paused')),
+      ),
+    )
     .get();
 
   if (existing) {
@@ -127,7 +132,7 @@ export function recoverStaleJobs(db: AppDatabase): number {
       errorMessage: 'Job interrupted by application restart',
       completedAt: new Date().toISOString(),
     })
-    .where(or(eq(job.status, 'running'), eq(job.status, 'pending')))
+    .where(or(eq(job.status, 'running'), eq(job.status, 'pending'), eq(job.status, 'paused')))
     .run();
 
   return result.changes;
@@ -139,6 +144,30 @@ export function clearJobHistory(db: AppDatabase): number {
     .where(or(eq(job.status, 'completed'), eq(job.status, 'failed'), eq(job.status, 'cancelled')))
     .run();
   return result.changes;
+}
+
+export function pauseJob(db: AppDatabase, id: string): boolean {
+  const existing = db.select({ status: job.status }).from(job).where(eq(job.id, id)).get();
+
+  if (!existing || existing.status !== 'running') {
+    return false;
+  }
+
+  db.update(job).set({ status: 'paused' }).where(eq(job.id, id)).run();
+
+  return true;
+}
+
+export function resumeJob(db: AppDatabase, id: string): boolean {
+  const existing = db.select({ status: job.status }).from(job).where(eq(job.id, id)).get();
+
+  if (!existing || existing.status !== 'paused') {
+    return false;
+  }
+
+  db.update(job).set({ status: 'running' }).where(eq(job.id, id)).run();
+
+  return true;
 }
 
 export function cancelJob(db: AppDatabase, id: string): boolean {
