@@ -1184,12 +1184,17 @@
       <div class="border-soft mt-6 border-t pt-4">
         <div class="flex items-center gap-3">
           <label class="flex items-center gap-2">
-            <input type="checkbox" bind:checked={aiTagAliasesEnabled} class="accent-accent h-4 w-4 rounded" />
+            <input
+              type="checkbox"
+              bind:checked={aiTagAliasesEnabled}
+              class="accent-accent h-4 w-4 rounded"
+            />
             <span class="text-ink text-sm font-medium">Enable Tag Alias Mapping</span>
           </label>
         </div>
         <p class="text-muted mt-1 text-xs">
-          Maps variant tag names to canonical tags in the LLM prompt. When enabled, the alias map is included in the system prompt to normalise tag suggestions.
+          Maps variant tag names to canonical tags in the LLM prompt. When enabled, the alias map is
+          included in the system prompt to normalise tag suggestions.
         </p>
 
         {#if aiTagAliasesEnabled}
@@ -1207,11 +1212,14 @@
             {#if showTagAliases}
               <div class="mt-3 space-y-3">
                 {#if !isDefaultTagAliasMap}
-                  <div class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm">
+                  <div
+                    class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+                  >
                     <AlertTriangle class="text-warn mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <p>
-                        Your tag alias map has been customised and differs from the latest recommended default.
+                        Your tag alias map has been customised and differs from the latest
+                        recommended default.
                       </p>
                       <button
                         onclick={revertTagAliases}
@@ -1223,11 +1231,14 @@
                   </div>
                 {/if}
                 {#if showRevertResetTagAliases}
-                  <div class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm">
+                  <div
+                    class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+                  >
                     <Check class="text-success mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <p>
-                        Tag alias map reverted to default. Reset processing history so documents can be reprocessed with the updated aliases?
+                        Tag alias map reverted to default. Reset processing history so documents can
+                        be reprocessed with the updated aliases?
                       </p>
                       <div class="mt-2 flex gap-2">
                         <button
@@ -1242,7 +1253,10 @@
                         <button
                           onclick={() => {
                             showRevertResetTagAliases = false;
-                            aiSaveStatus = { type: 'success', message: 'Tag alias map reverted to default' };
+                            aiSaveStatus = {
+                              type: 'success',
+                              message: 'Tag alias map reverted to default',
+                            };
                           }}
                           class="text-muted hover:text-ink text-xs font-medium"
                         >
@@ -1255,7 +1269,9 @@
                 <textarea
                   bind:value={aiTagAliasMap}
                   rows="16"
-                  class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none {tagAliasValidationError ? 'border-red-500' : ''}"
+                  class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none {tagAliasValidationError
+                    ? 'border-red-500'
+                    : ''}"
                 ></textarea>
                 {#if tagAliasValidationError}
                   <p class="text-xs text-red-600">{tagAliasValidationError}</p>

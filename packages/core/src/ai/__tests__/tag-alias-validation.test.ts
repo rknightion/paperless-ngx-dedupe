@@ -47,7 +47,10 @@ describe('validateTagAliasYaml', () => {
   });
 
   it('accepts an alias map with many entries', () => {
-    const yaml = Array.from({ length: 50 }, (_, i) => `tag-${i}:\n  - alias-${i}-a\n  - alias-${i}-b`).join('\n');
+    const yaml = Array.from(
+      { length: 50 },
+      (_, i) => `tag-${i}:\n  - alias-${i}-a\n  - alias-${i}-b`,
+    ).join('\n');
     const result = validateTagAliasYaml(yaml);
     expect(result.valid).toBe(true);
   });
