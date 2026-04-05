@@ -318,7 +318,11 @@
   </header>
 
   <!-- Stats Cards -->
-  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+  <div
+    class="grid grid-cols-2 gap-3 sm:grid-cols-3 {stats.skipped > 0
+      ? 'lg:grid-cols-7'
+      : 'lg:grid-cols-6'}"
+  >
     <a
       href="/ai-processing/history"
       class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
