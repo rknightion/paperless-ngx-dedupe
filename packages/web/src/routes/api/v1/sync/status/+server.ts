@@ -9,16 +9,18 @@ export const GET: RequestHandler = async ({ locals }) => {
   // Read sync state
   const state = db.select().from(syncState).where(eq(syncState.id, 'singleton')).get();
 
-  // Check for running sync job
+  // Check for running/pending/paused sync job
   const runningJobs = listJobs(db, { type: JobType.SYNC, status: JobStatus.RUNNING, limit: 1 });
   const pendingJobs = listJobs(db, { type: JobType.SYNC, status: JobStatus.PENDING, limit: 1 });
-  const activeJob = runningJobs[0] ?? pendingJobs[0] ?? null;
+  const pausedJobs = listJobs(db, { type: JobType.SYNC, status: JobStatus.PAUSED, limit: 1 });
+  const activeJob = runningJobs[0] ?? pendingJobs[0] ?? pausedJobs[0] ?? null;
 
   return apiSuccess({
     lastSyncAt: state?.lastSyncAt ?? null,
     lastSyncDocumentCount: state?.lastSyncDocumentCount ?? null,
     totalDocuments: state?.totalDocuments ?? 0,
     isSyncing: activeJob !== null,
+    isPaused: activeJob?.status === 'paused',
     currentJobId: activeJob?.id ?? null,
   });
 };

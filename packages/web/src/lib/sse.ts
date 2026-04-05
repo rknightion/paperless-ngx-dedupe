@@ -1,7 +1,12 @@
 import { browser } from '$app/environment';
 
 export interface SSECallbacks {
-  onProgress?: (data: { progress: number; phaseProgress?: number; message?: string }) => void;
+  onProgress?: (data: {
+    progress: number;
+    phaseProgress?: number;
+    message?: string;
+    status?: string;
+  }) => void;
   onComplete?: (data: { status: string; result?: unknown }) => void;
   onError?: (error: Event) => void;
 }
