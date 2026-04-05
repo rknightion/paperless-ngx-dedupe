@@ -17,6 +17,7 @@ export type JobType = (typeof JobType)[keyof typeof JobType];
 export const JobStatus = {
   PENDING: 'pending',
   RUNNING: 'running',
+  PAUSED: 'paused',
   COMPLETED: 'completed',
   FAILED: 'failed',
   CANCELLED: 'cancelled',

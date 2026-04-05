@@ -101,6 +101,8 @@ export {
   completeJob,
   failJob,
   cancelJob,
+  pauseJob,
+  resumeJob,
   clearJobHistory,
   recoverStaleJobs,
   JobAlreadyRunningError,
