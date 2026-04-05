@@ -1,5 +1,10 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { getAiConfig, setAiConfig, aiConfigSchema, validateTagAliasYaml } from '@paperless-dedupe/core';
+import {
+  getAiConfig,
+  setAiConfig,
+  aiConfigSchema,
+  validateTagAliasYaml,
+} from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -26,7 +31,10 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   if (typeof result.data.tagAliasMap === 'string') {
     const aliasValidation = validateTagAliasYaml(result.data.tagAliasMap);
     if (!aliasValidation.valid) {
-      return apiError(ErrorCode.VALIDATION_FAILED, `Invalid tag alias map: ${aliasValidation.error}`);
+      return apiError(
+        ErrorCode.VALIDATION_FAILED,
+        `Invalid tag alias map: ${aliasValidation.error}`,
+      );
     }
   }
 
