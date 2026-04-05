@@ -33,8 +33,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const unprocessed = getUnprocessedDocuments(locals.db, limit, offset, filters);
   const failed = getAiResults(locals.db, { status: 'failed' }, 50, 0);
+  const skipped = getAiResults(locals.db, { status: 'skipped' }, 50, 0);
   const aiConfig = getAiConfig(locals.db);
   const facets = getUnprocessedDocumentFacets(locals.db);
 
-  return { unprocessed, failed, reasoningEffort: aiConfig.reasoningEffort, facets, filters, limit };
+  return {
+    unprocessed,
+    failed,
+    skipped,
+    reasoningEffort: aiConfig.reasoningEffort,
+    facets,
+    filters,
+    limit,
+  };
 };

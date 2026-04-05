@@ -76,6 +76,7 @@
       <option value="partial">Partial</option>
       <option value="rejected">Rejected</option>
       <option value="failed">Failed</option>
+      <option value="skipped">Skipped</option>
     </select>
 
     <div class="relative">

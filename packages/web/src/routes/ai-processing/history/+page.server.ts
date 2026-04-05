@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const offset = Math.max(parseInt(url.searchParams.get('offset') ?? '0', 10) || 0, 0);
 
   // History shows applied, partial, rejected, and reverted statuses
-  const historyStatuses = ['applied', 'partial', 'rejected', 'reverted', 'failed'];
+  const historyStatuses = ['applied', 'partial', 'rejected', 'reverted', 'failed', 'skipped'];
   const activeStatus = status && historyStatuses.includes(status) ? status : undefined;
 
   const results = getAiResults(locals.db, { status: activeStatus, search, sort }, limit, offset);

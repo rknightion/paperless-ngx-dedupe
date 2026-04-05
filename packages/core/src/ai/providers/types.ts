@@ -49,7 +49,9 @@ export type AiFailureType =
   | 'timeout'
   | 'max_tokens'
   | 'rate_limit'
-  | 'quota_exceeded';
+  | 'quota_exceeded'
+  | 'no_content'
+  | 'no_suggestions';
 
 export class AiExtractionError extends Error {
   constructor(
