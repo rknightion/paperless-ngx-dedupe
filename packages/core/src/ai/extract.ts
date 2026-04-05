@@ -16,6 +16,8 @@ export interface ProcessDocumentOptions {
   includeCorrespondents: boolean;
   includeDocumentTypes: boolean;
   includeTags: boolean;
+  tagAliasesEnabled: boolean;
+  tagAliasMap: string;
   reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
 }
 
@@ -34,6 +36,8 @@ export async function processDocument(
     includeCorrespondents: options.includeCorrespondents,
     includeDocumentTypes: options.includeDocumentTypes,
     includeTags: options.includeTags,
+    tagAliasesEnabled: options.tagAliasesEnabled,
+    tagAliasMap: options.tagAliasMap,
   });
 
   const startMs = performance.now();

@@ -100,6 +100,8 @@ export async function reprocessSingleResult(
       includeCorrespondents: config.includeCorrespondents,
       includeDocumentTypes: config.includeDocumentTypes,
       includeTags: config.includeTags,
+      tagAliasesEnabled: config.tagAliasesEnabled,
+      tagAliasMap: config.tagAliasMap,
       reasoningEffort: config.reasoningEffort,
     });
   } catch (error) {
