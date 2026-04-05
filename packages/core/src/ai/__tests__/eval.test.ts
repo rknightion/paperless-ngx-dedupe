@@ -200,6 +200,8 @@ describe.skipIf(!process.env.AI_EVAL)('AI eval suite', () => {
       includeCorrespondents: true,
       includeDocumentTypes: true,
       includeTags: true,
+      tagAliasesEnabled: false,
+      tagAliasMap: '',
     });
 
     return result.response;

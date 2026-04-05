@@ -41,6 +41,8 @@ const baseOptions = {
   includeCorrespondents: true,
   includeDocumentTypes: true,
   includeTags: true,
+  tagAliasesEnabled: false,
+  tagAliasMap: '',
 };
 
 describe('processDocument', () => {

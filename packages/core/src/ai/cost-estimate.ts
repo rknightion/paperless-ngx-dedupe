@@ -150,6 +150,8 @@ export async function estimateProcessingCost(
     includeCorrespondents: config.includeCorrespondents,
     includeDocumentTypes: config.includeDocumentTypes,
     includeTags: config.includeTags,
+    tagAliasesEnabled: config.tagAliasesEnabled,
+    tagAliasMap: config.tagAliasMap,
   });
   const systemPromptTokens = await countTokens(systemPrompt, config.model);
 

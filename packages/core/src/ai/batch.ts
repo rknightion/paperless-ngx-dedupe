@@ -199,10 +199,39 @@ export async function processBatch(
 
         // Pre-partition: handle skipped docs (no content) upfront
         const processableDocs: typeof docs = [];
+        const now = new Date().toISOString();
         for (const doc of docs) {
           if (!doc.fullText) {
             result.skipped++;
             result.processed++;
+
+            // Write a skipped record so the doc leaves the unprocessed queue
+            db.insert(aiProcessingResult)
+              .values({
+                documentId: doc.id,
+                paperlessId: doc.paperlessId,
+                provider: provider.provider,
+                model: config.model,
+                errorMessage: 'Document has no OCR text content available for AI processing',
+                failureType: 'no_content',
+                appliedStatus: 'skipped',
+                currentTitle: doc.title,
+                currentCorrespondent: doc.correspondent,
+                currentDocumentType: doc.documentType,
+                currentTagsJson: doc.tagsJson,
+                createdAt: now,
+              })
+              .onConflictDoUpdate({
+                target: aiProcessingResult.documentId,
+                set: {
+                  errorMessage: 'Document has no OCR text content available for AI processing',
+                  failureType: 'no_content',
+                  appliedStatus: 'skipped',
+                  createdAt: now,
+                },
+              })
+              .run();
+
             aiDocumentsTotal().add(1, { outcome: 'skipped', 'gen_ai.system': provider.provider });
             logger.warn(
               { documentId: doc.id, title: doc.title },
@@ -253,6 +282,8 @@ export async function processBatch(
               includeCorrespondents: config.includeCorrespondents,
               includeDocumentTypes: config.includeDocumentTypes,
               includeTags: config.includeTags,
+              tagAliasesEnabled: config.tagAliasesEnabled,
+              tagAliasMap: config.tagAliasMap,
               reasoningEffort: config.reasoningEffort,
             });
 
