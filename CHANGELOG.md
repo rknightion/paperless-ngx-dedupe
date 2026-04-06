@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.16.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.15.0...v0.16.0) (2026-04-06)
+
+
+### Features
+
+* **ai:** add default tag alias map constant ([2b9607e](https://github.com/rknightion/paperless-ngx-dedupe/commit/2b9607e3fa890f91851c5c30f8b40eb302dc1104))
+* **ai:** add quota exceeded error handling for OpenAI provider ([e233d22](https://github.com/rknightion/paperless-ngx-dedupe/commit/e233d22a154351fe07eb91a98a17881da87bd4bc))
+* **ai:** add reprocess functionality for failed AI extractions ([c30c0c6](https://github.com/rknightion/paperless-ngx-dedupe/commit/c30c0c6619ef43ad32b3e7c40ce553298c928294))
+* **ai:** add skipped status for documents without OCR content ([afe1407](https://github.com/rknightion/paperless-ngx-dedupe/commit/afe1407cc2847eceb37038206d903104126390b3))
+* **ai:** add tag alias YAML validation utility with tests ([f1dc3a3](https://github.com/rknightion/paperless-ngx-dedupe/commit/f1dc3a3a278502220fd43ce003f1a4a0353dfc67))
+* **ai:** add tag_aliases placeholder to default extraction prompt ([bee0a05](https://github.com/rknightion/paperless-ngx-dedupe/commit/bee0a0590c6bf9f0e653c995f111de9dd6f3a79e))
+* **ai:** add tagAliasesEnabled and tagAliasMap config fields ([c8cf609](https://github.com/rknightion/paperless-ngx-dedupe/commit/c8cf609d0d4a3be112e81eb2512f6c4294fac122))
+* **ai:** adjust stats grid layout to accommodate skipped documents ([28da10d](https://github.com/rknightion/paperless-ngx-dedupe/commit/28da10d1105fd9981517771acb7c05b2b5f348be))
+* **ai:** export DEFAULT_TAG_ALIAS_MAP and validateTagAliasYaml from core ([f2fff98](https://github.com/rknightion/paperless-ngx-dedupe/commit/f2fff98916b3681daa51e7767a12644b9734d7e4))
+* **ai:** improve progress reporting during rate limit pauses ([82e8809](https://github.com/rknightion/paperless-ngx-dedupe/commit/82e88091fcdaafa2a1bc98d465b5ea17b401f163))
+* **ai:** resolve {{tag_aliases}} placeholder in buildPromptParts ([8d8de34](https://github.com/rknightion/paperless-ngx-dedupe/commit/8d8de3410f368cfa0a9ecee7ce81387ca40a8f88))
+* **ai:** thread tag alias config through processDocument and callers ([d98a2c8](https://github.com/rknightion/paperless-ngx-dedupe/commit/d98a2c88193aa840a7aac3c6931b964cba31d4ac))
+* **api:** add server-side YAML validation for tag alias map ([5834e09](https://github.com/rknightion/paperless-ngx-dedupe/commit/5834e09cfe0cda124693fb68c98eba966c22d68b))
+* **jobs:** add pause and resume functionality for job management ([cdcb93c](https://github.com/rknightion/paperless-ngx-dedupe/commit/cdcb93c2cc177885c5d74f841d38def3dd8d2f53))
+* **jobs:** implement pause/resume support in worker execution ([87e4e47](https://github.com/rknightion/paperless-ngx-dedupe/commit/87e4e47436bc291a66967520991c8cbcbe455e2c))
+* **web:** add isDefaultTagAliasMap to settings page data ([9dce0b1](https://github.com/rknightion/paperless-ngx-dedupe/commit/9dce0b14c095d2272dcce207382f110df2933580))
+* **web:** add pause/resume API endpoints for job control ([285d84c](https://github.com/rknightion/paperless-ngx-dedupe/commit/285d84ca063392774ff1664cc0f7318007d806f4))
+* **web:** add pause/resume UI controls and status display ([d4a1978](https://github.com/rknightion/paperless-ngx-dedupe/commit/d4a19780e1fc7f66d9238088013b27bd97e7b53d))
+* **web:** add tag alias mapping UI to settings page ([6c0f486](https://github.com/rknightion/paperless-ngx-dedupe/commit/6c0f486d1cb1a3aff130af1582ba7f01426f44a4))
+* **web:** update SSE interface and status tracking for paused jobs ([3e7ff27](https://github.com/rknightion/paperless-ngx-dedupe/commit/3e7ff27097b39963a0b16f29067e74b29088ee52))
+
+
+### Bug Fixes
+
+* address code review findings for tag alias mapping ([0976202](https://github.com/rknightion/paperless-ngx-dedupe/commit/0976202a810871938d9cf5448e0c33d0b37392b1))
+* use direct yaml import in settings page instead of core barrel export ([a7780ab](https://github.com/rknightion/paperless-ngx-dedupe/commit/a7780ab74e3e10a5dede45ad9df927b1818a3148))
+
+
+### Miscellaneous
+
+* add Paperless correspondent management script ([0879b37](https://github.com/rknightion/paperless-ngx-dedupe/commit/0879b37070e0e6cf1297f5a1c6ccf9306287ebfb))
+* add yaml dependency to core package ([0803c9a](https://github.com/rknightion/paperless-ngx-dedupe/commit/0803c9ad37fcefc0c4ab90982b896fd6379c11b5))
+* **deps:** lock file maintenance ([#299](https://github.com/rknightion/paperless-ngx-dedupe/issues/299)) ([36558bf](https://github.com/rknightion/paperless-ngx-dedupe/commit/36558bf30390880e28802fc8312148b3e0cb338c))
+* **deps:** update dependency vite to v8.0.4 ([#300](https://github.com/rknightion/paperless-ngx-dedupe/issues/300)) ([73f4b50](https://github.com/rknightion/paperless-ngx-dedupe/commit/73f4b5042bd08e3041ab55ede38fa7d49807b309))
+* **deps:** update dependency vite to v8.0.5 ([#301](https://github.com/rknightion/paperless-ngx-dedupe/issues/301)) ([435a02b](https://github.com/rknightion/paperless-ngx-dedupe/commit/435a02b22eea3d8139a37de8b67e2c7fb8157b1b))
+* fix formatting in tag alias mapping files ([533667b](https://github.com/rknightion/paperless-ngx-dedupe/commit/533667bdaba9dfb2512915c1f6efae151cdbc94b))
+
+
+### Documentation
+
+* add tag alias mapping design spec ([e5c45d6](https://github.com/rknightion/paperless-ngx-dedupe/commit/e5c45d69c8292ea5c437f4d9617854ae61dac608))
+* add tag alias mapping implementation plan ([e723f0c](https://github.com/rknightion/paperless-ngx-dedupe/commit/e723f0c56882225370836606e0932efb17827025))
+
 ## [0.15.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.14.0...v0.15.0) (2026-04-04)
 
 
