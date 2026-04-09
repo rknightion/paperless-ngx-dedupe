@@ -48,7 +48,7 @@
   "devDependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@fontsource/geist-sans": "^5.2.5",
-    "@grafana/faro-rollup-plugin": "^0.9.0",
+    "@grafana/faro-rollup-plugin": "^0.10.0",
     "@playwright/test": "^1.58.2",
     "@sveltejs/adapter-node": "^5.0.0",
     "@sveltejs/kit": "^2.0.0",
