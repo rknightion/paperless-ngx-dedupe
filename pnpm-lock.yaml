@@ -249,8 +249,8 @@ importers:
         specifier: ^5.2.5
         version: 5.2.5
       '@grafana/faro-rollup-plugin':
-        specifier: ^0.9.0
-        version: 0.9.1
+        specifier: ^0.10.0
+        version: 0.10.0
       '@playwright/test':
         specifier: ^1.58.2
         version: 1.59.1
@@ -864,14 +864,14 @@ packages:
   '@fontsource/geist-sans@5.2.5':
     resolution: {integrity: sha512-anllOHyJbElRs9fV15TeDRqAeb1IKm4bSknPl6ZMoyPTx1BBy7logudcUwpNjmQLkzn4Q0JGQLRCUKJYoyST6A==}
 
-  '@grafana/faro-bundlers-shared@0.9.1':
-    resolution: {integrity: sha512-L/PtQk3T2FFYOgjkG6Ajs44MWkFwLlu+lhfPOwE2tsSBW7OT2a+drRh8FRXkwTVpV/eVd2WNc1nTsPDyDes7Sw==}
+  '@grafana/faro-bundlers-shared@0.10.0':
+    resolution: {integrity: sha512-pukuCidmXHqCVduy5B+19KxLa10hM0TNppxQFK9tRRLSgl0STPgNyel5Vhr2ytRPPff46aN8nQ9NwgnhvdsJNg==}
 
   '@grafana/faro-core@2.3.1':
     resolution: {integrity: sha512-htDKO0YFKr0tfntrPoM151vOPSZzmP6oE0+0MDvbI1WDaBW4erXmYi3feGJLWDXt5/vZBg9iQRmZoRzTLTTcOA==}
 
-  '@grafana/faro-rollup-plugin@0.9.1':
-    resolution: {integrity: sha512-2eCWnpdBb41uGrYIjMoUhIwzqRtlWgN6SqwVF6R8HM4dsxblsu4ZdTilKb0uUhUw8hTxz9M1RvqP6sKA4j0qVw==}
+  '@grafana/faro-rollup-plugin@0.10.0':
+    resolution: {integrity: sha512-JTZqT4+dTcbTi/P5jfMQA52i00pXp/2+IQQP/dz9kgLl22qMe06no+8R6/qzrvcCOIvyZf07AFUrL34XUhUCwg==}
 
   '@grafana/faro-web-sdk@2.3.1':
     resolution: {integrity: sha512-WMfErl2YSP+CcfcobMpCdK6apX86hc8bymMXsvYLQpBBkQ0KJjIilEQS/YXd+g/cg6F1kwbeweisBKluNNy5sA==}
@@ -3984,7 +3984,7 @@ snapshots:
 
   '@fontsource/geist-sans@5.2.5': {}
 
-  '@grafana/faro-bundlers-shared@0.9.1':
+  '@grafana/faro-bundlers-shared@0.10.0':
     dependencies:
       ansis: 4.2.0
       tar: 7.5.13
@@ -3994,9 +3994,9 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/otlp-transformer': 0.213.0(@opentelemetry/api@1.9.1)
 
-  '@grafana/faro-rollup-plugin@0.9.1':
+  '@grafana/faro-rollup-plugin@0.10.0':
     dependencies:
-      '@grafana/faro-bundlers-shared': 0.9.1
+      '@grafana/faro-bundlers-shared': 0.10.0
       cross-fetch: 4.1.0
       magic-string: 0.30.21
       rollup: 4.60.1
