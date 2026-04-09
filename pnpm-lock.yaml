@@ -198,7 +198,7 @@ importers:
         version: 0.4.11
       ai:
         specifier: ^6.0.136
-        version: 6.0.154(zod@4.3.6)
+        version: 6.0.156(zod@4.3.6)
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.8.0
@@ -296,8 +296,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/gateway@3.0.94':
-    resolution: {integrity: sha512-uDDwLZhCkvC89crVS3S90D5L7AcVN8WriGuYVNYgVAaVcvy3Mthy3R9ICfzG75BObhz6pm2FWnhxDfNRK+t69Q==}
+  '@ai-sdk/gateway@3.0.95':
+    resolution: {integrity: sha512-ZmUNNbZl3V42xwQzPaNUi+s8eqR2lnrxf0bvB6YbLXpLjHYv0k2Y78t12cNOfY0bxGeuVVTLyk856uLuQIuXEQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -2117,8 +2117,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  ai@6.0.154:
-    resolution: {integrity: sha512-HfKJKCTJsDZxqrIUDSVnBQ7DpQlx5WI4ExqtLd7Bl70epLmvkpc/HYMzU1hP9W+g9VEAcvZo4fbMqc3v5D+9gQ==}
+  ai@6.0.156:
+    resolution: {integrity: sha512-uyi/5LYbugHQxZsR2PeAFOZEL4WqKkzZw4pv0nQvvdgxgVOsM7snOmGrYkp5fShxH/vnd08SXvHCVTX7oUW7xQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3632,7 +3632,7 @@ snapshots:
       '@vercel/oidc': 3.1.0
       zod: 4.3.6
 
-  '@ai-sdk/gateway@3.0.94(zod@4.3.6)':
+  '@ai-sdk/gateway@3.0.95(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.23(zod@4.3.6)
@@ -5409,9 +5409,9 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       zod: 4.3.6
 
-  ai@6.0.154(zod@4.3.6):
+  ai@6.0.156(zod@4.3.6):
     dependencies:
-      '@ai-sdk/gateway': 3.0.94(zod@4.3.6)
+      '@ai-sdk/gateway': 3.0.95(zod@4.3.6)
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.23(zod@4.3.6)
       '@opentelemetry/api': 1.9.1
