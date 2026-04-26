@@ -220,7 +220,7 @@ export {
   StatusTransitionError,
   PrimaryMemberError,
 } from './queries/duplicates.js';
-export { getConfig, setConfig, setConfigBatch } from './queries/config.js';
+export { getConfig, redactSensitiveConfig, setConfig, setConfigBatch } from './queries/config.js';
 
 // Telemetry
 export {

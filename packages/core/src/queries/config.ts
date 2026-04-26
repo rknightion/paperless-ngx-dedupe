@@ -1,11 +1,26 @@
 import type { AppDatabase } from '../db/client.js';
 import { appConfig } from '../schema/sqlite/app.js';
 
+const SENSITIVE_CONFIG_KEYS = new Set([
+  'paperless.apiToken',
+  'paperless.username',
+  'paperless.password',
+]);
+
 export function getConfig(db: AppDatabase): Record<string, string> {
   const rows = db.select().from(appConfig).all();
   const result: Record<string, string> = {};
   for (const row of rows) {
     result[row.key] = row.value;
+  }
+  return result;
+}
+
+export function redactSensitiveConfig(config: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (SENSITIVE_CONFIG_KEYS.has(key)) continue;
+    result[key] = value;
   }
   return result;
 }
