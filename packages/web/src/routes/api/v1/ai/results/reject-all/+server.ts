@@ -6,6 +6,12 @@ export const POST: RequestHandler = async ({ locals }) => {
   if (!locals.config.AI_ENABLED) {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
   }
+  if (!locals.config.AI_BULK_ALL_ENABLED) {
+    return apiError(
+      ErrorCode.UNAUTHORIZED,
+      'Bulk reject-all is disabled. Set AI_BULK_ALL_ENABLED=true to enable it.',
+    );
+  }
 
   const resultIds = getPendingAiResultIds(locals.db);
 
