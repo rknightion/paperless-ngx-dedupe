@@ -1,5 +1,5 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { getConfig, setConfig, setConfigBatch } from '@paperless-dedupe/core';
+import { getConfig, redactSensitiveConfig, setConfig, setConfigBatch } from '@paperless-dedupe/core';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
@@ -14,7 +14,7 @@ const batchConfigSchema = z.object({
 
 export const GET: RequestHandler = async ({ locals }) => {
   const config = getConfig(locals.db);
-  return apiSuccess(config);
+  return apiSuccess(redactSensitiveConfig(config));
 };
 
 export const PUT: RequestHandler = async ({ request, locals }) => {
@@ -30,14 +30,14 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   if (singleResult.success) {
     setConfig(locals.db, singleResult.data.key, singleResult.data.value);
     const config = getConfig(locals.db);
-    return apiSuccess(config);
+    return apiSuccess(redactSensitiveConfig(config));
   }
 
   const batchResult = batchConfigSchema.safeParse(body);
   if (batchResult.success) {
     setConfigBatch(locals.db, batchResult.data.settings);
     const config = getConfig(locals.db);
-    return apiSuccess(config);
+    return apiSuccess(redactSensitiveConfig(config));
   }
 
   return apiError(
