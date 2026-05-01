@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import { getConfig, setConfig, setConfigBatch } from '../config.js';
+import { getConfig, redactSensitiveConfig, setConfig, setConfigBatch } from '../config.js';
 
 // Migration seeds schema_ddl_hash and schema_ddl_snapshot into app_config.
 // These tests account for those pre-existing rows.
@@ -122,5 +122,23 @@ describe('setConfigBatch', () => {
     expect(config.c).toBe('3');
     expect(config.d).toBe('4');
     expect(Object.keys(config).length).toBe(baseKeyCount + 4);
+  });
+});
+
+describe('redactSensitiveConfig', () => {
+  it('removes sensitive paperless credential keys', () => {
+    const redacted = redactSensitiveConfig({
+      'paperless.url': 'http://localhost:8000',
+      'paperless.apiToken': 'token-123',
+      'paperless.username': 'alice',
+      'paperless.password': 'super-secret',
+      theme: 'dark',
+    });
+
+    expect(redacted['paperless.url']).toBe('http://localhost:8000');
+    expect(redacted.theme).toBe('dark');
+    expect(redacted['paperless.apiToken']).toBeUndefined();
+    expect(redacted['paperless.username']).toBeUndefined();
+    expect(redacted['paperless.password']).toBeUndefined();
   });
 });
