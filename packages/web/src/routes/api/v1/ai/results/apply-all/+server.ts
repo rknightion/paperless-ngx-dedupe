@@ -13,6 +13,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.config.AI_ENABLED) {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
   }
+  if (!locals.config.AI_BULK_ALL_ENABLED) {
+    return apiError(
+      ErrorCode.UNAUTHORIZED,
+      'Bulk apply-all is disabled. Set AI_BULK_ALL_ENABLED=true to enable it.',
+    );
+  }
 
   let allowClearing = false;
   let createMissingEntities = true;
