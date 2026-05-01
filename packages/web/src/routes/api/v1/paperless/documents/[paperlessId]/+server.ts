@@ -1,4 +1,6 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
+import { document, duplicateMember } from '@paperless-dedupe/core';
+import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 
 function buildAuthHeaders(config: App.Locals['config']): Record<string, string> {
@@ -18,6 +20,20 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
   const paperlessId = Number(params.paperlessId);
   if (isNaN(paperlessId) || paperlessId <= 0) {
     return apiError(ErrorCode.BAD_REQUEST, 'Invalid paperless document ID');
+  }
+
+  const duplicateMemberMatch = locals.db
+    .select({ id: duplicateMember.id })
+    .from(duplicateMember)
+    .innerJoin(document, eq(duplicateMember.documentId, document.id))
+    .where(eq(document.paperlessId, paperlessId))
+    .get();
+
+  if (!duplicateMemberMatch) {
+    return apiError(
+      ErrorCode.NOT_FOUND,
+      'Document is not part of a duplicate group member and cannot be deleted here',
+    );
   }
 
   const config = locals.config;
