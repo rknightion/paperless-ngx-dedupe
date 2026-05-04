@@ -13,7 +13,7 @@ importers:
     dependencies:
       openai:
         specifier: ^6.33.0
-        version: 6.34.0(zod@4.3.6)
+        version: 6.34.0(zod@4.4.3)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -128,7 +128,7 @@ importers:
         version: 2.8.3
       zod:
         specifier: ^4.0.0
-        version: 4.3.6
+        version: 4.4.3
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.0
@@ -150,7 +150,7 @@ importers:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^3.0.48
-        version: 3.0.52(zod@4.3.6)
+        version: 3.0.52(zod@4.4.3)
       '@grafana/faro-web-sdk':
         specifier: ^2.3.1
         version: 2.3.1
@@ -198,7 +198,7 @@ importers:
         version: 0.4.11
       ai:
         specifier: ^6.0.136
-        version: 6.0.158(zod@4.3.6)
+        version: 6.0.158(zod@4.4.3)
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.8.0
@@ -228,7 +228,7 @@ importers:
         version: 5.1.7
       openai:
         specifier: ^6.32.0
-        version: 6.34.0(zod@4.3.6)
+        version: 6.34.0(zod@4.4.3)
       pino:
         specifier: ^10.0.0
         version: 10.3.1
@@ -240,7 +240,7 @@ importers:
         version: 2.8.3
       zod:
         specifier: ^4.0.0
-        version: 4.3.6
+        version: 4.4.3
     devDependencies:
       '@fontsource-variable/jetbrains-mono':
         specifier: ^5.2.8
@@ -3626,6 +3626,9 @@ packages:
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
   zrender@6.0.0:
     resolution: {integrity: sha512-41dFXEEXuJpNecuUQq6JlbybmnHaqqpGlbH1yxnA5V9MMP4SbohSVZsJIwz+zdjQXSSlR1Vc34EgH1zxyTDvhg==}
 
@@ -3638,12 +3641,12 @@ snapshots:
       '@vercel/oidc': 3.1.0
       zod: 4.3.6
 
-  '@ai-sdk/gateway@3.0.95(zod@4.3.6)':
+  '@ai-sdk/gateway@3.0.95(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
-      '@ai-sdk/provider-utils': 4.0.23(zod@4.3.6)
+      '@ai-sdk/provider-utils': 4.0.23(zod@4.4.3)
       '@vercel/oidc': 3.1.0
-      zod: 4.3.6
+      zod: 4.4.3
 
   '@ai-sdk/openai@3.0.50(zod@4.3.6)':
     dependencies:
@@ -3651,11 +3654,11 @@ snapshots:
       '@ai-sdk/provider-utils': 4.0.22(zod@4.3.6)
       zod: 4.3.6
 
-  '@ai-sdk/openai@3.0.52(zod@4.3.6)':
+  '@ai-sdk/openai@3.0.52(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
-      '@ai-sdk/provider-utils': 4.0.23(zod@4.3.6)
-      zod: 4.3.6
+      '@ai-sdk/provider-utils': 4.0.23(zod@4.4.3)
+      zod: 4.4.3
 
   '@ai-sdk/provider-utils@4.0.22(zod@4.3.6)':
     dependencies:
@@ -3664,12 +3667,12 @@ snapshots:
       eventsource-parser: 3.0.6
       zod: 4.3.6
 
-  '@ai-sdk/provider-utils@4.0.23(zod@4.3.6)':
+  '@ai-sdk/provider-utils@4.0.23(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
-      zod: 4.3.6
+      zod: 4.4.3
 
   '@ai-sdk/provider@3.0.8':
     dependencies:
@@ -5419,13 +5422,13 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       zod: 4.3.6
 
-  ai@6.0.158(zod@4.3.6):
+  ai@6.0.158(zod@4.4.3):
     dependencies:
-      '@ai-sdk/gateway': 3.0.95(zod@4.3.6)
+      '@ai-sdk/gateway': 3.0.95(zod@4.4.3)
       '@ai-sdk/provider': 3.0.8
-      '@ai-sdk/provider-utils': 4.0.23(zod@4.3.6)
+      '@ai-sdk/provider-utils': 4.0.23(zod@4.4.3)
       '@opentelemetry/api': 1.9.1
-      zod: 4.3.6
+      zod: 4.4.3
 
   ajv@6.14.0:
     dependencies:
@@ -6131,9 +6134,9 @@ snapshots:
     optionalDependencies:
       zod: 4.3.6
 
-  openai@6.34.0(zod@4.3.6):
+  openai@6.34.0(zod@4.4.3):
     optionalDependencies:
-      zod: 4.3.6
+      zod: 4.4.3
 
   optionator@0.9.4:
     dependencies:
@@ -6741,6 +6744,8 @@ snapshots:
   zimmerframe@1.1.4: {}
 
   zod@4.3.6: {}
+
+  zod@4.4.3: {}
 
   zrender@6.0.0:
     dependencies:
