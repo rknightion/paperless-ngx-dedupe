@@ -13,7 +13,7 @@ importers:
     dependencies:
       openai:
         specifier: ^6.33.0
-        version: 6.34.0(zod@4.3.6)
+        version: 6.37.0(zod@4.3.6)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -228,7 +228,7 @@ importers:
         version: 5.1.7
       openai:
         specifier: ^6.32.0
-        version: 6.34.0(zod@4.3.6)
+        version: 6.37.0(zod@4.3.6)
       pino:
         specifier: ^10.0.0
         version: 10.3.1
@@ -2948,8 +2948,8 @@ packages:
       zod:
         optional: true
 
-  openai@6.34.0:
-    resolution: {integrity: sha512-yEr2jdGf4tVFYG6ohmr3pF6VJuveP0EA/sS8TBx+4Eq5NT10alu5zg2dmxMXMgqpihRDQlFGpRt2XwsGj+Fyxw==}
+  openai@6.37.0:
+    resolution: {integrity: sha512-0H5dEGFmmLv6KSd0W1w2nyL8WsLkX6yoLeQpU+dZAOuGcany5qkYQMmj35ZrKgb6yiyYqpUzFOpR8mZQkgqeEQ==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
@@ -6131,7 +6131,7 @@ snapshots:
     optionalDependencies:
       zod: 4.3.6
 
-  openai@6.34.0(zod@4.3.6):
+  openai@6.37.0(zod@4.3.6):
     optionalDependencies:
       zod: 4.3.6
 
