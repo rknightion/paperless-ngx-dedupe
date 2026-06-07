@@ -25,6 +25,13 @@ on:
 permissions:
   contents: read
 
+# Cancel an in-flight scan when the same ref is pushed/synced again, so a burst
+# of Renovate PR updates can't stack up dozens of concurrent scans and exhaust
+# the account-wide GitHub-hosted runner concurrency limit.
+concurrency:
+  group: codacy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   codacy-security-scan:
     permissions:
@@ -33,6 +40,8 @@ jobs:
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     name: Codacy Security Scan
     runs-on: ubuntu-latest
+    # Backstop against a hung scan squatting a runner for GitHub's 6h default.
+    timeout-minutes: 20
     steps:
       # Checkout the repository to the GitHub Actions runner
       - name: Checkout code
@@ -41,6 +50,9 @@ jobs:
       # Execute Codacy Analysis CLI and generate a SARIF output with the security issues identified during the analysis
       - name: Run Codacy Analysis CLI
         uses: codacy/codacy-analysis-cli-action@d43360362776a6789b47b99ae8973510854e2d3d
+        # The CLI runs analysis tools in Docker and can hang indefinitely on
+        # image pulls / Codacy API waits; cap it so the job fails fast instead.
+        timeout-minutes: 15
         with:
           # Check https://github.com/codacy/codacy-analysis-cli#project-token to get your project token from your Codacy repository
           # You can also omit the token and run the tools that support default configurations
