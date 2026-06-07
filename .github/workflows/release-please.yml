@@ -9,12 +9,18 @@ permissions:
   pull-requests: write
   packages: write
 
+# Serialize releases on rapid main pushes (don't cancel an in-flight release/publish).
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   release-please:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
@@ -31,6 +37,7 @@ jobs:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +95,7 @@ jobs:
   docker-merge-release:
     needs: [release-please, docker-build-release]
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Download digests
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
