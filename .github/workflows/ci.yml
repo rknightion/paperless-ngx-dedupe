@@ -347,3 +347,20 @@ jobs:
 
       - name: Push image
         run: docker push ghcr.io/${{ github.repository }}:main
+
+  # Single required status check (the branch ruleset requires only this). if: always() + an explicit
+  # failure check so a failed/cancelled leg fails the gate; main-only publish jobs aren't depended on,
+  # so a PR (where they're skipped) still passes. Renovate automerge waits for this to go green.
+  ci-success:
+    name: ci-success
+    runs-on: ubuntu-24.04
+    if: always()
+    needs: [quality, unit-tests, e2e-tests, docker-build-verify]
+    steps:
+      - name: Fail if any required job did not pass
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "A required job failed or was cancelled: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+      - name: All required jobs passed
+        run: echo "ci-success — ${{ join(needs.*.result, ', ') }}"

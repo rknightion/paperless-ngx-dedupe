@@ -10,6 +10,7 @@
   },
   "automergeType": "pr",
   "platformAutomerge": true,
+  "internalChecksAsSuccess": true,
   "packageRules": [
     {
       "description": "Never automerge release-please PRs - manual review required",
