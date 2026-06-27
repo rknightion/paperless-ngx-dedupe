@@ -130,18 +130,20 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: packages/web
         run: |
-          # The Chrome-for-Testing download from cdn.playwright.dev intermittently stalls; without a
-          # guard a hung download runs out the 30-min job timeout. Kill a stalled attempt after 5 min
-          # and retry (4 attempts, max ~20 min). One success populates the cache so later runs skip this.
-          for attempt in 1 2 3 4; do
+          # The previous "download reaches 100% then hangs until timeout" failures were the Node 24
+          # extract-zip bug in Playwright <1.60 (microsoft/playwright#41000), fixed by pinning
+          # @playwright/test >=1.61. This retry now only guards against genuine cdn.playwright.dev
+          # network flakes; the per-attempt timeout caps any future regression instead of eating the
+          # whole 30-min job. One success populates the cache so later runs skip this.
+          for attempt in 1 2 3; do
             if timeout 300 npx playwright install --with-deps chromium; then
               echo "Playwright browsers installed (attempt $attempt)"
               exit 0
             fi
-            echo "::warning::playwright install attempt $attempt stalled or failed; retrying"
+            echo "::warning::playwright install attempt $attempt failed; retrying"
             sleep 10
           done
-          echo "::error::playwright install failed after 4 attempts"
+          echo "::error::playwright install failed after 3 attempts"
           exit 1
 
       - name: Install Playwright system deps
