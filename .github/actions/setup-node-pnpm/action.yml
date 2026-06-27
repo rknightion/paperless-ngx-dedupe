@@ -1,19 +1,21 @@
 name: Setup Node.js with pnpm
-description: Setup pnpm, Node.js, and restore cached node_modules
+description: Set up pnpm + Node.js and install dependencies (frozen lockfile)
 
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6
+    - uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6.0.0
 
-    - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+    - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         node-version: 24
+        cache: pnpm
 
-    - name: Restore node_modules
-      uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
-      with:
-        path: |
-          node_modules
-          packages/*/node_modules
-        key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+    # Install directly rather than restoring a cross-job node_modules cache: pnpm rewrites
+    # pnpm-lock.yaml during install, so the install job's post-install hashFiles() key never
+    # matched the consumers' fresh-checkout key — every consumer missed the cache and ran with
+    # an empty node_modules (eslint/vitest/playwright "not found"). The pnpm store cache above
+    # keeps this fast.
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
