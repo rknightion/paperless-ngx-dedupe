@@ -24,10 +24,7 @@ export function buildPaperlessAuthHeaders(config: App.Locals['config']): Record<
   return { Authorization: authorization };
 }
 
-export function requirePaperlessAuthorization(
-  request: Request,
-  config: App.Locals['config'],
-) {
+export function requirePaperlessAuthorization(request: Request, config: App.Locals['config']) {
   const expected = getPaperlessAuthorization(config);
   const provided = request.headers.get('authorization');
 

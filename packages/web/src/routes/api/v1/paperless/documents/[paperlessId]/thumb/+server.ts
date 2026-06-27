@@ -1,5 +1,8 @@
 import { apiError, ErrorCode } from '$lib/server/api';
-import { buildPaperlessAuthHeaders, requirePaperlessAuthorization } from '$lib/server/paperless-auth';
+import {
+  buildPaperlessAuthHeaders,
+  requirePaperlessAuthorization,
+} from '$lib/server/paperless-auth';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, locals, request }) => {

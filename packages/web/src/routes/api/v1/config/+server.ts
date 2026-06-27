@@ -1,5 +1,10 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { getConfig, redactSensitiveConfig, setConfig, setConfigBatch } from '@paperless-dedupe/core';
+import {
+  getConfig,
+  redactSensitiveConfig,
+  setConfig,
+  setConfigBatch,
+} from '@paperless-dedupe/core';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
