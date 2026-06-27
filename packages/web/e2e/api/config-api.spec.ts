@@ -17,9 +17,10 @@ test.describe('Config API', () => {
     expect(body.data).toBeDefined();
     expect(typeof body.data).toBe('object');
 
-    // Seed inserts these keys
+    // Seed inserts paperless.url (non-sensitive) and paperless.apiToken (sensitive).
     expect(body.data['paperless.url']).toBe('http://localhost:18923');
-    expect(body.data['paperless.apiToken']).toBe('test-token-e2e');
+    // Sensitive keys must be redacted (omitted) from GET responses — see redactSensitiveConfig.
+    expect(body.data['paperless.apiToken']).toBeUndefined();
   });
 
   test('PUT /api/v1/config updates single config key', async ({ request }) => {
