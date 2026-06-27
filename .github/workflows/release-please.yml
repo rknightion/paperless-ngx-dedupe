@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
 
-permissions: {}  # no workflow-level write; each job grants only what it needs
+permissions: {} # no workflow-level write; each job grants only what it needs
 
 # Serialize releases on rapid main pushes (don't cancel an in-flight release/publish).
 concurrency:
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
-      contents: write      # create releases and tags
+      contents: write # create releases and tags
       pull-requests: write # create/update release PRs
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
