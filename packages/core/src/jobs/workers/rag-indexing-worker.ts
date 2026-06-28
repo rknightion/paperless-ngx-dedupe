@@ -21,12 +21,14 @@ runWorkerTask(async (ctx, onProgress) => {
   const result = await indexDocuments(ctx.db, ctx.sqlite, ragConfig, {
     apiKey: config.AI_OPENAI_API_KEY,
     rebuild: taskData?.rebuild,
-    onProgress: (progress) => {
+    onProgress: async (progress) => {
       const pct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
       const msg = progress.documentTitle
         ? `Indexing: ${progress.documentTitle}`
         : `Indexing documents...`;
-      onProgress(pct, msg);
+      // Await so a CancellationError thrown by the reporter propagates and
+      // actually aborts indexing instead of becoming an unhandled rejection.
+      await onProgress(pct, msg);
     },
   });
 

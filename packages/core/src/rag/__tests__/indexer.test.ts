@@ -85,6 +85,20 @@ describe('indexDocuments', () => {
     expect(result.failed).toBe(0);
   });
 
+  it('awaits onProgress and propagates a thrown error (cancellation)', async () => {
+    seedDocs(db);
+
+    // Simulate a cancellation check that throws on the first progress report.
+    const onProgress = vi.fn(async () => {
+      await Promise.resolve();
+      throw new Error('cancelled');
+    });
+
+    await expect(
+      indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, { apiKey: 'test-key', onProgress }),
+    ).rejects.toThrow('cancelled');
+  });
+
   it('skips already-indexed docs with same content hash', async () => {
     seedDocs(db);
 
@@ -252,7 +266,9 @@ describe('indexDocuments', () => {
 
     await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
       apiKey: 'test-key',
-      onProgress: (progress) => progressCalls.push({ ...progress }),
+      onProgress: (progress) => {
+        progressCalls.push({ ...progress });
+      },
     });
 
     // Should have initial progress (current=0) + per-doc progress

@@ -120,8 +120,7 @@ test.describe('Duplicates List Page', () => {
     await titleCell.click();
 
     // Should navigate to the detail page
-    await expect(page).toHaveURL(/\/duplicates\//);
-    await expect(page.url()).toMatch(/\/duplicates\/[a-zA-Z0-9_-]+$/);
+    await expect(page).toHaveURL(/\/duplicates\/[a-zA-Z0-9_-]+$/);
   });
 
   test('empty state when no duplicates', async ({ page, clearDB }) => {

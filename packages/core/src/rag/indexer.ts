@@ -27,7 +27,7 @@ export interface IndexResult {
 export interface IndexOptions {
   apiKey: string;
   rebuild?: boolean;
-  onProgress?: (progress: IndexProgress) => void;
+  onProgress?: (progress: IndexProgress) => void | Promise<void>;
   /** Override the number of documents processed per group. Defaults to 50. Exposed for testing. */
   docBatchSize?: number;
 }
@@ -84,7 +84,7 @@ export async function indexDocuments(
     .all();
 
   const totalDocs = docs.length;
-  opts.onProgress?.({ phase: 'indexing', current: 0, total: totalDocs });
+  await opts.onProgress?.({ phase: 'indexing', current: 0, total: totalDocs });
 
   const embeddingOpts = embeddingOptionsFromConfig(config, opts.apiKey);
   const docBatchSize = opts.docBatchSize ?? DOC_BATCH_SIZE;
@@ -95,7 +95,7 @@ export async function indexDocuments(
   for (let i = 0; i < docs.length; i++) {
     const doc = docs[i];
 
-    opts.onProgress?.({
+    await opts.onProgress?.({
       phase: 'indexing',
       current: i + 1,
       total: totalDocs,

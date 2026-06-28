@@ -1,5 +1,11 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { PaperlessClient, paperlessConfigSchema, toPaperlessConfig } from '@paperless-dedupe/core';
+import {
+  PaperlessClient,
+  paperlessConfigSchema,
+  toPaperlessConfig,
+  assertSafeTargetUrl,
+  UnsafeUrlError,
+} from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -19,6 +25,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             'Invalid connection configuration',
             result.error.issues,
           );
+        }
+        // SSRF guard: the supplied URL is fetched server-side, so reject
+        // dangerous schemes, embedded credentials, and metadata/link-local
+        // targets before constructing the client.
+        try {
+          assertSafeTargetUrl(result.data.url);
+        } catch (err) {
+          if (err instanceof UnsafeUrlError) {
+            return apiError(ErrorCode.VALIDATION_FAILED, err.message);
+          }
+          throw err;
         }
         config = result.data;
       }
