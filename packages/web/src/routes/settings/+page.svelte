@@ -1295,8 +1295,7 @@
                   rows="16"
                   class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none {tagAliasValidationError
                     ? 'border-red-500'
-                    : ''}"
-                ></textarea>
+                    : ''}"></textarea>
                 {#if tagAliasValidationError}
                   <p class="text-xs text-red-600">{tagAliasValidationError}</p>
                 {/if}
