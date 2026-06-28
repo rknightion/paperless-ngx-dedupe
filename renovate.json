@@ -4,7 +4,7 @@
     {
       "description": "Bundle the Vercel AI SDK packages into a single PR. @ai-sdk/openai major versions are coupled to the ai package's accepted model specificationVersion (e.g. @ai-sdk/openai v4 emits a v4 model spec that only ai v7 accepts), so they must be upgraded together or CI fails to type-check.",
       "groupName": "ai sdk",
-      "matchPackageNames": ["ai", "@ai-sdk/openai", "/^@ai-sdk\\//"]
+      "matchPackageNames": ["ai", "@ai-sdk/**"]
     }
   ]
 }
