@@ -1,0 +1,12 @@
+name: actionlint
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['**']
+permissions: {}
+jobs:
+  actionlint:
+    permissions:
+      contents: read
+    uses: rknightion/.github/.github/workflows/actionlint.yml@main
