@@ -2,8 +2,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
   const collect = (globalThis as Record<string, unknown>).__otelPrometheusCollect as
-    | (() => Promise<string>)
-    | undefined;
+    (() => Promise<string>) | undefined;
 
   if (!collect) {
     return new Response('Prometheus metrics not enabled (set OTEL_PROMETHEUS_ENABLED=true)', {

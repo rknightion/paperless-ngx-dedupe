@@ -5,10 +5,7 @@ import type { AppDatabase } from '../db/client.js';
 import type { AiResultFilters } from './queries.js';
 
 export type GroupByField =
-  | 'suggestedCorrespondent'
-  | 'suggestedDocumentType'
-  | 'failureType'
-  | 'confidenceBand';
+  'suggestedCorrespondent' | 'suggestedDocumentType' | 'failureType' | 'confidenceBand';
 
 export interface AiResultGroup {
   key: string;

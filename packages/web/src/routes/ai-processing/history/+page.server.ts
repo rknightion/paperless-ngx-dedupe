@@ -6,11 +6,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const search = url.searchParams.get('search') || undefined;
   const sort =
     (url.searchParams.get('sort') as
-      | 'applied_newest'
-      | 'applied_oldest'
-      | 'newest'
-      | 'oldest'
-      | null) || 'applied_newest';
+      'applied_newest' | 'applied_oldest' | 'newest' | 'oldest' | null) || 'applied_newest';
   const limit = Math.min(
     Math.max(parseInt(url.searchParams.get('limit') ?? '20', 10) || 20, 1),
     100,
