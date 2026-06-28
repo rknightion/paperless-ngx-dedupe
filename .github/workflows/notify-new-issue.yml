@@ -1,0 +1,16 @@
+name: Notify maintainer on new issue
+on:
+  issues:
+    types: [opened]
+permissions:
+  issues: write
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    # skip bot-authored issues (e.g. Renovate's Dependency Dashboard)
+    if: ${{ !endsWith(github.event.issue.user.login, '[bot]') }}
+    steps:
+      - name: Assign maintainer (triggers your email)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue edit "${{ github.event.issue.number }}" --add-assignee rknightion --repo "${{ github.repository }}"
