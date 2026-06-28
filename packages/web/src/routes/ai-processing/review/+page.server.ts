@@ -8,11 +8,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const search = url.searchParams.get('search') || undefined;
   const sort =
     (url.searchParams.get('sort') as
-      | 'newest'
-      | 'oldest'
-      | 'confidence_asc'
-      | 'confidence_desc'
-      | null) || undefined;
+      'newest' | 'oldest' | 'confidence_asc' | 'confidence_desc' | null) || undefined;
   const changedOnly = url.searchParams.get('changedOnly') === 'true' || undefined;
   const failed = url.searchParams.get('failed') === 'true' || undefined;
   const minConfidence = url.searchParams.has('minConfidence')

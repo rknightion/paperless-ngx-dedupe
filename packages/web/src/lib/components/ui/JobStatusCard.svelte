@@ -103,8 +103,7 @@
       const total = (result.totalDocuments ?? 0) as number;
       const isFullRebuild = (result.isFullRebuild ?? false) as boolean;
       const reasons = result.skipReasons as
-        | { noContent: number; tooShort: number; shinglesFailed: number }
-        | undefined;
+        { noContent: number; tooShort: number; shinglesFailed: number } | undefined;
 
       let prefix = '';
       if (isFullRebuild) {
