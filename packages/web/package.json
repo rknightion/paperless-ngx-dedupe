@@ -29,7 +29,7 @@
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@paperless-dedupe/core": "workspace:*",
     "@pyroscope/nodejs": "^0.4.11",
-    "ai": "^6.0.136",
+    "ai": "^7.0.0",
     "better-sqlite3": "^12.6.2",
     "diff-match-patch": "^1.0.5",
     "drizzle-kit": "^0.31.0",
