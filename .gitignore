@@ -20,6 +20,9 @@ data/
 # Zensical docs build output
 site/
 
+# Superpowers scratch dir — plans/specs are never committed (see global operating-model rule)
+docs/superpowers/
+
 test-results/
 playwright-report/
 coverage/
