@@ -93,6 +93,23 @@ jobs:
             packages/core/coverage/
           retention-days: 7
 
+      # Vitest emits lcov SF: paths relative to packages/core (e.g. src/config.ts). Codacy matches
+      # paths relative to the repo root, so rewrite them to packages/core/src/... or coverage stays
+      # stuck "Pending" with no file matches.
+      - name: Normalize coverage paths for Codacy
+        if: ${{ !cancelled() }}
+        run: sed -i 's#^SF:src/#SF:packages/core/src/#' packages/core/coverage/lcov.info
+
+      # Send core coverage to Codacy. continue-on-error so a coverage-upload hiccup (or a fork PR
+      # without access to the secret) never fails the required unit-tests job / ci-success gate.
+      - name: Upload coverage to Codacy
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: packages/core/coverage/lcov.info
+
       - name: Unit test report
         if: ${{ !cancelled() }}
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3

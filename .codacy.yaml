@@ -1,0 +1,27 @@
+---
+# Repo-local Codacy configuration.
+# Tool/pattern selection is governed by the org coding standard ("rknightion-standard");
+# this file only declares repo-local path exclusions so non-product code (docs, tests,
+# fixtures, generated/vendored output) is not analysed for quality, duplication, or coverage.
+# Codacy Cloud reads this file from the default branch. See:
+# https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+exclude_paths:
+  # Documentation site (Zensical/Markdown) — prose, not product code
+  - "docs/**"
+  # Tests and fixtures — unit, e2e, and eval datasets
+  - "test/**"
+  - "tests/**"
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.test.js"
+  - "**/*.spec.ts"
+  - "**/*.spec.js"
+  - "**/e2e/**"
+  - "evals/**"
+  - "**/*_test.go"
+  # Vendored / generated / build output
+  - "vendor/**"
+  - "**/vendor/**"
+  - "**/generated/**"
+  - "**/*.gen.ts"
+  - "**/*.generated.ts"

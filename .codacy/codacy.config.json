@@ -5079,5 +5079,22 @@
       ]
     }
   ],
-  "exclude": []
+  "exclude": [
+    "docs/**",
+    "test/**",
+    "tests/**",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/*.spec.ts",
+    "**/*.spec.js",
+    "**/e2e/**",
+    "evals/**",
+    "**/*_test.go",
+    "vendor/**",
+    "**/vendor/**",
+    "**/generated/**",
+    "**/*.gen.ts",
+    "**/*.generated.ts"
+  ]
 }

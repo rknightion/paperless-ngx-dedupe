@@ -1,108 +1,62 @@
 {
   "summary": {
-    "enabledPatterns": { "before": 1650, "after": 1648 },
-    "enabledTools": { "before": 11, "after": 11 },
+    "enabledPatterns": {
+      "before": 1648,
+      "after": 1648
+    },
+    "enabledTools": {
+      "before": 11,
+      "after": 11
+    },
     "issues": {
-      "before": 137,
-      "after": 54,
-      "note": "Local-CLI issue counts. Cloud production truth: 365 before → ~106 projected after (the two disabled patterns account for 259 Cloud issues)."
+      "before": 54,
+      "after": 34,
+      "note": "Local-CLI issue counts on the same pattern config; the only change this run is repo-local file exclusions. 54 (prior tuned run, no exclusions) -> 34 (-37%). All remaining: Security (32) + ErrorProne (2) in product code."
     },
-    "analysisRuntime": { "before": 77332, "after": 39572 }
-  },
-  "approach": "Tuned the existing curated Cloud config in place (no init --auto reset), per user choice. Cuts driven primarily by the Cloud issue overview (365 issues) since local analysis under-represents the real landscape (ESLint is not type-aware locally).",
-  "toolChanges": [],
-  "patternChanges": [
-    {
-      "patternId": "ESLint8_@typescript-eslint_no-non-null-assertion",
-      "toolId": "ESLint8",
-      "action": "disabled",
-      "reason": "Convention mismatch. Accounts for 192/365 (53%) of all Cloud issues. This TypeScript codebase deliberately uses non-null assertions (`!`); the rule is a stylistic restriction, not a correctness or security concern. Invisible to local analysis (ESLint runs non-type-aware locally), so cut on Cloud-overview evidence.",
-      "delta": -192,
-      "deltaSource": "cloud",
-      "parameters": []
-    },
-    {
-      "patternId": "ESLint8_security_detect-object-injection",
-      "toolId": "ESLint8",
-      "action": "disabled",
-      "reason": "False-positive-prone (rule 7). eslint-plugin-security's most notoriously noisy rule — flags every computed member access (obj[key]). 83 local / 67 Cloud issues; sampled hits (e.g. costs.ts: 24 lookups on internal cost tables keyed by model name) are all benign internal access, not user-controlled injection. Genuine injection concerns (SQL, path traversal, SSRF, XSS, hardcoded secrets) remain covered by active Semgrep JS rules + ESLint xss_no-mixed-html + detect-non-literal-fs-filename, so the security guardrail holds at the concern level.",
-      "delta": -83,
-      "deltaSource": "local",
-      "parameters": []
+    "analysisRuntime": {
+      "before": 39572,
+      "after": 55183
     }
-  ],
+  },
+  "toolChanges": [],
+  "patternChanges": [],
+  "fileExclusions": {
+    "global": [
+      "docs/**",
+      "test/**",
+      "tests/**",
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.js",
+      "**/*.spec.ts",
+      "**/*.spec.js",
+      "**/e2e/**",
+      "evals/**",
+      "**/*_test.go",
+      "vendor/**",
+      "**/vendor/**",
+      "**/generated/**",
+      "**/*.gen.ts",
+      "**/*.generated.ts"
+    ],
+    "perTool": {}
+  },
   "securityCoverage": {
     "deduplication": [],
     "newCoverage": [],
     "noisyButKept": [
-      "ESLint8_security_detect-unsafe-regex (10) — kept, real ReDoS coverage",
-      "ESLint8_security_detect-non-literal-fs-filename (6) — kept, real path-traversal coverage",
-      "ESLint8_xss_no-mixed-html (6) — kept, real XSS coverage",
-      "Semgrep_codacy.javascript.security.hard-coded-password (5) — kept, real secret coverage"
-    ],
-    "guardrailNote": "detect-object-injection was the only pattern named for 'object injection', but it does not provide precise vulnerability detection (it flags all bracket notation). All real injection vulnerability classes remain covered by other active patterns, so no security concern lost coverage."
-  },
-  "keyImprovements": [
-    "Disabled no-non-null-assertion — the single largest noise source on Cloud (192 issues, 53% of all), a pure convention mismatch with this codebase's deliberate use of TypeScript non-null assertions.",
-    "Disabled detect-object-injection — eslint-plugin-security's most false-positive-prone rule (83 local / 67 Cloud); sampled instances were all benign internal computed property access.",
-    "Together these two cuts remove 259 Cloud issues (365 → ~106 projected, -71%) and 83 local issues (137 → 54, -61%) while preserving full security coverage.",
-    "Local analysis runtime nearly halved (77s → 40s).",
-    "Curated config preserved — only 2 of 1650 patterns changed; no tools added/removed, no Coding Standard churn."
-  ],
-  "observations": [
-    "The Semgrep (Opengrep) tool carries 1428 patterns, the vast majority for languages not in this stack (PHP, Java, C#, Apex, Kotlin, Ruby, Python, Go). They produce zero issues so they are not noise, but they bloat the config and slow analysis. Left untouched per the lowest-churn directive; a future pass could language-filter them.",
-    "unbound-method (32 Cloud) and no-unnecessary-condition (15 Cloud) are type-aware ESLint rules with moderate counts; kept because they are correctness-oriented and cannot be verified locally. Revisit if they prove noisy in review."
-  ],
-  "localConfigTools": [],
-  "fileExclusions": null,
-  "codacyYaml": null,
-  "importResults": {
-    "status": "completed_with_errors",
-    "toolsConfigured": 11,
-    "toolsEnabled": [],
-    "toolsDisabled": [],
-    "errors": [],
-    "warnings": [
-      "Repo follows 'Default coding standard'. Import succeeded at the repo level, but the standard ENFORCES (overrides) both disabled patterns, so the two cuts are NOT live on Cloud — no-non-null-assertion and detect-object-injection remain enabled and the issue count stays 365.",
-      "Reanalysis of the same commit reused cached tool results (totals 365 -> 365, empty deltas)."
-    ],
-    "codingStandards": ["Default coding standard"],
-    "forceUsed": false
-  },
-  "cloudVerification": {
-    "reanalysisCompleted": false,
-    "reanalysisInFlight": true,
-    "issuesBefore": 365,
-    "issuesAfter": "pending Cloud reanalysis (config-level change verified; counts refresh asynchronously)",
-    "patternsDisabled": [
-      {
-        "patternId": "ESLint8_@typescript-eslint_no-non-null-assertion",
-        "toolId": "ESLint8",
-        "scope": "org coding standard (15 repos)",
-        "issueCount": 192,
-        "verified": "repo-level pattern state now shows disabled with no 'Enforced by' line"
-      },
-      {
-        "patternId": "ESLint8_security_detect-object-injection",
-        "toolId": "ESLint8",
-        "scope": "org coding standard (15 repos)",
-        "issueCount": 67,
-        "verified": "repo-level pattern state now shows disabled with no 'Enforced by' line"
-      }
-    ],
-    "warnings": [
-      "Cloud issue COUNTS still read 365 (last completed analysis snapshot) until the promote-triggered reanalysis of the 15 repos finishes; the repo currently reports issuesCount=null (recomputing). Counts will drop once it settles."
+      "All 32 Security findings retained in product code; no security pattern disabled — exclusions only remove non-product paths (docs/tests/fixtures)."
     ]
   },
-  "codingStandardEdit": {
-    "method": "Codacy REST API v3 (CODACY_API_TOKEN from skill env), since the Cloud CLI has no coding-standards command",
-    "flow": "POST /coding-standards?sourceCodingStandard=159648 (create draft 159649 seeded from existing) -> POST tools/{eslint8-uuid}/patterns/update?search=<id> {enabled:false} x2 -> POST /coding-standards/159649/promote",
-    "oldStandardId": 159648,
-    "newStandardId": 159649,
-    "name": "Default coding standard",
-    "linkedRepositories": 15,
-    "promoteResult": "applied to all 15 repos, 0 failures; old standard 159648 cleanly replaced (no orphan)",
-    "enabledPatternsCount": { "before": 3452, "after": 3450 }
-  },
-  "resolution": "Disabled both patterns ORG-WIDE in the 'Default coding standard' via the Codacy REST API (user authorized the 15-repo blast radius). Draft created from the existing standard, two patterns disabled, promoted in place. Local config (.codacy/codacy.config.json) also fully tuned and effective for local analysis."
+  "keyImprovements": [
+    "Added repo-local .codacy.yaml file exclusions (the prior run added none) covering docs/, all tests (__tests__, *.test.*, e2e *.spec.*), eval fixtures, and vendored/generated paths.",
+    "Local issues 54 -> 34 (-37%) on the identical pattern set — pure noise removal from non-product code; full Security + ErrorProne coverage on product code preserved.",
+    "Mirrored the same exclude globs into .codacy/codacy.config.json so local CLI analysis matches Cloud.",
+    "No tool/pattern/standard changes: tool & pattern selection stays governed by the org rknightion-standard (id 159741); repo stays assigned."
+  ],
+  "localConfigTools": [],
+  "codacyYaml": "see .codacy.yaml at repo root",
+  "importResults": null,
+  "cloudVerification": null,
+  "notes": "Repo is on Codacy Cloud and assigned to the org standard rknightion-standard (id 159741). Per guardrails, no cloud import of patterns/tools was performed (that would 409 against the standard) and the standard/assignment was left untouched. File exclusions are not importable via API regardless; they apply on Cloud via the committed .codacy.yaml read from the default branch."
 }
