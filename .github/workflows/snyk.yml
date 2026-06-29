@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: rknightion/.github/.github/workflows/snyk.yml@eb29aabc2233e17587a36d6883f59e3d2d0d6464 # v1.0.0
+    uses: rknightion/.github/.github/workflows/snyk.yml@f31690684f4292d1fe8e528618f7c8306fe27d9a # v1.3.1
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     with:
