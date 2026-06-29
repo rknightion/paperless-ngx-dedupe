@@ -31,7 +31,8 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # PAT (not GITHUB_TOKEN): bot-authored release PRs need a non-default-token author for CI to run without manual approval
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
   docker-build-release:
     needs: release-please
