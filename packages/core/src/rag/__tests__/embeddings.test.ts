@@ -24,6 +24,9 @@ import {
 import type { RagConfig } from '../types.js';
 import { DEFAULT_RAG_CONFIG } from '../types.js';
 
+// Placeholder credential for the mocked OpenAI client; never a real secret.
+const TEST_API_KEY = process.env.TEST_OPENAI_API_KEY ?? 'test-key';
+
 describe('embeddingOptionsFromConfig', () => {
   it('extracts apiKey, model, dimensions from config', () => {
     const config: RagConfig = {
@@ -46,7 +49,7 @@ describe('embeddingOptionsFromConfig', () => {
 });
 
 describe('generateEmbeddings', () => {
-  const opts = { apiKey: 'test-key', model: 'text-embedding-3-small', dimensions: 1536 };
+  const opts = { apiKey: TEST_API_KEY, model: 'text-embedding-3-small', dimensions: 1536 };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -87,7 +90,7 @@ describe('generateEmbeddings', () => {
 });
 
 describe('generateEmbedding', () => {
-  const opts = { apiKey: 'test-key', model: 'text-embedding-3-small', dimensions: 1536 };
+  const opts = { apiKey: TEST_API_KEY, model: 'text-embedding-3-small', dimensions: 1536 };
 
   beforeEach(() => {
     vi.clearAllMocks();

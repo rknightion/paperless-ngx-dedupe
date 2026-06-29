@@ -205,6 +205,9 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
 export function startMockPaperless(): Promise<void> {
   return new Promise((resolve, reject) => {
     state = createDefaultState();
+    // Test-only loopback mock for Playwright E2E; plain HTTP is intentional —
+    // it binds to localhost and carries no real credentials or data. Not a
+    // production server, so TLS adds no security here. (Snyk CWE-319 — justified.)
     server = http.createServer(handleRequest);
     server.on('error', reject);
     server.listen(PORT, () => {

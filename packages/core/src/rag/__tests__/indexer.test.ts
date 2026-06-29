@@ -31,6 +31,9 @@ import { documentChunk } from '../../schema/sqlite/rag.js';
 import { indexDocuments } from '../indexer.js';
 import { DEFAULT_RAG_CONFIG } from '../types.js';
 
+// Placeholder credential for the mocked embeddings client; never a real secret.
+const TEST_API_KEY = process.env.TEST_OPENAI_API_KEY ?? 'test-key';
+
 function seedDocs(db: AppDatabase) {
   db.insert(document)
     .values([
@@ -77,7 +80,7 @@ describe('indexDocuments', () => {
     mockGenerateEmbeddings.mockResolvedValue([[0.1, 0.2, 0.3]]);
 
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
     });
 
     expect(result.indexed).toBe(2);
@@ -95,7 +98,7 @@ describe('indexDocuments', () => {
     });
 
     await expect(
-      indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, { apiKey: 'test-key', onProgress }),
+      indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, { apiKey: TEST_API_KEY, onProgress }),
     ).rejects.toThrow('cancelled');
   });
 
@@ -117,7 +120,7 @@ describe('indexDocuments', () => {
       .run();
 
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
     });
 
     // doc-1 skipped (same hash), doc-2 indexed
@@ -143,7 +146,7 @@ describe('indexDocuments', () => {
       .run();
 
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
     });
 
     // Both should be indexed (doc-1 re-indexed due to hash mismatch, doc-2 fresh)
@@ -183,7 +186,7 @@ describe('indexDocuments', () => {
       .run();
 
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
       rebuild: true,
     });
 
@@ -211,7 +214,7 @@ describe('indexDocuments', () => {
     seedDocs(db);
 
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
     });
 
     // Only the 2 seeded docs with content get processed
@@ -244,7 +247,7 @@ describe('indexDocuments', () => {
 
     // Use docBatchSize=1 so each doc is its own group, exercising the circuit breaker
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
       docBatchSize: 1,
     });
 
@@ -265,7 +268,7 @@ describe('indexDocuments', () => {
     }> = [];
 
     await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
       onProgress: (progress) => {
         progressCalls.push({ ...progress });
       },
@@ -283,7 +286,7 @@ describe('indexDocuments', () => {
   it('returns correct durationMs (> 0)', async () => {
     seedDocs(db);
     const result = await indexDocuments(db, sqlite, DEFAULT_RAG_CONFIG, {
-      apiKey: 'test-key',
+      apiKey: TEST_API_KEY,
     });
     expect(result.durationMs).toBeGreaterThanOrEqual(0);
     expect(typeof result.durationMs).toBe('number');
