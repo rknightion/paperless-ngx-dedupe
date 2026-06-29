@@ -50,7 +50,7 @@
   },
   "peerDependencies": {
     "@ai-sdk/openai": "^3.0.0",
-    "ai": "^6.0.0",
+    "ai": "^6.0.0 || ^7.0.0",
     "openai": "^6.0.0"
   },
   "peerDependenciesMeta": {
