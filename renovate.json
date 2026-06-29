@@ -1,3 +1,28 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "description": "Lint/format toolchain (ESLint, Prettier, typescript-eslint and their plugins) — group into one PR; they're co-tuned and bump together.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "eslint",
+        "@eslint/**",
+        "eslint-config-prettier",
+        "eslint-plugin-svelte",
+        "typescript-eslint",
+        "@typescript-eslint/**",
+        "prettier",
+        "prettier-plugin-svelte",
+        "prettier-plugin-tailwindcss",
+        "globals"
+      ],
+      "groupName": "linters & formatters"
+    },
+    {
+      "description": "Vitest core and its coverage provider are co-versioned — group them.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["vitest", "@vitest/**"],
+      "groupName": "vitest"
+    }
+  ]
 }
