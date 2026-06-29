@@ -11,9 +11,6 @@ concurrency:
   group: release-please-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
-
 jobs:
   release-please:
     runs-on: ubuntu-24.04
@@ -34,158 +31,36 @@ jobs:
           # PAT (not GITHUB_TOKEN): bot-authored release PRs need a non-default-token author for CI to run without manual approval
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
-  docker-build-release:
+  publish:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
-    runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
-    timeout-minutes: 45
     permissions:
-      packages: write # push image digest to GHCR
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [linux/amd64, linux/arm64]
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      release_tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
 
-      - name: Prepare platform pair
-        run: echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-        env:
-          platform: ${{ matrix.platform }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-        with:
-          driver-opts: |
-            env.OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-            env.OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-            env.OTEL_TRACES_EXPORTER=otlp
-            env.OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-            env.OTEL_SERVICE_NAME=paperless-ngx-dedupe-ci
-            "env.OTEL_RESOURCE_ATTRIBUTES=ci.pipeline=${{ github.workflow }},ci.run_id=${{ github.run_id }},ci.ref=${{ github.ref_name }},ci.platform=${{ matrix.platform }}"
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push by digest
-        id: build
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
-          cache-to: type=gha,scope=build-${{ env.PLATFORM_PAIR }},mode=max
-
-      - name: Export digest
-        env:
-          BUILD_DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          mkdir -p /tmp/digests
-          touch "/tmp/digests/${BUILD_DIGEST#sha256:}"
-
-      - name: Upload digest
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: digests-release-${{ env.PLATFORM_PAIR }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  docker-merge-release:
-    needs: [release-please, docker-build-release]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
+  # Edge build on every non-release push to main: publishes the :main multi-arch image
+  # (replaces the removed amd64-only ci.yml docker job — now multi-arch).
+  edge:
+    needs: release-please
+    if: needs.release-please.outputs.release_created != 'true'
     permissions:
-      packages: write # push final multi-arch manifest to GHCR
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          path: /tmp/digests
-          pattern: digests-release-*
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check if prerelease
-        id: prerelease
-        run: |
-          VERSION="${NEEDS_RELEASE_PLEASE_OUTPUTS_VERSION}"
-          if [[ "$VERSION" == *-* ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          NEEDS_RELEASE_PLEASE_OUTPUTS_VERSION: ${{ needs.release-please.outputs.version }}
-
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ needs.release-please.outputs.version }}
-            type=raw,value=${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}
-            type=raw,value=${{ needs.release-please.outputs.major }}
-            type=raw,value=latest,enable=${{ steps.prerelease.outputs.is_prerelease == 'false' }}
-
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf "${IMAGE_NAME}@sha256:%s " *)
-
-  sbom-release:
-    needs: [release-please, docker-merge-release]
-    if: needs.release-please.outputs.release_created == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: write # gh release upload
-      packages: read # pull the published image for scanning
-    steps:
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install syft
-        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
-
-      - name: Generate SBOMs for the released image
-        env:
-          IMAGE_REF: ${{ env.IMAGE_NAME }}:${{ needs.release-please.outputs.version }}
-        run: |
-          mkdir -p dist/sbom
-          syft "registry:${IMAGE_REF}" -q \
-            -o spdx-json=dist/sbom/paperless-ngx-dedupe.spdx.json \
-            -o cyclonedx-json=dist/sbom/paperless-ngx-dedupe.cdx.json
-
-      - name: Attach SBOMs to the release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
-        run: |
-          gh release upload "$TAG" \
-            dist/sbom/paperless-ngx-dedupe.spdx.json \
-            dist/sbom/paperless-ngx-dedupe.cdx.json \
-            --clobber
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      release_tag: ""
+    secrets:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}

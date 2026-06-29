@@ -1,0 +1,33 @@
+name: publish
+
+on:
+  workflow_call:
+    inputs:
+      release_tag: { required: false, type: string, default: "" }
+    secrets:
+      OTEL_EXPORTER_OTLP_ENDPOINT:
+        required: false
+      OTEL_EXPORTER_OTLP_HEADERS:
+        required: false
+  workflow_dispatch:
+    inputs:
+      release_tag: { description: "vX.Y.Z; empty = edge :main test", required: false, type: string, default: "" }
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+    uses: rknightion/.github/.github/workflows/container-publish.yml@main
+    with:
+      release-tag: ${{ inputs.release_tag }}
+      otel-tracing: true
+    secrets:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
