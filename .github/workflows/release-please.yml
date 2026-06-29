@@ -150,3 +150,42 @@ jobs:
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf "${IMAGE_NAME}@sha256:%s " *)
+
+  sbom-release:
+    needs: [release-please, docker-merge-release]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # gh release upload
+      packages: read # pull the published image for scanning
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+
+      - name: Generate SBOMs for the released image
+        env:
+          IMAGE_REF: ${{ env.IMAGE_NAME }}:${{ needs.release-please.outputs.version }}
+        run: |
+          mkdir -p dist/sbom
+          syft "registry:${IMAGE_REF}" -q \
+            -o spdx-json=dist/sbom/paperless-ngx-dedupe.spdx.json \
+            -o cyclonedx-json=dist/sbom/paperless-ngx-dedupe.cdx.json
+
+      - name: Attach SBOMs to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          gh release upload "$TAG" \
+            dist/sbom/paperless-ngx-dedupe.spdx.json \
+            dist/sbom/paperless-ngx-dedupe.cdx.json \
+            --clobber

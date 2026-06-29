@@ -11,7 +11,14 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
+      # Use Node's fetch (no curl in the image) to match the Dockerfile HEALTHCHECK.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/v1/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
       interval: 5s
       timeout: 5s
       retries: 12

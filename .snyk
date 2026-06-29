@@ -1,0 +1,15 @@
+# Snyk (https://snyk.io) policy file, patches and ignores known vulnerabilities.
+version: v1.25.0
+ignore:
+  SNYK-JS-AI-16734889:
+    - '*':
+        reason: >-
+          Server-Side Request Forgery in the `ai` package (CVE-2026-8768). No
+          upstream fix is available as of 2026-06-29 (6.0.215 is still
+          affected; Snyk reports "No upgrade or patch available"). Outbound AI
+          requests target the fixed, operator-configured OpenAI-compatible
+          endpoint, so exposure is limited. Re-evaluate when Vercel ships a
+          patched release.
+        expires: 2026-09-29T00:00:00.000Z
+        created: 2026-06-29T00:00:00.000Z
+patch: {}

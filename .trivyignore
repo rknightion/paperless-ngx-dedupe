@@ -1,0 +1,9 @@
+# Trivy ignore file — auto-detected by aquasecurity/trivy-action (.github/workflows/docker-security.yml).
+# Keep entries in sync with .snyk. Each entry MUST carry a reason + re-eval date.
+
+# SSRF in the `ai` package (Vercel AI SDK). No upstream fix is available as of
+# 2026-06-29 (6.0.215 is still affected). Outbound AI requests target the fixed,
+# operator-configured OpenAI-compatible endpoint, so exposure is limited.
+# Re-evaluate by 2026-09-29 (matches the .snyk expiry); remove once a patched
+# `ai` release ships.
+CVE-2026-8768

@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:24-slim AS deps
+FROM node:24.18.0-trixie-slim AS deps
 
 WORKDIR /app
 
@@ -24,11 +24,11 @@ RUN pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedup
 RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
 
 # Stage 3: Production runtime
-FROM node:24-slim AS production
+FROM node:24.18.0-trixie-slim AS production
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends tini gosu curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tini gosu && rm -rf /var/lib/apt/lists/*
 
 # Copy production deps from pnpm deploy (flat node_modules, no symlinks)
 COPY --from=build /app/deployed/node_modules ./node_modules
