@@ -198,7 +198,7 @@ importers:
         version: 0.4.13
       ai:
         specifier: ^7.0.0
-        version: 7.0.6(zod@4.4.3)
+        version: 7.0.7(zod@4.4.3)
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.11.1
@@ -2068,6 +2068,12 @@ packages:
 
   ai@7.0.6:
     resolution: {integrity: sha512-RCina0WKhFgHQJHHOq+F11r9eaUo+Npcb84m7FDoYIVdG3IgeUb23fYfmqUTWIekI85c3GjkaTUxThiH3qHfkw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  ai@7.0.7:
+    resolution: {integrity: sha512-yoNPc4KIH7XKBm5syfZYOCpokc3AFkeBECgOryBbeYyYLbgC7AGGUXwexqYUVeUcmqL9pqej+cmtzOm+kWKmVw==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -5351,6 +5357,13 @@ snapshots:
   agent-base@7.1.4: {}
 
   ai@7.0.6(zod@4.4.3):
+    dependencies:
+      '@ai-sdk/gateway': 4.0.5(zod@4.4.3)
+      '@ai-sdk/provider': 4.0.0
+      '@ai-sdk/provider-utils': 5.0.1(zod@4.4.3)
+      zod: 4.4.3
+
+  ai@7.0.7(zod@4.4.3):
     dependencies:
       '@ai-sdk/gateway': 4.0.5(zod@4.4.3)
       '@ai-sdk/provider': 4.0.0
