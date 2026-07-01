@@ -150,7 +150,7 @@ importers:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^4.0.0
-        version: 4.0.3(zod@4.4.3)
+        version: 4.0.4(zod@4.4.3)
       '@grafana/faro-web-sdk':
         specifier: ^2.3.1
         version: 2.8.1
@@ -304,6 +304,12 @@ packages:
 
   '@ai-sdk/openai@4.0.3':
     resolution: {integrity: sha512-VA4R08RZf/vOwY6YtJu0p6tc8tW6ONw2BoHz8f+9qTRJHu9ID4E1u1JHC+pKG0FVVvSLQAFRm2m09ILoh89Qjg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai@4.0.4':
+    resolution: {integrity: sha512-p6VDEzEx52PIzRnFoUpiw6ABn07h4Rt+atL+M51W9SqwhselaZFRnz/pzv7LF9D1Gok5qfzOmR+JwvDDvDWS3w==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3672,6 +3678,12 @@ snapshots:
     dependencies:
       '@ai-sdk/provider': 4.0.0
       '@ai-sdk/provider-utils': 5.0.1(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/openai@4.0.4(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.1
+      '@ai-sdk/provider-utils': 5.0.2(zod@4.4.3)
       zod: 4.4.3
 
   '@ai-sdk/provider-utils@5.0.1(zod@4.4.3)':
