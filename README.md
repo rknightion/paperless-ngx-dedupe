@@ -1,5 +1,7 @@
 # Paperless NGX Dedupe
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/rknightion/paperless-ngx-dedupe/badge)](https://scorecard.dev/viewer/?uri=github.com/rknightion/paperless-ngx-dedupe)
+
 A document deduplication and AI-powered metadata companion for [Paperless-NGX](https://github.com/paperless-ngx/paperless-ngx). It syncs your documents, identifies duplicates using MinHash/LSH algorithms, extracts metadata with LLMs, and lets you ask questions about your document library — all through a web UI and REST API.
 
 ## Features
