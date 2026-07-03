@@ -31,13 +31,12 @@ nav = [
     ] },
   { Changelog = "changelog.md" }
 ]
-extra_css = ["stylesheets/extra.css"]
+extra_css = ["stylesheets/extra.css", "stylesheets/brand.css"]
 extra_javascript = [
   "javascripts/mathjax.js",
   "https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6",
   "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
   "javascripts/extra.js",
-  "javascripts/seo.js"
 ]
 copyright = """<a href=\"https://m7kni.io\" target=\"_blank\" rel=\"noopener\">m7kni.io</a>"""
 
@@ -75,11 +74,7 @@ features = [
 ]
 favicon = "assets/favicon.png"
 
-[[project.theme.palette]]
-media = "(prefers-color-scheme)"
-toggle.icon = "material/link"
-toggle.name = "Switch to light mode"
-
+# Light is default; dark is toggle-only (m7kni.io fleet brand alignment).
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
 scheme = "default"
@@ -94,7 +89,7 @@ scheme = "slate"
 primary = "indigo"
 accent = "indigo"
 toggle.icon = "material/toggle-switch-off-outline"
-toggle.name = "Switch to system preference"
+toggle.name = "Switch to light mode"
 
 [project.theme.icon]
 repo = "fontawesome/brands/github"
@@ -241,7 +236,7 @@ social_image = "assets/social-card.png"
 social_image_alt = "Paperless NGX Dedupe documentation social preview card"
 twitter_site = "@rknightion"
 twitter_creator = "@rknightion"
-theme_color = "#3f51b5"
+theme_color = "#2563eb"
 keywords = [
   "paperless-ngx",
   "document deduplication",

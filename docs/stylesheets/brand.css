@@ -1,0 +1,30 @@
+/* m7kni.io fleet brand alignment — documentation-friendly.
+ *
+ * Applies the shared m7kni.io brand accent on top of the standard Material for
+ * MkDocs / Zensical docs theme. Deliberately restrained: this is product
+ * documentation, not a marketing page — it unifies colour only, and leaves the
+ * readable docs typography, layout, nav and TOC untouched.
+ *
+ * Loaded LAST in extra_css so these tokens win over any per-repo colours.
+ * Brand accent: #2563eb (light) / #4f8cff (dark) — the m7kni.io hub palette.
+ */
+
+:root {
+  --md-primary-fg-color: #2563eb;
+  --md-primary-fg-color--light: #4f8cff;
+  --md-primary-fg-color--dark: #1d4ed8;
+  --md-accent-fg-color: #1d4ed8;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #4f8cff;
+  --md-primary-fg-color--light: #6ea1ff;
+  --md-primary-fg-color--dark: #2563eb;
+  --md-accent-fg-color: #6ea1ff;
+}
+
+/* Brand-tint inline code and links so the accent reads consistently with the
+ * hub, without altering spacing or type. */
+[data-md-color-scheme="default"] .md-typeset a {
+  color: var(--md-primary-fg-color);
+}
