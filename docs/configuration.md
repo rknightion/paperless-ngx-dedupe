@@ -72,6 +72,8 @@ OpenTelemetry is off unless `OTEL_ENABLED=true`. Common vars:
 
 See `.env.example` for the full list.
 
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
 | `OTEL_SERVICE_NAMESPACE` | No | `paperless-dedupe` | Groups frontend and backend as one app in Grafana Cloud App Observability |
 | `OTEL_EXPORTER_OTLP_COMPRESSION` | No | (none) | Set to `gzip` for Grafana Cloud (recommended) |
 | `OTEL_SEMCONV_STABILITY_OPT_IN` | No | (none) | Set to `database` to use stable DB semantic conventions |
@@ -172,7 +174,7 @@ The confidence model uses a **2-weight base score** plus a **discriminative pena
 
 The final confidence formula is:
 
-```
+```text
 base  = (jaccard × J_weight + fuzzy × F_weight) / (J_weight + F_weight)
 final = base × (1 - penalty_strength/100 × (1 - discriminative_score))
 ```

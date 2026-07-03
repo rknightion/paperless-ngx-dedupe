@@ -99,7 +99,7 @@ Each candidate pair from LSH is scored using a **2-weight base score** with a **
 
 The two weights are normalized (they must sum to 100) to produce a base score:
 
-```
+```text
 base = (jaccard × J_weight + fuzzy × F_weight) / (J_weight + F_weight)
 ```
 
@@ -117,7 +117,7 @@ base = (jaccard × J_weight + fuzzy × F_weight) / (J_weight + F_weight)
 
 The discriminative score acts as a **multiplicative penalty** on the base score:
 
-```
+```text
 final = base × (1 - penalty_strength/100 × (1 - discriminative_score))
 ```
 

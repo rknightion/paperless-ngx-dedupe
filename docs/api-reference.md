@@ -5,6 +5,8 @@ description: REST API reference for Paperless NGX Dedupe
 
 # API Reference
 
+Paperless NGX Dedupe exposes a REST API covering sync, analysis, duplicates, AI processing, Document Q&A, and configuration — everything the web UI does, automatable via HTTP.
+
 Base path: `/api/v1`
 
 ## Conventions

@@ -1,6 +1,11 @@
+---
+title: Observability
+description: OpenTelemetry traces, metrics, and logs; Grafana Faro frontend instrumentation; and Pyroscope continuous profiling for Paperless NGX Dedupe
+---
+
 # Observability Guide
 
-Paperless NGX Dedupe ships with comprehensive observability support: OpenTelemetry traces, metrics, and logs; Grafana Faro frontend instrumentation; and optional Pyroscope continuous profiling.
+Observability in Paperless NGX Dedupe is comprehensive OpenTelemetry support: traces, metrics, and logs from the backend; Grafana Faro instrumentation from the frontend; and optional Pyroscope continuous profiling. This guide covers configuring all three for Grafana Cloud or a self-hosted OTLP collector.
 
 ## Quick Start — Grafana Cloud
 

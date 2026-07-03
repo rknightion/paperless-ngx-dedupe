@@ -44,7 +44,7 @@ See the [Development Guide](development.md) for more on the local development wo
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/) with [Release Please](https://github.com/googleapis/release-please) for automated releases. Commit messages should follow this format:
 
-```
+```text
 type(scope): description
 
 [optional body]
@@ -67,7 +67,7 @@ type(scope): description
 
 **Examples:**
 
-```
+```text
 feat(dedup): add support for custom shingle functions
 fix(web): prevent duplicate SSE connections on reconnect
 docs: update API reference with batch endpoint examples

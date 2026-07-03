@@ -37,7 +37,7 @@ pnpm dev
 
 ## Project Structure
 
-```
+```text
 paperless-ngx-dedupe/
 ├── packages/
 │   ├── core/           # Framework-agnostic business logic

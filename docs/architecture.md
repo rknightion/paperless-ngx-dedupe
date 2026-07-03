@@ -323,7 +323,7 @@ Background jobs run in Node.js `worker_threads` to avoid blocking the main event
 
 The REST API is implemented as SvelteKit server routes at `packages/web/src/routes/api/v1/`:
 
-```
+```text
 api/v1/
 ├── health/                         # GET
 ├── ready/                          # GET
