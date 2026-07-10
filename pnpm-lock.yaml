@@ -13,7 +13,7 @@ importers:
     dependencies:
       openai:
         specifier: ^6.33.0
-        version: 6.45.0(zod@4.4.3)
+        version: 6.46.0(zod@4.4.3)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -228,7 +228,7 @@ importers:
         version: 5.1.16
       openai:
         specifier: ^6.32.0
-        version: 6.45.0(zod@4.4.3)
+        version: 6.46.0(zod@4.4.3)
       pino:
         specifier: ^10.0.0
         version: 10.3.1
@@ -3028,6 +3028,26 @@ packages:
 
   openai@6.45.0:
     resolution: {integrity: sha512-5DQVNErssk0afNpTTHUm/qZPU4iKR9OYdNid8Ib4puq4gHNNvGWZht2zY4h9a8JMF949Ik6m8gQutllVPbjdnw==}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
+
+  openai@6.46.0:
+    resolution: {integrity: sha512-DFg6jEPT2RO+oAyXtddeUJU8zkGy1OQ1AjGzNIJUMQG03TTqvCpy9tBpQ+2VVVnvrl3E56F8GEin2JYtWpITtA==}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
       '@smithy/hash-node': '>=4.3.0 <5'
@@ -6339,6 +6359,10 @@ snapshots:
       wrappy: 1.0.2
 
   openai@6.45.0(zod@4.4.3):
+    optionalDependencies:
+      zod: 4.4.3
+
+  openai@6.46.0(zod@4.4.3):
     optionalDependencies:
       zod: 4.4.3
 
