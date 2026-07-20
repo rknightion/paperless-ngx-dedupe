@@ -31,7 +31,7 @@ jobs:
           format: sarif
           output-file: hadolint.sarif
           no-fail: true
-      - uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
+      - uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
           sarif_file: hadolint.sarif
           category: hadolint
@@ -52,7 +52,7 @@ jobs:
           scanners: vuln,misconfig,secret
           format: sarif
           output: trivy.sarif
-      - uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
+      - uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
           sarif_file: trivy.sarif
           category: trivy-fs
