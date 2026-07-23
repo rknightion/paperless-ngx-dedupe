@@ -229,7 +229,7 @@ jobs:
           name: Core Package Coverage
 
   docker-build-verify:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
