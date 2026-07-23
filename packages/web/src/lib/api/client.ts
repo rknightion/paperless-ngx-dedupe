@@ -3,8 +3,8 @@ import {
   safeMessageForCode,
   sanitizeValidationIssues,
   toSafeError,
-} from '@paperless-dedupe/core';
-import type { SafeError, SafeErrorCode } from '@paperless-dedupe/core';
+} from '@paperless-dedupe/core/contracts/api';
+import type { SafeError, SafeErrorCode } from '@paperless-dedupe/core/contracts/api';
 
 export class ApiRequestError extends Error {
   constructor(public readonly safeError: SafeError) {

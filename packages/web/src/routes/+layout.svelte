@@ -1,6 +1,9 @@
 <script>
   import { initFaro } from '$lib/faro';
   import { initFaroRouteTracking } from '$lib/faro-route-tracker';
+  import { activity } from '$lib/activity/ActivityStore.svelte';
+  import ActivityPanel from '$lib/components/activity/ActivityPanel.svelte';
+  import ActivityLiveRegion from '$lib/components/activity/ActivityLiveRegion.svelte';
   import '../app.css';
   import { page } from '$app/stores';
   import { untrack, onMount } from 'svelte';
@@ -25,9 +28,11 @@
   });
 
   onMount(() => {
+    void activity.start();
     if (data.faroEnabled) {
       initFaroRouteTracking();
     }
+    return () => activity.stop();
   });
 
   $effect(() => {
@@ -163,4 +168,6 @@
     </button>
     {@render children()}
   </main>
+  <ActivityPanel jobs={activity.jobs} />
+  <ActivityLiveRegion jobs={activity.jobs} />
 </div>

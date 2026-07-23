@@ -7,8 +7,18 @@ export interface SSECallbacks {
     message?: string;
     status?: string;
   }) => void;
-  onComplete?: (data: { status: string; result?: unknown }) => void;
+  onComplete?: (data: {
+    status: string;
+    progress?: number;
+    phaseProgress?: number;
+    message?: string;
+    result?: unknown;
+  }) => void;
   onError?: (error: Event) => void;
+  onDiagnostic?: (diagnostic: {
+    code: 'malformed_event';
+    message: 'Received an invalid activity update.';
+  }) => void;
 }
 
 export function connectJobSSE(jobId: string, callbacks: SSECallbacks): { close: () => void } {
@@ -23,7 +33,10 @@ export function connectJobSSE(jobId: string, callbacks: SSECallbacks): { close: 
       const data = JSON.parse(event.data);
       callbacks.onProgress?.(data);
     } catch {
-      // Ignore malformed events
+      callbacks.onDiagnostic?.({
+        code: 'malformed_event',
+        message: 'Received an invalid activity update.',
+      });
     }
   });
 
@@ -32,7 +45,10 @@ export function connectJobSSE(jobId: string, callbacks: SSECallbacks): { close: 
       const data = JSON.parse(event.data);
       callbacks.onComplete?.(data);
     } catch {
-      // Ignore malformed events
+      callbacks.onDiagnostic?.({
+        code: 'malformed_event',
+        message: 'Received an invalid activity update.',
+      });
     }
     source.close();
   });
