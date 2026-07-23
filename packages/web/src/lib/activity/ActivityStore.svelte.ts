@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { requestJson } from '$lib/api/client';
 import { connectJobSSE } from '$lib/sse';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ActivityDiagnostic, ActivityJob, ActivityJobStatus, JobSnapshot } from './types';
 
 const DISCOVERY_INTERVAL_MS = 2_000;
@@ -13,12 +14,12 @@ type Token = { session: number; job: number };
 type Connection = { close: () => void; connectionId: number; token: Token };
 
 const state = $state({ jobs: [] as ActivityJob[] });
-const connections = new Map<string, Connection>();
-const retries = new Map<string, ReturnType<typeof setTimeout>>();
-const degradedTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const retryAttempts = new Map<string, number>();
-const jobGenerations = new Map<string, number>();
-const dismissedJobIds = new Set<string>();
+const connections = new SvelteMap<string, Connection>();
+const retries = new SvelteMap<string, ReturnType<typeof setTimeout>>();
+const degradedTimers = new SvelteMap<string, ReturnType<typeof setTimeout>>();
+const retryAttempts = new SvelteMap<string, number>();
+const jobGenerations = new SvelteMap<string, number>();
+const dismissedJobIds = new SvelteSet<string>();
 let discoveryTimer: ReturnType<typeof setInterval> | undefined;
 let startingSession: number | undefined;
 let sessionGeneration = 0;
@@ -42,21 +43,6 @@ function isCurrent(jobId: string, token: Token): boolean {
 
 function isCurrentConnection(jobId: string, token: Token, connectionId: number): boolean {
   return isCurrent(jobId, token) && connections.get(jobId)?.connectionId === connectionId;
-}
-
-function toActivityJob(job: JobSnapshot): ActivityJob {
-  return {
-    id: job.id,
-    type: job.type,
-    status: job.status,
-    progress: job.progress ?? 0,
-    ...(job.phaseProgress == null ? {} : { phaseProgress: job.phaseProgress }),
-    message: job.progressMessage ?? '',
-    startedAt: job.startedAt,
-    completedAt: job.completedAt,
-    connection: isTerminal(job.status) ? 'completed' : 'live',
-    diagnostics: [],
-  };
 }
 
 function updateJob(jobId: string, change: Partial<ActivityJob>, token?: Token): void {

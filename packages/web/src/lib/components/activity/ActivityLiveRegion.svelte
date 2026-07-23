@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { ActivityJob } from '$lib/activity/types';
+  import { SvelteSet } from 'svelte/reactivity';
 
   let { jobs }: { jobs: ActivityJob[] } = $props();
   let announcement = $state('');
   let timer: ReturnType<typeof setTimeout> | undefined;
   let lastAnnouncementAt = 0;
-  const announced = new Set<string>();
+  const announced = new SvelteSet<string>();
 
   function announce(message: string): void {
     const delay = Math.max(0, 2_000 - (Date.now() - lastAnnouncementAt));

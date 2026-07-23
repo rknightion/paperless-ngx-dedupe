@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import { setConfig, setConfigBatch, getConfig } from '../../queries/config.js';
+import { setConfig, getConfig } from '../../queries/config.js';
 import { getDedupConfig } from '../../dedup/config.js';
 import { DEFAULT_DEDUP_CONFIG } from '../../dedup/types.js';
 import { exportConfig, importConfig } from '../config.js';
