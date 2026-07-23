@@ -14,6 +14,22 @@ export {
 } from './schema/relations.js';
 
 // Types
+export {
+  isSafeErrorCode,
+  safeMessageForCode,
+  sanitizeCorrelationId,
+  sanitizeValidationIssues,
+  toSafeError,
+  SAFE_ERROR_CODES,
+} from './contracts/api.js';
+export type {
+  ApiFailure,
+  ApiSuccess,
+  SafeError,
+  SafeErrorCode,
+  SafeErrorContext,
+  ValidationIssue,
+} from './contracts/api.js';
 export type {
   Document,
   DocumentContent,
@@ -187,9 +203,15 @@ export type {
   GraphNode,
   GraphEdge,
   SimilarityGraphData,
+  LocalReadiness,
+  NextAction,
+  NextActionKind,
+  PaperlessReadiness,
+  Readiness,
 } from './queries/types.js';
 export { parseTagsJson } from './queries/helpers.js';
 export { getDashboard } from './queries/dashboard.js';
+export { buildNextActions, getReadiness } from './queries/readiness.js';
 export {
   getDocuments,
   getDocument,

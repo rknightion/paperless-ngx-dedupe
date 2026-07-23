@@ -3,20 +3,12 @@ import { count, eq, sql } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client.js';
 import { document } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
-import { syncState } from '../schema/sqlite/app.js';
-import { checkAnalysisStaleness } from '../dedup/analysis-hash.js';
 import type { DashboardData } from './types.js';
+import { buildNextActions, getReadiness } from './readiness.js';
 
 export function getDashboard(db: AppDatabase): DashboardData {
   // Total documents
   const [{ value: totalDocuments }] = db.select({ value: count() }).from(document).all();
-
-  // Pending duplicate groups
-  const [{ value: pendingGroups }] = db
-    .select({ value: count() })
-    .from(duplicateGroup)
-    .where(eq(duplicateGroup.status, 'pending'))
-    .all();
 
   // Pending analysis
   const [{ value: pendingAnalysis }] = db
@@ -25,8 +17,7 @@ export function getDashboard(db: AppDatabase): DashboardData {
     .where(eq(document.processingStatus, 'pending'))
     .all();
 
-  // Sync state
-  const syncRow = db.select().from(syncState).get();
+  const readiness = getReadiness(db, new Date());
 
   // Top correspondents with most duplicate groups
   const topCorrespondents = db
@@ -43,18 +34,18 @@ export function getDashboard(db: AppDatabase): DashboardData {
     .limit(10)
     .all() as { correspondent: string; groupCount: number }[];
 
-  const staleness = checkAnalysisStaleness(db);
-
   return {
     totalDocuments,
-    pendingGroups,
+    pendingGroups: readiness.pendingDuplicateGroups,
     pendingAnalysis,
-    lastSyncAt: syncRow?.lastSyncAt ?? null,
-    lastSyncDocumentCount: syncRow?.lastSyncDocumentCount ?? null,
-    lastAnalysisAt: syncRow?.lastAnalysisAt ?? null,
-    totalDuplicateGroups: syncRow?.totalDuplicateGroups ?? null,
+    lastSyncAt: readiness.lastSyncAt,
+    lastSyncDocumentCount: readiness.lastSyncDocumentCount,
+    lastAnalysisAt: readiness.lastAnalysisAt,
+    totalDuplicateGroups: readiness.totalDuplicateGroups,
     topCorrespondents,
-    analysisStale: staleness.isStale,
-    analysisStaleReason: staleness.reason,
+    analysisStale: readiness.analysisStale,
+    analysisStaleReason: readiness.analysisStaleReason,
+    readiness,
+    nextActions: buildNextActions(readiness),
   };
 }

@@ -158,6 +158,41 @@ export interface DashboardData {
   topCorrespondents: { correspondent: string; groupCount: number }[];
   analysisStale: boolean;
   analysisStaleReason: 'config_changed' | null;
+  readiness: LocalReadiness;
+  nextActions: NextAction[];
+}
+
+export type NextActionKind = 'retry' | 'sync' | 'analysis' | 'duplicate_review' | 'ai_review';
+
+export interface NextAction {
+  id: string;
+  priority: number;
+  kind: NextActionKind;
+  title: string;
+  detail: string;
+  href: string;
+  safeAction?: 'sync' | 'analysis' | 'retry';
+}
+
+export interface LocalReadiness {
+  lastSyncAt: string | null;
+  lastSyncDocumentCount: number | null;
+  lastAnalysisAt: string | null;
+  totalDuplicateGroups: number | null;
+  analysisStale: boolean;
+  analysisStaleReason: 'config_changed' | null;
+  failedJobCount: number;
+  pendingDuplicateGroups: number;
+  pendingAiResults: number;
+}
+
+export interface PaperlessReadiness {
+  status: 'connected' | 'unavailable';
+  apiVersion: string | null;
+}
+
+export interface Readiness extends LocalReadiness {
+  paperless: PaperlessReadiness;
 }
 
 export interface DocumentStats {
