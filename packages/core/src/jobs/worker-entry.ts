@@ -1,5 +1,6 @@
 import { workerData } from 'node:worker_threads';
 import { context } from '@opentelemetry/api';
+import type Database from 'better-sqlite3';
 import { createDatabaseWithHandle } from '../db/client.js';
 import { updateJobProgress, completeJob, failJob, getJob } from './manager.js';
 import { createLogger } from '../logger.js';
@@ -42,7 +43,7 @@ export interface WorkerTaskData {
  * worker-side idempotency.
  */
 export function claimWorkerJob(
-  sqlite: import('better-sqlite3').Database,
+  sqlite: Database.Database,
   jobId: string,
   now: Date = new Date(),
 ): boolean {

@@ -445,7 +445,7 @@ export async function consumeDispatchIntents(
       const nextAttempt = candidate.attemptCount + 1;
       const message = error instanceof Error ? error.message : String(error);
       if (nextAttempt > LAUNCH_RETRY_DELAYS_MS.length) {
-        let claimedTerminalTransition = false;
+        let claimedTerminalTransition: boolean;
         sqlite.exec('BEGIN IMMEDIATE');
         try {
           const deadLettered = sqlite
