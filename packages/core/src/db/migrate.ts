@@ -7,6 +7,14 @@ import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js'
 import { job } from '../schema/sqlite/jobs.js';
 import { appConfig, syncState } from '../schema/sqlite/app.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
+import { aiResultRevision } from '../schema/sqlite/ai-result-revisions.js';
+import {
+  aiBudgetReservation,
+  automationSchedule,
+  dispatchIntent,
+  operationLease,
+  syncChangeGeneration,
+} from '../schema/sqlite/automation.js';
 import { isSensitiveConfigKey } from '../queries/config.js';
 
 const SCHEMA_HASH_KEY = 'schema_ddl_hash';
@@ -22,6 +30,12 @@ const allTables = {
   appConfig,
   syncState,
   aiProcessingResult,
+  aiResultRevision,
+  automationSchedule,
+  dispatchIntent,
+  operationLease,
+  syncChangeGeneration,
+  aiBudgetReservation,
 };
 
 async function generateDDL(
@@ -44,6 +58,19 @@ async function generateDDL(
   }
 
   const currentSnapshot = await generateSQLiteDrizzleJson(allTables);
+
+  // A released database can contain retired feature tables (for example the
+  // v0.15 RAG tables) which are no longer imported by the running schema. Keep
+  // them in the migration snapshot so Drizzle neither prompts for a rename nor
+  // generates destructive DDL. Their data remains available for an explicit,
+  // separately reviewed retirement migration.
+  if (prevSnapshot?.tables) {
+    for (const [tableName, table] of Object.entries(prevSnapshot.tables)) {
+      if (!currentSnapshot.tables[tableName]) {
+        currentSnapshot.tables[tableName] = table;
+      }
+    }
+  }
   const migration = await generateSQLiteMigration(prevSnapshot, currentSnapshot);
 
   return {

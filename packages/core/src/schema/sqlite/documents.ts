@@ -1,4 +1,4 @@
-import { blob, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 export const document = sqliteTable(
@@ -19,8 +19,15 @@ export const document = sqliteTable(
     modifiedDate: text('modified_date'),
     processingStatus: text('processing_status').default('pending'),
     syncedAt: text('synced_at').notNull(),
+    insertedBySyncJobId: text('inserted_by_sync_job_id'),
+    insertedBySyncGenerationId: text('inserted_by_sync_generation_id'),
+    lastChangedBySyncJobId: text('last_changed_by_sync_job_id'),
+    lastChangedBySyncGenerationId: text('last_changed_by_sync_generation_id'),
   },
-  (table) => [uniqueIndex('document_paperless_id_unique').on(table.paperlessId)],
+  (table) => [
+    uniqueIndex('document_paperless_id_unique').on(table.paperlessId),
+    index('document_last_changed_by_sync_generation_idx').on(table.lastChangedBySyncGenerationId),
+  ],
 );
 
 export const documentContent = sqliteTable(

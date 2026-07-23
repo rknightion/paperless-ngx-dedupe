@@ -3,6 +3,7 @@ import { relations } from 'drizzle-orm';
 import { document, documentContent, documentSignature } from './sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from './sqlite/duplicates.js';
 import { aiProcessingResult } from './sqlite/ai-processing.js';
+import { aiResultRevision } from './sqlite/ai-result-revisions.js';
 
 export const documentRelations = relations(document, ({ one, many }) => ({
   content: one(documentContent, {
@@ -49,9 +50,17 @@ export const duplicateMemberRelations = relations(duplicateMember, ({ one }) => 
   }),
 }));
 
-export const aiProcessingResultRelations = relations(aiProcessingResult, ({ one }) => ({
+export const aiProcessingResultRelations = relations(aiProcessingResult, ({ one, many }) => ({
   document: one(document, {
     fields: [aiProcessingResult.documentId],
     references: [document.id],
+  }),
+  revisions: many(aiResultRevision),
+}));
+
+export const aiResultRevisionRelations = relations(aiResultRevision, ({ one }) => ({
+  result: one(aiProcessingResult, {
+    fields: [aiResultRevision.resultId],
+    references: [aiProcessingResult.id],
   }),
 }));

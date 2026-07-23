@@ -4,6 +4,14 @@ export { duplicateGroup, duplicateMember } from './schema/sqlite/duplicates.js';
 export { job } from './schema/sqlite/jobs.js';
 export { appConfig, syncState } from './schema/sqlite/app.js';
 export { aiProcessingResult } from './schema/sqlite/ai-processing.js';
+export { aiResultRevision } from './schema/sqlite/ai-result-revisions.js';
+export {
+  automationSchedule,
+  dispatchIntent,
+  operationLease,
+  syncChangeGeneration,
+  aiBudgetReservation,
+} from './schema/sqlite/automation.js';
 export {
   documentRelations,
   documentContentRelations,
@@ -11,6 +19,7 @@ export {
   duplicateGroupRelations,
   duplicateMemberRelations,
   aiProcessingResultRelations,
+  aiResultRevisionRelations,
 } from './schema/relations.js';
 
 // Types
@@ -40,6 +49,12 @@ export type {
   AppConfigRow,
   SyncState,
   AiProcessingResult,
+  AiResultRevision,
+  AutomationScheduleRow,
+  DispatchIntent,
+  OperationLease,
+  SyncChangeGeneration,
+  AiBudgetReservation,
   NewDocument,
   NewDocumentContent,
   NewDocumentSignature,
@@ -49,6 +64,12 @@ export type {
   NewAppConfigRow,
   NewSyncState,
   NewAiProcessingResult,
+  NewAiResultRevision,
+  NewAutomationScheduleRow,
+  NewDispatchIntent,
+  NewOperationLease,
+  NewSyncChangeGeneration,
+  NewAiBudgetReservation,
 } from './schema/types.js';
 export {
   ProcessingStatus,
@@ -68,6 +89,14 @@ export { migrateDatabase } from './db/migrate.js';
 
 // Config
 export { parseConfig } from './config.js';
+
+// Scheduling
+export {
+  toCronExpression,
+  nextOccurrence,
+  latestMissedOccurrence,
+} from './scheduler/occurrences.js';
+export type { AutomationSchedule, ScheduleCadence, ScheduleTask } from './scheduler/types.js';
 
 // Logger
 export { initLogger, createLogger, getLogger } from './logger.js';
