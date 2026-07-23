@@ -4,6 +4,7 @@ import {
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,
+  paperlessCustomFieldSchema,
   paperlessStatisticsSchema,
   paperlessConfigSchema,
   paginatedResponseSchema,
@@ -25,12 +26,48 @@ describe('snake_case to camelCase transformation', () => {
       original_file_name: 'test.pdf',
       archived_file_name: 'test_archived.pdf',
       archive_serial_number: 42,
+      custom_fields: [
+        { field: 7, value: 'Paid' },
+        { field: 8, value: true },
+      ],
     };
     const result = paperlessDocumentSchema.parse(input);
     expect(result.documentType).toBe(4);
     expect(result.originalFileName).toBe('test.pdf');
     expect(result.archivedFileName).toBe('test_archived.pdf');
     expect(result.archiveSerialNumber).toBe(42);
+    expect(result.customFields).toEqual([
+      { field: 7, value: 'Paid' },
+      { field: 8, value: true },
+    ]);
+  });
+
+  it('paperlessCustomFieldSchema preserves v10 select option IDs', () => {
+    const result = paperlessCustomFieldSchema.parse({
+      id: 7,
+      name: 'Payment Status',
+      data_type: 'select',
+      extra_data: {
+        select_options: [
+          { id: 'open-id', label: 'Open' },
+          { id: 'paid-id', label: 'Paid' },
+        ],
+      },
+      document_count: 12,
+    });
+
+    expect(result).toEqual({
+      id: 7,
+      name: 'Payment Status',
+      dataType: 'select',
+      extraData: {
+        selectOptions: [
+          { id: 'open-id', label: 'Open' },
+          { id: 'paid-id', label: 'Paid' },
+        ],
+      },
+      documentCount: 12,
+    });
   });
 
   it('paperlessTagSchema transforms tag fields', () => {

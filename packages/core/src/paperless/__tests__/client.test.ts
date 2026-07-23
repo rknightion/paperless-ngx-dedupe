@@ -761,6 +761,59 @@ describe('PaperlessClient', () => {
         documentCount: 15,
       });
     });
+
+    it('should fetch Paperless v10 custom field definitions', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+      mockFetch.mockResolvedValueOnce(
+        mockResponse(
+          makePaginatedResponse([
+            {
+              id: 7,
+              name: 'Payment Status',
+              data_type: 'select',
+              extra_data: {
+                select_options: [
+                  { id: 'open-id', label: 'Open' },
+                  { id: 'paid-id', label: 'Paid' },
+                ],
+              },
+              document_count: 12,
+            },
+          ]),
+        ),
+      );
+
+      const fields = await client.getCustomFields();
+
+      expect(fields[0].extraData.selectOptions[1]).toEqual({
+        id: 'paid-id',
+        label: 'Paid',
+      });
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/custom_fields/');
+    });
+  });
+
+  describe('updateDocument', () => {
+    it('serializes custom field instances in the v10 document format', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+      mockFetch.mockResolvedValueOnce(mockResponse({}));
+
+      await client.updateDocument(42, {
+        customFields: [
+          { field: 7, value: 'paid-id' },
+          { field: 8, value: '2026-07-23' },
+        ],
+      });
+
+      const [calledUrl, options] = mockFetch.mock.calls[0];
+      expect(calledUrl).toBe('http://localhost:8000/api/documents/42/');
+      expect(JSON.parse(options.body)).toEqual({
+        custom_fields: [
+          { field: 7, value: 'paid-id' },
+          { field: 8, value: '2026-07-23' },
+        ],
+      });
+    });
   });
 
   // ─── deleteDocument ──────────────────────────────────────────────────

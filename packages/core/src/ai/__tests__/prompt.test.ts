@@ -15,6 +15,8 @@ describe('buildPromptParts', () => {
     includeTags: true,
     tagAliasesEnabled: false,
     tagAliasMap: '',
+    customFields: [],
+    extractCustomFields: false,
   };
 
   it('substitutes reference data into the template', () => {
@@ -104,6 +106,31 @@ describe('buildPromptParts', () => {
     expect(systemPrompt).toContain('Amazon, barclays, Zebra Corp');
     expect(systemPrompt).toContain('contract, Invoice, Receipt');
     expect(systemPrompt).toContain('auto, Finance, shopping');
+  });
+
+  it('adds typed Paperless custom fields and v10 select option IDs to the prompt', () => {
+    const { systemPrompt } = buildPromptParts({
+      ...baseOptions,
+      extractCustomFields: true,
+      customFields: [
+        {
+          id: 7,
+          name: 'Payment Status',
+          dataType: 'select' as const,
+          extraData: {
+            selectOptions: [
+              { id: 'open-id', label: 'Open' },
+              { id: 'paid-id', label: 'Paid' },
+            ],
+          },
+          documentCount: 0,
+        },
+      ],
+    });
+
+    expect(systemPrompt).toContain('Payment Status');
+    expect(systemPrompt).toContain('paid-id');
+    expect(systemPrompt).toContain('Only recommend fields from this list');
   });
 });
 

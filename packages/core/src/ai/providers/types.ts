@@ -1,4 +1,13 @@
 import { z } from 'zod';
+import type { PaperlessCustomFieldValue } from '../../paperless/types.js';
+
+export interface AiCustomFieldRecommendation {
+  fieldId: number;
+  fieldName?: string;
+  value: PaperlessCustomFieldValue;
+  confidence: number;
+  evidence: string;
+}
 
 export interface AiExtractionRequest {
   systemPrompt: string;
@@ -11,6 +20,7 @@ export interface AiExtractionResponse {
   correspondent: string | null;
   documentType: string | null;
   tags: string[];
+  customFields?: AiCustomFieldRecommendation[];
   confidence: {
     title: number;
     correspondent: number;
@@ -70,6 +80,14 @@ export const aiExtractionResponseSchema = z.object({
   correspondent: z.string().nullable(),
   documentType: z.string().nullable(),
   tags: z.array(z.string()).max(5),
+  customFields: z.array(
+    z.object({
+      fieldId: z.number().int(),
+      value: z.union([z.string(), z.number(), z.boolean(), z.array(z.number()), z.null()]),
+      confidence: z.number().min(0).max(1),
+      evidence: z.string().max(500),
+    }),
+  ),
   confidence: z.object({
     title: z.number().min(0).max(1),
     correspondent: z.number().min(0).max(1),
@@ -101,6 +119,28 @@ export const EXTRACTION_JSON_SCHEMA = {
       items: { type: 'string' as const },
       description: 'Up to 5 relevant descriptive labels',
       maxItems: 5,
+    },
+    customFields: {
+      type: 'array' as const,
+      items: {
+        type: 'object' as const,
+        properties: {
+          fieldId: { type: 'integer' as const },
+          value: {
+            anyOf: [
+              { type: 'string' as const },
+              { type: 'number' as const },
+              { type: 'boolean' as const },
+              { type: 'array' as const, items: { type: 'integer' as const } },
+              { type: 'null' as const },
+            ],
+          },
+          confidence: { type: 'number' as const, minimum: 0, maximum: 1 },
+          evidence: { type: 'string' as const, maxLength: 500 },
+        },
+        required: ['fieldId', 'value', 'confidence', 'evidence'] as const,
+        additionalProperties: false,
+      },
     },
     confidence: {
       type: 'object' as const,
@@ -140,6 +180,14 @@ export const EXTRACTION_JSON_SCHEMA = {
       maxLength: 500,
     },
   },
-  required: ['title', 'correspondent', 'documentType', 'tags', 'confidence', 'evidence'] as const,
+  required: [
+    'title',
+    'correspondent',
+    'documentType',
+    'tags',
+    'customFields',
+    'confidence',
+    'evidence',
+  ] as const,
   additionalProperties: false,
 };

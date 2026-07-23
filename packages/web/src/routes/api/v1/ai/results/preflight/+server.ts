@@ -1,6 +1,6 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import { computeApplyPreflight, PaperlessClient, toPaperlessConfig } from '@paperless-dedupe/core';
-import type { ApplyScope } from '@paperless-dedupe/core';
+import type { AiApplyField, ApplyScope } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -16,15 +16,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   const scope: ApplyScope = body.scope;
 
-  let fields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
-    'title',
-    'correspondent',
-    'documentType',
-    'tags',
-  ];
+  let fields: AiApplyField[] = ['title', 'correspondent', 'documentType', 'tags'];
   if (Array.isArray(body.fields)) {
     fields = body.fields.filter((f: string) =>
-      ['title', 'correspondent', 'documentType', 'tags'].includes(f),
+      ['title', 'correspondent', 'documentType', 'tags', 'customFields'].includes(f),
     );
   }
 

@@ -16,6 +16,7 @@ function makeDoc(overrides?: Partial<PaperlessDocument>): PaperlessDocument {
     originalFileName: 'test.pdf',
     archivedFileName: null,
     archiveSerialNumber: null,
+    customFields: [],
     ...overrides,
   };
 }
@@ -53,6 +54,12 @@ describe('computeFingerprint', () => {
   it('should produce different fingerprint when tags change', () => {
     const fp1 = computeFingerprint(makeDoc());
     const fp2 = computeFingerprint(makeDoc({ tags: [1, 2, 4] }));
+    expect(fp1).not.toBe(fp2);
+  });
+
+  it('should produce different fingerprint when custom fields change', () => {
+    const fp1 = computeFingerprint(makeDoc({ customFields: [{ field: 7, value: 'Open' }] }));
+    const fp2 = computeFingerprint(makeDoc({ customFields: [{ field: 7, value: 'Paid' }] }));
     expect(fp1).not.toBe(fp2);
   });
 

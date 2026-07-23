@@ -43,6 +43,8 @@ const baseOptions = {
   includeTags: true,
   tagAliasesEnabled: false,
   tagAliasMap: '',
+  customFields: [],
+  extractCustomFields: false,
 };
 
 describe('processDocument', () => {

@@ -149,7 +149,13 @@ export function selectPrevResult(results: AiResultSummary[]): void {
 export function getFieldSelection(
   resultId: string,
   result: AiResultSummary,
-  extractEnabled?: { title: boolean; correspondent: boolean; documentType: boolean; tags: boolean },
+  extractEnabled?: {
+    title: boolean;
+    correspondent: boolean;
+    documentType: boolean;
+    tags: boolean;
+    customFields: boolean;
+  },
 ): SvelteSet<string> {
   if (!fieldSelections.has(resultId)) {
     const defaults = new SvelteSet<string>();
@@ -158,11 +164,15 @@ export function getFieldSelection(
       correspondent: true,
       documentType: true,
       tags: true,
+      customFields: true,
     };
     if (result.suggestedTitle && enabled.title) defaults.add('title');
     if (result.suggestedCorrespondent && enabled.correspondent) defaults.add('correspondent');
     if (result.suggestedDocumentType && enabled.documentType) defaults.add('documentType');
     if (result.suggestedTags.length > 0 && enabled.tags) defaults.add('tags');
+    if (result.suggestedCustomFields.length > 0 && enabled.customFields) {
+      defaults.add('customFields');
+    }
     fieldSelections.set(resultId, defaults);
   }
   return fieldSelections.get(resultId)!;

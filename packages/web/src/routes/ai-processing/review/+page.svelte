@@ -148,8 +148,11 @@
     if (result.suggestedCorrespondent && enabled.correspondent) fields.push('correspondent');
     if (result.suggestedDocumentType && enabled.documentType) fields.push('documentType');
     if (result.suggestedTags.length > 0 && enabled.tags) fields.push('tags');
+    if (result.suggestedCustomFields.length > 0 && enabled.customFields) {
+      fields.push('customFields');
+    }
     if (fields.length === 0) {
-      const allEnabled = ['title', 'correspondent', 'documentType', 'tags'].filter(
+      const allEnabled = ['title', 'correspondent', 'documentType', 'tags', 'customFields'].filter(
         (f) => enabled[f as keyof typeof enabled],
       );
       fields.push(...allEnabled);

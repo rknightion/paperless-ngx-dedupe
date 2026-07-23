@@ -5,7 +5,7 @@ description: AI-powered document classification and metadata extraction using LL
 
 # AI Processing
 
-Paperless NGX Dedupe can use large language models to classify your documents and suggest metadata -- correspondent, document type, and tags -- with per-field confidence scores. Results are stored for review before anything is changed in Paperless-NGX.
+Paperless NGX Dedupe can use large language models to classify your documents and suggest metadata -- title, correspondent, document type, tags, and existing Paperless custom fields -- with per-field confidence scores. Results are stored for review before anything is changed in Paperless-NGX.
 
 ## Setup
 
@@ -36,6 +36,7 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `includeCorrespondents` | `false` | boolean | Send existing correspondents as reference data |
 | `includeDocumentTypes` | `false` | boolean | Send existing document types as reference data |
 | `includeTags` | `false` | boolean | Send existing tags as reference data |
+| `extractCustomFields` | `false` | boolean | Recommend values for existing Paperless custom fields |
 | `flexProcessing` | `true` | boolean | Use OpenAI Flex Processing for ~50% lower costs |
 | `reasoningEffort` | `low` | `none`, `low`, `medium`, `high` | Reasoning effort level |
 | `maxRetries` | `3` | 0--10 | Retry count on transient API failures |
@@ -86,11 +87,11 @@ flowchart LR
 
 Processing runs as a background job with real-time progress via SSE:
 
-1. **Fetch reference data** -- If the `includeCorrespondents`, `includeDocumentTypes`, or `includeTags` toggles are enabled, the current lists are fetched from Paperless-NGX and included in the prompt so the model can match existing names.
+1. **Fetch reference data** -- If the corresponding toggles are enabled, current correspondents, document types, tags, and custom-field definitions are fetched from Paperless-NGX and included in the prompt.
 
 2. **For each document** -- The document's text is truncated to `maxContentLength` (preserving the beginning and end), combined with the prompt template, and sent to the configured provider.
 
-3. **Store result** -- The model's structured response (suggested correspondent, document type, up to 5 tags, and per-field confidence scores) is stored in the database. If processing fails for a document, the error is stored instead.
+3. **Store result** -- The model's structured response (suggested title, correspondent, document type, up to 5 tags, custom-field values, and confidence scores) is validated and stored in the database. Select labels are converted to Paperless option IDs, and invalid values are discarded. If processing fails for a document, the error is stored instead.
 
 4. **Rate delay** -- A configurable pause between API calls prevents rate-limit errors.
 
@@ -101,7 +102,7 @@ Documents without text content are skipped automatically. When re-processing, ex
 Open the **AI Processing** page to review suggestions. Each result shows:
 
 - The document title
-- Current vs. suggested correspondent, document type, and tags
+- Current vs. suggested title, correspondent, document type, tags, and custom fields
 - Per-field confidence scores (color-coded: green >= 80%, yellow >= 50%, red < 50%)
 - An evidence snippet from the document
 
@@ -129,11 +130,32 @@ When you apply a result:
 
 You can apply all fields at once, or select specific fields for partial application. Batch apply and batch reject are supported for bulk review.
 
+Custom fields use a live read-modify-write operation because Paperless replaces the complete
+`custom_fields` list on update. Unrelated values are preserved. The before and after lists are
+captured in the apply audit record and restored by revert. Custom fields are review-only and are
+not included in automatic application.
+
 By default, applying a result will not clear existing Paperless-NGX metadata when the AI has no suggestion for a field. Pass `allowClearing: true` in the API to explicitly allow clearing. New entities (correspondents, document types, tags) are created automatically unless `createMissingEntities: false` is specified.
 
 ### Reverting Applied Results
 
-Applied or partially applied results can be reverted to restore the document's pre-apply state in Paperless-NGX. Revert uses the audit snapshot recorded at apply time to restore the original correspondent, document type, and tags. Results applied before audit tracking was introduced cannot be reverted.
+Applied or partially applied results can be reverted to restore the document's pre-apply state in Paperless-NGX. Revert uses the audit snapshot recorded at apply time to restore the original title, correspondent, document type, tags, and custom fields. Results applied before audit tracking was introduced cannot be reverted.
+
+## Discovering Custom Fields
+
+The **AI Processing > Custom Fields** page analyses OCR already stored in the local database. It
+finds recurring labelled values such as account numbers, payment status, or due dates, infers a
+Paperless field type, and ranks candidates by coverage and confidence.
+
+The discovery scan:
+
+- reads local OCR only and makes no LLM calls
+- excludes Paperless first-class metadata and fields that already exist
+- reports examples or suggested select options
+- does not create or change anything in Paperless
+
+Use the recommendations as a reviewed schema-design aid. Create the fields you want in Paperless,
+sync the app, then enable `extractCustomFields` to recommend per-document values for them.
 
 Revert via the UI or `POST /api/v1/ai/results/:id/revert`.
 
@@ -163,7 +185,7 @@ When applying results in bulk, you choose which results to target:
 
 Before applying results in bulk, you can run a preflight check (`POST /api/v1/ai/preflight`) to preview the impact. The preflight report shows:
 
-- How many fields would change per category (correspondent, document type, tags)
+- How many fields would change per category (title, correspondent, document type, tags, custom fields)
 - Which new entities would be created
 - How many results have low confidence
 - How many results are no-ops (already matching)

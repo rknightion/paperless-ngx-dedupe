@@ -11,6 +11,7 @@ import { getModelPricing, estimateResultCost } from './costs.js';
 import { markAiResultFailed } from './queries.js';
 import type { AiConfig } from './types.js';
 import { createLogger } from '../logger.js';
+import { normalizeCustomFieldRecommendations } from './custom-fields.js';
 
 const logger = createLogger('ai-reprocess');
 
@@ -53,6 +54,7 @@ export async function reprocessSingleResult(
       correspondent: document.correspondent,
       documentType: document.documentType,
       tagsJson: document.tagsJson,
+      customFieldsJson: document.customFieldsJson,
     })
     .from(document)
     .where(eq(document.id, row.documentId))
@@ -72,7 +74,7 @@ export async function reprocessSingleResult(
   }
 
   // 4. Fetch reference data from Paperless per config toggles
-  const [correspondentNames, documentTypeNames, tagNames] = await Promise.all([
+  const [correspondentNames, documentTypeNames, tagNames, customFields] = await Promise.all([
     config.includeCorrespondents
       ? client.getCorrespondents().then((list) => list.map((c) => c.name))
       : Promise.resolve([] as string[]),
@@ -82,6 +84,7 @@ export async function reprocessSingleResult(
     config.includeTags
       ? client.getTags().then((list) => list.map((t) => t.name))
       : Promise.resolve([] as string[]),
+    config.extractCustomFields ? client.getCustomFields() : Promise.resolve([]),
   ]);
 
   // 5. Run extraction
@@ -102,6 +105,8 @@ export async function reprocessSingleResult(
       includeTags: config.includeTags,
       tagAliasesEnabled: config.tagAliasesEnabled,
       tagAliasMap: config.tagAliasMap,
+      customFields,
+      extractCustomFields: config.extractCustomFields,
       reasoningEffort: config.reasoningEffort,
     });
   } catch (error) {
@@ -123,6 +128,9 @@ export async function reprocessSingleResult(
   const normalizedCorrespondent = normalizeSuggestedLabel(extraction.response.correspondent);
   const normalizedDocumentType = normalizeSuggestedLabel(extraction.response.documentType);
   const normalizedTags = normalizeSuggestedTags(extraction.response.tags);
+  const suggestedCustomFields = config.extractCustomFields
+    ? normalizeCustomFieldRecommendations(extraction.response.customFields ?? [], customFields)
+    : [];
 
   // 7. Compute cost
   const pricing = getModelPricing(db, config.model);
@@ -140,11 +148,13 @@ export async function reprocessSingleResult(
       suggestedCorrespondent: normalizedCorrespondent,
       suggestedDocumentType: normalizedDocumentType,
       suggestedTagsJson: JSON.stringify(normalizedTags),
+      suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
       confidenceJson: JSON.stringify(extraction.response.confidence),
       currentTitle: doc.title,
       currentCorrespondent: doc.correspondent,
       currentDocumentType: doc.documentType,
       currentTagsJson: doc.tagsJson,
+      currentCustomFieldsJson: doc.customFieldsJson,
       appliedStatus: 'pending_review',
       appliedAt: null,
       appliedFieldsJson: null,

@@ -21,6 +21,7 @@ vi.mock('../../telemetry/metrics.js', () => ({
 
 // Import after mocks are registered
 const { applyAiResult, rejectAiResult, batchRejectAiResults } = await import('../apply.js');
+const { revertAiResult } = await import('../revert.js');
 
 function createMockClient() {
   return {
@@ -35,6 +36,34 @@ function createMockClient() {
     getTags: vi.fn().mockResolvedValue([
       { id: 1, name: 'finance', slug: 'finance', color: '#000' },
       { id: 2, name: 'shopping', slug: 'shopping', color: '#000' },
+    ]),
+    getCustomFields: vi.fn().mockResolvedValue([
+      {
+        id: 7,
+        name: 'Payment Status',
+        dataType: 'select',
+        extraData: {
+          selectOptions: [
+            { id: 'open-id', label: 'Open' },
+            { id: 'paid-id', label: 'Paid' },
+          ],
+        },
+        documentCount: 0,
+      },
+      {
+        id: 8,
+        name: 'Due Date',
+        dataType: 'date',
+        extraData: { selectOptions: [] },
+        documentCount: 0,
+      },
+      {
+        id: 99,
+        name: 'Existing Field',
+        dataType: 'string',
+        extraData: { selectOptions: [] },
+        documentCount: 0,
+      },
     ]),
     createCorrespondent: vi
       .fn()
@@ -65,6 +94,10 @@ function createMockClient() {
       originalFileName: null,
       archivedFileName: null,
       archiveSerialNumber: null,
+      customFields: [
+        { field: 7, value: 'open-id' },
+        { field: 99, value: 'preserve me' },
+      ],
     }),
   } as unknown as PaperlessClient;
 }
@@ -309,6 +342,79 @@ describe('applyAiResult', () => {
 
     const result = getAiResult(db, resultId);
     expect(result!.appliedStatus).toBe('partial');
+  });
+
+  it('merges custom field recommendations with live values without removing unrelated fields', async () => {
+    const client = createMockClient();
+    db.update(aiProcessingResult)
+      .set({
+        suggestedCustomFieldsJson: JSON.stringify([
+          {
+            fieldId: 7,
+            value: 'paid-id',
+            confidence: 0.95,
+            evidence: 'Paid in full',
+          },
+          {
+            fieldId: 8,
+            value: '2026-08-01',
+            confidence: 0.9,
+            evidence: 'Due 1 August 2026',
+          },
+        ]),
+      })
+      .run();
+
+    await applyAiResult(db, client, resultId, { fields: ['customFields'] });
+
+    expect(client.updateDocument).toHaveBeenCalledWith(1, {
+      customFields: [
+        { field: 7, value: 'paid-id' },
+        { field: 99, value: 'preserve me' },
+        { field: 8, value: '2026-08-01' },
+      ],
+    });
+  });
+
+  it('audits and restores custom fields when an applied result is reverted', async () => {
+    const client = createMockClient();
+    db.update(aiProcessingResult)
+      .set({
+        suggestedCustomFieldsJson: JSON.stringify([
+          {
+            fieldId: 7,
+            value: 'paid-id',
+            confidence: 0.95,
+            evidence: 'Paid in full',
+          },
+        ]),
+      })
+      .run();
+
+    await applyAiResult(db, client, resultId, { fields: ['customFields'] });
+
+    const applied = getAiResult(db, resultId);
+    expect(applied!.preApplyCustomFields).toEqual([
+      { field: 7, value: 'open-id' },
+      { field: 99, value: 'preserve me' },
+    ]);
+    expect(applied!.appliedCustomFields).toEqual([
+      { field: 7, value: 'paid-id' },
+      { field: 99, value: 'preserve me' },
+    ]);
+
+    await revertAiResult(db, client, resultId);
+
+    expect(client.updateDocument).toHaveBeenLastCalledWith(
+      1,
+      expect.objectContaining({
+        customFields: [
+          { field: 7, value: 'open-id' },
+          { field: 99, value: 'preserve me' },
+        ],
+      }),
+    );
+    expect(getAiResult(db, resultId)!.appliedStatus).toBe('reverted');
   });
 });
 

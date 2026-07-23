@@ -2,6 +2,8 @@ import { eq, sql, desc, asc, and, isNull, isNotNull, like } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { document } from '../schema/sqlite/documents.js';
 import type { AppDatabase } from '../db/client.js';
+import type { PaperlessCustomFieldInstance } from '../paperless/types.js';
+import type { AiCustomFieldRecommendation } from './providers/types.js';
 
 export interface ApplySnapshot {
   preApply: {
@@ -12,12 +14,14 @@ export interface ApplySnapshot {
     documentTypeName?: string | null;
     tagIds?: number[] | null;
     tagNames?: string[] | null;
+    customFields?: PaperlessCustomFieldInstance[] | null;
   };
   applied: {
     title?: string | null;
     correspondentId?: number | null;
     documentTypeId?: number | null;
     tagIds?: number[] | null;
+    customFields?: PaperlessCustomFieldInstance[] | null;
   };
 }
 
@@ -50,6 +54,7 @@ export interface AiResultSummary {
   suggestedCorrespondent: string | null;
   suggestedDocumentType: string | null;
   suggestedTags: string[];
+  suggestedCustomFields: AiCustomFieldRecommendation[];
   confidence: {
     title: number;
     correspondent: number;
@@ -60,6 +65,7 @@ export interface AiResultSummary {
   currentCorrespondent: string | null;
   currentDocumentType: string | null;
   currentTags: string[];
+  currentCustomFields: PaperlessCustomFieldInstance[];
   appliedStatus: string;
   appliedAt: string | null;
   errorMessage: string | null;
@@ -82,10 +88,12 @@ export interface AiResultDetail extends AiResultSummary {
   preApplyDocumentTypeName: string | null;
   preApplyTagIds: number[] | null;
   preApplyTagNames: string[] | null;
+  preApplyCustomFields: PaperlessCustomFieldInstance[] | null;
   appliedTitle: string | null;
   appliedCorrespondentId: number | null;
   appliedDocumentTypeId: number | null;
   appliedTagIds: number[] | null;
+  appliedCustomFields: PaperlessCustomFieldInstance[] | null;
   revertedAt: string | null;
 }
 
@@ -122,6 +130,24 @@ export interface UnprocessedDocumentFilters {
 }
 
 function parseJsonArray(json: string | null): string[] {
+  if (!json) return [];
+  try {
+    return JSON.parse(json);
+  } catch {
+    return [];
+  }
+}
+
+function parseCustomFieldRecommendations(json: string | null): AiCustomFieldRecommendation[] {
+  if (!json) return [];
+  try {
+    return JSON.parse(json);
+  } catch {
+    return [];
+  }
+}
+
+function parseCustomFieldInstances(json: string | null): PaperlessCustomFieldInstance[] {
   if (!json) return [];
   try {
     return JSON.parse(json);
@@ -187,7 +213,7 @@ export function getAiResults(
   }
   if (filters.changedOnly) {
     conditions.push(
-      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson} OR json_array_length(coalesce(${aiProcessingResult.suggestedCustomFieldsJson}, '[]')) > 0)`,
     );
   }
 
@@ -235,11 +261,13 @@ export function getAiResults(
       suggestedCorrespondent: aiProcessingResult.suggestedCorrespondent,
       suggestedDocumentType: aiProcessingResult.suggestedDocumentType,
       suggestedTagsJson: aiProcessingResult.suggestedTagsJson,
+      suggestedCustomFieldsJson: aiProcessingResult.suggestedCustomFieldsJson,
       confidenceJson: aiProcessingResult.confidenceJson,
       currentTitle: aiProcessingResult.currentTitle,
       currentCorrespondent: aiProcessingResult.currentCorrespondent,
       currentDocumentType: aiProcessingResult.currentDocumentType,
       currentTagsJson: aiProcessingResult.currentTagsJson,
+      currentCustomFieldsJson: aiProcessingResult.currentCustomFieldsJson,
       appliedStatus: aiProcessingResult.appliedStatus,
       appliedAt: aiProcessingResult.appliedAt,
       errorMessage: aiProcessingResult.errorMessage,
@@ -265,11 +293,13 @@ export function getAiResults(
     suggestedCorrespondent: r.suggestedCorrespondent,
     suggestedDocumentType: r.suggestedDocumentType,
     suggestedTags: parseJsonArray(r.suggestedTagsJson),
+    suggestedCustomFields: parseCustomFieldRecommendations(r.suggestedCustomFieldsJson),
     confidence: parseConfidence(r.confidenceJson),
     currentTitle: r.currentTitle ?? null,
     currentCorrespondent: r.currentCorrespondent,
     currentDocumentType: r.currentDocumentType,
     currentTags: parseJsonArray(r.currentTagsJson),
+    currentCustomFields: parseCustomFieldInstances(r.currentCustomFieldsJson),
     appliedStatus: r.appliedStatus ?? 'pending_review',
     appliedAt: r.appliedAt,
     errorMessage: r.errorMessage,
@@ -293,11 +323,13 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
       suggestedCorrespondent: aiProcessingResult.suggestedCorrespondent,
       suggestedDocumentType: aiProcessingResult.suggestedDocumentType,
       suggestedTagsJson: aiProcessingResult.suggestedTagsJson,
+      suggestedCustomFieldsJson: aiProcessingResult.suggestedCustomFieldsJson,
       confidenceJson: aiProcessingResult.confidenceJson,
       currentTitle: aiProcessingResult.currentTitle,
       currentCorrespondent: aiProcessingResult.currentCorrespondent,
       currentDocumentType: aiProcessingResult.currentDocumentType,
       currentTagsJson: aiProcessingResult.currentTagsJson,
+      currentCustomFieldsJson: aiProcessingResult.currentCustomFieldsJson,
       appliedStatus: aiProcessingResult.appliedStatus,
       appliedAt: aiProcessingResult.appliedAt,
       appliedFieldsJson: aiProcessingResult.appliedFieldsJson,
@@ -316,10 +348,12 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
       preApplyDocumentTypeName: aiProcessingResult.preApplyDocumentTypeName,
       preApplyTagIdsJson: aiProcessingResult.preApplyTagIdsJson,
       preApplyTagNamesJson: aiProcessingResult.preApplyTagNamesJson,
+      preApplyCustomFieldsJson: aiProcessingResult.preApplyCustomFieldsJson,
       appliedTitle: aiProcessingResult.appliedTitle,
       appliedCorrespondentId: aiProcessingResult.appliedCorrespondentId,
       appliedDocumentTypeId: aiProcessingResult.appliedDocumentTypeId,
       appliedTagIdsJson: aiProcessingResult.appliedTagIdsJson,
+      appliedCustomFieldsJson: aiProcessingResult.appliedCustomFieldsJson,
       revertedAt: aiProcessingResult.revertedAt,
     })
     .from(aiProcessingResult)
@@ -340,11 +374,13 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
     suggestedCorrespondent: row.suggestedCorrespondent,
     suggestedDocumentType: row.suggestedDocumentType,
     suggestedTags: parseJsonArray(row.suggestedTagsJson),
+    suggestedCustomFields: parseCustomFieldRecommendations(row.suggestedCustomFieldsJson),
     confidence: parseConfidence(row.confidenceJson),
     currentTitle: row.currentTitle ?? null,
     currentCorrespondent: row.currentCorrespondent,
     currentDocumentType: row.currentDocumentType,
     currentTags: parseJsonArray(row.currentTagsJson),
+    currentCustomFields: parseCustomFieldInstances(row.currentCustomFieldsJson),
     appliedStatus: row.appliedStatus ?? 'pending_review',
     appliedAt: row.appliedAt,
     errorMessage: row.errorMessage,
@@ -363,10 +399,16 @@ export function getAiResult(db: AppDatabase, id: string): AiResultDetail | null 
     preApplyDocumentTypeName: row.preApplyDocumentTypeName ?? null,
     preApplyTagIds: parseJsonNumberArray(row.preApplyTagIdsJson),
     preApplyTagNames: parseJsonArray(row.preApplyTagNamesJson),
+    preApplyCustomFields: row.preApplyCustomFieldsJson
+      ? parseCustomFieldInstances(row.preApplyCustomFieldsJson)
+      : null,
     appliedTitle: row.appliedTitle ?? null,
     appliedCorrespondentId: row.appliedCorrespondentId ?? null,
     appliedDocumentTypeId: row.appliedDocumentTypeId ?? null,
     appliedTagIds: parseJsonNumberArray(row.appliedTagIdsJson),
+    appliedCustomFields: row.appliedCustomFieldsJson
+      ? parseCustomFieldInstances(row.appliedCustomFieldsJson)
+      : null,
     revertedAt: row.revertedAt ?? null,
   };
 }
@@ -459,7 +501,8 @@ export function markAiResultApplied(
   snapshot?: ApplySnapshot,
 ): void {
   const allFields = ['title', 'correspondent', 'documentType', 'tags'];
-  const status = appliedFields.length === allFields.length ? 'applied' : 'partial';
+  if (appliedFields.includes('customFields')) allFields.push('customFields');
+  const status = allFields.every((field) => appliedFields.includes(field)) ? 'applied' : 'partial';
 
   const setData: Record<string, unknown> = {
     appliedStatus: status,
@@ -479,11 +522,17 @@ export function markAiResultApplied(
     setData.preApplyTagNamesJson = snapshot.preApply.tagNames
       ? JSON.stringify(snapshot.preApply.tagNames)
       : null;
+    setData.preApplyCustomFieldsJson = snapshot.preApply.customFields
+      ? JSON.stringify(snapshot.preApply.customFields)
+      : null;
     setData.appliedTitle = snapshot.applied.title ?? null;
     setData.appliedCorrespondentId = snapshot.applied.correspondentId ?? null;
     setData.appliedDocumentTypeId = snapshot.applied.documentTypeId ?? null;
     setData.appliedTagIdsJson = snapshot.applied.tagIds
       ? JSON.stringify(snapshot.applied.tagIds)
+      : null;
+    setData.appliedCustomFieldsJson = snapshot.applied.customFields
+      ? JSON.stringify(snapshot.applied.customFields)
       : null;
   }
 
@@ -519,7 +568,8 @@ export function markAiResultFailed(
 
 export function batchMarkApplied(db: AppDatabase, ids: string[], appliedFields: string[]): void {
   const allFields = ['title', 'correspondent', 'documentType', 'tags'];
-  const status = appliedFields.length === allFields.length ? 'applied' : 'partial';
+  if (appliedFields.includes('customFields')) allFields.push('customFields');
+  const status = allFields.every((field) => appliedFields.includes(field)) ? 'applied' : 'partial';
   const now = new Date().toISOString();
 
   db.transaction((tx) => {
@@ -576,7 +626,7 @@ export function getAiResultIdsByFilter(db: AppDatabase, filters: AiResultFilters
   }
   if (filters.changedOnly) {
     conditions.push(
-      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson} OR json_array_length(coalesce(${aiProcessingResult.suggestedCustomFieldsJson}, '[]')) > 0)`,
     );
   }
 
@@ -622,7 +672,7 @@ export function getDocumentIdsByAiFilter(db: AppDatabase, filters: AiResultFilte
   }
   if (filters.changedOnly) {
     conditions.push(
-      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson})`,
+      sql`(${aiProcessingResult.suggestedTitle} IS NOT ${aiProcessingResult.currentTitle} OR ${aiProcessingResult.suggestedCorrespondent} IS NOT ${aiProcessingResult.currentCorrespondent} OR ${aiProcessingResult.suggestedDocumentType} IS NOT ${aiProcessingResult.currentDocumentType} OR ${aiProcessingResult.suggestedTagsJson} IS NOT ${aiProcessingResult.currentTagsJson} OR json_array_length(coalesce(${aiProcessingResult.suggestedCustomFieldsJson}, '[]')) > 0)`,
     );
   }
 

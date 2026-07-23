@@ -1,6 +1,7 @@
 import type { AiProviderInterface, AiExtractionResult } from './providers/types.js';
 import { buildPromptParts, truncateContent } from './prompt.js';
 import { createLogger } from '../logger.js';
+import type { PaperlessCustomField } from '../paperless/types.js';
 
 const logger = createLogger('ai-extract');
 
@@ -18,6 +19,8 @@ export interface ProcessDocumentOptions {
   includeTags: boolean;
   tagAliasesEnabled: boolean;
   tagAliasMap: string;
+  customFields?: PaperlessCustomField[];
+  extractCustomFields?: boolean;
   reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
 }
 
@@ -38,6 +41,8 @@ export async function processDocument(
     includeTags: options.includeTags,
     tagAliasesEnabled: options.tagAliasesEnabled,
     tagAliasMap: options.tagAliasMap,
+    customFields: options.customFields ?? [],
+    extractCustomFields: options.extractCustomFields ?? false,
   });
 
   const startMs = performance.now();

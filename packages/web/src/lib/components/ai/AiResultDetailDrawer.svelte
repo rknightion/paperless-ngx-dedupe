@@ -29,6 +29,7 @@
       correspondent: boolean;
       documentType: boolean;
       tags: boolean;
+      customFields: boolean;
     };
     onapply: (
       id: string,
@@ -43,7 +44,13 @@
   let {
     mobile = false,
     paperlessUrl = '',
-    extractEnabled = { title: true, correspondent: true, documentType: true, tags: true },
+    extractEnabled = {
+      title: true,
+      correspondent: true,
+      documentType: true,
+      tags: true,
+      customFields: true,
+    },
     onapply,
     onreject,
     onreprocess,
@@ -76,7 +83,8 @@
       !detail.suggestedTitle &&
       !detail.suggestedCorrespondent &&
       !detail.suggestedDocumentType &&
-      detail.suggestedTags.length === 0
+      detail.suggestedTags.length === 0 &&
+      detail.suggestedCustomFields.length === 0
     );
   });
 
@@ -406,6 +414,26 @@
           oncheck={(c) => handleFieldCheck('tags', c)}
           disabled={detail.appliedStatus !== 'pending_review'}
           fieldDisabledByConfig={!extractEnabled.tags}
+        />
+        <AiFieldDiffCard
+          fieldName="customFields"
+          fieldLabel="Custom Fields"
+          currentValue={detail.currentCustomFields.map(
+            (field) => `Field #${field.field}: ${String(field.value)}`,
+          )}
+          suggestedValue={detail.suggestedCustomFields.map(
+            (field) =>
+              `${field.fieldName ?? `Field #${field.fieldId}`}: ${
+                Array.isArray(field.value) ? field.value.join(', ') : String(field.value)
+              }`,
+          )}
+          confidence={detail.suggestedCustomFields.length > 0
+            ? Math.min(...detail.suggestedCustomFields.map((field) => field.confidence))
+            : null}
+          checked={isFieldChecked('customFields')}
+          oncheck={(c) => handleFieldCheck('customFields', c)}
+          disabled={detail.appliedStatus !== 'pending_review'}
+          fieldDisabledByConfig={!extractEnabled.customFields}
         />
       </div>
 

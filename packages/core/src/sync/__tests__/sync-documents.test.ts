@@ -23,6 +23,7 @@ function makePaperlessDoc(id: number, overrides?: Partial<PaperlessDocument>): P
     originalFileName: `doc${id}.pdf`,
     archivedFileName: null,
     archiveSerialNumber: null,
+    customFields: [],
     ...overrides,
   };
 }
@@ -181,6 +182,22 @@ describe('syncDocuments', () => {
     expect(contents[0].normalizedText).toBe('hello world test');
     expect(contents[0].wordCount).toBe(3);
     expect(contents[0].contentHash).toBeTruthy();
+  });
+
+  it('should store custom field instances for AI comparison and safe updates', async () => {
+    const docs = [
+      makePaperlessDoc(1, {
+        customFields: [
+          { field: 7, value: 'paid-id' },
+          { field: 8, value: '2026-07-23' },
+        ],
+      }),
+    ];
+
+    await syncDocuments({ db, client: createSimpleClient(docs) });
+
+    const stored = db.select().from(document).get();
+    expect(JSON.parse(stored!.customFieldsJson!)).toEqual(docs[0].customFields);
   });
 
   it('should update sync state', async () => {

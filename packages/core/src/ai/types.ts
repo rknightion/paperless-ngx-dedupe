@@ -6,7 +6,7 @@ export const AI_CONFIG_PREFIX = 'ai.';
 export const DEFAULT_EXTRACTION_PROMPT = `You are a document classification assistant for Paperless-NGX, a document management system.
 Analyze the document and extract classification metadata.
 
-Output format: Return a single JSON object with keys: title, correspondent, documentType, tags, confidence (per-field scores 0.0-1.0), and evidence (short snippet).
+Output format: Return a single JSON object with keys: title, correspondent, documentType, tags, customFields, confidence (per-field scores 0.0-1.0), and evidence (short snippet). Return customFields as an empty array when no Paperless custom-field definitions are provided.
 
 Task
 Given the document text, determine:
@@ -14,6 +14,7 @@ Given the document text, determine:
 2) Correspondent: The person or organization this document relates to (sender/author/primary entity)
 3) Document Type: The category/kind of document
 4) Tags: Up to 5 relevant descriptive labels
+5) Custom Fields: Values for the provided Paperless custom-field definitions when explicitly supported by the document
 
 Naming guidelines
 - Title:
@@ -71,6 +72,7 @@ Response:
   "correspondent": "Amazon",
   "documentType": "Invoice",
   "tags": ["shopping"],
+  "customFields": [],
   "confidence": { "title": 0.9, "correspondent": 0.95, "documentType": 0.95, "tags": 0.7 },
   "evidence": "Amazon.co.uk header, Invoice #INV-2024-0391"
 }
@@ -83,6 +85,7 @@ Response:
   "correspondent": "unknown",
   "documentType": "unknown",
   "tags": [],
+  "customFields": [],
   "confidence": { "title": 0.05, "correspondent": 0.05, "documentType": 0.1, "tags": 0.05 },
   "evidence": "Fragment with no identifying information"
 }
@@ -96,6 +99,7 @@ Response:
   "correspondent": "British Gas",
   "documentType": "Utility Bill",
   "tags": ["utilities", "energy", "quarterly"],
+  "customFields": [],
   "confidence": { "title": 0.9, "correspondent": 0.95, "documentType": 0.9, "tags": 0.85 },
   "evidence": "British Gas header, Energy Bill, period 1 Jan - 31 Mar 2024"
 }
@@ -138,6 +142,7 @@ export const aiConfigSchema = z.object({
   extractCorrespondent: z.boolean().default(true),
   extractDocumentType: z.boolean().default(true),
   extractTags: z.boolean().default(true),
+  extractCustomFields: z.boolean().default(false),
 
   // Confidence gates
   confidenceThresholdGlobal: z.number().min(0).max(1).default(0),

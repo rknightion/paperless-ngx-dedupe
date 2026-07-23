@@ -540,6 +540,14 @@
         >
       {/if}
     </a>
+    <a
+      href="/ai-processing/custom-fields"
+      class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/custom-fields')
+        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+        : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
+    >
+      Custom Fields
+    </a>
   </nav>
 
   <!-- Child Page Content -->

@@ -8,6 +8,7 @@ import type {
   PaperlessTag,
   PaperlessCorrespondent,
   PaperlessDocumentType,
+  PaperlessCustomField,
   PaperlessStatistics,
   PaperlessStatus,
   PaperlessStoragePath,
@@ -20,6 +21,7 @@ import {
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,
+  paperlessCustomFieldSchema,
   paperlessStatisticsSchema,
   paperlessStatusSchema,
   paperlessStoragePathSchema,
@@ -263,6 +265,7 @@ export class PaperlessClient {
       'original_file_name',
       'archived_file_name',
       'archive_serial_number',
+      'custom_fields',
     ].join(',');
 
     while (hasNext) {
@@ -305,6 +308,10 @@ export class PaperlessClient {
     return this.fetchAllPaginated('/api/document_types/', paperlessDocumentTypeSchema);
   }
 
+  async getCustomFields(): Promise<PaperlessCustomField[]> {
+    return this.fetchAllPaginated('/api/custom_fields/', paperlessCustomFieldSchema);
+  }
+
   async getStatistics(): Promise<PaperlessStatistics> {
     const response = await this.fetchWithRetry(this.buildUrl('/api/statistics/'));
     const json = await response.json();
@@ -345,6 +352,7 @@ export class PaperlessClient {
     if (update.correspondent !== undefined) body.correspondent = update.correspondent;
     if (update.documentType !== undefined) body.document_type = update.documentType;
     if (update.tags !== undefined) body.tags = update.tags;
+    if (update.customFields !== undefined) body.custom_fields = update.customFields;
 
     await this.fetchWithRetry(this.buildUrl(`/api/documents/${id}/`), {
       method: 'PATCH',

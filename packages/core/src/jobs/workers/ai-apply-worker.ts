@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { runWorkerTask } from '../worker-entry.js';
 import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js';
 import { getAiConfig } from '../../ai/config.js';
-import { applyAiResult, type ReferenceData } from '../../ai/apply.js';
+import { applyAiResult, type AiApplyField, type ReferenceData } from '../../ai/apply.js';
 import { markAiResultFailed } from '../../ai/queries.js';
 import { resolveResultIdsForApplyScope } from '../../ai/scopes.js';
 import type { ApplyScope } from '../../ai/scopes.js';
@@ -13,7 +13,7 @@ const logger = createLogger('ai-apply-worker');
 
 interface ApplyTaskData {
   scope: ApplyScope;
-  fields: ('title' | 'correspondent' | 'documentType' | 'tags')[];
+  fields: AiApplyField[];
   allowClearing: boolean;
   createMissingEntities: boolean;
 }
@@ -34,12 +34,13 @@ runWorkerTask(async (ctx, onProgress) => {
   }
 
   // Fetch reference data once for the entire batch
-  const [correspondents, documentTypes, tags] = await Promise.all([
+  const [correspondents, documentTypes, tags, customFields] = await Promise.all([
     client.getCorrespondents(),
     client.getDocumentTypes(),
     client.getTags(),
+    taskData.fields.includes('customFields') ? client.getCustomFields() : Promise.resolve([]),
   ]);
-  const referenceData: ReferenceData = { correspondents, documentTypes, tags };
+  const referenceData: ReferenceData = { correspondents, documentTypes, tags, customFields };
 
   // Resolve processed tag ID up front if needed — we'll apply it in bulk after
   let processedTagId: number | null = null;

@@ -466,6 +466,18 @@ describe('markAiResultApplied', () => {
     expect(result!.appliedAt).toBeTruthy();
   });
 
+  it('sets status to "applied" when custom fields are included with all standard fields', () => {
+    markAiResultApplied(db, resultIds[0], [
+      'title',
+      'correspondent',
+      'documentType',
+      'tags',
+      'customFields',
+    ]);
+    const result = getAiResult(db, resultIds[0]);
+    expect(result!.appliedStatus).toBe('applied');
+  });
+
   it('sets status to "partial" when a subset of fields is provided', () => {
     markAiResultApplied(db, resultIds[0], ['correspondent']);
     const result = getAiResult(db, resultIds[0]);
@@ -558,6 +570,16 @@ describe('batchMarkApplied', () => {
     batchMarkApplied(db, [resultIds[0]], ['tags']);
     const result = getAiResult(db, resultIds[0]);
     expect(result!.appliedStatus).toBe('partial');
+  });
+
+  it('sets applied status when custom fields are included with all standard fields', () => {
+    batchMarkApplied(
+      db,
+      [resultIds[0]],
+      ['title', 'correspondent', 'documentType', 'tags', 'customFields'],
+    );
+    const result = getAiResult(db, resultIds[0]);
+    expect(result!.appliedStatus).toBe('applied');
   });
 });
 

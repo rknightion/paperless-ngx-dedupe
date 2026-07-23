@@ -20,6 +20,37 @@ export interface PaperlessDocument {
   originalFileName: string | null;
   archivedFileName: string | null;
   archiveSerialNumber: number | null;
+  customFields: PaperlessCustomFieldInstance[];
+}
+
+export type PaperlessCustomFieldDataType =
+  | 'string'
+  | 'url'
+  | 'date'
+  | 'boolean'
+  | 'integer'
+  | 'float'
+  | 'monetary'
+  | 'documentlink'
+  | 'select'
+  | 'longtext';
+
+export type PaperlessCustomFieldValue = string | number | boolean | number[] | null;
+
+export interface PaperlessCustomFieldInstance {
+  field: number;
+  value: PaperlessCustomFieldValue;
+}
+
+export interface PaperlessCustomField {
+  id: number;
+  name: string;
+  dataType: PaperlessCustomFieldDataType;
+  extraData: {
+    selectOptions: Array<{ id: string; label: string }>;
+    defaultCurrency?: string | null;
+  };
+  documentCount: number;
 }
 
 export interface PaperlessTag {
@@ -113,4 +144,5 @@ export interface DocumentUpdate {
   correspondent?: number | null;
   documentType?: number | null;
   tags?: number[];
+  customFields?: PaperlessCustomFieldInstance[];
 }

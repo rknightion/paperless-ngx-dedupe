@@ -7,6 +7,9 @@ import type {
   PaperlessCorrespondent,
   PaperlessDocumentType,
   PaperlessTag,
+  PaperlessCustomField,
+  PaperlessCustomFieldInstance,
+  DocumentUpdate,
 } from '../paperless/types.js';
 import type { AppDatabase } from '../db/client.js';
 import { createLogger } from '../logger.js';
@@ -21,6 +24,8 @@ import {
 } from './queries.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
 import { recordFeedback } from './feedback.js';
+import { normalizeCustomFieldRecommendations } from './custom-fields.js';
+import type { AiCustomFieldRecommendation } from './providers/types.js';
 
 const logger = createLogger('ai-apply');
 
@@ -29,10 +34,13 @@ export interface ReferenceData {
   correspondents: PaperlessCorrespondent[];
   documentTypes: PaperlessDocumentType[];
   tags: PaperlessTag[];
+  customFields?: PaperlessCustomField[];
 }
 
+export type AiApplyField = 'title' | 'correspondent' | 'documentType' | 'tags' | 'customFields';
+
 export interface ApplyOptions {
-  fields: ('title' | 'correspondent' | 'documentType' | 'tags')[];
+  fields: AiApplyField[];
   addProcessedTag?: boolean;
   processedTagName?: string;
   /** Allow clearing existing Paperless metadata when suggestion is null. Default: false */
@@ -75,12 +83,16 @@ export async function applyAiResult(
       const suggestedTags = normalizeSuggestedTags(
         row.suggestedTagsJson ? JSON.parse(row.suggestedTagsJson) : [],
       );
+      const rawSuggestedCustomFields: AiCustomFieldRecommendation[] = row.suggestedCustomFieldsJson
+        ? JSON.parse(row.suggestedCustomFieldsJson)
+        : [];
 
       if (
         !suggestedTitle &&
         !suggestedCorrespondent &&
         !suggestedDocumentType &&
-        suggestedTags.length === 0
+        suggestedTags.length === 0 &&
+        rawSuggestedCustomFields.length === 0
       ) {
         markAiResultFailed(db, resultId, 'No suggestions to apply', 'no_suggestions');
         throw new Error('No suggestions to apply');
@@ -90,26 +102,36 @@ export async function applyAiResult(
       let correspondents: PaperlessCorrespondent[];
       let documentTypes: PaperlessDocumentType[];
       let tags: PaperlessTag[];
+      let customFields: PaperlessCustomField[];
 
       if (options.referenceData) {
         correspondents = options.referenceData.correspondents;
         documentTypes = options.referenceData.documentTypes;
         tags = options.referenceData.tags;
+        customFields =
+          options.referenceData.customFields ??
+          (options.fields.includes('customFields') ? await client.getCustomFields() : []);
       } else {
-        [correspondents, documentTypes, tags] = await Promise.all([
+        [correspondents, documentTypes, tags, customFields] = await Promise.all([
           client.getCorrespondents(),
           client.getDocumentTypes(),
           client.getTags(),
+          options.fields.includes('customFields') ? client.getCustomFields() : Promise.resolve([]),
         ]);
       }
+      const suggestedCustomFields = normalizeCustomFieldRecommendations(
+        rawSuggestedCustomFields,
+        customFields,
+      );
 
       // Build pre-apply snapshot: use local DB data in batch mode, live API in single-doc mode
       let preApplyCorrespondent: PaperlessCorrespondent | null | undefined;
       let preApplyDocType: PaperlessDocumentType | null | undefined;
       let preApplyTagNames: string[];
       let currentDocTagIds: number[];
+      let currentCustomFields: PaperlessCustomFieldInstance[];
 
-      if (options.referenceData) {
+      if (options.referenceData && !options.fields.includes('customFields')) {
         // Reconstruct from AI result row's stored current* values + reference data
         preApplyCorrespondent = row.currentCorrespondent
           ? correspondents.find(
@@ -128,6 +150,9 @@ export async function applyAiResult(
         currentDocTagIds = currentTagNames
           .map((name) => tags.find((t) => t.name.toLowerCase() === name.toLowerCase())?.id)
           .filter((id): id is number => id !== undefined);
+        currentCustomFields = row.currentCustomFieldsJson
+          ? JSON.parse(row.currentCustomFieldsJson)
+          : [];
       } else {
         let currentDoc;
         try {
@@ -152,14 +177,10 @@ export async function applyAiResult(
           .map((tid) => tags.find((t) => t.id === tid)?.name)
           .filter((n): n is string => n !== undefined);
         currentDocTagIds = currentDoc.tags;
+        currentCustomFields = currentDoc.customFields;
       }
 
-      const update: {
-        title?: string;
-        correspondent?: number | null;
-        documentType?: number | null;
-        tags?: number[];
-      } = {};
+      const update: DocumentUpdate = {};
 
       // Resolve title (simple string — no entity resolution needed)
       if (options.fields.includes('title')) {
@@ -281,6 +302,24 @@ export async function applyAiResult(
         // else: no tags resolved and allowClearing is false → leave untouched
       }
 
+      if (options.fields.includes('customFields') && suggestedCustomFields.length > 0) {
+        const merged = currentCustomFields.map((instance) => ({ ...instance }));
+        const indexes = new Map(merged.map((instance, index) => [instance.field, index]));
+
+        for (const recommendation of suggestedCustomFields) {
+          const instance = { field: recommendation.fieldId, value: recommendation.value };
+          const index = indexes.get(recommendation.fieldId);
+          if (index === undefined) {
+            indexes.set(recommendation.fieldId, merged.length);
+            merged.push(instance);
+          } else {
+            merged[index] = instance;
+          }
+        }
+
+        update.customFields = merged;
+      }
+
       // Apply to Paperless-NGX
       await client.updateDocument(row.paperlessId, update);
       logger.info(
@@ -298,12 +337,14 @@ export async function applyAiResult(
           documentTypeName: preApplyDocType?.name ?? null,
           tagIds: currentDocTagIds.length > 0 ? currentDocTagIds : null,
           tagNames: preApplyTagNames.length > 0 ? preApplyTagNames : null,
+          customFields: currentCustomFields,
         },
         applied: {
           title: update.title ?? null,
           correspondentId: update.correspondent !== undefined ? update.correspondent : null,
           documentTypeId: update.documentType !== undefined ? update.documentType : null,
           tagIds: update.tags ?? null,
+          customFields: update.customFields ?? null,
         },
       };
 
@@ -330,17 +371,16 @@ export async function applyAiResult(
           .filter((n): n is string => n !== undefined);
         docUpdate.tagsJson = JSON.stringify(tagNames);
       }
+      if (update.customFields) {
+        docUpdate.customFieldsJson = JSON.stringify(update.customFields);
+      }
       if (Object.keys(docUpdate).length > 0) {
         db.update(document).set(docUpdate).where(eq(document.paperlessId, row.paperlessId)).run();
       }
 
       // Record feedback if only some fields were applied
-      const allFields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
-        'title',
-        'correspondent',
-        'documentType',
-        'tags',
-      ];
+      const allFields: AiApplyField[] = ['title', 'correspondent', 'documentType', 'tags'];
+      if (suggestedCustomFields.length > 0) allFields.push('customFields');
       const excludedFields = allFields.filter((f) => !options.fields.includes(f));
       if (excludedFields.length > 0) {
         recordFeedback(db, resultId, {

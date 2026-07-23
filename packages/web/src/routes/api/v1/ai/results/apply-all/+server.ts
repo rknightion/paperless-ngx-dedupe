@@ -6,7 +6,7 @@ import {
   launchWorker,
   getWorkerPath,
 } from '@paperless-dedupe/core';
-import type { ApplyScope } from '@paperless-dedupe/core';
+import type { AiApplyField, ApplyScope } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -22,12 +22,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   let allowClearing = false;
   let createMissingEntities = true;
-  let fields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
-    'title',
-    'correspondent',
-    'documentType',
-    'tags',
-  ];
+  let fields: AiApplyField[] = ['title', 'correspondent', 'documentType', 'tags'];
   let scope: ApplyScope = { type: 'all_pending' };
 
   const contentType = request.headers.get('content-type');
@@ -39,7 +34,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
       if (Array.isArray(body?.fields)) {
         fields = body.fields.filter((f: string) =>
-          ['title', 'correspondent', 'documentType', 'tags'].includes(f),
+          ['title', 'correspondent', 'documentType', 'tags', 'customFields'].includes(f),
         );
       }
 

@@ -9,6 +9,7 @@ import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js'
 import { evaluateGates } from './gates.js';
 import type { GateInput } from './gates.js';
 import { getAiConfig } from './config.js';
+import type { AiApplyField } from './apply.js';
 
 export interface ApplyPreflightResult {
   totalDocuments: number;
@@ -17,6 +18,7 @@ export interface ApplyPreflightResult {
     correspondent: number;
     documentType: number;
     tags: number;
+    customFields: number;
   };
   newEntitiesCreated: {
     correspondents: string[];
@@ -43,7 +45,7 @@ export async function computeApplyPreflight(
   client: PaperlessClient,
   scope: ApplyScope,
   options: {
-    fields: ('title' | 'correspondent' | 'documentType' | 'tags')[];
+    fields: AiApplyField[];
     allowClearing: boolean;
     createMissingEntities: boolean;
   },
@@ -53,7 +55,7 @@ export async function computeApplyPreflight(
   if (resultIds.length === 0) {
     return {
       totalDocuments: 0,
-      fieldsChanged: { title: 0, correspondent: 0, documentType: 0, tags: 0 },
+      fieldsChanged: { title: 0, correspondent: 0, documentType: 0, tags: 0, customFields: 0 },
       newEntitiesCreated: { correspondents: [], documentTypes: [], tags: [] },
       lowConfidenceCount: 0,
       noOpCount: 0,
@@ -88,7 +90,7 @@ export async function computeApplyPreflight(
 
   const result: ApplyPreflightResult = {
     totalDocuments: allResults.length,
-    fieldsChanged: { title: 0, correspondent: 0, documentType: 0, tags: 0 },
+    fieldsChanged: { title: 0, correspondent: 0, documentType: 0, tags: 0, customFields: 0 },
     newEntitiesCreated: { correspondents: [], documentTypes: [], tags: [] },
     lowConfidenceCount: 0,
     noOpCount: 0,
@@ -198,6 +200,16 @@ export async function computeApplyPreflight(
         if (!existingTagNames.has(tag.toLowerCase())) {
           newTags.add(tag);
         }
+      }
+    }
+
+    if (options.fields.includes('customFields')) {
+      const suggestions: unknown[] = row.suggestedCustomFieldsJson
+        ? JSON.parse(row.suggestedCustomFieldsJson)
+        : [];
+      if (suggestions.length > 0) {
+        result.fieldsChanged.customFields++;
+        isNoOp = false;
       }
     }
 

@@ -135,6 +135,11 @@
       {#if result.suggestedTags.length === 0}
         <span class="text-soft">&mdash;</span>
       {/if}
+      {#if result.suggestedCustomFields.length > 0}
+        <span class="bg-success-light text-success rounded-full px-2 py-0.5 text-xs font-medium">
+          +{result.suggestedCustomFields.length} custom
+        </span>
+      {/if}
     </div>
   </td>
   <td class="px-4 py-3">

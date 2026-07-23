@@ -1,6 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
+import { document } from '../schema/sqlite/documents.js';
 import type { PaperlessClient } from '../paperless/client.js';
+import type { PaperlessCustomFieldInstance, DocumentUpdate } from '../paperless/types.js';
 import type { AppDatabase } from '../db/client.js';
 import { createLogger } from '../logger.js';
 import { withSpan } from '../telemetry/spans.js';
@@ -41,7 +43,8 @@ export async function revertAiResult(
         row.preApplyDocumentTypeId !== null ||
         row.preApplyDocumentTypeName !== null ||
         row.preApplyTagIdsJson !== null ||
-        row.preApplyTagNamesJson !== null;
+        row.preApplyTagNamesJson !== null ||
+        row.preApplyCustomFieldsJson !== null;
 
       if (!hasSnapshot) {
         throw new Error(
@@ -54,12 +57,10 @@ export async function revertAiResult(
         ? JSON.parse(row.preApplyTagIdsJson)
         : [];
 
-      const revertUpdate: {
-        title?: string;
-        correspondent: number | null;
-        documentType: number | null;
-        tags: number[];
-      } = {
+      const preApplyCustomFields: PaperlessCustomFieldInstance[] | undefined =
+        row.preApplyCustomFieldsJson ? JSON.parse(row.preApplyCustomFieldsJson) : undefined;
+
+      const revertUpdate: DocumentUpdate = {
         correspondent: row.preApplyCorrespondentId ?? null,
         documentType: row.preApplyDocumentTypeId ?? null,
         tags: preApplyTagIds,
@@ -69,8 +70,24 @@ export async function revertAiResult(
       if (row.preApplyTitle) {
         revertUpdate.title = row.preApplyTitle;
       }
+      if (preApplyCustomFields) {
+        revertUpdate.customFields = preApplyCustomFields;
+      }
 
       await client.updateDocument(row.paperlessId, revertUpdate);
+
+      const localUpdate: Record<string, unknown> = {
+        correspondent: row.preApplyCorrespondentName ?? null,
+        documentType: row.preApplyDocumentTypeName ?? null,
+        tagsJson: JSON.stringify(
+          row.preApplyTagNamesJson ? JSON.parse(row.preApplyTagNamesJson) : [],
+        ),
+      };
+      if (row.preApplyTitle) localUpdate.title = row.preApplyTitle;
+      if (preApplyCustomFields) {
+        localUpdate.customFieldsJson = JSON.stringify(preApplyCustomFields);
+      }
+      db.update(document).set(localUpdate).where(eq(document.paperlessId, row.paperlessId)).run();
 
       // Atomically update status to reverted
       const result = db

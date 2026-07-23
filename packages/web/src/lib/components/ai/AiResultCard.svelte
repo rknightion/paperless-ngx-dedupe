@@ -190,6 +190,18 @@
     </div>
   {/if}
 
+  {#if result.suggestedCustomFields.length > 0}
+    <div class="border-soft flex flex-wrap gap-1 border-t px-4 py-2.5">
+      {#each result.suggestedCustomFields as field (field.fieldId)}
+        <span class="bg-success-light text-success rounded-full px-2 py-0.5 text-xs font-medium">
+          {field.fieldName ?? `Field #${field.fieldId}`}: {Array.isArray(field.value)
+            ? field.value.join(', ')
+            : String(field.value)}
+        </span>
+      {/each}
+    </div>
+  {/if}
+
   <!-- Bottom: actions -->
   {#if result.appliedStatus === 'pending_review' && !result.errorMessage}
     <div class="border-soft flex items-center gap-2 border-t px-4 py-2.5">

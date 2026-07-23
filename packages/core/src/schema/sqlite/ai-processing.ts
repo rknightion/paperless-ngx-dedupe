@@ -19,11 +19,13 @@ export const aiProcessingResult = sqliteTable(
     suggestedCorrespondent: text('suggested_correspondent'),
     suggestedDocumentType: text('suggested_document_type'),
     suggestedTagsJson: text('suggested_tags_json'),
+    suggestedCustomFieldsJson: text('suggested_custom_fields_json'),
     confidenceJson: text('confidence_json'),
     currentTitle: text('current_title'),
     currentCorrespondent: text('current_correspondent'),
     currentDocumentType: text('current_document_type'),
     currentTagsJson: text('current_tags_json'),
+    currentCustomFieldsJson: text('current_custom_fields_json'),
     appliedStatus: text('applied_status').default('pending_review'),
     appliedAt: text('applied_at'),
     appliedFieldsJson: text('applied_fields_json'),
@@ -44,12 +46,14 @@ export const aiProcessingResult = sqliteTable(
     preApplyDocumentTypeName: text('pre_apply_document_type_name'),
     preApplyTagIdsJson: text('pre_apply_tag_ids_json'),
     preApplyTagNamesJson: text('pre_apply_tag_names_json'),
+    preApplyCustomFieldsJson: text('pre_apply_custom_fields_json'),
 
     // Audit: what was actually written to Paperless
     appliedTitle: text('applied_title'),
     appliedCorrespondentId: integer('applied_correspondent_id'),
     appliedDocumentTypeId: integer('applied_document_type_id'),
     appliedTagIdsJson: text('applied_tag_ids_json'),
+    appliedCustomFieldsJson: text('applied_custom_fields_json'),
 
     // Revert tracking
     revertedAt: text('reverted_at'),

@@ -28,6 +28,7 @@ describe('getAiConfig', () => {
     expect(config.rateDelayMs).toBe(0);
     expect(config.reasoningEffort).toBe('low');
     expect(config.maxRetries).toBe(10);
+    expect(config.extractCustomFields).toBe(false);
   });
 
   it('matches DEFAULT_AI_CONFIG for a fresh database', () => {
@@ -71,6 +72,7 @@ describe('setAiConfig', () => {
       includeCorrespondents: true,
       includeDocumentTypes: true,
       includeTags: true,
+      extractCustomFields: true,
     });
 
     const config = getAiConfig(db);
@@ -79,6 +81,7 @@ describe('setAiConfig', () => {
     expect(config.includeCorrespondents).toBe(true);
     expect(config.includeDocumentTypes).toBe(true);
     expect(config.includeTags).toBe(true);
+    expect(config.extractCustomFields).toBe(true);
   });
 
   it('parses number values correctly', () => {

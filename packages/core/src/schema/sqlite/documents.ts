@@ -13,6 +13,7 @@ export const document = sqliteTable(
     correspondent: text('correspondent'),
     documentType: text('document_type'),
     tagsJson: text('tags_json'),
+    customFieldsJson: text('custom_fields_json'),
     createdDate: text('created_date'),
     addedDate: text('added_date'),
     modifiedDate: text('modified_date'),

@@ -107,6 +107,7 @@
   let aiExtractCorrespondent = $state(initialAiConfig?.extractCorrespondent ?? true);
   let aiExtractDocumentType = $state(initialAiConfig?.extractDocumentType ?? true);
   let aiExtractTags = $state(initialAiConfig?.extractTags ?? true);
+  let aiExtractCustomFields = $state(initialAiConfig?.extractCustomFields ?? false);
   let isDefaultPrompt = $state(untrack(() => data.isDefaultPrompt) ?? true);
   let showPrompt = $state(false);
   let showAiAdvanced = $state(false);
@@ -346,6 +347,7 @@
           extractCorrespondent: aiExtractCorrespondent,
           extractDocumentType: aiExtractDocumentType,
           extractTags: aiExtractTags,
+          extractCustomFields: aiExtractCustomFields,
           confidenceThresholdGlobal: aiConfidenceGlobal / 100,
           confidenceThresholdTitle: aiConfidenceTitle / 100,
           confidenceThresholdCorrespondent: aiConfidenceCorrespondent / 100,
@@ -1011,6 +1013,14 @@
           <label class="text-muted flex items-center gap-2 text-sm">
             <input type="checkbox" bind:checked={aiExtractTags} class="rounded" />
             Tags
+          </label>
+          <label class="text-muted flex items-center gap-2 text-sm">
+            <input type="checkbox" bind:checked={aiExtractCustomFields} class="rounded" />
+            Custom Fields
+            <InfoIcon
+              text="Recommend typed values for custom fields already defined in Paperless-NGX. Select fields use their stable option IDs, and recommendations are merged with live document values when applied."
+              position="top"
+            />
           </label>
         </div>
       </div>

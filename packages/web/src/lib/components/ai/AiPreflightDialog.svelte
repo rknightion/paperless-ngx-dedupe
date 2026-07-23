@@ -109,6 +109,10 @@
               <span class="text-muted">Tags</span>
               <span class="text-ink font-medium">{preflight.fieldsChanged.tags}</span>
             </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-muted">Custom fields</span>
+              <span class="text-ink font-medium">{preflight.fieldsChanged.customFields}</span>
+            </div>
           </div>
         </div>
 

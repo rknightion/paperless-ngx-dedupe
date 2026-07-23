@@ -247,6 +247,7 @@ function insertDocument(
         documentType:
           doc.documentType !== null ? (refMaps.documentTypes.get(doc.documentType) ?? null) : null,
         tagsJson: JSON.stringify(tagNames),
+        customFieldsJson: JSON.stringify(doc.customFields),
         createdDate: doc.created,
         addedDate: doc.added,
         modifiedDate: doc.modified,
@@ -295,6 +296,7 @@ function updateDocument(
         documentType:
           doc.documentType !== null ? (refMaps.documentTypes.get(doc.documentType) ?? null) : null,
         tagsJson: JSON.stringify(tagNames),
+        customFieldsJson: JSON.stringify(doc.customFields),
         createdDate: doc.created,
         addedDate: doc.added,
         modifiedDate: doc.modified,

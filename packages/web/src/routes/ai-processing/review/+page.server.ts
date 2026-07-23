@@ -75,6 +75,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       correspondent: aiConfig.extractCorrespondent,
       documentType: aiConfig.extractDocumentType,
       tags: aiConfig.extractTags,
+      customFields: aiConfig.extractCustomFields,
     },
   };
 };

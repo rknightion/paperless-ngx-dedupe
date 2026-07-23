@@ -20,6 +20,7 @@ import type { AiConfig } from './types.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
 import { getModelPricing, estimateResultCost } from './costs.js';
 import { TpmThrottle } from './tpm-throttle.js';
+import { normalizeCustomFieldRecommendations } from './custom-fields.js';
 
 const logger = createLogger('ai-batch');
 
@@ -82,7 +83,7 @@ export async function processBatch(
         const startMs = performance.now();
 
         // Fetch reference data from Paperless-NGX only when the corresponding toggle is enabled
-        const [correspondentNames, documentTypeNames, tagNames] = await Promise.all([
+        const [correspondentNames, documentTypeNames, tagNames, customFields] = await Promise.all([
           config.includeCorrespondents
             ? client.getCorrespondents().then((list) => list.map((c) => c.name))
             : Promise.resolve([] as string[]),
@@ -92,6 +93,7 @@ export async function processBatch(
           config.includeTags
             ? client.getTags().then((list) => list.map((t) => t.name))
             : Promise.resolve([] as string[]),
+          config.extractCustomFields ? client.getCustomFields() : Promise.resolve([]),
         ]);
 
         // Build document query
@@ -105,6 +107,7 @@ export async function processBatch(
               correspondent: document.correspondent,
               documentType: document.documentType,
               tagsJson: document.tagsJson,
+              customFieldsJson: document.customFieldsJson,
               fullText: documentContent.fullText,
             })
             .from(document)
@@ -120,6 +123,7 @@ export async function processBatch(
               correspondent: document.correspondent,
               documentType: document.documentType,
               tagsJson: document.tagsJson,
+              customFieldsJson: document.customFieldsJson,
               fullText: documentContent.fullText,
             })
             .from(document)
@@ -141,6 +145,7 @@ export async function processBatch(
               correspondent: document.correspondent,
               documentType: document.documentType,
               tagsJson: document.tagsJson,
+              customFieldsJson: document.customFieldsJson,
               fullText: documentContent.fullText,
             })
             .from(document)
@@ -219,6 +224,7 @@ export async function processBatch(
                 currentCorrespondent: doc.correspondent,
                 currentDocumentType: doc.documentType,
                 currentTagsJson: doc.tagsJson,
+                currentCustomFieldsJson: doc.customFieldsJson,
                 createdAt: now,
               })
               .onConflictDoUpdate({
@@ -284,6 +290,8 @@ export async function processBatch(
               includeTags: config.includeTags,
               tagAliasesEnabled: config.tagAliasesEnabled,
               tagAliasMap: config.tagAliasMap,
+              customFields,
+              extractCustomFields: config.extractCustomFields,
               reasoningEffort: config.reasoningEffort,
             });
 
@@ -299,6 +307,12 @@ export async function processBatch(
               extraction.response.documentType,
             );
             const normalizedTags = normalizeSuggestedTags(extraction.response.tags);
+            const suggestedCustomFields = config.extractCustomFields
+              ? normalizeCustomFieldRecommendations(
+                  extraction.response.customFields ?? [],
+                  customFields,
+                )
+              : [];
 
             // Compute cost estimate
             const pricing = getModelPricing(db, config.model);
@@ -321,11 +335,13 @@ export async function processBatch(
                 suggestedCorrespondent: normalizedCorrespondent,
                 suggestedDocumentType: normalizedDocumentType,
                 suggestedTagsJson: JSON.stringify(normalizedTags),
+                suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
                 confidenceJson: JSON.stringify(extraction.response.confidence),
                 currentTitle: doc.title,
                 currentCorrespondent: doc.correspondent,
                 currentDocumentType: doc.documentType,
                 currentTagsJson: doc.tagsJson,
+                currentCustomFieldsJson: doc.customFieldsJson,
                 appliedStatus: 'pending_review',
                 evidence: extraction.response.evidence || null,
                 rawResponseJson: JSON.stringify(extraction.response),
@@ -344,11 +360,13 @@ export async function processBatch(
                   suggestedCorrespondent: normalizedCorrespondent,
                   suggestedDocumentType: normalizedDocumentType,
                   suggestedTagsJson: JSON.stringify(normalizedTags),
+                  suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
                   confidenceJson: JSON.stringify(extraction.response.confidence),
                   currentTitle: doc.title,
                   currentCorrespondent: doc.correspondent,
                   currentDocumentType: doc.documentType,
                   currentTagsJson: doc.tagsJson,
+                  currentCustomFieldsJson: doc.customFieldsJson,
                   appliedStatus: 'pending_review',
                   appliedAt: null,
                   appliedFieldsJson: null,

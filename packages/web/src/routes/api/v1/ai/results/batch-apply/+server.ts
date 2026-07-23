@@ -8,6 +8,7 @@ import {
 } from '@paperless-dedupe/core';
 import type { ApplyScope } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
+import type { AiApplyField } from '@paperless-dedupe/core';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.config.AI_ENABLED) {
@@ -16,16 +17,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   const body = await request.json();
   const resultIds: string[] = body?.resultIds ?? [];
-  let fields: ('title' | 'correspondent' | 'documentType' | 'tags')[] = [
-    'title',
-    'correspondent',
-    'documentType',
-    'tags',
-  ];
+  let fields: AiApplyField[] = ['title', 'correspondent', 'documentType', 'tags'];
 
   if (Array.isArray(body?.fields)) {
     fields = body.fields.filter((f: string) =>
-      ['title', 'correspondent', 'documentType', 'tags'].includes(f),
+      ['title', 'correspondent', 'documentType', 'tags', 'customFields'].includes(f),
     );
   }
 

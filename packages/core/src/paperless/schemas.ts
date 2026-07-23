@@ -3,6 +3,19 @@ import type { ZodType } from 'zod';
 import type { AppConfig } from '../config.js';
 import type { PaperlessConfig } from './types.js';
 
+const paperlessCustomFieldValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.array(z.number()),
+  z.null(),
+]);
+
+export const paperlessCustomFieldInstanceSchema = z.object({
+  field: z.number(),
+  value: paperlessCustomFieldValueSchema,
+});
+
 export const paperlessDocumentSchema = z
   .object({
     id: z.number(),
@@ -17,6 +30,7 @@ export const paperlessDocumentSchema = z
     original_file_name: z.string().nullable().default(null),
     archived_file_name: z.string().nullable().default(null),
     archive_serial_number: z.number().nullable().default(null),
+    custom_fields: z.array(paperlessCustomFieldInstanceSchema).default([]),
   })
   .transform((raw) => ({
     id: raw.id,
@@ -31,6 +45,48 @@ export const paperlessDocumentSchema = z
     originalFileName: raw.original_file_name,
     archivedFileName: raw.archived_file_name,
     archiveSerialNumber: raw.archive_serial_number,
+    customFields: raw.custom_fields,
+  }));
+
+export const paperlessCustomFieldSchema = z
+  .object({
+    id: z.number(),
+    name: z.string(),
+    data_type: z.enum([
+      'string',
+      'url',
+      'date',
+      'boolean',
+      'integer',
+      'float',
+      'monetary',
+      'documentlink',
+      'select',
+      'longtext',
+    ]),
+    extra_data: z
+      .object({
+        select_options: z
+          .array(z.object({ id: z.string(), label: z.string() }))
+          .optional()
+          .default([]),
+        default_currency: z.string().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
+    document_count: z.number().default(0),
+  })
+  .transform((raw) => ({
+    id: raw.id,
+    name: raw.name,
+    dataType: raw.data_type,
+    extraData: {
+      selectOptions: raw.extra_data?.select_options ?? [],
+      ...(raw.extra_data?.default_currency !== undefined
+        ? { defaultCurrency: raw.extra_data.default_currency }
+        : {}),
+    },
+    documentCount: raw.document_count,
   }));
 
 export const paperlessTagSchema = z

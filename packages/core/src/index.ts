@@ -315,13 +315,20 @@ export type {
   UnprocessedDocumentFilters,
 } from './ai/queries.js';
 export { normalizeSuggestedLabel, normalizeSuggestedTags } from './ai/normalize.js';
+export { discoverCustomFieldCandidates } from './ai/custom-field-discovery.js';
+export type {
+  CustomFieldCandidate,
+  CustomFieldDiscoveryOptions,
+  CustomFieldDiscoveryResult,
+} from './ai/custom-field-discovery.js';
+export { normalizeCustomFieldRecommendations } from './ai/custom-fields.js';
 export {
   applyAiResult,
   rejectAiResult,
   rejectAiResultWithReason,
   batchRejectAiResults,
 } from './ai/apply.js';
-export type { ApplyOptions, ReferenceData } from './ai/apply.js';
+export type { AiApplyField, ApplyOptions, ReferenceData } from './ai/apply.js';
 export { revertAiResult } from './ai/revert.js';
 export { recordFeedback, getFeedbackSummary } from './ai/feedback.js';
 export type { AiFeedback, AiFeedbackSummary } from './ai/feedback.js';
