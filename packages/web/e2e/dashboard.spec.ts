@@ -1,4 +1,8 @@
 import { test, expect } from './fixtures/test-app';
+import { DB_PATH } from './fixtures/test-app';
+import Database from 'better-sqlite3';
+import { nanoid } from 'nanoid';
+import type { Page } from '@playwright/test';
 
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ seedDB }) => {
@@ -22,6 +26,29 @@ test.describe('Dashboard', () => {
     await expect(page.getByText('Total Documents')).toBeVisible();
     await expect(page.getByText('Pending Groups')).toBeVisible();
     await expect(page.getByText('Pending Analysis')).toBeVisible();
+    await expect(page.getByText('10 documents changed')).toBeVisible();
+    await expect(page.getByText('3 groups found')).toBeVisible();
+  });
+
+  test('puts readiness before priority-ordered next actions with named safe controls', async ({
+    page,
+  }) => {
+    makeDashboardActionable();
+
+    await page.goto('/');
+
+    await expect(page.getByRole('region', { name: 'Readiness' })).toBeVisible();
+    await expect(page.getByText(/Paperless connected/)).toBeVisible();
+
+    await expect(page.locator('[data-testid="next-action"]')).toHaveCount(3);
+    await expect(
+      page
+        .locator('[data-testid="next-action"]')
+        .evaluateAll((actions) => actions.map((action) => action.getAttribute('data-action-id'))),
+    ).resolves.toEqual(['retry-failed-jobs', 'run-analysis', 'review-duplicates']);
+
+    await expect(page.getByRole('button', { name: 'Sync Now' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Run Analysis' })).toBeVisible();
   });
 
   test('sidebar navigation links are present', async ({ page }) => {
@@ -62,20 +89,95 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('button', { name: 'Run Analysis' })).toBeVisible();
   });
 
-  test('sync controls section renders', async ({ page }) => {
+  test('shows global activity inline and disables only its matching safe action', async ({
+    page,
+  }) => {
+    const jobId = nanoid();
+    await mockActiveSync(page, jobId);
+
     await page.goto('/');
 
-    await expect(page.getByText('Sync Documents')).toBeVisible();
-    await expect(page.getByText('Pull latest documents from Paperless-NGX.')).toBeVisible();
-    await expect(page.getByText('Force Full Sync')).toBeVisible();
+    const activity = page.getByRole('region', { name: 'Current activity' });
+    await expect(activity).toContainText('Sync in progress');
+    await expect(page.getByRole('button', { name: 'Sync Now' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Run Analysis' })).toBeEnabled();
+    await expect(
+      page.getByText('A sync is already active. Follow its progress in Current activity.'),
+    ).toBeVisible();
   });
 
-  test('analysis controls section renders', async ({ page }) => {
+  test('shows active analysis beside its disabled action without blocking sync', async ({
+    page,
+  }) => {
+    const jobId = nanoid();
+    await mockActiveJob(page, jobId, 'analysis', 'Analysis in progress');
+
     await page.goto('/');
 
-    await expect(page.getByText('Duplicate Analysis')).toBeVisible();
-    await expect(page.getByText('Run deduplication analysis on synced documents.')).toBeVisible();
-    await expect(page.getByText('Force Rebuild')).toBeVisible();
+    const activity = page.getByRole('region', { name: 'Current activity' });
+    await expect(activity).toContainText('Analysis in progress');
+    await expect(page.getByRole('button', { name: 'Run Analysis' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Sync Now' })).toBeEnabled();
+    await expect(
+      page.getByText(
+        'Duplicate analysis is already active. Follow its progress in Current activity.',
+      ),
+    ).toBeVisible();
+  });
+
+  test('starts sync and analysis through safe requests and tracks their returned jobs', async ({
+    page,
+  }) => {
+    const syncJobId = nanoid();
+    const analysisJobId = nanoid();
+    const requestBodies: Record<string, unknown> = {};
+    await mockTrackedJobs(page, [
+      { id: syncJobId, type: 'sync', message: 'Sync in progress' },
+      { id: analysisJobId, type: 'analysis', message: 'Analysis in progress' },
+    ]);
+    await page.route('**/api/v1/sync', async (route) => {
+      requestBodies.sync = route.request().postDataJSON();
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { jobId: syncJobId } }),
+      });
+    });
+    await page.route('**/api/v1/analysis', async (route) => {
+      requestBodies.analysis = route.request().postDataJSON();
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { jobId: analysisJobId } }),
+      });
+    });
+
+    await page.goto('/');
+
+    await page.getByRole('button', { name: 'Sync Now' }).click();
+    await expect.poll(() => requestBodies.sync).toEqual({ force: false, purge: false });
+    await expect(page.getByTestId(`activity-job-${syncJobId}`)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Run Analysis' }).click();
+    await expect.poll(() => requestBodies.analysis).toEqual({ force: true });
+    await expect(page.getByTestId(`activity-job-${analysisJobId}`)).toBeVisible();
+  });
+
+  test('keeps primary workflow actions visible without horizontal overflow on mobile', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+
+    const sync = page.getByRole('button', { name: 'Sync Now' });
+    const analysis = page.getByRole('button', { name: 'Run Analysis' });
+    await expect(sync).toBeVisible();
+    await expect(analysis).toBeVisible();
+    await sync.scrollIntoViewIfNeeded();
+    await expect(sync).toBeInViewport();
+    await analysis.scrollIntoViewIfNeeded();
+    await expect(analysis).toBeInViewport();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
   });
 
   test('recent jobs section renders when jobs exist', async ({ page }) => {
@@ -84,3 +186,105 @@ test.describe('Dashboard', () => {
     await expect(page.getByText('Recent Jobs')).toBeVisible();
   });
 });
+
+function makeDashboardActionable(): void {
+  const db = new Database(DB_PATH);
+  const now = new Date().toISOString();
+  db.prepare('UPDATE sync_state SET last_analysis_at = NULL WHERE id = ?').run('singleton');
+  db.prepare(
+    `INSERT INTO job (id, type, status, progress, progress_message, started_at, completed_at, error_message, result_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(nanoid(), 'sync', 'failed', 0, 'Sync failed', now, now, 'Temporary failure', null, now);
+  db.close();
+}
+
+async function mockActiveSync(page: Page, jobId: string): Promise<void> {
+  return mockActiveJob(page, jobId, 'sync', 'Sync in progress');
+}
+
+async function mockActiveJob(
+  page: Page,
+  jobId: string,
+  type: 'sync' | 'analysis',
+  message: string,
+): Promise<void> {
+  await page.route('**/api/v1/jobs**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname !== '/api/v1/jobs') return route.continue();
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [
+          {
+            id: jobId,
+            type,
+            status: 'running',
+            progress: 0.25,
+            progressMessage: message,
+          },
+        ],
+      }),
+    });
+  });
+  await page.route(`**/api/v1/jobs/${jobId}`, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: jobId,
+          type,
+          status: 'running',
+          progress: 0.25,
+          progressMessage: message,
+        },
+      }),
+    });
+  });
+  await page.route(`**/api/v1/jobs/${jobId}/progress`, async (route) => {
+    await route.fulfill({
+      contentType: 'text/event-stream',
+      body: 'event: progress\ndata: {"progress":0.25,"status":"running"}\n\n',
+    });
+  });
+}
+
+async function mockTrackedJobs(
+  page: Page,
+  jobs: { id: string; type: 'sync' | 'analysis'; message: string }[],
+): Promise<void> {
+  const jobsById = new Map(jobs.map((job) => [job.id, job]));
+  await page.route('**/api/v1/jobs**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/v1/jobs') {
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+      return;
+    }
+
+    const [, jobId, endpoint] = url.pathname.match(/\/api\/v1\/jobs\/([^/]+)(?:\/(.*))?/) ?? [];
+    const job = jobId ? jobsById.get(jobId) : undefined;
+    if (!job) {
+      await route.continue();
+      return;
+    }
+    if (endpoint === 'progress') {
+      await route.fulfill({
+        contentType: 'text/event-stream',
+        body: 'event: progress\ndata: {"progress":0.25,"status":"running"}\n\n',
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: job.id,
+          type: job.type,
+          status: 'running',
+          progress: 0.25,
+          progressMessage: job.message,
+        },
+      }),
+    });
+  });
+}

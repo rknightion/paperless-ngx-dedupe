@@ -1,335 +1,121 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
+  import { activity } from '$lib/activity/ActivityStore.svelte';
+  import { requestJson } from '$lib/api/client';
+  import CompactTrends from '$lib/components/dashboard/CompactTrends.svelte';
+  import NextActions from '$lib/components/dashboard/NextActions.svelte';
+  import OutcomeSummary from '$lib/components/dashboard/OutcomeSummary.svelte';
+  import ReadinessStrip from '$lib/components/dashboard/ReadinessStrip.svelte';
   import {
-    StatCard,
-    JobStatusCard,
-    EChart,
-    ProgressBar,
-    RichTooltip,
-    StaleAnalysisBanner,
-  } from '$lib/components';
-  import { connectJobSSE } from '$lib/sse';
-  import {
-    trackSyncStarted,
-    trackSyncCompleted,
-    trackSyncFailed,
-    trackSyncPaused,
-    trackSyncResumed,
-    trackSyncCancelled,
-    trackAnalysisStarted,
-    trackAnalysisCompleted,
     trackAnalysisFailed,
-    trackAnalysisPaused,
-    trackAnalysisResumed,
-    trackAnalysisCancelled,
-    startTimer,
+    trackAnalysisStarted,
+    trackSyncFailed,
+    trackSyncStarted,
   } from '$lib/faro-events';
-  import {
-    FileStack,
-    AlertCircle,
-    Clock,
-    Brain,
-    CheckCircle,
-    Zap,
-    CircleDot,
-    Pause,
-    Play,
-    X,
-  } from 'lucide-svelte';
-  import type { EChartsOption } from 'echarts';
+  import { Activity, CircleAlert } from 'lucide-svelte';
 
   let { data } = $props();
 
-  // Sync state
-  let isSyncing = $state(false);
-  let syncProgress = $state(0);
-  let syncPhaseProgress = $state<number | undefined>(undefined);
-  let syncMessage = $state('');
-  let syncForce = $state(false);
-  let syncPurge = $state(false);
-  let syncSSE: { close: () => void } | null = null;
-  let syncJobId = $state<string | null>(null);
-  let syncJobStatus = $state<string>('');
-  const isSyncPaused = $derived(syncJobStatus === 'paused');
+  type SafeAction = 'sync' | 'analysis';
+  type JobStartResponse = { jobId?: unknown };
 
-  // Analysis state
-  let isAnalyzing = $state(false);
-  let analysisProgress = $state(0);
-  let analysisPhaseProgress = $state<number | undefined>(undefined);
-  let analysisMessage = $state('');
-  let analysisForce = $state(false);
-  let analysisSSE: { close: () => void } | null = null;
-  let analysisJobId = $state<string | null>(null);
-  let analysisJobStatus = $state<string>('');
-  const isAnalysisPaused = $derived(analysisJobStatus === 'paused');
+  let startingAction = $state<SafeAction | null>(null);
+  let actionError = $state<string | null>(null);
 
-  function formatDate(iso: string | null): string {
-    if (!iso) return 'Never';
-    return new Date(iso).toLocaleString();
+  const currentActivity = $derived(
+    activity.jobs.filter((job) => !['completed', 'failed', 'cancelled'].includes(job.status)),
+  );
+  const syncDisabled = $derived(startingAction === 'sync' || hasActiveJob('sync'));
+  const analysisDisabled = $derived(startingAction === 'analysis' || hasActiveJob('analysis'));
+
+  function hasActiveJob(type: SafeAction): boolean {
+    return activity.jobs.some(
+      (job) =>
+        job.type.toLowerCase() === type &&
+        !['completed', 'failed', 'cancelled'].includes(job.status),
+    );
   }
 
-  $effect(() => {
-    if (!syncForce) syncPurge = false;
-  });
+  function jobLabel(type: string): string {
+    return type.replaceAll('_', ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+  }
 
-  async function startSync() {
-    if (syncPurge) {
-      const confirmed = confirm(
-        'This will permanently delete all local documents, analysis results, and duplicate groups. The data will be reimported from Paperless-NGX.\n\nContinue?',
+  function jobIdFrom(response: JobStartResponse): string | null {
+    return typeof response.jobId === 'string' && response.jobId.trim().length > 0
+      ? response.jobId.trim()
+      : null;
+  }
+
+  function refreshAfterStart(): void {
+    void invalidateAll().catch(() => undefined);
+  }
+
+  async function startSync(): Promise<void> {
+    if (syncDisabled) return;
+    startingAction = 'sync';
+    actionError = null;
+    trackSyncStarted({ force: false, purge: false });
+
+    try {
+      const response = await requestJson<JobStartResponse>(
+        '/api/v1/sync',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: false, purge: false }),
+        },
+        'start sync',
       );
-      if (!confirmed) return;
-    }
-
-    isSyncing = true;
-    syncProgress = 0;
-    syncMessage = 'Starting sync...';
-    trackSyncStarted({ force: syncForce, purge: syncPurge });
-    const stopSyncTimer = startTimer('sync_duration');
-    try {
-      const res = await fetch('/api/v1/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: syncForce, purge: syncPurge }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        syncMessage = json.error?.message ?? 'Failed to start sync';
-        isSyncing = false;
-        trackSyncFailed(syncMessage);
+      const jobId = jobIdFrom(response);
+      if (!jobId) {
+        actionError = 'The sync could not be started. Please try again.';
+        trackSyncFailed(actionError);
         return;
       }
-      syncJobId = json.data.jobId;
-      syncJobStatus = 'running';
-      syncSSE = connectJobSSE(json.data.jobId, {
-        onProgress: (d) => {
-          syncProgress = d.progress;
-          syncPhaseProgress = d.phaseProgress;
-          syncMessage = d.message ?? '';
-          syncJobStatus = d.status ?? 'running';
-        },
-        onComplete: (d) => {
-          isSyncing = false;
-          syncJobId = null;
-          syncJobStatus = '';
-          if (d.status === 'cancelled') {
-            syncMessage = 'Sync cancelled';
-          } else {
-            syncProgress = 1;
-            syncMessage = 'Sync complete';
-            trackSyncCompleted();
-          }
-          syncPhaseProgress = undefined;
-          stopSyncTimer();
-          invalidateAll();
-        },
-        onError: () => {
-          isSyncing = false;
-          syncJobId = null;
-          syncJobStatus = '';
-          syncMessage = 'Connection lost';
-          trackSyncFailed('Connection lost');
-        },
-      });
+
+      activity.track(jobId);
+      refreshAfterStart();
     } catch {
-      isSyncing = false;
-      syncMessage = 'Failed to start sync';
-      trackSyncFailed('Failed to start sync');
+      actionError = 'The sync could not be started. Please try again.';
+      trackSyncFailed(actionError);
+    } finally {
+      startingAction = null;
     }
   }
 
-  async function startAnalysis() {
-    isAnalyzing = true;
-    analysisProgress = 0;
-    analysisMessage = 'Starting analysis...';
-    trackAnalysisStarted({ force: analysisForce || data.dashboard.analysisStale });
-    const stopAnalysisTimer = startTimer('analysis_duration');
+  async function startAnalysis(): Promise<void> {
+    if (analysisDisabled) return;
+    startingAction = 'analysis';
+    actionError = null;
+    const force = data.dashboard.analysisStale;
+    trackAnalysisStarted({ force });
+
     try {
-      const res = await fetch('/api/v1/analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: analysisForce || data.dashboard.analysisStale }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        analysisMessage = json.error?.message ?? 'Failed to start analysis';
-        isAnalyzing = false;
-        trackAnalysisFailed(analysisMessage);
+      const response = await requestJson<JobStartResponse>(
+        '/api/v1/analysis',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force }),
+        },
+        'start duplicate analysis',
+      );
+      const jobId = jobIdFrom(response);
+      if (!jobId) {
+        actionError = 'Duplicate analysis could not be started. Please try again.';
+        trackAnalysisFailed(actionError);
         return;
       }
-      analysisJobId = json.data.jobId;
-      analysisJobStatus = 'running';
-      analysisSSE = connectJobSSE(json.data.jobId, {
-        onProgress: (d) => {
-          analysisProgress = d.progress;
-          analysisPhaseProgress = d.phaseProgress;
-          analysisMessage = d.message ?? '';
-          analysisJobStatus = d.status ?? 'running';
-        },
-        onComplete: (d) => {
-          isAnalyzing = false;
-          analysisJobId = null;
-          analysisJobStatus = '';
-          if (d.status === 'cancelled') {
-            analysisMessage = 'Analysis cancelled';
-          } else {
-            analysisProgress = 1;
-            analysisMessage = 'Analysis complete';
-            trackAnalysisCompleted();
-          }
-          analysisPhaseProgress = undefined;
-          stopAnalysisTimer();
-          invalidateAll();
-        },
-        onError: () => {
-          isAnalyzing = false;
-          analysisJobId = null;
-          analysisJobStatus = '';
-          analysisMessage = 'Connection lost';
-          trackAnalysisFailed('Connection lost');
-        },
-      });
+
+      activity.track(jobId);
+      refreshAfterStart();
     } catch {
-      isAnalyzing = false;
-      analysisMessage = 'Failed to start analysis';
-      trackAnalysisFailed('Failed to start analysis');
+      actionError = 'Duplicate analysis could not be started. Please try again.';
+      trackAnalysisFailed(actionError);
+    } finally {
+      startingAction = null;
     }
   }
-
-  async function togglePause(jobId: string, isPaused: boolean, type: 'sync' | 'analysis') {
-    const endpoint = isPaused ? 'resume' : 'pause';
-    await fetch(`/api/v1/jobs/${jobId}/${endpoint}`, { method: 'POST' });
-    if (type === 'sync') {
-      if (isPaused) trackSyncResumed();
-      else trackSyncPaused();
-    } else {
-      if (isPaused) trackAnalysisResumed();
-      else trackAnalysisPaused();
-    }
-  }
-
-  async function cancelActiveJob(jobId: string, type: 'sync' | 'analysis') {
-    await fetch(`/api/v1/jobs/${jobId}/cancel`, { method: 'POST' });
-    if (type === 'sync') {
-      trackSyncCancelled();
-    } else {
-      trackAnalysisCancelled();
-    }
-  }
-
-  // Check for in-progress jobs on mount
-  async function checkActiveJobs() {
-    try {
-      const [syncRes, analysisRes] = await Promise.all([
-        fetch('/api/v1/sync/status'),
-        fetch('/api/v1/analysis/status'),
-      ]);
-      const syncStatus = await syncRes.json();
-      const analysisStatus = await analysisRes.json();
-
-      if (syncStatus.data?.isSyncing && syncStatus.data?.currentJobId) {
-        isSyncing = true;
-        syncJobId = syncStatus.data.currentJobId;
-        syncJobStatus = syncStatus.data.isPaused ? 'paused' : 'running';
-        syncMessage = syncStatus.data.isPaused ? 'Sync paused' : 'Sync in progress...';
-        syncSSE = connectJobSSE(syncStatus.data.currentJobId, {
-          onProgress: (d) => {
-            syncProgress = d.progress;
-            syncPhaseProgress = d.phaseProgress;
-            syncMessage = d.message ?? '';
-            syncJobStatus = d.status ?? 'running';
-          },
-          onComplete: (d) => {
-            isSyncing = false;
-            syncJobId = null;
-            syncJobStatus = '';
-            syncMessage = d.status === 'cancelled' ? 'Sync cancelled' : 'Sync complete';
-            syncProgress = d.status === 'cancelled' ? syncProgress : 1;
-            syncPhaseProgress = undefined;
-            invalidateAll();
-          },
-          onError: () => {
-            isSyncing = false;
-            syncJobId = null;
-            syncJobStatus = '';
-            syncMessage = 'Connection lost';
-          },
-        });
-      }
-
-      if (analysisStatus.data?.isAnalyzing && analysisStatus.data?.currentJobId) {
-        isAnalyzing = true;
-        analysisJobId = analysisStatus.data.currentJobId;
-        analysisJobStatus = analysisStatus.data.isPaused ? 'paused' : 'running';
-        analysisMessage = analysisStatus.data.isPaused
-          ? 'Analysis paused'
-          : 'Analysis in progress...';
-        analysisSSE = connectJobSSE(analysisStatus.data.currentJobId, {
-          onProgress: (d) => {
-            analysisProgress = d.progress;
-            analysisPhaseProgress = d.phaseProgress;
-            analysisMessage = d.message ?? '';
-            analysisJobStatus = d.status ?? 'running';
-          },
-          onComplete: (d) => {
-            isAnalyzing = false;
-            analysisJobId = null;
-            analysisJobStatus = '';
-            analysisMessage = d.status === 'cancelled' ? 'Analysis cancelled' : 'Analysis complete';
-            analysisProgress = d.status === 'cancelled' ? analysisProgress : 1;
-            analysisPhaseProgress = undefined;
-            invalidateAll();
-          },
-          onError: () => {
-            isAnalyzing = false;
-            analysisJobId = null;
-            analysisJobStatus = '';
-            analysisMessage = 'Connection lost';
-          },
-        });
-      }
-    } catch {
-      // Ignore status check errors
-    }
-  }
-
-  $effect(() => {
-    checkActiveJobs();
-    return () => {
-      syncSSE?.close();
-      analysisSSE?.close();
-    };
-  });
-
-  // Chart option for confidence distribution
-  let chartOption: EChartsOption = $derived({
-    tooltip: { trigger: 'axis' },
-    xAxis: {
-      type: 'category',
-      data: data.duplicateStats.confidenceDistribution.map((b) => b.label),
-      axisLabel: { fontSize: 11 },
-    },
-    yAxis: { type: 'value', name: 'Groups' },
-    series: [
-      {
-        type: 'bar',
-        data: data.duplicateStats.confidenceDistribution.map((b) => ({
-          value: b.count,
-          itemStyle: {
-            color:
-              b.label.startsWith('95') || b.label.startsWith('90')
-                ? 'oklch(0.55 0.15 155)' // green for 90%+
-                : b.label.startsWith('85') || b.label.startsWith('80')
-                  ? 'oklch(0.7 0.15 85)' // yellow for 80-90%
-                  : b.label.startsWith('75')
-                    ? 'oklch(0.6 0.15 55)' // orange for 75-80%
-                    : 'oklch(0.55 0.2 25)', // red for below 75%
-          },
-        })),
-        barMaxWidth: 40,
-      },
-    ],
-    grid: { left: 50, right: 20, top: 30, bottom: 40 },
-  });
 </script>
 
 <svelte:head>
@@ -339,345 +125,70 @@
 <div class="space-y-8">
   <header class="space-y-1">
     <h1 class="text-ink text-2xl font-semibold tracking-tight">Dashboard</h1>
-    <p class="text-muted text-sm">Overview of your document library and deduplication status.</p>
+    <p class="text-muted text-sm">
+      Start with readiness, then move through the work that needs you.
+    </p>
   </header>
 
-  <!-- Stat Cards -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <StatCard label="Total Documents" value={data.dashboard.totalDocuments.toLocaleString()}>
-      {#snippet icon()}<FileStack class="h-5 w-5" />{/snippet}
-    </StatCard>
-    <StatCard label="Pending Groups" value={data.dashboard.pendingGroups.toLocaleString()}>
-      {#snippet icon()}<AlertCircle class="h-5 w-5" />{/snippet}
-    </StatCard>
-    <StatCard label="Pending Analysis" value={data.dashboard.pendingAnalysis.toLocaleString()}>
-      {#snippet icon()}<Clock class="h-5 w-5" />{/snippet}
-    </StatCard>
-  </div>
+  <ReadinessStrip readiness={data.readiness} />
 
-  <!-- Controls Row -->
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <!-- Sync Controls -->
-    <div class="panel border-l-accent border-l-4">
-      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        Sync Documents
-        <RichTooltip position="bottom">
-          <svg
-            class="text-muted hover:text-accent inline-block h-4 w-4 shrink-0 cursor-help transition-colors"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          {#snippet content()}
-            <p class="font-semibold">Why sync?</p>
-            <p class="mt-1">
-              Sync pulls documents from your Paperless-NGX instance into the local database so they
-              can be compared for duplicates.
-            </p>
-            <p class="mt-2">
-              New and deleted documents are detected automatically. However, changes to existing
-              documents (e.g. adding OCR text or editing metadata) won't be picked up — use
-              <span class="font-semibold">Force Full Sync</span> to re-check everything.
-            </p>
-          {/snippet}
-        </RichTooltip>
-      </h2>
-      <p class="text-muted mt-1 text-sm">Pull latest documents from Paperless-NGX.</p>
-      <div class="mt-4 flex items-center gap-4">
-        <button
-          onclick={startSync}
-          disabled={isSyncing}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {#if isSyncing}
-            <span class="flex items-center gap-2">
-              <span
-                class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-              ></span>
-              Syncing...
-            </span>
-          {:else}
-            Sync Now
-          {/if}
-        </button>
-        <label class="text-muted flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={syncForce} class="rounded" />
-          Force Full Sync
-        </label>
-      </div>
-      {#if syncForce}
-        <label class="text-muted mt-2 flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={syncPurge} class="rounded" />
-          <span>
-            Purge & Resync
-            <span class="text-xs opacity-70">— Delete all local data and reimport from scratch</span
-            >
-          </span>
-        </label>
-      {/if}
-      {#if isSyncing}
-        <div class="mt-4">
-          <ProgressBar
-            progress={syncProgress}
-            phaseProgress={syncPhaseProgress}
-            message={syncMessage}
-            paused={isSyncPaused}
-          />
-        </div>
-        {#if syncJobId}
-          <div class="mt-2 flex items-center gap-2">
-            <button
-              onclick={() => togglePause(syncJobId!, isSyncPaused, 'sync')}
-              class="border-soft text-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition"
-            >
-              {#if isSyncPaused}
-                <Play class="h-3.5 w-3.5" /> Resume
-              {:else}
-                <Pause class="h-3.5 w-3.5" /> Pause
-              {/if}
-            </button>
-            <button
-              onclick={() => cancelActiveJob(syncJobId!, 'sync')}
-              class="text-ember hover:bg-ember/10 inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-xs font-medium transition"
-            >
-              <X class="h-3.5 w-3.5" /> Cancel
-            </button>
-          </div>
-        {/if}
-      {/if}
-      <div class="text-muted mt-3 text-xs">
-        Last sync: {formatDate(data.dashboard.lastSyncAt)}
-        {#if data.dashboard.lastSyncDocumentCount != null}
-          &middot;
-          {#if data.dashboard.lastSyncDocumentCount === 0}
-            No changes
-          {:else}
-            {data.dashboard.lastSyncDocumentCount} documents changed
-          {/if}
-        {/if}
+  <NextActions
+    actions={data.dashboard.nextActions}
+    {syncDisabled}
+    {analysisDisabled}
+    onSync={startSync}
+    onAnalysis={startAnalysis}
+  />
+
+  {#if actionError}
+    <div
+      class="border-ember-light bg-ember-light/40 text-ember flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
+      role="alert"
+    >
+      <CircleAlert class="mt-0.5 h-4 w-4 shrink-0" />
+      <p>{actionError}</p>
+    </div>
+  {/if}
+
+  <section class="panel" aria-label="Current activity">
+    <div class="mb-4 flex items-center gap-2">
+      <Activity class="text-accent h-5 w-5" />
+      <div>
+        <h2 class="text-ink text-lg font-semibold">Current activity</h2>
+        <p class="text-muted mt-1 text-sm">Live updates continue if you navigate elsewhere.</p>
       </div>
     </div>
-
-    <!-- Analysis Controls -->
-    <div class="panel border-l-accent border-l-4">
-      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        Duplicate Analysis
-        <RichTooltip position="bottom">
-          <svg
-            class="text-muted hover:text-accent inline-block h-4 w-4 shrink-0 cursor-help transition-colors"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          {#snippet content()}
-            <p class="font-semibold">How does analysis work?</p>
-            <p class="mt-1">
-              Analysis compares your synced documents using MinHash fingerprinting to find potential
-              duplicates, then groups them by similarity.
-            </p>
-            <p class="mt-2">
-              Only new documents are analyzed by default. Use
-              <span class="font-semibold">Force Full Rebuild</span> to re-analyze all documents from scratch,
-              e.g. after changing deduplication settings.
-            </p>
-          {/snippet}
-        </RichTooltip>
-      </h2>
-      <p class="text-muted mt-1 text-sm">Run deduplication analysis on synced documents.</p>
-      {#if data.dashboard.analysisStale}
-        <div class="mt-3">
-          <StaleAnalysisBanner onrunAnalysis={startAnalysis} showRunButton={!isAnalyzing} />
-        </div>
-      {/if}
-      <div class="mt-4 flex items-center gap-4">
-        <button
-          onclick={startAnalysis}
-          disabled={isAnalyzing}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {#if isAnalyzing}
-            <span class="flex items-center gap-2">
-              <span
-                class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-              ></span>
-              Analyzing...
-            </span>
-          {:else}
-            Run Analysis
-          {/if}
-        </button>
-        <label class="text-muted flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            bind:checked={analysisForce}
-            disabled={data.dashboard.analysisStale}
-            class="rounded"
-          />
-          Force Rebuild
-          {#if data.dashboard.analysisStale}
-            <span class="text-warn text-xs">(auto-enabled: settings changed)</span>
-          {/if}
-        </label>
-      </div>
-      {#if isAnalyzing}
-        <div class="mt-4">
-          <ProgressBar
-            progress={analysisProgress}
-            phaseProgress={analysisPhaseProgress}
-            message={analysisMessage}
-            paused={isAnalysisPaused}
-          />
-        </div>
-        {#if analysisJobId}
-          <div class="mt-2 flex items-center gap-2">
-            <button
-              onclick={() => togglePause(analysisJobId!, isAnalysisPaused, 'analysis')}
-              class="border-soft text-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition"
-            >
-              {#if isAnalysisPaused}
-                <Play class="h-3.5 w-3.5" /> Resume
-              {:else}
-                <Pause class="h-3.5 w-3.5" /> Pause
-              {/if}
-            </button>
-            <button
-              onclick={() => cancelActiveJob(analysisJobId!, 'analysis')}
-              class="text-ember hover:bg-ember/10 inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-xs font-medium transition"
-            >
-              <X class="h-3.5 w-3.5" /> Cancel
-            </button>
-          </div>
-        {/if}
-      {/if}
-      <div class="text-muted mt-3 text-xs">
-        Last analysis: {formatDate(data.dashboard.lastAnalysisAt)}
-        {#if data.dashboard.totalDuplicateGroups != null}
-          &middot; {data.dashboard.totalDuplicateGroups} groups found
-        {/if}
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Jobs -->
-  {#if data.jobs.length > 0}
-    <div class="panel">
-      <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-ink text-lg font-semibold">Recent Jobs</h2>
-        <a href="/jobs" class="text-accent hover:text-accent-hover text-sm font-medium">
-          View all &rarr;
-        </a>
-      </div>
-      <div class="space-y-3">
-        {#each data.jobs as j (j.id)}
-          <JobStatusCard
-            type={j.type}
-            status={j.status ?? 'pending'}
-            progress={j.progress ?? 0}
-            phaseProgress={j.phaseProgress}
-            progressMessage={j.progressMessage}
-            startedAt={j.startedAt}
-            completedAt={j.completedAt}
-            errorMessage={j.errorMessage}
-            resultJson={j.resultJson}
-          />
+    {#if currentActivity.length > 0}
+      <ul class="space-y-3">
+        {#each currentActivity as job (job.id)}
+          <li class="panel-inset" data-testid={`dashboard-activity-${job.id}`}>
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-ink text-sm font-medium">{jobLabel(job.type)}</p>
+                <p class="text-muted mt-1 text-xs">{job.message || 'Waiting for an update'}</p>
+              </div>
+              <span class="text-muted shrink-0 text-xs capitalize"
+                >{job.connection === 'degraded' ? 'Updates delayed' : job.status}</span
+              >
+            </div>
+            <div class="bg-canvas-deep mt-3 h-2 overflow-hidden rounded-full" aria-hidden="true">
+              <div
+                class="bg-accent h-full rounded-full"
+                style={`width: ${Math.round(job.progress * 100)}%`}
+              ></div>
+            </div>
+          </li>
         {/each}
-      </div>
-    </div>
-  {/if}
-
-  <!-- AI Processing Summary -->
-  {#if data.aiStats}
-    {@const totalTokens = data.aiStats.totalPromptTokens + data.aiStats.totalCompletionTokens}
-    <div class="panel">
-      <h2 class="text-ink mb-4 flex items-center gap-2 text-lg font-semibold">
-        <Brain class="text-accent h-5 w-5" />
-        AI Processing
-      </h2>
-      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <a
-          href="/ai-processing?status=pending_review"
-          class="bg-canvas-deep hover:ring-accent/40 flex flex-col items-center gap-1 rounded-lg p-4 text-center transition hover:ring-2"
-        >
-          <Clock class="text-warning h-5 w-5" />
-          <span class="text-ink text-xl font-semibold"
-            >{data.aiStats.pendingReview.toLocaleString()}</span
-          >
-          <span class="text-muted text-xs">Pending Review</span>
-        </a>
-        <a
-          href="/ai-processing?failed=true"
-          class="bg-canvas-deep hover:ring-accent/40 flex flex-col items-center gap-1 rounded-lg p-4 text-center transition hover:ring-2"
-        >
-          <AlertCircle class="text-ember h-5 w-5" />
-          <span class="text-ink text-xl font-semibold">{data.aiStats.failed.toLocaleString()}</span>
-          <span class="text-muted text-xs">Failed</span>
-        </a>
-        <div class="bg-canvas-deep flex flex-col items-center gap-1 rounded-lg p-4 text-center">
-          <CircleDot class="text-muted h-5 w-5" />
-          <span class="text-ink text-xl font-semibold"
-            >{data.aiStats.unprocessed.toLocaleString()}</span
-          >
-          <span class="text-muted text-xs">Unprocessed</span>
-        </div>
-        <div class="bg-canvas-deep flex flex-col items-center gap-1 rounded-lg p-4 text-center">
-          <CheckCircle class="text-success h-5 w-5" />
-          <span class="text-ink text-xl font-semibold">{data.aiStats.applied.toLocaleString()}</span
-          >
-          <span class="text-muted text-xs">Applied</span>
-        </div>
-        <div class="bg-canvas-deep flex flex-col items-center gap-1 rounded-lg p-4 text-center">
-          <Zap class="text-accent h-5 w-5" />
-          <span class="text-ink text-xl font-semibold">{totalTokens.toLocaleString()}</span>
-          <span class="text-muted text-xs">Total Tokens</span>
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Quick Stats -->
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <!-- Top Correspondents -->
-    {#if data.dashboard.topCorrespondents.length > 0}
-      <div class="panel">
-        <h2 class="text-ink mb-4 text-lg font-semibold">Top Duplicated Correspondents</h2>
-        <ul class="space-y-3">
-          {#each data.dashboard.topCorrespondents as c (c.correspondent)}
-            {@const maxCount = data.dashboard.topCorrespondents[0]?.groupCount ?? 1}
-            <li class="space-y-1">
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-ink">{c.correspondent}</span>
-                <span class="text-muted font-mono text-xs">{c.groupCount} groups</span>
-              </div>
-              <div class="bg-canvas-deep h-2 overflow-hidden rounded-full">
-                <div
-                  class="bg-accent h-full rounded-full transition-all duration-300"
-                  style="width: {(c.groupCount / maxCount) * 100}%"
-                ></div>
-              </div>
-            </li>
-          {/each}
-        </ul>
-      </div>
+      </ul>
+    {:else}
+      <p class="panel-inset text-muted text-sm">Nothing is running right now.</p>
     {/if}
+  </section>
 
-    <!-- Confidence Distribution Chart -->
-    {#if data.duplicateStats.confidenceDistribution.some((b) => b.count > 0)}
-      <div class="panel">
-        <h2 class="text-ink mb-4 text-lg font-semibold">Confidence Distribution</h2>
-        <EChart option={chartOption} height="250px" />
-      </div>
-    {/if}
-  </div>
+  <OutcomeSummary dashboard={data.dashboard} jobs={data.jobs} aiStats={data.aiStats} />
+
+  <CompactTrends
+    topCorrespondents={data.dashboard.topCorrespondents}
+    confidenceDistribution={data.duplicateStats.confidenceDistribution}
+  />
 </div>
