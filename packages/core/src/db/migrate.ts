@@ -119,6 +119,11 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: add title-related columns to ai_processing_result
   migrateAiTitleColumns(sqlite);
 
+  // Compatibility migration: generated DDL is skipped when a stale database
+  // carries the current schema hash, so repair the durable payload column
+  // explicitly before that early return can occur.
+  migrateDispatchIntentTaskData(sqlite);
+
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
     .prepare('SELECT value FROM app_config WHERE key = ?')
@@ -340,6 +345,13 @@ function migrateAiTitleColumns(sqlite: Database.Database): void {
   if (!tableHasColumn(sqlite, 'ai_processing_result', 'applied_title')) {
     sqlite.exec(`ALTER TABLE ai_processing_result ADD COLUMN applied_title TEXT`);
   }
+}
+
+/** Add the durable manual route-options column to old coordinator databases. */
+function migrateDispatchIntentTaskData(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'dispatch_intent', 'id')) return;
+  if (tableHasColumn(sqlite, 'dispatch_intent', 'task_data_json')) return;
+  sqlite.exec(`ALTER TABLE dispatch_intent ADD COLUMN task_data_json TEXT`);
 }
 
 /**

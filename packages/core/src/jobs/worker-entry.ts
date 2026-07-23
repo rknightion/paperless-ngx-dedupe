@@ -3,8 +3,6 @@ import { context } from '@opentelemetry/api';
 import { createDatabaseWithHandle } from '../db/client.js';
 import { updateJobProgress, completeJob, failJob, getJob } from './manager.js';
 import { createLogger } from '../logger.js';
-import { job as jobTable } from '../schema/sqlite/jobs.js';
-import { eq } from 'drizzle-orm';
 import {
   initWorkerTelemetry,
   shutdownWorkerTelemetry,
@@ -30,8 +28,45 @@ export interface WorkerContext {
 
 export type TaskFunction = (ctx: WorkerContext, onProgress: ProgressCallback) => Promise<unknown>;
 
+export interface WorkerTaskData {
+  jobId: string;
+  dbPath: string;
+  taskData?: unknown;
+  traceContext?: Record<string, string>;
+}
+
+/**
+ * Atomically turns one dispatchable job into a running worker. jobId is the
+ * immutable execution identity: dispatch_intent enforces one unique job_id
+ * per durable intent, so it is equivalent to that intent's dispatchKey for
+ * worker-side idempotency.
+ */
+export function claimWorkerJob(
+  sqlite: import('better-sqlite3').Database,
+  jobId: string,
+  now: Date = new Date(),
+): boolean {
+  const result = sqlite
+    .prepare(
+      `UPDATE job
+       SET status = 'running', started_at = ?
+       WHERE id = ? AND status = 'pending'
+         AND (next_attempt_at IS NULL OR next_attempt_at <= ?)`,
+    )
+    .run(now.toISOString(), jobId, now.toISOString());
+  return result.changes === 1;
+}
+
 export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
-  const { jobId, dbPath, taskData, traceContext } = workerData as {
+  return runWorkerTaskWithData(taskFn, workerData as WorkerTaskData);
+}
+
+/** Testable worker entry point that performs the durable execution claim. */
+export async function runWorkerTaskWithData(
+  taskFn: TaskFunction,
+  workerTaskData: WorkerTaskData,
+): Promise<void> {
+  const { jobId, dbPath, taskData, traceContext } = workerTaskData as {
     jobId: string;
     dbPath: string;
     taskData?: unknown;
@@ -47,14 +82,11 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
   const logger = createLogger('worker');
   const { db, sqlite } = createDatabaseWithHandle(dbPath);
 
-  // Set job to running
-  db.update(jobTable)
-    .set({
-      status: 'running',
-      startedAt: new Date().toISOString(),
-    })
-    .where(eq(jobTable.id, jobId))
-    .run();
+  if (!claimWorkerJob(sqlite, jobId)) {
+    logger.info({ jobId }, 'Worker execution claim already owned or not yet retry-eligible');
+    await shutdownWorkerTelemetry();
+    return;
+  }
 
   logger.info({ jobId }, 'Worker task started');
 

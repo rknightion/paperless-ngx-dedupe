@@ -49,6 +49,13 @@ async function assertAutomationSchema(
     ]),
   );
 
+  const dispatchIntentColumns = sqlite.prepare('PRAGMA table_info(dispatch_intent)').all() as {
+    name: string;
+  }[];
+  expect(dispatchIntentColumns.map(({ name }) => name)).toEqual(
+    expect.arrayContaining(['task_data_json']),
+  );
+
   const revisionForeignKeys = sqlite
     .prepare('PRAGMA foreign_key_list(ai_result_revision)')
     .all() as {
@@ -213,6 +220,10 @@ describe('database migration fixtures', () => {
   it('migrates a current database twice', async () => {
     const { sqlite } = createDatabaseWithHandle(':memory:');
     await migrateDatabase(sqlite);
+    // Simulate a current-hash database created before durable task payloads.
+    // The explicit compatibility migration must repair it even when generated
+    // DDL is skipped because its stored snapshot/hash claims it is current.
+    sqlite.exec('ALTER TABLE dispatch_intent DROP COLUMN task_data_json');
 
     await assertAutomationSchema(sqlite);
   });

@@ -57,10 +57,9 @@ describe('Job Manager', () => {
       expect(() => createJob(db, JobType.SYNC)).toThrow(JobAlreadyRunningError);
     });
 
-    it('should allow different types to run concurrently', () => {
+    it('should reject different incompatible operation types', () => {
       createJob(db, JobType.SYNC);
-      const analysisId = createJob(db, JobType.ANALYSIS);
-      expect(analysisId).toBeTruthy();
+      expect(() => createJob(db, JobType.ANALYSIS)).toThrow(JobAlreadyRunningError);
     });
 
     it('should allow new job after previous completed', () => {
@@ -114,7 +113,8 @@ describe('Job Manager', () => {
     });
 
     it('should filter by type', () => {
-      createJob(db, JobType.SYNC);
+      const syncId = createJob(db, JobType.SYNC);
+      completeJob(db, syncId);
       const analysisId = createJob(db, JobType.ANALYSIS);
       const jobs = listJobs(db, { type: JobType.ANALYSIS });
       expect(jobs).toHaveLength(1);
@@ -182,7 +182,7 @@ describe('Job Manager', () => {
   });
 
   describe('recoverStaleJobs', () => {
-    it('should mark running jobs as failed', () => {
+    it('should requeue running jobs while preserving their restart audit', () => {
       const id = createJob(db, JobType.SYNC);
       db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, id)).run();
 
@@ -190,31 +190,30 @@ describe('Job Manager', () => {
       expect(recovered).toBe(1);
 
       const j = getJob(db, id);
-      expect(j!.status).toBe('failed');
+      expect(j!.status).toBe('pending');
       expect(j!.errorMessage).toBe('Job interrupted by application restart');
-      expect(j!.completedAt).toBeTruthy();
+      expect(j!.completedAt).toBeNull();
+      expect(j!.terminalReason).toBe('restart_interrupted');
     });
 
-    it('should mark pending jobs as failed', () => {
+    it('should preserve pending durable jobs for dispatcher recovery', () => {
       const id = createJob(db, JobType.SYNC);
+
+      const recovered = recoverStaleJobs(db);
+      expect(recovered).toBe(0);
+
+      const j = getJob(db, id);
+      expect(j!.status).toBe('pending');
+    });
+
+    it('should leave a pending job while recovering a running job', () => {
+      const syncId = createJob(db, JobType.SYNC);
+      db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, syncId)).run();
 
       const recovered = recoverStaleJobs(db);
       expect(recovered).toBe(1);
 
-      const j = getJob(db, id);
-      expect(j!.status).toBe('failed');
-    });
-
-    it('should recover multiple stale jobs across types', () => {
-      const syncId = createJob(db, JobType.SYNC);
-      const analysisId = createJob(db, JobType.ANALYSIS);
-      db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, syncId)).run();
-
-      const recovered = recoverStaleJobs(db);
-      expect(recovered).toBe(2);
-
-      expect(getJob(db, syncId)!.status).toBe('failed');
-      expect(getJob(db, analysisId)!.status).toBe('failed');
+      expect(getJob(db, syncId)!.status).toBe('pending');
     });
 
     it('should not touch completed or failed jobs', () => {
@@ -235,15 +234,13 @@ describe('Job Manager', () => {
       expect(recoverStaleJobs(db)).toBe(0);
     });
 
-    it('should allow creating new jobs after recovery', () => {
+    it('should retain the recovered operation lease until its durable intent is resolved', () => {
       const id1 = createJob(db, JobType.SYNC);
       db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, id1)).run();
 
       recoverStaleJobs(db);
 
-      const id2 = createJob(db, JobType.SYNC);
-      expect(id2).toBeTruthy();
-      expect(getJob(db, id2)!.status).toBe('pending');
+      expect(() => createJob(db, JobType.SYNC)).toThrow(JobAlreadyRunningError);
     });
   });
 

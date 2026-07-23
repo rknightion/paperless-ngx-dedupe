@@ -97,6 +97,29 @@ export {
   latestMissedOccurrence,
 } from './scheduler/occurrences.js';
 export type { AutomationSchedule, ScheduleCadence, ScheduleTask } from './scheduler/types.js';
+export {
+  deserializeDispatchTaskData,
+  OPERATION_KINDS,
+  OPERATION_COMPATIBILITY,
+  serializeDispatchTaskData,
+} from './scheduler/store.js';
+export type { DispatchTaskData, OperationKind } from './scheduler/store.js';
+export {
+  acquireOperation,
+  consumeDispatchIntents,
+  enqueueDueSchedules,
+  enqueueManualOperation,
+  getDispatchIntent,
+  OperationConflictError,
+  releaseOperation,
+  renewOperationLease,
+} from './scheduler/coordinator.js';
+export type {
+  DispatchExecutor,
+  ResolvedDispatchIntent,
+  SchedulerDispatchExecutor,
+  SchedulerTickResult,
+} from './scheduler/coordinator.js';
 
 // Logger
 export { initLogger, createLogger, getLogger } from './logger.js';
@@ -147,6 +170,7 @@ export {
   resumeJob,
   clearJobHistory,
   recoverStaleJobs,
+  retryDeadLetterJob,
   JobAlreadyRunningError,
 } from './jobs/manager.js';
 export type { JobFilters } from './jobs/manager.js';

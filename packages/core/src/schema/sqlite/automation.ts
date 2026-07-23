@@ -39,6 +39,9 @@ export const dispatchIntent = sqliteTable(
       .$defaultFn(() => nanoid()),
     task: text('task').notNull(),
     operation: text('operation').notNull(),
+    // Nullable only for migration compatibility with pre-coordinator rows;
+    // coordinator-created intents always set this durable job reference.
+    jobId: text('job_id'),
     triggerKind: text('trigger_kind').notNull(),
     scheduleId: text('schedule_id'),
     dueAt: text('due_at'),
@@ -49,15 +52,25 @@ export const dispatchIntent = sqliteTable(
     attemptCount: integer('attempt_count').notNull().default(0),
     nextAttemptAt: text('next_attempt_at'),
     terminalReason: text('terminal_reason'),
+    taskDataJson: text('task_data_json'),
+    dispatchKey: text('dispatch_key'),
+    dispatchClaimToken: text('dispatch_claim_token'),
+    dispatchClaimedAt: text('dispatch_claimed_at'),
+    dispatchClaimExpiresAt: text('dispatch_claim_expires_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
     uniqueIndex('dispatch_intent_schedule_due_unique').on(table.scheduleId, table.dueAt),
+    uniqueIndex('dispatch_intent_job_id_unique').on(table.jobId),
+    uniqueIndex('dispatch_intent_dependency_parent_task_unique').on(table.parentJobId, table.task),
     index('dispatch_intent_pending_idx').on(table.status, table.nextAttemptAt),
     check(
       'dispatch_intent_task_check',
-      sql`${table.task} IN ('sync', 'analysis', 'ai_processing')`,
+      sql`${table.task} IN (
+        'sync', 'analysis', 'duplicate_delete', 'ai_processing', 'ai_apply',
+        'ai_revert', 'backup', 'checkpoint', 'vacuum', 'job_cleanup'
+      )`,
     ),
     check(
       'dispatch_intent_operation_check',
@@ -95,7 +108,8 @@ export const operationLease = sqliteTable(
     operation: text('operation').notNull(),
     ownerId: text('owner_id').notNull(),
     acquiredAt: text('acquired_at').notNull(),
-    expiresAt: text('expires_at').notNull(),
+    heartbeatAt: text('heartbeat_at'),
+    expiresAt: text('expires_at'),
   },
   (table) => [uniqueIndex('operation_lease_operation_unique').on(table.operation)],
 );
@@ -107,6 +121,9 @@ export const syncChangeGeneration = sqliteTable(
       .primaryKey()
       .$defaultFn(() => nanoid()),
     syncJobId: text('sync_job_id').notNull(),
+    rootScheduleId: text('root_schedule_id'),
+    rootDueAt: text('root_due_at'),
+    changedAt: text('changed_at'),
     status: text('status').notNull().default('pending'),
     createdAt: text('created_at').notNull(),
     completedAt: text('completed_at'),
