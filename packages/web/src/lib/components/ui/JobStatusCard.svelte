@@ -79,15 +79,6 @@
         return parts.length > 0 ? parts.join(', ') : 'No results to apply';
       }
 
-      if (type === 'rag_indexing') {
-        const parts: string[] = [];
-        if (result.indexed > 0)
-          parts.push(`${result.indexed} indexed (${result.totalChunks} chunks)`);
-        if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
-        if (result.failed > 0) parts.push(`${result.failed} failed`);
-        return parts.length > 0 ? parts.join(', ') : 'No documents to index';
-      }
-
       return null;
     } catch {
       return null;
@@ -148,7 +139,6 @@
     batch_operation: 'Batch Delete',
     ai_processing: 'AI Processing',
     ai_apply: 'AI Apply',
-    rag_indexing: 'RAG Indexing',
   };
 </script>
 

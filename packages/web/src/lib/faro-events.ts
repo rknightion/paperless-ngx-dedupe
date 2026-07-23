@@ -197,28 +197,9 @@ export function trackAiBulkAction(opts: {
   });
 }
 
-// ── RAG / Ask ────────────────────────────────────────────────────────
-
-export function trackRagQuestionAsked(questionLength: number) {
-  startAction('rag_ask', { question_length: str(questionLength) });
-  pushEvent('rag_question_asked', { question_length: str(questionLength) });
-}
-
-export function trackRagConversationStarted() {
-  pushEvent('rag_conversation_started');
-}
-
-export function trackRagConversationDeleted() {
-  pushEvent('rag_conversation_deleted');
-}
-
-export function trackRagIndexingStarted() {
-  pushEvent('rag_indexing_started');
-}
-
 // ── Settings ─────────────────────────────────────────────────────────
 
-export function trackSettingsSaved(section: 'connection' | 'dedup' | 'ai' | 'rag') {
+export function trackSettingsSaved(section: 'connection' | 'dedup' | 'ai') {
   pushEvent('settings_saved', { section });
 }
 

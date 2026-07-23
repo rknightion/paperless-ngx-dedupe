@@ -12,7 +12,6 @@ import {
 import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
-import { documentChunk } from '../../schema/sqlite/rag.js';
 
 function insertTestDocuments(db: AppDatabase) {
   db.insert(document)
@@ -491,18 +490,6 @@ describe('deleteDocumentLocally', () => {
         createdAt: '2024-01-01T00:00:00Z',
       })
       .run();
-    db.insert(documentChunk)
-      .values({
-        id: 'chunk-1',
-        documentId: 'doc-1',
-        chunkIndex: 0,
-        content: 'chunk text',
-        tokenCount: 2,
-        contentHash: 'hash',
-        embeddingModel: 'test',
-        createdAt: '2024-01-01T00:00:00Z',
-      })
-      .run();
     db.insert(duplicateGroup)
       .values({
         id: 'grp-1',
@@ -530,9 +517,6 @@ describe('deleteDocumentLocally', () => {
     ).toHaveLength(0);
     expect(
       db.select().from(aiProcessingResult).where(eq(aiProcessingResult.documentId, 'doc-1')).all(),
-    ).toHaveLength(0);
-    expect(
-      db.select().from(documentChunk).where(eq(documentChunk.documentId, 'doc-1')).all(),
     ).toHaveLength(0);
     expect(
       db.select().from(duplicateMember).where(eq(duplicateMember.documentId, 'doc-1')).all(),

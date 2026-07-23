@@ -41,7 +41,6 @@ Framework-agnostic TypeScript library containing all business logic. No web fram
 - `schema/` -- Drizzle ORM table definitions and relations
 - `paperless/` -- Paperless-NGX REST API client with Zod schema validation
 - `ai/` -- AI-powered metadata extraction (OpenAI), auto-apply, cost tracking, feedback
-- `rag/` -- Retrieval-augmented generation: document chunking, embeddings, vector search, conversations
 - `export/` -- CSV and JSON export utilities
 - `telemetry/` -- OpenTelemetry tracing and metrics instrumentation
 - `config.ts` -- Zod-validated environment configuration
@@ -53,7 +52,7 @@ SvelteKit 2 application (Svelte 5 runes) that serves both the web UI and the RES
 **Key areas:**
 
 - `routes/api/v1/` -- REST API endpoints matching the [API Reference](api-reference.md)
-- `routes/` -- UI pages: dashboard, documents, duplicates (detail, graph, wizard), AI processing (queue, review, history), RAG ask, settings
+- `routes/` -- UI pages: dashboard, documents, duplicates (detail, graph, wizard), AI processing (queue, review, history), settings
 - `lib/components/` -- Reusable Svelte components (DocumentCompare, TextDiff, etc.)
 - `lib/server/` -- Server-side utilities (database connection, API helpers)
 - `hooks.server.ts` -- SvelteKit server hooks for request processing
@@ -66,8 +65,7 @@ SvelteKit 2 application (Svelte 5 runes) that serves both the web UI and the RES
 | **Background Jobs** | `worker_threads` + SQLite job queue | No Redis needed. One job per type at a time prevents resource contention |
 | **Real-time Progress** | Server-Sent Events (SSE) | Simpler than WebSockets for unidirectional progress streams |
 | **Dedup Algorithms** | Pure TypeScript MinHash/LSH | No native dependencies beyond `better-sqlite3`. Defaults: 256 permutations, 32 bands |
-| **Vector Search** | `sqlite-vec` | SQLite extension for RAG embedding storage and similarity search |
-| **AI Providers** | OpenAI (via Vercel AI SDK) | Optional metadata extraction and RAG conversations |
+| **AI Providers** | OpenAI | Optional metadata extraction and classification |
 | **Validation** | Zod | TypeScript-first schemas for env config and API requests |
 | **Logging** | Pino | Fast structured JSON logging |
 | **Telemetry** | OpenTelemetry | Distributed tracing and metrics (optional) |
@@ -152,7 +150,7 @@ flowchart LR
 
 ## Database Schema
 
-The SQLite database contains 11 tables (plus a virtual table for vector embeddings):
+The SQLite database contains 9 tables:
 
 ```mermaid
 erDiagram
@@ -160,9 +158,7 @@ erDiagram
     document ||--o| documentSignature : "has signature"
     document ||--o{ duplicateMember : "belongs to groups"
     document ||--o| aiProcessingResult : "has AI result"
-    document ||--o{ documentChunk : "has chunks"
     duplicateGroup ||--|{ duplicateMember : "contains members"
-    ragConversation ||--|{ ragMessage : "contains messages"
 
     document {
         text id PK
@@ -267,34 +263,6 @@ erDiagram
         text createdAt
     }
 
-    documentChunk {
-        text id PK
-        text documentId FK
-        int chunkIndex
-        text content
-        int tokenCount
-        text metadata
-        text contentHash
-        text embeddingModel
-        text createdAt
-    }
-
-    ragConversation {
-        text id PK
-        text title
-        text createdAt
-        text updatedAt
-    }
-
-    ragMessage {
-        text id PK
-        text conversationId FK
-        text role
-        text content
-        text sourcesJson
-        int tokenUsage
-        text createdAt
-    }
 ```
 
 ## Worker Thread Architecture
@@ -310,7 +278,6 @@ Background jobs run in Node.js `worker_threads` to avoid blocking the main event
     - `batch-worker` -- Batch delete operations
     - `ai-processing-worker` -- AI metadata extraction
     - `ai-apply-worker` -- Apply AI suggestions to Paperless-NGX
-    - `rag-indexing-worker` -- RAG document chunking and embedding
 
 **Constraints:**
 
@@ -376,12 +343,6 @@ api/v1/
 ├── ai/results/:id/reject           # POST
 ├── ai/results/:id/revert           # POST
 ├── ai/results/:id/feedback         # POST
-├── rag/config                      # GET, PUT
-├── rag/index                       # POST
-├── rag/stats                       # GET
-├── rag/ask                         # POST
-├── rag/conversations               # GET, POST
-├── rag/conversations/:id           # GET, DELETE
 └── paperless/*                     # Proxy/helper endpoints used by the UI
 ```
 

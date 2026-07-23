@@ -16,7 +16,7 @@ pnpm test:e2e:headed # Playwright with visible browser
 
 - **API responses**: Use `apiSuccess(data, meta?, status)` and `apiError(code, message, details?)` helpers from `$lib/server/api`. Success shape: `{ data, meta? }`. Error shape: `{ error: { code, message, details? } }`. Error codes are defined in the `ErrorCode` enum.
 - **Hooks initialization**: Config, logger, and database are singletons initialized on first request in `hooks.server.ts` and injected via `event.locals`. CORS is handled via `CORS_ALLOW_ORIGIN` env var.
-- **Feature flags**: Layout load (`+layout.server.ts`) passes `aiEnabled`, `ragEnabled`, `faroEnabled` (and Faro config) to the client from server config.
+- **Feature flags**: Layout load (`+layout.server.ts`) passes `aiEnabled`, `faroEnabled` (and Faro config) to the client from server config.
 - **Styling**: Tailwind CSS v4 via Vite plugin (not PostCSS).
 
 ## Gotchas

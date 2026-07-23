@@ -3,8 +3,6 @@ import {
   getDedupConfig,
   getDashboard,
   getAiConfig,
-  getRagConfig,
-  getRagStats,
   DEFAULT_EXTRACTION_PROMPT,
   DEFAULT_TAG_ALIAS_MAP,
 } from '@paperless-dedupe/core';
@@ -31,8 +29,5 @@ export const load: PageServerLoad = async ({ locals }) => {
     isDefaultPrompt: aiConfig ? aiConfig.promptTemplate === DEFAULT_EXTRACTION_PROMPT : true,
     isDefaultTagAliasMap: aiConfig ? aiConfig.tagAliasMap === DEFAULT_TAG_ALIAS_MAP : true,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
-    ragEnabled: locals.config.RAG_ENABLED,
-    ragConfig: locals.config.RAG_ENABLED ? getRagConfig(locals.db) : null,
-    ragStats: locals.config.RAG_ENABLED ? getRagStats(locals.db) : null,
   };
 };

@@ -33,7 +33,7 @@ pnpm dev
 ```
 
 !!! warning "Worker Thread Limitation"
-    Background jobs (sync, analysis, batch delete, AI processing, AI apply, RAG indexing) use `worker_threads` that run as raw Node.js processes outside Vite. These do **not** work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `pnpm docker:dev` to test the full workflow including background jobs.
+    Background jobs (sync, analysis, batch delete, AI processing, and AI apply) use `worker_threads` that run as raw Node.js processes outside Vite. These do **not** work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `pnpm docker:dev` to test the full workflow including background jobs.
 
 ## Project Structure
 
@@ -49,7 +49,6 @@ paperless-ngx-dedupe/
 │   │       ├── schema/     # Database schema definitions
 │   │       ├── paperless/  # Paperless-NGX API client
 │   │       ├── ai/         # AI metadata extraction and auto-apply
-│   │       ├── rag/        # RAG: chunking, embeddings, search
 │   │       ├── export/     # CSV and JSON export
 │   │       ├── telemetry/  # OpenTelemetry tracing and metrics
 │   │       └── config.ts   # Zod-validated environment config
@@ -131,7 +130,7 @@ pnpm --filter @paperless-dedupe/core test
 - **Engine**: SQLite via `better-sqlite3`
 - **ORM**: Drizzle ORM with schema defined in `packages/core/src/schema/`
 - **Migrations**: Auto-detected via SHA-256 hashing of DDL statements. Run on startup when `AUTO_MIGRATE=true` (the default).
-- **Tables**: `document`, `documentContent`, `documentSignature`, `duplicateGroup`, `duplicateMember`, `job`, `appConfig`, `syncState`, `aiProcessingResult`, `documentChunk`, `ragConversation`, `ragMessage`
+- **Tables**: `document`, `documentContent`, `documentSignature`, `duplicateGroup`, `duplicateMember`, `job`, `appConfig`, `syncState`, `aiProcessingResult`
 
 ## Docker Development
 

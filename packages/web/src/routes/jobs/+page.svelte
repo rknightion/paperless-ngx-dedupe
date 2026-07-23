@@ -16,7 +16,6 @@
     { value: 'batch_operation', label: 'Batch Delete' },
     { value: 'ai_processing', label: 'AI Processing' },
     { value: 'ai_apply', label: 'AI Apply' },
-    { value: 'rag_indexing', label: 'RAG Indexing' },
   ];
 
   const jobStatusOptions = [

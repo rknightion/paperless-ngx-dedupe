@@ -2,7 +2,7 @@
 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/rknightion/paperless-ngx-dedupe/badge)](https://scorecard.dev/viewer/?uri=github.com/rknightion/paperless-ngx-dedupe)
 
-A document deduplication and AI-powered metadata companion for [Paperless-NGX](https://github.com/paperless-ngx/paperless-ngx). It syncs your documents, identifies duplicates using MinHash/LSH algorithms, extracts metadata with LLMs, and lets you ask questions about your document library — all through a web UI and REST API.
+A document deduplication and AI-powered metadata companion for [Paperless-NGX](https://github.com/paperless-ngx/paperless-ngx). It syncs your documents, identifies duplicates using MinHash/LSH algorithms, and extracts metadata with LLMs through a web UI and REST API.
 
 ## Features
 
@@ -19,18 +19,11 @@ A document deduplication and AI-powered metadata companion for [Paperless-NGX](h
 - **Reference-aware** -- optionally feeds your existing correspondents, document types, and tags to the LLM to avoid creating duplicates
 - **Batch processing** -- process your entire library or new documents automatically in configurable batches
 
-### RAG Document Q&A
-
-- **Ask questions about your documents** -- natural language queries answered using your document library as context
-- **Hybrid search** -- combines vector similarity (OpenAI embeddings) with full-text search via Reciprocal Rank Fusion for accurate retrieval
-- **Multi-turn conversations** -- follow-up questions with full conversation history and source citations
-- **Cost-aware indexing** -- estimates embedding costs before indexing, with configurable chunk sizes and token budgets
-
 ### Platform
 
 - **Document sync** -- full and incremental sync from your Paperless-NGX instance
 - **Background processing** -- worker threads with real-time progress via Server-Sent Events
-- **Web UI** -- dashboard, document browser, AI results review, and RAG chat interface
+- **Web UI** -- dashboard, document browser, duplicate review, and AI results review
 - **Batch operations** -- bulk review, apply, reject, and delete across duplicates and AI results
 - **Data export** -- CSV duplicate reports and JSON configuration backup/restore
 - **Observability** -- OpenTelemetry traces, metrics, and logs with optional Prometheus scrape endpoint and built-in Paperless-NGX system metrics collector

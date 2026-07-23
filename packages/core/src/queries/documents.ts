@@ -4,7 +4,6 @@ import type { AppDatabase } from '../db/client.js';
 import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
-import { documentChunk } from '../schema/sqlite/rag.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { parseTagsJson } from './helpers.js';
 import type {
@@ -416,7 +415,6 @@ export function deleteDocumentLocally(db: AppDatabase, documentId: string): void
     tx.delete(documentSignature).where(eq(documentSignature.documentId, documentId)).run();
     tx.delete(documentContent).where(eq(documentContent.documentId, documentId)).run();
     tx.delete(aiProcessingResult).where(eq(aiProcessingResult.documentId, documentId)).run();
-    tx.delete(documentChunk).where(eq(documentChunk.documentId, documentId)).run();
     tx.delete(document).where(eq(document.id, documentId)).run();
   });
 }

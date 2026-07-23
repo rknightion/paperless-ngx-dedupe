@@ -12,7 +12,6 @@ The library is organized into these major subsystems (all re-exported from `src/
 - **jobs** — SQLite-backed job queue with worker thread infrastructure
 - **queries** — Dashboard, documents, duplicates, and config queries
 - **ai** — AI-powered metadata extraction (OpenAI provider, batch processing, flex processing, auto-apply)
-- **rag** — RAG pipeline (vector store, chunking, embeddings, search, conversations)
 - **telemetry** — OpenTelemetry tracing, metrics, and Paperless metrics coordinator
 - **config** — Zod-validated environment config (`parseConfig`)
 - **export** — Document export utilities

@@ -2,7 +2,6 @@ import { eq, sql } from 'drizzle-orm';
 import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
-import { documentChunk } from '../schema/sqlite/rag.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { createLogger } from '../logger.js';
 import type { AppDatabase } from '../db/client.js';
@@ -11,7 +10,6 @@ export interface PurgeResult {
   documentsDeleted: number;
   groupsDeleted: number;
   aiResultsDeleted: number;
-  chunksDeleted: number;
 }
 
 /**
@@ -40,19 +38,12 @@ export function purgeAllDocumentData(db: AppDatabase): PurgeResult {
         .select({ count: sql<number>`count(*)` })
         .from(aiProcessingResult)
         .get()?.count ?? 0;
-    const chunkCount =
-      tx
-        .select({ count: sql<number>`count(*)` })
-        .from(documentChunk)
-        .get()?.count ?? 0;
-
     // Delete in FK-safe order
     tx.delete(duplicateMember).run();
     tx.delete(duplicateGroup).run();
     tx.delete(documentSignature).run();
     tx.delete(documentContent).run();
     tx.delete(aiProcessingResult).run();
-    tx.delete(documentChunk).run();
     tx.delete(document).run();
 
     // Reset sync state (preserve cumulative usage counters)
@@ -71,7 +62,6 @@ export function purgeAllDocumentData(db: AppDatabase): PurgeResult {
       documentsDeleted: docCount,
       groupsDeleted: groupCount,
       aiResultsDeleted: aiCount,
-      chunksDeleted: chunkCount,
     };
   });
 

@@ -6,7 +6,7 @@ image: assets/social-card.png
 
 # Paperless NGX Dedupe
 
-**Intelligent document deduplication, AI metadata extraction, and document Q&A for Paperless-NGX**
+**Intelligent document deduplication and AI metadata extraction for Paperless-NGX**
 
 ## Features
 
@@ -22,13 +22,9 @@ Two weighted dimensions — Jaccard text overlap and fuzzy text matching — are
 
 Automatically extract correspondents, document types, and tags from document text using OpenAI models. Each suggestion includes a confidence score and evidence snippet, so you can review and apply results individually or in bulk.
 
-### :material-forum: RAG Document Q&A
-
-Ask natural language questions about your document library. Hybrid search combines vector embeddings with full-text search via Reciprocal Rank Fusion, with multi-turn conversations and source citations for every answer.
-
 ### :material-lightning-bolt: Real-Time Processing
 
-Background worker threads handle sync, analysis, AI extraction, and document indexing with real-time progress streamed via Server-Sent Events.
+Background worker threads handle sync, analysis, and AI extraction with real-time progress streamed via Server-Sent Events.
 
 ### :material-chart-timeline-variant: Observability
 

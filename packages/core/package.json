@@ -37,7 +37,6 @@
     "js-tiktoken": "^1.0.21",
     "nanoid": "^6.0.0",
     "pino": "^10.0.0",
-    "sqlite-vec": "^0.1.7",
     "yaml": "^2.8.3",
     "zod": "^4.0.0"
   },
@@ -49,18 +48,10 @@
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
-    "@ai-sdk/openai": "^3.0.0 || ^4.0.0",
-    "ai": "^6.0.0 || ^7.0.0",
     "openai": "^6.0.0"
   },
   "peerDependenciesMeta": {
     "openai": {
-      "optional": true
-    },
-    "ai": {
-      "optional": true
-    },
-    "@ai-sdk/openai": {
       "optional": true
     }
   }

@@ -7,7 +7,6 @@ import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js'
 import { job } from '../schema/sqlite/jobs.js';
 import { appConfig, syncState } from '../schema/sqlite/app.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
-import { documentChunk, ragConversation, ragMessage } from '../schema/sqlite/rag.js';
 
 const SCHEMA_HASH_KEY = 'schema_ddl_hash';
 const SCHEMA_SNAPSHOT_KEY = 'schema_ddl_snapshot';
@@ -22,9 +21,6 @@ const allTables = {
   appConfig,
   syncState,
   aiProcessingResult,
-  documentChunk,
-  ragConversation,
-  ragMessage,
 };
 
 async function generateDDL(
