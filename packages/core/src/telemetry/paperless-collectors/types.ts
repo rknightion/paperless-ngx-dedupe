@@ -1,5 +1,6 @@
 import type { Meter } from '@opentelemetry/api';
 import type { PaperlessClient } from '../../paperless/client.js';
+import type { PaperlessStatistics } from '../../paperless/types.js';
 import type { Logger } from '../../logger.js';
 
 export const METER_NAME = 'paperless-ngx';
@@ -23,6 +24,7 @@ export interface CollectorContext {
   client: PaperlessClient;
   meter: Meter;
   logger: Logger;
+  getStatistics(): Promise<PaperlessStatistics>;
 }
 
 export interface Collector {

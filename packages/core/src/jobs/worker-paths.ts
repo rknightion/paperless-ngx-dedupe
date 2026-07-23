@@ -5,11 +5,7 @@ import { existsSync } from 'node:fs';
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
 export type WorkerName =
-  | 'sync-worker'
-  | 'analysis-worker'
-  | 'batch-worker'
-  | 'ai-processing-worker'
-  | 'ai-apply-worker';
+  'sync-worker' | 'analysis-worker' | 'batch-worker' | 'ai-processing-worker' | 'ai-apply-worker';
 
 export function getWorkerPath(name: WorkerName): string {
   const candidates = [

@@ -25,7 +25,7 @@ export class DocumentCollector implements Collector {
   }
 
   async collect(ctx: CollectorContext): Promise<void> {
-    const stats = await ctx.client.getStatistics();
+    const stats = await ctx.getStatistics();
     this.latest = stats.documentsTotal;
   }
 }

@@ -50,7 +50,12 @@ export class PaperlessMetricsCoordinator {
   constructor(private readonly opts: PaperlessMetricsOptions) {
     this.logger = createLogger('paperless-metrics');
     const meter = metrics.getMeter(METER_NAME);
-    this.ctx = { client: opts.client, meter, logger: this.logger };
+    this.ctx = {
+      client: opts.client,
+      meter,
+      logger: this.logger,
+      getStatistics: () => opts.client.getStatistics(),
+    };
     this.collectionIntervalMs = opts.collectionIntervalMs ?? 60_000;
   }
 
@@ -95,9 +100,15 @@ export class PaperlessMetricsCoordinator {
   }
 
   private async collectAll(): Promise<void> {
+    let statistics: ReturnType<PaperlessClient['getStatistics']> | undefined;
+    const ctx: CollectorContext = {
+      ...this.ctx,
+      getStatistics: () => (statistics ??= this.ctx.client.getStatistics()),
+    };
+
     await Promise.allSettled(
       this.collectors.map((c) =>
-        c.collect(this.ctx).catch((err: unknown) => {
+        c.collect(ctx).catch((err: unknown) => {
           this.logger.warn({ collector: c.id, err }, 'Paperless metrics collector failed');
           this.errorsCounter.add(1, { collector: c.id });
         }),

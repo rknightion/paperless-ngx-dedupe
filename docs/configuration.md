@@ -94,7 +94,10 @@ When both are active, the Prometheus endpoint exposes the same metrics as the OT
 
 When enabled, Paperless NGX Dedupe collects system-level metrics from your Paperless-NGX instance — storage, document counts, tags, correspondents, and more. This provides the same observability as running a separate [prometheus-paperless-exporter](https://github.com/hansmi/prometheus-paperless-exporter) container, but delivered through whichever metrics pipeline you have active (OTLP, Prometheus, or both) — one fewer container to manage.
 
-Metric names match the Prometheus exporter exactly (e.g. `paperless_status_storage_total_bytes`, `paperless_statistics_documents_total`) for Grafana dashboard compatibility.
+For the supported collectors, metric names match the Prometheus exporter (for example,
+`paperless_status_storage_total_bytes` and `paperless_statistics_documents_total`) for Grafana
+dashboard compatibility. Exporter collectors that this application does not provide, such as
+individual task and log metrics, are not exposed.
 
 !!! note "Separately opt-in"
     This is opt-in independently of `OTEL_ENABLED` / `OTEL_PROMETHEUS_ENABLED` because collectors poll the Paperless-NGX API every export interval (~60s), adding load to your Paperless instance. Enable only the collectors you need if this is a concern.
@@ -104,18 +107,22 @@ Metric names match the Prometheus exporter exactly (e.g. `paperless_status_stora
 | `PAPERLESS_METRICS_ENABLED` | No | `false` | Enable Paperless system metrics collection. Requires `OTEL_ENABLED=true` or `OTEL_PROMETHEUS_ENABLED=true`. |
 | `PAPERLESS_METRICS_COLLECTORS` | No | all | Comma-separated list of collectors to enable |
 
+Paperless-NGX 3.x applies permissions to system-wide observability data. The API user needs
+`paperless.view_system_monitoring` for the `status` collector. Grant
+`paperless.view_global_statistics` if the `statistics` and `document` collectors should report
+global counts; without it, Paperless returns counts limited to objects visible to that user.
+
 **Available collectors:**
 
 | Collector | API Calls | Description |
 | --- | --- | --- |
 | `status` | 1 | Storage, database, Redis, Celery, index, classifier, and sanity check status |
-| `statistics` | 1 + paginated | Document totals, inbox count, file type breakdown, character count, metadata counts |
-| `document` | 1 | Total document count |
+| `statistics` | 1 + paginated on Paperless 2.x | Document totals, inbox count, file type breakdown, character count, metadata counts |
+| `document` | 1 (shared with `statistics`) | Total document count |
 | `tag` | paginated | Per-tag info, document counts, inbox flag |
 | `correspondent` | paginated | Per-correspondent info, document counts, last correspondence timestamp |
 | `document_type` | paginated | Per-document-type info and document counts |
 | `storage_path` | paginated | Per-storage-path info and document counts |
-| `task` | 1 | Background task info, status, timestamps |
 | `group` | 1 | User group count |
 | `user` | 1 | User count |
 | `remote_version` | 1 | Update availability check (causes Paperless-NGX to make an outbound network call) |

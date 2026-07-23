@@ -87,7 +87,7 @@ describe('PaperlessMetricsCoordinator', () => {
 
     // All collectors should be called including remote_version
     expect(client.getStatus).toHaveBeenCalled();
-    expect(client.getStatistics).toHaveBeenCalledTimes(2); // statistics + document both call it
+    expect(client.getStatistics).toHaveBeenCalledTimes(1);
     expect(client.getRemoteVersion).toHaveBeenCalled();
     expect(client.getGroupCount).toHaveBeenCalled();
     expect(client.getUserCount).toHaveBeenCalled();
@@ -111,6 +111,23 @@ describe('PaperlessMetricsCoordinator', () => {
     expect(client.getUserCount).not.toHaveBeenCalled();
     expect(client.getRemoteVersion).not.toHaveBeenCalled();
 
+    coordinator.shutdown();
+  });
+
+  it('shares statistics within a collection cycle but refreshes on the next cycle', async () => {
+    const client = createMockClient();
+    const coordinator = new PaperlessMetricsCoordinator({
+      client,
+      enabledCollectors: ['statistics', 'document'],
+      collectionIntervalMs: 1_000,
+    });
+    coordinator.start();
+
+    expect(client.getStatistics).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(client.getStatistics).toHaveBeenCalledTimes(2);
     coordinator.shutdown();
   });
 
