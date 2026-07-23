@@ -23,6 +23,12 @@
       "matchManagers": ["npm"],
       "matchPackageNames": ["vitest", "@vitest/**"],
       "groupName": "vitest"
+    },
+    {
+      "description": "typescript-eslint does not support the TypeScript 7 compiler API yet.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     }
   ]
 }

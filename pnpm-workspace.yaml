@@ -1,2 +1,11 @@
 packages:
   - 'packages/*'
+
+overrides:
+  '@opentelemetry/api': 1.9.1
+
+allowBuilds:
+  '@datadog/pprof': false
+  better-sqlite3: true
+  esbuild: true
+  protobufjs: false
