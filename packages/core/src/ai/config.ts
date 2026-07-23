@@ -12,14 +12,6 @@ function parseConfigValue(key: string, value: string): unknown {
     shortKey === 'includeCorrespondents' ||
     shortKey === 'includeDocumentTypes' ||
     shortKey === 'includeTags' ||
-    shortKey === 'neverAutoCreateEntities' ||
-    shortKey === 'neverOverwriteNonEmpty' ||
-    shortKey === 'tagsOnlyAutoApply' ||
-    shortKey === 'autoApplyEnabled' ||
-    shortKey === 'autoApplyRequireAllAboveThreshold' ||
-    shortKey === 'autoApplyRequireNoNewEntities' ||
-    shortKey === 'autoApplyRequireNoClearing' ||
-    shortKey === 'autoApplyRequireOcrText' ||
     shortKey === 'protectedTagsEnabled' ||
     shortKey === 'extractTitle' ||
     shortKey === 'extractCorrespondent' ||

@@ -150,9 +150,6 @@ export const aiConfigSchema = z.object({
   confidenceThresholdCorrespondent: z.number().min(0).max(1).default(0),
   confidenceThresholdDocumentType: z.number().min(0).max(1).default(0),
   confidenceThresholdTags: z.number().min(0).max(1).default(0),
-  neverAutoCreateEntities: z.boolean().default(false),
-  neverOverwriteNonEmpty: z.boolean().default(false),
-  tagsOnlyAutoApply: z.boolean().default(false),
 
   // Protected tags — never add or remove these tags during AI apply
   protectedTagsEnabled: z.boolean().default(false),
@@ -161,13 +158,6 @@ export const aiConfigSchema = z.object({
   // Tag alias mapping — normalise LLM tag suggestions via canonical→alias YAML map
   tagAliasesEnabled: z.boolean().default(false),
   tagAliasMap: z.string().default(DEFAULT_TAG_ALIAS_MAP),
-
-  // Auto-apply rules (opt-in, maximally conservative defaults)
-  autoApplyEnabled: z.boolean().default(false),
-  autoApplyRequireAllAboveThreshold: z.boolean().default(true),
-  autoApplyRequireNoNewEntities: z.boolean().default(true),
-  autoApplyRequireNoClearing: z.boolean().default(true),
-  autoApplyRequireOcrText: z.boolean().default(true),
 
   // Concurrency for applying results to Paperless-NGX
   applyConcurrency: z.number().int().min(1).max(50).default(5),
@@ -186,8 +176,6 @@ export interface AiBatchResult {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   durationMs: number;
-  autoApplied?: number;
-  autoApplySkipped?: number;
   rateLimitRetries: number;
   rateLimitPauses: number;
 }

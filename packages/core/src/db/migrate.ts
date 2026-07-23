@@ -69,6 +69,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Connection and credential values are supplied at runtime through the
   // environment. Remove values written by older settings and import flows.
   migrateStoredCredentials(sqlite);
+  migrateRetiredAiAutoApplyConfig(sqlite);
 
   // Pre-DDL migration: convert reviewed/resolved booleans to status enum
   migrateGroupStatus(sqlite);
@@ -174,6 +175,14 @@ function migrateStoredCredentials(sqlite: Database.Database): void {
       remove.run(key);
     }
   })();
+}
+
+function migrateRetiredAiAutoApplyConfig(sqlite: Database.Database): void {
+  sqlite
+    .prepare(
+      "DELETE FROM app_config WHERE key LIKE 'ai.autoApply%' OR key = 'ai.tagsOnlyAutoApply'",
+    )
+    .run();
 }
 
 /**

@@ -130,4 +130,42 @@ describe('setAiConfig', () => {
     expect(config.protectedTagsEnabled).toBe(false);
     expect(config.protectedTagNames).toEqual(['email']);
   });
+
+  it('removes retired auto-apply settings during migration and ignores them in config reads', async () => {
+    const legacyKeys = [
+      'ai.autoApplyEnabled',
+      'ai.autoApplyRequireAllAboveThreshold',
+      'ai.autoApplyRequireNoNewEntities',
+      'ai.autoApplyRequireNoClearing',
+      'ai.autoApplyRequireOcrText',
+      'ai.tagsOnlyAutoApply',
+    ];
+    const now = new Date().toISOString();
+
+    for (const key of legacyKeys) {
+      db.$client
+        .prepare('INSERT INTO app_config (key, value, updated_at) VALUES (?, ?, ?)')
+        .run(key, 'true', now);
+    }
+
+    const configBeforeMigration = getAiConfig(db) as Record<string, unknown>;
+    for (const key of legacyKeys) {
+      expect(configBeforeMigration).not.toHaveProperty(key.replace('ai.', ''));
+    }
+
+    await migrateDatabase(db.$client);
+    await migrateDatabase(db.$client);
+
+    const remainingLegacyKeys = db.$client
+      .prepare(
+        "SELECT key FROM app_config WHERE key LIKE 'ai.autoApply%' OR key = 'ai.tagsOnlyAutoApply'",
+      )
+      .all();
+    expect(remainingLegacyKeys).toEqual([]);
+
+    const config = getAiConfig(db) as Record<string, unknown>;
+    for (const key of legacyKeys) {
+      expect(config).not.toHaveProperty(key.replace('ai.', ''));
+    }
+  });
 });

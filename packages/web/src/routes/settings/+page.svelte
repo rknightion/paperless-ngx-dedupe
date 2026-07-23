@@ -130,19 +130,7 @@
     Math.round((initialAiConfig?.confidenceThresholdDocumentType ?? 0) * 100),
   );
   let aiConfidenceTags = $state(Math.round((initialAiConfig?.confidenceThresholdTags ?? 0) * 100));
-  let aiNeverAutoCreate = $state(initialAiConfig?.neverAutoCreateEntities ?? false);
-  let aiNeverOverwrite = $state(initialAiConfig?.neverOverwriteNonEmpty ?? false);
-  let aiTagsOnly = $state(initialAiConfig?.tagsOnlyAutoApply ?? false);
   let showConfidenceFields = $state(false);
-
-  // Auto-apply rules
-  let aiAutoApply = $state(initialAiConfig?.autoApplyEnabled ?? false);
-  let aiAutoApplyRequireThreshold = $state(
-    initialAiConfig?.autoApplyRequireAllAboveThreshold ?? true,
-  );
-  let aiAutoApplyRequireNoNew = $state(initialAiConfig?.autoApplyRequireNoNewEntities ?? true);
-  let aiAutoApplyRequireNoClearing = $state(initialAiConfig?.autoApplyRequireNoClearing ?? true);
-  let aiAutoApplyRequireOcr = $state(initialAiConfig?.autoApplyRequireOcrText ?? true);
 
   let weightSum = $derived(weightJaccard + weightFuzzy);
   let weightsValid = $derived(weightSum === 100);
@@ -308,9 +296,6 @@
           confidenceThresholdCorrespondent: aiConfidenceCorrespondent / 100,
           confidenceThresholdDocumentType: aiConfidenceDocType / 100,
           confidenceThresholdTags: aiConfidenceTags / 100,
-          neverAutoCreateEntities: aiNeverAutoCreate,
-          neverOverwriteNonEmpty: aiNeverOverwrite,
-          tagsOnlyAutoApply: aiTagsOnly,
           protectedTagsEnabled: aiProtectedTagsEnabled,
           protectedTagNames: aiProtectedTagsInput
             .split(',')
@@ -318,11 +303,6 @@
             .filter((s: string) => s.length > 0),
           tagAliasesEnabled: aiTagAliasesEnabled,
           tagAliasMap: aiTagAliasMap,
-          autoApplyEnabled: aiAutoApply,
-          autoApplyRequireAllAboveThreshold: aiAutoApplyRequireThreshold,
-          autoApplyRequireNoNewEntities: aiAutoApplyRequireNoNew,
-          autoApplyRequireNoClearing: aiAutoApplyRequireNoClearing,
-          autoApplyRequireOcrText: aiAutoApplyRequireOcr,
         }),
       });
       const json = await res.json();
@@ -1274,15 +1254,14 @@
       <div class="border-soft mt-4 border-t pt-4">
         <h3 class="text-ink text-sm font-semibold">Confidence Thresholds</h3>
         <p class="text-muted mt-1 text-xs">
-          Set minimum confidence scores for auto-apply eligibility. Results below these thresholds
-          will require manual review.
+          Set minimum confidence scores to help prioritize manual review.
         </p>
 
         <div class="mt-3">
           <label for="ai-conf-global" class="text-muted flex items-center gap-1.5 text-sm">
             Global Minimum
             <InfoIcon
-              text="Results with any field below this confidence are never auto-applied. Set to 0 to disable the global gate."
+              text="Use confidence to prioritize review. Set to 0 to disable the global threshold."
               position="top"
             />
           </label>
@@ -1368,87 +1347,6 @@
             Per-field thresholds override the global minimum upward. The effective threshold for
             each field is the higher of the two.
           </p>
-        {/if}
-
-        <div class="mt-4 space-y-2">
-          <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiNeverAutoCreate} class="accent-blue-500" />
-            <span class="text-ink">Never auto-create new entities</span>
-            <InfoIcon
-              text="Prevents auto-apply from creating correspondents, document types, or tags that don't already exist in Paperless-NGX."
-              position="top"
-            />
-          </label>
-          <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiNeverOverwrite} class="accent-blue-500" />
-            <span class="text-ink">Never overwrite existing non-empty fields</span>
-            <InfoIcon
-              text="Prevents auto-apply from changing a field that already has a value in Paperless-NGX."
-              position="top"
-            />
-          </label>
-          <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiTagsOnly} class="accent-blue-500" />
-            <span class="text-ink">Tags-only auto-apply mode</span>
-            <InfoIcon
-              text="Restricts auto-apply to only modify tags, leaving correspondent and document type untouched."
-              position="top"
-            />
-          </label>
-        </div>
-      </div>
-
-      <!-- Auto-Apply Rules -->
-      <div class="border-soft mt-4 border-t pt-4">
-        <h3 class="text-ink text-sm font-semibold">Auto-Apply Rules</h3>
-        <p class="text-muted mt-1 text-xs">
-          Automatically apply AI suggestions that meet all criteria below. Results that don't
-          qualify remain in the review queue.
-        </p>
-
-        <label class="mt-3 flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={aiAutoApply} class="accent-blue-500" />
-          <span class="text-ink font-medium">Enable auto-apply after processing</span>
-        </label>
-
-        {#if aiAutoApply}
-          <div
-            class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
-          >
-            Auto-apply will modify documents in Paperless-NGX without manual review. Ensure your
-            confidence thresholds are set appropriately.
-          </div>
-
-          <div class="mt-3 space-y-2 pl-6">
-            <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                bind:checked={aiAutoApplyRequireThreshold}
-                class="accent-blue-500"
-              />
-              <span class="text-ink">All fields above their confidence threshold</span>
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                bind:checked={aiAutoApplyRequireNoNew}
-                class="accent-blue-500"
-              />
-              <span class="text-ink">No new entities would be created</span>
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                bind:checked={aiAutoApplyRequireNoClearing}
-                class="accent-blue-500"
-              />
-              <span class="text-ink">No existing values would be cleared</span>
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" bind:checked={aiAutoApplyRequireOcr} class="accent-blue-500" />
-              <span class="text-ink">Document has OCR text</span>
-            </label>
-          </div>
         {/if}
       </div>
 

@@ -364,10 +364,6 @@ export { getAiResultGroups } from './ai/grouping.js';
 export type { GroupByField, AiResultGroup, AiGroupedResults } from './ai/grouping.js';
 export { computeApplyPreflight } from './ai/preflight.js';
 export type { ApplyPreflightResult } from './ai/preflight.js';
-export { evaluateGates } from './ai/gates.js';
-export type { GateEvaluation, GateInput, GateContext, AiField } from './ai/gates.js';
-export { evaluateAndAutoApply } from './ai/auto-apply.js';
-export type { AutoApplyResult } from './ai/auto-apply.js';
 export {
   fetchAndCachePricing,
   refreshPricingIfStale,
