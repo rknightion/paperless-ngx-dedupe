@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Social / OpenGraph card for the paperless-ngx-dedupe docs site and GitHub repo.
+
+  Source of truth for docs/assets/social-card.png. Regenerate after editing:
+
+      rsvg-convert -w 1200 -h 630 docs/assets/social-card.svg -o docs/assets/social-card.png
+
+  Sized 1200x630 to match the og:image:width / og:image:height that
+  docs/overrides/main.html declares. Keep text inside the 80px margin: GitHub
+  crops a social preview to 2:1, trimming a few pixels top and bottom.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#042f2e"/>
+      <stop offset="55%" stop-color="#115e59"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#5eead4" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="dots" width="34" height="34" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="2" fill="#ffffff" opacity="0.05"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <text x="80" y="150" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="26" font-weight="bold"
+        letter-spacing="4.5" fill="#5eead4">PAPERLESS-NGX · DEDUPLICATION</text>
+
+  <text x="80" y="272" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="86" font-weight="bold"
+        fill="#ffffff">paperless-ngx-dedupe</text>
+
+  <rect x="80" y="312" width="620" height="5" rx="2.5" fill="url(#rule)"/>
+
+  <text x="80" y="392" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="42"
+        fill="#ccfbf1">Find and resolve duplicate documents</text>
+
+  <text x="80" y="462" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="29"
+        fill="#5eead4">MinHash/LSH · fuzzy matching · review web UI</text>
+
+  <rect x="80" y="540" width="6" height="34" rx="3" fill="#5eead4"/>
+  <text x="104" y="567" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="28" font-weight="bold"
+        fill="#ffffff">m7kni.io/paperless-ngx-dedupe</text>
+</svg>
