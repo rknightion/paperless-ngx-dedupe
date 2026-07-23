@@ -7,6 +7,7 @@ import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js'
 import { job } from '../schema/sqlite/jobs.js';
 import { appConfig, syncState } from '../schema/sqlite/app.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
+import { isSensitiveConfigKey } from '../queries/config.js';
 
 const SCHEMA_HASH_KEY = 'schema_ddl_hash';
 const SCHEMA_SNAPSHOT_KEY = 'schema_ddl_snapshot';
@@ -64,6 +65,10 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
       updated_at TEXT NOT NULL
     )
   `);
+
+  // Connection and credential values are supplied at runtime through the
+  // environment. Remove values written by older settings and import flows.
+  migrateStoredCredentials(sqlite);
 
   // Pre-DDL migration: convert reviewed/resolved booleans to status enum
   migrateGroupStatus(sqlite);
@@ -156,6 +161,19 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
 function tableHasColumn(sqlite: Database.Database, table: string, column: string): boolean {
   const cols = sqlite.prepare(`PRAGMA table_info('${table}')`).all() as { name: string }[];
   return cols.some((c) => c.name === column);
+}
+
+function migrateStoredCredentials(sqlite: Database.Database): void {
+  const rows = sqlite.prepare('SELECT key FROM app_config').all() as { key: string }[];
+  const keys = rows.filter(({ key }) => isSensitiveConfigKey(key)).map(({ key }) => key);
+  if (keys.length === 0) return;
+
+  const remove = sqlite.prepare('DELETE FROM app_config WHERE key = ?');
+  sqlite.transaction(() => {
+    for (const key of keys) {
+      remove.run(key);
+    }
+  })();
 }
 
 /**

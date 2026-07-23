@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { AppDatabase } from '../db/client.js';
-import { getConfig, setConfigBatch } from '../queries/config.js';
+import { filterPersistableConfig, getConfig, setConfigBatch } from '../queries/config.js';
 import { getDedupConfig, setDedupConfig } from '../dedup/config.js';
 import { dedupConfigSchema } from '../dedup/types.js';
 import type { ConfigBackup } from './types.js';
@@ -60,7 +60,7 @@ function filterSchemaDdlKeys(config: Record<string, string>): Record<string, str
 
 export function exportConfig(db: AppDatabase): ConfigBackup {
   const allConfig = getConfig(db);
-  const appConfigFiltered = filterSchemaDdlKeys(allConfig);
+  const appConfigFiltered = filterSchemaDdlKeys(filterPersistableConfig(allConfig));
   const dedupConfig = getDedupConfig(db);
 
   return {
@@ -77,7 +77,7 @@ export function importConfig(
 ): { appConfigKeys: number; dedupConfigUpdated: boolean } {
   const validated = configBackupSchema.parse(data);
 
-  const filteredAppConfig = filterSchemaDdlKeys(validated.appConfig);
+  const filteredAppConfig = filterSchemaDdlKeys(filterPersistableConfig(validated.appConfig));
 
   setConfigBatch(db, filteredAppConfig);
   setDedupConfig(db, validated.dedupConfig);

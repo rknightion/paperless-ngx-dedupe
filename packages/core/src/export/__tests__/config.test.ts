@@ -1,17 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import type Database from 'better-sqlite3';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
-import { setConfig, getConfig } from '../../queries/config.js';
+import { setConfig, setConfigBatch, getConfig } from '../../queries/config.js';
 import { getDedupConfig } from '../../dedup/config.js';
 import { DEFAULT_DEDUP_CONFIG } from '../../dedup/types.js';
 import { exportConfig, importConfig } from '../config.js';
 
 let db: AppDatabase;
+let sqlite: Database.Database;
 
 beforeEach(async () => {
   const handle = createDatabaseWithHandle(':memory:');
   db = handle.db;
+  sqlite = handle.sqlite;
   await migrateDatabase(handle.sqlite);
 });
 
@@ -19,13 +22,54 @@ describe('exportConfig', () => {
   it('excludes schema_ddl_ keys from appConfig', () => {
     setConfig(db, 'schema_ddl_hash', 'abc123');
     setConfig(db, 'schema_ddl_snapshot', 'CREATE TABLE...');
-    setConfig(db, 'paperless_url', 'http://localhost:8000');
+    setConfig(db, 'theme', 'dark');
 
     const backup = exportConfig(db);
 
     expect(backup.appConfig).not.toHaveProperty('schema_ddl_hash');
     expect(backup.appConfig).not.toHaveProperty('schema_ddl_snapshot');
-    expect(backup.appConfig.paperless_url).toBe('http://localhost:8000');
+    expect(backup.appConfig.theme).toBe('dark');
+  });
+
+  it('filters legacy stored credential rows from backups', () => {
+    const now = new Date().toISOString();
+    const insert = sqlite.prepare(
+      'INSERT INTO app_config (key, value, updated_at) VALUES (?, ?, ?)',
+    );
+    for (const [key, value] of [
+      ['paperless.url', 'http://paperless.example.test'],
+      ['paperless.apiToken', 'paperless-secret'],
+      ['openaiApiKey', 'openai-api-key'],
+      ['paperlessApiToken', 'paperless-api-token'],
+      ['clientSecret', 'client-secret'],
+      ['secretKey', 'secret-key'],
+      ['clientSecretKey', 'client-secret-key'],
+      ['privateKey', 'private-key'],
+      ['accessToken', 'access-token'],
+      ['databasePassword', 'database-password'],
+      ['paperlessUrl', 'http://paperless.example.test'],
+      ['paperless-url', 'http://legacy-paperless.example.test'],
+    ]) {
+      insert.run(key, value, now);
+    }
+    setConfig(db, 'theme', 'dark');
+
+    const backup = exportConfig(db);
+
+    for (const secret of [
+      'paperless-secret',
+      'openai-api-key',
+      'paperless-api-token',
+      'client-secret',
+      'secret-key',
+      'client-secret-key',
+      'private-key',
+      'access-token',
+      'database-password',
+    ]) {
+      expect(JSON.stringify(backup)).not.toContain(secret);
+    }
+    expect(backup.appConfig).toEqual({ theme: 'dark' });
   });
 
   it('includes dedupConfig', () => {
@@ -38,13 +82,25 @@ describe('exportConfig', () => {
 });
 
 describe('importConfig', () => {
-  it('imports valid data successfully', () => {
+  it('imports valid mutable data while discarding obsolete connection settings', () => {
     const data = {
       version: '1.0',
       exportedAt: '2024-01-01T00:00:00Z',
       appConfig: {
         paperless_url: 'http://localhost:8000',
         api_token: 'secret',
+        'paperless.apiToken': 'new-secret',
+        AI_OPENAI_API_KEY: 'sk-secret',
+        openaiApiKey: 'openai-key',
+        clientSecret: 'client-secret',
+        accessToken: 'access-token',
+        databasePassword: 'database-password',
+        secretKey: 'secret-key',
+        clientSecretKey: 'client-secret-key',
+        privateKey: 'private-key',
+        paperlessUrl: 'http://paperless.example.test',
+        'paperless-url': 'http://legacy-paperless.example.test',
+        theme: 'dark',
       },
       dedupConfig: {
         ...DEFAULT_DEDUP_CONFIG,
@@ -54,12 +110,24 @@ describe('importConfig', () => {
 
     const result = importConfig(db, data);
 
-    expect(result.appConfigKeys).toBe(2);
+    expect(result.appConfigKeys).toBe(1);
     expect(result.dedupConfigUpdated).toBe(true);
 
     const config = getConfig(db);
-    expect(config.paperless_url).toBe('http://localhost:8000');
-    expect(config.api_token).toBe('secret');
+    expect(config).not.toHaveProperty('paperless_url');
+    expect(config).not.toHaveProperty('api_token');
+    expect(config).not.toHaveProperty('paperless.apiToken');
+    expect(config).not.toHaveProperty('AI_OPENAI_API_KEY');
+    expect(config).not.toHaveProperty('openaiApiKey');
+    expect(config).not.toHaveProperty('clientSecret');
+    expect(config).not.toHaveProperty('accessToken');
+    expect(config).not.toHaveProperty('databasePassword');
+    expect(config).not.toHaveProperty('secretKey');
+    expect(config).not.toHaveProperty('clientSecretKey');
+    expect(config).not.toHaveProperty('privateKey');
+    expect(config).not.toHaveProperty('paperlessUrl');
+    expect(config).not.toHaveProperty('paperless-url');
+    expect(config.theme).toBe('dark');
 
     const dedupConfig = getDedupConfig(db);
     expect(dedupConfig.minWords).toBe(50);
@@ -83,7 +151,7 @@ describe('importConfig', () => {
       appConfig: {
         schema_ddl_hash: 'should_be_filtered',
         schema_ddl_snapshot: 'should_also_be_filtered',
-        paperless_url: 'http://localhost:8000',
+        theme: 'dark',
       },
       dedupConfig: DEFAULT_DEDUP_CONFIG,
     };
@@ -93,7 +161,7 @@ describe('importConfig', () => {
     expect(result.appConfigKeys).toBe(1);
 
     const config = getConfig(db);
-    expect(config.paperless_url).toBe('http://localhost:8000');
+    expect(config.theme).toBe('dark');
     // schema_ddl_ keys from import should not overwrite existing ones
   });
 

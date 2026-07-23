@@ -22,43 +22,35 @@ test.describe('Settings Page', () => {
     ).toBeVisible();
   });
 
-  test('connection form fields render', async ({ page }) => {
+  test('connection settings are environment-owned and never serialize credentials', async ({
+    page,
+  }) => {
     await page.goto('/settings');
 
-    // Connection section
     await expect(page.getByRole('heading', { name: 'Paperless-NGX Connection' })).toBeVisible();
-
-    // URL field
-    await expect(page.locator('#paperless-url')).toBeVisible();
-
-    // API Token field
-    await expect(page.locator('#api-token')).toBeVisible();
-
-    // Username and password
-    await expect(page.locator('#username')).toBeVisible();
-    await expect(page.locator('#password')).toBeVisible();
+    await expect(
+      page.getByText('Connection settings are managed by environment variables.'),
+    ).toBeVisible();
+    await expect(page.locator('#paperless-url')).toHaveAttribute('readonly');
+    await expect(page.locator('#api-token')).toHaveCount(0);
+    await expect(page.locator('#username')).toHaveCount(0);
+    await expect(page.locator('#password')).toHaveCount(0);
+    expect(await page.content()).not.toContain('test-token-e2e');
+    expect(await page.content()).not.toContain('./data/e2e-test.db');
   });
 
   test('connection action buttons render', async ({ page }) => {
     await page.goto('/settings');
 
     await expect(page.getByRole('button', { name: 'Test Connection' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
   });
 
-  test('token show/hide toggle works', async ({ page }) => {
+  test('connection result is announced through an accessible live region', async ({ page }) => {
     await page.goto('/settings');
 
-    const tokenInput = page.locator('#api-token');
-    await expect(tokenInput).toHaveAttribute('type', 'password');
-
-    // Click Show button
-    await page.getByRole('button', { name: 'Show', exact: true }).click();
-    await expect(tokenInput).toHaveAttribute('type', 'text');
-
-    // Click Hide button
-    await page.getByRole('button', { name: 'Hide', exact: true }).click();
-    await expect(tokenInput).toHaveAttribute('type', 'password');
+    await page.getByRole('button', { name: 'Test Connection' }).click();
+    await expect(page.getByRole('status')).toContainText('Connected!');
   });
 
   test('dedup parameters section renders', async ({ page }) => {
@@ -119,7 +111,7 @@ test.describe('Settings Page', () => {
     await page.goto('/settings');
 
     await expect(page.getByText('System Information')).toBeVisible();
-    await expect(page.getByText('Database Path')).toBeVisible();
+    await expect(page.getByText('Database Path')).toHaveCount(0);
     await expect(page.getByText('Total Documents')).toBeVisible();
     await expect(page.getByText('Pending Groups')).toBeVisible();
   });

@@ -17,10 +17,29 @@ test.describe('Config API', () => {
     expect(body.data).toBeDefined();
     expect(typeof body.data).toBe('object');
 
-    // Seed inserts paperless.url (non-sensitive) and paperless.apiToken (sensitive).
-    expect(body.data['paperless.url']).toBe('http://localhost:18923');
-    // Sensitive keys must be redacted (omitted) from GET responses — see redactSensitiveConfig.
+    // Stale environment-owned connection data is never exposed to API clients.
+    expect(body.data['paperless.url']).toBeUndefined();
     expect(body.data['paperless.apiToken']).toBeUndefined();
+  });
+
+  test('PUT /api/v1/config never persists credential values', async ({ request }) => {
+    const secret = 'paperless-secret-that-must-not-return';
+    const response = await request.put('/api/v1/config', {
+      data: {
+        settings: {
+          'paperless.apiToken': secret,
+          'openai.apiKey': 'sk-secret-that-must-not-return',
+          theme: 'dark',
+        },
+      },
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(JSON.stringify(body)).not.toContain(secret);
+    expect(body.data).not.toHaveProperty('paperless.apiToken');
+    expect(body.data).not.toHaveProperty('openai.apiKey');
+    expect(body.data.theme).toBe('dark');
   });
 
   test('PUT /api/v1/config updates single config key', async ({ request }) => {
@@ -112,29 +131,25 @@ test.describe('Config API', () => {
     expect([400, 403]).toContain(response.status());
   });
 
-  test('POST /api/v1/config/test-connection tests connection', async ({ request }) => {
-    // The seed data has paperless.url = http://localhost:18923
-    // The mock Paperless server should be running on that port
+  test('POST /api/v1/config/test-connection ignores supplied credentials and uses runtime config', async ({
+    request,
+  }) => {
     const response = await request.post('/api/v1/config/test-connection', {
       headers: { 'Content-Type': 'application/json' },
       data: {
-        url: 'http://localhost:18923',
-        token: 'test-token-e2e',
+        url: 'http://invalid.example.test',
+        token: 'request-token-must-be-ignored',
+        username: 'request-user-must-be-ignored',
+        password: 'request-password-must-be-ignored',
       },
     });
 
-    // If mock server is running, expect 200 with connected: true
-    // If not, expect 502
-    const status = response.status();
-    expect([200, 502]).toContain(status);
-
+    expect(response.status()).toBe(200);
     const body = await response.json();
-    if (status === 200) {
-      expect(body.data.connected).toBe(true);
-      expect(body.data).toHaveProperty('version');
-      expect(body.data).toHaveProperty('documentCount');
-    } else {
-      expect(body.error).toBeDefined();
-    }
+    expect(JSON.stringify(body)).not.toContain('request-token-must-be-ignored');
+    expect(JSON.stringify(body)).not.toContain('request-password-must-be-ignored');
+    expect(body.data.connected).toBe(true);
+    expect(body.data).toHaveProperty('version');
+    expect(body.data).toHaveProperty('documentCount');
   });
 });

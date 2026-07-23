@@ -1,5 +1,4 @@
 import {
-  getConfig,
   getDedupConfig,
   getDashboard,
   getAiConfig,
@@ -9,18 +8,20 @@ import {
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const config = getConfig(locals.db);
   const dedupConfig = getDedupConfig(locals.db);
   const dashboard = getDashboard(locals.db);
 
   const aiConfig = locals.config.AI_ENABLED ? getAiConfig(locals.db) : null;
 
   return {
-    config,
     dedupConfig,
+    connection: {
+      url: locals.config.PAPERLESS_URL,
+      apiToken: { configured: Boolean(locals.config.PAPERLESS_API_TOKEN) },
+      username: { configured: Boolean(locals.config.PAPERLESS_USERNAME) },
+      password: { configured: Boolean(locals.config.PAPERLESS_PASSWORD) },
+    },
     system: {
-      databaseUrl: locals.config.DATABASE_URL,
-      paperlessUrl: locals.config.PAPERLESS_URL,
       totalDocuments: dashboard.totalDocuments,
       duplicateGroups: dashboard.pendingGroups,
     },

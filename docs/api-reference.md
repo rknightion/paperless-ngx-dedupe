@@ -229,7 +229,8 @@ Cancels a pending/running job.
 
 ### GET /api/v1/config
 
-Returns app config key/value map from DB.
+Returns mutable app config key/value map from DB. Environment-owned Paperless connection settings
+and credential keys are omitted.
 
 ### PUT /api/v1/config
 
@@ -245,33 +246,13 @@ or:
 { "settings": { "some.key": "value", "another.key": "value" } }
 ```
 
-Returns full config map.
+Returns the safe mutable config map. Credential and environment-owned connection keys are ignored.
 
 ### POST /api/v1/config/test-connection
 
-Tests Paperless connectivity.
-
-- If body includes `url`, validates explicit body config.
-- Otherwise uses current runtime env config.
-
-Body shape when explicit:
-
-```json
-{
-  "url": "http://paperless:8000",
-  "token": "..."
-}
-```
-
-or
-
-```json
-{
-  "url": "http://paperless:8000",
-  "username": "admin",
-  "password": "..."
-}
-```
+Tests Paperless connectivity using the runtime environment configuration. The endpoint does not
+accept a request body, preventing browser-supplied connection credentials from entering server
+state or diagnostics.
 
 Success:
 

@@ -30,6 +30,12 @@ Paperless NGX Dedupe uses:
 
 If both token and username/password are set, token is used first.
 
+Paperless connection settings and all credentials are environment-owned. The Settings page exposes
+the configured URL as read-only and only reports whether authentication is configured; it never
+reads, stores, exports, or accepts these values through the database or configuration API. Existing
+legacy credential rows in `app_config` are removed during startup migration. Keep the values in your
+deployment environment or secret manager when moving an installation.
+
 ### Container Runtime
 
 | Variable | Required | Default | Notes |

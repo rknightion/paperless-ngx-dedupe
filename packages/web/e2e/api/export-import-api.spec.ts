@@ -69,8 +69,9 @@ test.describe('Export/Import API', () => {
     expect(typeof body.appConfig).toBe('object');
     expect(typeof body.dedupConfig).toBe('object');
 
-    // Verify app config contains seeded values
-    expect(body.appConfig['paperless.url']).toBe('http://localhost:18923');
+    // Environment-owned settings and credentials never leave the server in backups.
+    expect(body.appConfig['paperless.url']).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain('test-token-e2e');
 
     // Verify dedup config shape
     expect(typeof body.dedupConfig.numPermutations).toBe('number');
@@ -82,8 +83,8 @@ test.describe('Export/Import API', () => {
     const exportResponse = await request.get('/api/v1/export/config.json');
     const exportedConfig = await exportResponse.json();
 
-    // Modify a setting
-    exportedConfig.appConfig['paperless.url'] = 'http://new-server:8000';
+    // Modify a safe mutable setting.
+    exportedConfig.appConfig.theme = 'dark';
 
     // Import the modified config
     const importResponse = await request.post('/api/v1/import/config', {
@@ -100,18 +101,19 @@ test.describe('Export/Import API', () => {
     // Verify the imported config persisted
     const configResponse = await request.get('/api/v1/config');
     const configBody = await configResponse.json();
-    expect(configBody.data['paperless.url']).toBe('http://new-server:8000');
+    expect(configBody.data.theme).toBe('dark');
   });
 
   test('POST /api/v1/import/config rejects invalid body', async ({ request }) => {
     const response = await request.post('/api/v1/import/config', {
-      data: { invalid: 'data' },
+      data: { invalid: 'data', 'paperless.apiToken': 'secret-not-in-import-error' },
     });
 
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.error).toBeDefined();
     expect(body.error.code).toBe('VALIDATION_FAILED');
+    expect(JSON.stringify(body)).not.toContain('secret-not-in-import-error');
   });
 
   test('POST /api/v1/import/config rejects invalid JSON', async ({ request }) => {

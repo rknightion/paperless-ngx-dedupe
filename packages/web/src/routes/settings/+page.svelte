@@ -45,24 +45,13 @@
 
   let { data } = $props();
 
-  // Snapshot initial values for editable form fields.
-  // These intentionally capture once — users edit them independently.
-  const initialConfig = untrack(() => data.config);
   const initialDedup = untrack(() => data.dedupConfig);
-  const initialSystemUrl = untrack(() => data.system.paperlessUrl);
 
   // Derived read-only system info (tracks data changes from invalidateAll)
   let system = $derived(data.system);
 
-  // Connection settings
-  let paperlessUrl = $state(initialConfig['paperless.url'] ?? initialSystemUrl ?? '');
-  let apiToken = $state(initialConfig['paperless.apiToken'] ?? '');
-  let username = $state(initialConfig['paperless.username'] ?? '');
-  let password = $state(initialConfig['paperless.password'] ?? '');
-  let showToken = $state(false);
   let connectionStatus = $state<{ type: 'success' | 'error'; message: string } | null>(null);
   let isTesting = $state(false);
-  let isSavingConnection = $state(false);
 
   // Dedup settings - use $state for form binding
   let threshold = $state(Math.round(initialDedup.similarityThreshold * 100));
@@ -162,15 +151,8 @@
     isTesting = true;
     connectionStatus = null;
     try {
-      const body: Record<string, string> = { url: paperlessUrl };
-      if (apiToken) body.token = apiToken;
-      if (username) body.username = username;
-      if (password) body.password = password;
-
       const res = await fetch('/api/v1/config/test-connection', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (res.ok && json.data?.connected) {
@@ -191,33 +173,6 @@
       connectionStatus = { type: 'error', message: 'Request failed' };
     }
     isTesting = false;
-  }
-
-  async function saveConnection() {
-    isSavingConnection = true;
-    try {
-      const settings: Record<string, string> = {
-        'paperless.url': paperlessUrl,
-        'paperless.apiToken': apiToken,
-        'paperless.username': username,
-        'paperless.password': password,
-      };
-      const res = await fetch('/api/v1/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings }),
-      });
-      if (res.ok) {
-        trackSettingsSaved('connection');
-        connectionStatus = { type: 'success', message: 'Settings saved' };
-      } else {
-        const json = await res.json();
-        connectionStatus = { type: 'error', message: json.error?.message ?? 'Save failed' };
-      }
-    } catch {
-      connectionStatus = { type: 'error', message: 'Save failed' };
-    }
-    isSavingConnection = false;
   }
 
   async function handleImport() {
@@ -505,61 +460,31 @@
       <Link class="text-accent h-5 w-5" />
       Paperless-NGX Connection
     </h2>
+    <p class="text-muted mt-2 text-sm">Connection settings are managed by environment variables.</p>
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <div class="sm:col-span-2">
         <label for="paperless-url" class="text-ink block text-sm font-medium">URL</label>
         <input
           id="paperless-url"
           type="url"
-          bind:value={paperlessUrl}
-          placeholder="https://paperless.example.com"
+          value={data.connection.url}
+          readonly
           class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
       <div class="sm:col-span-2">
-        <label for="api-token" class="text-ink block text-sm font-medium">API Token</label>
-        <div class="relative mt-1">
-          <input
-            id="api-token"
-            type={showToken ? 'text' : 'password'}
-            bind:value={apiToken}
-            placeholder="Enter API token"
-            class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 pr-20 text-sm focus:ring-1 focus:outline-none"
-          />
-          <button
-            type="button"
-            onclick={() => (showToken = !showToken)}
-            class="text-muted hover:text-ink absolute top-1/2 right-2 -translate-y-1/2 text-xs"
-          >
-            {showToken ? 'Hide' : 'Show'}
-          </button>
-        </div>
-      </div>
-      <div>
-        <label for="username" class="text-ink block text-sm font-medium">Username</label>
-        <input
-          id="username"
-          type="text"
-          bind:value={username}
-          placeholder="Username"
-          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        />
-      </div>
-      <div>
-        <label for="password" class="text-ink block text-sm font-medium">Password</label>
-        <input
-          id="password"
-          type="password"
-          bind:value={password}
-          placeholder="Password"
-          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        />
+        <p class="text-muted text-xs">
+          Authentication: {data.connection.apiToken.configured ||
+          (data.connection.username.configured && data.connection.password.configured)
+            ? 'configured'
+            : 'not configured'}
+        </p>
       </div>
     </div>
     <div class="mt-4 flex items-center gap-3">
       <button
         onclick={testConnection}
-        disabled={isTesting || !paperlessUrl}
+        disabled={isTesting || !data.connection.url}
         class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {#if isTesting}
@@ -573,16 +498,12 @@
           Test Connection
         {/if}
       </button>
-      <button
-        onclick={saveConnection}
-        disabled={isSavingConnection}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
-        {isSavingConnection ? 'Saving...' : 'Save'}
-      </button>
     </div>
     {#if connectionStatus}
       <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
         class="mt-3 rounded-lg px-3 py-2 text-sm {connectionStatus.type === 'success'
           ? 'bg-success-light text-success'
           : 'bg-ember-light text-ember'}"
@@ -1560,10 +1481,6 @@
       System Information
     </h2>
     <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-      <div>
-        <dt class="text-muted text-sm">Database Path</dt>
-        <dd class="text-ink mt-0.5 truncate font-mono text-sm">{system.databaseUrl}</dd>
-      </div>
       <div>
         <dt class="text-muted text-sm">Total Documents</dt>
         <dd class="text-ink mt-0.5 text-sm font-medium">
