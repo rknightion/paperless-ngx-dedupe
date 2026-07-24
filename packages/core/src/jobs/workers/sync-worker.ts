@@ -1,8 +1,10 @@
 import { runWorkerTask } from '../worker-entry.js';
 import { syncDocuments } from '../../sync/sync-documents.js';
 import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js';
+import { assertOperationLeaseOwnership } from '../../scheduler/coordinator.js';
 
 runWorkerTask(async (ctx, onProgress) => {
+  assertOperationLeaseOwnership(ctx.sqlite, 'sync', ctx.jobId);
   const config = parseConfig(process.env as Record<string, string | undefined>);
   const paperlessConfig = toPaperlessConfig(config);
   const client = new PaperlessClient({ ...paperlessConfig, timeout: 120_000 });

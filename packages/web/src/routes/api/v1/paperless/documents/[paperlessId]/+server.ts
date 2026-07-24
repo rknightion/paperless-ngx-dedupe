@@ -1,5 +1,10 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { document, duplicateMember } from '@paperless-dedupe/core';
+import {
+  document,
+  duplicateMember,
+  OperationConflictError,
+  withDuplicateMutationLeaseAsync,
+} from '@paperless-dedupe/core';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 
@@ -41,18 +46,26 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
   const url = `${baseUrl}/api/documents/${paperlessId}/`;
 
   try {
-    const upstream = await fetch(url, {
-      method: 'DELETE',
-      headers: buildAuthHeaders(config),
-      signal: AbortSignal.timeout(15000),
+    return await withDuplicateMutationLeaseAsync(locals.db, async () => {
+      const upstream = await fetch(url, {
+        method: 'DELETE',
+        headers: buildAuthHeaders(config),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!upstream.ok) {
+        return apiError(ErrorCode.BAD_GATEWAY, `Paperless returned ${upstream.status}`);
+      }
+
+      return apiSuccess({ deleted: true });
     });
-
-    if (!upstream.ok) {
-      return apiError(ErrorCode.BAD_GATEWAY, `Paperless returned ${upstream.status}`);
+  } catch (error) {
+    if (error instanceof OperationConflictError) {
+      return apiError(ErrorCode.CONFLICT, {
+        operation: 'delete_paperless_duplicate_document',
+        retryable: true,
+      });
     }
-
-    return apiSuccess({ deleted: true });
-  } catch {
     return apiError(ErrorCode.BAD_GATEWAY, 'Failed to connect to Paperless-NGX');
   }
 };

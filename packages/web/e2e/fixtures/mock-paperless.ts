@@ -168,6 +168,22 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
     return jsonResponse(res, doc);
   }
 
+  // DELETE /api/documents/:id/
+  if (docMatch && req.method === 'DELETE') {
+    const id = parseInt(docMatch[1], 10);
+    const index = state.documents.findIndex((document) => document.id === id);
+    if (index === -1) {
+      return jsonResponse(res, { detail: 'Not found.' }, 404);
+    }
+    state.documents.splice(index, 1);
+    res.writeHead(204, {
+      'X-Api-Version': '5',
+      'X-Version': '2.14.0',
+    });
+    res.end();
+    return;
+  }
+
   // GET /api/documents/:id/metadata/
   const metaMatch = path.match(/^\/api\/documents\/(\d+)\/metadata\/$/);
   if (metaMatch && req.method === 'GET') {

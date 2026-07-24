@@ -1,22 +1,33 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
+  createDuplicateDeletionPlan,
   createJob,
+  DuplicateDeletionPreviewError,
+  getReviewedMutationPlan,
   JobAlreadyRunningError,
   JobType,
   launchWorker,
-  duplicateGroup,
+  MutationPlanError,
 } from '@paperless-dedupe/core';
 import { resolveServerWorkerPath } from '$lib/server/job-dispatcher';
 import { RuntimeUnavailableError } from '$lib/server/scheduler';
 import { getServerRuntime } from '../../../../../runtime.server';
-import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
-const bodySchema = z.object({
-  groupIds: z.array(z.string().min(1)).min(1).max(50000),
+const groupIdsSchema = z.array(z.string().min(1)).min(1).max(50000);
+
+const reviewedPlanBodySchema = z.object({
+  planToken: z.string().min(32).max(256),
   confirm: z.literal(true),
 });
+
+const legacyBodySchema = z.object({
+  groupIds: groupIdsSchema,
+  confirm: z.literal(true),
+});
+
+const bodySchema = z.union([reviewedPlanBodySchema, legacyBodySchema]);
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   const runtime = await getServerRuntime();
@@ -35,29 +46,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid request body', result.error.issues);
     }
 
-    // Guard: only allow deletion of groups in 'pending' status
-    const groups = locals.db
-      .select({ id: duplicateGroup.id, status: duplicateGroup.status })
-      .from(duplicateGroup)
-      .where(inArray(duplicateGroup.id, result.data.groupIds))
-      .all();
-
-    const nonPending = groups.filter((g) => g.status !== 'pending');
-    if (nonPending.length > 0) {
-      return apiError(
-        ErrorCode.VALIDATION_FAILED,
-        `All groups must be in 'pending' status before deletion. Found ${nonPending.length} group(s) with non-pending status.`,
-      );
-    }
-
     return runtime.acceptingGate.run(() => {
-      const jobId = createJob(locals.db, JobType.BATCH_OPERATION);
+      let planToken: string;
+      if ('groupIds' in result.data) {
+        planToken = createDuplicateDeletionPlan(locals.db, result.data.groupIds).token;
+      } else {
+        planToken = result.data.planToken;
+        getReviewedMutationPlan(locals.db, planToken, 'duplicate_delete');
+      }
+
+      const taskData = { planToken };
+      const jobId = createJob(locals.db, JobType.BATCH_OPERATION, taskData);
       const workerPath = resolveServerWorkerPath('batch-worker');
       launchWorker({
         jobId,
         dbPath: locals.config.DATABASE_URL,
         workerScriptPath: workerPath,
-        taskData: { groupIds: result.data.groupIds },
+        taskData,
       });
       return apiSuccess({ jobId }, undefined, 202);
     });
@@ -71,6 +76,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
     if (error instanceof JobAlreadyRunningError) {
       return apiError(ErrorCode.JOB_ALREADY_RUNNING, error.message);
+    }
+    if (error instanceof MutationPlanError) {
+      return apiError(ErrorCode.CONFLICT, {
+        operation: 'batch_delete_non_primary',
+        retryable: false,
+      });
+    }
+    if (error instanceof DuplicateDeletionPreviewError) {
+      return apiError(ErrorCode.VALIDATION_FAILED);
     }
     throw error;
   }

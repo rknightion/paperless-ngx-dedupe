@@ -1,5 +1,10 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { batchSetStatus, GROUP_STATUS_VALUES } from '@paperless-dedupe/core';
+import {
+  batchSetStatus,
+  GROUP_STATUS_VALUES,
+  OperationConflictError,
+  withDuplicateMutationLease,
+} from '@paperless-dedupe/core';
 import type { GroupStatus } from '@paperless-dedupe/core';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
@@ -24,6 +29,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid request body', result.error.issues);
   }
 
-  const data = batchSetStatus(locals.db, result.data.groupIds, result.data.status as GroupStatus);
-  return apiSuccess(data);
+  try {
+    const data = withDuplicateMutationLease(locals.db, () =>
+      batchSetStatus(locals.db, result.data.groupIds, result.data.status as GroupStatus),
+    );
+    return apiSuccess(data);
+  } catch (error) {
+    if (error instanceof OperationConflictError) {
+      return apiError(ErrorCode.CONFLICT, {
+        operation: 'batch_set_duplicate_status',
+        retryable: true,
+      });
+    }
+    throw error;
+  }
 };

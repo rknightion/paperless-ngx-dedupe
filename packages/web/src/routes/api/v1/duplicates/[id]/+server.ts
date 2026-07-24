@@ -3,6 +3,8 @@ import {
   getDuplicateGroup,
   getDuplicateGroupLight,
   deleteDuplicateGroup,
+  OperationConflictError,
+  withDuplicateMutationLease,
 } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
@@ -20,7 +22,20 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 };
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-  const deleted = deleteDuplicateGroup(locals.db, params.id);
+  let deleted: boolean;
+  try {
+    deleted = withDuplicateMutationLease(locals.db, () =>
+      deleteDuplicateGroup(locals.db, params.id),
+    );
+  } catch (error) {
+    if (error instanceof OperationConflictError) {
+      return apiError(ErrorCode.CONFLICT, {
+        operation: 'delete_duplicate_group',
+        retryable: true,
+      });
+    }
+    throw error;
+  }
 
   if (!deleted) {
     return apiError(ErrorCode.NOT_FOUND, `Duplicate group not found: ${params.id}`);

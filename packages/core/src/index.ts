@@ -13,6 +13,11 @@ export {
   aiBudgetReservation,
 } from './schema/sqlite/automation.js';
 export {
+  reviewedMutationDocumentCheckpoint,
+  reviewedMutationGroupCheckpoint,
+  reviewedMutationPlan,
+} from './schema/sqlite/review.js';
+export {
   documentRelations,
   documentContentRelations,
   documentSignatureRelations,
@@ -55,6 +60,9 @@ export type {
   OperationLease,
   SyncChangeGeneration,
   AiBudgetReservation,
+  ReviewedMutationPlan,
+  ReviewedMutationGroupCheckpoint,
+  ReviewedMutationDocumentCheckpoint,
   NewDocument,
   NewDocumentContent,
   NewDocumentSignature,
@@ -70,6 +78,9 @@ export type {
   NewOperationLease,
   NewSyncChangeGeneration,
   NewAiBudgetReservation,
+  NewReviewedMutationPlan,
+  NewReviewedMutationGroupCheckpoint,
+  NewReviewedMutationDocumentCheckpoint,
 } from './schema/types.js';
 export {
   ProcessingStatus,
@@ -86,6 +97,43 @@ export type { AppConfig } from './config.js';
 export { createDatabase, createDatabaseWithHandle } from './db/client.js';
 export type { AppDatabase } from './db/client.js';
 export { migrateDatabase } from './db/migrate.js';
+
+// Reviewed mutations
+export {
+  claimDuplicateDeletionPlan,
+  consumeDuplicateDeletionPlan,
+  completeDuplicateDeletionPlan,
+  createDuplicateDeletionPlan,
+  finalizeDuplicateGroupLocally,
+  getDuplicateDeletionCheckpointState,
+  getReviewedMutationPlan,
+  markDuplicateDocumentDeleteStarted,
+  markDuplicateDocumentFailed,
+  markDuplicateDocumentRemoteDeleted,
+  markDuplicateGroupConflict,
+  markDuplicateGroupStarted,
+  reconcileDuplicateDocumentLocally,
+  revalidateFrozenDuplicateGroup,
+  withDuplicateMutationLease,
+  withDuplicateMutationLeaseAsync,
+  DuplicateDeletionPreviewError,
+  MutationPlanError,
+  REVIEWED_MUTATION_PLAN_TTL_MS,
+} from './review/mutation-plans.js';
+export type {
+  ClaimedDuplicateDeletionPlan,
+  DuplicateDeletionPlanPayload,
+  DuplicateDeletionPlanPreview,
+  DuplicateDeletionCheckpointState,
+  DuplicateDocumentCheckpoint,
+  DuplicateDocumentCheckpointStatus,
+  DuplicateGroupCheckpoint,
+  DuplicateGroupCheckpointStatus,
+  DuplicateGroupRevalidation,
+  FrozenDuplicateDocument,
+  FrozenDuplicateGroup,
+  ReviewedMutationOperation,
+} from './review/mutation-plans.js';
 
 // Config
 export { parseConfig } from './config.js';
@@ -119,11 +167,13 @@ export {
 export type { DispatchTaskData, OperationKind } from './scheduler/store.js';
 export {
   acquireOperation,
+  assertOperationLeaseOwnership,
   consumeDispatchIntents,
   enqueueDueSchedules,
   enqueueManualOperation,
   getDispatchIntent,
   OperationConflictError,
+  OperationLeaseOwnershipError,
   releaseOperation,
   renewOperationLease,
 } from './scheduler/coordinator.js';
@@ -247,6 +297,8 @@ export type {
 // Queries
 export {
   paginationSchema,
+  duplicateInboxQuerySchema,
+  DUPLICATE_HIGH_CONFIDENCE_THRESHOLD,
   duplicateGroupFiltersSchema,
   documentFiltersSchema,
   similarityGraphFiltersSchema,
@@ -254,6 +306,10 @@ export {
 export type {
   PaginationParams,
   PaginatedResult,
+  DuplicateInboxQuery,
+  DuplicateInboxQueue,
+  DuplicateInboxQueueCounts,
+  DuplicateInboxPage,
   DocumentFilters,
   DuplicateGroupFilters,
   DocumentSummary,
@@ -287,6 +343,7 @@ export {
   deleteDocumentLocally,
 } from './queries/documents.js';
 export {
+  listDuplicateInbox,
   getDuplicateGroups,
   getDuplicateGroup,
   getDuplicateGroupLight,

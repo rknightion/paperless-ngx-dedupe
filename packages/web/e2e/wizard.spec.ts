@@ -66,6 +66,26 @@ test.describe('Bulk Operations Wizard', () => {
     await expect(page.getByText(/pending groups match this threshold/)).toBeVisible();
   });
 
+  test('wizard confidence requests retain the legacy list contract', async ({ page }) => {
+    const responsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === '/api/v1/duplicates' &&
+        url.searchParams.has('minConfidence') &&
+        url.searchParams.get('status') === 'pending'
+      );
+    });
+
+    await page.goto('/duplicates/wizard');
+    const response = await responsePromise;
+    const body = await response.json();
+
+    expect(response.status()).toBe(200);
+    expect(body.meta).toMatchObject({ limit: 1, offset: 0 });
+    expect(body.meta.nextCursor).toBeUndefined();
+    await expect(page.getByText(/pending groups match this threshold/)).toBeVisible();
+  });
+
   test('step 1: next button is disabled when no matches', async ({ page }) => {
     await page.goto('/duplicates/wizard');
 

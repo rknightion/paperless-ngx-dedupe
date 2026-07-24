@@ -17,6 +17,11 @@ import {
   syncChangeGeneration,
 } from '../schema/sqlite/automation.js';
 import {
+  reviewedMutationDocumentCheckpoint,
+  reviewedMutationGroupCheckpoint,
+  reviewedMutationPlan,
+} from '../schema/sqlite/review.js';
+import {
   documentRelations,
   documentContentRelations,
   documentSignatureRelations,
@@ -43,6 +48,9 @@ const schema = {
   operationLease,
   syncChangeGeneration,
   aiBudgetReservation,
+  reviewedMutationPlan,
+  reviewedMutationGroupCheckpoint,
+  reviewedMutationDocumentCheckpoint,
   documentRelations,
   documentContentRelations,
   documentSignatureRelations,

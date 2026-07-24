@@ -56,6 +56,24 @@ export class OperationConflictError extends Error {
   }
 }
 
+export class OperationLeaseOwnershipError extends Error {
+  constructor(operation: OperationKind) {
+    super(`Worker does not own the required '${operation}' operation lease`);
+    this.name = 'OperationLeaseOwnershipError';
+  }
+}
+
+export function assertOperationLeaseOwnership(
+  sqlite: Database.Database,
+  operation: OperationKind,
+  ownerId: string,
+): void {
+  const lease = sqlite
+    .prepare('SELECT 1 FROM operation_lease WHERE operation = ? AND owner_id = ?')
+    .get(operation, ownerId);
+  if (!lease) throw new OperationLeaseOwnershipError(operation);
+}
+
 function operationForTask(task: OperationKind): OperationKind {
   return task;
 }

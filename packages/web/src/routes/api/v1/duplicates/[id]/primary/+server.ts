@@ -1,5 +1,9 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { setPrimaryDocument } from '@paperless-dedupe/core';
+import {
+  OperationConflictError,
+  setPrimaryDocument,
+  withDuplicateMutationLease,
+} from '@paperless-dedupe/core';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
@@ -20,7 +24,20 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid request body', result.error.issues);
   }
 
-  const updated = setPrimaryDocument(locals.db, params.id, result.data.documentId);
+  let updated: boolean;
+  try {
+    updated = withDuplicateMutationLease(locals.db, () =>
+      setPrimaryDocument(locals.db, params.id, result.data.documentId),
+    );
+  } catch (error) {
+    if (error instanceof OperationConflictError) {
+      return apiError(ErrorCode.CONFLICT, {
+        operation: 'set_duplicate_primary',
+        retryable: true,
+      });
+    }
+    throw error;
+  }
 
   if (!updated) {
     return apiError(ErrorCode.NOT_FOUND, `Duplicate group not found: ${params.id}`);

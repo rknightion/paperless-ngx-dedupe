@@ -16,7 +16,42 @@ const automationTables = [
   'sync_change_generation',
   'ai_budget_reservation',
   'ai_result_revision',
+  'reviewed_mutation_plan',
+  'reviewed_mutation_group_checkpoint',
+  'reviewed_mutation_document_checkpoint',
 ] as const;
+
+function tableSignature(
+  sqlite: ReturnType<typeof createDatabaseWithHandle>['sqlite'],
+  table: string,
+) {
+  return {
+    columns: sqlite.prepare(`PRAGMA table_info('${table}')`).all(),
+    tableSql: (
+      sqlite
+        .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`)
+        .get(table) as { sql: string }
+    ).sql
+      .replace(/\s+/g, ' ')
+      .replaceAll('`', '')
+      .replaceAll('"', '')
+      .trim(),
+    indexes: (
+      sqlite.prepare(`PRAGMA index_list('${table}')`).all() as {
+        name: string;
+        unique: number;
+        origin: string;
+        partial: number;
+      }[]
+    )
+      .map((index) => ({
+        ...index,
+        columns: sqlite.prepare(`PRAGMA index_xinfo('${index.name}')`).all(),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name)),
+    foreignKeys: sqlite.prepare(`PRAGMA foreign_key_list('${table}')`).all(),
+  };
+}
 
 async function assertAutomationSchema(
   sqlite: ReturnType<typeof createDatabaseWithHandle>['sqlite'],
@@ -65,6 +100,26 @@ async function assertAutomationSchema(
     table: string;
   }[];
   expect(revisionForeignKeys).toEqual([expect.objectContaining({ table: 'ai_processing_result' })]);
+
+  const planColumns = sqlite.prepare('PRAGMA table_info(reviewed_mutation_plan)').all() as {
+    name: string;
+  }[];
+  expect(planColumns.map(({ name }) => name)).toEqual(
+    expect.arrayContaining(['claimed_by_job_id', 'claimed_at', 'completed_at']),
+  );
+  const checkpointForeignKeys = sqlite
+    .prepare('PRAGMA foreign_key_list(reviewed_mutation_document_checkpoint)')
+    .all() as { table: string }[];
+  expect(checkpointForeignKeys).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ table: 'reviewed_mutation_group_checkpoint' }),
+    ]),
+  );
+
+  const duplicateIndexes = sqlite.prepare('PRAGMA index_list(duplicate_group)').all() as {
+    name: string;
+  }[];
+  expect(duplicateIndexes.map(({ name }) => name)).toContain('idx_dg_inbox_order');
 
   const insertIntent = sqlite.prepare(`
     INSERT INTO dispatch_intent (
@@ -220,15 +275,162 @@ describe('database migration fixtures', () => {
     });
   });
 
-  it('migrates a current database twice', async () => {
-    const { sqlite } = createDatabaseWithHandle(':memory:');
-    await migrateDatabase(sqlite);
-    // Simulate a current-hash database created before durable task payloads.
-    // The explicit compatibility migration must repair it even when generated
-    // DDL is skipped because its stored snapshot/hash claims it is current.
-    sqlite.exec('ALTER TABLE dispatch_intent DROP COLUMN task_data_json');
+  it('repairs malformed current-hash reviewed tables and same-named indexes to the fresh schema', async () => {
+    const current = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(current.sqlite);
+    await migrateDatabase(fresh.sqlite);
+    // Keep the stored snapshot/hash untouched while corrupting every reviewed
+    // signature surface that generated DDL would otherwise skip.
+    current.sqlite.pragma('foreign_keys = OFF');
+    current.sqlite.exec(`
+      ALTER TABLE dispatch_intent DROP COLUMN task_data_json;
+      DROP TABLE reviewed_mutation_document_checkpoint;
+      DROP TABLE reviewed_mutation_group_checkpoint;
+      DROP TABLE reviewed_mutation_plan;
+      CREATE TABLE reviewed_mutation_plan (
+        id TEXT NOT NULL,
+        token_hash BLOB NOT NULL,
+        operation TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        consumed_at TEXT,
+        claimed_by_job_id TEXT,
+        claimed_at TEXT,
+        completed_at TEXT,
+        PRIMARY KEY(token_hash, id),
+        CONSTRAINT "reviewed_mutation_plan_operation_check"
+          CHECK(operation IN ('duplicate_delete', 'bogus'))
+      );
 
-    await assertAutomationSchema(sqlite);
+      CREATE TABLE reviewed_mutation_group_checkpoint (
+        plan_id TEXT NOT NULL,
+        group_id TEXT NOT NULL,
+        ordinal TEXT NOT NULL,
+        status TEXT DEFAULT 'in_progress' NOT NULL,
+        conflict_reason TEXT,
+        started_at TEXT,
+        completed_at TEXT,
+        PRIMARY KEY(group_id, plan_id),
+        FOREIGN KEY (plan_id) REFERENCES reviewed_mutation_plan(id)
+          ON UPDATE CASCADE ON DELETE NO ACTION,
+        CONSTRAINT "reviewed_mutation_group_checkpoint_ordinal_check" CHECK(ordinal >= -1),
+        CONSTRAINT "reviewed_mutation_group_checkpoint_status_check"
+          CHECK(status IN ('pending', 'completed')),
+        CONSTRAINT "reviewed_mutation_group_checkpoint_conflict_check"
+          CHECK(conflict_reason IS NULL OR conflict_reason = 'missing')
+      );
+
+      CREATE TABLE reviewed_mutation_document_checkpoint (
+        plan_id TEXT NOT NULL,
+        group_id TEXT NOT NULL,
+        document_id TEXT NOT NULL,
+        paperless_id TEXT NOT NULL,
+        ordinal INTEGER NOT NULL,
+        status TEXT DEFAULT 'delete_started' NOT NULL,
+        outcome TEXT,
+        attempt_count INTEGER DEFAULT 1 NOT NULL,
+        retryable INTEGER,
+        started_at TEXT,
+        remote_deleted_at TEXT,
+        reconciled_at TEXT,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(group_id, plan_id, document_id),
+        CONSTRAINT "reviewed_mutation_document_checkpoint_paperless_id_check"
+          CHECK(CAST(paperless_id AS INTEGER) >= 0),
+        CONSTRAINT "reviewed_mutation_document_checkpoint_ordinal_check"
+          CHECK(ordinal >= 0 AND ordinal < 1000),
+        CONSTRAINT "reviewed_mutation_document_checkpoint_attempt_count_check"
+          CHECK(attempt_count >= 0 AND attempt_count < 100),
+        CONSTRAINT "reviewed_mutation_document_checkpoint_status_check"
+          CHECK(status IN ('pending', 'reconciled')),
+        CONSTRAINT "reviewed_mutation_document_checkpoint_outcome_check"
+          CHECK(outcome IS NULL OR outcome = 'deleted'),
+        CONSTRAINT "reviewed_mutation_document_checkpoint_retryable_check"
+          CHECK(retryable IS NULL OR retryable IN (0, 1, 2))
+      );
+
+      CREATE INDEX reviewed_mutation_plan_token_hash_unique
+        ON reviewed_mutation_plan(operation);
+      CREATE INDEX reviewed_mutation_plan_expiry_idx
+        ON reviewed_mutation_plan(expires_at DESC);
+      CREATE INDEX reviewed_mutation_plan_claim_idx
+        ON reviewed_mutation_plan(completed_at, claimed_by_job_id)
+        WHERE completed_at IS NULL;
+      CREATE UNIQUE INDEX reviewed_mutation_group_checkpoint_ordinal_unique
+        ON reviewed_mutation_group_checkpoint(ordinal DESC, plan_id);
+      CREATE INDEX reviewed_mutation_group_checkpoint_status_idx
+        ON reviewed_mutation_group_checkpoint(status, plan_id);
+      CREATE INDEX reviewed_mutation_document_checkpoint_ordinal_unique
+        ON reviewed_mutation_document_checkpoint(ordinal, group_id, plan_id);
+      CREATE INDEX reviewed_mutation_document_checkpoint_status_idx
+        ON reviewed_mutation_document_checkpoint(status)
+        WHERE status = 'pending';
+
+      INSERT INTO reviewed_mutation_plan (
+        id, token_hash, operation, expires_at, payload_json
+      ) VALUES (
+        'preserved-plan', 'preserved-token', 'duplicate_delete',
+        '2026-07-24T12:00:00.000Z', '{"groups":[]}'
+      );
+      INSERT INTO reviewed_mutation_group_checkpoint (
+        plan_id, group_id, ordinal, status
+      ) VALUES ('preserved-plan', 'preserved-group', 0, 'pending');
+      INSERT INTO reviewed_mutation_document_checkpoint (
+        plan_id, group_id, document_id, paperless_id, ordinal, status, attempt_count, updated_at
+      ) VALUES (
+        'preserved-plan', 'preserved-group', 'preserved-document',
+        42, 0, 'pending', 0, '2026-07-24T00:00:00.000Z'
+      );
+
+      DROP INDEX idx_dg_inbox_order;
+      CREATE INDEX idx_dg_inbox_order
+        ON duplicate_group(status, confidence_score, created_at DESC)
+        WHERE status = 'pending';
+    `);
+    current.sqlite.pragma('foreign_keys = ON');
+
+    await migrateDatabase(current.sqlite);
+    const reviewedTables = [
+      'reviewed_mutation_plan',
+      'reviewed_mutation_group_checkpoint',
+      'reviewed_mutation_document_checkpoint',
+    ] as const;
+    for (const table of reviewedTables) {
+      expect(tableSignature(current.sqlite, table)).toEqual(tableSignature(fresh.sqlite, table));
+    }
+    expect(current.sqlite.prepare(`PRAGMA index_list('duplicate_group')`).all()).toEqual(
+      fresh.sqlite.prepare(`PRAGMA index_list('duplicate_group')`).all(),
+    );
+    expect(current.sqlite.prepare(`PRAGMA index_xinfo('idx_dg_inbox_order')`).all()).toEqual(
+      fresh.sqlite.prepare(`PRAGMA index_xinfo('idx_dg_inbox_order')`).all(),
+    );
+    expect(
+      current.sqlite
+        .prepare(
+          `SELECT plan_id AS planId, group_id AS groupId, document_id AS documentId,
+                  paperless_id AS paperlessId
+           FROM reviewed_mutation_document_checkpoint`,
+        )
+        .get(),
+    ).toEqual({
+      planId: 'preserved-plan',
+      groupId: 'preserved-group',
+      documentId: 'preserved-document',
+      paperlessId: 42,
+    });
+
+    const afterFirstRepair = reviewedTables.map((table) => tableSignature(current.sqlite, table));
+    const inboxAfterFirstRepair = current.sqlite
+      .prepare(`PRAGMA index_xinfo('idx_dg_inbox_order')`)
+      .all();
+    await migrateDatabase(current.sqlite);
+    expect(reviewedTables.map((table) => tableSignature(current.sqlite, table))).toEqual(
+      afterFirstRepair,
+    );
+    expect(current.sqlite.prepare(`PRAGMA index_xinfo('idx_dg_inbox_order')`).all()).toEqual(
+      inboxAfterFirstRepair,
+    );
   });
 
   it('migrates an empty database twice', async () => {
@@ -273,37 +475,9 @@ describe('database migration fixtures', () => {
     await migrateDatabase(legacy.sqlite);
     await migrateDatabase(legacy.sqlite);
 
-    const signature = (sqlite: typeof legacy.sqlite) => ({
-      columns: sqlite.prepare(`PRAGMA table_info('ai_budget_reservation')`).all(),
-      tableSql: (
-        sqlite
-          .prepare(
-            `SELECT sql FROM sqlite_master
-             WHERE type = 'table' AND name = 'ai_budget_reservation'`,
-          )
-          .get() as { sql: string }
-      ).sql
-        .replace(/\s+/g, ' ')
-        .replaceAll('`', '')
-        .replaceAll('"', '')
-        .trim(),
-      indexes: (
-        sqlite.prepare(`PRAGMA index_list('ai_budget_reservation')`).all() as {
-          name: string;
-          unique: number;
-          origin: string;
-          partial: number;
-        }[]
-      )
-        .map((index) => ({
-          ...index,
-          columns: sqlite.prepare(`PRAGMA index_info('${index.name}')`).all(),
-        }))
-        .sort((left, right) => left.name.localeCompare(right.name)),
-      foreignKeys: sqlite.prepare(`PRAGMA foreign_key_list('ai_budget_reservation')`).all(),
-    });
-
-    expect(signature(legacy.sqlite)).toEqual(signature(fresh.sqlite));
+    expect(tableSignature(legacy.sqlite, 'ai_budget_reservation')).toEqual(
+      tableSignature(fresh.sqlite, 'ai_budget_reservation'),
+    );
     expect(
       legacy.sqlite
         .prepare(

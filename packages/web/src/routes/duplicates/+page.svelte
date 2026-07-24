@@ -71,6 +71,8 @@
   let showingTo = $derived(Math.min(data.offset + data.limit, data.total));
 
   // Filter helpers
+  const LEGACY_ONLY_FILTER_KEYS = new Set(['status', 'includeDeleted', 'sortBy', 'sortOrder']);
+
   function applyFilters(updates: Record<string, string>) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
@@ -81,6 +83,14 @@
         params.delete(key);
       }
     }
+    const switchesToLegacy = Object.keys(updates).some((key) => LEGACY_ONLY_FILTER_KEYS.has(key));
+    if (switchesToLegacy) {
+      params.delete('queue');
+      params.delete('correspondent');
+    } else if (data.paginationMode === 'inbox') {
+      params.set('queue', data.query?.queue ?? 'pending');
+    }
+    params.delete('cursor');
     params.delete('offset');
     trackDuplicatesFilterApplied({
       status: params.get('status') ?? undefined,
@@ -304,11 +314,21 @@
   }
 
   // Pagination
-  function goToPage(newOffset: number) {
+  function nextPageHref() {
+    if (!data.nextCursor) return '';
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const params = new URLSearchParams($page.url.searchParams);
+    params.set('cursor', data.nextCursor);
+    params.delete('offset');
+    return `?${params.toString()}`;
+  }
+
+  function legacyPageHref(newOffset: number) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
     params.set('offset', String(newOffset));
-    goto(`?${params.toString()}`, { replaceState: true });
+    params.delete('cursor');
+    return `?${params.toString()}`;
   }
 
   function changePageSize(e: Event) {
@@ -316,8 +336,12 @@
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams($page.url.searchParams);
     params.set('limit', value);
+    if (data.paginationMode === 'inbox') {
+      params.set('queue', data.query?.queue ?? 'pending');
+    }
+    params.delete('cursor');
     params.delete('offset');
-    goto(`?${params.toString()}`, { replaceState: true });
+    window.location.assign(`?${params.toString()}`);
   }
 </script>
 
@@ -776,24 +800,64 @@
       <span class="text-muted text-sm">
         Showing {showingFrom}-{showingTo} of {data.total}
       </span>
-      <span class="text-muted text-sm">
-        Page {Math.floor(data.offset / data.limit) + 1} of {Math.ceil(data.total / data.limit)}
-      </span>
       <div class="flex items-center gap-3">
-        <button
-          onclick={() => goToPage(data.offset - data.limit)}
-          disabled={data.offset === 0}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <button
-          onclick={() => goToPage(data.offset + data.limit)}
-          disabled={data.offset + data.limit >= data.total}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
-          Next
-        </button>
+        {#if data.paginationMode === 'legacy'}
+          {#if data.offset > 0}
+            <a
+              href={legacyPageHref(Math.max(0, data.offset - data.limit))}
+              data-sveltekit-reload
+              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium"
+            >
+              Previous
+            </a>
+          {:else}
+            <button
+              disabled
+              class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium opacity-50"
+            >
+              Previous
+            </button>
+          {/if}
+          {#if data.offset + data.limit < data.total}
+            <a
+              href={legacyPageHref(data.offset + data.limit)}
+              data-sveltekit-reload
+              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium"
+            >
+              Next
+            </a>
+          {:else}
+            <button
+              disabled
+              class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium opacity-50"
+            >
+              Next
+            </button>
+          {/if}
+        {:else}
+          <button
+            disabled
+            class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          >
+            Previous
+          </button>
+          {#if data.nextCursor}
+            <a
+              href={nextPageHref()}
+              data-sveltekit-reload
+              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium"
+            >
+              Next
+            </a>
+          {:else}
+            <button
+              disabled
+              class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium opacity-50"
+            >
+              Next
+            </button>
+          {/if}
+        {/if}
         <select
           onchange={changePageSize}
           value={String(data.limit)}

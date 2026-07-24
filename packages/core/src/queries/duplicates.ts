@@ -1,4 +1,4 @@
-import { and, count, desc, asc, eq, gte, lte, sql, inArray, ne } from 'drizzle-orm';
+import { and, count, desc, asc, eq, gte, lt, lte, or, sql, inArray, ne } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
 import type { GroupStatus } from '../types/enums.js';
@@ -28,9 +28,180 @@ import type {
   GraphNode,
   GraphEdge,
   SimilarityGraphData,
+  DuplicateInboxPage,
+  DuplicateInboxQuery,
+  DuplicateInboxQueue,
+} from './types.js';
+import {
+  decodeDuplicateInboxCursor,
+  DUPLICATE_HIGH_CONFIDENCE_THRESHOLD,
+  encodeDuplicateInboxCursor,
 } from './types.js';
 
 // ── List queries ────────────────────────────────────────────────────────
+
+function duplicateInboxQueueWhere(queue: DuplicateInboxQueue) {
+  switch (queue) {
+    case 'pending':
+      return eq(duplicateGroup.status, 'pending');
+    case 'high-confidence':
+      return and(
+        eq(duplicateGroup.status, 'pending'),
+        gte(duplicateGroup.confidenceScore, DUPLICATE_HIGH_CONFIDENCE_THRESHOLD),
+      );
+    case 'ambiguous':
+      return and(
+        eq(duplicateGroup.status, 'pending'),
+        lt(duplicateGroup.confidenceScore, DUPLICATE_HIGH_CONFIDENCE_THRESHOLD),
+      );
+    case 'ignored':
+      return eq(duplicateGroup.status, 'ignored');
+    case 'deleted':
+      return eq(duplicateGroup.status, 'deleted');
+  }
+}
+
+function duplicateInboxCorrespondentWhere(correspondent: string | undefined) {
+  if (correspondent === undefined) return undefined;
+
+  return sql`EXISTS (
+    SELECT 1
+    FROM duplicate_member inbox_member
+    INNER JOIN document inbox_document ON inbox_document.id = inbox_member.document_id
+    WHERE inbox_member.group_id = ${duplicateGroup.id}
+      AND inbox_document.correspondent = ${correspondent}
+  )`;
+}
+
+export function listDuplicateInbox(
+  db: AppDatabase,
+  query: DuplicateInboxQuery,
+): DuplicateInboxPage {
+  const correspondentWhere = duplicateInboxCorrespondentWhere(query.correspondent);
+  const confidenceWhere = and(
+    query.minConfidence === undefined
+      ? undefined
+      : gte(duplicateGroup.confidenceScore, query.minConfidence),
+    query.maxConfidence === undefined
+      ? undefined
+      : lte(duplicateGroup.confidenceScore, query.maxConfidence),
+  );
+  const cursor = query.cursor ? decodeDuplicateInboxCursor(query.cursor) : null;
+  const cursorWhere = cursor
+    ? or(
+        lt(duplicateGroup.confidenceScore, cursor.confidenceScore),
+        and(
+          eq(duplicateGroup.confidenceScore, cursor.confidenceScore),
+          lt(duplicateGroup.createdAt, cursor.createdAt),
+        ),
+        and(
+          eq(duplicateGroup.confidenceScore, cursor.confidenceScore),
+          eq(duplicateGroup.createdAt, cursor.createdAt),
+          lt(duplicateGroup.id, cursor.id),
+        ),
+      )
+    : undefined;
+  const where = and(
+    duplicateInboxQueueWhere(query.queue),
+    correspondentWhere,
+    confidenceWhere,
+    cursorWhere,
+  );
+
+  const rows = db
+    .select()
+    .from(duplicateGroup)
+    .where(where)
+    .orderBy(
+      desc(duplicateGroup.confidenceScore),
+      desc(duplicateGroup.createdAt),
+      desc(duplicateGroup.id),
+    )
+    .limit(query.limit + 1)
+    .all();
+  const hasNextPage = rows.length > query.limit;
+  const groups = hasNextPage ? rows.slice(0, query.limit) : rows;
+  const groupIds = groups.map((group) => group.id);
+  const memberCounts =
+    groupIds.length === 0
+      ? []
+      : db
+          .select({
+            groupId: duplicateMember.groupId,
+            memberCount: count(),
+          })
+          .from(duplicateMember)
+          .where(inArray(duplicateMember.groupId, groupIds))
+          .groupBy(duplicateMember.groupId)
+          .all();
+  const countMap = new Map(memberCounts.map((row) => [row.groupId, row.memberCount]));
+  const primaryDocs =
+    groupIds.length === 0
+      ? []
+      : db
+          .select({
+            groupId: duplicateMember.groupId,
+            title: document.title,
+            paperlessId: document.paperlessId,
+          })
+          .from(duplicateMember)
+          .innerJoin(document, eq(duplicateMember.documentId, document.id))
+          .where(
+            and(inArray(duplicateMember.groupId, groupIds), eq(duplicateMember.isPrimary, true)),
+          )
+          .all();
+  const primaryMap = new Map(primaryDocs.map((row) => [row.groupId, row]));
+  const items: DuplicateGroupSummary[] = groups.map((group) => {
+    const primary = primaryMap.get(group.id);
+    return {
+      id: group.id,
+      confidenceScore: group.confidenceScore,
+      jaccardSimilarity: group.jaccardSimilarity,
+      fuzzyTextRatio: group.fuzzyTextRatio,
+      discriminativeScore: group.discriminativeScore,
+      status: group.status,
+      memberCount: countMap.get(group.id) ?? 0,
+      archivedMemberCount: group.archivedMemberCount,
+      primaryDocumentTitle: primary?.title ?? group.archivedPrimaryTitle ?? null,
+      primaryPaperlessId: primary?.paperlessId ?? null,
+      createdAt: group.createdAt,
+      updatedAt: group.updatedAt,
+    };
+  });
+
+  const counts = db
+    .select({
+      pending: sql<number>`COALESCE(SUM(CASE WHEN ${duplicateGroup.status} = 'pending' THEN 1 ELSE 0 END), 0)`,
+      highConfidence: sql<number>`COALESCE(SUM(CASE WHEN ${duplicateGroup.status} = 'pending' AND ${duplicateGroup.confidenceScore} >= ${DUPLICATE_HIGH_CONFIDENCE_THRESHOLD} THEN 1 ELSE 0 END), 0)`,
+      ambiguous: sql<number>`COALESCE(SUM(CASE WHEN ${duplicateGroup.status} = 'pending' AND ${duplicateGroup.confidenceScore} < ${DUPLICATE_HIGH_CONFIDENCE_THRESHOLD} THEN 1 ELSE 0 END), 0)`,
+      ignored: sql<number>`COALESCE(SUM(CASE WHEN ${duplicateGroup.status} = 'ignored' THEN 1 ELSE 0 END), 0)`,
+      deleted: sql<number>`COALESCE(SUM(CASE WHEN ${duplicateGroup.status} = 'deleted' THEN 1 ELSE 0 END), 0)`,
+    })
+    .from(duplicateGroup)
+    .where(and(correspondentWhere, confidenceWhere))
+    .get() ?? {
+    pending: 0,
+    highConfidence: 0,
+    ambiguous: 0,
+    ignored: 0,
+    deleted: 0,
+  };
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasNextPage && lastItem
+        ? encodeDuplicateInboxCursor({
+            confidenceScore: lastItem.confidenceScore,
+            createdAt: lastItem.createdAt,
+            id: lastItem.id,
+          })
+        : null,
+    counts,
+    query,
+  };
+}
 
 export function buildGroupWhere(
   filters: Pick<DuplicateGroupFilters, 'minConfidence' | 'maxConfidence' | 'status'> & {

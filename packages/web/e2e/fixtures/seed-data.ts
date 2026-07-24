@@ -201,6 +201,9 @@ export function clearDatabase(dbPath: string): void {
 
   db.transaction(() => {
     db.exec(`
+      DELETE FROM reviewed_mutation_document_checkpoint;
+      DELETE FROM reviewed_mutation_group_checkpoint;
+      DELETE FROM reviewed_mutation_plan;
       DELETE FROM ai_budget_reservation;
       DELETE FROM dispatch_intent;
       DELETE FROM operation_lease;

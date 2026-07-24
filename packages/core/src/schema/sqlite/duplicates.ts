@@ -1,4 +1,5 @@
 import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 import { document } from './documents.js';
@@ -25,6 +26,12 @@ export const duplicateGroup = sqliteTable(
     index('idx_dg_confidence').on(table.confidenceScore),
     index('idx_dg_status').on(table.status),
     index('idx_dg_created').on(table.createdAt),
+    index('idx_dg_inbox_order').on(
+      table.status,
+      desc(table.confidenceScore),
+      desc(table.createdAt),
+      desc(table.id),
+    ),
   ],
 );
 

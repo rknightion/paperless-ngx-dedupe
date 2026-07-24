@@ -1,5 +1,11 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { setGroupStatus, GROUP_STATUS_VALUES, StatusTransitionError } from '@paperless-dedupe/core';
+import {
+  GROUP_STATUS_VALUES,
+  OperationConflictError,
+  setGroupStatus,
+  StatusTransitionError,
+  withDuplicateMutationLease,
+} from '@paperless-dedupe/core';
 import type { GroupStatus } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
@@ -21,7 +27,9 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
   }
 
   try {
-    const updated = setGroupStatus(locals.db, params.id, status as GroupStatus);
+    const updated = withDuplicateMutationLease(locals.db, () =>
+      setGroupStatus(locals.db, params.id, status as GroupStatus),
+    );
 
     if (!updated) {
       return apiError(ErrorCode.NOT_FOUND, `Duplicate group not found: ${params.id}`);
@@ -31,6 +39,12 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
   } catch (error) {
     if (error instanceof StatusTransitionError) {
       return apiError(ErrorCode.CONFLICT, error.message);
+    }
+    if (error instanceof OperationConflictError) {
+      return apiError(ErrorCode.CONFLICT, {
+        operation: 'set_duplicate_status',
+        retryable: true,
+      });
     }
     throw error;
   }

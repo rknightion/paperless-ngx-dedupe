@@ -21,6 +21,347 @@ import {
 } from '../duplicates.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
+import * as core from '../../index.js';
+import * as duplicateQueries from '../duplicates.js';
+import * as queryTypes from '../types.js';
+
+describe('duplicate inbox contract', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+  });
+
+  it('exports the duplicate inbox schema and query', () => {
+    expect(queryTypes).toHaveProperty('duplicateInboxQuerySchema');
+    expect(duplicateQueries).toHaveProperty('listDuplicateInbox');
+    expect(core).toHaveProperty('duplicateInboxQuerySchema');
+    expect(core).toHaveProperty('listDuplicateInbox');
+  });
+
+  it('strictly validates and normalizes URL-backed query state', () => {
+    expect(
+      queryTypes.duplicateInboxQuerySchema.parse({
+        queue: 'high-confidence',
+        correspondent: '  Alice  ',
+        limit: '25',
+      }),
+    ).toEqual({
+      queue: 'high-confidence',
+      correspondent: 'Alice',
+      limit: 25,
+    });
+
+    expect(queryTypes.duplicateInboxQuerySchema.safeParse({ offset: '25' }).success).toBe(false);
+    const cursor = queryTypes.encodeDuplicateInboxCursor({
+      confidenceScore: 0.95,
+      createdAt: '2024-01-10T00:00:00Z',
+      id: 'group-1',
+    });
+    expect(queryTypes.decodeDuplicateInboxCursor(cursor)).toEqual({
+      confidenceScore: 0.95,
+      createdAt: '2024-01-10T00:00:00Z',
+      id: 'group-1',
+    });
+    expect(queryTypes.decodeDuplicateInboxCursor(`${cursor}=`)).toBeNull();
+    expect(queryTypes.decodeDuplicateInboxCursor(`${cursor}junk`)).toBeNull();
+    expect(
+      queryTypes.duplicateInboxQuerySchema.safeParse({
+        queue: 'pending',
+        cursor: 'not-a-cursor',
+      }).success,
+    ).toBe(false);
+    expect(
+      queryTypes.duplicateInboxQuerySchema.safeParse({
+        queue: 'pending',
+        cursor: queryTypes.encodeDuplicateInboxCursor({
+          confidenceScore: 0.95,
+          createdAt: 'x',
+          id: 'group-1',
+        }),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('lists pending, high-confidence, ambiguous, ignored, and deleted queues', () => {
+    insertTestData(db);
+    db.insert(duplicateGroup)
+      .values([
+        {
+          id: 'grp-ignored',
+          confidenceScore: 0.8,
+          algorithmVersion: 'v1',
+          status: 'ignored',
+          createdAt: '2024-03-10T00:00:00Z',
+          updatedAt: '2024-03-10T00:00:00Z',
+        },
+        {
+          id: 'grp-deleted',
+          confidenceScore: 0.7,
+          algorithmVersion: 'v1',
+          status: 'deleted',
+          createdAt: '2024-04-10T00:00:00Z',
+          updatedAt: '2024-04-10T00:00:00Z',
+        },
+        {
+          id: 'grp-false-positive',
+          confidenceScore: 0.99,
+          algorithmVersion: 'v1',
+          status: 'false_positive',
+          createdAt: '2024-05-10T00:00:00Z',
+          updatedAt: '2024-05-10T00:00:00Z',
+        },
+      ])
+      .run();
+
+    const list = (queue: queryTypes.DuplicateInboxQueue) =>
+      duplicateQueries.listDuplicateInbox(db, { queue, limit: 50 });
+
+    expect(list('pending').items.map((group) => group.id)).toEqual(['grp-1', 'grp-2']);
+    expect(list('high-confidence').items.map((group) => group.id)).toEqual(['grp-1']);
+    expect(list('ambiguous').items.map((group) => group.id)).toEqual(['grp-2']);
+    expect(list('ignored').items.map((group) => group.id)).toEqual(['grp-ignored']);
+    expect(list('deleted').items.map((group) => group.id)).toEqual(['grp-deleted']);
+  });
+
+  it('returns queue counts and excludes false positives from review queues', () => {
+    insertTestData(db);
+    db.insert(duplicateGroup)
+      .values([
+        {
+          id: 'grp-ignored',
+          confidenceScore: 0.8,
+          algorithmVersion: 'v1',
+          status: 'ignored',
+          createdAt: '2024-03-10T00:00:00Z',
+          updatedAt: '2024-03-10T00:00:00Z',
+        },
+        {
+          id: 'grp-deleted',
+          confidenceScore: 0.7,
+          algorithmVersion: 'v1',
+          status: 'deleted',
+          createdAt: '2024-04-10T00:00:00Z',
+          updatedAt: '2024-04-10T00:00:00Z',
+        },
+        {
+          id: 'grp-false-positive',
+          confidenceScore: 0.99,
+          algorithmVersion: 'v1',
+          status: 'false_positive',
+          createdAt: '2024-05-10T00:00:00Z',
+          updatedAt: '2024-05-10T00:00:00Z',
+        },
+      ])
+      .run();
+
+    const page = duplicateQueries.listDuplicateInbox(db, { queue: 'pending', limit: 50 });
+
+    expect(page.counts).toEqual({
+      pending: 2,
+      highConfidence: 1,
+      ambiguous: 1,
+      ignored: 1,
+      deleted: 1,
+    });
+  });
+
+  it('filters groups and queue counts by member correspondent', () => {
+    insertTestData(db);
+
+    const page = duplicateQueries.listDuplicateInbox(db, {
+      queue: 'pending',
+      correspondent: 'Alice',
+      limit: 50,
+    });
+
+    expect(page.items.map((group) => group.id)).toEqual(['grp-1']);
+    expect(page.counts).toEqual({
+      pending: 1,
+      highConfidence: 1,
+      ambiguous: 0,
+      ignored: 0,
+      deleted: 0,
+    });
+  });
+
+  it('applies inbox confidence filters to items and queue counts', () => {
+    insertTestData(db);
+
+    const page = duplicateQueries.listDuplicateInbox(db, {
+      queue: 'pending',
+      minConfidence: 0.9,
+      maxConfidence: 0.96,
+      limit: 50,
+    });
+
+    expect(page.items.map((group) => group.id)).toEqual(['grp-1']);
+    expect(page.counts).toEqual({
+      pending: 1,
+      highConfidence: 1,
+      ambiguous: 0,
+      ignored: 0,
+      deleted: 0,
+    });
+  });
+
+  it('uses a stable confidence, creation time, and id cursor without offset scans', () => {
+    insertTestData(db);
+    db.insert(duplicateGroup)
+      .values([
+        {
+          id: 'grp-3',
+          confidenceScore: 0.95,
+          algorithmVersion: 'v1',
+          createdAt: '2024-01-10T00:00:00Z',
+          updatedAt: '2024-01-10T00:00:00Z',
+        },
+        {
+          id: 'grp-0',
+          confidenceScore: 0.95,
+          algorithmVersion: 'v1',
+          createdAt: '2024-01-10T00:00:00Z',
+          updatedAt: '2024-01-10T00:00:00Z',
+        },
+        {
+          id: 'grp-recent',
+          confidenceScore: 0.95,
+          algorithmVersion: 'v1',
+          createdAt: '2024-01-11T00:00:00Z',
+          updatedAt: '2024-01-11T00:00:00Z',
+        },
+      ])
+      .run();
+
+    const first = duplicateQueries.listDuplicateInbox(db, { queue: 'pending', limit: 3 });
+    expect(first.items.map((group) => group.id)).toEqual(['grp-recent', 'grp-3', 'grp-1']);
+    expect(first.nextCursor).not.toBeNull();
+
+    db.insert(duplicateGroup)
+      .values({
+        id: 'grp-new',
+        confidenceScore: 0.99,
+        algorithmVersion: 'v1',
+        createdAt: '2024-06-10T00:00:00Z',
+        updatedAt: '2024-06-10T00:00:00Z',
+      })
+      .run();
+
+    const second = duplicateQueries.listDuplicateInbox(db, {
+      queue: 'pending',
+      cursor: first.nextCursor!,
+      limit: 3,
+    });
+
+    expect(second.items.map((group) => group.id)).toEqual(['grp-0', 'grp-2']);
+    expect(new Set([...first.items, ...second.items].map((group) => group.id)).size).toBe(5);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it('paginates three stable pages across 50k tied groups using the inbox index', async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(handle.sqlite);
+
+    const totalGroups = 50_100;
+    const expectedCounts = {
+      pending: 0,
+      highConfidence: 0,
+      ambiguous: 0,
+      ignored: 0,
+      deleted: 0,
+    };
+    const insert = handle.sqlite.prepare(`
+      INSERT INTO duplicate_group (
+        id, confidence_score, algorithm_version, status, created_at, updated_at
+      ) VALUES (?, ?, 'v1', ?, ?, ?)
+    `);
+    const insertAll = handle.sqlite.transaction(() => {
+      for (let index = 0; index < totalGroups; index++) {
+        const confidenceScore = 0.9 + (index % 11) / 100;
+        const status = index % 17 === 0 ? 'ignored' : 'pending';
+        const createdAt = `2024-01-${String((index % 5) + 10).padStart(2, '0')}T00:00:00Z`;
+        insert.run(
+          `bulk-${String(index).padStart(6, '0')}`,
+          confidenceScore,
+          status,
+          createdAt,
+          createdAt,
+        );
+        if (status === 'ignored') {
+          expectedCounts.ignored++;
+        } else {
+          expectedCounts.pending++;
+          if (confidenceScore >= 0.95) {
+            expectedCounts.highConfidence++;
+          } else {
+            expectedCounts.ambiguous++;
+          }
+        }
+      }
+    });
+    insertAll();
+
+    const pages = [];
+    let cursor: string | undefined;
+    for (let pageNumber = 0; pageNumber < 3; pageNumber++) {
+      const page = duplicateQueries.listDuplicateInbox(handle.db, {
+        queue: 'pending',
+        limit: 100,
+        ...(cursor ? { cursor } : {}),
+      });
+      pages.push(page);
+      cursor = page.nextCursor ?? undefined;
+    }
+
+    const ids = pages.flatMap((page) => page.items.map((group) => group.id));
+    expect(ids).toHaveLength(300);
+    expect(new Set(ids).size).toBe(300);
+    expect(pages.every((page) => page.counts.pending === expectedCounts.pending)).toBe(true);
+    expect(
+      pages.every((page) => page.counts.highConfidence === expectedCounts.highConfidence),
+    ).toBe(true);
+    expect(pages.every((page) => page.counts.ambiguous === expectedCounts.ambiguous)).toBe(true);
+    expect(pages.every((page) => page.counts.ignored === expectedCounts.ignored)).toBe(true);
+    expect(pages.every((page) => page.nextCursor !== null)).toBe(true);
+
+    const queryPlan = handle.sqlite
+      .prepare(
+        `EXPLAIN QUERY PLAN
+         SELECT id
+         FROM duplicate_group
+         WHERE status = 'pending'
+           AND (
+             confidence_score < ?
+             OR (confidence_score = ? AND created_at < ?)
+             OR (confidence_score = ? AND created_at = ? AND id < ?)
+           )
+         ORDER BY confidence_score DESC, created_at DESC, id DESC
+         LIMIT 101`,
+      )
+      .all(0.95, 0.95, '2024-01-12T00:00:00Z', 0.95, '2024-01-12T00:00:00Z', 'bulk-025000') as {
+      detail: string;
+    }[];
+    const planDetails = queryPlan.map(({ detail }) => detail).join('\n');
+    expect(planDetails).toContain('idx_dg_inbox_order');
+    expect(planDetails).not.toContain('USE TEMP B-TREE FOR ORDER BY');
+    const inboxIndex = handle.sqlite
+      .prepare(
+        `SELECT sql FROM sqlite_master
+         WHERE type = 'index' AND name = 'idx_dg_inbox_order'`,
+      )
+      .get() as { sql: string };
+    expect(
+      inboxIndex.sql
+        .toLowerCase()
+        .replaceAll('`', '')
+        .replaceAll('"', '')
+        .replace(/\s+/g, ' ')
+        .replaceAll(', ', ','),
+    ).toContain('on duplicate_group (status,confidence_score desc,created_at desc,id desc)');
+  }, 15_000);
+});
 
 function insertTestData(db: AppDatabase) {
   // Insert documents

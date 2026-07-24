@@ -13,6 +13,11 @@ import type {
   operationLease,
   syncChangeGeneration,
 } from './sqlite/automation.js';
+import type {
+  reviewedMutationDocumentCheckpoint,
+  reviewedMutationGroupCheckpoint,
+  reviewedMutationPlan,
+} from './sqlite/review.js';
 
 // Select types (reading from DB)
 export type Document = InferSelectModel<typeof document>;
@@ -30,6 +35,13 @@ export type DispatchIntent = InferSelectModel<typeof dispatchIntent>;
 export type OperationLease = InferSelectModel<typeof operationLease>;
 export type SyncChangeGeneration = InferSelectModel<typeof syncChangeGeneration>;
 export type AiBudgetReservation = InferSelectModel<typeof aiBudgetReservation>;
+export type ReviewedMutationPlan = InferSelectModel<typeof reviewedMutationPlan>;
+export type ReviewedMutationGroupCheckpoint = InferSelectModel<
+  typeof reviewedMutationGroupCheckpoint
+>;
+export type ReviewedMutationDocumentCheckpoint = InferSelectModel<
+  typeof reviewedMutationDocumentCheckpoint
+>;
 
 // Insert types (writing to DB)
 export type NewDocument = InferInsertModel<typeof document>;
@@ -47,3 +59,10 @@ export type NewDispatchIntent = InferInsertModel<typeof dispatchIntent>;
 export type NewOperationLease = InferInsertModel<typeof operationLease>;
 export type NewSyncChangeGeneration = InferInsertModel<typeof syncChangeGeneration>;
 export type NewAiBudgetReservation = InferInsertModel<typeof aiBudgetReservation>;
+export type NewReviewedMutationPlan = InferInsertModel<typeof reviewedMutationPlan>;
+export type NewReviewedMutationGroupCheckpoint = InferInsertModel<
+  typeof reviewedMutationGroupCheckpoint
+>;
+export type NewReviewedMutationDocumentCheckpoint = InferInsertModel<
+  typeof reviewedMutationDocumentCheckpoint
+>;

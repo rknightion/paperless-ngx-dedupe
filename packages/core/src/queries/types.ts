@@ -20,6 +20,84 @@ export interface PaginatedResult<T> {
   offset: number;
 }
 
+// ── Duplicate Inbox ────────────────────────────────────────────────────
+
+export const DUPLICATE_HIGH_CONFIDENCE_THRESHOLD = 0.95;
+
+const duplicateInboxCursorPayloadSchema = z
+  .object({
+    confidenceScore: z.number().finite().min(0).max(1),
+    createdAt: z.iso.datetime(),
+    id: z.string().min(1),
+  })
+  .strict();
+
+export type DuplicateInboxCursorPayload = z.infer<typeof duplicateInboxCursorPayloadSchema>;
+
+export function encodeDuplicateInboxCursor(payload: DuplicateInboxCursorPayload): string {
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+export function decodeDuplicateInboxCursor(value: string): DuplicateInboxCursorPayload | null {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return null;
+
+  try {
+    const decoded: unknown = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+    const result = duplicateInboxCursorPayloadSchema.safeParse(decoded);
+    if (!result.success || encodeDuplicateInboxCursor(result.data) !== value) return null;
+    return result.data;
+  } catch {
+    return null;
+  }
+}
+
+export const duplicateInboxQuerySchema = z
+  .object({
+    queue: z
+      .enum(['pending', 'high-confidence', 'ambiguous', 'ignored', 'deleted'])
+      .default('pending'),
+    correspondent: z.string().trim().min(1).max(200).optional(),
+    minConfidence: z.coerce.number().min(0).max(1).optional(),
+    maxConfidence: z.coerce.number().min(0).max(1).optional(),
+    cursor: z
+      .string()
+      .min(1)
+      .max(1_000)
+      .refine(
+        (value) => decodeDuplicateInboxCursor(value) !== null,
+        'Invalid duplicate inbox cursor',
+      )
+      .optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+  })
+  .strict()
+  .refine(
+    ({ minConfidence, maxConfidence }) =>
+      minConfidence === undefined || maxConfidence === undefined || minConfidence <= maxConfidence,
+    {
+      path: ['maxConfidence'],
+      message: 'Maximum confidence must be greater than or equal to minimum confidence',
+    },
+  );
+
+export type DuplicateInboxQuery = z.infer<typeof duplicateInboxQuerySchema>;
+export type DuplicateInboxQueue = DuplicateInboxQuery['queue'];
+
+export interface DuplicateInboxQueueCounts {
+  pending: number;
+  highConfidence: number;
+  ambiguous: number;
+  ignored: number;
+  deleted: number;
+}
+
+export interface DuplicateInboxPage {
+  items: DuplicateGroupSummary[];
+  nextCursor: string | null;
+  counts: DuplicateInboxQueueCounts;
+  query: DuplicateInboxQuery;
+}
+
 // ── Duplicate Group Filters ─────────────────────────────────────────────
 
 export const duplicateGroupFiltersSchema = z.object({

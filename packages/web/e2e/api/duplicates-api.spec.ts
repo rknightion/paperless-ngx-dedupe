@@ -34,6 +34,19 @@ test.describe('Duplicates API', () => {
     expect(body.meta.offset).toBe(0);
   });
 
+  test('GET /api/v1/duplicates preserves legacy metadata with limit alone', async ({ request }) => {
+    const response = await request.get('/api/v1/duplicates?limit=1');
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.meta.total).toBeGreaterThan(1);
+    expect(body.meta.totalMemberCount).toBeGreaterThan(1);
+    expect(body.meta.limit).toBe(1);
+    expect(body.meta.offset).toBe(0);
+    expect(body.meta.nextCursor).toBeUndefined();
+  });
+
   test('GET /api/v1/duplicates supports filtering by min confidence', async ({ request }) => {
     const response = await request.get('/api/v1/duplicates?minConfidence=0.9');
 
