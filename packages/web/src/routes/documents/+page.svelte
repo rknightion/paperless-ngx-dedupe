@@ -1,5 +1,8 @@
 <script lang="ts">
   import { StatCard, EChart, ProgressBar } from '$lib/components';
+  import DocumentLibraryFilters from '$lib/components/documents/DocumentLibraryFilters.svelte';
+  import DocumentLibraryTable from '$lib/components/documents/DocumentLibraryTable.svelte';
+  import DocumentQualitySummary from '$lib/components/documents/DocumentQualitySummary.svelte';
   import { FileStack, Clock, Type, Copy } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
 
@@ -134,10 +137,48 @@
 </svelte:head>
 
 <div class="space-y-8">
-  <header class="space-y-1">
-    <h1 class="text-ink text-2xl font-semibold tracking-tight">Documents</h1>
-    <p class="text-muted mt-1">Library statistics and document overview.</p>
-  </header>
+  {#if data.library}
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h1 class="text-ink text-2xl font-semibold tracking-tight">Document Library</h1>
+        <p class="text-muted mt-1">
+          Find synced documents and move directly into the relevant review workflow.
+        </p>
+      </div>
+      <a
+        href="/documents"
+        class="border-soft text-ink rounded-lg border px-3 py-2 text-center text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        View statistics only
+      </a>
+    </header>
+
+    <DocumentLibraryFilters query={data.library.query} />
+    <DocumentQualitySummary
+      counts={data.library.counts}
+      query={data.library.query}
+      insights={data.dataQuality.insights}
+    />
+    <DocumentLibraryTable
+      items={data.library.items}
+      nextCursor={data.library.nextCursor}
+      limit={data.library.query.limit}
+      paperlessUrl={data.paperlessUrl}
+    />
+  {:else}
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div class="space-y-1">
+        <h1 class="text-ink text-2xl font-semibold tracking-tight">Documents</h1>
+        <p class="text-muted mt-1">Library statistics and document overview.</p>
+      </div>
+      <a
+        href="/documents?library=true"
+        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-center text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        Browse document library
+      </a>
+    </header>
+  {/if}
 
   <!-- Overview Divider -->
   <div class="flex items-center gap-4">

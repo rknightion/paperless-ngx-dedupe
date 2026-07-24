@@ -5,8 +5,14 @@ import { document, documentContent, documentSignature } from '../schema/sqlite/d
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { syncState } from '../schema/sqlite/app.js';
+import { GROUP_STATUS_VALUES } from '../types/enums.js';
+import type { GroupStatus } from '../types/enums.js';
 import { parseTagsJson } from './helpers.js';
 import type {
+  DocumentLibraryCounts,
+  DocumentLibraryItem,
+  DocumentLibraryPage,
+  DocumentLibraryQuery,
   DocumentFilters,
   DocumentStats,
   DocumentSummary,
@@ -14,6 +20,390 @@ import type {
   PaginatedResult,
   PaginationParams,
 } from './types.js';
+import { decodeDocumentLibraryCursor, encodeDocumentLibraryCursor } from './types.js';
+
+function escapeLike(value: string): string {
+  return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
+}
+
+export const documentLibraryAddedDateKeySql = `CASE
+  WHEN d.added_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*'
+    AND date(substr(d.added_date, 1, 10)) = substr(d.added_date, 1, 10)
+    AND (
+      length(d.added_date) = 10
+      OR (
+        substr(d.added_date, 12, 2) BETWEEN '00' AND '23'
+        AND (
+          d.added_date GLOB '????-??-??T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]Z'
+          OR d.added_date GLOB '????-??-??T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].?*Z'
+          OR (
+            (
+              d.added_date GLOB '????-??-??T[0-2][0-9]:[0-5][0-9]:[0-5][0-9][+-][0-2][0-9]:[0-5][0-9]'
+              OR d.added_date GLOB '????-??-??T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].?*[+-][0-2][0-9]:[0-5][0-9]'
+            )
+            AND CAST(substr(d.added_date, -5, 2) AS INTEGER) BETWEEN 0 AND 14
+            AND (
+              CAST(substr(d.added_date, -5, 2) AS INTEGER) < 14
+              OR substr(d.added_date, -2, 2) = '00'
+            )
+          )
+        )
+      )
+    )
+    AND (
+      strftime('%Y-%m-%dT%H:%M:%fZ', d.added_date)
+        GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[01][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z'
+      OR strftime('%Y-%m-%dT%H:%M:%fZ', d.added_date)
+        GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T2[0-3]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z'
+    )
+  THEN coalesce(strftime('%Y-%m-%dT%H:%M:%fZ', d.added_date), '')
+  ELSE ''
+END`;
+
+function buildDocumentLibraryWhere(query: DocumentLibraryQuery): {
+  clauses: string[];
+  parameters: unknown[];
+} {
+  const clauses: string[] = [];
+  const parameters: unknown[] = [];
+
+  if (query.text) {
+    clauses.push(`(
+      lower(d.title) LIKE ? ESCAPE '\\'
+      OR lower(coalesce(d.correspondent, '')) LIKE ? ESCAPE '\\'
+      OR lower(coalesce(d.document_type, '')) LIKE ? ESCAPE '\\'
+      OR EXISTS (
+        SELECT 1
+        FROM document_content search_content
+        WHERE search_content.document_id = d.id
+          AND lower(coalesce(search_content.full_text, '')) LIKE ? ESCAPE '\\'
+      )
+    )`);
+    const pattern = `%${escapeLike(query.text.toLowerCase())}%`;
+    parameters.push(pattern, pattern, pattern, pattern);
+  }
+  if (query.missingOcr !== undefined) {
+    const hasOcr = `EXISTS (
+      SELECT 1
+      FROM document_content ocr_content
+      WHERE ocr_content.document_id = d.id
+        AND length(trim(coalesce(ocr_content.full_text, ''))) > 0
+    )`;
+    clauses.push(query.missingOcr ? `NOT ${hasOcr}` : hasOcr);
+  }
+  if (query.missingCorrespondent !== undefined) {
+    clauses.push(
+      query.missingCorrespondent
+        ? "length(trim(coalesce(d.correspondent, ''))) = 0"
+        : "length(trim(coalesce(d.correspondent, ''))) > 0",
+    );
+  }
+  if (query.missingDocumentType !== undefined) {
+    clauses.push(
+      query.missingDocumentType
+        ? "length(trim(coalesce(d.document_type, ''))) = 0"
+        : "length(trim(coalesce(d.document_type, ''))) > 0",
+    );
+  }
+  if (query.missingTags !== undefined) {
+    const hasTags = `CASE WHEN json_valid(d.tags_json)
+      THEN json_type(d.tags_json) = 'array' AND EXISTS (
+        SELECT 1 FROM json_each(d.tags_json) classification_tag
+        WHERE classification_tag.type = 'text'
+          AND length(trim(classification_tag.value)) > 0
+      )
+      ELSE 0 END`;
+    clauses.push(query.missingTags ? `NOT (${hasTags})` : `(${hasTags})`);
+  }
+  if (query.correspondent) {
+    clauses.push('d.correspondent = ?');
+    parameters.push(query.correspondent);
+  }
+  if (query.correspondentSet) {
+    clauses.push(`d.correspondent IN (${query.correspondentSet.map(() => '?').join(', ')})`);
+    parameters.push(...query.correspondentSet);
+  }
+  if (query.documentType) {
+    clauses.push('d.document_type = ?');
+    parameters.push(query.documentType);
+  }
+  if (query.documentTypeSet) {
+    clauses.push(`d.document_type IN (${query.documentTypeSet.map(() => '?').join(', ')})`);
+    parameters.push(...query.documentTypeSet);
+  }
+  if (query.tag) {
+    clauses.push(`json_valid(coalesce(d.tags_json, '[]'))
+      AND EXISTS (
+        SELECT 1 FROM json_each(d.tags_json) tag_value WHERE tag_value.value = ?
+      )`);
+    parameters.push(query.tag);
+  }
+  if (query.tagSet) {
+    clauses.push(`json_valid(coalesce(d.tags_json, '[]'))
+      AND EXISTS (
+        SELECT 1 FROM json_each(d.tags_json) tag_set_value
+        WHERE tag_set_value.type = 'text'
+          AND tag_set_value.value IN (${query.tagSet.map(() => '?').join(', ')})
+      )`);
+    parameters.push(...query.tagSet);
+  }
+  if (query.customFieldId !== undefined) {
+    let valuePredicate = '';
+    const valueParameters: unknown[] = [];
+    const value = query.customFieldValue;
+    if (value === null) {
+      valuePredicate = "AND json_type(custom_field.value, '$.value') = 'null'";
+    } else if (typeof value === 'string') {
+      valuePredicate =
+        "AND json_type(custom_field.value, '$.value') = 'text' AND json_extract(custom_field.value, '$.value') = ?";
+      valueParameters.push(value);
+    } else if (typeof value === 'number') {
+      valuePredicate =
+        "AND json_type(custom_field.value, '$.value') IN ('integer', 'real') AND json_extract(custom_field.value, '$.value') = ?";
+      valueParameters.push(value);
+    } else if (typeof value === 'boolean') {
+      valuePredicate = `AND json_type(custom_field.value, '$.value') = '${
+        value ? 'true' : 'false'
+      }'`;
+    } else if (Array.isArray(value)) {
+      valuePredicate =
+        "AND json_type(custom_field.value, '$.value') = 'array' AND json(json_extract(custom_field.value, '$.value')) = json(?)";
+      valueParameters.push(JSON.stringify(value));
+    }
+    clauses.push(`json_valid(coalesce(d.custom_fields_json, '[]'))
+      AND EXISTS (
+        SELECT 1
+        FROM json_each(d.custom_fields_json) custom_field
+        WHERE json_extract(custom_field.value, '$.field') = ?
+          ${valuePredicate}
+      )`);
+    parameters.push(query.customFieldId, ...valueParameters);
+  }
+  if (query.duplicate === 'involved') {
+    clauses.push(
+      'EXISTS (SELECT 1 FROM duplicate_member duplicate_filter WHERE duplicate_filter.document_id = d.id)',
+    );
+  } else if (query.duplicate === 'not-involved') {
+    clauses.push(
+      'NOT EXISTS (SELECT 1 FROM duplicate_member duplicate_filter WHERE duplicate_filter.document_id = d.id)',
+    );
+  }
+  if (query.aiStatus === 'unprocessed') {
+    clauses.push(
+      'NOT EXISTS (SELECT 1 FROM ai_processing_result ai_filter WHERE ai_filter.document_id = d.id)',
+    );
+  } else if (query.aiStatus) {
+    clauses.push(
+      'EXISTS (SELECT 1 FROM ai_processing_result ai_filter WHERE ai_filter.document_id = d.id AND ai_filter.applied_status = ?)',
+    );
+    parameters.push(query.aiStatus);
+  }
+  if (query.freshness) {
+    clauses.push(`EXISTS (
+      SELECT 1
+      FROM ai_processing_result freshness_filter
+      WHERE freshness_filter.document_id = d.id
+        AND freshness_filter.sync_generation_id ${
+          query.freshness === 'fresh' ? 'IS' : 'IS NOT'
+        } d.last_changed_by_sync_generation_id
+    )`);
+  }
+
+  return { clauses, parameters };
+}
+
+type DocumentLibrarySqlRow = {
+  id: string;
+  paperlessId: number;
+  title: string;
+  correspondent: string | null;
+  documentType: string | null;
+  tagsJson: string | null;
+  createdDate: string | null;
+  addedDate: string | null;
+  processingStatus: string | null;
+  hasOcr: number;
+  duplicateGroupCount: number;
+  duplicateGroupJson: string | null;
+  aiStatus: string | null;
+  aiFailureType: string | null;
+  aiFreshness: 'fresh' | 'stale' | null;
+};
+
+function parseRelevantDuplicateGroup(value: string | null): {
+  duplicateGroupId: string | null;
+  duplicateGroupStatus: GroupStatus | null;
+} {
+  if (!value) return { duplicateGroupId: null, duplicateGroupStatus: null };
+
+  try {
+    const parsed = JSON.parse(value) as { id?: unknown; status?: unknown };
+    if (
+      typeof parsed.id !== 'string' ||
+      typeof parsed.status !== 'string' ||
+      !GROUP_STATUS_VALUES.includes(parsed.status as GroupStatus)
+    ) {
+      return { duplicateGroupId: null, duplicateGroupStatus: null };
+    }
+    return {
+      duplicateGroupId: parsed.id,
+      duplicateGroupStatus: parsed.status as GroupStatus,
+    };
+  } catch {
+    return { duplicateGroupId: null, duplicateGroupStatus: null };
+  }
+}
+
+export function listDocumentLibrary(
+  db: AppDatabase,
+  query: DocumentLibraryQuery,
+): DocumentLibraryPage {
+  const base = buildDocumentLibraryWhere(query);
+  const baseWhere = base.clauses.length > 0 ? `WHERE ${base.clauses.join(' AND ')}` : '';
+
+  const countRow = db.$client
+    .prepare(
+      `SELECT
+        count(*) AS total,
+        coalesce(sum(CASE WHEN NOT EXISTS (
+          SELECT 1 FROM document_content count_content
+          WHERE count_content.document_id = d.id
+            AND length(trim(coalesce(count_content.full_text, ''))) > 0
+        ) THEN 1 ELSE 0 END), 0) AS missingOcr,
+        coalesce(sum(CASE WHEN EXISTS (
+          SELECT 1 FROM duplicate_member count_duplicate
+          WHERE count_duplicate.document_id = d.id
+        ) THEN 1 ELSE 0 END), 0) AS duplicateInvolved,
+        coalesce(sum(CASE WHEN NOT EXISTS (
+          SELECT 1 FROM ai_processing_result count_ai
+          WHERE count_ai.document_id = d.id
+        ) THEN 1 ELSE 0 END), 0) AS aiUnprocessed,
+        coalesce(sum(CASE WHEN EXISTS (
+          SELECT 1 FROM ai_processing_result count_stale_ai
+          WHERE count_stale_ai.document_id = d.id
+            AND count_stale_ai.sync_generation_id IS NOT d.last_changed_by_sync_generation_id
+        ) THEN 1 ELSE 0 END), 0) AS aiStale
+      FROM document d
+      ${baseWhere}`,
+    )
+    .get(...base.parameters) as DocumentLibraryCounts;
+
+  const page = listDocumentLibraryRows(db, query);
+
+  return {
+    ...page,
+    counts: {
+      total: Number(countRow.total),
+      missingOcr: Number(countRow.missingOcr),
+      duplicateInvolved: Number(countRow.duplicateInvolved),
+      aiUnprocessed: Number(countRow.aiUnprocessed),
+      aiStale: Number(countRow.aiStale),
+    },
+    query,
+  };
+}
+
+export function listDocumentLibraryRows(
+  db: AppDatabase,
+  query: DocumentLibraryQuery,
+): Pick<DocumentLibraryPage, 'items' | 'nextCursor'> {
+  const base = buildDocumentLibraryWhere(query);
+  const rowClauses = [...base.clauses];
+  const rowParameters = [...base.parameters];
+  if (query.cursor) {
+    const cursor = decodeDocumentLibraryCursor(query.cursor);
+    if (!cursor) {
+      // The schema already validates this. Keep the guard local so this
+      // function remains safe if validation changes independently.
+      throw new Error('Invalid document library cursor');
+    }
+    rowClauses.push(
+      `(${documentLibraryAddedDateKeySql} < ? OR (${documentLibraryAddedDateKeySql} = ? AND d.paperless_id < ?))`,
+    );
+    const cursorDate = cursor.addedDate ?? '';
+    rowParameters.push(cursorDate, cursorDate, cursor.paperlessId);
+  }
+  const rowWhere = rowClauses.length > 0 ? `WHERE ${rowClauses.join(' AND ')}` : '';
+
+  const rows = db.$client
+    .prepare(
+      `SELECT
+        d.id,
+        d.paperless_id AS paperlessId,
+        d.title,
+        d.correspondent,
+        d.document_type AS documentType,
+        d.tags_json AS tagsJson,
+        d.created_date AS createdDate,
+        nullif(${documentLibraryAddedDateKeySql}, '') AS addedDate,
+        d.processing_status AS processingStatus,
+        EXISTS (
+          SELECT 1 FROM document_content item_content
+          WHERE item_content.document_id = d.id
+            AND length(trim(coalesce(item_content.full_text, ''))) > 0
+        ) AS hasOcr,
+        (
+          SELECT count(*) FROM duplicate_member item_duplicate
+          WHERE item_duplicate.document_id = d.id
+        ) AS duplicateGroupCount,
+        (
+          SELECT json_object('id', relevant_group.id, 'status', relevant_group.status)
+          FROM duplicate_member relevant_member
+          JOIN duplicate_group relevant_group ON relevant_group.id = relevant_member.group_id
+          WHERE relevant_member.document_id = d.id
+          ORDER BY
+            CASE WHEN relevant_group.status = 'pending' THEN 0 ELSE 1 END,
+            relevant_group.updated_at DESC,
+            relevant_group.id DESC
+          LIMIT 1
+        ) AS duplicateGroupJson,
+        item_ai.applied_status AS aiStatus,
+        item_ai.failure_type AS aiFailureType,
+        CASE
+          WHEN item_ai.id IS NULL THEN NULL
+          WHEN item_ai.sync_generation_id IS d.last_changed_by_sync_generation_id THEN 'fresh'
+          ELSE 'stale'
+        END AS aiFreshness
+      FROM document d
+      LEFT JOIN ai_processing_result item_ai ON item_ai.document_id = d.id
+      ${rowWhere}
+      ORDER BY ${documentLibraryAddedDateKeySql} DESC, d.paperless_id DESC
+      LIMIT ?`,
+    )
+    .all(...rowParameters, query.limit + 1) as DocumentLibrarySqlRow[];
+
+  const hasNextPage = rows.length > query.limit;
+  const visibleRows = hasNextPage ? rows.slice(0, query.limit) : rows;
+  const items: DocumentLibraryItem[] = visibleRows.map((row) => ({
+    id: row.id,
+    paperlessId: row.paperlessId,
+    title: row.title,
+    correspondent: row.correspondent,
+    documentType: row.documentType,
+    tags: parseTagsJson(row.tagsJson),
+    createdDate: row.createdDate,
+    addedDate: row.addedDate,
+    processingStatus: row.processingStatus,
+    hasOcr: row.hasOcr === 1,
+    duplicateGroupCount: row.duplicateGroupCount,
+    ...parseRelevantDuplicateGroup(row.duplicateGroupJson),
+    aiStatus: row.aiStatus,
+    aiFailureType: row.aiFailureType,
+    aiFreshness: row.aiFreshness,
+  }));
+  const last = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasNextPage && last
+        ? encodeDocumentLibraryCursor({
+            addedDate: last.addedDate,
+            paperlessId: last.paperlessId,
+          })
+        : null,
+  };
+}
 
 function buildDocumentWhere(filters: DocumentFilters) {
   const conditions = [];

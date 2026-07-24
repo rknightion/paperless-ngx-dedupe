@@ -1,16 +1,18 @@
 <script lang="ts">
-  import type { AiResultSummary } from '@paperless-dedupe/core';
+  import type { AiFieldSelection, AiResultSummary } from '@paperless-dedupe/core';
+  import { isAiKeyboardActionAllowed, shouldIgnoreAiShortcutTarget } from './ai-keyboard';
   import {
     selectNextResult,
     selectPrevResult,
     getActiveResultId,
     toggleField,
     closeDetail,
+    fieldSelections,
   } from './AiReviewStore.svelte';
 
   interface Props {
     results: AiResultSummary[];
-    onapply: (id: string) => Promise<void>;
+    onapply: (id: string, selection: AiFieldSelection) => Promise<void>;
     onreject: (id: string) => Promise<void>;
     searchInputRef: HTMLInputElement | null;
   }
@@ -20,12 +22,7 @@
   function handleKeydown(e: KeyboardEvent) {
     // Skip if focus is in an input, textarea, select, or contenteditable
     const target = e.target as HTMLElement;
-    if (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.tagName === 'SELECT' ||
-      target.isContentEditable
-    ) {
+    if (shouldIgnoreAiShortcutTarget(target)) {
       return;
     }
 
@@ -39,36 +36,62 @@
         selectPrevResult(results);
         break;
       case 'a': {
-        e.preventDefault();
         const id = getActiveResultId();
-        if (id) onapply(id);
+        const result = results.find((item) => item.id === id);
+        const selection = id ? fieldSelections.get(id) : null;
+        if (
+          id &&
+          isAiKeyboardActionAllowed(result, 'apply') &&
+          selection &&
+          (selection.title ||
+            selection.correspondent ||
+            selection.documentType ||
+            selection.tags ||
+            selection.processedTag ||
+            selection.customFieldIds.length > 0)
+        ) {
+          e.preventDefault();
+          onapply(id, selection);
+        }
         break;
       }
       case 'r': {
-        e.preventDefault();
         const id = getActiveResultId();
-        if (id) onreject(id);
+        const result = results.find((item) => item.id === id);
+        if (id && isAiKeyboardActionAllowed(result, 'reject')) {
+          e.preventDefault();
+          onreject(id);
+        }
         break;
       }
       case '1':
-        e.preventDefault();
         {
           const id = getActiveResultId();
-          if (id) toggleField(id, 'correspondent');
+          const result = results.find((item) => item.id === id);
+          if (id && isAiKeyboardActionAllowed(result, 'toggle-field')) {
+            e.preventDefault();
+            toggleField(id, 'correspondent');
+          }
         }
         break;
       case '2':
-        e.preventDefault();
         {
           const id = getActiveResultId();
-          if (id) toggleField(id, 'documentType');
+          const result = results.find((item) => item.id === id);
+          if (id && isAiKeyboardActionAllowed(result, 'toggle-field')) {
+            e.preventDefault();
+            toggleField(id, 'documentType');
+          }
         }
         break;
       case '3':
-        e.preventDefault();
         {
           const id = getActiveResultId();
-          if (id) toggleField(id, 'tags');
+          const result = results.find((item) => item.id === id);
+          if (id && isAiKeyboardActionAllowed(result, 'toggle-field')) {
+            e.preventDefault();
+            toggleField(id, 'tags');
+          }
         }
         break;
       case '/':

@@ -1,4 +1,4 @@
-import { eq, and, or, desc, sql } from 'drizzle-orm';
+import { eq, and, or, desc, lt, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type Database from 'better-sqlite3';
 
@@ -33,6 +33,88 @@ export interface JobFilters {
   limit?: number;
 }
 
+export type LegacyJob = Omit<Job, 'publicHistoryKey'>;
+
+export interface JobHistoryQuery {
+  type?: JobType;
+  status?: JobStatus;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface JobHistoryPage {
+  items: JobHistoryItem[];
+  nextCursor: string | null;
+}
+
+export interface JobHistoryItem {
+  key: string;
+  type: string;
+  status: string | null;
+  progress: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+const JOB_TYPES: readonly JobType[] = [
+  'sync',
+  'analysis',
+  'batch_operation',
+  'ai_processing',
+  'ai_apply',
+  'ai_revert',
+  'custom_field_discovery',
+];
+const JOB_STATUSES: readonly JobStatus[] = [
+  'pending',
+  'running',
+  'paused',
+  'completed',
+  'failed',
+  'cancelled',
+];
+interface JobHistoryCursor {
+  key: string;
+}
+
+export class JobHistoryQueryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'JobHistoryQueryError';
+  }
+}
+
+function encodeJobHistoryCursor(value: JobHistoryCursor): string {
+  return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
+}
+
+function decodeJobHistoryCursor(cursor: string): JobHistoryCursor {
+  try {
+    if (!cursor || cursor.length > 512 || !/^[A-Za-z0-9_-]+$/.test(cursor)) {
+      throw new Error('invalid encoding');
+    }
+    const decoded = Buffer.from(cursor, 'base64url');
+    if (decoded.toString('base64url') !== cursor) throw new Error('non-canonical encoding');
+    const value = JSON.parse(decoded.toString('utf8')) as unknown;
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      Array.isArray(value) ||
+      Object.keys(value).join(',') !== 'key'
+    ) {
+      throw new Error('invalid shape');
+    }
+    const candidate = value as Record<string, unknown>;
+    if (typeof candidate.key !== 'string' || !/^[A-Za-z0-9_-]{32}$/.test(candidate.key)) {
+      throw new Error('invalid values');
+    }
+    return { key: candidate.key };
+  } catch {
+    throw new JobHistoryQueryError('cursor is invalid');
+  }
+}
+
 const AUTOMATED_RETRY_DELAYS_MS = [60_000, 300_000, 900_000] as const;
 
 const OPERATION_BY_JOB_TYPE: Record<JobType, OperationKind> = {
@@ -41,6 +123,8 @@ const OPERATION_BY_JOB_TYPE: Record<JobType, OperationKind> = {
   batch_operation: 'duplicate_delete',
   ai_processing: 'ai_processing',
   ai_apply: 'ai_apply',
+  ai_revert: 'ai_revert',
+  custom_field_discovery: 'custom_field_discovery',
 };
 
 function sqliteFor(db: AppDatabase): Database.Database {
@@ -81,13 +165,19 @@ export function createJob(db: AppDatabase, type: JobType, taskData?: unknown): s
   }
 }
 
-export function getJob(db: AppDatabase, id: string): Job | null {
-  const result = db.select().from(job).where(eq(job.id, id)).get();
-
-  return result ?? null;
+function toLegacyJob(row: Job): LegacyJob {
+  const legacy = { ...row };
+  delete (legacy as Partial<Job>).publicHistoryKey;
+  return legacy;
 }
 
-export function listJobs(db: AppDatabase, filters?: JobFilters): Job[] {
+export function getJob(db: AppDatabase, id: string): LegacyJob | null {
+  const result = db.select().from(job).where(eq(job.id, id)).get();
+
+  return result ? toLegacyJob(result) : null;
+}
+
+export function listJobs(db: AppDatabase, filters?: JobFilters): LegacyJob[] {
   const conditions = [];
 
   if (filters?.type) {
@@ -105,7 +195,120 @@ export function listJobs(db: AppDatabase, filters?: JobFilters): Job[] {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(job.createdAt))
     .limit(limit)
+    .all()
+    .map(toLegacyJob);
+}
+
+export function listJobHistory(db: AppDatabase, query: JobHistoryQuery = {}): JobHistoryPage {
+  if (query.type !== undefined && !JOB_TYPES.includes(query.type)) {
+    throw new JobHistoryQueryError(`type must be one of: ${JOB_TYPES.join(', ')}`);
+  }
+  if (query.status !== undefined && !JOB_STATUSES.includes(query.status)) {
+    throw new JobHistoryQueryError(`status must be one of: ${JOB_STATUSES.join(', ')}`);
+  }
+  const limit = query.limit ?? 25;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new JobHistoryQueryError('limit must be between 1 and 100');
+  }
+
+  const conditions = [];
+  if (query.type) conditions.push(eq(job.type, query.type));
+  if (query.status) conditions.push(eq(job.status, query.status));
+  if (query.cursor !== undefined) {
+    const cursor = decodeJobHistoryCursor(query.cursor);
+    const boundary = sqliteFor(db)
+      .prepare(
+        `SELECT id, created_at AS createdAt
+         FROM job INDEXED BY job_public_history_key_unique
+         WHERE public_history_key = ?`,
+      )
+      .get(cursor.key) as { id: string; createdAt: string } | undefined;
+    if (!boundary) throw new JobHistoryQueryError('cursor is invalid');
+    conditions.push(
+      or(
+        lt(job.createdAt, boundary.createdAt),
+        and(eq(job.createdAt, boundary.createdAt), lt(job.id, boundary.id)),
+      )!,
+    );
+  }
+
+  const rows = db
+    .select({
+      id: job.id,
+      publicHistoryKey: job.publicHistoryKey,
+      type: job.type,
+      status: job.status,
+      progress: job.progress,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      createdAt: job.createdAt,
+    })
+    .from(job)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(job.createdAt), desc(job.id))
+    .limit(limit + 1)
     .all();
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const last = pageRows.at(-1);
+  if (pageRows.some(({ publicHistoryKey }) => !publicHistoryKey)) {
+    throw new Error('Job history public key invariant is not satisfied');
+  }
+  const items = pageRows.map(({ id: _id, publicHistoryKey, ...row }) => ({
+    key: publicHistoryKey!,
+    ...row,
+  }));
+  return {
+    items,
+    nextCursor:
+      hasMore && last?.publicHistoryKey
+        ? encodeJobHistoryCursor({ key: last.publicHistoryKey })
+        : null,
+  };
+}
+
+const CLEARABLE_JOB_WHERE = `
+  j.status IN ('completed', 'failed', 'cancelled')
+  AND NOT (
+    j.status = 'failed'
+    AND (
+      j.terminal_reason IS NOT NULL
+      OR EXISTS (
+        SELECT 1 FROM dispatch_intent dead_letter
+        WHERE dead_letter.job_id = j.id AND dead_letter.status = 'dead_letter'
+      )
+    )
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM reviewed_mutation_plan plan
+    WHERE plan.claimed_by_job_id = j.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM dispatch_intent child_intent
+    WHERE child_intent.parent_job_id = j.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM sync_change_generation generation
+    WHERE generation.sync_job_id = j.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM operation_lease lease
+    WHERE lease.owner_id = j.id
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM dispatch_intent budget_intent
+    INNER JOIN ai_budget_reservation budget
+      ON budget.dispatch_intent_id = budget_intent.id
+    WHERE budget_intent.job_id = j.id
+  )
+`;
+
+export function getJobHistoryCounts(db: AppDatabase): { clearable: number } {
+  const result = sqliteFor(db)
+    .prepare(`SELECT COUNT(*) AS clearable FROM job j WHERE ${CLEARABLE_JOB_WHERE}`)
+    .get() as { clearable: number };
+  return result;
 }
 
 export function updateJobProgress(
@@ -418,11 +621,22 @@ export function recoverStaleJobs(db: AppDatabase): number {
 }
 
 export function clearJobHistory(db: AppDatabase): number {
-  const result = db
-    .delete(job)
-    .where(or(eq(job.status, 'completed'), eq(job.status, 'failed'), eq(job.status, 'cancelled')))
-    .run();
-  return result.changes;
+  const sqlite = sqliteFor(db);
+  return sqlite.transaction(() => {
+    sqlite.exec(`
+      DROP TABLE IF EXISTS temp.clearable_job_history;
+      CREATE TEMP TABLE clearable_job_history (id TEXT PRIMARY KEY);
+      INSERT INTO clearable_job_history (id)
+      SELECT j.id FROM job j WHERE ${CLEARABLE_JOB_WHERE};
+      DELETE FROM dispatch_intent
+      WHERE job_id IN (SELECT id FROM clearable_job_history);
+    `);
+    const result = sqlite
+      .prepare('DELETE FROM job WHERE id IN (SELECT id FROM clearable_job_history)')
+      .run();
+    sqlite.exec('DROP TABLE clearable_job_history');
+    return result.changes;
+  })();
 }
 
 export function pauseJob(db: AppDatabase, id: string): boolean {

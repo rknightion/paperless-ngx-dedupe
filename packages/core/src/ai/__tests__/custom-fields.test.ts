@@ -36,6 +36,20 @@ const fields: PaperlessCustomField[] = [
     extraData: { selectOptions: [] },
     documentCount: 0,
   },
+  {
+    id: 11,
+    name: 'Source URL',
+    dataType: 'url',
+    extraData: { selectOptions: [] },
+    documentCount: 0,
+  },
+  {
+    id: 12,
+    name: 'Amount',
+    dataType: 'monetary',
+    extraData: { selectOptions: [], defaultCurrency: 'GBP' },
+    documentCount: 0,
+  },
 ];
 
 describe('normalizeCustomFieldRecommendations', () => {
@@ -80,5 +94,146 @@ describe('normalizeCustomFieldRecommendations', () => {
         evidence: 'Reference ABC-123',
       },
     ]);
+  });
+
+  it('allows only HTTP(S) URL schemes', () => {
+    expect(
+      normalizeCustomFieldRecommendations(
+        [
+          {
+            fieldId: 11,
+            value: 'https://example.com/invoice/1',
+            confidence: 0.8,
+            evidence: 'Invoice portal',
+          },
+        ],
+        fields,
+      )[0].value,
+    ).toBe('https://example.com/invoice/1');
+
+    for (const value of ['javascript:alert(1)', 'file:///etc/passwd', 'not a url']) {
+      expect(
+        normalizeCustomFieldRecommendations(
+          [{ fieldId: 11, value, confidence: 0.8, evidence: 'unsafe' }],
+          fields,
+        ),
+      ).toEqual([]);
+    }
+  });
+
+  it.each([
+    ['2024-02-29', true],
+    ['2023-02-29', false],
+    ['2026-02-30', false],
+    ['2026-07-24T00:00:00Z', false],
+  ])('validates canonical calendar date %s', (value, valid) => {
+    const result = normalizeCustomFieldRecommendations(
+      [{ fieldId: 8, value, confidence: 0.8, evidence: 'Due date' }],
+      fields,
+    );
+    expect(result.length > 0).toBe(valid);
+  });
+
+  it.each([
+    ['GBP60229.33', true],
+    ['EUR-12.00', true],
+    ['60229.33', true],
+    [12.34, false],
+    ['gbp12.00', false],
+    ['£12.00', false],
+    ['GBP1.234', false],
+  ])('validates canonical monetary value %s', (value, valid) => {
+    const result = normalizeCustomFieldRecommendations(
+      [{ fieldId: 12, value, confidence: 0.8, evidence: 'Total' }],
+      fields,
+    );
+    expect(result.length > 0).toBe(valid);
+  });
+
+  it('drops unknown select options and normalizes evidence whitespace', () => {
+    const result = normalizeCustomFieldRecommendations(
+      [
+        {
+          fieldId: 7,
+          value: 'Paid',
+          confidence: 0.9,
+          evidence: '  Paid \n\t in full  ',
+        },
+        {
+          fieldId: 7,
+          value: 'not-an-option',
+          confidence: 0.9,
+          evidence: 'ignored duplicate',
+        },
+      ],
+      fields,
+    );
+
+    expect(result).toEqual([
+      {
+        fieldId: 7,
+        fieldName: 'Payment Status',
+        value: 'paid-id',
+        confidence: 0.9,
+        evidence: 'Paid in full',
+      },
+    ]);
+  });
+
+  it.each([
+    ['string', 9],
+    ['longtext', 13],
+  ])('trims %s recommendations and rejects whitespace-only values', (dataType, fieldId) => {
+    const definitions = [
+      ...fields,
+      {
+        id: fieldId,
+        name: dataType,
+        dataType: dataType as 'string' | 'longtext',
+        extraData: { selectOptions: [] },
+        documentCount: 0,
+      },
+    ];
+    expect(
+      normalizeCustomFieldRecommendations(
+        [{ fieldId, value: '  value  ', confidence: 0.8, evidence: 'text' }],
+        definitions,
+      )[0]?.value,
+    ).toBe('value');
+    expect(
+      normalizeCustomFieldRecommendations(
+        [{ fieldId, value: ' \n\t ', confidence: 0.8, evidence: 'text' }],
+        definitions,
+      ),
+    ).toEqual([]);
+  });
+
+  it('accepts an exact select ID before labels but rejects ambiguous case-insensitive labels', () => {
+    const collision = {
+      ...fields[0],
+      extraData: {
+        selectOptions: [
+          { id: 'paid', label: 'Paid' },
+          { id: 'other', label: 'PAID' },
+          { id: 'unicode-a', label: 'État' },
+          { id: 'unicode-b', label: 'E\u0301TAT' },
+        ],
+      },
+    };
+
+    expect(
+      normalizeCustomFieldRecommendations(
+        [{ fieldId: 7, value: 'paid', confidence: 0.9, evidence: 'exact ID' }],
+        [collision],
+      )[0]?.value,
+    ).toBe('paid');
+    for (const value of ['PaId', 'état', ' état ']) {
+      expect(
+        normalizeCustomFieldRecommendations(
+          [{ fieldId: 7, value, confidence: 0.9, evidence: 'ambiguous label' }],
+          [collision],
+        ),
+      ).toEqual([]);
+    }
   });
 });

@@ -60,7 +60,9 @@ test.describe('Config API', () => {
     expect(getBody.data['ai.model']).toBe('gpt-5.4');
   });
 
-  test('PUT /api/v1/config updates batch config', async ({ request }) => {
+  test('PUT /api/v1/config rejects batch custom-field extraction without an approved policy', async ({
+    request,
+  }) => {
     const response = await request.put('/api/v1/config', {
       data: {
         settings: {
@@ -70,10 +72,13 @@ test.describe('Config API', () => {
       },
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(400);
     const body = await response.json();
-    expect(body.data['ai.batchSize']).toBe('50');
-    expect(body.data['ai.extractCustomFields']).toBe('true');
+    expect(body.error.code).toBe('VALIDATION_FAILED');
+    expect(body.error.message).toBe('Validation failed');
+    const current = await (await request.get('/api/v1/config')).json();
+    expect(current.data['ai.batchSize']).toBeUndefined();
+    expect(current.data['ai.extractCustomFields']).toBeUndefined();
   });
 
   test('PUT /api/v1/config rejects invalid body', async ({ request }) => {

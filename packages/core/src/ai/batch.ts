@@ -25,6 +25,7 @@ import { replaceAiResultWithRevision } from './history.js';
 import type { AiRequestBudget } from './extract.js';
 import type { NewAiProcessingResult } from '../schema/types.js';
 import { AiBudgetPolicyError } from './budget.js';
+import { resolveCustomFieldPolicy } from './custom-field-policy.js';
 
 const logger = createLogger('ai-batch');
 
@@ -132,7 +133,11 @@ export async function processBatch(
           config.includeTags
             ? client.getTags().then((list) => list.map((t) => t.name))
             : Promise.resolve([] as string[]),
-          config.extractCustomFields ? client.getCustomFields() : Promise.resolve([]),
+          config.extractCustomFields
+            ? client
+                .getCustomFields()
+                .then((liveFields) => resolveCustomFieldPolicy(db, liveFields))
+            : Promise.resolve([]),
         ]);
 
         // Build document query

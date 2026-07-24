@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getServerRuntime: vi.fn(),
   createJob: vi.fn(() => 'job-apply-all'),
   launchWorker: vi.fn(),
+  dispatchPending: vi.fn(),
   RuntimeUnavailableError: class RuntimeUnavailableError extends Error {},
 }));
 
@@ -55,6 +56,7 @@ describe('AI apply-all shutdown admission', () => {
           return operation();
         },
       },
+      dispatchPending: mocks.dispatchPending,
     });
   });
 
@@ -88,7 +90,7 @@ describe('AI apply-all shutdown admission', () => {
       headers: new Headers({ 'content-type': 'application/json' }),
       async json() {
         mocks.accepting = false;
-        return { fields: ['title'] };
+        return { planToken: 'reviewed-token-long-enough' };
       },
     };
 
@@ -109,6 +111,33 @@ describe('AI apply-all shutdown admission', () => {
       error: { code: 'SERVICE_UNAVAILABLE', retryable: true },
     });
     expect(mocks.createJob).not.toHaveBeenCalled();
+    expect(mocks.launchWorker).not.toHaveBeenCalled();
+  });
+
+  it('persists only the opaque reviewed token and dispatches the durable intent', async () => {
+    const response = await POST({
+      request: {
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          planToken: 'reviewed-token-long-enough',
+          filters: { status: 'pending_review' },
+        }),
+      },
+      locals: {
+        db: {},
+        config: {
+          AI_ENABLED: true,
+          AI_BULK_ALL_ENABLED: true,
+          DATABASE_URL: '/data/app.db',
+        },
+      },
+    } as never);
+
+    expect(response.status).toBe(202);
+    expect(mocks.createJob).toHaveBeenCalledWith({}, 'ai_apply', {
+      planToken: 'reviewed-token-long-enough',
+    });
+    expect(mocks.dispatchPending).toHaveBeenCalledOnce();
     expect(mocks.launchWorker).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@ import type {
   PaperlessTag,
   PaperlessCustomField,
   PaperlessCustomFieldInstance,
+  PaperlessDocument,
   DocumentUpdate,
 } from '../paperless/types.js';
 import type { AppDatabase } from '../db/client.js';
@@ -19,8 +20,10 @@ import {
   markAiResultApplied,
   markAiResultRejected,
   markAiResultFailed,
+  markAiResultApplyStarted,
   batchMarkRejected,
   type ApplySnapshot,
+  type AppliedTagAudit,
 } from './queries.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
 import { recordFeedback } from './feedback.js';
@@ -53,6 +56,36 @@ export interface ApplyOptions {
   protectedTagNames?: string[];
   /** Pre-fetched reference data — when provided, skips per-document API fetches. */
   referenceData?: ReferenceData;
+  /** Exact custom-field IDs approved in a reviewed mutation plan. */
+  customFieldIds?: readonly number[];
+  /** Live document fetched immediately before a reviewed mutation. */
+  liveDocument?: PaperlessDocument;
+  /** Exact field identifiers persisted to the apply audit. */
+  auditFields?: readonly string[];
+  /** Testable crash boundary hook, invoked after the durable intent write. */
+  afterIntentPersisted?: () => void;
+  /** Testable crash boundary hook, invoked after Paperless accepts the mutation. */
+  afterRemoteMutation?: () => void;
+  /** Revalidate the final live document after reference resolution. */
+  revalidateLiveDocument?: (document: PaperlessDocument) => string[];
+}
+
+export interface AiApplyOutcome {
+  appliedFields: string[];
+  skippedFields: string[];
+  liveDocument: PaperlessDocument;
+  update: DocumentUpdate;
+}
+
+export class AiApplyConflictError extends Error {
+  constructor(public readonly conflictFields: string[]) {
+    super(`Reviewed Paperless fields changed: ${conflictFields.join(', ')}`);
+    this.name = 'AiApplyConflictError';
+  }
+}
+
+function customValue(fields: readonly PaperlessCustomFieldInstance[], fieldId: number): unknown {
+  return fields.find(({ field }) => field === fieldId)?.value;
 }
 
 export async function applyAiResult(
@@ -60,7 +93,7 @@ export async function applyAiResult(
   client: PaperlessClient,
   resultId: string,
   options: ApplyOptions,
-): Promise<void> {
+): Promise<AiApplyOutcome | void> {
   return withSpan(
     'dedupe.ai.apply',
     {
@@ -88,6 +121,7 @@ export async function applyAiResult(
         : [];
 
       if (
+        !options.auditFields &&
         !suggestedTitle &&
         !suggestedCorrespondent &&
         !suggestedDocumentType &&
@@ -130,8 +164,13 @@ export async function applyAiResult(
       let preApplyTagNames: string[];
       let currentDocTagIds: number[];
       let currentCustomFields: PaperlessCustomFieldInstance[];
+      let currentDoc: PaperlessDocument | undefined;
 
-      if (options.referenceData && !options.fields.includes('customFields')) {
+      if (
+        options.referenceData &&
+        !options.fields.includes('customFields') &&
+        !options.liveDocument
+      ) {
         // Reconstruct from AI result row's stored current* values + reference data
         preApplyCorrespondent = row.currentCorrespondent
           ? correspondents.find(
@@ -154,9 +193,8 @@ export async function applyAiResult(
           ? JSON.parse(row.currentCustomFieldsJson)
           : [];
       } else {
-        let currentDoc;
         try {
-          currentDoc = await client.getDocument(row.paperlessId);
+          currentDoc = options.liveDocument ?? (await client.getDocument(row.paperlessId));
         } catch (err) {
           if (err instanceof PaperlessApiError && err.statusCode === 404) {
             const msg = `Document no longer exists in Paperless (paperlessId=${row.paperlessId})`;
@@ -167,20 +205,22 @@ export async function applyAiResult(
           }
           throw err;
         }
-        preApplyCorrespondent = currentDoc.correspondent
-          ? correspondents.find((c) => c.id === currentDoc.correspondent)
+        preApplyCorrespondent = currentDoc!.correspondent
+          ? correspondents.find((c) => c.id === currentDoc!.correspondent)
           : null;
-        preApplyDocType = currentDoc.documentType
-          ? documentTypes.find((dt) => dt.id === currentDoc.documentType)
+        preApplyDocType = currentDoc!.documentType
+          ? documentTypes.find((dt) => dt.id === currentDoc!.documentType)
           : null;
-        preApplyTagNames = currentDoc.tags
+        preApplyTagNames = currentDoc!.tags
           .map((tid) => tags.find((t) => t.id === tid)?.name)
           .filter((n): n is string => n !== undefined);
-        currentDocTagIds = currentDoc.tags;
-        currentCustomFields = currentDoc.customFields;
+        currentDocTagIds = currentDoc!.tags;
+        currentCustomFields = currentDoc!.customFields;
       }
 
       const update: DocumentUpdate = {};
+      let resolvedTagIds: number[] | null = null;
+      let protectedTagSet = new Set<string>();
 
       // Resolve title (simple string — no entity resolution needed)
       if (options.fields.includes('title')) {
@@ -242,10 +282,10 @@ export async function applyAiResult(
 
       // Resolve tags
       if (options.fields.includes('tags')) {
-        const resolvedTagIds: number[] = [];
+        resolvedTagIds = [];
 
         // Build protected tag set (case-insensitive)
-        const protectedTagSet = new Set(
+        protectedTagSet = new Set(
           options.protectedTagsEnabled && options.protectedTagNames
             ? options.protectedTagNames.map((n) => n.toLowerCase())
             : [],
@@ -269,20 +309,6 @@ export async function applyAiResult(
           resolvedTagIds.push(found.id);
         }
 
-        // Add ai-processed tag if configured
-        if (options.addProcessedTag && options.processedTagName) {
-          let processedTag = tags.find(
-            (t) => t.name.toLowerCase() === options.processedTagName!.toLowerCase(),
-          );
-          if (!processedTag) {
-            processedTag = await client.createTag(options.processedTagName);
-            logger.info({ name: options.processedTagName }, 'Created ai-processed tag');
-          }
-          if (!resolvedTagIds.includes(processedTag.id)) {
-            resolvedTagIds.push(processedTag.id);
-          }
-        }
-
         // Preserve protected tags already on the document
         if (protectedTagSet.size > 0) {
           for (const existingTagId of currentDocTagIds) {
@@ -302,11 +328,69 @@ export async function applyAiResult(
         // else: no tags resolved and allowClearing is false → leave untouched
       }
 
+      let processedTagId: number | null = null;
+      if (options.addProcessedTag && options.processedTagName) {
+        let processedTag = tags.find(
+          (tag) => tag.name.toLowerCase() === options.processedTagName!.toLowerCase(),
+        );
+        if (!processedTag) {
+          processedTag = await client.createTag(options.processedTagName);
+          tags.push(processedTag);
+          logger.info({ name: options.processedTagName }, 'Created ai-processed tag');
+        }
+        processedTagId = processedTag.id;
+      }
+
+      const finalLiveDocument = options.auditFields
+        ? await client.getDocument(row.paperlessId)
+        : currentDoc;
+      if (options.auditFields) {
+        if (!finalLiveDocument) {
+          throw new Error('A live Paperless document is required for reviewed apply');
+        }
+        const finalConflicts = options.revalidateLiveDocument?.(finalLiveDocument) ?? [];
+        if (finalConflicts.length > 0) throw new AiApplyConflictError(finalConflicts);
+        currentDocTagIds = finalLiveDocument.tags;
+        currentCustomFields = finalLiveDocument.customFields;
+        preApplyCorrespondent = finalLiveDocument.correspondent
+          ? correspondents.find((item) => item.id === finalLiveDocument.correspondent)
+          : null;
+        preApplyDocType = finalLiveDocument.documentType
+          ? documentTypes.find((item) => item.id === finalLiveDocument.documentType)
+          : null;
+        preApplyTagNames = finalLiveDocument.tags
+          .map((id) => tags.find((tag) => tag.id === id)?.name)
+          .filter((name): name is string => name !== undefined);
+      }
+
+      if (resolvedTagIds && finalLiveDocument) {
+        for (const existingTagId of finalLiveDocument.tags) {
+          const existingTag = tags.find((tag) => tag.id === existingTagId);
+          if (
+            existingTag &&
+            protectedTagSet.has(existingTag.name.toLowerCase()) &&
+            !resolvedTagIds.includes(existingTagId)
+          ) {
+            resolvedTagIds.push(existingTagId);
+          }
+        }
+        if (resolvedTagIds.length > 0 || options.allowClearing) update.tags = resolvedTagIds;
+        else delete update.tags;
+      }
+      const tagsBeforeProcessed = [...(update.tags ?? finalLiveDocument?.tags ?? currentDocTagIds)];
+      if (processedTagId !== null) {
+        const selectedTags = [...tagsBeforeProcessed];
+        if (!selectedTags.includes(processedTagId)) selectedTags.push(processedTagId);
+        update.tags = selectedTags;
+      }
+
       if (options.fields.includes('customFields') && suggestedCustomFields.length > 0) {
         const merged = currentCustomFields.map((instance) => ({ ...instance }));
         const indexes = new Map(merged.map((instance, index) => [instance.field, index]));
 
+        const approvedIds = options.customFieldIds ? new Set(options.customFieldIds) : null;
         for (const recommendation of suggestedCustomFields) {
+          if (approvedIds && !approvedIds.has(recommendation.fieldId)) continue;
           const instance = { field: recommendation.fieldId, value: recommendation.value };
           const index = indexes.get(recommendation.fieldId);
           if (index === undefined) {
@@ -320,36 +404,149 @@ export async function applyAiResult(
         update.customFields = merged;
       }
 
-      // Apply to Paperless-NGX
-      await client.updateDocument(row.paperlessId, update);
-      logger.info(
-        { paperlessId: row.paperlessId, fields: options.fields },
-        'Applied AI suggestions to document',
-      );
+      let exactAuditFields = [...(options.auditFields ?? options.fields)];
+      let tagAudit: AppliedTagAudit | null = null;
+      if (options.auditFields) {
+        if (!finalLiveDocument) throw new Error('Reviewed apply lost its live document');
+        const actual = new Set<string>();
+        if (
+          options.auditFields.includes('title') &&
+          update.title !== undefined &&
+          update.title !== finalLiveDocument.title
+        ) {
+          actual.add('title');
+        } else {
+          delete update.title;
+        }
+        if (
+          options.auditFields.includes('correspondent') &&
+          update.correspondent !== undefined &&
+          update.correspondent !== finalLiveDocument.correspondent
+        ) {
+          actual.add('correspondent');
+        } else {
+          delete update.correspondent;
+        }
+        if (
+          options.auditFields.includes('documentType') &&
+          update.documentType !== undefined &&
+          update.documentType !== finalLiveDocument.documentType
+        ) {
+          actual.add('documentType');
+        } else {
+          delete update.documentType;
+        }
+
+        const finalTagIds = update.tags ?? finalLiveDocument.tags;
+        const tagAdded = tagsBeforeProcessed.filter(
+          (id) =>
+            !finalLiveDocument.tags.includes(id) &&
+            !(options.auditFields!.includes('processedTag') && id === processedTagId),
+        );
+        const tagRemoved = finalLiveDocument.tags.filter((id) => !finalTagIds.includes(id));
+        const processedTagAdded =
+          processedTagId !== null &&
+          !finalLiveDocument.tags.includes(processedTagId) &&
+          finalTagIds.includes(processedTagId);
+        if (
+          options.auditFields.includes('tags') &&
+          (tagAdded.length > 0 || tagRemoved.length > 0)
+        ) {
+          actual.add('tags');
+        }
+        if (options.auditFields.includes('processedTag') && processedTagAdded) {
+          actual.add(`processedTag:${processedTagId}`);
+        }
+        if (
+          (options.auditFields.includes('tags') || options.auditFields.includes('processedTag')) &&
+          (tagAdded.length > 0 || tagRemoved.length > 0 || processedTagAdded)
+        ) {
+          tagAudit = {
+            after: [...finalTagIds],
+            tagAdded,
+            tagRemoved,
+            processedTagId,
+            processedTagAdded,
+          };
+        } else {
+          delete update.tags;
+        }
+
+        const changedCustomIds = new Set<number>();
+        for (const fieldName of options.auditFields) {
+          if (!fieldName.startsWith('customField:')) continue;
+          const fieldId = Number(fieldName.slice('customField:'.length));
+          if (
+            update.customFields &&
+            customValue(update.customFields, fieldId) !==
+              customValue(finalLiveDocument.customFields, fieldId)
+          ) {
+            actual.add(fieldName);
+            changedCustomIds.add(fieldId);
+          }
+        }
+        if (changedCustomIds.size === 0) delete update.customFields;
+        exactAuditFields = options.auditFields.flatMap((field) =>
+          field === 'processedTag'
+            ? [...actual].filter((actualField) => actualField.startsWith('processedTag:'))
+            : actual.has(field)
+              ? [field]
+              : [],
+        );
+      }
+
+      if (options.auditFields && Object.keys(update).length === 0) {
+        return {
+          appliedFields: [],
+          skippedFields: [...options.auditFields],
+          liveDocument: finalLiveDocument!,
+          update,
+        };
+      }
 
       // Build audit snapshot
+      const selectedCustomFieldIds = new Set(options.customFieldIds ?? []);
       const snapshot: ApplySnapshot = {
         preApply: {
-          title: row.currentTitle ?? null,
+          title: finalLiveDocument?.title ?? row.currentTitle ?? null,
           correspondentId: preApplyCorrespondent?.id ?? null,
           correspondentName: preApplyCorrespondent?.name ?? null,
           documentTypeId: preApplyDocType?.id ?? null,
           documentTypeName: preApplyDocType?.name ?? null,
           tagIds: currentDocTagIds.length > 0 ? currentDocTagIds : null,
           tagNames: preApplyTagNames.length > 0 ? preApplyTagNames : null,
-          customFields: currentCustomFields,
+          customFields: options.customFieldIds
+            ? currentCustomFields.filter((field) => selectedCustomFieldIds.has(field.field))
+            : currentCustomFields,
         },
         applied: {
           title: update.title ?? null,
           correspondentId: update.correspondent !== undefined ? update.correspondent : null,
           documentTypeId: update.documentType !== undefined ? update.documentType : null,
           tagIds: update.tags ?? null,
-          customFields: update.customFields ?? null,
+          tagAudit,
+          customFields: options.customFieldIds
+            ? (update.customFields?.filter((field) => selectedCustomFieldIds.has(field.field)) ??
+              null)
+            : (update.customFields ?? null),
         },
       };
 
+      if (options.auditFields) {
+        markAiResultApplyStarted(db, resultId, exactAuditFields, snapshot);
+        options.afterIntentPersisted?.();
+      }
+
+      // Apply to Paperless-NGX
+      await client.updateDocument(row.paperlessId, update);
+      options.afterRemoteMutation?.();
+      logger.info(
+        { paperlessId: row.paperlessId, fields: options.fields },
+        'Applied AI suggestions to document',
+      );
+
       // Update DB status
-      markAiResultApplied(db, resultId, options.fields, snapshot);
+      markAiResultApplied(db, resultId, exactAuditFields, snapshot);
 
       // Sync applied values back to the local document table so re-running
       // AI processing uses the updated metadata instead of stale values
@@ -391,6 +588,20 @@ export async function applyAiResult(
       }
 
       aiApplyTotal().add(1, { status: 'applied' });
+      if (!options.auditFields) return;
+      return {
+        appliedFields: exactAuditFields,
+        skippedFields: (options.auditFields ?? []).filter(
+          (field) =>
+            !exactAuditFields.includes(field) &&
+            !(
+              field === 'processedTag' &&
+              exactAuditFields.some((actual) => actual.startsWith('processedTag:'))
+            ),
+        ),
+        liveDocument: finalLiveDocument!,
+        update,
+      };
     },
   );
 }

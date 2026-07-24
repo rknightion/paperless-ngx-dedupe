@@ -7,6 +7,7 @@ import { migrateDatabase } from '../../db/migrate.js';
 import { DEFAULT_DEDUP_CONFIG } from '../../dedup/types.js';
 import { getDedupConfig, setDedupConfig } from '../../dedup/config.js';
 import { getConfig, setConfig } from '../../queries/config.js';
+import { replaceCustomFieldPolicy } from '../../ai/custom-field-policy.js';
 import { exportConfig, importConfig, previewConfigImport } from '../config.js';
 
 let db: AppDatabase;
@@ -28,6 +29,22 @@ function backup(appConfig: Record<string, unknown> = {}) {
   };
 }
 
+function seedCustomFieldPolicy(): void {
+  replaceCustomFieldPolicy(
+    db,
+    [{ fieldId: 7 }],
+    [
+      {
+        id: 7,
+        name: 'Reference',
+        dataType: 'string',
+        extraData: { selectOptions: [] },
+        documentCount: 0,
+      },
+    ],
+  );
+}
+
 describe('exportConfig', () => {
   it('exports only registered mutable keys and never stored secrets or internal state', () => {
     const now = new Date().toISOString();
@@ -44,6 +61,7 @@ describe('exportConfig', () => {
     ]) {
       insert.run(key, value, now);
     }
+    seedCustomFieldPolicy();
     setConfig(db, 'ai.model', 'gpt-5.4');
     setConfig(db, 'ai.extractCustomFields', true);
 
@@ -185,6 +203,7 @@ describe('previewConfigImport', () => {
 
 describe('importConfig', () => {
   it('imports a fully validated batch and dedup settings', () => {
+    seedCustomFieldPolicy();
     const result = importConfig(
       db,
       backup({
@@ -206,6 +225,23 @@ describe('importConfig', () => {
       'ai.batchSize': '50',
       'ai.extractCustomFields': 'true',
     });
+  });
+
+  it('rejects imported extraction enablement with an empty policy and rolls back all settings', () => {
+    setConfig(db, 'ai.model', 'gpt-5.4-mini');
+
+    expect(() =>
+      importConfig(
+        db,
+        backup({
+          'ai.model': 'gpt-5.4',
+          'ai.extractCustomFields': true,
+        }),
+      ),
+    ).toThrowError(expect.objectContaining({ code: 'empty_policy' }));
+
+    expect(getConfig(db)['ai.model']).toBe('gpt-5.4-mini');
+    expect(getConfig(db)).not.toHaveProperty('ai.extractCustomFields');
   });
 
   it('does not parse an unrelated schedule when no scheduled-AI migration is requested', () => {

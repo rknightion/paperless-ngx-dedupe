@@ -1,5 +1,7 @@
 import { test, expect } from './fixtures/test-app';
 import type { SeedResult } from './fixtures/seed-data';
+import Database from 'better-sqlite3';
+import { DB_PATH } from './fixtures/test-app';
 
 test.describe('Duplicate Detail Page', () => {
   let seed: SeedResult;
@@ -75,6 +77,29 @@ test.describe('Duplicate Detail Page', () => {
     await expect(page.getByRole('button', { name: 'Set as Primary' })).toBeVisible();
   });
 
+  test('selected primary persists after a reload', async ({ page }) => {
+    const groupId = seed.groupIds[0];
+    await page.goto(`/duplicates/${groupId}`);
+
+    const members = page.locator('table').first().locator('tbody tr');
+    const promotedTitle = (await members.nth(1).locator('td').first().textContent())?.trim();
+    await members.nth(1).getByRole('button', { name: 'Set as Primary' }).click();
+    const promotedRow = page
+      .locator('table')
+      .first()
+      .locator('tbody tr')
+      .filter({ hasText: promotedTitle ?? '' });
+    await expect(promotedRow.getByText('Primary', { exact: true })).toBeVisible();
+
+    await page.reload();
+    const reloadedPrimaryRow = page
+      .locator('table')
+      .first()
+      .locator('tbody tr')
+      .filter({ hasText: promotedTitle ?? '' });
+    await expect(reloadedPrimaryRow.getByText('Primary', { exact: true })).toBeVisible();
+  });
+
   test('document comparison section renders', async ({ page }) => {
     const groupId = seed.groupIds[0];
     await page.goto(`/duplicates/${groupId}`);
@@ -88,6 +113,29 @@ test.describe('Duplicate Detail Page', () => {
 
     // ConfidenceBreakdown heading
     await expect(page.getByText('Confidence Breakdown')).toBeVisible();
+  });
+
+  test('shows why documents matched and their key differences', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const db = new Database(DB_PATH);
+    db.prepare('UPDATE document_content SET normalized_text = ? WHERE document_id = ?').run(
+      'invoice number inv-2024-001 date 15/01/2024 total £1234.56 from lhr to jfk',
+      seed.documentIds[0],
+    );
+    db.prepare('UPDATE document_content SET normalized_text = ? WHERE document_id = ?').run(
+      'invoice number inv-2024-001 date 16/01/2024 total £1234.56 from jfk to lhr',
+      seed.documentIds[1],
+    );
+    db.close();
+
+    await page.goto(`/duplicates/${seed.groupIds[0]}`);
+
+    const explanation = page.getByRole('region', { name: 'Match explanation' });
+    await expect(explanation.getByRole('heading', { name: 'Why these matched' })).toBeVisible();
+    await expect(explanation.getByText('1234.56')).toBeVisible();
+    await expect(explanation.getByRole('heading', { name: 'Key differences' })).toBeVisible();
+    await expect(explanation.getByText('lhr → jfk')).toBeVisible();
+    await expect(explanation.getByText('jfk → lhr')).toBeVisible();
   });
 
   test('404 for non-existent group', async ({ page }) => {

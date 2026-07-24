@@ -6,6 +6,7 @@ import type { job } from './sqlite/jobs.js';
 import type { appConfig, syncState } from './sqlite/app.js';
 import type { aiProcessingResult } from './sqlite/ai-processing.js';
 import type { aiResultRevision } from './sqlite/ai-result-revisions.js';
+import type { aiCustomFieldPolicy } from './sqlite/ai-custom-field-policy.js';
 import type {
   aiBudgetReservation,
   automationSchedule,
@@ -30,6 +31,7 @@ export type AppConfigRow = InferSelectModel<typeof appConfig>;
 export type SyncState = InferSelectModel<typeof syncState>;
 export type AiProcessingResult = InferSelectModel<typeof aiProcessingResult>;
 export type AiResultRevision = InferSelectModel<typeof aiResultRevision>;
+export type AiCustomFieldPolicy = InferSelectModel<typeof aiCustomFieldPolicy>;
 export type AutomationScheduleRow = InferSelectModel<typeof automationSchedule>;
 export type DispatchIntent = InferSelectModel<typeof dispatchIntent>;
 export type OperationLease = InferSelectModel<typeof operationLease>;
@@ -54,6 +56,7 @@ export type NewAppConfigRow = InferInsertModel<typeof appConfig>;
 export type NewSyncState = InferInsertModel<typeof syncState>;
 export type NewAiProcessingResult = InferInsertModel<typeof aiProcessingResult>;
 export type NewAiResultRevision = InferInsertModel<typeof aiResultRevision>;
+export type NewAiCustomFieldPolicy = InferInsertModel<typeof aiCustomFieldPolicy>;
 export type NewAutomationScheduleRow = InferInsertModel<typeof automationSchedule>;
 export type NewDispatchIntent = InferInsertModel<typeof dispatchIntent>;
 export type NewOperationLease = InferInsertModel<typeof operationLease>;

@@ -79,6 +79,12 @@
         return parts.length > 0 ? parts.join(', ') : 'No results to apply';
       }
 
+      if (type === 'custom_field_discovery') {
+        const candidates = Number(result.candidates ?? 0);
+        const documents = Number(result.documentsScanned ?? 0);
+        return `${candidates} candidate${candidates === 1 ? '' : 's'} from ${documents.toLocaleString()} documents`;
+      }
+
       return null;
     } catch {
       return null;
@@ -139,6 +145,8 @@
     batch_operation: 'Batch Delete',
     ai_processing: 'AI Processing',
     ai_apply: 'AI Apply',
+    ai_revert: 'AI Revert',
+    custom_field_discovery: 'Custom Field Discovery',
   };
 </script>
 

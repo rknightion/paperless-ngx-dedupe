@@ -12,6 +12,7 @@ import type { PaperlessClient } from '../../paperless/client.js';
 import { DEFAULT_AI_CONFIG } from '../types.js';
 import type { AiConfig } from '../types.js';
 import { AiBudgetExceededError, UnknownAiModelPricingError } from '../budget.js';
+import { replaceCustomFieldPolicy } from '../custom-field-policy.js';
 
 vi.mock('../../telemetry/spans.js', () => ({
   withSpan: vi
@@ -73,6 +74,7 @@ function createMockClient(includeData = true): PaperlessClient {
       .mockResolvedValue(
         includeData ? [{ id: 1, name: 'finance', slug: 'finance', color: '#000' }] : [],
       ),
+    getCustomFields: vi.fn().mockResolvedValue([]),
   } as unknown as PaperlessClient;
 }
 
@@ -146,6 +148,170 @@ describe('processBatch', () => {
     expect(succeeded).toHaveLength(2);
     expect(skipped).toHaveLength(1);
     expect(skipped[0].failureType).toBe('no_content');
+  });
+
+  it('fails before an AI request when custom-field extraction has no allowlist', async () => {
+    seedDocs(db);
+    const provider = createMockProvider();
+    const client = createMockClient();
+
+    await expect(
+      processBatch(db, {
+        provider,
+        client,
+        config: { ...config, extractCustomFields: true },
+      }),
+    ).rejects.toMatchObject({ code: 'empty_policy' });
+
+    expect(provider.extract).not.toHaveBeenCalled();
+  });
+
+  it('snapshots the selected live fields once and prompts in numeric ID order', async () => {
+    seedDocs(db);
+    replaceCustomFieldPolicy(
+      db,
+      [{ fieldId: 9, guidance: 'Use the final amount due.' }, { fieldId: 2 }],
+      [
+        {
+          id: 9,
+          name: 'Amount',
+          dataType: 'monetary',
+          extraData: { selectOptions: [], defaultCurrency: 'GBP' },
+          documentCount: 1,
+        },
+        {
+          id: 2,
+          name: 'Due date',
+          dataType: 'date',
+          extraData: { selectOptions: [] },
+          documentCount: 1,
+        },
+        {
+          id: 4,
+          name: 'Not selected',
+          dataType: 'string',
+          extraData: { selectOptions: [] },
+          documentCount: 1,
+        },
+      ],
+    );
+    const client = createMockClient();
+    vi.mocked(client.getCustomFields).mockResolvedValue([
+      {
+        id: 4,
+        name: 'Not selected',
+        dataType: 'string',
+        extraData: { selectOptions: [] },
+        documentCount: 1,
+      },
+      {
+        id: 9,
+        name: 'Amount',
+        dataType: 'monetary',
+        extraData: { selectOptions: [], defaultCurrency: 'GBP' },
+        documentCount: 1,
+      },
+      {
+        id: 2,
+        name: 'Due date',
+        dataType: 'date',
+        extraData: { selectOptions: [] },
+        documentCount: 1,
+      },
+    ]);
+    const provider = createMockProvider();
+
+    await processBatch(db, {
+      provider,
+      client,
+      config: { ...config, extractCustomFields: true },
+    });
+
+    expect(client.getCustomFields).toHaveBeenCalledTimes(1);
+    expect(provider.extract).toHaveBeenCalledTimes(2);
+    const prompt = vi.mocked(provider.extract).mock.calls[0][0].systemPrompt;
+    expect(prompt.indexOf('"id": 2')).toBeLessThan(prompt.indexOf('"id": 9'));
+    expect(prompt).not.toContain('Not selected');
+    expect(prompt).toContain('Use the final amount due.');
+  });
+
+  it('fails on a stale custom-field snapshot before an AI request', async () => {
+    seedDocs(db);
+    replaceCustomFieldPolicy(
+      db,
+      [{ fieldId: 2 }],
+      [
+        {
+          id: 2,
+          name: 'Due date',
+          dataType: 'date',
+          extraData: { selectOptions: [] },
+          documentCount: 1,
+        },
+      ],
+    );
+    const client = createMockClient();
+    vi.mocked(client.getCustomFields).mockResolvedValue([
+      {
+        id: 2,
+        name: 'Payment date',
+        dataType: 'date',
+        extraData: { selectOptions: [] },
+        documentCount: 1,
+      },
+    ]);
+    const provider = createMockProvider();
+
+    await expect(
+      processBatch(db, {
+        provider,
+        client,
+        config: { ...config, extractCustomFields: true },
+      }),
+    ).rejects.toMatchObject({ code: 'renamed_field' });
+
+    expect(provider.extract).not.toHaveBeenCalled();
+  });
+
+  it('fails mutable live option growth before batch budget or provider calls', async () => {
+    seedDocs(db);
+    const saved = {
+      id: 2,
+      name: 'Status',
+      dataType: 'select' as const,
+      extraData: { selectOptions: [{ id: 'open', label: 'Open' }] },
+      documentCount: 1,
+    };
+    replaceCustomFieldPolicy(db, [{ fieldId: 2 }], [saved]);
+    const client = createMockClient();
+    vi.mocked(client.getCustomFields).mockResolvedValue([
+      {
+        ...saved,
+        extraData: {
+          selectOptions: Array.from({ length: 100 }, (_, index) => ({
+            id: `option-${index}-${'x'.repeat(200)}`,
+            label: `Label ${index} ${'y'.repeat(200)}`,
+          })),
+        },
+      },
+    ]);
+    const provider = createMockProvider();
+    const requestBudget = {
+      reserve: vi.fn(),
+      reconcile: vi.fn(),
+    };
+
+    await expect(
+      processBatch(db, {
+        provider,
+        client,
+        config: { ...config, extractCustomFields: true },
+        requestBudget,
+      }),
+    ).rejects.toMatchObject({ code: 'prompt_too_large' });
+
+    expect(requestBudget.reserve).not.toHaveBeenCalled();
+    expect(provider.extract).not.toHaveBeenCalled();
   });
 
   it('skips documents without content (result.skipped incremented)', async () => {

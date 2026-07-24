@@ -4,6 +4,7 @@ import { appConfig } from '../schema/sqlite/app.js';
 import type { AppDatabase } from '../db/client.js';
 import { aiConfigSchema, AI_CONFIG_PREFIX, DEFAULT_AI_CONFIG } from './types.js';
 import type { AiConfig } from './types.js';
+import { assertCustomFieldPolicyInvariant } from './custom-field-policy.js';
 
 function parseConfigValue(key: string, value: string): unknown {
   const shortKey = key.replace(AI_CONFIG_PREFIX, '');
@@ -71,7 +72,6 @@ export function setAiConfig(db: AppDatabase, config: Partial<AiConfig>): AiConfi
   const existing = getAiConfig(db);
   const merged = { ...existing, ...config };
   const validated = aiConfigSchema.parse(merged) as AiConfig;
-
   const now = new Date().toISOString();
 
   db.transaction((tx) => {
@@ -93,6 +93,7 @@ export function setAiConfig(db: AppDatabase, config: Partial<AiConfig>): AiConfi
         })
         .run();
     }
+    assertCustomFieldPolicyInvariant(tx as unknown as AppDatabase);
   });
 
   return validated;

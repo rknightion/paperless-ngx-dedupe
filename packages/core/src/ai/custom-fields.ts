@@ -14,15 +14,21 @@ function normalizeValue(
   if (value === null || field.dataType === 'documentlink') return undefined;
 
   switch (field.dataType) {
-    case 'string':
-      return typeof value === 'string' && value.length <= 128 ? value : undefined;
-    case 'longtext':
-      return typeof value === 'string' ? value : undefined;
+    case 'string': {
+      if (typeof value !== 'string') return undefined;
+      const normalized = value.trim();
+      return normalized.length > 0 && normalized.length <= 128 ? normalized : undefined;
+    }
+    case 'longtext': {
+      if (typeof value !== 'string') return undefined;
+      const normalized = value.trim();
+      return normalized.length > 0 ? normalized : undefined;
+    }
     case 'url':
       if (typeof value !== 'string') return undefined;
       try {
-        new URL(value);
-        return value;
+        const parsed = new URL(value);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? value : undefined;
       } catch {
         return undefined;
       }
@@ -40,17 +46,18 @@ function normalizeValue(
     case 'float':
       return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
     case 'monetary':
-      return (typeof value === 'number' && Number.isFinite(value)) ||
-        (typeof value === 'string' && /^(?:[A-Z]{3})?-?\d+(?:\.\d{1,2})?$/.test(value))
+      return typeof value === 'string' && /^(?:[A-Z]{3})?-?\d+(?:\.\d{1,2})?$/.test(value)
         ? value
         : undefined;
     case 'select': {
       if (typeof value !== 'string') return undefined;
-      const option = field.extraData.selectOptions.find(
-        (candidate) =>
-          candidate.id === value || candidate.label.toLowerCase() === value.toLowerCase(),
+      const exactId = field.extraData.selectOptions.find((candidate) => candidate.id === value);
+      if (exactId) return exactId.id;
+      const normalizedLabel = value.normalize('NFC').toLowerCase();
+      const labelMatches = field.extraData.selectOptions.filter(
+        (candidate) => candidate.label.normalize('NFC').toLowerCase() === normalizedLabel,
       );
-      return option?.id;
+      return labelMatches.length === 1 ? labelMatches[0].id : undefined;
     }
   }
 }
@@ -77,7 +84,7 @@ export function normalizeCustomFieldRecommendations(
       fieldName: field.name,
       value,
       confidence: Math.min(1, Math.max(0, recommendation.confidence)),
-      evidence: recommendation.evidence.slice(0, 500),
+      evidence: recommendation.evidence.replace(/\s+/g, ' ').trim().slice(0, 500),
     });
   }
 

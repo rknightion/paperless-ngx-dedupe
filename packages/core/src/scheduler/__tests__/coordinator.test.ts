@@ -10,6 +10,7 @@ import {
   completeJob,
   createJob,
   failJob,
+  getJob,
   recoverStaleJobs,
   retryDeadLetterJob,
 } from '../../jobs/manager.js';
@@ -27,79 +28,27 @@ import {
 
 describe('schedule coordinator compatibility', () => {
   it('freezes the cross-operation compatibility matrix symmetrically', () => {
+    const exclusive = {
+      sync: false,
+      analysis: false,
+      duplicate_delete: false,
+      ai_processing: false,
+      ai_apply: false,
+      ai_revert: false,
+      custom_field_discovery: false,
+      backup: true,
+      checkpoint: true,
+      vacuum: false,
+      job_cleanup: true,
+    } as const;
     const expected = {
-      sync: {
-        sync: false,
-        analysis: false,
-        duplicate_delete: false,
-        ai_processing: false,
-        ai_apply: false,
-        ai_revert: false,
-        backup: true,
-        checkpoint: true,
-        vacuum: false,
-        job_cleanup: true,
-      },
-      analysis: {
-        sync: false,
-        analysis: false,
-        duplicate_delete: false,
-        ai_processing: false,
-        ai_apply: false,
-        ai_revert: false,
-        backup: true,
-        checkpoint: true,
-        vacuum: false,
-        job_cleanup: true,
-      },
-      duplicate_delete: {
-        sync: false,
-        analysis: false,
-        duplicate_delete: false,
-        ai_processing: false,
-        ai_apply: false,
-        ai_revert: false,
-        backup: true,
-        checkpoint: true,
-        vacuum: false,
-        job_cleanup: true,
-      },
-      ai_processing: {
-        sync: false,
-        analysis: false,
-        duplicate_delete: false,
-        ai_processing: false,
-        ai_apply: false,
-        ai_revert: false,
-        backup: true,
-        checkpoint: true,
-        vacuum: false,
-        job_cleanup: true,
-      },
-      ai_apply: {
-        sync: false,
-        analysis: false,
-        duplicate_delete: false,
-        ai_processing: false,
-        ai_apply: false,
-        ai_revert: false,
-        backup: true,
-        checkpoint: true,
-        vacuum: false,
-        job_cleanup: true,
-      },
-      ai_revert: {
-        sync: false,
-        analysis: false,
-        duplicate_delete: false,
-        ai_processing: false,
-        ai_apply: false,
-        ai_revert: false,
-        backup: true,
-        checkpoint: true,
-        vacuum: false,
-        job_cleanup: true,
-      },
+      sync: exclusive,
+      analysis: exclusive,
+      duplicate_delete: exclusive,
+      ai_processing: exclusive,
+      ai_apply: exclusive,
+      ai_revert: exclusive,
+      custom_field_discovery: exclusive,
       backup: {
         sync: true,
         analysis: true,
@@ -107,6 +56,7 @@ describe('schedule coordinator compatibility', () => {
         ai_processing: true,
         ai_apply: true,
         ai_revert: true,
+        custom_field_discovery: true,
         backup: false,
         checkpoint: true,
         vacuum: false,
@@ -119,6 +69,7 @@ describe('schedule coordinator compatibility', () => {
         ai_processing: true,
         ai_apply: true,
         ai_revert: true,
+        custom_field_discovery: true,
         backup: true,
         checkpoint: false,
         vacuum: false,
@@ -131,6 +82,7 @@ describe('schedule coordinator compatibility', () => {
         ai_processing: false,
         ai_apply: false,
         ai_revert: false,
+        custom_field_discovery: false,
         backup: false,
         checkpoint: false,
         vacuum: false,
@@ -143,6 +95,7 @@ describe('schedule coordinator compatibility', () => {
         ai_processing: true,
         ai_apply: true,
         ai_revert: true,
+        custom_field_discovery: true,
         backup: true,
         checkpoint: true,
         vacuum: false,
@@ -219,6 +172,16 @@ describe('schedule coordinator durable claims', () => {
       );
   }
 
+  function expectPublicHistoryKey(jobId: string): void {
+    expect(
+      sqlite
+        .prepare('SELECT public_history_key AS publicHistoryKey FROM job WHERE id = ?')
+        .get(jobId),
+    ).toEqual({
+      publicHistoryKey: expect.stringMatching(/^[A-Za-z0-9_-]{32}$/),
+    });
+  }
+
   it('claims one due occurrence into one durable pending job', () => {
     const now = new Date('2026-07-23T12:00:00.000Z');
     sqlite
@@ -247,6 +210,7 @@ describe('schedule coordinator durable claims', () => {
       dueAt: now.toISOString(),
       status: 'pending',
     });
+    expectPublicHistoryKey(intents[0].jobId!);
     expect(sqlite.prepare('SELECT count(*) AS count FROM job').get()).toEqual({ count: 1 });
     expect(
       sqlite
@@ -274,6 +238,7 @@ describe('schedule coordinator durable claims', () => {
       );
 
     const manual = enqueueManualOperation(sqlite, 'sync', { kind: 'manual' });
+    expectPublicHistoryKey(manual.jobId!);
     expect(enqueueDueSchedules(sqlite, now)).toEqual([]);
     expect(enqueueDueSchedules(sqlite, now)).toEqual([]);
     expect(sqlite.prepare('SELECT count(*) AS count FROM dispatch_intent').get()).toEqual({
@@ -640,6 +605,7 @@ describe('schedule coordinator durable claims', () => {
         rootDueAt: now.toISOString(),
       }),
     ]);
+    expectPublicHistoryKey(dependencies[0].jobId!);
     expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:00:02.000Z'))).toEqual([]);
   });
 
@@ -856,7 +822,8 @@ describe('schedule coordinator durable claims', () => {
     const [syncIntent] = enqueueDueSchedules(sqlite, now);
     tagDurablyChangedDocument(syncIntent.jobId!, now);
     completeJob(db, syncIntent.jobId!, { inserted: 1, updated: 0 });
-    expect(clearJobHistory(db)).toBe(1);
+    expect(clearJobHistory(db)).toBe(0);
+    expect(getJob(db, syncIntent.jobId!)).not.toBeNull();
 
     expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:00:01.000Z'))).toEqual([
       expect.objectContaining({

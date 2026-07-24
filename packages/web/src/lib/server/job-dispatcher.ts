@@ -32,6 +32,10 @@ const WORKER_BY_TASK = {
   sync: 'sync-worker',
   analysis: 'analysis-worker',
   ai_processing: 'ai-processing-worker',
+  ai_apply: 'ai-apply-worker',
+  ai_revert: 'ai-revert-worker',
+  custom_field_discovery: 'custom-field-discovery-worker',
+  duplicate_delete: 'batch-worker',
 } as const satisfies Record<string, WorkerName>;
 
 interface WorkerPathOptions {

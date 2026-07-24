@@ -1,6 +1,7 @@
 import { and, count, desc, asc, eq, gte, lt, lte, or, sql, inArray, ne } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
+import { buildMatchExplanation } from '../dedup/explanations.js';
 import type { GroupStatus } from '../types/enums.js';
 
 // ── Errors ───────────────────────────────────────────────────────────────
@@ -354,14 +355,23 @@ function fetchGroupWithMembers(
     .from(duplicateMember)
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
     .where(eq(duplicateMember.groupId, id))
+    .orderBy(
+      desc(duplicateMember.isPrimary),
+      asc(duplicateMember.documentId),
+      asc(duplicateMember.id),
+    )
     .all();
 
   const memberDocIds = memberRows.map((m) => m.documentId);
 
-  type ContentRow = { documentId: string; fullText: string | null; wordCount: number | null };
-  type LightContentRow = { documentId: string; wordCount: number | null };
+  type ContentRow = {
+    documentId: string;
+    fullText: string | null;
+    normalizedText: string | null;
+    wordCount: number | null;
+  };
 
-  let contentMap: Map<string, ContentRow | LightContentRow>;
+  let contentMap: Map<string, ContentRow>;
   if (memberDocIds.length === 0) {
     contentMap = new Map();
   } else if (opts.includeFullText) {
@@ -373,7 +383,14 @@ function fetchGroupWithMembers(
     contentMap = new Map(rows.map((c) => [c.documentId, c]));
   } else {
     const rows = db
-      .select({ documentId: documentContent.documentId, wordCount: documentContent.wordCount })
+      .select({
+        documentId: documentContent.documentId,
+        fullText: sql<string | null>`NULL`,
+        normalizedText: sql<
+          string | null
+        >`COALESCE(${documentContent.normalizedText}, ${documentContent.fullText})`,
+        wordCount: documentContent.wordCount,
+      })
       .from(documentContent)
       .where(inArray(documentContent.documentId, memberDocIds))
       .all();
@@ -394,12 +411,26 @@ function fetchGroupWithMembers(
       createdDate: m.createdDate,
       content: content
         ? {
-            fullText: 'fullText' in content ? (content.fullText as string | null) : null,
+            fullText: opts.includeFullText ? content.fullText : null,
             wordCount: content.wordCount,
           }
         : null,
     };
   });
+  const primaryDocumentId =
+    memberRows.find((member) => member.isPrimary)?.documentId ?? memberRows[0]?.documentId;
+  const matchExplanation = primaryDocumentId
+    ? buildMatchExplanation(
+        memberRows.map((member) => {
+          const content = contentMap.get(member.documentId);
+          return {
+            documentId: member.documentId,
+            text: content?.normalizedText ?? content?.fullText ?? null,
+          };
+        }),
+        primaryDocumentId,
+      )
+    : null;
 
   return {
     id: group.id,
@@ -415,6 +446,7 @@ function fetchGroupWithMembers(
     createdAt: group.createdAt,
     updatedAt: group.updatedAt,
     members,
+    matchExplanation,
   };
 }
 

@@ -101,8 +101,7 @@ test.describe('Duplicates Extended API', () => {
     const body = await response.json();
     expect(body.error).toBeDefined();
     expect(body.error.code).toBe('VALIDATION_FAILED');
-    expect(body.error.message).toContain('docA');
-    expect(body.error.message).toContain('docB');
+    expect(body.error.message).toBe('Validation failed');
   });
 
   test('GET /api/v1/duplicates/:id/content rejects non-member documents', async ({ request }) => {
@@ -120,7 +119,7 @@ test.describe('Duplicates Extended API', () => {
     const body = await response.json();
     expect(body.error).toBeDefined();
     expect(body.error.code).toBe('VALIDATION_FAILED');
-    expect(body.error.message).toContain('not members');
+    expect(body.error.message).toBe('Validation failed');
   });
 
   test('GET /api/v1/duplicates/stats returns duplicate statistics', async ({ request }) => {

@@ -26,7 +26,7 @@
 
   function toggleSelectAll() {
     if (allSelected) {
-      clearSelection();
+      clearSelection(results.map((result) => result.id));
     } else {
       selectAllIds(results.map((r) => r.id));
     }
@@ -53,6 +53,7 @@
               type="checkbox"
               checked={allSelected}
               onchange={toggleSelectAll}
+              aria-label="Select all visible AI results"
               class="rounded"
             />
           </th>

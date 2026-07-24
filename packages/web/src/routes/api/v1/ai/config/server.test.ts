@@ -2,12 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 const mocks = vi.hoisted(() => ({
+  PolicyError: class extends Error {
+    code = 'empty_policy' as const;
+  },
   getAiConfig: vi.fn(),
   setAiConfig: vi.fn(),
   validateTagAliasYaml: vi.fn(() => ({ valid: true })),
 }));
 
 vi.mock('@paperless-dedupe/core', () => ({
+  CustomFieldPolicyError: mocks.PolicyError,
   aiConfigSchema: z.object({ model: z.string() }).strict(),
   getAiConfig: mocks.getAiConfig,
   setAiConfig: mocks.setAiConfig,
@@ -45,5 +49,19 @@ describe('AI config API JSON boundary', () => {
 
     expect(response.status).toBe(400);
     expect(mocks.setAiConfig).not.toHaveBeenCalled();
+  });
+
+  it('maps custom-field policy failures to a typed safe validation response', async () => {
+    mocks.setAiConfig.mockImplementation(() => {
+      throw new mocks.PolicyError('private policy detail');
+    });
+
+    const response = await PUT({
+      request: jsonRequest('{"model":"gpt-5.4"}'),
+      locals: { config: { AI_ENABLED: true }, db: {} },
+    } as never);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: { code: 'VALIDATION_FAILED' } });
   });
 });

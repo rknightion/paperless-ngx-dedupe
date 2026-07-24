@@ -1,81 +1,74 @@
-import { getAiResults, getAiResultGroups, getAiConfig } from '@paperless-dedupe/core';
-import type { GroupByField } from '@paperless-dedupe/core';
+import { listAiReviewInbox, getAiConfig } from '@paperless-dedupe/core';
+import { safeDocumentReturnTarget } from '$lib/utils/safe-return';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const aiConfig = getAiConfig(locals.db);
-  const status = url.searchParams.get('status') || undefined;
-  const search = url.searchParams.get('search') || undefined;
-  const sort =
-    (url.searchParams.get('sort') as
-      'newest' | 'oldest' | 'confidence_asc' | 'confidence_desc' | null) || undefined;
+  const requestedQueue = url.searchParams.get('queue');
+  const queue =
+    requestedQueue === 'failures' || requestedQueue === 'history' ? requestedQueue : 'review';
+  const search = url.searchParams.get('search')?.trim() || undefined;
   const changedOnly = url.searchParams.get('changedOnly') === 'true' || undefined;
-  const failed = url.searchParams.get('failed') === 'true' || undefined;
-  const minConfidence = url.searchParams.has('minConfidence')
-    ? parseFloat(url.searchParams.get('minConfidence')!)
-    : undefined;
-  const maxConfidence = url.searchParams.has('maxConfidence')
-    ? parseFloat(url.searchParams.get('maxConfidence')!)
-    : undefined;
   const provider = url.searchParams.get('provider') || undefined;
   const model = url.searchParams.get('model') || undefined;
-  const groupByParam = url.searchParams.get('groupBy') || undefined;
-  const validGroupByFields: GroupByField[] = [
-    'suggestedCorrespondent',
-    'suggestedDocumentType',
-    'confidenceBand',
-    'failureType',
-  ];
-  const groupBy = validGroupByFields.includes(groupByParam as GroupByField)
-    ? (groupByParam as GroupByField)
-    : undefined;
+  const documentId = url.searchParams.get('documentId')?.trim() || undefined;
+  const returnTo = safeDocumentReturnTarget(url.searchParams.get('returnTo'));
+  const requestedFailureCategory = url.searchParams.get('failureCategory');
+  const failureCategory =
+    requestedFailureCategory === 'temporary' ||
+    requestedFailureCategory === 'no_content' ||
+    requestedFailureCategory === 'extraction' ||
+    requestedFailureCategory === 'configuration'
+      ? requestedFailureCategory
+      : undefined;
   const limit = Math.min(
     Math.max(parseInt(url.searchParams.get('limit') ?? '20', 10) || 20, 1),
     100,
   );
-  const offset = Math.max(parseInt(url.searchParams.get('offset') ?? '0', 10) || 0, 0);
-
-  const results = getAiResults(
-    locals.db,
-    { status, search, sort, changedOnly, failed, minConfidence, maxConfidence, provider, model },
+  const cursor = url.searchParams.get('cursor') || undefined;
+  const page = listAiReviewInbox(locals.db, {
+    queue,
     limit,
-    offset,
-  );
-  const filters = {
-    status,
+    cursor,
     search,
-    sort,
     changedOnly,
-    failed,
-    minConfidence,
-    maxConfidence,
     provider,
     model,
-  };
-  const groups = groupBy ? getAiResultGroups(locals.db, groupBy, filters) : null;
+    ...(documentId ? { documentId } : {}),
+    ...(failureCategory ? { failureCategory } : {}),
+  });
 
   return {
-    results: results.items,
-    total: results.total,
+    results: page.items,
+    total: page.total,
     limit,
-    offset,
-    status,
+    offset: 0,
+    queue,
+    cursor: cursor ?? null,
+    nextCursor: page.nextCursor,
+    previousCursor: page.previousCursor,
+    failureGroups: page.failureGroups,
+    status: queue === 'review' ? 'pending_review' : queue === 'failures' ? 'failed' : undefined,
     search,
-    sort,
-    groupBy: groupBy ?? null,
+    sort: 'confidence_desc' as const,
+    groupBy: null,
     changedOnly,
-    failed,
-    minConfidence,
-    maxConfidence,
+    failed: queue === 'failures',
+    minConfidence: undefined,
+    maxConfidence: undefined,
     provider: provider ?? null,
     model: model ?? null,
-    groups,
+    failureCategory: failureCategory ?? null,
+    documentId: documentId ?? null,
+    returnTo,
+    groups: null,
     extractEnabled: {
       title: aiConfig.extractTitle,
       correspondent: aiConfig.extractCorrespondent,
       documentType: aiConfig.extractDocumentType,
       tags: aiConfig.extractTags,
       customFields: aiConfig.extractCustomFields,
+      processedTag: aiConfig.addProcessedTag,
     },
   };
 };

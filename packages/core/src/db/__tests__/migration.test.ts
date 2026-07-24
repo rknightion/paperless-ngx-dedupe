@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { createDatabaseWithHandle } from '../client.js';
 import { migrateDatabase } from '../migrate.js';
 import { V015_RELEASE_FIXTURE_GZIP_BASE64 } from './fixtures/v0.15.0-release.js';
+import { documentLibraryAddedDateKeySql } from '../../queries/documents.js';
 
 const v015Fixture = gunzipSync(Buffer.from(V015_RELEASE_FIXTURE_GZIP_BASE64, 'base64')).toString(
   'utf8',
@@ -211,6 +212,108 @@ async function assertAutomationSchema(
 }
 
 describe('database migration fixtures', () => {
+  it('disables legacy custom-field extraction with an empty policy on current-hash databases', async () => {
+    const { sqlite } = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(sqlite);
+    sqlite
+      .prepare(
+        `INSERT INTO app_config (key, value, updated_at) VALUES (?, 'true', ?)
+         ON CONFLICT(key) DO UPDATE SET value = 'true'`,
+      )
+      .run('ai.extractCustomFields', '2026-07-24T00:00:00.000Z');
+
+    await migrateDatabase(sqlite);
+    await migrateDatabase(sqlite);
+
+    expect(
+      sqlite.prepare("SELECT value FROM app_config WHERE key = 'ai.extractCustomFields'").get(),
+    ).toEqual({ value: 'false' });
+  });
+
+  it('repairs a malformed current-hash custom-field policy table and preserves valid rows', async () => {
+    const current = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(current.sqlite);
+    await migrateDatabase(fresh.sqlite);
+    current.sqlite.exec(`
+      DROP TABLE ai_custom_field_policy;
+      CREATE TABLE ai_custom_field_policy (
+        field_id INTEGER,
+        field_name TEXT,
+        data_type TEXT,
+        guidance TEXT,
+        updated_at TEXT
+      );
+      INSERT INTO ai_custom_field_policy
+        (field_id, field_name, data_type, guidance, updated_at)
+      VALUES (7, 'Reference', 'string', NULL, '2026-07-24T00:00:00.000Z');
+      INSERT INTO app_config (key, value, updated_at)
+      VALUES ('ai.extractCustomFields', 'true', '2026-07-24T00:00:00.000Z')
+      ON CONFLICT(key) DO UPDATE SET value = 'true';
+    `);
+
+    await migrateDatabase(current.sqlite);
+    const repairedSignature = tableSignature(current.sqlite, 'ai_custom_field_policy');
+    expect(repairedSignature).toEqual(tableSignature(fresh.sqlite, 'ai_custom_field_policy'));
+    expect(current.sqlite.prepare('SELECT * FROM ai_custom_field_policy').all()).toEqual([
+      {
+        field_id: 7,
+        field_name: 'Reference',
+        data_type: 'string',
+        guidance: null,
+        updated_at: '2026-07-24T00:00:00.000Z',
+      },
+    ]);
+    expect(
+      current.sqlite
+        .prepare("SELECT value FROM app_config WHERE key = 'ai.extractCustomFields'")
+        .get(),
+    ).toEqual({ value: 'true' });
+
+    await migrateDatabase(current.sqlite);
+    expect(tableSignature(current.sqlite, 'ai_custom_field_policy')).toEqual(repairedSignature);
+  });
+
+  it('creates and repairs the exact document-library keyset index idempotently', async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(handle.sqlite);
+
+    const indexName = 'document_library_added_date_paperless_idx';
+    const indexSql = () =>
+      (
+        handle.sqlite
+          .prepare(`SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?`)
+          .get(indexName) as { sql: string } | undefined
+      )?.sql;
+    const expectedExpression = documentLibraryAddedDateKeySql.replaceAll('d.', '');
+
+    expect(indexSql()?.replace(/\s+/g, ' ')).toContain(
+      `${expectedExpression.replace(/\s+/g, ' ')} DESC, paperless_id DESC`,
+    );
+
+    // Simulate a current-version/current-hash database created immediately
+    // before this compatibility index shipped.
+    handle.sqlite.exec(`DROP INDEX ${indexName}`);
+    expect(indexSql()).toBeUndefined();
+    await migrateDatabase(handle.sqlite);
+    const repairedSql = indexSql();
+    expect(repairedSql).toBeTruthy();
+    await migrateDatabase(handle.sqlite);
+    expect(indexSql()).toBe(repairedSql);
+
+    const plan = handle.sqlite
+      .prepare(
+        `EXPLAIN QUERY PLAN
+         SELECT d.id
+         FROM document d
+         ORDER BY ${documentLibraryAddedDateKeySql} DESC, d.paperless_id DESC
+         LIMIT 101`,
+      )
+      .all() as { detail: string }[];
+    expect(plan.some(({ detail }) => detail.includes(`USING INDEX ${indexName}`))).toBe(true);
+    expect(plan.some(({ detail }) => detail.includes('USE TEMP B-TREE'))).toBe(false);
+  });
+
   it('migrates the content-free released v0.15.0 fixture twice without DDL/config drift', async () => {
     const { sqlite } = createDatabaseWithHandle(':memory:');
     sqlite.exec(v015Fixture);
@@ -431,6 +534,233 @@ describe('database migration fixtures', () => {
     expect(current.sqlite.prepare(`PRAGMA index_xinfo('idx_dg_inbox_order')`).all()).toEqual(
       inboxAfterFirstRepair,
     );
+  });
+
+  it('repairs missing and malformed current-hash job-history indexes exactly and idempotently', async () => {
+    const current = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(current.sqlite);
+    await migrateDatabase(fresh.sqlite);
+    const names = [
+      'job_history_order_idx',
+      'job_history_status_order_idx',
+      'job_history_type_order_idx',
+      'job_history_type_status_order_idx',
+    ] as const;
+
+    current.sqlite.exec(`
+      DROP INDEX job_history_order_idx;
+      DROP INDEX job_history_status_order_idx;
+      DROP INDEX job_history_type_order_idx;
+      CREATE INDEX job_history_type_order_idx
+        ON job(type, created_at ASC, id DESC) WHERE type = 'sync';
+      DROP INDEX job_history_type_status_order_idx;
+      CREATE UNIQUE INDEX job_history_type_status_order_idx
+        ON job(status, type, created_at DESC, id DESC);
+    `);
+
+    await migrateDatabase(current.sqlite);
+    for (const name of names) {
+      expect(current.sqlite.prepare(`PRAGMA index_xinfo('${name}')`).all()).toEqual(
+        fresh.sqlite.prepare(`PRAGMA index_xinfo('${name}')`).all(),
+      );
+    }
+    expect(current.sqlite.prepare(`PRAGMA index_list('job')`).all()).toEqual(
+      fresh.sqlite.prepare(`PRAGMA index_list('job')`).all(),
+    );
+
+    const repaired = names.map((name) =>
+      current.sqlite.prepare(`PRAGMA index_xinfo('${name}')`).all(),
+    );
+    await migrateDatabase(current.sqlite);
+    expect(
+      names.map((name) => current.sqlite.prepare(`PRAGMA index_xinfo('${name}')`).all()),
+    ).toEqual(repaired);
+  });
+
+  it('repairs a missing public history key column at the current schema hash', async () => {
+    const current = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(current.sqlite);
+    await migrateDatabase(fresh.sqlite);
+
+    const hasPublicKey = (
+      current.sqlite.prepare(`PRAGMA table_info('job')`).all() as { name: string }[]
+    ).some(({ name }) => name === 'public_history_key');
+    if (hasPublicKey) {
+      current.sqlite.exec(`
+        DROP INDEX IF EXISTS job_public_history_key_unique;
+        ALTER TABLE job DROP COLUMN public_history_key;
+      `);
+    }
+    current.sqlite
+      .prepare(
+        `INSERT INTO job (id, type, status, progress, attempt, created_at)
+         VALUES ('preserved-legacy-job', 'analysis', 'completed', 1, 0, ?)`,
+      )
+      .run('2026-07-23T12:00:00.000Z');
+
+    await migrateDatabase(current.sqlite);
+
+    const currentColumn = (
+      current.sqlite.prepare(`PRAGMA table_info('job')`).all() as {
+        name: string;
+        type: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[]
+    ).find(({ name }) => name === 'public_history_key');
+    const freshColumn = (
+      fresh.sqlite.prepare(`PRAGMA table_info('job')`).all() as {
+        name: string;
+        type: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[]
+    ).find(({ name }) => name === 'public_history_key');
+    expect(currentColumn).toEqual(freshColumn);
+    expect(
+      current.sqlite
+        .prepare(
+          `SELECT id, public_history_key AS publicHistoryKey
+           FROM job WHERE id = 'preserved-legacy-job'`,
+        )
+        .get(),
+    ).toEqual({
+      id: 'preserved-legacy-job',
+      publicHistoryKey: expect.stringMatching(/^[A-Za-z0-9_-]{32}$/),
+    });
+    expect(current.sqlite.prepare(`PRAGMA index_list('job')`).all()).toEqual(
+      fresh.sqlite.prepare(`PRAGMA index_list('job')`).all(),
+    );
+  });
+
+  it('atomically repairs invalid and duplicate public keys and a malformed unique index', async () => {
+    const current = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(current.sqlite);
+    await migrateDatabase(fresh.sqlite);
+    const columns = current.sqlite.prepare(`PRAGMA table_info('job')`).all() as { name: string }[];
+    if (!columns.some(({ name }) => name === 'public_history_key')) {
+      current.sqlite.exec('ALTER TABLE job ADD COLUMN public_history_key TEXT');
+    }
+    current.sqlite.exec('DROP INDEX IF EXISTS job_public_history_key_unique');
+    const insert = current.sqlite.prepare(
+      `INSERT INTO job (
+         id, type, status, progress, attempt, created_at, public_history_key
+       ) VALUES (?, 'analysis', 'completed', 1, 0, ?, ?)`,
+    );
+    const preservedKey = 'V'.repeat(32);
+    insert.run('valid-key-job', '2026-07-23T12:00:00.000Z', preservedKey);
+    insert.run('duplicate-key-job', '2026-07-23T12:00:01.000Z', preservedKey);
+    insert.run('empty-key-job', '2026-07-23T12:00:02.000Z', '');
+    insert.run('null-key-job', '2026-07-23T12:00:03.000Z', null);
+    current.sqlite.exec(`
+      CREATE INDEX job_public_history_key_unique
+        ON job(id) WHERE status = 'completed';
+    `);
+
+    await migrateDatabase(current.sqlite);
+
+    const rows = current.sqlite
+      .prepare(
+        `SELECT id, public_history_key AS publicHistoryKey
+         FROM job ORDER BY id`,
+      )
+      .all() as { id: string; publicHistoryKey: string }[];
+    expect(rows).toHaveLength(4);
+    expect(rows.find(({ id }) => id === 'valid-key-job')?.publicHistoryKey).toBe(preservedKey);
+    expect(new Set(rows.map(({ publicHistoryKey }) => publicHistoryKey))).toHaveLength(4);
+    expect(rows.every(({ publicHistoryKey }) => /^[A-Za-z0-9_-]{32}$/.test(publicHistoryKey))).toBe(
+      true,
+    );
+    expect(
+      current.sqlite.prepare(`PRAGMA index_xinfo('job_public_history_key_unique')`).all(),
+    ).toEqual(fresh.sqlite.prepare(`PRAGMA index_xinfo('job_public_history_key_unique')`).all());
+    expect(
+      (
+        current.sqlite.prepare(`PRAGMA index_list('job')`).all() as {
+          name: string;
+          unique: number;
+          partial: number;
+        }[]
+      ).find(({ name }) => name === 'job_public_history_key_unique'),
+    ).toEqual(expect.objectContaining({ unique: 1, partial: 0 }));
+
+    const afterRepair = rows;
+    await migrateDatabase(current.sqlite);
+    expect(
+      current.sqlite
+        .prepare(`SELECT id, public_history_key AS publicHistoryKey FROM job ORDER BY id`)
+        .all(),
+    ).toEqual(afterRepair);
+  });
+
+  it('rebuilds a malformed public history key column to the exact fresh signature', async () => {
+    const current = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(current.sqlite);
+    await migrateDatabase(fresh.sqlite);
+    const insert = current.sqlite.prepare(
+      `INSERT INTO job (
+         id, type, status, progress, attempt, created_at, public_history_key
+       ) VALUES (?, 'analysis', 'completed', 1, 0, ?, ?)`,
+    );
+    const firstKey = 'A'.repeat(32);
+    const secondKey = 'B'.repeat(32);
+    insert.run('preserved-first', '2026-07-23T12:00:00.000Z', firstKey);
+    insert.run('preserved-second', '2026-07-23T12:00:01.000Z', secondKey);
+
+    const canonicalSql = (
+      current.sqlite
+        .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'job'`)
+        .get() as { sql: string }
+    ).sql;
+    const malformedSql = canonicalSql.replace(
+      '`public_history_key` text',
+      '`public_history_key` INTEGER DEFAULT 7',
+    );
+    expect(malformedSql).not.toBe(canonicalSql);
+    const indexSql = (
+      current.sqlite
+        .prepare(
+          `SELECT sql FROM sqlite_master
+           WHERE type = 'index' AND tbl_name = 'job' AND sql IS NOT NULL
+           ORDER BY name`,
+        )
+        .all() as { sql: string }[]
+    ).map(({ sql }) => sql);
+    const columnNames = (
+      current.sqlite.prepare(`PRAGMA table_info('job')`).all() as { name: string }[]
+    )
+      .map(({ name }) => `"${name}"`)
+      .join(', ');
+    current.sqlite.exec(`
+      ALTER TABLE job RENAME TO malformed_job;
+      ${malformedSql};
+      INSERT INTO job (${columnNames}) SELECT ${columnNames} FROM malformed_job;
+      DROP TABLE malformed_job;
+      ${indexSql.join(';\n')};
+    `);
+
+    await migrateDatabase(current.sqlite);
+
+    expect(tableSignature(current.sqlite, 'job')).toEqual(tableSignature(fresh.sqlite, 'job'));
+    expect(
+      current.sqlite
+        .prepare(
+          `SELECT id, public_history_key AS publicHistoryKey
+           FROM job ORDER BY id`,
+        )
+        .all(),
+    ).toEqual([
+      { id: 'preserved-first', publicHistoryKey: firstKey },
+      { id: 'preserved-second', publicHistoryKey: secondKey },
+    ]);
+
+    const repaired = tableSignature(current.sqlite, 'job');
+    await migrateDatabase(current.sqlite);
+    expect(tableSignature(current.sqlite, 'job')).toEqual(repaired);
   });
 
   it('migrates an empty database twice', async () => {

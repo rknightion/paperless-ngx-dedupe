@@ -12,6 +12,7 @@ import type { AiConfig } from './types.js';
 import { createLogger } from '../logger.js';
 import { normalizeCustomFieldRecommendations } from './custom-fields.js';
 import { replaceAiResultWithRevision } from './history.js';
+import { resolveCustomFieldPolicy } from './custom-field-policy.js';
 
 const logger = createLogger('ai-reprocess');
 
@@ -84,7 +85,9 @@ export async function reprocessSingleResult(
     config.includeTags
       ? client.getTags().then((list) => list.map((t) => t.name))
       : Promise.resolve([] as string[]),
-    config.extractCustomFields ? client.getCustomFields() : Promise.resolve([]),
+    config.extractCustomFields
+      ? client.getCustomFields().then((liveFields) => resolveCustomFieldPolicy(db, liveFields))
+      : Promise.resolve([]),
   ]);
 
   // 5. Run extraction

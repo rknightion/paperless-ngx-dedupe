@@ -1,5 +1,5 @@
 import { SvelteSet, SvelteMap } from 'svelte/reactivity';
-import type { AiResultSummary, AiResultDetail, AiResultFilters } from '@paperless-dedupe/core';
+import type { AiResultSummary, AiResultDetail, AiFieldSelection } from '@paperless-dedupe/core';
 
 // Re-export core types for convenience
 export type { AiResultSummary, AiResultDetail };
@@ -11,42 +11,28 @@ export interface Toast {
   detail?: string;
 }
 
-// ── Selection Mode ──
-export type SelectionMode =
-  | { type: 'manual' }
-  | { type: 'all_matching_filter'; filters: AiResultFilters; matchCount: number };
-
-let _selectionMode = $state<SelectionMode>({ type: 'manual' });
-
-export function getSelectionMode(): SelectionMode {
-  return _selectionMode;
-}
-
-export function selectAllMatchingFilter(filters: AiResultFilters, matchCount: number): void {
-  _selectionMode = { type: 'all_matching_filter', filters, matchCount };
-  selectedIds.clear();
-}
-
-export function clearFilterSelection(): void {
-  _selectionMode = { type: 'manual' };
-}
-
 // ── Selection State ──
 export const selectedIds = new SvelteSet<string>();
 
 // ── Active Detail State ──
-let _activeResultId = $state<string | null>(null);
-let _activeResultDetail = $state<AiResultDetail | null>(null);
-let _detailLoadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+export const activeReviewState = $state<{
+  resultId: string | null;
+  detail: AiResultDetail | null;
+  loadState: 'idle' | 'loading' | 'loaded' | 'error';
+}>({
+  resultId: null,
+  detail: null,
+  loadState: 'idle',
+});
 
 export function getActiveResultId(): string | null {
-  return _activeResultId;
+  return activeReviewState.resultId;
 }
 export function getActiveResultDetail(): AiResultDetail | null {
-  return _activeResultDetail;
+  return activeReviewState.detail;
 }
 export function getDetailLoadState(): 'idle' | 'loading' | 'loaded' | 'error' {
-  return _detailLoadState;
+  return activeReviewState.loadState;
 }
 
 // ── Toasts ──
@@ -56,7 +42,67 @@ export function getToasts(): Toast[] {
 }
 
 // ── Field Selections for Partial Apply ──
-export const fieldSelections = new SvelteMap<string, SvelteSet<string>>();
+export const fieldSelections = new SvelteMap<string, AiFieldSelection>();
+
+interface ExtractEnabled {
+  title: boolean;
+  correspondent: boolean;
+  documentType: boolean;
+  tags: boolean;
+  customFields: boolean;
+  processedTag?: boolean;
+}
+
+export function createDefaultFieldSelection(
+  result: AiResultSummary,
+  extractEnabled: ExtractEnabled = {
+    title: true,
+    correspondent: true,
+    documentType: true,
+    tags: true,
+    customFields: true,
+    processedTag: false,
+  },
+): AiFieldSelection {
+  return {
+    title: Boolean(result.suggestedTitle && extractEnabled.title),
+    correspondent: Boolean(result.suggestedCorrespondent && extractEnabled.correspondent),
+    documentType: Boolean(result.suggestedDocumentType && extractEnabled.documentType),
+    tags: result.suggestedTags.length > 0 && extractEnabled.tags,
+    // Adding an operational marker must always be a conscious review choice.
+    processedTag: false,
+    customFieldIds: extractEnabled.customFields
+      ? result.suggestedCustomFields.map((field) => field.fieldId).sort((a, b) => a - b)
+      : [],
+  };
+}
+
+export function toggleAiFieldSelection(
+  selection: AiFieldSelection,
+  field: string,
+): AiFieldSelection {
+  if (field.startsWith('customField:')) {
+    const id = Number(field.slice('customField:'.length));
+    const hasId = selection.customFieldIds.includes(id);
+    return {
+      ...selection,
+      customFieldIds: (hasId
+        ? selection.customFieldIds.filter((fieldId) => fieldId !== id)
+        : [...selection.customFieldIds, id]
+      ).sort((a, b) => a - b),
+    };
+  }
+  if (
+    field === 'title' ||
+    field === 'correspondent' ||
+    field === 'documentType' ||
+    field === 'tags' ||
+    field === 'processedTag'
+  ) {
+    return { ...selection, [field]: !selection[field] };
+  }
+  return selection;
+}
 
 // ── Selection Functions ──
 export function toggleSelection(id: string): void {
@@ -68,12 +114,15 @@ export function toggleSelection(id: string): void {
 }
 
 export function selectAllIds(ids: string[]): void {
-  selectedIds.clear();
   for (const id of ids) selectedIds.add(id);
 }
 
-export function clearSelection(): void {
-  selectedIds.clear();
+export function clearSelection(ids: Iterable<string>): void {
+  for (const id of ids) selectedIds.delete(id);
+}
+
+export function removeSelection(id: string): void {
+  selectedIds.delete(id);
 }
 
 export function pruneSelection(validIds: Set<string>): void {
@@ -83,31 +132,16 @@ export function pruneSelection(validIds: Set<string>): void {
 }
 
 // ── Detail Functions ──
-export async function selectResult(id: string): Promise<void> {
-  _activeResultId = id;
-  _detailLoadState = 'loading';
-  _activeResultDetail = null;
-
-  try {
-    const res = await fetch(`/api/v1/ai/results/${id}`);
-    if (!res.ok) throw new Error('Failed to load result');
-    const json = await res.json();
-    // Only update if this is still the active result (prevent race conditions)
-    if (_activeResultId === id) {
-      _activeResultDetail = json.data;
-      _detailLoadState = 'loaded';
-    }
-  } catch {
-    if (_activeResultId === id) {
-      _detailLoadState = 'error';
-    }
-  }
+export function selectResult(id: string): void {
+  activeReviewState.resultId = id;
+  activeReviewState.detail = null;
+  activeReviewState.loadState = 'loading';
 }
 
 export function closeDetail(): void {
-  _activeResultId = null;
-  _activeResultDetail = null;
-  _detailLoadState = 'idle';
+  activeReviewState.resultId = null;
+  activeReviewState.detail = null;
+  activeReviewState.loadState = 'idle';
 }
 
 // ── Toast Functions ──
@@ -133,14 +167,14 @@ export function dismissToast(id: string): void {
 // ── Keyboard Nav Functions ──
 export function selectNextResult(results: AiResultSummary[]): void {
   if (results.length === 0) return;
-  const currentIndex = results.findIndex((r) => r.id === _activeResultId);
+  const currentIndex = results.findIndex((r) => r.id === activeReviewState.resultId);
   const nextIndex = currentIndex < results.length - 1 ? currentIndex + 1 : 0;
   selectResult(results[nextIndex].id);
 }
 
 export function selectPrevResult(results: AiResultSummary[]): void {
   if (results.length === 0) return;
-  const currentIndex = results.findIndex((r) => r.id === _activeResultId);
+  const currentIndex = results.findIndex((r) => r.id === activeReviewState.resultId);
   const prevIndex = currentIndex > 0 ? currentIndex - 1 : results.length - 1;
   selectResult(results[prevIndex].id);
 }
@@ -149,52 +183,42 @@ export function selectPrevResult(results: AiResultSummary[]): void {
 export function getFieldSelection(
   resultId: string,
   result: AiResultSummary,
-  extractEnabled?: {
-    title: boolean;
-    correspondent: boolean;
-    documentType: boolean;
-    tags: boolean;
-    customFields: boolean;
-  },
-): SvelteSet<string> {
+  extractEnabled?: ExtractEnabled,
+): AiFieldSelection {
   if (!fieldSelections.has(resultId)) {
-    const defaults = new SvelteSet<string>();
-    const enabled = extractEnabled ?? {
-      title: true,
-      correspondent: true,
-      documentType: true,
-      tags: true,
-      customFields: true,
-    };
-    if (result.suggestedTitle && enabled.title) defaults.add('title');
-    if (result.suggestedCorrespondent && enabled.correspondent) defaults.add('correspondent');
-    if (result.suggestedDocumentType && enabled.documentType) defaults.add('documentType');
-    if (result.suggestedTags.length > 0 && enabled.tags) defaults.add('tags');
-    if (result.suggestedCustomFields.length > 0 && enabled.customFields) {
-      defaults.add('customFields');
-    }
-    fieldSelections.set(resultId, defaults);
+    fieldSelections.set(resultId, createDefaultFieldSelection(result, extractEnabled));
   }
   return fieldSelections.get(resultId)!;
+}
+
+export function initializeFieldSelection(
+  resultId: string,
+  result: AiResultSummary,
+  extractEnabled?: ExtractEnabled,
+): AiFieldSelection {
+  const existing = fieldSelections.get(resultId);
+  if (existing) return existing;
+  const selection = createDefaultFieldSelection(result, extractEnabled);
+  fieldSelections.set(resultId, selection);
+  return selection;
 }
 
 export function toggleField(resultId: string, field: string): void {
   const selection = fieldSelections.get(resultId);
   if (!selection) return;
-  if (selection.has(field)) {
-    selection.delete(field);
-  } else {
-    selection.add(field);
-  }
+  fieldSelections.set(resultId, toggleAiFieldSelection(selection, field));
+}
+
+export function setFieldSelection(resultId: string, selection: AiFieldSelection): void {
+  fieldSelections.set(resultId, selection);
 }
 
 // ── Cleanup ──
 export function resetStore(): void {
   selectedIds.clear();
-  _selectionMode = { type: 'manual' };
-  _activeResultId = null;
-  _activeResultDetail = null;
-  _detailLoadState = 'idle';
+  activeReviewState.resultId = null;
+  activeReviewState.detail = null;
+  activeReviewState.loadState = 'idle';
   _toasts = [];
   fieldSelections.clear();
 }

@@ -16,12 +16,15 @@
     { value: 'batch_operation', label: 'Batch Delete' },
     { value: 'ai_processing', label: 'AI Processing' },
     { value: 'ai_apply', label: 'AI Apply' },
+    { value: 'ai_revert', label: 'AI Revert' },
+    { value: 'custom_field_discovery', label: 'Custom Field Discovery' },
   ];
 
   const jobStatusOptions = [
     { value: '', label: 'All Statuses' },
     { value: 'pending', label: 'Pending' },
     { value: 'running', label: 'Running' },
+    { value: 'paused', label: 'Paused' },
     { value: 'completed', label: 'Completed' },
     { value: 'failed', label: 'Failed' },
     { value: 'cancelled', label: 'Cancelled' },
@@ -35,8 +38,18 @@
     } else {
       params.delete(key);
     }
+    params.delete('cursor');
     goto(`?${params.toString()}`, { replaceState: true });
   }
+
+  let nextPageHref = $derived.by(() => {
+    if (!data.nextCursor) return null;
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const params = new URLSearchParams($page.url.searchParams);
+    params.set('cursor', data.nextCursor);
+    params.set('pageSize', String(data.filters.pageSize));
+    return `?${params.toString()}`;
+  });
 
   function formatDate(iso: string): string {
     const date = new Date(iso);
@@ -54,12 +67,6 @@
       minute: '2-digit',
     });
   }
-
-  let terminalJobCount = $derived(
-    data.jobs.filter(
-      (j) => j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled',
-    ).length,
-  );
 
   async function clearHistory() {
     if (!confirm('Clear all completed, failed, and cancelled jobs from history?')) return;
@@ -120,10 +127,27 @@
         </select>
       </div>
 
+      <div>
+        <label for="page-size-filter" class="text-ink block text-sm font-medium">
+          Jobs per page
+        </label>
+        <select
+          id="page-size-filter"
+          onchange={(e) => applyFilter('pageSize', (e.target as HTMLSelectElement).value)}
+          value={String(data.filters.pageSize)}
+          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+        >
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+
       <div class="ml-auto">
         <button
           onclick={clearHistory}
-          disabled={isClearing || terminalJobCount === 0}
+          disabled={isClearing || data.counts.clearable === 0}
           class="bg-ember/10 text-ember hover:bg-ember/20 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50"
         >
           <Trash2 class="h-4 w-4" />
@@ -135,6 +159,8 @@
 
   {#if feedback}
     <div
+      role={feedback.type === 'error' ? 'alert' : 'status'}
+      aria-live={feedback.type === 'error' ? 'assertive' : 'polite'}
       class="rounded-lg border px-4 py-3 text-sm {feedback.type === 'success'
         ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400'
         : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'}"
@@ -146,23 +172,29 @@
   <!-- Job List -->
   {#if data.jobs.length > 0}
     <div class="space-y-3">
-      {#each data.jobs as j (j.id)}
-        <div class="space-y-1">
+      {#each data.jobs as j (j.key)}
+        <div class="min-w-0 space-y-1" data-job-key={j.key}>
           <JobStatusCard
             type={j.type}
             status={j.status ?? 'pending'}
             progress={j.progress ?? 0}
-            phaseProgress={j.phaseProgress}
-            progressMessage={j.progressMessage}
             startedAt={j.startedAt}
             completedAt={j.completedAt}
-            errorMessage={j.errorMessage}
-            resultJson={j.resultJson}
           />
           <p class="text-muted px-1 text-xs">{formatDate(j.createdAt)}</p>
         </div>
       {/each}
     </div>
+    {#if nextPageHref}
+      <nav aria-label="Job history pagination" class="flex justify-end pt-2">
+        <a
+          href={nextPageHref}
+          class="border-soft bg-surface text-ink hover:border-accent focus:ring-accent rounded-lg border px-4 py-2 text-sm font-medium transition focus:ring-2 focus:outline-none"
+        >
+          Next page
+        </a>
+      </nav>
+    {/if}
   {:else}
     <div class="py-16 text-center">
       <p class="text-muted">

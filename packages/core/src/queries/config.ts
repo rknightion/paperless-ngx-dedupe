@@ -3,6 +3,7 @@ import { CONFIG_REGISTRY, coerceConfigBatch } from '../config/registry.js';
 import { getDedupConfig } from '../dedup/config.js';
 import { dedupConfigSchema } from '../dedup/types.js';
 import { appConfig } from '../schema/sqlite/app.js';
+import { assertCustomFieldPolicyInvariant } from '../ai/custom-field-policy.js';
 
 const ENVIRONMENT_OWNED_CONFIG_KEYS = new Set([
   'paperless.url',
@@ -117,5 +118,6 @@ export function setConfigBatch(db: AppDatabase, settings: Record<string, unknown
         })
         .run();
     }
+    assertCustomFieldPolicyInvariant(tx as unknown as AppDatabase);
   });
 }

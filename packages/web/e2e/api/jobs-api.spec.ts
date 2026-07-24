@@ -3,6 +3,29 @@ import type { SeedResult } from '../fixtures/seed-data';
 
 test.describe('Jobs API', () => {
   let seed: SeedResult;
+  const legacyJobKeys = [
+    'attempt',
+    'completedAt',
+    'createdAt',
+    'dueAt',
+    'errorMessage',
+    'executionToken',
+    'id',
+    'nextAttemptAt',
+    'parentJobId',
+    'phaseProgress',
+    'progress',
+    'progressMessage',
+    'resultJson',
+    'rootDueAt',
+    'rootScheduleId',
+    'scheduleId',
+    'startedAt',
+    'status',
+    'terminalReason',
+    'triggerKind',
+    'type',
+  ];
 
   test.beforeEach(async ({ seedDB }) => {
     seed = seedDB();
@@ -23,6 +46,7 @@ test.describe('Jobs API', () => {
 
     // Verify job shape
     const job = body.data[0];
+    expect(Object.keys(job).sort()).toEqual(legacyJobKeys);
     expect(job).toHaveProperty('id');
     expect(job).toHaveProperty('type');
     expect(job).toHaveProperty('status');
@@ -59,6 +83,7 @@ test.describe('Jobs API', () => {
     expect(body.data.type).toBe('SYNC');
     expect(body.data.status).toBe('completed');
     expect(body.data.progress).toBe(1);
+    expect(Object.keys(body.data).sort()).toEqual(legacyJobKeys);
   });
 
   test('GET /api/v1/jobs/:jobId returns 404 for nonexistent', async ({ request }) => {

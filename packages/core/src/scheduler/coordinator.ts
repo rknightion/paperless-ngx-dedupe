@@ -177,6 +177,7 @@ function claimSchedule(
   const dueAt = due.toISOString();
   const nowIso = now.toISOString();
   const jobId = nanoid();
+  const publicHistoryKey = nanoid(32);
   const intentId = nanoid();
   const dispatchKey = nanoid();
 
@@ -200,10 +201,10 @@ function claimSchedule(
       `INSERT INTO job (
         id, type, status, progress, trigger_kind, schedule_id, due_at,
         parent_job_id, root_schedule_id, root_due_at, attempt, next_attempt_at,
-        terminal_reason, created_at
-      ) VALUES (?, ?, 'pending', 0, 'schedule', ?, ?, NULL, NULL, NULL, 0, NULL, NULL, ?)`,
+        terminal_reason, created_at, public_history_key
+      ) VALUES (?, ?, 'pending', 0, 'schedule', ?, ?, NULL, NULL, NULL, 0, NULL, NULL, ?, ?)`,
     )
-    .run(jobId, row.task, row.id, dueAt, nowIso);
+    .run(jobId, row.task, row.id, dueAt, nowIso, publicHistoryKey);
   if (row.task === 'sync') {
     sqlite
       .prepare(
@@ -250,6 +251,7 @@ function claimDependency(
   if (existing) return null;
 
   const jobId = nanoid();
+  const publicHistoryKey = nanoid(32);
   const intentId = nanoid();
   const dispatchKey = nanoid();
   const taskDataJson = serializeDispatchTaskData({ syncGenerationId: parent.id });
@@ -259,10 +261,18 @@ function claimDependency(
       `INSERT INTO job (
         id, type, status, progress, trigger_kind, schedule_id, due_at,
         parent_job_id, root_schedule_id, root_due_at, attempt, next_attempt_at,
-        terminal_reason, created_at
-      ) VALUES (?, ?, 'pending', 0, 'dependency', NULL, NULL, ?, ?, ?, 0, NULL, NULL, ?)`,
+        terminal_reason, created_at, public_history_key
+      ) VALUES (?, ?, 'pending', 0, 'dependency', NULL, NULL, ?, ?, ?, 0, NULL, NULL, ?, ?)`,
     )
-    .run(jobId, task, parent.sync_job_id, parent.root_schedule_id, parent.root_due_at, nowIso);
+    .run(
+      jobId,
+      task,
+      parent.sync_job_id,
+      parent.root_schedule_id,
+      parent.root_due_at,
+      nowIso,
+      publicHistoryKey,
+    );
   sqlite
     .prepare(
       `INSERT INTO dispatch_intent (
@@ -362,6 +372,7 @@ export function enqueueManualOperation(
 
   const nowIso = new Date().toISOString();
   const jobId = nanoid();
+  const publicHistoryKey = nanoid(32);
   const intentId = nanoid();
   const dispatchKey = nanoid();
   const taskDataJson = serializeDispatchTaskData(taskData);
@@ -373,10 +384,10 @@ export function enqueueManualOperation(
         `INSERT INTO job (
           id, type, status, progress, trigger_kind, schedule_id, due_at,
           parent_job_id, root_schedule_id, root_due_at, attempt, next_attempt_at,
-          terminal_reason, created_at
-        ) VALUES (?, ?, 'pending', 0, 'manual', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, ?)`,
+          terminal_reason, created_at, public_history_key
+        ) VALUES (?, ?, 'pending', 0, 'manual', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, ?, ?)`,
       )
-      .run(jobId, jobType, nowIso);
+      .run(jobId, jobType, nowIso, publicHistoryKey);
     sqlite
       .prepare(
         `INSERT INTO dispatch_intent (

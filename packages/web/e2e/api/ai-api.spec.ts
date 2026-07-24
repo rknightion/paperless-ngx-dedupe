@@ -1,8 +1,14 @@
 import { test, expect } from '../fixtures/test-app';
+import { DB_PATH } from '../fixtures/test-app';
+import type { SeedResult } from '../fixtures/seed-data';
+import Database from 'better-sqlite3';
 
 test.describe('AI API', () => {
+  let seed: SeedResult;
+
   test.beforeEach(async ({ seedDB }) => {
-    seedDB();
+    seed = seedDB();
+    await fetch('http://localhost:18923/__control__/reset', { method: 'POST' });
   });
 
   test.afterEach(async ({ clearDB }) => {
@@ -62,39 +68,25 @@ test.describe('AI API', () => {
     expect(body.error.code).toBe('NOT_FOUND');
   });
 
-  // ── Config (requires AI_ENABLED) ────────────────────────────────────
+  // ── Config ──────────────────────────────────────────────────────────
 
-  test('GET /api/v1/ai/config returns 400 when AI is disabled', async ({ request }) => {
+  test('GET /api/v1/ai/config returns config when AI is enabled', async ({ request }) => {
     const response = await request.get('/api/v1/ai/config');
 
-    // AI_ENABLED is false in E2E config, so this should fail
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.error).toBeDefined();
+    expect(body.data.provider).toBe('openai');
   });
 
-  test('PUT /api/v1/ai/config returns 400 when AI is disabled', async ({ request }) => {
+  test('PUT /api/v1/ai/config updates config when AI is enabled', async ({ request }) => {
     const response = await request.put('/api/v1/ai/config', {
       headers: { 'Content-Type': 'application/json' },
-      data: { provider: 'openai', model: 'gpt-4o' },
+      data: { applyConcurrency: 3 },
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.error).toBeDefined();
-  });
-
-  // ── Process (requires AI_ENABLED) ───────────────────────────────────
-
-  test('POST /api/v1/ai/process returns 400 when AI is disabled', async ({ request }) => {
-    const response = await request.post('/api/v1/ai/process', {
-      headers: { 'Content-Type': 'application/json' },
-      data: {},
-    });
-
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body.error).toBeDefined();
+    expect(body.data.applyConcurrency).toBe(3);
   });
 
   // ── Batch operations ────────────────────────────────────────────────
@@ -112,7 +104,7 @@ test.describe('AI API', () => {
     expect(body.error).toBeDefined();
   });
 
-  test('POST /api/v1/ai/results/batch-apply returns 400 when AI is disabled', async ({
+  test('POST /api/v1/ai/results/batch-apply requires a reviewed plan token', async ({
     request,
   }) => {
     const response = await request.post('/api/v1/ai/results/batch-apply', {
@@ -123,6 +115,75 @@ test.describe('AI API', () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.error).toBeDefined();
+  });
+
+  test('creates a reviewed apply plan and executes it through the production worker', async ({
+    request,
+  }) => {
+    const resultId = 'e2e-reviewed-ai-result';
+    const sqlite = new Database(DB_PATH);
+    sqlite
+      .prepare(
+        `INSERT INTO ai_processing_result (
+           id, document_id, paperless_id, provider, model, suggested_title,
+           current_title, applied_status, created_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        resultId,
+        seed.documentIds[0],
+        1,
+        'openai',
+        'e2e-model',
+        'AI reviewed E2E title',
+        'Test Document 1',
+        'pending_review',
+        new Date().toISOString(),
+      );
+    sqlite.close();
+
+    const preflightResponse = await request.post('/api/v1/ai/results/preflight', {
+      data: {
+        scope: { type: 'selected_result_ids', resultIds: [resultId] },
+        selection: {
+          title: true,
+          correspondent: false,
+          documentType: false,
+          tags: false,
+          processedTag: false,
+          customFieldIds: [],
+        },
+      },
+    });
+    expect(preflightResponse.status()).toBe(200);
+    const preflight = await preflightResponse.json();
+    expect(preflight.data.resultIds).toEqual([resultId]);
+
+    const applyResponse = await request.post('/api/v1/ai/results/batch-apply', {
+      data: { planToken: preflight.data.token },
+    });
+    expect(applyResponse.status()).toBe(202);
+    const apply = await applyResponse.json();
+
+    await expect
+      .poll(async () => {
+        const jobs = await request.get('/api/v1/jobs?limit=200');
+        const jobsBody = await jobs.json();
+        return jobsBody.data.find((job: { id: string }) => job.id === apply.data.jobId)?.status;
+      })
+      .toBe('completed');
+
+    const paperlessResponse = await fetch('http://localhost:18923/api/documents/1/', {
+      headers: { Authorization: 'Token test-token-e2e' },
+    });
+    expect(paperlessResponse.status).toBe(200);
+    const paperlessDocument = (await paperlessResponse.json()) as { title: string };
+    expect(paperlessDocument.title).toBe('AI reviewed E2E title');
+
+    const resultResponse = await request.get(`/api/v1/ai/results/${resultId}`);
+    expect(resultResponse.status()).toBe(200);
+    const result = await resultResponse.json();
+    expect(result.data.appliedStatus).toBe('partial');
   });
 
   // ── Single result reject (no AI_ENABLED check) ──────────────────────

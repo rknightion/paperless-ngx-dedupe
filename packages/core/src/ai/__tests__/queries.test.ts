@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
@@ -8,6 +11,7 @@ import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
 import {
   getAiResults,
   getAiResult,
+  getAiInboxResult,
   getAiStats,
   clearAllAiResults,
   markAiResultApplied,
@@ -15,6 +19,7 @@ import {
   markAiResultFailed,
   batchMarkApplied,
   batchMarkRejected,
+  listAiReviewInbox,
 } from '../queries.js';
 
 function seedDocumentsAndResults(db: AppDatabase): string[] {
@@ -174,6 +179,394 @@ describe('getAiResults', () => {
   });
 });
 
+describe('listAiReviewInbox', () => {
+  let db: AppDatabase;
+
+  beforeEach(async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    db = handle.db;
+    await migrateDatabase(handle.sqlite);
+    seedDocumentsAndResults(db);
+  });
+
+  it('uses stable confidence, timestamp, and id cursors without repeating tied results', () => {
+    for (let index = 4; index <= 9; index += 1) {
+      db.insert(document)
+        .values({
+          id: `doc-${index}`,
+          paperlessId: index,
+          title: `Tied invoice ${index}`,
+          processingStatus: 'completed',
+          syncedAt: '2024-01-01T00:00:00Z',
+        })
+        .run();
+      db.insert(aiProcessingResult)
+        .values({
+          id: `result-${index}`,
+          documentId: `doc-${index}`,
+          paperlessId: index,
+          provider: 'openai',
+          model: 'gpt-5.4-mini',
+          confidenceJson:
+            index === 9 ? null : '{"correspondent":0.8,"documentType":0.8,"tags":0.8}',
+          appliedStatus: 'pending_review',
+          createdAt: '2024-02-01T00:00:00.000Z',
+        })
+        .run();
+    }
+
+    const first = listAiReviewInbox(db, { queue: 'review', limit: 3 });
+    const second = listAiReviewInbox(db, {
+      queue: 'review',
+      limit: 3,
+      cursor: first.nextCursor ?? undefined,
+    });
+    const third = listAiReviewInbox(db, {
+      queue: 'review',
+      limit: 3,
+      cursor: second.nextCursor ?? undefined,
+    });
+
+    const ids = [...first.items, ...second.items, ...third.items].map((item) => item.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual([
+      expect.any(String),
+      'result-8',
+      'result-7',
+      'result-6',
+      'result-5',
+      'result-4',
+      'result-9',
+    ]);
+    expect(first.previousCursor).toBeNull();
+    expect(second.previousCursor).not.toBeNull();
+  });
+
+  it('separates extraction failures from review conflicts and returns safe grouped categories', () => {
+    const seeded = getAiResults(db, { failed: true }).items[0];
+    db.update(aiProcessingResult)
+      .set({ failureType: 'timeout', errorMessage: 'secret upstream exception details' })
+      .where(eq(aiProcessingResult.id, seeded.id))
+      .run();
+
+    db.insert(document)
+      .values({
+        id: 'doc-conflict',
+        paperlessId: 100,
+        title: 'Concurrent edit',
+        processingStatus: 'completed',
+        syncedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    db.insert(aiProcessingResult)
+      .values({
+        id: 'result-conflict',
+        documentId: 'doc-conflict',
+        paperlessId: 100,
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        appliedStatus: 'failed',
+        failureType: 'review_conflict',
+        errorMessage: 'private live value',
+        createdAt: '2024-02-01T00:00:00Z',
+      })
+      .run();
+
+    const failures = listAiReviewInbox(db, { queue: 'failures', limit: 20 });
+    expect(failures.items.map((item) => item.id)).toEqual([seeded.id]);
+    expect(failures.failureGroups).toEqual([
+      { category: 'temporary', count: 1, label: 'Temporary service issue' },
+    ]);
+    expect(failures.items[0].safeFailure).toEqual({
+      category: 'temporary',
+      label: 'Temporary service issue',
+    });
+    expect(JSON.stringify(failures)).not.toContain('secret upstream');
+    expect(JSON.stringify(failures)).not.toContain('private live value');
+
+    const review = listAiReviewInbox(db, { queue: 'review', limit: 20 });
+    expect(review.items.map((item) => item.id)).toContain('result-conflict');
+    expect(review.items.find((item) => item.id === 'result-conflict')?.errorMessage).toBeNull();
+  });
+
+  it('shares active filters with failure groups and supports category and document targeting', () => {
+    db.update(aiProcessingResult)
+      .set({ appliedStatus: 'failed', failureType: 'authentication' })
+      .where(eq(aiProcessingResult.documentId, 'doc-1'))
+      .run();
+    db.update(aiProcessingResult)
+      .set({ failureType: 'timeout' })
+      .where(eq(aiProcessingResult.documentId, 'doc-3'))
+      .run();
+    db.insert(document)
+      .values({
+        id: 'doc-4',
+        paperlessId: 4,
+        title: 'Invoice with temporary failure',
+        processingStatus: 'completed',
+        syncedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    db.insert(aiProcessingResult)
+      .values({
+        id: 'result-4',
+        documentId: 'doc-4',
+        paperlessId: 4,
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        appliedStatus: 'failed',
+        failureType: 'timeout',
+        createdAt: '2024-01-04T00:00:00Z',
+      })
+      .run();
+
+    const filtered = listAiReviewInbox(db, {
+      queue: 'failures',
+      limit: 20,
+      search: 'Invoice',
+      provider: 'openai',
+      model: 'gpt-5.4-mini',
+      failureCategory: 'configuration',
+    });
+    expect(filtered.items.map((item) => item.documentId)).toEqual(['doc-1']);
+    expect(filtered.failureGroups).toEqual([
+      { category: 'configuration', count: 1, label: 'AI configuration needs attention' },
+    ]);
+
+    const documentOnly = listAiReviewInbox(db, {
+      queue: 'failures',
+      limit: 20,
+      documentId: 'doc-3',
+    });
+    expect(documentOnly.items.map((item) => item.documentId)).toEqual(['doc-3']);
+    expect(documentOnly.failureGroups).toEqual([
+      { category: 'temporary', count: 1, label: 'Temporary service issue' },
+    ]);
+  });
+
+  it('routes skipped, rejected, and review-conflict results to their advertised queues', () => {
+    db.update(aiProcessingResult)
+      .set({ appliedStatus: 'skipped', failureType: 'no_content' })
+      .where(eq(aiProcessingResult.documentId, 'doc-3'))
+      .run();
+    db.update(aiProcessingResult)
+      .set({ appliedStatus: 'rejected' })
+      .where(eq(aiProcessingResult.documentId, 'doc-2'))
+      .run();
+    db.update(aiProcessingResult)
+      .set({ appliedStatus: 'failed', failureType: 'review_conflict' })
+      .where(eq(aiProcessingResult.documentId, 'doc-1'))
+      .run();
+
+    expect(
+      listAiReviewInbox(db, { queue: 'failures', documentId: 'doc-3' }).items.map(
+        (item) => item.documentId,
+      ),
+    ).toEqual(['doc-3']);
+    expect(
+      listAiReviewInbox(db, { queue: 'history', documentId: 'doc-2' }).items.map(
+        (item) => item.documentId,
+      ),
+    ).toEqual(['doc-2']);
+    expect(
+      listAiReviewInbox(db, { queue: 'review', documentId: 'doc-1' }).items.map(
+        (item) => item.documentId,
+      ),
+    ).toEqual(['doc-1']);
+  });
+
+  it('rejects a cursor from another queue or malformed cursor', () => {
+    const review = listAiReviewInbox(db, { queue: 'review', limit: 1 });
+    expect(() =>
+      listAiReviewInbox(db, {
+        queue: 'failures',
+        limit: 1,
+        cursor: review.nextCursor ?? 'malformed',
+      }),
+    ).toThrow('Invalid AI inbox cursor');
+    expect(() =>
+      listAiReviewInbox(db, { queue: 'review', limit: 1, cursor: 'not-a-cursor' }),
+    ).toThrow('Invalid AI inbox cursor');
+    expect(() =>
+      listAiReviewInbox(db, {
+        queue: 'review',
+        limit: 1,
+        search: 'different-filter',
+        cursor: review.nextCursor ?? 'malformed',
+      }),
+    ).toThrow('Invalid AI inbox cursor');
+    const tampered = `${review.nextCursor?.slice(0, -1)}x`;
+    expect(() => listAiReviewInbox(db, { queue: 'review', limit: 1, cursor: tampered })).toThrow(
+      'Invalid AI inbox cursor',
+    );
+  });
+
+  it('encrypts cursor contents and can decode them after reopening the database', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'ai-inbox-cursor-'));
+    const databasePath = join(directory, 'inbox.db');
+    try {
+      const firstHandle = createDatabaseWithHandle(databasePath);
+      await migrateDatabase(firstHandle.sqlite);
+      seedDocumentsAndResults(firstHandle.db);
+      firstHandle.db
+        .insert(document)
+        .values({
+          id: 'private-document-id',
+          paperlessId: 4,
+          title: 'Invoice private search match',
+          processingStatus: 'completed',
+          syncedAt: '2024-01-01T00:00:00Z',
+        })
+        .run();
+      firstHandle.db
+        .insert(aiProcessingResult)
+        .values({
+          id: 'private-result-id',
+          documentId: 'private-document-id',
+          paperlessId: 4,
+          provider: 'openai',
+          model: 'gpt-5.4-mini',
+          appliedStatus: 'pending_review',
+          createdAt: '2024-01-04T00:00:00Z',
+        })
+        .run();
+      const first = listAiReviewInbox(firstHandle.db, {
+        queue: 'review',
+        limit: 1,
+        search: 'Invoice',
+      });
+      const cursor = first.nextCursor!;
+      expect(cursor).toBeTruthy();
+      for (const segment of cursor.split('.')) {
+        const decoded = Buffer.from(segment, 'base64url').toString('utf8');
+        expect(decoded).not.toContain('doc-1');
+        expect(decoded).not.toContain('private-document-id');
+        expect(decoded).not.toContain('Invoice');
+        expect(decoded).not.toContain(first.items[0].id);
+      }
+      firstHandle.sqlite.close();
+
+      const reopened = createDatabaseWithHandle(databasePath);
+      const next = listAiReviewInbox(reopened.db, {
+        queue: 'review',
+        limit: 1,
+        search: 'Invoice',
+        cursor,
+      });
+      expect(next.items).toHaveLength(1);
+      reopened.sqlite.close();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('paginates apply audit history when applied timestamps are null or tied', () => {
+    db.update(aiProcessingResult)
+      .set({ appliedStatus: 'partial', appliedAt: null })
+      .where(eq(aiProcessingResult.documentId, 'doc-1'))
+      .run();
+
+    const first = listAiReviewInbox(db, { queue: 'history', limit: 1 });
+    const second = listAiReviewInbox(db, {
+      queue: 'history',
+      limit: 1,
+      cursor: first.nextCursor ?? undefined,
+    });
+    expect(first.items).toHaveLength(1);
+    expect(second.items).toHaveLength(1);
+    expect(first.items[0].id).not.toBe(second.items[0].id);
+  });
+
+  it.each(['review', 'failures', 'history'] as const)(
+    'returns exact first and last boundaries when paging %s backwards',
+    (queue) => {
+      if (queue === 'review') {
+        db.update(aiProcessingResult)
+          .set({ appliedStatus: 'pending_review' })
+          .where(eq(aiProcessingResult.documentId, 'doc-2'))
+          .run();
+      } else if (queue === 'failures') {
+        db.update(aiProcessingResult)
+          .set({ appliedStatus: 'failed', failureType: 'timeout' })
+          .where(eq(aiProcessingResult.documentId, 'doc-1'))
+          .run();
+      } else if (queue === 'history') {
+        db.update(aiProcessingResult)
+          .set({ appliedStatus: 'partial', appliedAt: null })
+          .where(eq(aiProcessingResult.documentId, 'doc-1'))
+          .run();
+      }
+      const first = listAiReviewInbox(db, { queue, limit: 1 });
+      const second = listAiReviewInbox(db, {
+        queue,
+        limit: 1,
+        cursor: first.nextCursor ?? undefined,
+      });
+      expect(first.previousCursor).toBeNull();
+      expect(second.previousCursor).not.toBeNull();
+      const back = listAiReviewInbox(db, {
+        queue,
+        limit: 1,
+        cursor: second.previousCursor ?? undefined,
+      });
+      expect(back.items.map((item) => item.id)).toEqual(first.items.map((item) => item.id));
+      expect(back.previousCursor).toBeNull();
+      expect(back.nextCursor).not.toBeNull();
+    },
+  );
+
+  it('keeps two cursor pages correct on a 50k-result inbox', async () => {
+    const handle = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(handle.sqlite);
+    handle.sqlite.exec(`
+      WITH RECURSIVE numbers(n) AS (
+        SELECT 1
+        UNION ALL
+        SELECT n + 1 FROM numbers WHERE n < 50000
+      )
+      INSERT INTO document (id, paperless_id, title, processing_status, synced_at)
+      SELECT 'perf-doc-' || n, n, 'Performance document ' || n, 'completed',
+             '2024-01-01T00:00:00.000Z'
+      FROM numbers;
+
+      WITH RECURSIVE numbers(n) AS (
+        SELECT 1
+        UNION ALL
+        SELECT n + 1 FROM numbers WHERE n < 50000
+      )
+      INSERT INTO ai_processing_result (
+        id, document_id, paperless_id, provider, model, confidence_json,
+        applied_status, created_at
+      )
+      SELECT 'perf-result-' || n, 'perf-doc-' || n, n, 'openai', 'perf-model',
+             json_object(
+               'title', (n % 100) / 100.0,
+               'correspondent', (n % 100) / 100.0,
+               'documentType', (n % 100) / 100.0,
+               'tags', (n % 100) / 100.0
+             ),
+             'pending_review',
+             strftime('%Y-%m-%dT%H:%M:%fZ', '2024-01-01', '+' || n || ' seconds')
+      FROM numbers;
+    `);
+
+    const startedAt = performance.now();
+    const first = listAiReviewInbox(handle.db, { queue: 'review', limit: 100 });
+    const second = listAiReviewInbox(handle.db, {
+      queue: 'review',
+      limit: 100,
+      cursor: first.nextCursor ?? undefined,
+    });
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(first.total).toBe(50_000);
+    expect(first.items).toHaveLength(100);
+    expect(second.items).toHaveLength(100);
+    expect(new Set([...first.items, ...second.items].map((item) => item.id)).size).toBe(200);
+    expect(elapsedMs).toBeLessThan(5_000);
+  });
+});
+
 describe('getAiResult', () => {
   let db: AppDatabase;
   let resultIds: string[];
@@ -228,6 +621,67 @@ describe('getAiResult', () => {
     expect(result).not.toBeNull();
     expect(result!.failureType).toBe('timeout');
     expect(result!.errorMessage).toBe('Extraction failed: timeout');
+  });
+
+  it('returns a bounded safe inbox detail without raw model or exception payloads', () => {
+    const hugeValue = 'private-value-'.repeat(10_000);
+    const hugeCustomFields = Array.from({ length: 200 }, (_, field) => ({
+      field,
+      fieldId: field,
+      fieldName: `field-${field}-${hugeValue}`,
+      value: {
+        nested: [hugeValue, { deeper: hugeValue }],
+        ...(field === 0 ? { ['private-key-'.repeat(10_000)]: hugeValue } : {}),
+      },
+      confidence: 0.9,
+    }));
+    db.update(aiProcessingResult)
+      .set({
+        evidence: 'e'.repeat(900),
+        rawResponseJson: '{"private":"raw-model-output"}',
+        errorMessage: 'private upstream stack',
+        failureType: 'timeout',
+        suggestedTitle: hugeValue,
+        currentTitle: hugeValue,
+        suggestedTagsJson: JSON.stringify(Array(200).fill(hugeValue)),
+        currentTagsJson: JSON.stringify(Array(200).fill(hugeValue)),
+        suggestedCustomFieldsJson: JSON.stringify(hugeCustomFields),
+        currentCustomFieldsJson: JSON.stringify(hugeCustomFields),
+        preApplyCustomFieldsJson: JSON.stringify(hugeCustomFields),
+        appliedCustomFieldsJson: JSON.stringify(hugeCustomFields),
+        preApplyTagNamesJson: JSON.stringify(Array(200).fill(hugeValue)),
+      })
+      .where(eq(aiProcessingResult.id, resultIds[0]))
+      .run();
+
+    const result = getAiInboxResult(db, resultIds[0]);
+    expect(result?.evidence).toHaveLength(500);
+    expect(result?.errorMessage).toBeNull();
+    expect(result).not.toHaveProperty('rawResponseJson');
+    expect(result?.truncation.truncated).toBe(true);
+    expect(result?.truncation.paths).toContain('suggestedTitle');
+    expect(JSON.stringify(result).length).toBeLessThan(65_536);
+    expect(JSON.stringify(result)).not.toContain('private upstream');
+    expect(JSON.stringify(result)).not.toContain('raw-model-output');
+    // The inbox projection may truncate untrusted display content, but it must
+    // never spend that budget on the controls used to decide what can be
+    // reviewed or applied.
+    expect(result).toMatchObject({
+      id: resultIds[0],
+      documentId: 'doc-1',
+      appliedStatus: 'pending_review',
+      createdAt: '2024-01-01T00:00:00Z',
+    });
+    expect(result?.safeFailure).toEqual(null);
+    expect(result?.confidence).toEqual(getAiResult(db, resultIds[0])?.confidence);
+    expect(result?.suggestedCustomFields[0]).toMatchObject({
+      fieldId: 0,
+      confidence: 0.9,
+    });
+
+    const legacy = getAiResult(db, resultIds[0]);
+    expect(legacy?.suggestedTitle).toBe(hugeValue);
+    expect(legacy?.suggestedCustomFields).toHaveLength(200);
   });
 });
 

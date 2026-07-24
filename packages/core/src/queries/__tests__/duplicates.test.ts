@@ -6,6 +6,7 @@ import type { AppDatabase } from '../../db/client.js';
 import {
   getDuplicateGroups,
   getDuplicateGroup,
+  getDuplicateGroupLight,
   getDuplicateStats,
   getSimilarityGraph,
   setPrimaryDocument,
@@ -645,6 +646,143 @@ describe('getDuplicateGroup', () => {
     expect(primary!.content).not.toBeNull();
     expect(primary!.content!.fullText).toBe('Invoice text A');
     expect(primary!.content!.wordCount).toBe(3);
+  });
+
+  it('returns bounded explanations on the requested detail without exposing normalized OCR', () => {
+    insertTestData(db);
+    db.update(documentContent)
+      .set({
+        normalizedText: 'invoice number inv-2024-001 date 15/01/2024 total £1234.56',
+      })
+      .where(eq(documentContent.documentId, 'doc-1'))
+      .run();
+    db.update(documentContent)
+      .set({
+        normalizedText: 'invoice number inv-2024-001 date 16/01/2024 total £1234.56',
+      })
+      .where(eq(documentContent.documentId, 'doc-2'))
+      .run();
+
+    const result = getDuplicateGroup(db, 'grp-1');
+
+    expect(result?.matchExplanation).toEqual({
+      primaryDocumentId: 'doc-1',
+      comparisons: [
+        expect.objectContaining({
+          documentId: 'doc-2',
+          shared: expect.arrayContaining([
+            expect.objectContaining({ category: 'amount', values: ['1234.56'] }),
+            expect.objectContaining({ category: 'identifier', values: ['inv2024001'] }),
+          ]),
+          differences: expect.arrayContaining([
+            expect.objectContaining({
+              category: 'date',
+              primaryValues: ['15012024'],
+              comparisonValues: ['16012024'],
+            }),
+          ]),
+        }),
+      ],
+    });
+    expect(JSON.stringify(result)).not.toContain('normalizedText');
+    expect(JSON.stringify(result)).not.toContain('date 15/01/2024');
+
+    const list = getDuplicateGroups(
+      db,
+      { sortBy: 'confidence', sortOrder: 'desc' },
+      { limit: 50, offset: 0 },
+    );
+    expect(list.items[0]).not.toHaveProperty('matchExplanation');
+    expect(JSON.stringify(list)).not.toContain('1234.56');
+  });
+
+  it('builds explanations for the light detail without returning OCR text', () => {
+    insertTestData(db);
+    db.update(documentContent)
+      .set({ normalizedText: null, fullText: 'Total £25.00 reference 12345678' })
+      .where(eq(documentContent.documentId, 'doc-1'))
+      .run();
+    db.update(documentContent)
+      .set({ normalizedText: null, fullText: 'Total £25.00 reference 12345678' })
+      .where(eq(documentContent.documentId, 'doc-2'))
+      .run();
+
+    const result = getDuplicateGroupLight(db, 'grp-1');
+
+    expect(result?.matchExplanation?.comparisons[0].shared).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ category: 'amount', values: ['25.00'] }),
+        expect.objectContaining({ category: 'reference', values: ['12345678'] }),
+      ]),
+    );
+    expect(result?.members.every((member) => member.content?.fullText === null)).toBe(true);
+    expect(JSON.stringify(result)).not.toContain('normalizedText');
+    expect(JSON.stringify(result)).not.toContain('total £25.00');
+  });
+
+  it('orders members and explanations independently of membership insertion order', () => {
+    insertTestData(db);
+    db.insert(documentContent)
+      .values([
+        {
+          id: 'cnt-3',
+          documentId: 'doc-3',
+          normalizedText: 'total £25.00 reference 12345678',
+        },
+        {
+          id: 'cnt-4',
+          documentId: 'doc-4',
+          normalizedText: 'total £25.00 reference 12345678',
+        },
+      ])
+      .run();
+    db.insert(duplicateGroup)
+      .values([
+        {
+          id: 'grp-order-a',
+          confidenceScore: 0.9,
+          algorithmVersion: 'v1',
+          createdAt: '2024-03-01T00:00:00Z',
+          updatedAt: '2024-03-01T00:00:00Z',
+        },
+        {
+          id: 'grp-order-b',
+          confidenceScore: 0.9,
+          algorithmVersion: 'v1',
+          createdAt: '2024-03-01T00:00:00Z',
+          updatedAt: '2024-03-01T00:00:00Z',
+        },
+      ])
+      .run();
+    db.insert(duplicateMember)
+      .values([
+        { id: 'order-a-4', groupId: 'grp-order-a', documentId: 'doc-4', isPrimary: true },
+        { id: 'order-a-2', groupId: 'grp-order-a', documentId: 'doc-2', isPrimary: false },
+        { id: 'order-a-1', groupId: 'grp-order-a', documentId: 'doc-1', isPrimary: false },
+        { id: 'order-a-3', groupId: 'grp-order-a', documentId: 'doc-3', isPrimary: false },
+        { id: 'order-b-1', groupId: 'grp-order-b', documentId: 'doc-1', isPrimary: false },
+        { id: 'order-b-3', groupId: 'grp-order-b', documentId: 'doc-3', isPrimary: false },
+        { id: 'order-b-2', groupId: 'grp-order-b', documentId: 'doc-2', isPrimary: false },
+        { id: 'order-b-4', groupId: 'grp-order-b', documentId: 'doc-4', isPrimary: true },
+      ])
+      .run();
+
+    const first = getDuplicateGroupLight(db, 'grp-order-a');
+    const second = getDuplicateGroupLight(db, 'grp-order-b');
+
+    expect(first?.members.map((member) => member.documentId)).toEqual([
+      'doc-4',
+      'doc-1',
+      'doc-2',
+      'doc-3',
+    ]);
+    expect(second?.members.map((member) => member.documentId)).toEqual(
+      first?.members.map((member) => member.documentId),
+    );
+    expect(first?.matchExplanation).toEqual(second?.matchExplanation);
+    expect(first?.matchExplanation?.comparisons.map((comparison) => comparison.documentId)).toEqual(
+      ['doc-1', 'doc-2', 'doc-3'],
+    );
   });
 
   it('members have correct tags parsed', () => {

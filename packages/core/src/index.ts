@@ -5,6 +5,7 @@ export { job } from './schema/sqlite/jobs.js';
 export { appConfig, syncState } from './schema/sqlite/app.js';
 export { aiProcessingResult } from './schema/sqlite/ai-processing.js';
 export { aiResultRevision } from './schema/sqlite/ai-result-revisions.js';
+export { aiCustomFieldPolicy } from './schema/sqlite/ai-custom-field-policy.js';
 export {
   automationSchedule,
   dispatchIntent,
@@ -55,6 +56,7 @@ export type {
   SyncState,
   AiProcessingResult,
   AiResultRevision,
+  AiCustomFieldPolicy,
   AutomationScheduleRow,
   DispatchIntent,
   OperationLease,
@@ -73,6 +75,7 @@ export type {
   NewSyncState,
   NewAiProcessingResult,
   NewAiResultRevision,
+  NewAiCustomFieldPolicy,
   NewAutomationScheduleRow,
   NewDispatchIntent,
   NewOperationLease,
@@ -225,6 +228,8 @@ export {
   createJob,
   getJob,
   listJobs,
+  listJobHistory,
+  getJobHistoryCounts,
   updateJobProgress,
   completeJob,
   failJob,
@@ -236,7 +241,13 @@ export {
   retryDeadLetterJob,
   JobAlreadyRunningError,
 } from './jobs/manager.js';
-export type { JobFilters } from './jobs/manager.js';
+export type {
+  JobFilters,
+  JobHistoryQuery,
+  JobHistoryPage,
+  JobHistoryItem,
+} from './jobs/manager.js';
+export { JobHistoryQueryError } from './jobs/manager.js';
 
 // Worker Infrastructure
 export { launchWorker } from './jobs/worker-launcher.js';
@@ -268,6 +279,15 @@ export { LSHIndex } from './dedup/lsh.js';
 export { tokenSortRatio, sampleText } from './dedup/fuzzy.js';
 export { computeSimilarityScore } from './dedup/scoring.js';
 export { computeDiscriminativeScore, extractDiscriminativeTokens } from './dedup/discriminative.js';
+export { buildMatchExplanation } from './dedup/explanations.js';
+export type {
+  DuplicateMatchExplanation,
+  MatchExplanationCategory,
+  MatchExplanationComparison,
+  MatchExplanationDifference,
+  MatchExplanationDocument,
+  MatchExplanationShared,
+} from './dedup/explanations.js';
 export { UnionFind } from './dedup/union-find.js';
 export { getDedupConfig, setDedupConfig, recalculateConfidenceScores } from './dedup/config.js';
 export {
@@ -408,8 +428,9 @@ export {
   DEFAULT_AI_CONFIG,
   OPENAI_MODELS,
   AI_CONFIG_PREFIX,
+  aiFieldSelectionSchema,
 } from './ai/types.js';
-export type { AiConfig, AiBatchResult } from './ai/types.js';
+export type { AiConfig, AiBatchResult, AiFieldSelection } from './ai/types.js';
 export { DEFAULT_TAG_ALIAS_MAP } from './ai/tag-alias-defaults.js';
 export { validateTagAliasYaml } from './ai/tag-alias-validation.js';
 export type { TagAliasValidationResult } from './ai/tag-alias-validation.js';
@@ -437,6 +458,7 @@ export type { TpmThrottleStatus } from './ai/tpm-throttle.js';
 export {
   getAiResults,
   getAiResult,
+  getAiInboxResult,
   getAiStats,
   clearAllAiResults,
   markAiResultApplied,
@@ -449,11 +471,19 @@ export {
   getDocumentIdsByAiFilter,
   getUnprocessedDocuments,
   getUnprocessedDocumentFacets,
+  listAiReviewInbox,
 } from './ai/queries.js';
 export type {
+  AiFailureCategory,
+  AiFailureGroup,
+  AiInboxPage,
+  AiInboxQuery,
+  AiInboxQueue,
+  AiSafeFailure,
   AiResultFilters,
   AiResultSummary,
   AiResultDetail,
+  AiInboxResultDetail,
   AiStats,
   ApplySnapshot,
   UnprocessedDocument,
@@ -466,7 +496,44 @@ export type {
   CustomFieldDiscoveryOptions,
   CustomFieldDiscoveryResult,
 } from './ai/custom-field-discovery.js';
+export {
+  adaptCustomFieldDiscoveryV2ToLegacy,
+  scanCustomFieldCandidatesV2,
+} from './ai/custom-field-discovery-v2.js';
+export type {
+  CustomFieldCandidateV2,
+  CustomFieldDiscoveryOptionsV2,
+  CustomFieldDiscoveryRunV2,
+  CustomFieldDiscoveryRiskV2,
+  CustomFieldDiscoveryTruncationV2,
+} from './ai/custom-field-discovery-v2.js';
+export {
+  beginCustomFieldDiscoveryRun,
+  completeCustomFieldDiscoveryRun,
+  createCustomFieldDiscoverySource,
+  failCustomFieldDiscoveryRun,
+  getLatestCustomFieldDiscoveryRun,
+} from './ai/custom-field-discovery-store.js';
+export type { PublicCustomFieldDiscoveryRun } from './ai/custom-field-discovery-store.js';
+export { runCustomFieldDiscoveryOperation } from './ai/custom-field-discovery-operation.js';
+export type {
+  CustomFieldDiscoveryOperationSummary,
+  CustomFieldDiscoveryTaskData,
+  RunCustomFieldDiscoveryOperationOptions,
+} from './ai/custom-field-discovery-operation.js';
 export { normalizeCustomFieldRecommendations } from './ai/custom-fields.js';
+export {
+  CustomFieldPolicyError,
+  getCustomFieldPolicy,
+  replaceCustomFieldPolicy,
+  resolveCustomFieldPolicy,
+} from './ai/custom-field-policy.js';
+export type {
+  CustomFieldPolicyEntry,
+  CustomFieldPolicyErrorCode,
+  CustomFieldPolicySelection,
+  ResolvedCustomField,
+} from './ai/custom-field-policy.js';
 export {
   applyAiResult,
   rejectAiResult,
@@ -474,7 +541,7 @@ export {
   batchRejectAiResults,
 } from './ai/apply.js';
 export type { AiApplyField, ApplyOptions, ReferenceData } from './ai/apply.js';
-export { revertAiResult } from './ai/revert.js';
+export { createAiRevertPlan, executeClaimedAiRevertPlan, revertAiResult } from './ai/revert.js';
 export { recordFeedback, getFeedbackSummary } from './ai/feedback.js';
 export type { AiFeedback, AiFeedbackSummary } from './ai/feedback.js';
 export {
@@ -485,8 +552,19 @@ export {
 export type { ProcessScope, ApplyScope } from './ai/scopes.js';
 export { getAiResultGroups } from './ai/grouping.js';
 export type { GroupByField, AiResultGroup, AiGroupedResults } from './ai/grouping.js';
-export { computeApplyPreflight } from './ai/preflight.js';
-export type { ApplyPreflightResult } from './ai/preflight.js';
+export {
+  claimAiMutationPlan,
+  computeApplyPreflight,
+  createAiApplyPlan,
+  executeClaimedAiApplyPlan,
+} from './ai/preflight.js';
+export type {
+  AiMutationExecutionResult,
+  AiMutationPlanPayload,
+  AiMutationPlanPreview,
+  ApplyPreflightResult,
+  ClaimedAiMutationPlan,
+} from './ai/preflight.js';
 export {
   fetchAndCachePricing,
   refreshPricingIfStale,

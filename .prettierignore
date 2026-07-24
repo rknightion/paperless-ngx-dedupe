@@ -5,6 +5,9 @@ dist
 pnpm-lock.yaml
 .pnpm-store
 .claude
+.superpowers
+.codacy
+packages/core/coverage
 CHANGELOG.md
 docs
 site

@@ -1,5 +1,6 @@
 import {
   createDatabaseWithHandle,
+  consumeDispatchIntents,
   enqueueManualOperation,
   migrateDatabase,
 } from '@paperless-dedupe/core';
@@ -105,6 +106,125 @@ describe('createJobDispatcher', () => {
       taskData: { force: true, purge: true },
     });
   });
+
+  it.each([
+    ['ai_apply', 'ai-apply-worker'],
+    ['ai_revert', 'ai-revert-worker'],
+  ])('dispatches durable %s intent task data to %s', async (task, workerName) => {
+    const sqlite = createSqlite({
+      id: `intent-${task}`,
+      jobId: `job-${task}`,
+      task,
+      taskDataJson: JSON.stringify({ planToken: 'opaque-reviewed-plan-token' }),
+    });
+    const launch = vi.fn(() => ({
+      jobId: `job-${task}`,
+      worker: {},
+      ready: Promise.resolve({ claimed: true }),
+      done: Promise.resolve(),
+    }));
+    const resolveWorker = vi.fn(() => `/workers/${workerName}.js`);
+    const dispatcher = createJobDispatcher({
+      sqlite: sqlite as never,
+      dbPath: '/data/app.db',
+      logger: { info: vi.fn(), error: vi.fn() } as never,
+      launchWorker: launch as never,
+      getWorkerPath: resolveWorker,
+    });
+
+    await dispatcher.launchIntent(`intent-${task}`, `dispatch-${task}`);
+
+    expect(resolveWorker).toHaveBeenCalledWith(workerName);
+    expect(launch).toHaveBeenCalledWith({
+      jobId: `job-${task}`,
+      dbPath: '/data/app.db',
+      workerScriptPath: `/workers/${workerName}.js`,
+      taskData: { planToken: 'opaque-reviewed-plan-token' },
+    });
+  });
+
+  it('dispatches durable custom-field discovery to its dedicated worker', async () => {
+    const sqlite = createSqlite({
+      id: 'intent-custom-fields',
+      jobId: 'job-custom-fields',
+      task: 'custom_field_discovery',
+      taskDataJson: JSON.stringify({ existingFieldNames: ['Account number'] }),
+    });
+    const launch = vi.fn(() => ({
+      jobId: 'job-custom-fields',
+      worker: {},
+      ready: Promise.resolve({ claimed: true }),
+      done: Promise.resolve(),
+    }));
+    const resolveWorker = vi.fn(() => '/workers/custom-field-discovery-worker.js');
+    const dispatcher = createJobDispatcher({
+      sqlite: sqlite as never,
+      dbPath: '/data/app.db',
+      logger: { info: vi.fn(), error: vi.fn() } as never,
+      launchWorker: launch as never,
+      getWorkerPath: resolveWorker,
+    });
+
+    await dispatcher.launchIntent('intent-custom-fields', 'dispatch-custom-fields');
+
+    expect(resolveWorker).toHaveBeenCalledWith('custom-field-discovery-worker');
+    expect(launch).toHaveBeenCalledWith({
+      jobId: 'job-custom-fields',
+      dbPath: '/data/app.db',
+      workerScriptPath: '/workers/custom-field-discovery-worker.js',
+      taskData: { existingFieldNames: ['Account number'] },
+    });
+  });
+
+  it.each([
+    ['ai_apply', 'ai_apply', 'ai-apply-worker'],
+    ['ai_revert', 'ai_revert', 'ai-revert-worker'],
+  ])(
+    'replays accepted %s work from its durable intent after a process restart',
+    async (operation, jobType, workerName) => {
+      const directory = mkdtempSync(join(tmpdir(), `paperless-${operation}-restart-`));
+      temporaryDirectories.push(directory);
+      const dbPath = join(directory, 'jobs.sqlite');
+      const first = createDatabaseWithHandle(dbPath);
+      await migrateDatabase(first.sqlite);
+      const intent = enqueueManualOperation(
+        first.sqlite,
+        operation as 'ai_apply' | 'ai_revert',
+        { kind: 'manual' },
+        jobType,
+        { planToken: 'opaque-reviewed-plan-token' },
+      );
+      first.sqlite.close();
+
+      const restarted = createDatabaseWithHandle(dbPath);
+      await migrateDatabase(restarted.sqlite);
+      const launch = vi.fn(() => ({
+        jobId: intent.jobId!,
+        worker: {},
+        ready: Promise.resolve({ claimed: true }),
+        done: Promise.resolve(),
+      }));
+      const dispatcher = createJobDispatcher({
+        sqlite: restarted.sqlite,
+        dbPath,
+        logger: { info: vi.fn(), error: vi.fn() } as never,
+        launchWorker: launch as never,
+        getWorkerPath: vi.fn(() => `/workers/${workerName}.js`),
+      });
+
+      const result = await consumeDispatchIntents(dispatcher, new Date());
+
+      expect(result).toMatchObject({ dispatched: 1, retried: 0, deadLettered: 0 });
+      expect(launch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobId: intent.jobId,
+          workerScriptPath: `/workers/${workerName}.js`,
+          taskData: { planToken: 'opaque-reviewed-plan-token' },
+        }),
+      );
+      restarted.sqlite.close();
+    },
+  );
 
   it('does not acknowledge dispatch until the worker is ready', async () => {
     vi.useFakeTimers();
@@ -214,7 +334,7 @@ describe('createJobDispatcher', () => {
       logger: { info: vi.fn(), error: vi.fn() } as never,
       readinessTimeoutMs: 500,
       getWorkerPath: vi.fn(() =>
-        resolve('packages/core/src/jobs/__tests__/fixtures/worker-claim-then-hang.mjs'),
+        resolve('..', 'core', 'src/jobs/__tests__/fixtures/worker-claim-then-hang.mjs'),
       ),
     });
 
@@ -501,7 +621,7 @@ describe('createJobDispatcher', () => {
     const sqlite = createSqlite({
       id: 'intent-legacy',
       jobId: 'job-legacy',
-      task: 'ai_apply',
+      task: 'legacy_direct_worker',
       jobStatus: 'running',
     });
     const launch = vi.fn();

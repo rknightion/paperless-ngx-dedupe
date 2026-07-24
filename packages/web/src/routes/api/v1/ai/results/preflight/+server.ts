@@ -1,6 +1,12 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { computeApplyPreflight, PaperlessClient, toPaperlessConfig } from '@paperless-dedupe/core';
-import type { AiApplyField, ApplyScope } from '@paperless-dedupe/core';
+import {
+  aiFieldSelectionSchema,
+  createAiApplyPlan,
+  getAiConfig,
+  PaperlessClient,
+  toPaperlessConfig,
+} from '@paperless-dedupe/core';
+import type { ApplyScope } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -16,11 +22,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   const scope: ApplyScope = body.scope;
 
-  let fields: AiApplyField[] = ['title', 'correspondent', 'documentType', 'tags'];
-  if (Array.isArray(body.fields)) {
-    fields = body.fields.filter((f: string) =>
-      ['title', 'correspondent', 'documentType', 'tags', 'customFields'].includes(f),
-    );
+  const selection = aiFieldSelectionSchema.safeParse(body.selection);
+  if (!selection.success) {
+    return apiError(ErrorCode.BAD_REQUEST, 'A non-empty field selection is required');
   }
 
   const allowClearing = body.allowClearing === true;
@@ -28,11 +32,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   const paperlessConfig = toPaperlessConfig(locals.config);
   const client = new PaperlessClient(paperlessConfig);
+  const aiConfig = getAiConfig(locals.db);
 
-  const preflight = await computeApplyPreflight(locals.db, client, scope, {
-    fields,
+  const preflight = await createAiApplyPlan(locals.db, client, scope, selection.data, {
     allowClearing,
     createMissingEntities,
+    processedTagName: aiConfig.processedTagName,
   });
 
   return apiSuccess(preflight);

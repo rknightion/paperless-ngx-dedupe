@@ -1,9 +1,9 @@
 <script lang="ts">
   import { ArrowRight } from 'lucide-svelte';
-  import type { AiResultDetail } from '@paperless-dedupe/core';
+  import type { AiInboxResultDetail, AiResultDetail } from '@paperless-dedupe/core';
 
   interface Props {
-    result: AiResultDetail;
+    result: AiResultDetail | AiInboxResultDetail;
   }
 
   let { result }: Props = $props();

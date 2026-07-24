@@ -19,7 +19,9 @@
   } from 'lucide-svelte';
   import { parse as parseYaml } from 'yaml';
   import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
+  import DatabaseBackupSettings from '$lib/components/settings/DatabaseBackupSettings.svelte';
   import DiagnosticsSettings from '$lib/components/settings/DiagnosticsSettings.svelte';
+  import CustomFieldPolicySettings from '$lib/components/settings/CustomFieldPolicySettings.svelte';
 
   /** Validate YAML string as a tag alias map (Record<string, string[]>). */
   function validateTagAliasYaml(yaml: string): { valid: boolean; error?: string } {
@@ -915,14 +917,7 @@
             <input type="checkbox" bind:checked={aiExtractTags} class="rounded" />
             Tags
           </label>
-          <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiExtractCustomFields} class="rounded" />
-            Custom Fields
-            <InfoIcon
-              text="Recommend typed values for custom fields already defined in Paperless-NGX. Select fields use their stable option IDs, and recommendations are merged with live document values when applied."
-              position="top"
-            />
-          </label>
+          <CustomFieldPolicySettings bind:enabled={aiExtractCustomFields} />
         </div>
       </div>
 
@@ -1393,6 +1388,8 @@
       </div>
     </dl>
   </div>
+
+  <DatabaseBackupSettings />
 
   <DiagnosticsSettings />
 

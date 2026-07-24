@@ -7,6 +7,7 @@ import {
   setConfigBatch,
 } from '@paperless-dedupe/core';
 import { ConfigValidationError, getConfigMetadata } from '@paperless-dedupe/core/config/registry';
+import { CustomFieldPolicyError } from '@paperless-dedupe/core';
 import { z, ZodError } from 'zod';
 import type { RequestHandler } from './$types';
 
@@ -62,6 +63,12 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
       return apiError(ErrorCode.VALIDATION_FAILED, {
         operation: 'update_config',
         validationIssues: [{ path: [error.key], message: error.reason }],
+      });
+    }
+    if (error instanceof CustomFieldPolicyError) {
+      return apiError(ErrorCode.VALIDATION_FAILED, {
+        operation: 'update_config',
+        validationIssues: [{ path: ['ai.extractCustomFields'], message: error.message }],
       });
     }
     if (error instanceof ZodError) {

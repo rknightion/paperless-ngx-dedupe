@@ -36,6 +36,8 @@ export default defineConfig({
       PAPERLESS_API_TOKEN: 'test-token-e2e',
       DATABASE_URL: './data/e2e-test.db',
       LOG_LEVEL: 'warn',
+      AI_ENABLED: 'true',
+      AI_OPENAI_API_KEY: 'test-key-e2e-not-used',
     },
   },
 });

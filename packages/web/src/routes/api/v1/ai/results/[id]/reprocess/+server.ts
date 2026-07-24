@@ -6,10 +6,11 @@ import {
   markAiResultFailed,
   PaperlessClient,
   toPaperlessConfig,
+  CustomFieldPolicyError,
 } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ params, locals }) => {
+export const POST: RequestHandler = async ({ params, locals, url }) => {
   if (!locals.config.AI_ENABLED) {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
   }
@@ -38,11 +39,37 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 
     return apiSuccess({ reprocessed: true, resultId: result.resultId });
   } catch (error) {
+    if (error instanceof CustomFieldPolicyError) {
+      return apiError(
+        ErrorCode.CONFLICT,
+        {
+          operation: 'ai_reprocess',
+          retryable: false,
+          validationIssues: [
+            {
+              path: ['customFields', error.fieldId ?? 'policy'],
+              message: error.code,
+            },
+          ],
+        },
+        409,
+      );
+    }
     const errMsg = (error as Error).message;
     try {
       markAiResultFailed(locals.db, params.id, errMsg);
     } catch {
       // DB update failed — original error already logged
+    }
+    if (url.searchParams.get('mode') === 'inbox') {
+      return apiError(
+        errMsg.includes('not found') ? ErrorCode.NOT_FOUND : ErrorCode.INTERNAL_ERROR,
+        {
+          operation: 'ai_reprocess',
+          retryable: !errMsg.includes('not found'),
+        },
+        errMsg.includes('not found') ? 404 : 500,
+      );
     }
     if (errMsg.includes('not found')) {
       return apiError(ErrorCode.NOT_FOUND, errMsg);

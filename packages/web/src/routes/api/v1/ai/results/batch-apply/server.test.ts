@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getServerRuntime: vi.fn(),
   createJob: vi.fn(() => 'job-batch-apply'),
   launchWorker: vi.fn(),
+  dispatchPending: vi.fn(),
   RuntimeUnavailableError: class RuntimeUnavailableError extends Error {},
 }));
 
@@ -54,6 +55,7 @@ describe('AI batch-apply shutdown admission', () => {
           return operation();
         },
       },
+      dispatchPending: mocks.dispatchPending,
     });
   });
 
@@ -82,7 +84,7 @@ describe('AI batch-apply shutdown admission', () => {
     const request = {
       async json() {
         mocks.accepting = false;
-        return { resultIds: ['result-1'] };
+        return { planToken: 'reviewed-token-long-enough' };
       },
     };
 
@@ -102,6 +104,29 @@ describe('AI batch-apply shutdown admission', () => {
       error: { code: 'SERVICE_UNAVAILABLE', retryable: true },
     });
     expect(mocks.createJob).not.toHaveBeenCalled();
+    expect(mocks.launchWorker).not.toHaveBeenCalled();
+  });
+
+  it('persists only the opaque reviewed token and dispatches the durable intent', async () => {
+    const response = await POST({
+      request: {
+        json: async () => ({
+          planToken: 'reviewed-token-long-enough',
+          resultIds: ['must-not-cross-boundary'],
+          fields: ['title'],
+        }),
+      },
+      locals: {
+        db: {},
+        config: { AI_ENABLED: true, DATABASE_URL: '/data/app.db' },
+      },
+    } as never);
+
+    expect(response.status).toBe(202);
+    expect(mocks.createJob).toHaveBeenCalledWith({}, 'ai_apply', {
+      planToken: 'reviewed-token-long-enough',
+    });
+    expect(mocks.dispatchPending).toHaveBeenCalledOnce();
     expect(mocks.launchWorker).not.toHaveBeenCalled();
   });
 });

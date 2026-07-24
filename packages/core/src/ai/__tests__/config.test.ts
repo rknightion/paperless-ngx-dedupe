@@ -4,6 +4,7 @@ import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
 import { getAiConfig, setAiConfig } from '../config.js';
 import { DEFAULT_AI_CONFIG } from '../types.js';
+import { replaceCustomFieldPolicy } from '../custom-field-policy.js';
 
 describe('getAiConfig', () => {
   let db: AppDatabase;
@@ -67,6 +68,19 @@ describe('setAiConfig', () => {
   });
 
   it('parses boolean values correctly', () => {
+    replaceCustomFieldPolicy(
+      db,
+      [{ fieldId: 7 }],
+      [
+        {
+          id: 7,
+          name: 'Reference',
+          dataType: 'string',
+          extraData: { selectOptions: [] },
+          documentCount: 0,
+        },
+      ],
+    );
     setAiConfig(db, {
       addProcessedTag: true,
       includeCorrespondents: true,
@@ -81,6 +95,13 @@ describe('setAiConfig', () => {
     expect(config.includeDocumentTypes).toBe(true);
     expect(config.includeTags).toBe(true);
     expect(config.extractCustomFields).toBe(true);
+  });
+
+  it('rejects enabling custom-field extraction with an empty allowlist atomically', () => {
+    expect(() => setAiConfig(db, { model: 'gpt-5.4', extractCustomFields: true })).toThrowError(
+      expect.objectContaining({ code: 'empty_policy' }),
+    );
+    expect(getAiConfig(db)).toEqual(DEFAULT_AI_CONFIG);
   });
 
   it('rejects the retired autoProcess key without persisting it', () => {

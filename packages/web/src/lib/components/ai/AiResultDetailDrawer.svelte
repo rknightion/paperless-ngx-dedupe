@@ -1,27 +1,21 @@
 <script lang="ts">
+  import { X, ExternalLink, Loader2, AlertCircle, RefreshCw, Check } from 'lucide-svelte';
   import {
-    X,
-    ExternalLink,
-    Loader2,
-    AlertCircle,
-    RefreshCw,
-    ChevronDown,
-    ChevronUp,
-    Check,
-  } from 'lucide-svelte';
-  import {
-    getActiveResultId,
-    getActiveResultDetail,
-    getDetailLoadState,
-    getFieldSelection,
-    toggleField,
     fieldSelections,
-    selectResult,
+    initializeFieldSelection,
+    setFieldSelection,
   } from './AiReviewStore.svelte';
-  import AiFieldDiffCard from './AiFieldDiffCard.svelte';
+  import { createAiDetailLoader } from './ai-detail-loader';
+  import AiFieldSelection from './AiFieldSelection.svelte';
+  import AiApplyAuditCard from './AiApplyAuditCard.svelte';
   import AiDocumentPreview from './AiDocumentPreview.svelte';
+  import type {
+    AiFieldSelection as AiFieldSelectionValue,
+    AiInboxResultDetail,
+  } from '@paperless-dedupe/core';
 
   interface Props {
+    resultId: string;
     mobile?: boolean;
     paperlessUrl?: string;
     extractEnabled?: {
@@ -30,18 +24,21 @@
       documentType: boolean;
       tags: boolean;
       customFields: boolean;
+      processedTag?: boolean;
     };
     onapply: (
       id: string,
-      fields: string[],
+      selection: AiFieldSelectionValue,
       options: { allowClearing: boolean; createMissingEntities: boolean },
     ) => Promise<void>;
     onreject: (id: string) => Promise<void>;
     onreprocess: (id: string) => Promise<void>;
+    onrevert?: (id: string, selection: AiFieldSelectionValue) => Promise<void>;
     onclose: () => void;
   }
 
   let {
+    resultId,
     mobile = false,
     paperlessUrl = '',
     extractEnabled = {
@@ -54,28 +51,53 @@
     onapply,
     onreject,
     onreprocess,
+    onrevert,
     onclose,
   }: Props = $props();
 
-  let contentText = $state<string | null>(null);
-  let contentLoading = $state(false);
-  let contentExpanded = $state(false);
   let isApplying = $state(false);
   let isRejecting = $state(false);
   let isRetrying = $state(false);
   let isReprocessing = $state(false);
 
-  const activeId = $derived(getActiveResultId());
-  const detail = $derived(getActiveResultDetail());
-  const loadState = $derived(getDetailLoadState());
+  const activeId = $derived(resultId);
+  let detail = $state<AiInboxResultDetail | null>(null);
+  let loadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const selection = $derived(activeId ? (fieldSelections.get(activeId) ?? null) : null);
 
-  const checkedFields = $derived(() => {
-    if (!activeId || !detail) return [] as string[];
-    const sel = fieldSelections.get(activeId);
-    return sel ? [...sel] : [];
+  const detailLoader = createAiDetailLoader<AiInboxResultDetail>(
+    async (id) => {
+      const response = await fetch(`/api/v1/ai/results/${id}?mode=inbox`);
+      if (!response.ok) throw new Error('Failed to load result');
+      const body = await response.json();
+      return body.data;
+    },
+    (snapshot) => {
+      detail = snapshot.detail;
+      loadState = snapshot.state;
+      if (snapshot.id && snapshot.detail) {
+        initializeFieldSelection(snapshot.id, snapshot.detail, extractEnabled);
+      }
+    },
+  );
+
+  $effect(() => {
+    const id = activeId;
+    if (id) void detailLoader.load(id);
+    else detailLoader.close();
+    return () => detailLoader.close();
   });
 
-  const checkedCount = $derived(checkedFields().length);
+  const checkedCount = $derived(
+    selection
+      ? Number(selection.title) +
+          Number(selection.correspondent) +
+          Number(selection.documentType) +
+          Number(selection.tags) +
+          Number(selection.processedTag) +
+          selection.customFieldIds.length
+      : 0,
+  );
 
   const isExtractionFailure = $derived(() => {
     if (!detail || detail.appliedStatus !== 'failed') return false;
@@ -87,31 +109,10 @@
       detail.suggestedCustomFields.length === 0
     );
   });
-
-  // Fetch document content when active result changes
-  $effect(() => {
-    const docId = detail?.documentId;
-    if (!docId) {
-      contentText = null;
-      return;
-    }
-    contentLoading = true;
-    contentExpanded = false;
-    fetch(`/api/v1/documents/${docId}/content`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load content');
-        return res.json();
-      })
-      .then((json) => {
-        contentText = json.data?.content ?? json.content ?? null;
-      })
-      .catch(() => {
-        contentText = null;
-      })
-      .finally(() => {
-        contentLoading = false;
-      });
-  });
+  const isReviewable = $derived(
+    detail?.appliedStatus === 'pending_review' ||
+      (detail?.appliedStatus === 'failed' && detail.failureType === 'review_conflict'),
+  );
 
   function statusBadgeClass(status: string): string {
     switch (status) {
@@ -145,34 +146,11 @@
     }
   }
 
-  const contentPreview = $derived(
-    contentText && contentText.length > 500 && !contentExpanded
-      ? contentText.slice(0, 500) + '...'
-      : contentText,
-  );
-
-  function isFieldChecked(field: string): boolean {
-    if (!activeId) return false;
-    const sel = fieldSelections.get(activeId);
-    return sel ? sel.has(field) : false;
-  }
-
-  function handleFieldCheck(field: string, checked: boolean): void {
-    if (!activeId) return;
-    // Ensure field selection exists
-    if (detail) {
-      getFieldSelection(activeId, detail);
-    }
-    if (checked !== isFieldChecked(field)) {
-      toggleField(activeId, field);
-    }
-  }
-
   async function handleApply(): Promise<void> {
-    if (!activeId || checkedCount === 0) return;
+    if (!activeId || !selection || checkedCount === 0) return;
     isApplying = true;
     try {
-      await onapply(activeId, checkedFields(), {
+      await onapply(activeId, selection, {
         allowClearing: false,
         createMissingEntities: true,
       });
@@ -192,15 +170,25 @@
   }
 
   async function handleRetry(): Promise<void> {
-    if (!activeId) return;
+    if (!activeId || !selection) return;
     isRetrying = true;
     try {
-      await onapply(activeId, ['title', 'correspondent', 'documentType', 'tags'], {
+      await onapply(activeId, selection, {
         allowClearing: false,
         createMissingEntities: true,
       });
     } finally {
       isRetrying = false;
+    }
+  }
+
+  async function handleRevert(): Promise<void> {
+    if (!activeId || !selection || !onrevert) return;
+    isApplying = true;
+    try {
+      await onrevert(activeId, selection);
+    } finally {
+      isApplying = false;
     }
   }
 
@@ -283,7 +271,7 @@
       </div>
       <p class="text-ink text-sm font-medium">Failed to load result</p>
       <button
-        onclick={() => activeId && selectResult(activeId)}
+        onclick={() => detailLoader.reload()}
         class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
       >
         <RefreshCw class="h-4 w-4" />
@@ -327,6 +315,12 @@
         </button>
       </div>
 
+      {#if detail.truncation?.truncated}
+        <p class="bg-warn-light/30 text-muted rounded-lg px-3 py-2 text-xs" role="status">
+          Some values were shortened for safe review.
+        </p>
+      {/if}
+
       <!-- Skipped Banner -->
       {#if detail.appliedStatus === 'skipped' && detail.errorMessage}
         <div class="bg-warn-light/30 border-warn/20 space-y-2 rounded-lg border p-4">
@@ -343,7 +337,7 @@
       {/if}
 
       <!-- Error Banner -->
-      {#if detail.appliedStatus === 'failed' && detail.errorMessage}
+      {#if detail.appliedStatus === 'failed'}
         <div class="bg-ember-light/30 border-ember/20 space-y-2 rounded-lg border p-4">
           <div class="flex items-start gap-2">
             <AlertCircle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
@@ -351,17 +345,13 @@
               <p class="text-ember text-sm font-semibold">
                 {isExtractionFailure() ? 'Extraction Failed' : 'Apply Failed'}
               </p>
-              {#if detail.failureType}
-                <span
-                  class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
-                >
-                  {detail.failureType}
-                </span>
-              {/if}
+              <p class="text-muted text-xs">
+                {isExtractionFailure()
+                  ? 'The extraction did not complete. Retry when the underlying issue is resolved.'
+                  : 'The reviewed apply conflicted with newer document data. Review the current values again.'}
+              </p>
             </div>
           </div>
-          <pre
-            class="text-ink bg-canvas rounded p-3 text-xs whitespace-pre-wrap">{detail.errorMessage}</pre>
         </div>
       {/if}
 
@@ -369,110 +359,29 @@
       <AiDocumentPreview paperlessId={detail.paperlessId} mode="preview" />
 
       <!-- Suggestions -->
-      <div class="space-y-3">
-        <h3 class="text-ink text-sm font-semibold">Suggestions</h3>
-        <AiFieldDiffCard
-          fieldName="title"
-          fieldLabel="Title"
-          currentValue={detail.currentTitle}
-          suggestedValue={detail.suggestedTitle}
-          confidence={detail.confidence?.title ?? null}
-          checked={isFieldChecked('title')}
-          oncheck={(c) => handleFieldCheck('title', c)}
-          disabled={detail.appliedStatus !== 'pending_review'}
-          fieldDisabledByConfig={!extractEnabled.title}
+      {#if selection}
+        <AiFieldSelection
+          result={detail}
+          {selection}
+          {extractEnabled}
+          disabled={!isReviewable}
+          onchange={(next) => activeId && setFieldSelection(activeId, next)}
         />
-        <AiFieldDiffCard
-          fieldName="correspondent"
-          fieldLabel="Correspondent"
-          currentValue={detail.currentCorrespondent}
-          suggestedValue={detail.suggestedCorrespondent}
-          confidence={detail.confidence?.correspondent ?? null}
-          checked={isFieldChecked('correspondent')}
-          oncheck={(c) => handleFieldCheck('correspondent', c)}
-          disabled={detail.appliedStatus !== 'pending_review'}
-          fieldDisabledByConfig={!extractEnabled.correspondent}
-        />
-        <AiFieldDiffCard
-          fieldName="documentType"
-          fieldLabel="Document Type"
-          currentValue={detail.currentDocumentType}
-          suggestedValue={detail.suggestedDocumentType}
-          confidence={detail.confidence?.documentType ?? null}
-          checked={isFieldChecked('documentType')}
-          oncheck={(c) => handleFieldCheck('documentType', c)}
-          disabled={detail.appliedStatus !== 'pending_review'}
-          fieldDisabledByConfig={!extractEnabled.documentType}
-        />
-        <AiFieldDiffCard
-          fieldName="tags"
-          fieldLabel="Tags"
-          currentValue={detail.currentTags}
-          suggestedValue={detail.suggestedTags}
-          confidence={detail.confidence?.tags ?? null}
-          checked={isFieldChecked('tags')}
-          oncheck={(c) => handleFieldCheck('tags', c)}
-          disabled={detail.appliedStatus !== 'pending_review'}
-          fieldDisabledByConfig={!extractEnabled.tags}
-        />
-        <AiFieldDiffCard
-          fieldName="customFields"
-          fieldLabel="Custom Fields"
-          currentValue={detail.currentCustomFields.map(
-            (field) => `Field #${field.field}: ${String(field.value)}`,
-          )}
-          suggestedValue={detail.suggestedCustomFields.map(
-            (field) =>
-              `${field.fieldName ?? `Field #${field.fieldId}`}: ${
-                Array.isArray(field.value) ? field.value.join(', ') : String(field.value)
-              }`,
-          )}
-          confidence={detail.suggestedCustomFields.length > 0
-            ? Math.min(...detail.suggestedCustomFields.map((field) => field.confidence))
-            : null}
-          checked={isFieldChecked('customFields')}
-          oncheck={(c) => handleFieldCheck('customFields', c)}
-          disabled={detail.appliedStatus !== 'pending_review'}
-          fieldDisabledByConfig={!extractEnabled.customFields}
-        />
-      </div>
+      {/if}
 
       <!-- Evidence -->
       {#if detail.evidence}
         <div class="space-y-2">
           <h3 class="text-ink text-sm font-semibold">Evidence</h3>
           <blockquote class="border-accent text-muted border-l-2 pl-3 text-sm italic">
-            {detail.evidence}
+            {detail.evidence.length > 500 ? `${detail.evidence.slice(0, 497)}...` : detail.evidence}
           </blockquote>
         </div>
       {/if}
 
-      <!-- Content Excerpt -->
-      <div class="space-y-2">
-        <h3 class="text-ink text-sm font-semibold">Document Content</h3>
-        {#if contentLoading}
-          <div class="bg-canvas-deep h-24 animate-pulse rounded-lg"></div>
-        {:else if contentText}
-          <pre
-            class="text-muted bg-canvas max-h-48 overflow-y-auto rounded-lg p-3 text-xs whitespace-pre-wrap">{contentPreview}</pre>
-          {#if contentText.length > 500}
-            <button
-              onclick={() => (contentExpanded = !contentExpanded)}
-              class="text-accent hover:text-accent-hover flex items-center gap-1 text-xs font-medium"
-            >
-              {#if contentExpanded}
-                <ChevronUp class="h-3 w-3" />
-                Show less
-              {:else}
-                <ChevronDown class="h-3 w-3" />
-                Show more
-              {/if}
-            </button>
-          {/if}
-        {:else}
-          <p class="text-muted text-sm italic">No content available</p>
-        {/if}
-      </div>
+      {#if detail.appliedStatus === 'applied' || detail.appliedStatus === 'partial' || detail.appliedStatus === 'reverted'}
+        <AiApplyAuditCard result={detail} />
+      {/if}
 
       <!-- Processing Info -->
       <div class="space-y-2">
@@ -501,7 +410,7 @@
     </div>
 
     <!-- Action Footer -->
-    {#if detail.appliedStatus === 'pending_review'}
+    {#if isReviewable}
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
         <button
           onclick={handleApply}
@@ -531,7 +440,19 @@
       </div>
     {/if}
 
-    {#if detail.appliedStatus === 'failed'}
+    {#if (detail.appliedStatus === 'applied' || detail.appliedStatus === 'partial') && onrevert}
+      <div class="border-soft bg-surface sticky bottom-0 flex border-t px-4 py-3">
+        <button
+          onclick={handleRevert}
+          disabled={isApplying || checkedCount === 0}
+          class="border-ember text-ember hover:bg-ember-light flex flex-1 items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          Revert selected audited fields
+        </button>
+      </div>
+    {/if}
+
+    {#if detail.appliedStatus === 'failed' && detail.failureType !== 'review_conflict'}
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
         {#if isExtractionFailure()}
           <button

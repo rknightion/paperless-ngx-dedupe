@@ -7,6 +7,7 @@ import { document, documentContent, documentSignature } from '../schema/sqlite/d
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { job } from '../schema/sqlite/jobs.js';
 import { appConfig, syncState } from '../schema/sqlite/app.js';
+import { customFieldDiscoveryRun } from '../schema/sqlite/custom-field-discovery.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { aiResultRevision } from '../schema/sqlite/ai-result-revisions.js';
 import {
@@ -41,6 +42,7 @@ const schema = {
   job,
   appConfig,
   syncState,
+  customFieldDiscoveryRun,
   aiProcessingResult,
   aiResultRevision,
   automationSchedule,

@@ -5,6 +5,7 @@ import {
   setAiConfig,
   aiConfigSchema,
   validateTagAliasYaml,
+  CustomFieldPolicyError,
 } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
@@ -44,6 +45,21 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     }
   }
 
-  const updated = setAiConfig(locals.db, result.data);
-  return apiSuccess(updated);
+  try {
+    const updated = setAiConfig(locals.db, result.data);
+    return apiSuccess(updated);
+  } catch (error) {
+    if (error instanceof CustomFieldPolicyError) {
+      return apiError(ErrorCode.VALIDATION_FAILED, {
+        operation: 'update_ai_config',
+        validationIssues: [
+          {
+            path: ['extractCustomFields'],
+            message: error.code,
+          },
+        ],
+      });
+    }
+    throw error;
+  }
 };

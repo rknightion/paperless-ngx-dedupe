@@ -93,12 +93,29 @@ describe('setConfigBatch', () => {
     setConfigBatch(db, {
       'ai.model': 'gpt-5.4',
       'ai.batchSize': '100',
-      'ai.extractCustomFields': 'true',
+      'ai.extractCustomFields': 'false',
     });
 
     const config = getConfig(db);
     expect(config['ai.model']).toBe('gpt-5.4');
     expect(Object.keys(config).length).toBe(baseKeyCount + 3);
+  });
+
+  it.each([
+    ['single', () => setConfig(db, 'ai.extractCustomFields', true)],
+    [
+      'batch',
+      () =>
+        setConfigBatch(db, {
+          'ai.model': 'gpt-5.4',
+          'ai.extractCustomFields': true,
+        }),
+    ],
+  ])('rejects %s enablement with an empty policy and rolls back every write', (_name, mutate) => {
+    expect(mutate).toThrowError(expect.objectContaining({ code: 'empty_policy' }));
+
+    expect(getConfig(db)).not.toHaveProperty('ai.extractCustomFields');
+    expect(getConfig(db)).not.toHaveProperty('ai.model');
   });
 
   it('handles mixed insert and update', () => {

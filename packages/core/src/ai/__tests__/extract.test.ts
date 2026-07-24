@@ -173,4 +173,34 @@ describe('processDocument', () => {
       expect.objectContaining({ maxOutputTokens: 777 }),
     );
   });
+
+  it('rejects an invalid custom-field prompt before budget reservation or provider invocation', async () => {
+    const provider = createMockProvider();
+    const requestBudget = {
+      reserve: vi.fn(),
+      reconcile: vi.fn(),
+    };
+
+    await expect(
+      processDocument({
+        ...baseOptions,
+        provider,
+        extractCustomFields: true,
+        customFields: [
+          {
+            id: 7,
+            name: '💷'.repeat(65),
+            dataType: 'string',
+            extraData: { selectOptions: [] },
+            documentCount: 0,
+          },
+        ],
+        budgetRequestKey: 'doc-invalid-policy',
+        requestBudget,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_definition' });
+
+    expect(requestBudget.reserve).not.toHaveBeenCalled();
+    expect(provider.extract).not.toHaveBeenCalled();
+  });
 });

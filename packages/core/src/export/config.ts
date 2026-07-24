@@ -7,6 +7,7 @@ import { getDedupConfig } from '../dedup/config.js';
 import { dedupConfigSchema } from '../dedup/types.js';
 import { getConfig } from '../queries/config.js';
 import { appConfig } from '../schema/sqlite/app.js';
+import { assertCustomFieldPolicyInvariant } from '../ai/custom-field-policy.js';
 import { automationSchedule } from '../schema/sqlite/automation.js';
 import { nextOccurrence } from '../scheduler/occurrences.js';
 import { scheduleCadenceSchema } from '../scheduler/settings.js';
@@ -369,6 +370,7 @@ export function importConfig(
         .run();
       scheduledAiApplied = true;
     }
+    assertCustomFieldPolicyInvariant(tx as unknown as AppDatabase);
   });
 
   let reason: ConfigImportResult['scheduledAiOptIn']['reason'];

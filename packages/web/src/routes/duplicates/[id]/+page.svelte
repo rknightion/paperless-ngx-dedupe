@@ -10,9 +10,11 @@
     TextDiff,
     GroupActionBar,
     DocumentVisualCompare,
+    MatchExplanation,
   } from '$lib/components';
   import { ConfirmDialog } from '$lib/components';
   import { trackGroupViewed, trackMemberAction } from '$lib/faro-events';
+  import { safeDocumentReturnTarget } from '$lib/utils/safe-return';
   import { ArrowLeft, ExternalLink, Trash2, UserMinus } from 'lucide-svelte';
 
   let { data } = $props();
@@ -31,7 +33,12 @@
 
   let groupStatus = $derived(data.group.status);
   let returnParams = $derived($page.url.searchParams.get('returnParams') ?? '');
-  let returnUrl = $derived(returnParams ? `/duplicates?${returnParams}` : '/duplicates');
+  let documentReturnUrl = $derived(
+    safeDocumentReturnTarget($page.url.searchParams.get('returnTo')),
+  );
+  let returnUrl = $derived(
+    documentReturnUrl ?? (returnParams ? `/duplicates?${returnParams}` : '/duplicates'),
+  );
 
   untrack(() =>
     trackGroupViewed({
@@ -143,7 +150,8 @@
     href={returnUrl}
     class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm"
   >
-    <ArrowLeft class="h-4 w-4" /> Back to Duplicates
+    <ArrowLeft class="h-4 w-4" />
+    {documentReturnUrl ? 'Back to Documents' : 'Back to Duplicates'}
   </a>
 
   <!-- Group header -->
@@ -169,6 +177,7 @@
     memberCount={data.group.members.length}
     onaction={() => invalidateAll()}
     {returnParams}
+    {returnUrl}
   />
 
   <!-- Confidence section divider -->
@@ -318,6 +327,13 @@
             </select>
           {/if}
         {/if}
+
+        <MatchExplanation
+          explanation={data.group.matchExplanation}
+          comparisonDocumentId={selectedSecondary.documentId}
+          primaryTitle={primaryMember.title}
+          comparisonTitle={selectedSecondary.title}
+        />
 
         <!-- Per-document actions -->
         {#if groupStatus !== 'deleted'}

@@ -57,6 +57,7 @@
     <input
       type="checkbox"
       checked={isSelected}
+      aria-label={`Select ${result.documentTitle}`}
       onclick={(e) => {
         e.stopPropagation();
         onselect();

@@ -1,9 +1,6 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { createJob, JobAlreadyRunningError, JobType, launchWorker } from '@paperless-dedupe/core';
-import type { ApplyScope } from '@paperless-dedupe/core';
+import { createJob, JobAlreadyRunningError, JobType } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
-import type { AiApplyField } from '@paperless-dedupe/core';
-import { resolveServerWorkerPath } from '$lib/server/job-dispatcher';
 import { RuntimeUnavailableError } from '$lib/server/scheduler';
 import { getServerRuntime } from '../../../../../../runtime.server';
 
@@ -17,38 +14,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const resultIds: string[] = body?.resultIds ?? [];
-    let fields: AiApplyField[] = ['title', 'correspondent', 'documentType', 'tags'];
-
-    if (Array.isArray(body?.fields)) {
-      fields = body.fields.filter((f: string) =>
-        ['title', 'correspondent', 'documentType', 'tags', 'customFields'].includes(f),
-      );
+    const planToken = body?.planToken;
+    if (typeof planToken !== 'string' || planToken.length < 16) {
+      return apiError(ErrorCode.BAD_REQUEST, 'A reviewed AI apply plan token is required');
     }
 
-    const allowClearing = body?.allowClearing === true;
-    const createMissingEntities = body?.createMissingEntities !== false;
-
-    // Support both explicit scope and legacy resultIds
-    let scope: ApplyScope;
-    if (body?.scope) {
-      scope = body.scope;
-    } else {
-      if (resultIds.length === 0) {
-        return apiError(ErrorCode.BAD_REQUEST, 'No result IDs provided');
-      }
-      scope = { type: 'selected_result_ids', resultIds };
-    }
-
-    return runtime.acceptingGate.run(() => {
-      const jobId = createJob(locals.db, JobType.AI_APPLY);
-      const workerPath = resolveServerWorkerPath('ai-apply-worker');
-      launchWorker({
-        jobId,
-        dbPath: locals.config.DATABASE_URL,
-        workerScriptPath: workerPath,
-        taskData: { scope, fields, allowClearing, createMissingEntities },
-      });
+    return runtime.acceptingGate.run(async () => {
+      const jobId = createJob(locals.db, JobType.AI_APPLY, { planToken });
+      await runtime.dispatchPending();
       return apiSuccess({ jobId }, undefined, 202);
     });
   } catch (error) {

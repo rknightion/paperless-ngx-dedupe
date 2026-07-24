@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import type Database from 'better-sqlite3';
+import { nanoid } from 'nanoid';
 
 import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
@@ -8,6 +9,8 @@ import { job } from '../schema/sqlite/jobs.js';
 import { appConfig, syncState } from '../schema/sqlite/app.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { aiResultRevision } from '../schema/sqlite/ai-result-revisions.js';
+import { aiCustomFieldPolicy } from '../schema/sqlite/ai-custom-field-policy.js';
+import { customFieldDiscoveryRun } from '../schema/sqlite/custom-field-discovery.js';
 import {
   aiBudgetReservation,
   automationSchedule,
@@ -22,6 +25,7 @@ import {
 } from '../schema/sqlite/review.js';
 import { isSensitiveConfigKey } from '../queries/config.js';
 import { ensureAutomationDefaults } from '../scheduler/settings.js';
+import { documentLibraryAddedDateKeySql } from '../queries/documents.js';
 
 const SCHEMA_HASH_KEY = 'schema_ddl_hash';
 const SCHEMA_SNAPSHOT_KEY = 'schema_ddl_snapshot';
@@ -37,6 +41,8 @@ const allTables = {
   syncState,
   aiProcessingResult,
   aiResultRevision,
+  aiCustomFieldPolicy,
+  customFieldDiscoveryRun,
   automationSchedule,
   dispatchIntent,
   operationLease,
@@ -135,6 +141,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   migrateJobExecutionToken(sqlite);
   migrateAiAutomationCompatibility(sqlite);
   ensureReviewedMutationCompatibility(sqlite);
+  ensureJobHistoryCompatibility(sqlite);
+  ensureDocumentLibraryAddedDateIndex(sqlite);
+  ensureCustomFieldPolicyCompatibility(sqlite);
 
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
@@ -153,6 +162,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
     // Schema is up to date — still run post-DDL migrations
     migrateDeletedGroupArchives(sqlite);
     ensureAutomationDefaults(sqlite);
+    ensureCustomFieldPolicyCompatibility(sqlite);
     return;
   }
 
@@ -199,8 +209,10 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   applyStatements();
 
   // Post-DDL migrations (require new columns to exist)
+  ensureDocumentLibraryAddedDateIndex(sqlite);
   migrateDeletedGroupArchives(sqlite);
   ensureAutomationDefaults(sqlite);
+  ensureCustomFieldPolicyCompatibility(sqlite);
 }
 
 // ── Pre-DDL Migrations ──────────────────────────────────────────────────
@@ -208,6 +220,119 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
 function tableHasColumn(sqlite: Database.Database, table: string, column: string): boolean {
   const cols = sqlite.prepare(`PRAGMA table_info('${table}')`).all() as { name: string }[];
   return cols.some((c) => c.name === column);
+}
+
+const DOCUMENT_LIBRARY_ADDED_DATE_INDEX_NAME = 'document_library_added_date_paperless_idx';
+
+function normalizeSchemaSql(value: string): string {
+  return value.replaceAll('`', '').replaceAll('"', '').replace(/\s+/g, ' ').trim();
+}
+
+const CUSTOM_FIELD_POLICY_TABLE_SQL = `CREATE TABLE ai_custom_field_policy (
+  field_id integer PRIMARY KEY NOT NULL,
+  field_name text NOT NULL,
+  data_type text NOT NULL,
+  guidance text,
+  updated_at text NOT NULL,
+  CONSTRAINT ai_custom_field_policy_field_id_check CHECK(ai_custom_field_policy.field_id > 0),
+  CONSTRAINT ai_custom_field_policy_name_check CHECK(length(ai_custom_field_policy.field_name) > 0),
+  CONSTRAINT ai_custom_field_policy_type_check CHECK(ai_custom_field_policy.data_type IN (
+    'string', 'url', 'date', 'boolean', 'integer', 'float', 'monetary', 'select', 'longtext'
+  )),
+  CONSTRAINT ai_custom_field_policy_guidance_check CHECK(
+    ai_custom_field_policy.guidance IS NULL
+    OR length(ai_custom_field_policy.guidance) BETWEEN 1 AND 500
+  )
+)`;
+
+/**
+ * Repairs policy storage independently of the generated schema hash, then
+ * enforces the legacy enabled/empty invariant in the same transaction.
+ */
+function ensureCustomFieldPolicyCompatibility(sqlite: Database.Database): void {
+  const existing = sqlite
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get('ai_custom_field_policy') as { sql: string } | undefined;
+  const compatible =
+    existing !== undefined &&
+    normalizeSchemaSql(existing.sql) === normalizeSchemaSql(CUSTOM_FIELD_POLICY_TABLE_SQL);
+
+  sqlite.transaction(() => {
+    if (!compatible) {
+      if (existing) {
+        sqlite.exec('ALTER TABLE ai_custom_field_policy RENAME TO legacy_ai_custom_field_policy');
+      }
+      sqlite.exec(CUSTOM_FIELD_POLICY_TABLE_SQL);
+
+      if (existing) {
+        const columns = new Set(
+          (
+            sqlite.prepare("PRAGMA table_info('legacy_ai_custom_field_policy')").all() as {
+              name: string;
+            }[]
+          ).map(({ name }) => name),
+        );
+        const required = ['field_id', 'field_name', 'data_type', 'guidance', 'updated_at'];
+        if (required.every((column) => columns.has(column))) {
+          sqlite.exec(`
+            INSERT OR IGNORE INTO ai_custom_field_policy (
+              field_id, field_name, data_type, guidance, updated_at
+            )
+            SELECT field_id, field_name, data_type, guidance, updated_at
+            FROM legacy_ai_custom_field_policy
+            WHERE typeof(field_id) = 'integer'
+              AND field_id > 0
+              AND typeof(field_name) = 'text'
+              AND length(field_name) > 0
+              AND data_type IN (
+                'string', 'url', 'date', 'boolean', 'integer', 'float',
+                'monetary', 'select', 'longtext'
+              )
+              AND (guidance IS NULL OR (
+                typeof(guidance) = 'text' AND length(guidance) BETWEEN 1 AND 500
+              ))
+              AND typeof(updated_at) = 'text'
+              AND length(updated_at) > 0
+            ORDER BY rowid
+          `);
+        }
+        sqlite.exec('DROP TABLE legacy_ai_custom_field_policy');
+      }
+    }
+
+    const policyExists = sqlite.prepare('SELECT 1 FROM ai_custom_field_policy LIMIT 1').get();
+    if (!policyExists) {
+      sqlite
+        .prepare(
+          `UPDATE app_config
+           SET value = 'false', updated_at = ?
+           WHERE key = 'ai.extractCustomFields' AND value = 'true'`,
+        )
+        .run(new Date().toISOString());
+    }
+  })();
+}
+
+function ensureDocumentLibraryAddedDateIndex(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'document', 'added_date')) return;
+
+  // SQLite does not permit qualified column names in CREATE INDEX
+  // expressions. Removing only the query alias preserves the exact shared
+  // CASE expression used by the keyset ORDER BY.
+  const indexExpression = documentLibraryAddedDateKeySql.replaceAll('d.', '');
+  const createSql = `CREATE INDEX ${DOCUMENT_LIBRARY_ADDED_DATE_INDEX_NAME}
+    ON document (${indexExpression} DESC, paperless_id DESC)`;
+  const existing = sqlite
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?")
+    .get(DOCUMENT_LIBRARY_ADDED_DATE_INDEX_NAME) as { sql: string } | undefined;
+  if (existing && normalizeSchemaSql(existing.sql) === normalizeSchemaSql(createSql)) return;
+
+  sqlite.transaction(() => {
+    if (existing) {
+      sqlite.exec(`DROP INDEX ${DOCUMENT_LIBRARY_ADDED_DATE_INDEX_NAME}`);
+    }
+    sqlite.exec(createSql);
+  })();
 }
 
 const REVIEWED_PLAN_TABLE_SQL = `
@@ -527,6 +652,126 @@ const COMPATIBILITY_INDEX_DEFINITIONS: readonly CompatibilityIndexDefinition[] =
   },
 ];
 
+const JOB_HISTORY_INDEX_DEFINITIONS: readonly CompatibilityIndexDefinition[] = [
+  {
+    table: 'job',
+    name: 'job_history_order_idx',
+    unique: 0,
+    partial: 0,
+    columns: [
+      { name: 'created_at', desc: 1, coll: 'BINARY' },
+      { name: 'id', desc: 1, coll: 'BINARY' },
+    ],
+    createSql: `CREATE INDEX job_history_order_idx
+      ON job(created_at DESC, id DESC)`,
+  },
+  {
+    table: 'job',
+    name: 'job_history_status_order_idx',
+    unique: 0,
+    partial: 0,
+    columns: [
+      { name: 'status', desc: 0, coll: 'BINARY' },
+      { name: 'created_at', desc: 1, coll: 'BINARY' },
+      { name: 'id', desc: 1, coll: 'BINARY' },
+    ],
+    createSql: `CREATE INDEX job_history_status_order_idx
+      ON job(status, created_at DESC, id DESC)`,
+  },
+  {
+    table: 'job',
+    name: 'job_history_type_order_idx',
+    unique: 0,
+    partial: 0,
+    columns: [
+      { name: 'type', desc: 0, coll: 'BINARY' },
+      { name: 'created_at', desc: 1, coll: 'BINARY' },
+      { name: 'id', desc: 1, coll: 'BINARY' },
+    ],
+    createSql: `CREATE INDEX job_history_type_order_idx
+      ON job(type, created_at DESC, id DESC)`,
+  },
+  {
+    table: 'job',
+    name: 'job_history_type_status_order_idx',
+    unique: 0,
+    partial: 0,
+    columns: [
+      { name: 'type', desc: 0, coll: 'BINARY' },
+      { name: 'status', desc: 0, coll: 'BINARY' },
+      { name: 'created_at', desc: 1, coll: 'BINARY' },
+      { name: 'id', desc: 1, coll: 'BINARY' },
+    ],
+    createSql: `CREATE INDEX job_history_type_status_order_idx
+      ON job(type, status, created_at DESC, id DESC)`,
+  },
+  {
+    table: 'job',
+    name: 'job_public_history_key_unique',
+    unique: 1,
+    partial: 0,
+    columns: [{ name: 'public_history_key', desc: 0, coll: 'BINARY' }],
+    createSql: `CREATE UNIQUE INDEX job_public_history_key_unique
+      ON job(public_history_key)`,
+  },
+];
+
+const JOB_TABLE_SQL = `CREATE TABLE \`job\` (
+  \`id\` text PRIMARY KEY NOT NULL,
+  \`type\` text NOT NULL,
+  \`status\` text DEFAULT 'pending',
+  \`progress\` real DEFAULT 0,
+  \`phase_progress\` real,
+  \`progress_message\` text,
+  \`started_at\` text,
+  \`execution_token\` text,
+  \`completed_at\` text,
+  \`error_message\` text,
+  \`result_json\` text,
+  \`trigger_kind\` text,
+  \`schedule_id\` text,
+  \`due_at\` text,
+  \`parent_job_id\` text,
+  \`root_schedule_id\` text,
+  \`root_due_at\` text,
+  \`attempt\` integer DEFAULT 0 NOT NULL,
+  \`next_attempt_at\` text,
+  \`terminal_reason\` text,
+  \`created_at\` text NOT NULL,
+  \`public_history_key\` text
+)`;
+
+const JOB_COLUMN_NAMES = [
+  'id',
+  'type',
+  'status',
+  'progress',
+  'phase_progress',
+  'progress_message',
+  'started_at',
+  'execution_token',
+  'completed_at',
+  'error_message',
+  'result_json',
+  'trigger_kind',
+  'schedule_id',
+  'due_at',
+  'parent_job_id',
+  'root_schedule_id',
+  'root_due_at',
+  'attempt',
+  'next_attempt_at',
+  'terminal_reason',
+  'created_at',
+  'public_history_key',
+] as const;
+
+const JOB_BASE_INDEX_SQL = [
+  `CREATE UNIQUE INDEX job_active_type_unique
+    ON job(type) WHERE status IN ('pending', 'running', 'paused')`,
+  `CREATE INDEX job_next_attempt_at_idx ON job(status, next_attempt_at)`,
+] as const;
+
 function tableColumnSignature(sqlite: Database.Database, table: string): TableColumnSignature[] {
   return (
     sqlite.prepare(`PRAGMA table_info('${table}')`).all() as {
@@ -680,8 +925,11 @@ function quoteSqliteIdentifier(identifier: string): string {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
-function repairCompatibilityIndexes(sqlite: Database.Database): void {
-  for (const definition of COMPATIBILITY_INDEX_DEFINITIONS) {
+function repairCompatibilityIndexes(
+  sqlite: Database.Database,
+  definitions: readonly CompatibilityIndexDefinition[] = COMPATIBILITY_INDEX_DEFINITIONS,
+): void {
+  for (const definition of definitions) {
     if (!tableSql(sqlite, definition.table)) continue;
     if (isCompatibilityIndexValid(sqlite, definition)) continue;
 
@@ -692,6 +940,84 @@ function repairCompatibilityIndexes(sqlite: Database.Database): void {
       sqlite.exec(`DROP INDEX ${quoteSqliteIdentifier(definition.name)}`);
     }
     sqlite.exec(definition.createSql);
+  }
+}
+
+function ensureJobHistoryCompatibility(sqlite: Database.Database): void {
+  if (!tableSql(sqlite, 'job')) return;
+  const originalColumns = tableColumnSignature(sqlite, 'job');
+  const publicKeyIndex = originalColumns.findIndex(({ name }) => name === 'public_history_key');
+  const needsTableRebuild =
+    publicKeyIndex !== -1 &&
+    (publicKeyIndex !== JOB_COLUMN_NAMES.length - 1 ||
+      !signaturesEqual(originalColumns[publicKeyIndex], {
+        name: 'public_history_key',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+      }));
+  const foreignKeysEnabled = sqlite.pragma('foreign_keys', { simple: true }) === 1;
+  if (needsTableRebuild && foreignKeysEnabled) sqlite.pragma('foreign_keys = OFF');
+
+  const repair = sqlite.transaction(() => {
+    if (!tableHasColumn(sqlite, 'job', 'public_history_key')) {
+      sqlite.exec('ALTER TABLE job ADD COLUMN public_history_key TEXT');
+    }
+
+    const rows = sqlite
+      .prepare(
+        `SELECT rowid, public_history_key AS publicHistoryKey
+         FROM job ORDER BY rowid`,
+      )
+      .all() as { rowid: number; publicHistoryKey: string | null }[];
+    const accepted = new Set<string>();
+    const update = sqlite.prepare('UPDATE job SET public_history_key = ? WHERE rowid = ?');
+    for (const row of rows) {
+      const existing = row.publicHistoryKey;
+      if (existing && /^[A-Za-z0-9_-]{32}$/.test(existing) && !accepted.has(existing)) {
+        accepted.add(existing);
+        continue;
+      }
+      let replacement = nanoid(32);
+      while (accepted.has(replacement)) replacement = nanoid(32);
+      update.run(replacement, row.rowid);
+      accepted.add(replacement);
+    }
+
+    if (needsTableRebuild) {
+      const quotedColumns = JOB_COLUMN_NAMES.map(quoteSqliteIdentifier).join(', ');
+      sqlite.exec('ALTER TABLE job RENAME TO malformed_job_public_history_key');
+      sqlite.exec(JOB_TABLE_SQL);
+      sqlite.exec(
+        `INSERT INTO job (${quotedColumns})
+         SELECT ${quotedColumns} FROM malformed_job_public_history_key`,
+      );
+      sqlite.exec('DROP TABLE malformed_job_public_history_key');
+      for (const statement of JOB_BASE_INDEX_SQL) sqlite.exec(statement);
+      for (const definition of JOB_HISTORY_INDEX_DEFINITIONS) {
+        sqlite.exec(definition.createSql);
+      }
+    }
+
+    if (
+      JOB_HISTORY_INDEX_DEFINITIONS.some(
+        (definition) => !isCompatibilityIndexValid(sqlite, definition),
+      )
+    ) {
+      for (const definition of JOB_HISTORY_INDEX_DEFINITIONS) {
+        sqlite.exec(`DROP INDEX IF EXISTS ${quoteSqliteIdentifier(definition.name)}`);
+      }
+      for (const definition of JOB_HISTORY_INDEX_DEFINITIONS) {
+        sqlite.exec(definition.createSql);
+      }
+    }
+  });
+
+  try {
+    repair();
+  } finally {
+    if (needsTableRebuild && foreignKeysEnabled) sqlite.pragma('foreign_keys = ON');
   }
 }
 

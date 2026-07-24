@@ -1,8 +1,46 @@
 import { apiSuccess } from '$lib/server/api';
-import { getAiResults } from '@paperless-dedupe/core';
+import { getAiResults, listAiReviewInbox } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
+  if (url.searchParams.get('mode') === 'inbox') {
+    const requestedQueue = url.searchParams.get('queue');
+    const queue =
+      requestedQueue === 'failures' || requestedQueue === 'history' ? requestedQueue : 'review';
+    const limit = Math.min(
+      Math.max(parseInt(url.searchParams.get('limit') ?? '20', 10) || 20, 1),
+      100,
+    );
+    const requestedFailureCategory = url.searchParams.get('failureCategory');
+    const failureCategory =
+      requestedFailureCategory === 'temporary' ||
+      requestedFailureCategory === 'no_content' ||
+      requestedFailureCategory === 'extraction' ||
+      requestedFailureCategory === 'configuration'
+        ? requestedFailureCategory
+        : undefined;
+    const page = listAiReviewInbox(locals.db, {
+      queue,
+      limit,
+      cursor: url.searchParams.get('cursor') || undefined,
+      search: url.searchParams.get('search')?.trim() || undefined,
+      provider: url.searchParams.get('provider') || undefined,
+      model: url.searchParams.get('model') || undefined,
+      changedOnly: url.searchParams.get('changedOnly') === 'true' || undefined,
+      ...(url.searchParams.get('documentId')?.trim()
+        ? { documentId: url.searchParams.get('documentId')!.trim() }
+        : {}),
+      ...(failureCategory ? { failureCategory } : {}),
+    });
+    return apiSuccess(page.items, {
+      total: page.total,
+      limit,
+      nextCursor: page.nextCursor,
+      previousCursor: page.previousCursor,
+      failureGroups: page.failureGroups,
+    });
+  }
+
   const status = url.searchParams.get('status') || undefined;
   const search = url.searchParams.get('search') || undefined;
   const limit = Math.min(

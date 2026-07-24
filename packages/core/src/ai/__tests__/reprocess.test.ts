@@ -9,6 +9,7 @@ import { aiResultRevision } from '../../schema/sqlite/ai-result-revisions.js';
 import { reprocessSingleResult } from '../reprocess.js';
 import { AiExtractionError, type AiProviderInterface } from '../providers/types.js';
 import { DEFAULT_AI_CONFIG } from '../types.js';
+import { replaceCustomFieldPolicy } from '../custom-field-policy.js';
 
 describe('single AI result reprocessing revisions', () => {
   let db: AppDatabase;
@@ -89,6 +90,47 @@ describe('single AI result reprocessing revisions', () => {
       suggestedTitle: 'New suggestion',
       appliedStatus: 'pending_review',
     });
+  });
+
+  it('fails stale custom-field policy validation before reprocessing with OpenAI', async () => {
+    replaceCustomFieldPolicy(
+      db,
+      [{ fieldId: 2 }],
+      [
+        {
+          id: 2,
+          name: 'Due date',
+          dataType: 'date',
+          extraData: { selectOptions: [] },
+          documentCount: 1,
+        },
+      ],
+    );
+    const policyClient = {
+      getCustomFields: vi.fn().mockResolvedValue([
+        {
+          id: 2,
+          name: 'Due date',
+          dataType: 'string',
+          extraData: { selectOptions: [] },
+          documentCount: 1,
+        },
+      ]),
+    } as unknown as PaperlessClient;
+    const provider: AiProviderInterface = {
+      provider: 'openai',
+      extract: vi.fn(),
+    };
+
+    await expect(
+      reprocessSingleResult(db, 'result-1', {
+        provider,
+        client: policyClient,
+        config: { ...DEFAULT_AI_CONFIG, extractCustomFields: true },
+      }),
+    ).rejects.toMatchObject({ code: 'type_changed_field' });
+
+    expect(provider.extract).not.toHaveBeenCalled();
   });
 
   it('snapshots the prior result transactionally before recording reprocess failure', async () => {

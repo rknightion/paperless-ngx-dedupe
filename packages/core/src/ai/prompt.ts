@@ -15,7 +15,7 @@ export interface BuildPromptOptions {
   includeTags: boolean;
   tagAliasesEnabled: boolean;
   tagAliasMap: string;
-  customFields?: PaperlessCustomField[];
+  customFields?: Array<PaperlessCustomField & { guidance?: string | null }>;
   extractCustomFields?: boolean;
 }
 
@@ -76,25 +76,7 @@ export function buildPromptParts(options: BuildPromptOptions): PromptParts {
 
   const customFieldPrompt =
     extractCustomFields && customFields.length > 0
-      ? `\n\nPaperless Custom Fields
-Only recommend fields from this list. Omit a field when its value is not explicitly supported by the document text.
-Return the field ID exactly as provided. For select fields, return the option ID, not its label or position.
-Do not recommend documentlink fields. String values must be at most 128 characters; dates must use YYYY-MM-DD.
-${JSON.stringify(
-  customFields.map((field) => ({
-    id: field.id,
-    name: field.name,
-    dataType: field.dataType,
-    ...(field.extraData.selectOptions.length > 0
-      ? { selectOptions: field.extraData.selectOptions }
-      : {}),
-    ...(field.extraData.defaultCurrency !== undefined
-      ? { defaultCurrency: field.extraData.defaultCurrency }
-      : {}),
-  })),
-  null,
-  2,
-)}`
+      ? renderCustomFieldPromptBlock(customFields)
       : '';
 
   const systemPrompt = `${baseSystemPrompt}${customFieldPrompt}`;
@@ -134,3 +116,4 @@ export function truncateContent(content: string, maxLength: number): string {
   return header + marker + footer;
 }
 import type { PaperlessCustomField } from '../paperless/types.js';
+import { renderCustomFieldPromptBlock } from './custom-field-policy.js';

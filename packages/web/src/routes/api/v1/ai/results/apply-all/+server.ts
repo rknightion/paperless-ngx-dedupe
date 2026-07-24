@@ -1,8 +1,6 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { createJob, JobAlreadyRunningError, JobType, launchWorker } from '@paperless-dedupe/core';
-import type { AiApplyField, ApplyScope } from '@paperless-dedupe/core';
+import { createJob, JobAlreadyRunningError, JobType } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
-import { resolveServerWorkerPath } from '$lib/server/job-dispatcher';
 import { RuntimeUnavailableError } from '$lib/server/scheduler';
 import { getServerRuntime } from '../../../../../../runtime.server';
 
@@ -21,44 +19,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       );
     }
 
-    let allowClearing = false;
-    let createMissingEntities = true;
-    let fields: AiApplyField[] = ['title', 'correspondent', 'documentType', 'tags'];
-    let scope: ApplyScope = { type: 'all_pending' };
-
+    let planToken: string | undefined;
     const contentType = request.headers.get('content-type');
     if (contentType?.includes('application/json')) {
       try {
         const body = await request.json();
-        allowClearing = body?.allowClearing === true;
-        createMissingEntities = body?.createMissingEntities !== false;
-
-        if (Array.isArray(body?.fields)) {
-          fields = body.fields.filter((f: string) =>
-            ['title', 'correspondent', 'documentType', 'tags', 'customFields'].includes(f),
-          );
-        }
-
-        // Support filter-scoped apply-all
-        if (body?.scope) {
-          scope = body.scope;
-        } else if (body?.filters) {
-          scope = { type: 'current_filter', filters: body.filters };
-        }
+        planToken = body?.planToken;
       } catch {
-        // Use defaults
+        // Handled below.
       }
     }
+    if (typeof planToken !== 'string' || planToken.length < 16) {
+      return apiError(ErrorCode.BAD_REQUEST, 'A reviewed AI apply plan token is required');
+    }
 
-    return runtime.acceptingGate.run(() => {
-      const jobId = createJob(locals.db, JobType.AI_APPLY);
-      const workerPath = resolveServerWorkerPath('ai-apply-worker');
-      launchWorker({
-        jobId,
-        dbPath: locals.config.DATABASE_URL,
-        workerScriptPath: workerPath,
-        taskData: { scope, fields, allowClearing, createMissingEntities },
-      });
+    return runtime.acceptingGate.run(async () => {
+      const jobId = createJob(locals.db, JobType.AI_APPLY, { planToken });
+      await runtime.dispatchPending();
       return apiSuccess({ jobId }, undefined, 202);
     });
   } catch (error) {

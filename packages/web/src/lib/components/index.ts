@@ -15,6 +15,7 @@ export { default as InfoIcon } from './ui/InfoIcon.svelte';
 export { default as ConfidenceTooltipContent } from './duplicates/ConfidenceTooltipContent.svelte';
 export { default as GroupPreviewModal } from './duplicates/GroupPreviewModal.svelte';
 export { default as DocumentVisualCompare } from './duplicates/DocumentVisualCompare.svelte';
+export { default as MatchExplanation } from './duplicates/MatchExplanation.svelte';
 export { default as RecycleBinPrompt } from './duplicates/RecycleBinPrompt.svelte';
 export { default as ThumbnailPreview } from './duplicates/ThumbnailPreview.svelte';
 export { default as WizardGroupCard } from './duplicates/WizardGroupCard.svelte';

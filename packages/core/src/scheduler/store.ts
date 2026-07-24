@@ -5,6 +5,7 @@ export const OPERATION_KINDS = [
   'ai_processing',
   'ai_apply',
   'ai_revert',
+  'custom_field_discovery',
   'backup',
   'checkpoint',
   'vacuum',
@@ -31,6 +32,7 @@ const MUTATING_OPERATIONS = new Set<OperationKind>([
   'ai_processing',
   'ai_apply',
   'ai_revert',
+  'custom_field_discovery',
 ]);
 
 /**

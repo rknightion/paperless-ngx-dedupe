@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -28,11 +28,22 @@ export const job = sqliteTable(
     nextAttemptAt: text('next_attempt_at'),
     terminalReason: text('terminal_reason'),
     createdAt: text('created_at').notNull(),
+    publicHistoryKey: text('public_history_key').$defaultFn(() => nanoid(32)),
   },
   (table) => [
     uniqueIndex('job_active_type_unique')
       .on(table.type)
       .where(sql`${table.status} IN ('pending', 'running', 'paused')`),
     index('job_next_attempt_at_idx').on(table.status, table.nextAttemptAt),
+    index('job_history_order_idx').on(desc(table.createdAt), desc(table.id)),
+    index('job_history_status_order_idx').on(table.status, desc(table.createdAt), desc(table.id)),
+    index('job_history_type_order_idx').on(table.type, desc(table.createdAt), desc(table.id)),
+    index('job_history_type_status_order_idx').on(
+      table.type,
+      table.status,
+      desc(table.createdAt),
+      desc(table.id),
+    ),
+    uniqueIndex('job_public_history_key_unique').on(table.publicHistoryKey),
   ],
 );

@@ -132,6 +132,34 @@ describe('buildPromptParts', () => {
     expect(systemPrompt).toContain('paid-id');
     expect(systemPrompt).toContain('Only recommend fields from this list');
   });
+
+  it('serializes selected fields in numeric ID order with operator guidance', () => {
+    const { systemPrompt } = buildPromptParts({
+      ...baseOptions,
+      extractCustomFields: true,
+      customFields: [
+        {
+          id: 9,
+          name: 'Amount',
+          dataType: 'monetary' as const,
+          extraData: { selectOptions: [], defaultCurrency: 'GBP' },
+          documentCount: 0,
+          guidance: 'Use the final amount due.',
+        },
+        {
+          id: 2,
+          name: 'Due date',
+          dataType: 'date' as const,
+          extraData: { selectOptions: [] },
+          documentCount: 0,
+          guidance: null,
+        },
+      ],
+    });
+
+    expect(systemPrompt.indexOf('"id": 2')).toBeLessThan(systemPrompt.indexOf('"id": 9'));
+    expect(systemPrompt).toContain('"guidance": "Use the final amount due."');
+  });
 });
 
 describe('truncateContent', () => {

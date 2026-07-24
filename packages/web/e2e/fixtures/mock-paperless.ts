@@ -81,6 +81,14 @@ function jsonResponse(res: http.ServerResponse, data: unknown, status = 200) {
   res.end(JSON.stringify(data));
 }
 
+async function readJsonBody(req: http.IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
+}
+
 function paginate<T>(
   items: T[],
   url: URL,
@@ -107,7 +115,7 @@ function paginate<T>(
   };
 }
 
-function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
   const path = url.pathname;
 
@@ -165,6 +173,28 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
     if (!doc) {
       return jsonResponse(res, { detail: 'Not found.' }, 404);
     }
+    return jsonResponse(res, doc);
+  }
+
+  // PATCH /api/documents/:id/
+  if (docMatch && req.method === 'PATCH') {
+    const id = parseInt(docMatch[1], 10);
+    const doc = state.documents.find((candidate) => candidate.id === id);
+    if (!doc) {
+      return jsonResponse(res, { detail: 'Not found.' }, 404);
+    }
+    const update = await readJsonBody(req);
+    if (typeof update.title === 'string') doc.title = update.title;
+    if (typeof update.correspondent === 'number' || update.correspondent === null) {
+      doc.correspondent = update.correspondent;
+    }
+    if (typeof update.document_type === 'number' || update.document_type === null) {
+      doc.document_type = update.document_type;
+    }
+    if (Array.isArray(update.tags) && update.tags.every((tag) => Number.isInteger(tag))) {
+      doc.tags = update.tags as number[];
+    }
+    doc.modified = new Date().toISOString();
     return jsonResponse(res, doc);
   }
 

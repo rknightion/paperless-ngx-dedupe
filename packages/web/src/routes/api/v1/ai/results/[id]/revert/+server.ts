@@ -1,26 +1,40 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { revertAiResult, PaperlessClient, toPaperlessConfig } from '@paperless-dedupe/core';
+import { createJob, JobAlreadyRunningError, JobType } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
+import { RuntimeUnavailableError } from '$lib/server/scheduler';
+import { getServerRuntime } from '../../../../../../../runtime.server';
 
-export const POST: RequestHandler = async ({ params, locals }) => {
-  if (!locals.config.AI_ENABLED) {
-    return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
-  }
-
-  const paperlessConfig = toPaperlessConfig(locals.config);
-  const client = new PaperlessClient(paperlessConfig);
-
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const runtime = await getServerRuntime();
   try {
-    await revertAiResult(locals.db, client, params.id);
-    return apiSuccess({ reverted: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to revert AI result';
-    if (message.includes('not found')) {
-      return apiError(ErrorCode.NOT_FOUND, message);
+    runtime.acceptingGate.assertAccepting();
+    if (!locals.config.AI_ENABLED) {
+      return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
     }
-    if (message.includes('Cannot revert') || message.includes('No pre-apply snapshot')) {
-      return apiError(ErrorCode.BAD_REQUEST, message);
+    const body = await request.json();
+    const planToken = body?.planToken;
+    if (typeof planToken !== 'string' || planToken.length < 16) {
+      return apiError(ErrorCode.BAD_REQUEST, 'A reviewed AI revert plan token is required');
     }
-    return apiError(ErrorCode.INTERNAL_ERROR, message);
+    return runtime.acceptingGate.run(async () => {
+      const jobId = createJob(locals.db, JobType.AI_REVERT, { planToken });
+      await runtime.dispatchPending();
+      return apiSuccess({ jobId }, undefined, 202);
+    });
+  } catch (error) {
+    if (error instanceof RuntimeUnavailableError) {
+      return apiError(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        {
+          operation: 'ai_revert',
+          retryable: true,
+        },
+        503,
+      );
+    }
+    if (error instanceof JobAlreadyRunningError) {
+      return apiError(ErrorCode.JOB_ALREADY_RUNNING, error.message);
+    }
+    throw error;
   }
 };
