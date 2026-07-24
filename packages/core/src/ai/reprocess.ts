@@ -8,10 +8,10 @@ import { AiExtractionError } from './providers/types.js';
 import { processDocument } from './extract.js';
 import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js';
 import { getModelPricing, estimateResultCost } from './costs.js';
-import { markAiResultFailed } from './queries.js';
 import type { AiConfig } from './types.js';
 import { createLogger } from '../logger.js';
 import { normalizeCustomFieldRecommendations } from './custom-fields.js';
+import { replaceAiResultWithRevision } from './history.js';
 
 const logger = createLogger('ai-reprocess');
 
@@ -108,6 +108,7 @@ export async function reprocessSingleResult(
       customFields,
       extractCustomFields: config.extractCustomFields,
       reasoningEffort: config.reasoningEffort,
+      maxOutputTokens: config.maxOutputTokens,
     });
   } catch (error) {
     const isAiError = error instanceof AiExtractionError;
@@ -116,7 +117,15 @@ export async function reprocessSingleResult(
       : (error as Error).message;
     const failureType = isAiError ? error.failureType : null;
 
-    markAiResultFailed(db, resultId, errorMsg, failureType ?? undefined);
+    replaceAiResultWithRevision(db, row.documentId, {
+      provider: provider.provider,
+      model: config.model,
+      appliedStatus: 'failed',
+      appliedAt: null,
+      failureType,
+      errorMessage: errorMsg,
+      createdAt: new Date().toISOString(),
+    });
     logger.error({ resultId, error: errorMsg }, 'Reprocess extraction failed');
     throw error;
   }
@@ -140,36 +149,33 @@ export async function reprocessSingleResult(
 
   // 8. Update existing result row
   const now = new Date().toISOString();
-  db.update(aiProcessingResult)
-    .set({
-      provider: provider.provider,
-      model: config.model,
-      suggestedTitle: normalizedTitle,
-      suggestedCorrespondent: normalizedCorrespondent,
-      suggestedDocumentType: normalizedDocumentType,
-      suggestedTagsJson: JSON.stringify(normalizedTags),
-      suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
-      confidenceJson: JSON.stringify(extraction.response.confidence),
-      currentTitle: doc.title,
-      currentCorrespondent: doc.correspondent,
-      currentDocumentType: doc.documentType,
-      currentTagsJson: doc.tagsJson,
-      currentCustomFieldsJson: doc.customFieldsJson,
-      appliedStatus: 'pending_review',
-      appliedAt: null,
-      appliedFieldsJson: null,
-      evidence: extraction.response.evidence || null,
-      failureType: null,
-      rawResponseJson: JSON.stringify(extraction.response),
-      promptTokens: extraction.usage.promptTokens,
-      completionTokens: extraction.usage.completionTokens,
-      estimatedCostUsd,
-      errorMessage: null,
-      processingTimeMs: docDurationMs,
-      createdAt: now,
-    })
-    .where(eq(aiProcessingResult.id, resultId))
-    .run();
+  replaceAiResultWithRevision(db, row.documentId, {
+    provider: provider.provider,
+    model: config.model,
+    suggestedTitle: normalizedTitle,
+    suggestedCorrespondent: normalizedCorrespondent,
+    suggestedDocumentType: normalizedDocumentType,
+    suggestedTagsJson: JSON.stringify(normalizedTags),
+    suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
+    confidenceJson: JSON.stringify(extraction.response.confidence),
+    currentTitle: doc.title,
+    currentCorrespondent: doc.correspondent,
+    currentDocumentType: doc.documentType,
+    currentTagsJson: doc.tagsJson,
+    currentCustomFieldsJson: doc.customFieldsJson,
+    appliedStatus: 'pending_review',
+    appliedAt: null,
+    appliedFieldsJson: null,
+    evidence: extraction.response.evidence || null,
+    failureType: null,
+    rawResponseJson: JSON.stringify(extraction.response),
+    promptTokens: extraction.usage.promptTokens,
+    completionTokens: extraction.usage.completionTokens,
+    estimatedCostUsd,
+    errorMessage: null,
+    processingTimeMs: docDurationMs,
+    createdAt: now,
+  });
 
   logger.info(
     { resultId, paperlessId: row.paperlessId, durationMs: docDurationMs },

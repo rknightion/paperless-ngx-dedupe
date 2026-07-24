@@ -158,10 +158,12 @@ describe('schedule coordinator durable claims', () => {
   let db: ReturnType<typeof createDatabaseWithHandle>['db'];
   let sqlite: ReturnType<typeof createDatabaseWithHandle>['sqlite'];
   const temporaryDirectories: string[] = [];
+  let durableDocumentSequence = 0;
 
   beforeEach(async () => {
     ({ db, sqlite } = createDatabaseWithHandle(':memory:'));
     await migrateDatabase(sqlite);
+    sqlite.exec('DELETE FROM automation_schedule');
   });
 
   afterEach(() => {
@@ -170,6 +172,52 @@ describe('schedule coordinator durable claims', () => {
       rmSync(directory, { force: true, recursive: true });
     }
   });
+
+  function seedDueSyncAndAnalysis(now: Date): void {
+    const insertSchedule = sqlite.prepare(
+      `INSERT INTO automation_schedule (
+        id, task, enabled, cadence_json, timezone, next_due_at,
+        last_claimed_due_at, created_at, updated_at
+      ) VALUES (?, ?, 1, ?, 'UTC', ?, NULL, ?, ?)`,
+    );
+    insertSchedule.run(
+      'sync-schedule',
+      'sync',
+      JSON.stringify({ kind: 'interval', hours: 2 }),
+      now.toISOString(),
+      now.toISOString(),
+      now.toISOString(),
+    );
+    insertSchedule.run(
+      'analysis-schedule',
+      'analysis',
+      JSON.stringify({ kind: 'daily', hour: 12, minute: 0 }),
+      '2026-07-24T12:00:00.000Z',
+      now.toISOString(),
+      now.toISOString(),
+    );
+  }
+
+  function tagDurablyChangedDocument(syncJobId: string, now: Date): void {
+    const generation = sqlite
+      .prepare(`SELECT id FROM sync_change_generation WHERE sync_job_id = ?`)
+      .get(syncJobId) as { id: string };
+    durableDocumentSequence++;
+    sqlite
+      .prepare(
+        `INSERT INTO document (
+          id, paperless_id, title, processing_status, synced_at,
+          last_changed_by_sync_job_id, last_changed_by_sync_generation_id
+        ) VALUES (?, ?, 'Changed', 'completed', ?, ?, ?)`,
+      )
+      .run(
+        `durably-changed-${durableDocumentSequence}`,
+        10_000 + durableDocumentSequence,
+        now.toISOString(),
+        syncJobId,
+        generation.id,
+      );
+  }
 
   it('claims one due occurrence into one durable pending job', () => {
     const now = new Date('2026-07-23T12:00:00.000Z');
@@ -578,6 +626,7 @@ describe('schedule coordinator durable claims', () => {
     );
 
     const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    tagDurablyChangedDocument(syncIntent.jobId!, now);
     completeJob(db, syncIntent.jobId!, { inserted: 1, updated: 0 });
 
     const dependencies = enqueueDueSchedules(sqlite, new Date('2026-07-23T12:00:01.000Z'));
@@ -649,13 +698,113 @@ describe('schedule coordinator durable claims', () => {
       now.toISOString(),
     );
     const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    tagDurablyChangedDocument(syncIntent.jobId!, now);
     completeJob(db, syncIntent.jobId!, { inserted: 1, updated: 0 });
     expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:00:01.000Z'))).toEqual([]);
 
     sqlite.prepare('UPDATE automation_schedule SET enabled = 1 WHERE id = ?').run('ai-schedule');
     expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:00:02.000Z'))).toEqual([
-      expect.objectContaining({ task: 'ai_processing', parentJobId: syncIntent.jobId }),
+      expect.objectContaining({
+        task: 'ai_processing',
+        parentJobId: syncIntent.jobId,
+        taskData: { syncGenerationId: expect.any(String) },
+      }),
     ]);
+  });
+
+  it('creates a durable sync generation before work and blocks dependencies after partial failure', () => {
+    const now = new Date('2026-07-23T12:00:00.000Z');
+    const insertSchedule = sqlite.prepare(
+      `INSERT INTO automation_schedule (
+        id, task, enabled, cadence_json, timezone, next_due_at, last_claimed_due_at, created_at, updated_at
+      ) VALUES (?, ?, 1, ?, 'UTC', ?, NULL, ?, ?)`,
+    );
+    insertSchedule.run(
+      'sync-schedule',
+      'sync',
+      JSON.stringify({ kind: 'interval', hours: 2 }),
+      now.toISOString(),
+      now.toISOString(),
+      now.toISOString(),
+    );
+    insertSchedule.run(
+      'analysis-schedule',
+      'analysis',
+      JSON.stringify({ kind: 'daily', hour: 12, minute: 0 }),
+      '2026-07-24T12:00:00.000Z',
+      now.toISOString(),
+      now.toISOString(),
+    );
+
+    const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    const generation = sqlite
+      .prepare(
+        'SELECT id, status, sync_job_id AS syncJobId FROM sync_change_generation WHERE sync_job_id = ?',
+      )
+      .get(syncIntent.jobId) as { id: string; status: string; syncJobId: string };
+    expect(generation).toMatchObject({ status: 'running', syncJobId: syncIntent.jobId });
+
+    completeJob(db, syncIntent.jobId!, { inserted: 1, updated: 0, failed: 1 });
+    expect(
+      sqlite.prepare('SELECT status FROM sync_change_generation WHERE id = ?').get(generation.id),
+    ).toEqual({ status: 'partial_failed' });
+    expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:00:01.000Z'))).toEqual([]);
+  });
+
+  it('keeps retryable generations running and derives readiness from durable changed rows', () => {
+    const now = new Date('2026-07-23T12:00:00.000Z');
+    seedDueSyncAndAnalysis(now);
+    const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    const generation = sqlite
+      .prepare(`SELECT id, status FROM sync_change_generation WHERE sync_job_id = ?`)
+      .get(syncIntent.jobId) as { id: string; status: string };
+    sqlite
+      .prepare(
+        `INSERT INTO document (
+          id, paperless_id, title, processing_status, synced_at,
+          last_changed_by_sync_job_id, last_changed_by_sync_generation_id
+        ) VALUES ('changed-on-attempt-one', 991, 'Changed', 'completed', ?, ?, ?)`,
+      )
+      .run(now.toISOString(), syncIntent.jobId, generation.id);
+
+    failJob(db, syncIntent.jobId!, 'network timeout');
+    expect(
+      sqlite.prepare('SELECT status FROM sync_change_generation WHERE id = ?').get(generation.id),
+    ).toEqual({ status: 'running' });
+
+    completeJob(db, syncIntent.jobId!, {
+      inserted: 0,
+      updated: 0,
+      skipped: 1,
+      failed: 0,
+    });
+    expect(
+      sqlite.prepare('SELECT status FROM sync_change_generation WHERE id = ?').get(generation.id),
+    ).toEqual({ status: 'ready' });
+    expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:02:00.000Z'))).toEqual([
+      expect.objectContaining({
+        task: 'analysis',
+        parentJobId: syncIntent.jobId,
+        taskData: { syncGenerationId: generation.id },
+      }),
+    ]);
+    expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:02:01.000Z'))).toEqual([]);
+  });
+
+  it('marks terminal sync generations failed so they cannot launch children', () => {
+    const now = new Date('2026-07-23T12:00:00.000Z');
+    seedDueSyncAndAnalysis(now);
+    const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    const generation = sqlite
+      .prepare(`SELECT id FROM sync_change_generation WHERE sync_job_id = ?`)
+      .get(syncIntent.jobId) as { id: string };
+
+    failJob(db, syncIntent.jobId!, 'configuration validation failed');
+
+    expect(
+      sqlite.prepare('SELECT status FROM sync_change_generation WHERE id = ?').get(generation.id),
+    ).toEqual({ status: 'failed' });
+    expect(enqueueDueSchedules(sqlite, new Date('2026-07-23T12:01:00.000Z'))).toEqual([]);
   });
 
   it('claims only the latest missed occurrence and persists the following occurrence', () => {
@@ -705,6 +854,7 @@ describe('schedule coordinator durable claims', () => {
       now.toISOString(),
     );
     const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    tagDurablyChangedDocument(syncIntent.jobId!, now);
     completeJob(db, syncIntent.jobId!, { inserted: 1, updated: 0 });
     expect(clearJobHistory(db)).toBe(1);
 

@@ -28,6 +28,7 @@ describe('getAiConfig', () => {
     expect(config.rateDelayMs).toBe(0);
     expect(config.reasoningEffort).toBe('low');
     expect(config.maxRetries).toBe(10);
+    expect(config.maxOutputTokens).toBe(1000);
     expect(config.extractCustomFields).toBe(false);
   });
 

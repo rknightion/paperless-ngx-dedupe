@@ -18,6 +18,7 @@
     Check,
   } from 'lucide-svelte';
   import { parse as parseYaml } from 'yaml';
+  import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
 
   /** Validate YAML string as a tag alias map (Record<string, string[]>). */
   function validateTagAliasYaml(yaml: string): { valid: boolean; error?: string } {
@@ -425,6 +426,10 @@
       >
     {/if}
     <a
+      href="#automation"
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">Automation</a
+    >
+    <a
       href="#system"
       class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">System</a
     >
@@ -492,6 +497,8 @@
       </div>
     {/if}
   </div>
+
+  <AutomationSettings settings={data.automation} />
 
   <!-- Dedup Parameters -->
   <div class="panel" id="dedup">

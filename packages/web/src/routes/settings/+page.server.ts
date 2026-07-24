@@ -4,6 +4,7 @@ import {
   getAiConfig,
   DEFAULT_EXTRACTION_PROMPT,
   DEFAULT_TAG_ALIAS_MAP,
+  getAutomationSettings,
 } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
@@ -30,5 +31,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     isDefaultPrompt: aiConfig ? aiConfig.promptTemplate === DEFAULT_EXTRACTION_PROMPT : true,
     isDefaultTagAliasMap: aiConfig ? aiConfig.tagAliasMap === DEFAULT_TAG_ALIAS_MAP : true,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
+    automation: getAutomationSettings(locals.sqlite),
   };
 };

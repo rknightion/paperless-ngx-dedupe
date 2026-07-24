@@ -25,6 +25,7 @@ export interface WorkerContext {
   sqlite: import('better-sqlite3').Database; // eslint-disable-line @typescript-eslint/consistent-type-imports
   jobId: string;
   taskData: unknown;
+  executionToken?: string;
 }
 
 export type TaskFunction = (ctx: WorkerContext, onProgress: ProgressCallback) => Promise<unknown>;
@@ -173,7 +174,7 @@ export async function runWorkerTaskWithData(
     await context.with(parentContext, async () => {
       await withPyroscopeLabels({ operation: 'worker' }, async () => {
         await withSpan('dedupe.worker.task', { 'app.job.id': jobId }, async () => {
-          const result = await taskFn({ db, sqlite, jobId, taskData }, onProgress);
+          const result = await taskFn({ db, sqlite, jobId, taskData, executionToken }, onProgress);
           completeJob(db, jobId, result, executionToken);
           logger.info({ jobId }, 'Worker task completed successfully');
         });

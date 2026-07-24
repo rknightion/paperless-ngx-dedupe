@@ -1,4 +1,4 @@
-import { eq, and, or, desc } from 'drizzle-orm';
+import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type Database from 'better-sqlite3';
 
@@ -18,6 +18,7 @@ import {
   OperationConflictError,
 } from '../scheduler/coordinator.js';
 import type { OperationKind } from '../scheduler/store.js';
+import { document } from '../schema/sqlite/documents.js';
 
 export class JobAlreadyRunningError extends Error {
   constructor(type: string) {
@@ -186,20 +187,43 @@ export function completeJob(
       existing?.type === 'sync' &&
       existing.triggerKind === 'schedule' &&
       existing.scheduleId &&
-      existing.dueAt &&
-      changedSyncResult(result)
+      existing.dueAt
     ) {
+      const syncResult =
+        result && typeof result === 'object' ? (result as { failed?: unknown }) : {};
+      const partialFailure = Number(syncResult.failed ?? 0) > 0;
+      const existingGeneration = tx
+        .select({ id: syncChangeGeneration.id })
+        .from(syncChangeGeneration)
+        .where(eq(syncChangeGeneration.syncJobId, id))
+        .get();
+      const changed = existingGeneration
+        ? (tx
+            .select({ count: sql<number>`count(*)` })
+            .from(document)
+            .where(eq(document.lastChangedBySyncGenerationId, existingGeneration.id))
+            .get()?.count ?? 0) > 0
+        : changedSyncResult(result);
+      const status = partialFailure ? 'partial_failed' : changed ? 'ready' : 'no_change';
       tx.insert(syncChangeGeneration)
         .values({
-          id: nanoid(),
+          id: existingGeneration?.id ?? nanoid(),
           syncJobId: id,
           rootScheduleId: existing.rootScheduleId ?? existing.scheduleId,
           rootDueAt: existing.rootDueAt ?? existing.dueAt,
-          status: 'pending',
+          status,
           createdAt: now,
-          changedAt: now,
+          changedAt: changed ? now : null,
+          completedAt: now,
         })
-        .onConflictDoNothing()
+        .onConflictDoUpdate({
+          target: syncChangeGeneration.syncJobId,
+          set: {
+            status,
+            changedAt: changed ? now : null,
+            completedAt: now,
+          },
+        })
         .run();
     }
     tx.delete(operationLease).where(eq(operationLease.ownerId, id)).run();
@@ -284,6 +308,7 @@ export function failJob(db: AppDatabase, id: string, error: string, executionTok
       .run();
     if (executionToken && failed.changes !== 1) return;
     transitioned = failed.changes === 1;
+    if (!transitioned) return;
     tx.update(dispatchIntent)
       .set({
         status: 'dead_letter',
@@ -293,6 +318,12 @@ export function failJob(db: AppDatabase, id: string, error: string, executionTok
       })
       .where(eq(dispatchIntent.jobId, id))
       .run();
+    if (existing.type === 'sync') {
+      tx.update(syncChangeGeneration)
+        .set({ status: 'failed', completedAt: nowIso })
+        .where(eq(syncChangeGeneration.syncJobId, id))
+        .run();
+    }
     tx.delete(operationLease).where(eq(operationLease.ownerId, id)).run();
   });
   if (transitioned && existing?.type) {

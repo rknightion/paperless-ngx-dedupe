@@ -1,4 +1,8 @@
-import type { AiProviderInterface, AiExtractionResult } from './providers/types.js';
+import type {
+  AiProviderInterface,
+  AiExtractionRequest,
+  AiExtractionResult,
+} from './providers/types.js';
 import { buildPromptParts, truncateContent } from './prompt.js';
 import { createLogger } from '../logger.js';
 import type { PaperlessCustomField } from '../paperless/types.js';
@@ -22,6 +26,20 @@ export interface ProcessDocumentOptions {
   customFields?: PaperlessCustomField[];
   extractCustomFields?: boolean;
   reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
+  maxOutputTokens?: number;
+  budgetRequestKey?: string;
+  requestBudget?: AiRequestBudget;
+}
+
+export interface AiRequestBudget {
+  reserve(request: {
+    requestKey: string;
+    extractionRequest: AiExtractionRequest;
+  }): Promise<{ id: string }>;
+  reconcile(
+    reservation: { id: string },
+    usage: { promptTokens: number; completionTokens: number },
+  ): Promise<void>;
 }
 
 export async function processDocument(
@@ -47,11 +65,24 @@ export async function processDocument(
 
   const startMs = performance.now();
   try {
-    const result = await options.provider.extract({
+    const maxOutputTokens = options.maxOutputTokens ?? 1000;
+    const extractionRequest: AiExtractionRequest = {
       systemPrompt,
       userPrompt,
       reasoningEffort: options.reasoningEffort,
-    });
+      maxOutputTokens,
+    };
+    const reservation =
+      options.requestBudget && options.budgetRequestKey
+        ? await options.requestBudget.reserve({
+            requestKey: options.budgetRequestKey,
+            extractionRequest,
+          })
+        : undefined;
+    const result = await options.provider.extract(extractionRequest);
+    if (reservation && options.requestBudget) {
+      await options.requestBudget.reconcile(reservation, result.usage);
+    }
     const durationMs = Math.round(performance.now() - startMs);
     logger.info(
       {

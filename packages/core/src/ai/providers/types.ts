@@ -13,6 +13,7 @@ export interface AiExtractionRequest {
   systemPrompt: string;
   userPrompt: string;
   reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
+  maxOutputTokens?: number;
 }
 
 export interface AiExtractionResponse {

@@ -14,6 +14,8 @@ export interface SyncOptions {
   pageSize?: number;
   onProgress?: SyncProgressCallback;
   signal?: AbortSignal;
+  syncJobId?: string;
+  syncGenerationId?: string;
 }
 
 export interface SyncResult {

@@ -170,6 +170,47 @@ describe('syncDocuments', () => {
     expect(dbDocs[0].title).toBe('Updated Title');
   });
 
+  it('scopes new, metadata-changed, and OCR-changed documents to the exact sync generation', async () => {
+    const initial = [
+      makePaperlessDoc(1),
+      makePaperlessDoc(2),
+      makePaperlessDoc(3),
+      makePaperlessDoc(4),
+    ];
+    await syncDocuments(
+      { db, client: createSimpleClient(initial) },
+      { forceFullSync: true, syncJobId: 'job-1', syncGenerationId: 'generation-1' },
+    );
+
+    const changed = [
+      makePaperlessDoc(1),
+      makePaperlessDoc(2, { title: 'Metadata changed' }),
+      makePaperlessDoc(3, { content: 'OCR changed' }),
+      makePaperlessDoc(5),
+    ];
+    const result = await syncDocuments(
+      { db, client: createSimpleClient(changed) },
+      { forceFullSync: true, syncJobId: 'job-2', syncGenerationId: 'generation-2' },
+    );
+    expect(result).toMatchObject({ inserted: 1, updated: 2, skipped: 1, reconciled: 1 });
+
+    const rows = db
+      .select({
+        paperlessId: document.paperlessId,
+        insertedGeneration: document.insertedBySyncGenerationId,
+        changedGeneration: document.lastChangedBySyncGenerationId,
+      })
+      .from(document)
+      .all()
+      .sort((left, right) => left.paperlessId - right.paperlessId);
+    expect(rows).toEqual([
+      { paperlessId: 1, insertedGeneration: 'generation-1', changedGeneration: 'generation-1' },
+      { paperlessId: 2, insertedGeneration: 'generation-1', changedGeneration: 'generation-2' },
+      { paperlessId: 3, insertedGeneration: 'generation-1', changedGeneration: 'generation-2' },
+      { paperlessId: 5, insertedGeneration: 'generation-2', changedGeneration: 'generation-2' },
+    ]);
+  });
+
   it('should store document content with normalization', async () => {
     const docs = [makePaperlessDoc(1, { content: '  Hello   WORLD  \n\n  Test  ' })];
     const client = createSimpleClient(docs);

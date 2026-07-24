@@ -61,6 +61,33 @@ export function parseRateLimitHeaders(headers: Headers): RateLimitInfo | undefin
   return { limitTokens, remainingTokens, resetTokensMs };
 }
 
+/** Build the exact Responses API parameters used for extraction and budget token accounting. */
+export async function buildOpenAiRequestParams(
+  request: AiExtractionRequest,
+  model: string,
+  flexProcessing: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<Record<string, any>> {
+  const { zodTextFormat } = await import('openai/helpers/zod');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const params: Record<string, any> = {
+    model,
+    input: [
+      { role: 'developer', content: request.systemPrompt },
+      { role: 'user', content: request.userPrompt },
+    ],
+    text: { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') },
+    service_tier: flexProcessing ? 'flex' : 'default',
+  };
+  if (request.maxOutputTokens !== undefined) {
+    params.max_output_tokens = request.maxOutputTokens;
+  }
+  if (request.reasoningEffort && request.reasoningEffort !== 'none') {
+    params.reasoning = { effort: request.reasoningEffort };
+  }
+  return params;
+}
+
 export class OpenAiProvider implements AiProviderInterface {
   readonly provider = 'openai' as const;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,23 +119,7 @@ export class OpenAiProvider implements AiProviderInterface {
   }
 
   async extract(request: AiExtractionRequest): Promise<AiExtractionResult> {
-    const { zodTextFormat } = await import('openai/helpers/zod');
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const params: Record<string, any> = {
-      model: this.model,
-      input: [
-        { role: 'developer', content: request.systemPrompt },
-        { role: 'user', content: request.userPrompt },
-      ],
-      text: { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') },
-    };
-
-    params.service_tier = this.flexProcessing ? 'flex' : 'default';
-
-    if (request.reasoningEffort && request.reasoningEffort !== 'none') {
-      params.reasoning = { effort: request.reasoningEffort };
-    }
+    const params = await buildOpenAiRequestParams(request, this.model, this.flexProcessing);
 
     let response;
     let rateLimit: RateLimitInfo | undefined;

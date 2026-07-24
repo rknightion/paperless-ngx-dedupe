@@ -98,6 +98,19 @@ export {
 } from './scheduler/occurrences.js';
 export type { AutomationSchedule, ScheduleCadence, ScheduleTask } from './scheduler/types.js';
 export {
+  AUTOMATION_DEFAULTS,
+  automationScheduleUpdateSchema,
+  ensureAutomationDefaults,
+  getAutomationSettings,
+  scheduleCadenceSchema,
+  updateAutomationSchedule,
+} from './scheduler/settings.js';
+export type {
+  AutomationScheduleUpdate,
+  AutomationScheduleView,
+  AutomationSettings,
+} from './scheduler/settings.js';
+export {
   deserializeDispatchTaskData,
   OPERATION_KINDS,
   OPERATION_COMPATIBILITY,
@@ -357,7 +370,7 @@ export { createAiProvider } from './ai/providers/factory.js';
 export { buildPromptParts, truncateContent } from './ai/prompt.js';
 export type { PromptParts, BuildPromptOptions } from './ai/prompt.js';
 export { processDocument } from './ai/extract.js';
-export type { ProcessDocumentOptions } from './ai/extract.js';
+export type { AiRequestBudget, ProcessDocumentOptions } from './ai/extract.js';
 export { processBatch } from './ai/batch.js';
 export type { BatchProcessOptions } from './ai/batch.js';
 export { reprocessSingleResult } from './ai/reprocess.js';
@@ -421,6 +434,7 @@ export {
   fetchAndCachePricing,
   refreshPricingIfStale,
   getModelPricing,
+  getExactModelPricing,
   getAllModelPricing,
   estimateResultCost,
   estimateBatchCost,
@@ -434,3 +448,13 @@ export type {
   ModelCostEstimate,
   EstimateProcessingCostOptions,
 } from './ai/cost-estimate.js';
+export {
+  AiBudgetExceededError,
+  UnknownAiModelPricingError,
+  abandonAiReservations,
+  countAiPromptTokens,
+  reconcileAiBudgetReservation,
+  reserveAiBudget,
+} from './ai/budget.js';
+export type { AiBudgetReservationView } from './ai/budget.js';
+export { clearAiResultHistory, replaceAiResultWithRevision } from './ai/history.js';

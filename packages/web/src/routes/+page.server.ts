@@ -6,6 +6,7 @@ import {
   PaperlessClient,
   toPaperlessConfig,
   type PaperlessReadiness,
+  getAutomationSettings,
 } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
@@ -22,6 +23,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     jobs,
     duplicateStats,
     aiStats,
+    automation: getAutomationSettings(locals.sqlite),
   };
 };
 

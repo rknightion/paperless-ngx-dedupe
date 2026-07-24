@@ -23,6 +23,7 @@ type ScheduleRow = {
 };
 
 type SyncGenerationRow = {
+  id: string;
   sync_job_id: string;
   root_schedule_id: string | null;
   root_due_at: string | null;
@@ -185,6 +186,16 @@ function claimSchedule(
       ) VALUES (?, ?, 'pending', 0, 'schedule', ?, ?, NULL, NULL, NULL, 0, NULL, NULL, ?)`,
     )
     .run(jobId, row.task, row.id, dueAt, nowIso);
+  if (row.task === 'sync') {
+    sqlite
+      .prepare(
+        `INSERT INTO sync_change_generation (
+          id, sync_job_id, root_schedule_id, root_due_at, changed_at,
+          status, created_at, completed_at
+        ) VALUES (?, ?, ?, ?, NULL, 'running', ?, NULL)`,
+      )
+      .run(nanoid(), jobId, row.id, dueAt, nowIso);
+  }
   sqlite
     .prepare(
       `INSERT INTO dispatch_intent (
@@ -223,6 +234,7 @@ function claimDependency(
   const jobId = nanoid();
   const intentId = nanoid();
   const dispatchKey = nanoid();
+  const taskDataJson = serializeDispatchTaskData({ syncGenerationId: parent.id });
   acquireOperation(sqlite, operationForTask(task), jobId);
   sqlite
     .prepare(
@@ -239,7 +251,7 @@ function claimDependency(
         id, task, operation, job_id, trigger_kind, schedule_id, due_at,
         parent_job_id, root_schedule_id, root_due_at, status, attempt_count,
         next_attempt_at, terminal_reason, task_data_json, dispatch_key, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, 'dependency', NULL, NULL, ?, ?, ?, 'pending', 0, NULL, NULL, NULL, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, 'dependency', NULL, NULL, ?, ?, ?, 'pending', 0, NULL, NULL, ?, ?, ?, ?)`,
     )
     .run(
       intentId,
@@ -249,6 +261,7 @@ function claimDependency(
       parent.sync_job_id,
       parent.root_schedule_id,
       parent.root_due_at,
+      taskDataJson,
       dispatchKey,
       nowIso,
       nowIso,
@@ -267,9 +280,9 @@ function enqueueCompletedDependencies(sqlite: Database.Database, now: Date): Dis
 
   const parents = sqlite
     .prepare(
-      `SELECT sync_job_id, root_schedule_id, root_due_at
+      `SELECT id, sync_job_id, root_schedule_id, root_due_at
        FROM sync_change_generation
-       WHERE status = 'pending'`,
+       WHERE status = 'ready'`,
     )
     .all() as SyncGenerationRow[];
   const intents: DispatchIntent[] = [];

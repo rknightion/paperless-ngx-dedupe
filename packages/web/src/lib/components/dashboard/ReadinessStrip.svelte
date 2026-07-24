@@ -1,12 +1,13 @@
 <script lang="ts">
-  import type { Readiness } from '@paperless-dedupe/core';
+  import type { AutomationSettings, Readiness } from '@paperless-dedupe/core';
   import { CheckCircle2, CircleAlert, Database, Server } from 'lucide-svelte';
 
   interface Props {
     readiness: Readiness;
+    automation?: AutomationSettings;
   }
 
-  let { readiness }: Props = $props();
+  let { readiness, automation }: Props = $props();
 
   const paperlessConnected = $derived(readiness.paperless.status === 'connected');
   const localReady = $derived(readiness.lastSyncAt !== null);
@@ -70,3 +71,27 @@
     </li>
   </ul>
 </section>
+
+{#if automation}
+  <section class="panel" aria-label="Automation next runs">
+    <h2 class="text-ink text-lg font-semibold">Automation next runs</h2>
+    <ul class="mt-3 grid gap-3 sm:grid-cols-3">
+      {#each Object.values(automation.schedules) as schedule (schedule.task)}
+        <li class="panel-inset">
+          <p class="text-ink text-sm font-medium">
+            {schedule.task === 'ai_processing'
+              ? 'AI suggestions'
+              : schedule.task === 'analysis'
+                ? 'Analysis'
+                : 'Sync'}
+          </p>
+          <p class="text-muted mt-1 text-xs">
+            {schedule.enabled && schedule.nextRunAt
+              ? new Date(schedule.nextRunAt).toLocaleString()
+              : 'Not scheduled'}
+          </p>
+        </li>
+      {/each}
+    </ul>
+  </section>
+{/if}

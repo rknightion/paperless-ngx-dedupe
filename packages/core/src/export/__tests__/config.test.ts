@@ -69,7 +69,11 @@ describe('exportConfig', () => {
     ]) {
       expect(JSON.stringify(backup)).not.toContain(secret);
     }
-    expect(backup.appConfig).toEqual({ theme: 'dark' });
+    expect(backup.appConfig).toEqual({
+      'automation.aiMaxDocumentsPerRun': '25',
+      'automation.aiMonthlyBudgetUsd': '0',
+      theme: 'dark',
+    });
   });
 
   it('includes dedupConfig', () => {

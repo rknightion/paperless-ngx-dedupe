@@ -14,6 +14,12 @@ runWorkerTask(async (ctx, onProgress) => {
     {
       forceFullSync: taskData?.force,
       purgeBeforeSync: taskData?.purge,
+      syncJobId: ctx.jobId,
+      syncGenerationId: (
+        ctx.sqlite
+          .prepare('SELECT id FROM sync_change_generation WHERE sync_job_id = ?')
+          .get(ctx.jobId) as { id: string } | undefined
+      )?.id,
       onProgress,
     },
   );

@@ -1,14 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
+import { aiResultRevision } from '../../schema/sqlite/ai-result-revisions.js';
 import type { AiProviderInterface, AiExtractionResult } from '../providers/types.js';
 import { AiExtractionError } from '../providers/types.js';
 import type { PaperlessClient } from '../../paperless/client.js';
 import { DEFAULT_AI_CONFIG } from '../types.js';
 import type { AiConfig } from '../types.js';
+import { AiBudgetExceededError, UnknownAiModelPricingError } from '../budget.js';
 
 vi.mock('../../telemetry/spans.js', () => ({
   withSpan: vi
@@ -113,10 +116,12 @@ function seedDocs(db: AppDatabase) {
 
 describe('processBatch', () => {
   let db: AppDatabase;
+  let sqlite: ReturnType<typeof createDatabaseWithHandle>['sqlite'];
 
   beforeEach(async () => {
     const handle = createDatabaseWithHandle(':memory:');
     db = handle.db;
+    sqlite = handle.sqlite;
     await migrateDatabase(handle.sqlite);
   });
 
@@ -301,6 +306,47 @@ describe('processBatch', () => {
     expect(result.skipped).toBe(1);
   });
 
+  it('snapshots prior results for success, failure, and skipped replacements', async () => {
+    seedDocs(db);
+    db.insert(aiProcessingResult)
+      .values(
+        ['doc-1', 'doc-2', 'doc-3'].map((documentId, index) => ({
+          documentId,
+          paperlessId: index + 1,
+          provider: 'openai',
+          model: 'old-model',
+          suggestedTitle: `Old ${documentId}`,
+          appliedStatus: 'pending_review',
+          createdAt: '2024-01-01T00:00:00Z',
+        })),
+      )
+      .run();
+    const extractFn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        response: {
+          title: 'Replacement',
+          correspondent: 'Test',
+          documentType: 'Invoice',
+          tags: [],
+          confidence: { title: 0.9, correspondent: 0.9, documentType: 0.9, tags: 0.5 },
+          evidence: 'test',
+        },
+        usage: { promptTokens: 10, completionTokens: 5 },
+      })
+      .mockRejectedValueOnce(new AiExtractionError('timeout', 'Request timed out'));
+
+    const result = await processBatch(db, {
+      provider: createMockProvider({ extractFn }),
+      client: createMockClient(),
+      config: { ...config, batchSize: 1 },
+      reprocess: true,
+    });
+
+    expect(result).toMatchObject({ succeeded: 1, failed: 1, skipped: 1 });
+    expect(db.select().from(aiResultRevision).all()).toHaveLength(3);
+  });
+
   it('processes only specified documentIds', async () => {
     seedDocs(db);
     const provider = createMockProvider();
@@ -316,6 +362,284 @@ describe('processBatch', () => {
     expect(result.totalDocuments).toBe(1);
     expect(result.succeeded).toBe(1);
     expect(provider.extract).toHaveBeenCalledTimes(1);
+  });
+
+  it('caps direct scheduled document IDs without capping manual callers', async () => {
+    seedDocs(db);
+    const scheduledProvider = createMockProvider();
+    const prepareSpy = vi.spyOn(sqlite, 'prepare');
+    const scheduled = await processBatch(db, {
+      provider: scheduledProvider,
+      client: createMockClient(),
+      config,
+      documentIds: ['doc-1', 'doc-2'],
+      maxDocuments: 1,
+    });
+    expect(scheduled.totalDocuments).toBe(1);
+    expect(scheduledProvider.extract).toHaveBeenCalledTimes(1);
+    expect(
+      prepareSpy.mock.calls.some(
+        ([statement]) =>
+          typeof statement === 'string' &&
+          statement.toLowerCase().includes('from "document"') &&
+          statement.toLowerCase().includes('limit ?'),
+      ),
+    ).toBe(true);
+    prepareSpy.mockRestore();
+
+    db.delete(aiProcessingResult).run();
+    const manualProvider = createMockProvider();
+    const manual = await processBatch(db, {
+      provider: manualProvider,
+      client: createMockClient(),
+      config,
+      documentIds: ['doc-1', 'doc-2'],
+    });
+    expect(manual.totalDocuments).toBe(2);
+    expect(manualProvider.extract).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['unprocessed', 'reprocess'] as const)(
+    'applies the scheduled document cap to the %s query',
+    async (queryKind) => {
+      seedDocs(db);
+      const provider = createMockProvider();
+      const prepareSpy = vi.spyOn(sqlite, 'prepare');
+
+      const result = await processBatch(db, {
+        provider,
+        client: createMockClient(),
+        config,
+        ...(queryKind === 'reprocess' ? { reprocess: true } : {}),
+        maxDocuments: 1,
+      });
+
+      expect(result.totalDocuments).toBe(1);
+      expect(provider.extract).toHaveBeenCalledTimes(1);
+      expect(
+        prepareSpy.mock.calls.some(
+          ([statement]) =>
+            typeof statement === 'string' &&
+            statement.toLowerCase().includes('from "document"') &&
+            statement.toLowerCase().includes('limit ?'),
+        ),
+      ).toBe(true);
+      prepareSpy.mockRestore();
+    },
+  );
+
+  it('accepts fifty thousand explicit IDs without exceeding SQLite variable limits', async () => {
+    seedDocs(db);
+    const documentIds = Array.from({ length: 50_000 }, (_, index) => `missing-${index}`);
+    documentIds[10_001] = 'doc-1';
+    documentIds[40_001] = 'doc-2';
+    const provider = createMockProvider();
+
+    const result = await processBatch(db, {
+      provider,
+      client: createMockClient(),
+      config,
+      documentIds,
+    });
+
+    expect(result.totalDocuments).toBe(2);
+    expect(result.succeeded).toBe(2);
+    expect(provider.extract).toHaveBeenCalledTimes(2);
+  });
+
+  it('selects one unprocessed document beyond 32,767 processed rows without materializing IDs', async () => {
+    sqlite.exec(`
+      BEGIN;
+      WITH RECURSIVE sequence(value) AS (
+        VALUES (1)
+        UNION ALL
+        SELECT value + 1 FROM sequence WHERE value < 32768
+      )
+      INSERT INTO document (
+        id, paperless_id, title, processing_status, synced_at
+      )
+      SELECT
+        printf('processed-%05d', value),
+        value,
+        'Processed',
+        'completed',
+        '2026-07-24T00:00:00.000Z'
+      FROM sequence;
+
+      INSERT INTO ai_processing_result (
+        id, document_id, paperless_id, provider, model, applied_status, created_at
+      )
+      SELECT
+        'result-' || id,
+        id,
+        paperless_id,
+        'openai',
+        'old-model',
+        'pending_review',
+        '2026-07-24T00:00:00.000Z'
+      FROM document;
+
+      INSERT INTO document (
+        id, paperless_id, title, processing_status, synced_at
+      ) VALUES (
+        'unprocessed-candidate', 40000, 'Unprocessed', 'completed',
+        '2026-07-24T00:00:00.000Z'
+      );
+      INSERT INTO document_content (
+        id, document_id, full_text, content_hash
+      ) VALUES (
+        'content-unprocessed-candidate', 'unprocessed-candidate',
+        'Candidate content', 'candidate-hash'
+      );
+      COMMIT;
+    `);
+    const provider = createMockProvider();
+
+    const result = await processBatch(db, {
+      provider,
+      client: createMockClient(),
+      config,
+      maxDocuments: 1,
+    });
+
+    expect(result.totalDocuments).toBe(1);
+    expect(result.succeeded).toBe(1);
+    expect(provider.extract).toHaveBeenCalledTimes(1);
+    expect(
+      db
+        .select({ documentId: aiProcessingResult.documentId })
+        .from(aiProcessingResult)
+        .where(eq(aiProcessingResult.documentId, 'unprocessed-candidate'))
+        .get(),
+    ).toEqual({ documentId: 'unprocessed-candidate' });
+  });
+
+  it.each([
+    ['generation', AiBudgetExceededError],
+    ['generation', UnknownAiModelPricingError],
+    ['direct', AiBudgetExceededError],
+    ['direct', UnknownAiModelPricingError],
+  ] as const)(
+    'preserves %s eligibility and prior result when %s blocks before the provider',
+    async (scope, ErrorType) => {
+      db.insert(document)
+        .values({
+          id: 'policy-doc',
+          paperlessId: 101,
+          title: 'Policy document',
+          processingStatus: 'completed',
+          syncedAt: '2026-07-24T00:00:00.000Z',
+          lastChangedBySyncGenerationId: scope === 'generation' ? 'generation-policy' : null,
+        })
+        .run();
+      db.insert(documentContent)
+        .values({
+          documentId: 'policy-doc',
+          fullText: 'Budget-sensitive content',
+          contentHash: 'policy-hash',
+        })
+        .run();
+      db.insert(aiProcessingResult)
+        .values({
+          documentId: 'policy-doc',
+          paperlessId: 101,
+          provider: 'openai',
+          model: 'old-model',
+          suggestedTitle: 'Keep this result',
+          appliedStatus: 'pending_review',
+          syncGenerationId: scope === 'generation' ? 'older-generation' : null,
+          createdAt: '2026-07-23T00:00:00.000Z',
+        })
+        .run();
+      const provider = createMockProvider();
+      const requestBudget = {
+        reserve: vi.fn(async () => {
+          throw new ErrorType();
+        }),
+        reconcile: vi.fn(async () => undefined),
+      };
+
+      await expect(
+        processBatch(db, {
+          provider,
+          client: createMockClient(),
+          config: { ...config, batchSize: 1 },
+          ...(scope === 'generation'
+            ? { syncGenerationId: 'generation-policy' }
+            : { reprocess: true, documentIds: ['policy-doc'] }),
+          maxDocuments: 25,
+          requestBudget,
+        }),
+      ).rejects.toBeInstanceOf(ErrorType);
+
+      expect(provider.extract).not.toHaveBeenCalled();
+      expect(
+        db
+          .select({
+            model: aiProcessingResult.model,
+            suggestedTitle: aiProcessingResult.suggestedTitle,
+            appliedStatus: aiProcessingResult.appliedStatus,
+            syncGenerationId: aiProcessingResult.syncGenerationId,
+          })
+          .from(aiProcessingResult)
+          .where(eq(aiProcessingResult.documentId, 'policy-doc'))
+          .get(),
+      ).toEqual({
+        model: 'old-model',
+        suggestedTitle: 'Keep this result',
+        appliedStatus: 'pending_review',
+        syncGenerationId: scope === 'generation' ? 'older-generation' : null,
+      });
+      expect(db.select().from(aiResultRevision).all()).toHaveLength(0);
+    },
+  );
+
+  it('scopes dependent work to a sync generation, reprocesses changed results, and caps the run', async () => {
+    seedDocs(db);
+    db.update(document)
+      .set({ lastChangedBySyncGenerationId: 'generation-1' })
+      .where(eq(document.id, 'doc-1'))
+      .run();
+    db.update(document)
+      .set({ lastChangedBySyncGenerationId: 'generation-1' })
+      .where(eq(document.id, 'doc-2'))
+      .run();
+    db.insert(aiProcessingResult)
+      .values({
+        documentId: 'doc-1',
+        paperlessId: 1,
+        provider: 'openai',
+        model: 'old-model',
+        suggestedTitle: 'Old title',
+        appliedStatus: 'pending_review',
+        syncGenerationId: 'older-generation',
+        createdAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    const provider = createMockProvider();
+
+    const first = await processBatch(db, {
+      provider,
+      client: createMockClient(),
+      config,
+      syncGenerationId: 'generation-1',
+      maxDocuments: 1,
+    });
+    expect(first.totalDocuments).toBe(1);
+    expect(
+      db.select().from(aiProcessingResult).where(eq(aiProcessingResult.documentId, 'doc-1')).get()
+        ?.syncGenerationId,
+    ).toBe('generation-1');
+
+    const restarted = await processBatch(db, {
+      provider,
+      client: createMockClient(),
+      config,
+      syncGenerationId: 'generation-1',
+      maxDocuments: 25,
+    });
+    expect(restarted.totalDocuments).toBe(1);
+    expect(provider.extract).toHaveBeenCalledTimes(2);
   });
 
   it('fetches reference data only when include flags enabled', async () => {
@@ -625,6 +949,14 @@ describe('rate limit retry queue', () => {
     seedManyDocs(db, 3);
 
     let callCount = 0;
+    const requestKeys: string[] = [];
+    const requestBudget = {
+      reserve: vi.fn(async ({ requestKey }: { requestKey: string }) => {
+        requestKeys.push(requestKey);
+        return { id: `reservation-${requestKeys.length}` };
+      }),
+      reconcile: vi.fn(async () => undefined),
+    };
     const extractFn = vi.fn().mockImplementation(async () => {
       callCount++;
       if (callCount <= 3) {
@@ -647,13 +979,21 @@ describe('rate limit retry queue', () => {
     const client = createMockClient();
     const seqConfig: AiConfig = { ...config, batchSize: 1 };
 
-    const result = await processBatch(db, { provider, client, config: seqConfig });
+    const result = await processBatch(db, {
+      provider,
+      client,
+      config: seqConfig,
+      requestBudget,
+    });
 
     expect(result.succeeded).toBe(3);
     expect(result.failed).toBe(0);
     expect(result.rateLimitRetries).toBe(3);
     expect(result.rateLimitPauses).toBeGreaterThan(0);
     expect(extractFn).toHaveBeenCalledTimes(6);
+    expect(requestBudget.reserve).toHaveBeenCalledTimes(6);
+    expect(requestBudget.reconcile).toHaveBeenCalledTimes(3);
+    expect(new Set(requestKeys).size).toBe(6);
   });
 
   it('records permanent failure after max retry passes', async () => {

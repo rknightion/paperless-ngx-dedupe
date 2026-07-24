@@ -16,6 +16,7 @@ import {
   syncChangeGeneration,
 } from '../schema/sqlite/automation.js';
 import { isSensitiveConfigKey } from '../queries/config.js';
+import { ensureAutomationDefaults } from '../scheduler/settings.js';
 
 const SCHEMA_HASH_KEY = 'schema_ddl_hash';
 const SCHEMA_SNAPSHOT_KEY = 'schema_ddl_snapshot';
@@ -124,6 +125,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // explicitly before that early return can occur.
   migrateDispatchIntentTaskData(sqlite);
   migrateJobExecutionToken(sqlite);
+  migrateAiAutomationCompatibility(sqlite);
 
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
@@ -141,6 +143,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   if (storedRow?.value === currentHash) {
     // Schema is up to date — still run post-DDL migrations
     migrateDeletedGroupArchives(sqlite);
+    ensureAutomationDefaults(sqlite);
     return;
   }
 
@@ -188,6 +191,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
 
   // Post-DDL migrations (require new columns to exist)
   migrateDeletedGroupArchives(sqlite);
+  ensureAutomationDefaults(sqlite);
 }
 
 // ── Pre-DDL Migrations ──────────────────────────────────────────────────
@@ -360,6 +364,153 @@ function migrateJobExecutionToken(sqlite: Database.Database): void {
   if (!tableHasColumn(sqlite, 'job', 'id')) return;
   if (tableHasColumn(sqlite, 'job', 'execution_token')) return;
   sqlite.exec(`ALTER TABLE job ADD COLUMN execution_token TEXT`);
+}
+
+/** Repair Task 5 automation columns even when an obsolete hash claims current DDL. */
+function migrateAiAutomationCompatibility(sqlite: Database.Database): void {
+  if (tableHasColumn(sqlite, 'ai_processing_result', 'id')) {
+    if (!tableHasColumn(sqlite, 'ai_processing_result', 'sync_generation_id')) {
+      sqlite.exec(`ALTER TABLE ai_processing_result ADD COLUMN sync_generation_id TEXT`);
+    }
+  }
+  if (!tableHasColumn(sqlite, 'ai_budget_reservation', 'id')) return;
+
+  const columns = sqlite.prepare(`PRAGMA table_info('ai_budget_reservation')`).all() as {
+    name: string;
+    notnull: number;
+  }[];
+  const tableSql = (
+    sqlite
+      .prepare(
+        `SELECT sql FROM sqlite_master
+         WHERE type = 'table' AND name = 'ai_budget_reservation'`,
+      )
+      .get() as { sql: string }
+  ).sql;
+  const indexNames = new Set(
+    (
+      sqlite.prepare(`PRAGMA index_list('ai_budget_reservation')`).all() as {
+        name: string;
+      }[]
+    ).map(({ name }) => name),
+  );
+  const requiredNotNull = new Set([
+    'id',
+    'dispatch_intent_id',
+    'request_key',
+    'owner_token',
+    'billing_month',
+    'model',
+    'prompt_tokens',
+    'max_output_tokens',
+    'input_per_token',
+    'output_per_token',
+    'reserved_cost_usd',
+    'status',
+    'reserved_at',
+  ]);
+  const expectedColumns = [
+    'id',
+    'dispatch_intent_id',
+    'schedule_id',
+    'request_key',
+    'owner_token',
+    'billing_month',
+    'model',
+    'prompt_tokens',
+    'max_output_tokens',
+    'input_per_token',
+    'output_per_token',
+    'reserved_cost_usd',
+    'actual_cost_usd',
+    'status',
+    'reserved_at',
+    'reconciled_at',
+  ];
+  const isCurrent =
+    columns.map(({ name }) => name).join(',') === expectedColumns.join(',') &&
+    columns.every(({ name, notnull }) => !requiredNotNull.has(name) || notnull === 1) &&
+    tableSql.includes('ai_budget_reservation_status_check') &&
+    indexNames.has('ai_budget_reservation_request_key_unique') &&
+    indexNames.has('ai_budget_reservation_dispatch_intent_idx') &&
+    indexNames.has('ai_budget_reservation_month_idx');
+  if (isCurrent) return;
+
+  const has = (column: string) => columns.some(({ name }) => name === column);
+  const expression = (column: string, fallback: string) => (has(column) ? column : fallback);
+  const requestKey = has('request_key') ? 'COALESCE(request_key, id)' : 'id';
+  const status = has('status')
+    ? `CASE
+         WHEN status IN ('reserved', 'reconciled', 'abandoned') THEN status
+         WHEN actual_cost_usd IS NOT NULL OR reconciled_at IS NOT NULL THEN 'reconciled'
+         ELSE 'reserved'
+       END`
+    : `CASE
+         WHEN actual_cost_usd IS NOT NULL OR reconciled_at IS NOT NULL THEN 'reconciled'
+         ELSE 'reserved'
+       END`;
+
+  sqlite.exec('BEGIN IMMEDIATE');
+  try {
+    sqlite.exec(`
+      ALTER TABLE ai_budget_reservation RENAME TO ai_budget_reservation_task2;
+      CREATE TABLE \`ai_budget_reservation\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`dispatch_intent_id\` text NOT NULL,
+        \`schedule_id\` text,
+        \`request_key\` text NOT NULL,
+        \`owner_token\` text NOT NULL,
+        \`billing_month\` text NOT NULL,
+        \`model\` text NOT NULL,
+        \`prompt_tokens\` integer NOT NULL,
+        \`max_output_tokens\` integer NOT NULL,
+        \`input_per_token\` real NOT NULL,
+        \`output_per_token\` real NOT NULL,
+        \`reserved_cost_usd\` real NOT NULL,
+        \`actual_cost_usd\` real,
+        \`status\` text DEFAULT 'reserved' NOT NULL,
+        \`reserved_at\` text NOT NULL,
+        \`reconciled_at\` text,
+        CONSTRAINT "ai_budget_reservation_status_check"
+          CHECK("ai_budget_reservation"."status" IN ('reserved', 'reconciled', 'abandoned'))
+      );
+      INSERT INTO ai_budget_reservation (
+        id, dispatch_intent_id, schedule_id, request_key, owner_token,
+        billing_month, model, prompt_tokens, max_output_tokens,
+        input_per_token, output_per_token, reserved_cost_usd,
+        actual_cost_usd, status, reserved_at, reconciled_at
+      )
+      SELECT
+        id,
+        dispatch_intent_id,
+        ${expression('schedule_id', 'NULL')},
+        ${requestKey},
+        ${expression('owner_token', "'legacy'")},
+        billing_month,
+        ${expression('model', "'unknown'")},
+        ${expression('prompt_tokens', '0')},
+        ${expression('max_output_tokens', '0')},
+        ${expression('input_per_token', '0')},
+        ${expression('output_per_token', '0')},
+        reserved_cost_usd,
+        ${expression('actual_cost_usd', 'NULL')},
+        ${status},
+        reserved_at,
+        ${expression('reconciled_at', 'NULL')}
+      FROM ai_budget_reservation_task2;
+      DROP TABLE ai_budget_reservation_task2;
+      CREATE UNIQUE INDEX \`ai_budget_reservation_request_key_unique\`
+        ON \`ai_budget_reservation\` (\`request_key\`);
+      CREATE INDEX \`ai_budget_reservation_dispatch_intent_idx\`
+        ON \`ai_budget_reservation\` (\`dispatch_intent_id\`);
+      CREATE INDEX \`ai_budget_reservation_month_idx\`
+        ON \`ai_budget_reservation\` (\`schedule_id\`,\`billing_month\`);
+    `);
+    sqlite.exec('COMMIT');
+  } catch (error) {
+    sqlite.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 /**

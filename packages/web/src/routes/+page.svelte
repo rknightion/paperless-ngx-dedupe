@@ -130,7 +130,7 @@
     </p>
   </header>
 
-  <ReadinessStrip readiness={data.readiness} />
+  <ReadinessStrip readiness={data.readiness} automation={data.automation} />
 
   <NextActions
     actions={data.dashboard.nextActions}

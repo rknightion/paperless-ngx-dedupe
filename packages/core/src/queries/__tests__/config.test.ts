@@ -265,6 +265,10 @@ describe('connection-setting migration', () => {
     const remaining = handle.sqlite
       .prepare('SELECT key FROM app_config WHERE key NOT LIKE ? ORDER BY key')
       .all('schema_ddl_%') as { key: string }[];
-    expect(remaining).toEqual([{ key: 'theme' }]);
+    expect(remaining).toEqual([
+      { key: 'automation.aiMaxDocumentsPerRun' },
+      { key: 'automation.aiMonthlyBudgetUsd' },
+      { key: 'theme' },
+    ]);
   });
 });

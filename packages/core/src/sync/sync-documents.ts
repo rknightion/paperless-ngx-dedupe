@@ -88,11 +88,28 @@ export async function syncDocuments(
 
           if (!localDoc) {
             // New document - insert
-            insertDocument(db, doc, fingerprint, refMaps, maxOcrLength);
+            insertDocument(
+              db,
+              doc,
+              fingerprint,
+              refMaps,
+              maxOcrLength,
+              options?.syncJobId,
+              options?.syncGenerationId,
+            );
             result.inserted++;
           } else if (localDoc.fingerprint !== fingerprint) {
             // Modified - update
-            updateDocument(db, localDoc.id, doc, fingerprint, refMaps, maxOcrLength);
+            updateDocument(
+              db,
+              localDoc.id,
+              doc,
+              fingerprint,
+              refMaps,
+              maxOcrLength,
+              options?.syncJobId,
+              options?.syncGenerationId,
+            );
             result.updated++;
           } else {
             // Unchanged - skip
@@ -227,6 +244,8 @@ function insertDocument(
   fingerprint: string,
   refMaps: ReferenceMaps,
   maxOcrLength: number,
+  syncJobId?: string,
+  syncGenerationId?: string,
 ): string {
   const now = new Date().toISOString();
   const tagNames = resolveTagNames(doc.tags, refMaps);
@@ -253,6 +272,10 @@ function insertDocument(
         modifiedDate: doc.modified,
         processingStatus: 'pending',
         syncedAt: now,
+        insertedBySyncJobId: syncJobId,
+        insertedBySyncGenerationId: syncGenerationId,
+        lastChangedBySyncJobId: syncJobId,
+        lastChangedBySyncGenerationId: syncGenerationId,
       })
       .returning({ id: document.id })
       .get();
@@ -278,6 +301,8 @@ function updateDocument(
   fingerprint: string,
   refMaps: ReferenceMaps,
   maxOcrLength: number,
+  syncJobId?: string,
+  syncGenerationId?: string,
 ): void {
   const now = new Date().toISOString();
   const tagNames = resolveTagNames(doc.tags, refMaps);
@@ -302,6 +327,8 @@ function updateDocument(
         modifiedDate: doc.modified,
         processingStatus: 'pending',
         syncedAt: now,
+        lastChangedBySyncJobId: syncJobId,
+        lastChangedBySyncGenerationId: syncGenerationId,
       })
       .where(eq(document.id, localDocId))
       .run();

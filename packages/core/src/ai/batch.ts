@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { type PaperlessClient } from '../paperless/client.js';
@@ -21,6 +21,10 @@ import { normalizeSuggestedLabel, normalizeSuggestedTags } from './normalize.js'
 import { getModelPricing, estimateResultCost } from './costs.js';
 import { TpmThrottle } from './tpm-throttle.js';
 import { normalizeCustomFieldRecommendations } from './custom-fields.js';
+import { replaceAiResultWithRevision } from './history.js';
+import type { AiRequestBudget } from './extract.js';
+import type { NewAiProcessingResult } from '../schema/types.js';
+import { AiBudgetPolicyError } from './budget.js';
 
 const logger = createLogger('ai-batch');
 
@@ -32,12 +36,37 @@ const PROVIDER_RPM: Record<string, number> = {
 /** Target utilization of rate limits */
 const TARGET_UTILIZATION = 0.85;
 
+type CompleteAiResultWrite = NewAiProcessingResult & {
+  documentId: string;
+  paperlessId: number;
+  provider: string;
+  model: string;
+  appliedStatus: string;
+  createdAt: string;
+};
+
+function writeAiResultWithHistory(db: AppDatabase, values: CompleteAiResultWrite): void {
+  const existing = db
+    .select({ id: aiProcessingResult.id })
+    .from(aiProcessingResult)
+    .where(eq(aiProcessingResult.documentId, values.documentId))
+    .get();
+  if (existing) {
+    replaceAiResultWithRevision(db, values.documentId, values);
+  } else {
+    db.insert(aiProcessingResult).values(values).run();
+  }
+}
+
 export interface BatchProcessOptions {
   provider: AiProviderInterface;
   client: PaperlessClient;
   config: AiConfig;
   reprocess?: boolean;
   documentIds?: string[];
+  syncGenerationId?: string;
+  maxDocuments?: number;
+  requestBudget?: AiRequestBudget;
   onProgress?: (progress: number, message: string) => Promise<void>;
 }
 
@@ -62,7 +91,17 @@ export async function processBatch(
   options: BatchProcessOptions,
 ): Promise<AiBatchResult> {
   return withPyroscopeLabels({ operation: 'ai_batch' }, async () => {
-    const { provider, client, config, reprocess = false, documentIds, onProgress } = options;
+    const {
+      provider,
+      client,
+      config,
+      reprocess = false,
+      documentIds,
+      syncGenerationId,
+      maxDocuments,
+      requestBudget,
+      onProgress,
+    } = options;
 
     const maxConcurrency = config.batchSize;
     const intervalMs = computeRequestInterval(provider.provider, config.rateDelayMs);
@@ -98,7 +137,7 @@ export async function processBatch(
 
         // Build document query
         let docs;
-        if (documentIds && documentIds.length > 0) {
+        if (syncGenerationId) {
           docs = db
             .select({
               id: document.id,
@@ -112,7 +151,41 @@ export async function processBatch(
             })
             .from(document)
             .leftJoin(documentContent, eq(document.id, documentContent.documentId))
-            .where(inArray(document.id, documentIds))
+            .where(
+              and(
+                eq(document.lastChangedBySyncGenerationId, syncGenerationId),
+                sql`NOT EXISTS (
+                  SELECT 1
+                  FROM ${aiProcessingResult} AS existing_ai_result
+                  WHERE existing_ai_result.document_id = ${document.id}
+                    AND existing_ai_result.sync_generation_id = ${syncGenerationId}
+                )`,
+              ),
+            )
+            .orderBy(document.id)
+            .limit(maxDocuments ?? 25)
+            .all();
+        } else if (documentIds && documentIds.length > 0) {
+          docs = db
+            .select({
+              id: document.id,
+              paperlessId: document.paperlessId,
+              title: document.title,
+              correspondent: document.correspondent,
+              documentType: document.documentType,
+              tagsJson: document.tagsJson,
+              customFieldsJson: document.customFieldsJson,
+              fullText: documentContent.fullText,
+            })
+            .from(document)
+            .leftJoin(documentContent, eq(document.id, documentContent.documentId))
+            .where(
+              sql`${document.id} IN (
+                SELECT value FROM json_each(${JSON.stringify(documentIds)})
+              )`,
+            )
+            .orderBy(document.id)
+            .limit(maxDocuments ?? -1)
             .all();
         } else if (reprocess) {
           docs = db
@@ -128,16 +201,11 @@ export async function processBatch(
             })
             .from(document)
             .leftJoin(documentContent, eq(document.id, documentContent.documentId))
+            .orderBy(document.id)
+            .limit(maxDocuments ?? -1)
             .all();
         } else {
-          // Only documents without an existing AI result
-          const existingIds = db
-            .select({ documentId: aiProcessingResult.documentId })
-            .from(aiProcessingResult)
-            .all()
-            .map((r) => r.documentId);
-
-          const baseQuery = db
+          docs = db
             .select({
               id: document.id,
               paperlessId: document.paperlessId,
@@ -149,20 +217,17 @@ export async function processBatch(
               fullText: documentContent.fullText,
             })
             .from(document)
-            .leftJoin(documentContent, eq(document.id, documentContent.documentId));
-
-          if (existingIds.length > 0) {
-            docs = baseQuery
-              .where(
-                sql`${document.id} NOT IN (${sql.join(
-                  existingIds.map((id) => sql`${id}`),
-                  sql`, `,
-                )})`,
-              )
-              .all();
-          } else {
-            docs = baseQuery.all();
-          }
+            .leftJoin(documentContent, eq(document.id, documentContent.documentId))
+            .where(
+              sql`NOT EXISTS (
+                SELECT 1
+                FROM ${aiProcessingResult} AS existing_ai_result
+                WHERE existing_ai_result.document_id = ${document.id}
+              )`,
+            )
+            .orderBy(document.id)
+            .limit(maxDocuments ?? -1)
+            .all();
         }
 
         const totalDocs = docs.length;
@@ -211,32 +276,36 @@ export async function processBatch(
             result.processed++;
 
             // Write a skipped record so the doc leaves the unprocessed queue
-            db.insert(aiProcessingResult)
-              .values({
-                documentId: doc.id,
-                paperlessId: doc.paperlessId,
-                provider: provider.provider,
-                model: config.model,
-                errorMessage: 'Document has no OCR text content available for AI processing',
-                failureType: 'no_content',
-                appliedStatus: 'skipped',
-                currentTitle: doc.title,
-                currentCorrespondent: doc.correspondent,
-                currentDocumentType: doc.documentType,
-                currentTagsJson: doc.tagsJson,
-                currentCustomFieldsJson: doc.customFieldsJson,
-                createdAt: now,
-              })
-              .onConflictDoUpdate({
-                target: aiProcessingResult.documentId,
-                set: {
-                  errorMessage: 'Document has no OCR text content available for AI processing',
-                  failureType: 'no_content',
-                  appliedStatus: 'skipped',
-                  createdAt: now,
-                },
-              })
-              .run();
+            writeAiResultWithHistory(db, {
+              documentId: doc.id,
+              paperlessId: doc.paperlessId,
+              provider: provider.provider,
+              model: config.model,
+              suggestedTitle: null,
+              suggestedCorrespondent: null,
+              suggestedDocumentType: null,
+              suggestedTagsJson: null,
+              suggestedCustomFieldsJson: null,
+              confidenceJson: null,
+              currentTitle: doc.title,
+              currentCorrespondent: doc.correspondent,
+              currentDocumentType: doc.documentType,
+              currentTagsJson: doc.tagsJson,
+              currentCustomFieldsJson: doc.customFieldsJson,
+              appliedStatus: 'skipped',
+              appliedAt: null,
+              appliedFieldsJson: null,
+              evidence: null,
+              failureType: 'no_content',
+              rawResponseJson: null,
+              promptTokens: null,
+              completionTokens: null,
+              errorMessage: 'Document has no OCR text content available for AI processing',
+              processingTimeMs: null,
+              estimatedCostUsd: null,
+              syncGenerationId,
+              createdAt: now,
+            });
 
             aiDocumentsTotal().add(1, { outcome: 'skipped', 'gen_ai.system': provider.provider });
             logger.warn(
@@ -271,6 +340,7 @@ export async function processBatch(
         const throttle = new TpmThrottle();
         const retryQueue: typeof processableDocs = [];
         const MAX_RETRY_PASSES = 3;
+        let requestSequence = 0;
 
         // Process a single document: API call, DB upsert, telemetry
         async function processOne(doc: (typeof processableDocs)[0]): Promise<void> {
@@ -293,6 +363,9 @@ export async function processBatch(
               customFields,
               extractCustomFields: config.extractCustomFields,
               reasoningEffort: config.reasoningEffort,
+              maxOutputTokens: config.maxOutputTokens,
+              budgetRequestKey: `${doc.id}:${++requestSequence}`,
+              requestBudget,
             });
 
             const now = new Date().toISOString();
@@ -324,64 +397,51 @@ export async function processBatch(
                 )
               : null;
 
-            // Upsert result
-            db.insert(aiProcessingResult)
-              .values({
-                documentId: doc.id,
-                paperlessId: doc.paperlessId,
-                provider: provider.provider,
-                model: config.model,
-                suggestedTitle: normalizedTitle,
-                suggestedCorrespondent: normalizedCorrespondent,
-                suggestedDocumentType: normalizedDocumentType,
-                suggestedTagsJson: JSON.stringify(normalizedTags),
-                suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
-                confidenceJson: JSON.stringify(extraction.response.confidence),
-                currentTitle: doc.title,
-                currentCorrespondent: doc.correspondent,
-                currentDocumentType: doc.documentType,
-                currentTagsJson: doc.tagsJson,
-                currentCustomFieldsJson: doc.customFieldsJson,
-                appliedStatus: 'pending_review',
-                evidence: extraction.response.evidence || null,
-                rawResponseJson: JSON.stringify(extraction.response),
-                promptTokens: extraction.usage.promptTokens,
-                completionTokens: extraction.usage.completionTokens,
-                estimatedCostUsd,
-                processingTimeMs: docDurationMs,
-                createdAt: now,
-              })
-              .onConflictDoUpdate({
-                target: aiProcessingResult.documentId,
-                set: {
-                  provider: provider.provider,
-                  model: config.model,
-                  suggestedTitle: normalizedTitle,
-                  suggestedCorrespondent: normalizedCorrespondent,
-                  suggestedDocumentType: normalizedDocumentType,
-                  suggestedTagsJson: JSON.stringify(normalizedTags),
-                  suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
-                  confidenceJson: JSON.stringify(extraction.response.confidence),
-                  currentTitle: doc.title,
-                  currentCorrespondent: doc.correspondent,
-                  currentDocumentType: doc.documentType,
-                  currentTagsJson: doc.tagsJson,
-                  currentCustomFieldsJson: doc.customFieldsJson,
-                  appliedStatus: 'pending_review',
-                  appliedAt: null,
-                  appliedFieldsJson: null,
-                  evidence: extraction.response.evidence || null,
-                  failureType: null,
-                  rawResponseJson: JSON.stringify(extraction.response),
-                  promptTokens: extraction.usage.promptTokens,
-                  completionTokens: extraction.usage.completionTokens,
-                  estimatedCostUsd,
-                  errorMessage: null,
-                  processingTimeMs: docDurationMs,
-                  createdAt: now,
-                },
-              })
-              .run();
+            writeAiResultWithHistory(db, {
+              documentId: doc.id,
+              paperlessId: doc.paperlessId,
+              provider: provider.provider,
+              model: config.model,
+              suggestedTitle: normalizedTitle,
+              suggestedCorrespondent: normalizedCorrespondent,
+              suggestedDocumentType: normalizedDocumentType,
+              suggestedTagsJson: JSON.stringify(normalizedTags),
+              suggestedCustomFieldsJson: JSON.stringify(suggestedCustomFields),
+              confidenceJson: JSON.stringify(extraction.response.confidence),
+              currentTitle: doc.title,
+              currentCorrespondent: doc.correspondent,
+              currentDocumentType: doc.documentType,
+              currentTagsJson: doc.tagsJson,
+              currentCustomFieldsJson: doc.customFieldsJson,
+              appliedStatus: 'pending_review',
+              appliedAt: null,
+              appliedFieldsJson: null,
+              evidence: extraction.response.evidence || null,
+              failureType: null,
+              rawResponseJson: JSON.stringify(extraction.response),
+              promptTokens: extraction.usage.promptTokens,
+              completionTokens: extraction.usage.completionTokens,
+              estimatedCostUsd,
+              errorMessage: null,
+              processingTimeMs: docDurationMs,
+              createdAt: now,
+              syncGenerationId,
+              preApplyTitle: null,
+              preApplyCorrespondentId: null,
+              preApplyCorrespondentName: null,
+              preApplyDocumentTypeId: null,
+              preApplyDocumentTypeName: null,
+              preApplyTagIdsJson: null,
+              preApplyTagNamesJson: null,
+              preApplyCustomFieldsJson: null,
+              appliedTitle: null,
+              appliedCorrespondentId: null,
+              appliedDocumentTypeId: null,
+              appliedTagIdsJson: null,
+              appliedCustomFieldsJson: null,
+              revertedAt: null,
+              feedbackJson: null,
+            });
 
             result.succeeded++;
             // Update throttle from rate limit headers
@@ -415,6 +475,11 @@ export async function processBatch(
             consecutiveSameError = 0;
             lastErrorMsg = '';
           } catch (error) {
+            if (error instanceof AiBudgetPolicyError) {
+              circuitBroken = true;
+              circuitBreakerError = error;
+              throw error;
+            }
             const isAiError = error instanceof AiExtractionError;
             const errorMsg = isAiError
               ? `[${error.failureType}] ${error.message}`
@@ -453,27 +518,36 @@ export async function processBatch(
             const now = new Date().toISOString();
             const failureType = isAiError ? error.failureType : null;
             // Store error result
-            db.insert(aiProcessingResult)
-              .values({
-                documentId: doc.id,
-                paperlessId: doc.paperlessId,
-                provider: provider.provider,
-                model: config.model,
-                errorMessage: errorMsg,
-                failureType,
-                appliedStatus: 'failed',
-                createdAt: now,
-              })
-              .onConflictDoUpdate({
-                target: aiProcessingResult.documentId,
-                set: {
-                  errorMessage: errorMsg,
-                  failureType,
-                  appliedStatus: 'failed',
-                  createdAt: now,
-                },
-              })
-              .run();
+            writeAiResultWithHistory(db, {
+              documentId: doc.id,
+              paperlessId: doc.paperlessId,
+              provider: provider.provider,
+              model: config.model,
+              suggestedTitle: null,
+              suggestedCorrespondent: null,
+              suggestedDocumentType: null,
+              suggestedTagsJson: null,
+              suggestedCustomFieldsJson: null,
+              confidenceJson: null,
+              currentTitle: doc.title,
+              currentCorrespondent: doc.correspondent,
+              currentDocumentType: doc.documentType,
+              currentTagsJson: doc.tagsJson,
+              currentCustomFieldsJson: doc.customFieldsJson,
+              appliedStatus: 'failed',
+              appliedAt: null,
+              appliedFieldsJson: null,
+              evidence: null,
+              failureType,
+              rawResponseJson: null,
+              promptTokens: null,
+              completionTokens: null,
+              errorMessage: errorMsg,
+              processingTimeMs: null,
+              estimatedCostUsd: null,
+              syncGenerationId,
+              createdAt: now,
+            });
 
             result.failed++;
             aiDocumentsTotal().add(1, { outcome: 'failed', 'gen_ai.system': provider.provider });
@@ -528,7 +602,10 @@ export async function processBatch(
           const doc = processableDocs[i];
           const promise = processOne(doc);
           pending.add(promise);
-          promise.finally(() => pending.delete(promise));
+          void promise.then(
+            () => pending.delete(promise),
+            () => pending.delete(promise),
+          );
 
           // Rate-limit: pause before launching the next request (throttle-aware)
           if (i < processableDocs.length - 1) {
@@ -571,7 +648,10 @@ export async function processBatch(
             const doc = retryDocs[i];
             const promise = processOne(doc);
             pending.add(promise);
-            promise.finally(() => pending.delete(promise));
+            void promise.then(
+              () => pending.delete(promise),
+              () => pending.delete(promise),
+            );
           }
 
           await Promise.allSettled(pending);
@@ -580,27 +660,36 @@ export async function processBatch(
         // Record permanent failures for docs that exhausted all retry passes
         for (const doc of retryQueue) {
           const now = new Date().toISOString();
-          db.insert(aiProcessingResult)
-            .values({
-              documentId: doc.id,
-              paperlessId: doc.paperlessId,
-              provider: provider.provider,
-              model: config.model,
-              errorMessage: 'Rate limit exceeded after all retry passes',
-              failureType: 'rate_limit',
-              appliedStatus: 'failed',
-              createdAt: now,
-            })
-            .onConflictDoUpdate({
-              target: aiProcessingResult.documentId,
-              set: {
-                errorMessage: 'Rate limit exceeded after all retry passes',
-                failureType: 'rate_limit',
-                appliedStatus: 'failed',
-                createdAt: now,
-              },
-            })
-            .run();
+          writeAiResultWithHistory(db, {
+            documentId: doc.id,
+            paperlessId: doc.paperlessId,
+            provider: provider.provider,
+            model: config.model,
+            suggestedTitle: null,
+            suggestedCorrespondent: null,
+            suggestedDocumentType: null,
+            suggestedTagsJson: null,
+            suggestedCustomFieldsJson: null,
+            confidenceJson: null,
+            currentTitle: doc.title,
+            currentCorrespondent: doc.correspondent,
+            currentDocumentType: doc.documentType,
+            currentTagsJson: doc.tagsJson,
+            currentCustomFieldsJson: doc.customFieldsJson,
+            appliedStatus: 'failed',
+            appliedAt: null,
+            appliedFieldsJson: null,
+            evidence: null,
+            failureType: 'rate_limit',
+            rawResponseJson: null,
+            promptTokens: null,
+            completionTokens: null,
+            errorMessage: 'Rate limit exceeded after all retry passes',
+            processingTimeMs: null,
+            estimatedCostUsd: null,
+            syncGenerationId,
+            createdAt: now,
+          });
 
           result.failed++;
           result.processed++;

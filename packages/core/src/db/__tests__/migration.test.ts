@@ -236,4 +236,107 @@ describe('database migration fixtures', () => {
 
     await assertAutomationSchema(sqlite);
   });
+
+  it('transactionally rebuilds a genuine Task 2 budget table to the fresh schema twice', async () => {
+    const legacy = createDatabaseWithHandle(':memory:');
+    legacy.sqlite.exec(`
+      CREATE TABLE app_config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE ai_budget_reservation (
+        id TEXT PRIMARY KEY NOT NULL,
+        dispatch_intent_id TEXT NOT NULL,
+        schedule_id TEXT,
+        billing_month TEXT NOT NULL,
+        reserved_cost_usd REAL NOT NULL,
+        actual_cost_usd REAL,
+        reserved_at TEXT NOT NULL,
+        reconciled_at TEXT
+      );
+      CREATE UNIQUE INDEX ai_budget_reservation_dispatch_intent_id_unique
+        ON ai_budget_reservation(dispatch_intent_id);
+      CREATE INDEX ai_budget_reservation_month_idx
+        ON ai_budget_reservation(schedule_id, billing_month);
+      INSERT INTO ai_budget_reservation (
+        id, dispatch_intent_id, schedule_id, billing_month,
+        reserved_cost_usd, actual_cost_usd, reserved_at, reconciled_at
+      ) VALUES (
+        'legacy-reservation', 'legacy-intent', 'legacy-schedule', '2026-07',
+        0.25, 0.2, '2026-07-01T00:00:00.000Z', '2026-07-01T00:01:00.000Z'
+      );
+    `);
+    const fresh = createDatabaseWithHandle(':memory:');
+
+    await migrateDatabase(fresh.sqlite);
+    await migrateDatabase(legacy.sqlite);
+    await migrateDatabase(legacy.sqlite);
+
+    const signature = (sqlite: typeof legacy.sqlite) => ({
+      columns: sqlite.prepare(`PRAGMA table_info('ai_budget_reservation')`).all(),
+      tableSql: (
+        sqlite
+          .prepare(
+            `SELECT sql FROM sqlite_master
+             WHERE type = 'table' AND name = 'ai_budget_reservation'`,
+          )
+          .get() as { sql: string }
+      ).sql
+        .replace(/\s+/g, ' ')
+        .replaceAll('`', '')
+        .replaceAll('"', '')
+        .trim(),
+      indexes: (
+        sqlite.prepare(`PRAGMA index_list('ai_budget_reservation')`).all() as {
+          name: string;
+          unique: number;
+          origin: string;
+          partial: number;
+        }[]
+      )
+        .map((index) => ({
+          ...index,
+          columns: sqlite.prepare(`PRAGMA index_info('${index.name}')`).all(),
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+      foreignKeys: sqlite.prepare(`PRAGMA foreign_key_list('ai_budget_reservation')`).all(),
+    });
+
+    expect(signature(legacy.sqlite)).toEqual(signature(fresh.sqlite));
+    expect(
+      legacy.sqlite
+        .prepare(
+          `SELECT id, request_key AS requestKey, owner_token AS ownerToken,
+                  model, status, reserved_cost_usd AS reservedCostUsd,
+                  actual_cost_usd AS actualCostUsd
+           FROM ai_budget_reservation`,
+        )
+        .get(),
+    ).toEqual({
+      id: 'legacy-reservation',
+      requestKey: 'legacy-reservation',
+      ownerToken: 'legacy',
+      model: 'unknown',
+      status: 'reconciled',
+      reservedCostUsd: 0.25,
+      actualCostUsd: 0.2,
+    });
+    expect(() =>
+      legacy.sqlite
+        .prepare(
+          `INSERT INTO ai_budget_reservation (
+            id, dispatch_intent_id, schedule_id, request_key, owner_token,
+            billing_month, model, prompt_tokens, max_output_tokens,
+            input_per_token, output_per_token, reserved_cost_usd,
+            status, reserved_at
+          ) VALUES (
+            'bad-status', 'intent-2', NULL, 'key-2', 'owner-2',
+            '2026-07', 'known', 1, 1, 0.1, 0.1, 0.2,
+            'invalid', '2026-07-01T00:00:00.000Z'
+          )`,
+        )
+        .run(),
+    ).toThrow(/CHECK constraint failed/);
+  });
 });

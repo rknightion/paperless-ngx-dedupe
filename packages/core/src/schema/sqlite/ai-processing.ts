@@ -63,6 +63,7 @@ export const aiProcessingResult = sqliteTable(
 
     // Cost tracking
     estimatedCostUsd: real('estimated_cost_usd'),
+    syncGenerationId: text('sync_generation_id'),
   },
   (table) => [uniqueIndex('ai_processing_result_document_id_unique').on(table.documentId)],
 );

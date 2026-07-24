@@ -122,4 +122,55 @@ describe('processDocument', () => {
     expect(call.userPrompt).toContain('Document Title');
     expect(call.userPrompt).not.toContain('<document>');
   });
+
+  it('reserves scheduled budget before the provider request and reconciles actual usage', async () => {
+    const order: string[] = [];
+    const provider = createMockProvider();
+    vi.mocked(provider.extract).mockImplementation(async () => {
+      order.push('request');
+      return {
+        response: {
+          title: 'Title',
+          correspondent: null,
+          documentType: null,
+          tags: [],
+          confidence: { title: 1, correspondent: 0, documentType: 0, tags: 0 },
+          evidence: '',
+        },
+        usage: { promptTokens: 101, completionTokens: 17 },
+      };
+    });
+    const requestBudget = {
+      reserve: vi.fn(async (request) => {
+        order.push('reserve');
+        expect(request).toMatchObject({
+          requestKey: 'doc-1',
+          extractionRequest: {
+            maxOutputTokens: 777,
+            systemPrompt: expect.any(String),
+            userPrompt: expect.any(String),
+          },
+        });
+        return { id: 'reservation-1' };
+      }),
+      reconcile: vi.fn(async (reservation, usage) => {
+        order.push('reconcile');
+        expect(reservation).toEqual({ id: 'reservation-1' });
+        expect(usage).toEqual({ promptTokens: 101, completionTokens: 17 });
+      }),
+    };
+
+    await processDocument({
+      ...baseOptions,
+      provider,
+      maxOutputTokens: 777,
+      budgetRequestKey: 'doc-1',
+      requestBudget,
+    });
+
+    expect(order).toEqual(['reserve', 'request', 'reconcile']);
+    expect(provider.extract).toHaveBeenCalledWith(
+      expect.objectContaining({ maxOutputTokens: 777 }),
+    );
+  });
 });

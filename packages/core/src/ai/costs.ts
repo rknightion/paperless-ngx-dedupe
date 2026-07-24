@@ -243,6 +243,11 @@ export function getModelPricing(db: AppDatabase, model: string): ModelPricing | 
   return fallback;
 }
 
+/** Exact lookup used by scheduled AI, where a fallback could under-reserve. */
+export function getExactModelPricing(db: AppDatabase, model: string): ModelPricing | null {
+  return getAllModelPricing(db)?.[model] ?? null;
+}
+
 /**
  * Return the full cached pricing map for all known models.
  * Returns null if no pricing data has been cached yet.
