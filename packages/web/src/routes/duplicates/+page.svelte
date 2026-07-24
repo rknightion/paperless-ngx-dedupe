@@ -1,293 +1,86 @@
 <script lang="ts">
+  import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
-  import { goto, invalidateAll } from '$app/navigation';
-  import {
-    ConfidenceBadge,
-    StatusBadge,
-    ConfirmDialog,
-    RichTooltip,
-    ConfidenceTooltipContent,
-    GroupPreviewModal,
-    RecycleBinPrompt,
-  } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
-  import {
-    trackDuplicatesFilterApplied,
-    trackDuplicatesBulkAction,
-    trackCsvExported,
-    trackPurgeDeleted,
-  } from '$lib/faro-events';
-  import { Network, Download, Wand2, ArrowDown, ArrowUp, ArrowUpDown, Trash2 } from 'lucide-svelte';
+  import { ConfirmDialog, GroupPreviewModal, RecycleBinPrompt } from '$lib/components';
+  import BulkDeletePreview from '$lib/components/duplicates/BulkDeletePreview.svelte';
+  import DuplicateInboxFilters from '$lib/components/duplicates/DuplicateInboxFilters.svelte';
+  import DuplicateInboxList from '$lib/components/duplicates/DuplicateInboxList.svelte';
+  import { trackCsvExported, trackDuplicatesBulkAction, trackPurgeDeleted } from '$lib/faro-events';
+  import { Download, Network, Trash2, Wand2 } from 'lucide-svelte';
 
   let { data } = $props();
-
-  let selectedIds: Set<string> = $state(new Set());
+  let selectedIds = $state<Set<string>>(new Set());
   let isSubmitting = $state(false);
-  let actionFeedback: { type: 'success' | 'error'; message: string } | null = $state(null);
-  let showDeleteConfirm = $state(false);
+  let actionFeedback = $state<{ type: 'success' | 'error'; message: string } | null>(null);
+  let showDeletePreview = $state(false);
+  let showPurgeConfirm = $state(false);
   let showRecycleBinPrompt = $state(false);
   let deleteProgress = $state<{ progress: number; message: string } | null>(null);
-  let showPurgeConfirm = $state(false);
-  let previewGroupId: string | null = $state(null);
-  let previewGroupTitle = $state('');
-  let previewConfidenceScore = $state(0);
+  let previewGroup = $state<{
+    id: string;
+    primaryDocumentTitle: string | null;
+    confidenceScore: number;
+  } | null>(null);
 
-  function openPreview(group: (typeof data.groups)[0]) {
-    previewGroupId = group.id;
-    previewGroupTitle = group.primaryDocumentTitle ?? 'Untitled';
-    previewConfidenceScore = group.confidenceScore;
-  }
-
-  function timeAgo(iso: string): string {
-    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return new Date(iso).toLocaleDateString();
-  }
-
-  // Reset selection when data changes (e.g. after filter/pagination change)
   $effect(() => {
     void data.groups;
     selectedIds = new Set();
+    showDeletePreview = false;
   });
 
-  // Derived helpers
-  let hasFilters = $derived(
-    $page.url.searchParams.has('status') ||
-      $page.url.searchParams.has('minConfidence') ||
-      $page.url.searchParams.has('maxConfidence') ||
-      $page.url.searchParams.get('includeDeleted') === 'true',
-  );
-
-  let allSelected = $derived(data.groups.length > 0 && selectedIds.size === data.groups.length);
-
-  let currentStatus = $derived(() => {
-    return $page.url.searchParams.get('status') ?? 'all';
-  });
-
-  let showingFrom = $derived(data.offset + 1);
-  let showingTo = $derived(Math.min(data.offset + data.limit, data.total));
-
-  // Filter helpers
-  const LEGACY_ONLY_FILTER_KEYS = new Set(['status', 'includeDeleted', 'sortBy', 'sortOrder']);
-
-  function applyFilters(updates: Record<string, string>) {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
-    for (const [key, value] of Object.entries(updates)) {
-      if (value) {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-    }
-    const switchesToLegacy = Object.keys(updates).some((key) => LEGACY_ONLY_FILTER_KEYS.has(key));
-    if (switchesToLegacy) {
-      params.delete('queue');
-      params.delete('correspondent');
-    } else if (data.paginationMode === 'inbox') {
-      params.set('queue', data.query?.queue ?? 'pending');
-    }
-    params.delete('cursor');
-    params.delete('offset');
-    trackDuplicatesFilterApplied({
-      status: params.get('status') ?? undefined,
-      minConfidence: params.get('minConfidence') ?? undefined,
-      maxConfidence: params.get('maxConfidence') ?? undefined,
-      sortBy: params.get('sortBy') ?? undefined,
-      sortOrder: params.get('sortOrder') ?? undefined,
-    });
-    goto(`?${params.toString()}`, { replaceState: true });
-  }
-
-  function clearFilters() {
-    goto('?', { replaceState: true });
-  }
-
-  function handleStatusChange(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    applyFilters({ status: value === 'all' ? '' : value });
-  }
-
-  function handleMinConfidence(e: Event) {
-    const value = (e.target as HTMLInputElement).value;
-    applyFilters({ minConfidence: value ? String(Number(value) / 100) : '' });
-  }
-
-  function handleMaxConfidence(e: Event) {
-    const value = (e.target as HTMLInputElement).value;
-    applyFilters({ maxConfidence: value ? String(Number(value) / 100) : '' });
-  }
-
-  const SORT_STORAGE_KEY = 'paperless-dedupe:duplicates:sort';
-
-  function saveSortPreference(sortBy: string, sortOrder: string) {
-    try {
-      localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortBy, sortOrder }));
-    } catch {
-      // localStorage unavailable
-    }
-  }
-
-  function loadSortPreference(): { sortBy: string; sortOrder: string } | null {
-    try {
-      const raw = localStorage.getItem(SORT_STORAGE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.sortBy === 'string' && typeof parsed.sortOrder === 'string') {
-        return parsed;
-      }
-    } catch {
-      // ignore
-    }
-    return null;
-  }
-
-  // Restore sort preference from localStorage on first load (no sort params in URL)
-  $effect(() => {
-    if (!$page.url.searchParams.has('sortBy') && !$page.url.searchParams.has('sortOrder')) {
-      const saved = loadSortPreference();
-      if (saved && (saved.sortBy !== 'confidence' || saved.sortOrder !== 'desc')) {
-        applyFilters({ sortBy: saved.sortBy, sortOrder: saved.sortOrder });
-      }
-    }
-  });
-
-  function handleSortChange(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    const order = $page.url.searchParams.get('sortOrder') ?? 'desc';
-    saveSortPreference(value, order);
-    applyFilters({ sortBy: value });
-  }
-
-  function toggleSortOrder() {
-    const current = $page.url.searchParams.get('sortOrder') ?? 'desc';
-    const next = current === 'desc' ? 'asc' : 'desc';
-    const sortBy = $page.url.searchParams.get('sortBy') ?? 'confidence';
-    saveSortPreference(sortBy, next);
-    applyFilters({ sortOrder: next });
-  }
-
-  let currentSortBy = $derived($page.url.searchParams.get('sortBy') ?? 'confidence');
-  let currentSortOrder = $derived($page.url.searchParams.get('sortOrder') ?? 'desc');
-
-  function sortByColumn(column: string) {
-    if (currentSortBy === column) {
-      // Toggle direction
-      const next = currentSortOrder === 'desc' ? 'asc' : 'desc';
-      saveSortPreference(column, next);
-      applyFilters({ sortBy: column, sortOrder: next });
-    } else {
-      // New column, default to desc
-      saveSortPreference(column, 'desc');
-      applyFilters({ sortBy: column, sortOrder: 'desc' });
-    }
-  }
-
-  // Selection helpers
-  function toggleSelectAll() {
-    if (allSelected) {
-      selectedIds = new Set();
-    } else {
-      selectedIds = new Set(data.groups.map((g) => g.id));
-    }
-  }
-
-  function toggleSelect(id: string) {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const next = new Set(selectedIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    selectedIds = next;
-  }
-
-  // Batch actions
-  async function batchAction(url: string, body: Record<string, unknown>): Promise<boolean> {
+  async function batchStatus(status: 'false_positive' | 'ignored') {
     isSubmitting = true;
     actionFeedback = null;
-    let success = false;
+    trackDuplicatesBulkAction(status, selectedIds.size);
     try {
-      const res = await fetch(url, {
+      const response = await fetch('/api/v1/batch/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ groupIds: [...selectedIds], status }),
       });
-      const json = await res.json();
-      if (res.ok) {
-        actionFeedback = { type: 'success', message: json.message ?? 'Action completed' };
-        selectedIds = new Set();
-        await invalidateAll();
-        success = true;
-      } else {
-        actionFeedback = { type: 'error', message: json.error?.message ?? 'Action failed' };
-      }
-    } catch {
-      actionFeedback = { type: 'error', message: 'Request failed' };
-    }
-    isSubmitting = false;
-    return success;
-  }
-
-  function dismissSelected() {
-    trackDuplicatesBulkAction('false_positive', selectedIds.size);
-    batchAction('/api/v1/batch/status', { groupIds: [...selectedIds], status: 'false_positive' });
-  }
-
-  function ignoreSelected() {
-    trackDuplicatesBulkAction('ignored', selectedIds.size);
-    batchAction('/api/v1/batch/status', { groupIds: [...selectedIds], status: 'ignored' });
-  }
-
-  async function deleteNonPrimary() {
-    showDeleteConfirm = false;
-    trackDuplicatesBulkAction('delete', selectedIds.size);
-    isSubmitting = true;
-    actionFeedback = null;
-    try {
-      const res = await fetch('/api/v1/batch/delete-non-primary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupIds: [...selectedIds], confirm: true }),
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        actionFeedback = { type: 'error', message: json.error?.message ?? 'Action failed' };
-        isSubmitting = false;
+      const body = await response.json();
+      if (!response.ok) {
+        actionFeedback = { type: 'error', message: body.error?.message ?? 'Action failed' };
         return;
       }
-      const json = await res.json();
-      const jobId = json.data?.jobId;
-      if (jobId) {
-        deleteProgress = { progress: 0, message: 'Starting...' };
-        connectJobSSE(jobId, {
-          onProgress: (d) => {
-            deleteProgress = { progress: d.progress, message: d.message ?? '' };
-          },
-          onComplete: async () => {
-            deleteProgress = null;
-            isSubmitting = false;
-            selectedIds = new Set();
-            await invalidateAll();
-            showRecycleBinPrompt = true;
-          },
-          onError: () => {
-            deleteProgress = null;
-            isSubmitting = false;
-            actionFeedback = { type: 'error', message: 'Delete operation failed' };
-          },
-        });
-      } else {
-        isSubmitting = false;
-      }
+      actionFeedback = { type: 'success', message: body.message ?? 'Action completed' };
+      selectedIds = new Set();
+      await invalidateAll();
     } catch {
-      isSubmitting = false;
       actionFeedback = { type: 'error', message: 'Request failed' };
+    } finally {
+      isSubmitting = false;
     }
+  }
+
+  function deletionSubmitted(jobId?: string) {
+    showDeletePreview = false;
+    trackDuplicatesBulkAction('delete', selectedIds.size);
+    if (!jobId) {
+      isSubmitting = false;
+      actionFeedback = { type: 'success', message: 'Reviewed deletion submitted.' };
+      return;
+    }
+    isSubmitting = true;
+    deleteProgress = { progress: 0, message: 'Starting reviewed deletion…' };
+    connectJobSSE(jobId, {
+      onProgress: (event) => {
+        deleteProgress = { progress: event.progress, message: event.message ?? '' };
+      },
+      onComplete: async () => {
+        deleteProgress = null;
+        isSubmitting = false;
+        selectedIds = new Set();
+        await invalidateAll();
+        showRecycleBinPrompt = true;
+      },
+      onError: () => {
+        deleteProgress = null;
+        isSubmitting = false;
+        actionFeedback = { type: 'error', message: 'Reviewed deletion failed.' };
+      },
+    });
   }
 
   async function purgeDeleted() {
@@ -295,53 +88,23 @@
     isSubmitting = true;
     actionFeedback = null;
     try {
-      const res = await fetch('/api/v1/batch/purge-deleted', { method: 'POST' });
-      const json = await res.json();
-      if (res.ok) {
-        trackPurgeDeleted(json.data.purged);
-        actionFeedback = {
-          type: 'success',
-          message: `Purged ${json.data.purged} deleted group(s) from the database.`,
-        };
-        await invalidateAll();
-      } else {
-        actionFeedback = { type: 'error', message: json.error?.message ?? 'Purge failed' };
+      const response = await fetch('/api/v1/batch/purge-deleted', { method: 'POST' });
+      const body = await response.json();
+      if (!response.ok) {
+        actionFeedback = { type: 'error', message: body.error?.message ?? 'Purge failed' };
+        return;
       }
+      trackPurgeDeleted(body.data.purged);
+      actionFeedback = {
+        type: 'success',
+        message: `Purged ${body.data.purged} deleted group(s) from the database.`,
+      };
+      await invalidateAll();
     } catch {
       actionFeedback = { type: 'error', message: 'Request failed' };
+    } finally {
+      isSubmitting = false;
     }
-    isSubmitting = false;
-  }
-
-  // Pagination
-  function nextPageHref() {
-    if (!data.nextCursor) return '';
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
-    params.set('cursor', data.nextCursor);
-    params.delete('offset');
-    return `?${params.toString()}`;
-  }
-
-  function legacyPageHref(newOffset: number) {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
-    params.set('offset', String(newOffset));
-    params.delete('cursor');
-    return `?${params.toString()}`;
-  }
-
-  function changePageSize(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
-    params.set('limit', value);
-    if (data.paginationMode === 'inbox') {
-      params.set('queue', data.query?.queue ?? 'pending');
-    }
-    params.delete('cursor');
-    params.delete('offset');
-    window.location.assign(`?${params.toString()}`);
   }
 </script>
 
@@ -349,107 +112,56 @@
   <title>Duplicates - Paperless NGX Dedupe</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <!-- Page Header -->
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div class="space-y-5">
+  <header class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
     <div class="flex items-center gap-3">
       <h1 class="text-ink text-2xl font-semibold tracking-tight">Duplicate Groups</h1>
       <span class="bg-accent-light text-accent rounded-full px-2.5 py-0.5 text-xs font-semibold">
         {data.total}
       </span>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="grid grid-cols-2 gap-2 sm:flex">
       <a
         href="/duplicates/graph"
-        class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
+        class="border-soft text-ink flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
       >
-        <Network class="h-4 w-4" />Similarity Graph
+        <Network class="h-4 w-4" /> Similarity Graph
       </a>
       <a
         href="/api/v1/export/duplicates.csv?{$page.url.searchParams.toString()}"
         download
         onclick={() => trackCsvExported()}
-        class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
+        class="border-soft text-ink flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
       >
-        <Download class="h-4 w-4" />Export CSV
+        <Download class="h-4 w-4" /> Export CSV
       </a>
       <a
         href="/duplicates/wizard"
-        class="bg-accent hover:bg-accent-hover flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white"
+        class="bg-accent flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white"
       >
-        <Wand2 class="h-4 w-4" />Bulk Operations Wizard
+        <Wand2 class="h-4 w-4" /> Bulk Operations Wizard
       </a>
       {#if data.deletedGroupCount > 0}
         <button
+          type="button"
           onclick={() => (showPurgeConfirm = true)}
           disabled={isSubmitting}
-          class="border-soft text-ember hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
+          class="border-soft text-ember flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
         >
-          <Trash2 class="h-4 w-4" />Purge {data.deletedGroupCount} Deleted
+          <Trash2 class="h-4 w-4" /> Purge {data.deletedGroupCount} Deleted
         </button>
       {/if}
     </div>
-  </div>
-
-  <!-- How does this work? -->
-  <details class="panel">
-    <summary class="text-accent hover:text-accent-hover cursor-pointer text-sm font-medium">
-      How does duplicate detection work?
-    </summary>
-    <div class="text-muted mt-3 space-y-3 text-sm leading-relaxed">
-      <p>
-        Paperless NGX Dedupe identifies potential duplicates using a multi-stage pipeline that
-        compares documents across three similarity dimensions:
-      </p>
-      <dl
-        class="border-soft grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 rounded-lg border p-3 text-xs"
-      >
-        <dt class="text-ink font-semibold">Jaccard (Shingles)</dt>
-        <dd>
-          Compares word sequences using compact MinHash signatures. Best for catching near-identical
-          documents and OCR re-scans.
-        </dd>
-        <dt class="text-ink font-semibold">Fuzzy Text</dt>
-        <dd>
-          Measures character-level edit distance after sorting words. Catches documents with minor
-          wording differences or typos.
-        </dd>
-        <dt class="text-ink font-semibold">Discriminative</dt>
-        <dd>
-          Extracts and compares dates, monetary amounts, and reference numbers. Reduces false
-          positives from template-based documents like monthly bank or credit card statements.
-        </dd>
-      </dl>
-      <p>
-        These three scores are combined into an overall
-        <strong class="text-ink">confidence score</strong>
-        using configurable weights (adjustable in
-        <a href="/settings" class="text-accent hover:text-accent-hover underline">Settings</a>).
-        Hover over any confidence badge to see the breakdown.
-      </p>
-      <p>
-        <strong class="text-ink">Workflow:</strong> Review groups by clicking a row to compare
-        documents side-by-side. For each group, choose an outcome:
-        <em>Not a Duplicate</em> (false positive),
-        <em>Keep All</em> (real duplicates, but you want to keep every copy), or
-        <em>Delete Duplicates</em> (remove non-primary documents via Paperless-NGX recycle bin).
-        Non-deleted groups can be reopened at any time. Use the
-        <a href="/duplicates/wizard" class="text-accent hover:text-accent-hover underline">
-          Bulk Operations Wizard
-        </a>
-        for batch processing.
-      </p>
-    </div>
-  </details>
+  </header>
 
   <p class="text-muted text-sm">
-    When documents are deleted through this app, Paperless-NGX moves them to its recycle bin rather
-    than permanently deleting them.
+    Review likely matches before acting. Paperless-NGX deletions go to its recycle bin and are not
+    permanently removed by this workflow.
   </p>
 
-  <!-- Action Feedback -->
   {#if actionFeedback}
     <div
+      role={actionFeedback.type === 'error' ? 'alert' : 'status'}
       class="rounded-lg px-3 py-2 text-sm {actionFeedback.type === 'success'
         ? 'bg-success-light text-success'
         : 'bg-ember-light text-ember'}"
@@ -458,502 +170,104 @@
     </div>
   {/if}
 
-  <!-- Filter Bar -->
-  <div class="panel">
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-      <div>
-        <label for="status-filter" class="text-ink block text-sm font-medium">Status</label>
-        <select
-          id="status-filter"
-          onchange={handleStatusChange}
-          value={currentStatus()}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        >
-          <option value="all">All</option>
-          <option value="pending">Pending</option>
-          <option value="false_positive">False Positive</option>
-          <option value="ignored">Ignored</option>
-        </select>
-      </div>
+  <DuplicateInboxFilters
+    paginationMode={data.paginationMode}
+    queue={data.query?.queue ?? 'pending'}
+  />
 
-      <div>
-        <label for="min-confidence" class="text-ink block text-sm font-medium">Min Confidence</label
-        >
-        <input
-          id="min-confidence"
-          type="number"
-          min="0"
-          max="100"
-          placeholder="0"
-          value={$page.url.searchParams.get('minConfidence')
-            ? Math.round(Number($page.url.searchParams.get('minConfidence')) * 100)
-            : ''}
-          onchange={handleMinConfidence}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        />
-      </div>
-
-      <div>
-        <label for="max-confidence" class="text-ink block text-sm font-medium">Max Confidence</label
-        >
-        <input
-          id="max-confidence"
-          type="number"
-          min="0"
-          max="100"
-          placeholder="100"
-          value={$page.url.searchParams.get('maxConfidence')
-            ? Math.round(Number($page.url.searchParams.get('maxConfidence')) * 100)
-            : ''}
-          onchange={handleMaxConfidence}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        />
-      </div>
-
-      <div>
-        <label for="sort-by" class="text-ink block text-sm font-medium">Sort By</label>
-        <div class="mt-1 flex gap-1">
-          <select
-            id="sort-by"
-            onchange={handleSortChange}
-            value={currentSortBy}
-            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-          >
-            <option value="confidence">Confidence</option>
-            <option value="created_at">Created</option>
-            <option value="member_count">Members</option>
-            <option value="status">Status</option>
-            <option value="updated_at">Updated</option>
-          </select>
-          <button
-            onclick={toggleSortOrder}
-            class="border-soft text-ink hover:bg-canvas rounded-lg border px-2 py-2 text-sm"
-            title="Toggle sort order"
-          >
-            {#if currentSortOrder === 'desc'}
-              <ArrowDown class="h-4 w-4" />
-            {:else}
-              <ArrowUp class="h-4 w-4" />
-            {/if}
-          </button>
-        </div>
-      </div>
-
-      <div class="flex items-end">
-        <label class="text-ink flex items-center gap-2 py-2 text-sm">
-          <input
-            type="checkbox"
-            checked={$page.url.searchParams.get('includeDeleted') === 'true'}
-            onchange={(e) => {
-              const checked = (e.target as HTMLInputElement).checked;
-              applyFilters({ includeDeleted: checked ? 'true' : '' });
-            }}
-            class="rounded"
-          />
-          Show deleted
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Active Filter Chips -->
-  {#if hasFilters}
-    <div class="flex flex-wrap items-center gap-2">
-      <span class="text-muted text-xs">Active filters:</span>
-      {#if $page.url.searchParams.get('status')}
-        <span
-          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-        >
-          Status: {currentStatus()}
-          <button onclick={() => applyFilters({ status: '' })} class="hover:text-accent-hover"
-            >&times;</button
-          >
-        </span>
-      {/if}
-      {#if $page.url.searchParams.get('minConfidence')}
-        <span
-          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-        >
-          Min: {Math.round(Number($page.url.searchParams.get('minConfidence')) * 100)}%
-          <button
-            onclick={() => applyFilters({ minConfidence: '' })}
-            class="hover:text-accent-hover">&times;</button
-          >
-        </span>
-      {/if}
-      {#if $page.url.searchParams.get('maxConfidence')}
-        <span
-          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-        >
-          Max: {Math.round(Number($page.url.searchParams.get('maxConfidence')) * 100)}%
-          <button
-            onclick={() => applyFilters({ maxConfidence: '' })}
-            class="hover:text-accent-hover">&times;</button
-          >
-        </span>
-      {/if}
-      {#if $page.url.searchParams.get('includeDeleted') === 'true'}
-        <span
-          class="bg-accent-light text-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-        >
-          Showing deleted
-          <button
-            onclick={() => applyFilters({ includeDeleted: '' })}
-            class="hover:text-accent-hover">&times;</button
-          >
-        </span>
-      {/if}
-      <button onclick={clearFilters} class="text-muted hover:text-ink text-xs underline">
-        Clear all
-      </button>
-    </div>
-  {/if}
-
-  <!-- Bulk Actions Bar -->
   {#if selectedIds.size > 0}
-    <div
-      class="border-accent bg-accent-light sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
+    <section
+      class="border-accent bg-accent-light sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
+      aria-label="Bulk actions"
     >
       <span class="text-ink text-sm font-medium">{selectedIds.size} selected</span>
       <button
-        onclick={dismissSelected}
+        type="button"
+        onclick={() => batchStatus('false_positive')}
         disabled={isSubmitting}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+        class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium"
       >
         Not Duplicates
       </button>
       <button
-        onclick={ignoreSelected}
+        type="button"
+        onclick={() => batchStatus('ignored')}
         disabled={isSubmitting}
-        class="bg-accent hover:bg-accent-hover rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        class="bg-accent rounded-lg px-3 py-1.5 text-sm font-medium text-white"
       >
         Keep All
       </button>
       <button
-        onclick={() => (showDeleteConfirm = true)}
+        type="button"
+        onclick={() => (showDeletePreview = true)}
         disabled={isSubmitting}
-        class="bg-ember rounded-lg px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+        class="bg-ember rounded-lg px-3 py-1.5 text-sm font-medium text-white"
       >
         Delete Non-Primary
       </button>
-      <button onclick={() => (selectedIds = new Set())} class="text-muted hover:text-ink text-sm">
+      <button
+        type="button"
+        onclick={() => (selectedIds = new Set())}
+        class="text-muted text-sm underline"
+      >
         Clear selection
       </button>
       {#if deleteProgress}
-        <div class="text-muted flex items-center gap-2 text-sm">
-          <span
-            class="border-accent inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
-          ></span>
+        <span class="text-muted text-sm" role="status">
           {deleteProgress.message || `${Math.round(deleteProgress.progress * 100)}%`}
-        </div>
+        </span>
       {/if}
-    </div>
+    </section>
   {/if}
 
-  <!-- Data Table -->
-  {#if data.total > 0}
-    <div class="border-soft overflow-x-auto rounded-lg border">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-soft bg-canvas border-b text-left">
-            <th class="px-4 py-3">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                onchange={toggleSelectAll}
-                class="rounded"
-              />
-            </th>
-            <th class="text-muted px-4 py-3 font-medium">Primary Doc Title</th>
-            <th class="text-muted hidden px-4 py-3 font-medium md:table-cell">
-              <button
-                onclick={() => sortByColumn('member_count')}
-                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
-              >
-                Members
-                {#if currentSortBy === 'member_count'}
-                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
-                      class="h-3 w-3"
-                    />{/if}
-                {:else}
-                  <ArrowUpDown class="h-3 w-3 opacity-40" />
-                {/if}
-              </button>
-            </th>
-            <th class="text-muted px-4 py-3 font-medium">
-              <button
-                onclick={() => sortByColumn('confidence')}
-                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
-              >
-                Confidence
-                {#if currentSortBy === 'confidence'}
-                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
-                      class="h-3 w-3"
-                    />{/if}
-                {:else}
-                  <ArrowUpDown class="h-3 w-3 opacity-40" />
-                {/if}
-              </button>
-            </th>
-            <th class="text-muted hidden px-4 py-3 font-medium sm:table-cell">
-              <button
-                onclick={() => sortByColumn('status')}
-                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
-              >
-                Status
-                {#if currentSortBy === 'status'}
-                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
-                      class="h-3 w-3"
-                    />{/if}
-                {:else}
-                  <ArrowUpDown class="h-3 w-3 opacity-40" />
-                {/if}
-              </button>
-            </th>
-            <th class="text-muted hidden px-4 py-3 font-medium lg:table-cell">
-              <button
-                onclick={() => sortByColumn('updated_at')}
-                class="hover:text-ink inline-flex items-center gap-1 transition-colors"
-              >
-                Updated
-                {#if currentSortBy === 'updated_at'}
-                  {#if currentSortOrder === 'desc'}<ArrowDown class="h-3 w-3" />{:else}<ArrowUp
-                      class="h-3 w-3"
-                    />{/if}
-                {:else}
-                  <ArrowUpDown class="h-3 w-3 opacity-40" />
-                {/if}
-              </button>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each data.groups as group, i (group.id)}
-            <tr
-              class="border-soft hover:bg-accent-subtle cursor-pointer border-b transition-colors duration-150 {i %
-                2 ===
-              0
-                ? 'bg-surface'
-                : 'bg-canvas'} {group.status === 'deleted' ? 'opacity-60' : ''}"
-              onclick={() => {
-                const returnParams = $page.url.searchParams.toString();
-                const url = returnParams
-                  ? `/duplicates/${group.id}?returnParams=${encodeURIComponent(returnParams)}`
-                  : `/duplicates/${group.id}`;
-                goto(url);
-              }}
-            >
-              <td class="px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(group.id)}
-                  onchange={() => toggleSelect(group.id)}
-                  onclick={(e) => e.stopPropagation()}
-                  class="rounded"
-                />
-              </td>
-              <td class="text-ink max-w-xs truncate px-4 py-3">
-                {group.primaryDocumentTitle ?? 'Untitled'}
-              </td>
-              <td class="text-ink hidden px-4 py-3 md:table-cell">
-                {#if group.status === 'deleted'}
-                  <span class="text-muted">&mdash;</span>
-                {:else}
-                  <button
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      openPreview(group);
-                    }}
-                    class="text-accent hover:text-accent-hover font-medium underline decoration-dotted underline-offset-2"
-                    title="Preview members"
-                  >
-                    {group.memberCount}
-                  </button>
-                {/if}
-              </td>
-              <td class="px-4 py-3">
-                <RichTooltip position="left">
-                  <ConfidenceBadge score={group.confidenceScore} />
-                  {#snippet content()}
-                    <ConfidenceTooltipContent
-                      jaccardSimilarity={group.jaccardSimilarity}
-                      fuzzyTextRatio={group.fuzzyTextRatio}
-                      discriminativeScore={group.discriminativeScore}
-                    />
-                  {/snippet}
-                </RichTooltip>
-              </td>
-              <td class="hidden px-4 py-3 sm:table-cell">
-                <StatusBadge status={group.status} />
-              </td>
-              <td class="text-muted hidden px-4 py-3 text-xs lg:table-cell" title={group.updatedAt}>
-                {timeAgo(group.updatedAt)}
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <span class="text-muted text-sm">
-        Showing {showingFrom}-{showingTo} of {data.total}
-      </span>
-      <div class="flex items-center gap-3">
-        {#if data.paginationMode === 'legacy'}
-          {#if data.offset > 0}
-            <a
-              href={legacyPageHref(Math.max(0, data.offset - data.limit))}
-              data-sveltekit-reload
-              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium"
-            >
-              Previous
-            </a>
-          {:else}
-            <button
-              disabled
-              class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium opacity-50"
-            >
-              Previous
-            </button>
-          {/if}
-          {#if data.offset + data.limit < data.total}
-            <a
-              href={legacyPageHref(data.offset + data.limit)}
-              data-sveltekit-reload
-              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium"
-            >
-              Next
-            </a>
-          {:else}
-            <button
-              disabled
-              class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium opacity-50"
-            >
-              Next
-            </button>
-          {/if}
-        {:else}
-          <button
-            disabled
-            class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-          >
-            Previous
-          </button>
-          {#if data.nextCursor}
-            <a
-              href={nextPageHref()}
-              data-sveltekit-reload
-              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium"
-            >
-              Next
-            </a>
-          {:else}
-            <button
-              disabled
-              class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium opacity-50"
-            >
-              Next
-            </button>
-          {/if}
-        {/if}
-        <select
-          onchange={changePageSize}
-          value={String(data.limit)}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1.5 text-sm focus:ring-1 focus:outline-none"
-        >
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50</option>
-        </select>
-      </div>
-    </div>
-  {:else if hasFilters}
-    <!-- Empty state with filters -->
-    <div class="panel py-16 text-center">
-      <svg
-        class="text-muted mx-auto h-12 w-12"
-        fill="none"
-        viewBox="0 0 48 48"
-        stroke="currentColor"
-        stroke-width="1.5"
-      >
-        <circle cx="20" cy="20" r="14" />
-        <path stroke-linecap="round" d="M30 30l10 10" />
-      </svg>
-      <p class="text-muted mt-4">No groups match your filters.</p>
-      <button
-        onclick={clearFilters}
-        class="bg-accent hover:bg-accent-hover mt-3 rounded-lg px-4 py-2 text-sm font-medium text-white"
-      >
-        Clear filters
-      </button>
-    </div>
-  {:else}
-    <!-- Empty state, no data -->
-    <div class="panel py-16 text-center">
-      <svg
-        class="text-muted mx-auto h-12 w-12"
-        fill="none"
-        viewBox="0 0 48 48"
-        stroke="currentColor"
-        stroke-width="1.5"
-      >
-        <rect x="8" y="6" width="24" height="30" rx="3" />
-        <path stroke-linecap="round" d="M16 20l4 4 8-8" />
-      </svg>
-      <p class="text-muted mt-4">No duplicates found yet. Run analysis from the Dashboard.</p>
-    </div>
-  {/if}
+  <DuplicateInboxList
+    groups={data.groups}
+    total={data.total}
+    limit={data.limit}
+    offset={data.offset}
+    paginationMode={data.paginationMode}
+    nextCursor={data.nextCursor}
+    {selectedIds}
+    onselectionchange={(ids) => (selectedIds = ids)}
+    onpreview={(group) => (previewGroup = group)}
+  />
 </div>
 
-<!-- Delete Confirmation Dialog -->
-<ConfirmDialog
-  open={showDeleteConfirm}
-  title="Delete Non-Primary Documents"
-  message="This will delete non-primary documents from the selected groups in Paperless-NGX. Documents are moved to the Paperless-NGX recycle bin and can be restored from there."
-  confirmLabel="Delete"
-  variant="ember"
-  onconfirm={deleteNonPrimary}
-  oncancel={() => (showDeleteConfirm = false)}
+<BulkDeletePreview
+  open={showDeletePreview}
+  groupIds={[...selectedIds]}
+  oncancel={() => (showDeletePreview = false)}
+  onsubmitted={deletionSubmitted}
 />
 
-<!-- Purge Deleted Groups Confirmation Dialog -->
 <ConfirmDialog
   open={showPurgeConfirm}
   title="Purge Deleted Groups"
-  message="This will permanently remove {data.deletedGroupCount} deleted group(s) from the database. This cannot be undone. Documents in Paperless-NGX are not affected."
+  message="This permanently removes {data.deletedGroupCount} deleted group records from this app. Paperless-NGX documents are not affected."
   confirmLabel="Purge"
   variant="ember"
   onconfirm={purgeDeleted}
   oncancel={() => (showPurgeConfirm = false)}
 />
 
-<!-- Recycle Bin Prompt Dialog -->
 {#if showRecycleBinPrompt}
   <dialog
     open
-    onclick={(e) => {
-      if (e.target === e.currentTarget) showRecycleBinPrompt = false;
-    }}
+    aria-labelledby="delete-complete-title"
     class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
   >
-    <h2 class="text-ink text-lg font-semibold">Delete Complete</h2>
+    <h2 id="delete-complete-title" class="text-ink text-lg font-semibold">Delete complete</h2>
     <RecycleBinPrompt onclose={() => (showRecycleBinPrompt = false)} />
   </dialog>
 {/if}
 
-<!-- Group Preview Modal -->
-{#if previewGroupId}
+{#if previewGroup}
   <GroupPreviewModal
-    open={previewGroupId !== null}
-    groupId={previewGroupId}
-    groupTitle={previewGroupTitle}
-    confidenceScore={previewConfidenceScore}
+    open
+    groupId={previewGroup.id}
+    groupTitle={previewGroup.primaryDocumentTitle ?? 'Untitled'}
+    confidenceScore={previewGroup.confidenceScore}
     paperlessUrl={data.paperlessUrl}
-    onclose={() => {
-      previewGroupId = null;
-    }}
+    onclose={() => (previewGroup = null)}
   />
 {/if}
