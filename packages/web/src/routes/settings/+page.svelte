@@ -48,6 +48,8 @@
   }
 
   let { data } = $props();
+  type SettingsSection = 'connection' | 'automation' | 'dedup' | 'ai' | 'system';
+  let activeSettingsSection = $state<SettingsSection>('connection');
 
   const initialDedup = untrack(() => data.dedupConfig);
 
@@ -409,39 +411,52 @@
   </header>
 
   <!-- Sticky Mini-Nav -->
-  <nav
+  <div
+    role="tablist"
+    aria-label="Settings sections"
     class="bg-canvas/80 sticky top-0 z-10 -mx-4 flex gap-1 rounded-lg px-4 py-2 backdrop-blur-sm sm:-mx-6 md:-mx-8"
   >
-    <a
-      href="#connection"
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">Connection</a
+    <button
+      role="tab"
+      aria-selected={activeSettingsSection === 'connection'}
+      onclick={() => (activeSettingsSection = 'connection')}
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
+      >Connection</button
     >
-    <a href="#dedup" class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
-      >Dedup Parameters</a
+    <button
+      role="tab"
+      aria-selected={activeSettingsSection === 'dedup'}
+      onclick={() => (activeSettingsSection = 'dedup')}
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
+      >Deduplication</button
     >
     {#if data.aiEnabled}
-      <a
-        href="#ai-processing"
+      <button
+        role="tab"
+        aria-selected={activeSettingsSection === 'ai'}
+        onclick={() => (activeSettingsSection = 'ai')}
         class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
-        >AI Processing</a
+        >AI Processing</button
       >
     {/if}
-    <a
-      href="#automation"
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">Automation</a
+    <button
+      role="tab"
+      aria-selected={activeSettingsSection === 'automation'}
+      onclick={() => (activeSettingsSection = 'automation')}
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
+      >Automation</button
     >
-    <a
-      href="#system"
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">System</a
+    <button
+      role="tab"
+      aria-selected={activeSettingsSection === 'system'}
+      onclick={() => (activeSettingsSection = 'system')}
+      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
+      >System & backup</button
     >
-    <a
-      href="#backup"
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium">Backup</a
-    >
-  </nav>
+  </div>
 
   <!-- Paperless-NGX Connection -->
-  <div class="panel" id="connection">
+  <div class="panel" id="connection" class:hidden={activeSettingsSection !== 'connection'}>
     <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
       <Link class="text-accent h-5 w-5" />
       Paperless-NGX Connection
@@ -499,10 +514,12 @@
     {/if}
   </div>
 
-  <AutomationSettings settings={data.automation} />
+  <div class:hidden={activeSettingsSection !== 'automation'}>
+    <AutomationSettings settings={data.automation} />
+  </div>
 
   <!-- Dedup Parameters -->
-  <div class="panel" id="dedup">
+  <div class="panel" id="dedup" class:hidden={activeSettingsSection !== 'dedup'}>
     <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
       <SlidersHorizontal class="text-accent h-5 w-5" />
       Deduplication Parameters
@@ -784,7 +801,7 @@
 
   <!-- AI Processing Settings -->
   {#if data.aiEnabled}
-    <div class="panel" id="ai-processing">
+    <div class="panel" id="ai-processing" class:hidden={activeSettingsSection !== 'ai'}>
       <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
         <Brain class="text-accent h-5 w-5" />
         AI Processing
@@ -868,6 +885,7 @@
             Add tag:
           </label>
           <input
+            aria-label="Processed tag name"
             type="text"
             bind:value={aiProcessedTagName}
             disabled={!aiAddProcessedTag}
@@ -1367,87 +1385,117 @@
     </div>
   {/if}
 
-  <!-- System Information -->
-  <div class="panel" id="system">
-    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-      <Info class="text-accent h-5 w-5" />
-      System Information
-    </h2>
-    <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-      <div>
-        <dt class="text-muted text-sm">Total Documents</dt>
-        <dd class="text-ink mt-0.5 text-sm font-medium">
-          {system.totalDocuments.toLocaleString()}
-        </dd>
-      </div>
-      <div>
-        <dt class="text-muted text-sm">Pending Groups</dt>
-        <dd class="text-ink mt-0.5 text-sm font-medium">
-          {system.duplicateGroups.toLocaleString()}
-        </dd>
-      </div>
-    </dl>
-  </div>
+  <div class:hidden={activeSettingsSection !== 'system'}>
+    <!-- System Information -->
+    <div class="panel" id="system">
+      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+        <Info class="text-accent h-5 w-5" />
+        System Information
+      </h2>
+      <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <dt class="text-muted text-sm">Total Documents</dt>
+          <dd class="text-ink mt-0.5 text-sm font-medium">
+            {system.totalDocuments.toLocaleString()}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-muted text-sm">Pending Groups</dt>
+          <dd class="text-ink mt-0.5 text-sm font-medium">
+            {system.duplicateGroups.toLocaleString()}
+          </dd>
+        </div>
+      </dl>
+    </div>
 
-  <DatabaseBackupSettings />
+    <DatabaseBackupSettings />
 
-  <DiagnosticsSettings />
+    <section class="panel" aria-label="Maintenance report">
+      <h2 class="text-ink text-lg font-semibold">Maintenance report</h2>
+      <p class="text-muted mt-1 text-sm">
+        Read-only local state. Maintenance actions remain lease-controlled and no retention cleanup
+        runs automatically.
+      </p>
+      <dl class="mt-4 grid gap-3 sm:grid-cols-3">
+        <div class="panel-inset">
+          <dt class="text-muted text-xs">Active leases</dt>
+          <dd class="text-ink mt-1 text-sm font-medium">{data.maintenance.activeLeases.length}</dd>
+        </div>
+        <div class="panel-inset">
+          <dt class="text-muted text-xs">Terminal jobs</dt>
+          <dd class="text-ink mt-1 text-sm font-medium">
+            {data.maintenance.terminalJobs.total} ({data.maintenance.terminalJobs
+              .olderThanThirtyDays} older than 30 days)
+          </dd>
+        </div>
+        <div class="panel-inset">
+          <dt class="text-muted text-xs">Allocated database storage</dt>
+          <dd class="text-ink mt-1 text-sm font-medium">
+            {(data.maintenance.storage.allocatedBytes / 1024 / 1024).toFixed(1)} MiB
+          </dd>
+        </div>
+      </dl>
+    </section>
 
-  <!-- Backup & Restore -->
-  <div class="panel" id="backup">
-    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-      <Archive class="text-accent h-5 w-5" />
-      Backup & Restore
-    </h2>
-    <div class="mt-4 space-y-4">
-      <div>
-        <h3 class="text-ink text-sm font-medium">Export Configuration</h3>
-        <p class="text-muted mt-1 text-xs">
-          Download a backup of all settings and dedup parameters.
-        </p>
-        <a
-          href="/api/v1/export/config.json"
-          download
-          onclick={() => trackConfigExported()}
-          class="border-soft text-ink hover:bg-canvas mt-2 inline-block rounded-lg border px-4 py-2 text-sm font-medium"
-        >
-          Download Backup
-        </a>
-      </div>
-      <div class="border-soft border-t pt-4">
-        <h3 class="text-ink text-sm font-medium">Import Configuration</h3>
-        <p class="text-muted mt-1 text-xs">
-          Restore settings from a previously exported backup file.
-        </p>
-        <div class="mt-2 flex items-center gap-3">
-          <input
-            type="file"
-            accept=".json"
-            onchange={(e) => {
-              const target = e.target as HTMLInputElement;
-              importFile = target.files?.[0] ?? null;
-              importStatus = null;
-            }}
-            class="text-ink file:border-soft file:text-ink file:hover:bg-canvas text-sm file:mr-3 file:rounded-lg file:border file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:font-medium"
-          />
-          <button
-            onclick={handleImport}
-            disabled={!importFile || isImporting}
-            class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+    <DiagnosticsSettings />
+
+    <!-- Backup & Restore -->
+    <div class="panel" id="backup">
+      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
+        <Archive class="text-accent h-5 w-5" />
+        Backup & Restore
+      </h2>
+      <div class="mt-4 space-y-4">
+        <div>
+          <h3 class="text-ink text-sm font-medium">Export Configuration</h3>
+          <p class="text-muted mt-1 text-xs">
+            Download a backup of all settings and dedup parameters.
+          </p>
+          <a
+            href="/api/v1/export/config.json"
+            download
+            onclick={() => trackConfigExported()}
+            class="border-soft text-ink hover:bg-canvas mt-2 inline-block rounded-lg border px-4 py-2 text-sm font-medium"
           >
-            {isImporting ? 'Importing...' : 'Import'}
-          </button>
+            Download Backup
+          </a>
+        </div>
+        <div class="border-soft border-t pt-4">
+          <h3 class="text-ink text-sm font-medium">Import Configuration</h3>
+          <p class="text-muted mt-1 text-xs">
+            Restore settings from a previously exported backup file.
+          </p>
+          <div class="mt-2 flex items-center gap-3">
+            <input
+              aria-label="Configuration backup file"
+              type="file"
+              accept=".json"
+              onchange={(e) => {
+                const target = e.target as HTMLInputElement;
+                importFile = target.files?.[0] ?? null;
+                importStatus = null;
+              }}
+              class="text-ink file:border-soft file:text-ink file:hover:bg-canvas text-sm file:mr-3 file:rounded-lg file:border file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:font-medium"
+            />
+            <button
+              onclick={handleImport}
+              disabled={!importFile || isImporting}
+              class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {isImporting ? 'Importing...' : 'Import'}
+            </button>
+          </div>
         </div>
       </div>
+      {#if importStatus}
+        <div
+          class="mt-3 rounded-lg px-3 py-2 text-sm {importStatus.type === 'success'
+            ? 'bg-success-light text-success'
+            : 'bg-ember-light text-ember'}"
+        >
+          {importStatus.message}
+        </div>
+      {/if}
     </div>
-    {#if importStatus}
-      <div
-        class="mt-3 rounded-lg px-3 py-2 text-sm {importStatus.type === 'success'
-          ? 'bg-success-light text-success'
-          : 'bg-ember-light text-ember'}"
-      >
-        {importStatus.message}
-      </div>
-    {/if}
   </div>
 </div>

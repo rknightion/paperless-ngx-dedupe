@@ -54,8 +54,28 @@ test.describe('Settings Page', () => {
     await expect(page.getByRole('status')).toContainText('Connected!');
   });
 
+  test('shows read-only maintenance, retention and storage reporting', async ({ page }) => {
+    await page.goto('/settings');
+    await page.getByRole('tab', { name: 'System & backup' }).click();
+    const report = page.getByRole('region', { name: 'Maintenance report' });
+    await expect(report).toBeVisible();
+    await expect(report).toContainText('Active leases');
+    await expect(report).toContainText('Terminal jobs');
+    await expect(report).toContainText('Allocated database storage');
+  });
+
+  test('switches between focused settings sections', async ({ page }) => {
+    await page.goto('/settings');
+    await page.getByRole('tab', { name: 'AI Processing' }).click();
+    await expect(page.getByRole('heading', { name: 'AI Processing' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Paperless-NGX Connection' })).toBeHidden();
+    await page.getByRole('tab', { name: 'Connection' }).click();
+    await expect(page.getByRole('heading', { name: 'Paperless-NGX Connection' })).toBeVisible();
+  });
+
   test('dedup parameters section renders', async ({ page }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Deduplication' }).click();
 
     await expect(page.getByRole('heading', { name: 'Deduplication Parameters' })).toBeVisible();
 
@@ -68,6 +88,7 @@ test.describe('Settings Page', () => {
 
   test('confidence weight sliders render', async ({ page }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Deduplication' }).click();
 
     await expect(page.locator('#w-jaccard')).toBeVisible();
     await expect(page.locator('#w-fuzzy')).toBeVisible();
@@ -75,6 +96,7 @@ test.describe('Settings Page', () => {
 
   test('weight sum indicator shows', async ({ page }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Deduplication' }).click();
 
     // Should show the sum
     await expect(page.getByText(/Sum: \d+\/100/)).toBeVisible();
@@ -82,12 +104,14 @@ test.describe('Settings Page', () => {
 
   test('save configuration button renders', async ({ page }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Deduplication' }).click();
 
     await expect(page.getByRole('button', { name: 'Save Configuration' })).toBeVisible();
   });
 
   test('advanced settings toggle works', async ({ page }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Deduplication' }).click();
 
     // Advanced settings should be hidden by default
     await expect(page.locator('#num-perms')).not.toBeVisible();
@@ -110,6 +134,7 @@ test.describe('Settings Page', () => {
 
   test('system information section renders', async ({ page }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'System & backup' }).click();
 
     await expect(page.getByText('System Information')).toBeVisible();
     await expect(page.getByText('Database Path')).toHaveCount(0);
@@ -121,6 +146,7 @@ test.describe('Settings Page', () => {
     page,
   }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'System & backup' }).click();
 
     await expect(page.getByRole('heading', { name: 'Support diagnostics' })).toBeVisible();
     await expect(

@@ -11,7 +11,9 @@ nav = [
   { "Getting Started" = [
       "getting-started.md",
       { Installation = "installation.md" },
-      { Configuration = "configuration.md" }
+      { Configuration = "configuration.md" },
+      { Upgrading = "upgrading.md" },
+      { "Backup and Restore" = "database-backup-and-restore.md" }
     ] },
   { "How It Works" = [
       { "Dedup Pipeline" = "how-it-works.md" },

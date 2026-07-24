@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { coverageThresholds } from './src/coverage-thresholds.js';
 
 export default defineConfig({
   test: {
@@ -12,6 +13,7 @@ export default defineConfig({
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/**/__tests__/**', 'src/index.ts'],
+      thresholds: coverageThresholds,
     },
     reporters: ['default', 'junit'],
     outputFile: {

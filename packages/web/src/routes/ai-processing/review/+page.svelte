@@ -534,6 +534,7 @@
             of <span class="text-ink font-medium">{data.total}</span>
           </p>
           <select
+            aria-label="Results per page"
             value={data.limit}
             onchange={changePageSize}
             class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1 text-sm focus:ring-1 focus:outline-none"

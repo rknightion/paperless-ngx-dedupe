@@ -211,6 +211,7 @@ test.describe('Safe automation dispatch', () => {
     page,
   }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Automation' }).click();
     const region = page.getByRole('region', { name: 'Automation schedules' });
     await expect(region).toBeVisible();
     await expect(region.getByRole('group')).toHaveCount(3);

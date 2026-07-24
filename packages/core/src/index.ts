@@ -141,6 +141,10 @@ export type {
 // Config
 export { parseConfig } from './config.js';
 
+// Maintenance
+export { getMaintenanceReport } from './maintenance/report.js';
+export type { MaintenanceReport } from './maintenance/report.js';
+
 // Scheduling
 export {
   toCronExpression,

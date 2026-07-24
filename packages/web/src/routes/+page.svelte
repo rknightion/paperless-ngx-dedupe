@@ -130,6 +130,29 @@
     </p>
   </header>
 
+  <section class="panel" aria-label="First-run checklist">
+    <h2 class="text-ink text-lg font-semibold">First-run checklist</h2>
+    <p class="text-muted mt-1 text-sm">
+      Work through these in order. Nothing here changes Paperless without your review.
+    </p>
+    <ol class="mt-4 grid gap-3 sm:grid-cols-3">
+      <li class="panel-inset text-sm">
+        <span class="text-ink font-medium">1. Connect to Paperless</span>
+        <p class="text-muted mt-1 text-xs">Confirm the connection in Settings.</p>
+      </li>
+      <li class="panel-inset text-sm">
+        <span class="text-ink font-medium">2. Sync your library</span>
+        <p class="text-muted mt-1 text-xs">
+          Copy document metadata into the local review database.
+        </p>
+      </li>
+      <li class="panel-inset text-sm">
+        <span class="text-ink font-medium">3. Run duplicate analysis</span>
+        <p class="text-muted mt-1 text-xs">Review matches before any Paperless change.</p>
+      </li>
+    </ol>
+  </section>
+
   <ReadinessStrip readiness={data.readiness} automation={data.automation} />
 
   <NextActions

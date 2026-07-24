@@ -18,6 +18,7 @@ test.describe('database backup', () => {
     page,
   }) => {
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'System & backup' }).click();
     await expect(page.getByRole('heading', { name: 'Database backup' })).toBeVisible();
     await expect(page.getByText('Restore is intentionally an offline operation.')).toBeVisible();
     await expect(

@@ -19,6 +19,16 @@ test.describe('Dashboard', () => {
     await expect(page.locator('main h1')).toHaveText('Dashboard');
   });
 
+  test('shows a first-run checklist before the library has been synced', async ({ page }) => {
+    await page.goto('/');
+
+    const checklist = page.getByRole('region', { name: 'First-run checklist' });
+    await expect(checklist).toBeVisible();
+    await expect(checklist).toContainText('Connect to Paperless');
+    await expect(checklist).toContainText('Sync your library');
+    await expect(checklist).toContainText('Run duplicate analysis');
+  });
+
   test('stat cards render with data', async ({ page }) => {
     await page.goto('/');
 

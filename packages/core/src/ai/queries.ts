@@ -331,6 +331,7 @@ function decodeAiInboxCursor(
       'aes-256-gcm',
       Buffer.from(getAiInboxCursorKey(db), 'base64url'),
       nonce,
+      { authTagLength: 16 },
     );
     decipher.setAAD(Buffer.from('ai-inbox-cursor:v1'));
     decipher.setAuthTag(tag);

@@ -266,6 +266,7 @@
       </button>
       <div class="relative">
         <button
+          aria-label="Choose AI processing scope"
           onclick={() => (showProcessMenu = !showProcessMenu)}
           disabled={isProcessing}
           class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
@@ -503,7 +504,7 @@
       href={tabHref('/ai-processing/queue')}
       class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/queue')
         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
+        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
     >
       Queue
       {#if queueCount > 0}
@@ -517,7 +518,7 @@
       href={tabHref('/ai-processing/review')}
       class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/review')
         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
+        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
     >
       Review
       {#if pendingReviewCount > 0}
@@ -530,7 +531,7 @@
       href={tabHref('/ai-processing/history')}
       class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/history')
         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
+        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
     >
       History
       {#if historyCount > 0}
@@ -544,7 +545,7 @@
       href="/ai-processing/custom-fields"
       class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/custom-fields')
         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}"
+        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
     >
       Custom Fields
     </a>
