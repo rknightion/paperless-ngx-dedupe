@@ -5,9 +5,19 @@ import { tmpdir } from 'node:os';
 
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import { createJob, recoverStaleJobs } from '../manager.js';
+import {
+  completeJob,
+  createJob,
+  failJob,
+  recoverStaleJobs,
+  updateJobProgress,
+} from '../manager.js';
 import { JobType } from '../../types/enums.js';
-import { claimWorkerJob, runWorkerTaskWithData } from '../worker-entry.js';
+import {
+  claimWorkerJob,
+  releaseWorkerClaimForRetry,
+  runWorkerTaskWithData,
+} from '../worker-entry.js';
 import { consumeDispatchIntents, getDispatchIntent } from '../../scheduler/coordinator.js';
 
 describe('worker entry durable execution claim', () => {
@@ -47,9 +57,17 @@ describe('worker entry durable execution claim', () => {
       return { completed: true };
     };
 
-    const first = runWorkerTaskWithData(task, { jobId, dbPath: databasePath });
+    const first = runWorkerTaskWithData(task, {
+      jobId,
+      dbPath: databasePath,
+      executionToken: 'first-owner',
+    });
     await taskStarted;
-    await runWorkerTaskWithData(task, { jobId, dbPath: databasePath });
+    await runWorkerTaskWithData(task, {
+      jobId,
+      dbPath: databasePath,
+      executionToken: 'second-owner',
+    });
 
     expect(executions).toBe(1);
     releaseTask?.();
@@ -69,8 +87,108 @@ describe('worker entry durable execution claim', () => {
       .prepare("UPDATE job SET next_attempt_at = '2026-07-23T12:01:00.000Z' WHERE id = ?")
       .run(jobId);
 
-    expect(claimWorkerJob(sqlite, jobId, new Date('2026-07-23T12:00:59.999Z'))).toBe(false);
-    expect(claimWorkerJob(sqlite, jobId, new Date('2026-07-23T12:01:00.000Z'))).toBe(true);
+    expect(claimWorkerJob(sqlite, jobId, 'early-owner', new Date('2026-07-23T12:00:59.999Z'))).toBe(
+      false,
+    );
+    expect(claimWorkerJob(sqlite, jobId, 'due-owner', new Date('2026-07-23T12:01:00.000Z'))).toBe(
+      true,
+    );
+  });
+
+  it('persists the execution token and only its owner can release a pre-ready claim', async () => {
+    const { db, sqlite } = await database();
+    const jobId = createJob(db, JobType.SYNC);
+
+    expect(
+      claimWorkerJob(sqlite, jobId, 'launch-owner', new Date('2026-07-23T12:00:00.000Z')),
+    ).toBe(true);
+    expect(
+      sqlite
+        .prepare(
+          `SELECT status, started_at AS startedAt, execution_token AS executionToken
+           FROM job WHERE id = ?`,
+        )
+        .get(jobId),
+    ).toEqual({
+      status: 'running',
+      startedAt: '2026-07-23T12:00:00.000Z',
+      executionToken: 'launch-owner',
+    });
+
+    expect(releaseWorkerClaimForRetry(sqlite, jobId, 'wrong-token')).toBe(false);
+    expect(
+      sqlite
+        .prepare('SELECT status, execution_token AS executionToken FROM job WHERE id = ?')
+        .get(jobId),
+    ).toEqual({ status: 'running', executionToken: 'launch-owner' });
+
+    expect(releaseWorkerClaimForRetry(sqlite, jobId, 'launch-owner')).toBe(true);
+    expect(
+      sqlite
+        .prepare(
+          `SELECT status, started_at AS startedAt, execution_token AS executionToken
+           FROM job WHERE id = ?`,
+        )
+        .get(jobId),
+    ).toEqual({ status: 'pending', startedAt: null, executionToken: null });
+  });
+
+  it('does not let an old execution token overwrite a newer claim', async () => {
+    const { db, sqlite } = await database();
+    const jobId = createJob(db, JobType.SYNC);
+    expect(claimWorkerJob(sqlite, jobId, 'old-owner')).toBe(true);
+    expect(releaseWorkerClaimForRetry(sqlite, jobId, 'old-owner')).toBe(true);
+    expect(claimWorkerJob(sqlite, jobId, 'new-owner')).toBe(true);
+
+    updateJobProgress(db, jobId, 0.75, 'stale progress', undefined, 'old-owner');
+    completeJob(db, jobId, { stale: true }, 'old-owner');
+    failJob(db, jobId, 'stale failure', 'old-owner');
+
+    expect(
+      sqlite
+        .prepare(
+          `SELECT status, progress, progress_message AS progressMessage,
+                  result_json AS resultJson, error_message AS errorMessage,
+                  execution_token AS executionToken
+           FROM job WHERE id = ?`,
+        )
+        .get(jobId),
+    ).toEqual({
+      status: 'running',
+      progress: 0,
+      progressMessage: null,
+      resultJson: null,
+      errorMessage: null,
+      executionToken: 'new-owner',
+    });
+
+    completeJob(db, jobId, { completed: true }, 'new-owner');
+    expect(
+      sqlite
+        .prepare('SELECT status, execution_token AS executionToken FROM job WHERE id = ?')
+        .get(jobId),
+    ).toEqual({ status: 'completed', executionToken: null });
+  });
+
+  it('acknowledges the durable claim before executing the task', async () => {
+    const { db, databasePath } = await database();
+    const jobId = createJob(db, JobType.SYNC);
+    const events: unknown[] = [];
+
+    await runWorkerTaskWithData(
+      async () => {
+        expect(events).toEqual([
+          { type: 'worker-ready', jobId, executionToken: 'ready-owner', claimed: true },
+        ]);
+        return { completed: true };
+      },
+      { jobId, dbPath: databasePath, executionToken: 'ready-owner' },
+      (event) => events.push(event),
+    );
+
+    expect(events).toEqual([
+      { type: 'worker-ready', jobId, executionToken: 'ready-owner', claimed: true },
+    ]);
   });
 
   it('returns a restart-recovered job to pending so it executes once after the retained lease clears', async () => {
@@ -90,7 +208,7 @@ describe('worker entry durable execution claim', () => {
         executions += 1;
         return { recovered: true };
       },
-      { jobId, dbPath: databasePath },
+      { jobId, dbPath: databasePath, executionToken: 'recovered-owner' },
     );
     expect(executions).toBe(1);
   });
@@ -141,6 +259,7 @@ describe('worker entry durable execution claim', () => {
           {
             jobId: durableIntent.jobId!,
             dbPath: first.databasePath,
+            executionToken: 'reconciled-owner',
             taskData: durableIntent.taskData,
           },
         );

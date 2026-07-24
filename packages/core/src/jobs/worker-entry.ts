@@ -1,4 +1,4 @@
-import { workerData } from 'node:worker_threads';
+import { parentPort, workerData } from 'node:worker_threads';
 import { context } from '@opentelemetry/api';
 import type Database from 'better-sqlite3';
 import { createDatabaseWithHandle } from '../db/client.js';
@@ -32,8 +32,22 @@ export type TaskFunction = (ctx: WorkerContext, onProgress: ProgressCallback) =>
 export interface WorkerTaskData {
   jobId: string;
   dbPath: string;
+  executionToken: string;
   taskData?: unknown;
   traceContext?: Record<string, string>;
+}
+
+export interface WorkerReadyMessage {
+  type: 'worker-ready';
+  jobId: string;
+  executionToken: string;
+  claimed: boolean;
+}
+
+type NotifyWorkerReady = (message: WorkerReadyMessage) => void;
+
+function notifyParentReady(message: WorkerReadyMessage): void {
+  parentPort?.postMessage(message);
 }
 
 /**
@@ -45,16 +59,33 @@ export interface WorkerTaskData {
 export function claimWorkerJob(
   sqlite: Database.Database,
   jobId: string,
+  executionToken: string,
   now: Date = new Date(),
 ): boolean {
   const result = sqlite
     .prepare(
       `UPDATE job
-       SET status = 'running', started_at = ?
+       SET status = 'running', started_at = ?, execution_token = ?
        WHERE id = ? AND status = 'pending'
          AND (next_attempt_at IS NULL OR next_attempt_at <= ?)`,
     )
-    .run(now.toISOString(), jobId, now.toISOString());
+    .run(now.toISOString(), executionToken, jobId, now.toISOString());
+  return result.changes === 1;
+}
+
+/** Release only this launch's live claim after the worker has stopped pre-ready. */
+export function releaseWorkerClaimForRetry(
+  sqlite: Database.Database,
+  jobId: string,
+  executionToken: string,
+): boolean {
+  const result = sqlite
+    .prepare(
+      `UPDATE job
+       SET status = 'pending', started_at = NULL, execution_token = NULL
+       WHERE id = ? AND status = 'running' AND execution_token = ?`,
+    )
+    .run(jobId, executionToken);
   return result.changes === 1;
 }
 
@@ -66,10 +97,12 @@ export async function runWorkerTask(taskFn: TaskFunction): Promise<void> {
 export async function runWorkerTaskWithData(
   taskFn: TaskFunction,
   workerTaskData: WorkerTaskData,
+  notifyReady: NotifyWorkerReady = notifyParentReady,
 ): Promise<void> {
-  const { jobId, dbPath, taskData, traceContext } = workerTaskData as {
+  const { jobId, dbPath, executionToken, taskData, traceContext } = workerTaskData as {
     jobId: string;
     dbPath: string;
+    executionToken: string;
     taskData?: unknown;
     traceContext?: Record<string, string>;
   };
@@ -83,7 +116,9 @@ export async function runWorkerTaskWithData(
   const logger = createLogger('worker');
   const { db, sqlite } = createDatabaseWithHandle(dbPath);
 
-  if (!claimWorkerJob(sqlite, jobId)) {
+  const claimed = claimWorkerJob(sqlite, jobId, executionToken);
+  notifyReady({ type: 'worker-ready', jobId, executionToken, claimed });
+  if (!claimed) {
     logger.info({ jobId }, 'Worker execution claim already owned or not yet retry-eligible');
     await shutdownWorkerTelemetry();
     return;
@@ -100,7 +135,7 @@ export async function runWorkerTaskWithData(
     message?: string,
     phaseProgress?: number,
   ) => {
-    updateJobProgress(db, jobId, progress, message, phaseProgress);
+    updateJobProgress(db, jobId, progress, message, phaseProgress, executionToken);
 
     const now = Date.now();
 
@@ -139,7 +174,7 @@ export async function runWorkerTaskWithData(
       await withPyroscopeLabels({ operation: 'worker' }, async () => {
         await withSpan('dedupe.worker.task', { 'app.job.id': jobId }, async () => {
           const result = await taskFn({ db, sqlite, jobId, taskData }, onProgress);
-          completeJob(db, jobId, result);
+          completeJob(db, jobId, result, executionToken);
           logger.info({ jobId }, 'Worker task completed successfully');
         });
       });
@@ -150,7 +185,7 @@ export async function runWorkerTaskWithData(
       return;
     }
     const errorMessage = error instanceof Error ? error.message : String(error);
-    failJob(db, jobId, errorMessage);
+    failJob(db, jobId, errorMessage, executionToken);
     logger.error({ jobId, error: errorMessage }, 'Worker task failed');
   } finally {
     await shutdownWorkerTelemetry();

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { withE2ePrestart } from './e2e/prestart-cleanup';
 
 export default defineConfig({
   testDir: './e2e',
@@ -23,10 +24,12 @@ export default defineConfig({
   ],
   webServer: {
     command: process.env.CI
-      ? 'pnpm --filter @paperless-dedupe/web preview --port 4173'
-      : 'pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/web build && pnpm preview --port 4173',
+      ? withE2ePrestart('pnpm --filter @paperless-dedupe/web preview --port 4173')
+      : withE2ePrestart(
+          'pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/web build && pnpm preview --port 4173',
+        ),
     port: 4173,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: process.env.CI ? 120_000 : 60_000,
     env: {
       PAPERLESS_URL: 'http://localhost:18923',

@@ -113,26 +113,39 @@ export function updateJobProgress(
   progress: number,
   message?: string,
   phaseProgress?: number,
+  executionToken?: string,
 ): void {
   const clamped = Math.max(0, Math.min(1, progress));
 
-  db.update(job)
+  const updated = db
+    .update(job)
     .set({
       progress: clamped,
       phaseProgress: phaseProgress != null ? Math.max(0, Math.min(1, phaseProgress)) : null,
       progressMessage: message,
     })
-    .where(eq(job.id, id))
+    .where(
+      executionToken
+        ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+        : eq(job.id, id),
+    )
     .run();
+  if (executionToken && updated.changes !== 1) return;
   db.update(operationLease)
     .set({ heartbeatAt: new Date().toISOString() })
     .where(eq(operationLease.ownerId, id))
     .run();
 }
 
-export function completeJob(db: AppDatabase, id: string, result?: unknown): void {
+export function completeJob(
+  db: AppDatabase,
+  id: string,
+  result?: unknown,
+  executionToken?: string,
+): void {
   const now = new Date().toISOString();
   let type: string | null = null;
+  let transitioned = false;
   db.transaction((tx) => {
     const existing = tx
       .select({
@@ -144,18 +157,31 @@ export function completeJob(db: AppDatabase, id: string, result?: unknown): void
         rootDueAt: job.rootDueAt,
       })
       .from(job)
-      .where(eq(job.id, id))
+      .where(
+        executionToken
+          ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+          : eq(job.id, id),
+      )
       .get();
+    if (!existing) return;
     type = existing?.type ?? null;
-    tx.update(job)
+    const completed = tx
+      .update(job)
       .set({
         status: 'completed',
         progress: 1,
         completedAt: now,
+        executionToken: null,
         resultJson: result !== undefined ? JSON.stringify(result) : undefined,
       })
-      .where(eq(job.id, id))
+      .where(
+        executionToken
+          ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+          : eq(job.id, id),
+      )
       .run();
+    if (executionToken && completed.changes !== 1) return;
+    transitioned = completed.changes === 1;
     if (
       existing?.type === 'sync' &&
       existing.triggerKind === 'schedule' &&
@@ -178,15 +204,20 @@ export function completeJob(db: AppDatabase, id: string, result?: unknown): void
     }
     tx.delete(operationLease).where(eq(operationLease.ownerId, id)).run();
   });
-  if (type) jobsTotal().add(1, { type, outcome: 'completed' });
+  if (transitioned && type) jobsTotal().add(1, { type, outcome: 'completed' });
 }
 
-export function failJob(db: AppDatabase, id: string, error: string): void {
+export function failJob(db: AppDatabase, id: string, error: string, executionToken?: string): void {
   const existing = db
     .select({ type: job.type, attempt: job.attempt })
     .from(job)
-    .where(eq(job.id, id))
+    .where(
+      executionToken
+        ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+        : eq(job.id, id),
+    )
     .get();
+  if (!existing) return;
   const now = new Date();
   const nowIso = now.toISOString();
   const attempt = existing?.attempt ?? 0;
@@ -197,18 +228,28 @@ export function failJob(db: AppDatabase, id: string, error: string): void {
     const nextAttemptAt = new Date(
       now.getTime() + AUTOMATED_RETRY_DELAYS_MS[nextAttempt - 1],
     ).toISOString();
+    let transitioned = false;
     db.transaction((tx) => {
-      tx.update(job)
+      const requeued = tx
+        .update(job)
         .set({
           status: 'pending',
           errorMessage: error,
           completedAt: null,
+          startedAt: null,
+          executionToken: null,
           attempt: nextAttempt,
           nextAttemptAt,
           terminalReason: null,
         })
-        .where(eq(job.id, id))
+        .where(
+          executionToken
+            ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+            : eq(job.id, id),
+        )
         .run();
+      if (executionToken && requeued.changes !== 1) return;
+      transitioned = requeued.changes === 1;
       tx.update(dispatchIntent)
         .set({
           status: 'pending',
@@ -219,20 +260,30 @@ export function failJob(db: AppDatabase, id: string, error: string): void {
         .where(eq(dispatchIntent.jobId, id))
         .run();
     });
+    if (!transitioned) return;
     return;
   }
 
   const terminalReason = retryable ? 'automated_retry_exhausted' : 'automated_retry_not_allowed';
+  let transitioned = false;
   db.transaction((tx) => {
-    tx.update(job)
+    const failed = tx
+      .update(job)
       .set({
         status: 'failed',
         errorMessage: error,
         completedAt: nowIso,
+        executionToken: null,
         terminalReason,
       })
-      .where(eq(job.id, id))
+      .where(
+        executionToken
+          ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+          : eq(job.id, id),
+      )
       .run();
+    if (executionToken && failed.changes !== 1) return;
+    transitioned = failed.changes === 1;
     tx.update(dispatchIntent)
       .set({
         status: 'dead_letter',
@@ -244,7 +295,9 @@ export function failJob(db: AppDatabase, id: string, error: string): void {
       .run();
     tx.delete(operationLease).where(eq(operationLease.ownerId, id)).run();
   });
-  if (existing?.type) jobsTotal().add(1, { type: existing.type, outcome: 'failed' });
+  if (transitioned && existing?.type) {
+    jobsTotal().add(1, { type: existing.type, outcome: 'failed' });
+  }
 }
 
 /** Requeues an exhausted job only after an explicit manual retry request. */
@@ -263,7 +316,8 @@ export function retryDeadLetterJob(db: AppDatabase, id: string): boolean {
       .prepare(
         `UPDATE job
          SET status = 'pending', error_message = NULL, completed_at = NULL, attempt = 0,
-             next_attempt_at = NULL, terminal_reason = NULL
+             started_at = NULL, execution_token = NULL, next_attempt_at = NULL,
+             terminal_reason = NULL
          WHERE id = ? AND status = 'failed'`,
       )
       .run(id);
@@ -309,7 +363,8 @@ export function recoverStaleJobs(db: AppDatabase): number {
           .prepare(
             `UPDATE job
              SET status = 'pending', error_message = ?, completed_at = NULL,
-                 next_attempt_at = ?, terminal_reason = ?
+                 started_at = NULL, execution_token = NULL, next_attempt_at = ?,
+                 terminal_reason = ?
              WHERE id = ?`,
           )
           .run('Job interrupted by application restart', now, 'restart_interrupted', id);
@@ -382,6 +437,7 @@ export function cancelJob(db: AppDatabase, id: string): boolean {
       .set({
         status: 'cancelled',
         completedAt: now,
+        executionToken: null,
       })
       .where(eq(job.id, id))
       .run();

@@ -15,6 +15,7 @@ export const ErrorCode = {
   JOB_ALREADY_RUNNING: 'JOB_ALREADY_RUNNING',
   NOT_READY: 'NOT_READY',
   BAD_GATEWAY: 'BAD_GATEWAY',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
 } as const;
 
 type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -37,6 +38,7 @@ const ERROR_STATUS_MAP: Record<ErrorCodeType, number> = {
   JOB_ALREADY_RUNNING: 409,
   NOT_READY: 503,
   BAD_GATEWAY: 502,
+  SERVICE_UNAVAILABLE: 503,
 };
 
 function isApiErrorContext(value: unknown): value is ApiErrorContext {

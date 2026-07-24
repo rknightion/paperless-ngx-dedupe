@@ -199,16 +199,25 @@ export function clearDatabase(dbPath: string): void {
   const db = new Database(dbPath);
   db.pragma('foreign_keys = OFF');
 
-  db.exec(`
-    DELETE FROM duplicate_member;
-    DELETE FROM duplicate_group;
-    DELETE FROM document_signature;
-    DELETE FROM document_content;
-    DELETE FROM document;
-    DELETE FROM job;
-    DELETE FROM sync_state;
-    DELETE FROM app_config;
-  `);
+  db.transaction(() => {
+    db.exec(`
+      DELETE FROM ai_budget_reservation;
+      DELETE FROM dispatch_intent;
+      DELETE FROM operation_lease;
+      DELETE FROM sync_change_generation;
+      DELETE FROM automation_schedule;
+      DELETE FROM ai_result_revision;
+      DELETE FROM ai_processing_result;
+      DELETE FROM duplicate_member;
+      DELETE FROM duplicate_group;
+      DELETE FROM document_signature;
+      DELETE FROM document_content;
+      DELETE FROM document;
+      DELETE FROM job;
+      DELETE FROM sync_state;
+      DELETE FROM app_config;
+    `);
+  })();
 
   db.pragma('foreign_keys = ON');
   db.close();

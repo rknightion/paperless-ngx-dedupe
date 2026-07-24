@@ -123,6 +123,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // carries the current schema hash, so repair the durable payload column
   // explicitly before that early return can occur.
   migrateDispatchIntentTaskData(sqlite);
+  migrateJobExecutionToken(sqlite);
 
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
@@ -352,6 +353,13 @@ function migrateDispatchIntentTaskData(sqlite: Database.Database): void {
   if (!tableHasColumn(sqlite, 'dispatch_intent', 'id')) return;
   if (tableHasColumn(sqlite, 'dispatch_intent', 'task_data_json')) return;
   sqlite.exec(`ALTER TABLE dispatch_intent ADD COLUMN task_data_json TEXT`);
+}
+
+/** Add the per-launch worker ownership token even when an old hash claims current DDL. */
+function migrateJobExecutionToken(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'job', 'id')) return;
+  if (tableHasColumn(sqlite, 'job', 'execution_token')) return;
+  sqlite.exec(`ALTER TABLE job ADD COLUMN execution_token TEXT`);
 }
 
 /**

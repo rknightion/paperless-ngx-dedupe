@@ -106,7 +106,8 @@ test.describe('Batch API', () => {
     const body = await response.json();
     expect(body.error).toBeDefined();
     expect(body.error.code).toBe('VALIDATION_FAILED');
-    expect(body.error.message).toContain('pending');
+    expect(body.error.operation).toBe('api_request');
+    expect(body.error.message).toBe('Validation failed');
   });
 
   test('POST /api/v1/batch/delete-non-primary validates confirm flag', async ({ request }) => {

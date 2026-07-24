@@ -1,60 +1,8 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
-import {
-  parseConfig,
-  initLogger,
-  createLogger,
-  PaperlessClient,
-  PaperlessMetricsCoordinator,
-  toPaperlessConfig,
-} from '@paperless-dedupe/core';
+import { createLogger } from '@paperless-dedupe/core';
 import type { Handle } from '@sveltejs/kit';
-import { getDatabase } from '$lib/server/db';
-
-// Graceful shutdown handlers
-if (typeof process !== 'undefined') {
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-    process.on(signal, () => {
-      console.log(`Received ${signal}, shutting down gracefully...`);
-      setTimeout(() => process.exit(1), 25_000).unref(); // safety net inside Docker's 30s stop_grace_period
-    });
-  }
-}
-
-// Singleton initialization
-let config: ReturnType<typeof parseConfig> | undefined;
-let initialized = false;
-
-function ensureInitialized() {
-  if (initialized) return;
-  config = parseConfig(process.env as Record<string, string | undefined>);
-  initLogger(config.LOG_LEVEL);
-
-  const telemetryActive =
-    process.env.OTEL_ENABLED === 'true' || process.env.OTEL_PROMETHEUS_ENABLED === 'true';
-  if (telemetryActive && config.PAPERLESS_METRICS_ENABLED) {
-    const metricsClient = new PaperlessClient({
-      ...toPaperlessConfig(config),
-      timeout: 10_000,
-      maxRetries: 0,
-    });
-    const coordinator = new PaperlessMetricsCoordinator({
-      client: metricsClient,
-      enabledCollectors: config.PAPERLESS_METRICS_COLLECTORS
-        ? config.PAPERLESS_METRICS_COLLECTORS.split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : undefined,
-    });
-    coordinator.start();
-
-    if (typeof process !== 'undefined') {
-      process.on('SIGTERM', () => coordinator.shutdown());
-    }
-  }
-
-  initialized = true;
-}
+import { getServerRuntime } from './runtime.server';
 
 const handleCors: Handle = async ({ event, resolve }) => {
   // Only apply CORS to API routes
@@ -62,8 +10,8 @@ const handleCors: Handle = async ({ event, resolve }) => {
     return resolve(event);
   }
 
-  ensureInitialized();
-  const allowOrigin = config!.CORS_ALLOW_ORIGIN;
+  const runtime = await getServerRuntime();
+  const allowOrigin = runtime.config.CORS_ALLOW_ORIGIN;
 
   // Handle preflight
   if (event.request.method === 'OPTIONS') {
@@ -101,14 +49,12 @@ const handleCors: Handle = async ({ event, resolve }) => {
 };
 
 const handleRequest: Handle = async ({ event, resolve }) => {
-  ensureInitialized();
-
+  const runtime = await getServerRuntime();
   const logger = createLogger('http');
-  event.locals.config = config!;
+  event.locals.config = runtime.config;
   event.locals.logger = logger;
-  const { db, sqlite } = await getDatabase(config!);
-  event.locals.db = db;
-  event.locals.sqlite = sqlite;
+  event.locals.db = runtime.db;
+  event.locals.sqlite = runtime.sqlite;
 
   const start = performance.now();
   const response = await resolve(event);

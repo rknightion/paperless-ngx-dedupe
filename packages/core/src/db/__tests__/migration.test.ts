@@ -56,6 +56,9 @@ async function assertAutomationSchema(
     expect.arrayContaining(['task_data_json']),
   );
 
+  const jobColumns = sqlite.prepare('PRAGMA table_info(job)').all() as { name: string }[];
+  expect(jobColumns.map(({ name }) => name)).toEqual(expect.arrayContaining(['execution_token']));
+
   const revisionForeignKeys = sqlite
     .prepare('PRAGMA foreign_key_list(ai_result_revision)')
     .all() as {

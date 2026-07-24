@@ -1,14 +1,10 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import {
-  createJob,
-  JobAlreadyRunningError,
-  JobType,
-  launchWorker,
-  getWorkerPath,
-} from '@paperless-dedupe/core';
+import { JobType, OperationConflictError } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
+import { getServerRuntime } from '../../../../runtime.server';
+import { RuntimeUnavailableError } from '$lib/server/scheduler';
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request }) => {
   let force = false;
 
   const contentType = request.headers.get('content-type');
@@ -21,24 +17,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
   }
 
-  let jobId: string;
+  const runtime = await getServerRuntime();
   try {
-    jobId = createJob(locals.db, JobType.ANALYSIS);
+    const intent = runtime.enqueueManual('analysis', JobType.ANALYSIS, { force });
+    await runtime.dispatchPending();
+    return apiSuccess({ jobId: intent.jobId }, undefined, 202);
   } catch (error) {
-    if (error instanceof JobAlreadyRunningError) {
+    if (error instanceof RuntimeUnavailableError) {
+      return apiError(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        { operation: 'manual_analysis', retryable: true },
+        503,
+      );
+    }
+    if (error instanceof OperationConflictError) {
       return apiError(ErrorCode.JOB_ALREADY_RUNNING, error.message);
     }
     throw error;
   }
-
-  // Launch analysis worker
-  const workerPath = getWorkerPath('analysis-worker');
-  launchWorker({
-    jobId,
-    dbPath: locals.config.DATABASE_URL,
-    workerScriptPath: workerPath,
-    taskData: { force },
-  });
-
-  return apiSuccess({ jobId }, undefined, 202);
 };

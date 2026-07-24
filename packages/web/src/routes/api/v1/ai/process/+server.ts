@@ -1,15 +1,14 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
-  createJob,
-  JobAlreadyRunningError,
   JobType,
-  launchWorker,
-  getWorkerPath,
+  OperationConflictError,
   getFailedDocumentIds,
   getDocumentIdsByAiFilter,
 } from '@paperless-dedupe/core';
 import type { ProcessScope } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
+import { getServerRuntime } from '../../../../../runtime.server';
+import { RuntimeUnavailableError } from '$lib/server/scheduler';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.config.AI_ENABLED) {
@@ -42,25 +41,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
   }
 
-  let jobId: string;
+  const runtime = await getServerRuntime();
   try {
-    jobId = createJob(locals.db, JobType.AI_PROCESSING);
+    const intent = runtime.enqueueManual('ai_processing', JobType.AI_PROCESSING, {
+      reprocess,
+      documentIds,
+    });
+    await runtime.dispatchPending();
+    return apiSuccess({ jobId: intent.jobId }, undefined, 202);
   } catch (error) {
-    if (error instanceof JobAlreadyRunningError) {
+    if (error instanceof RuntimeUnavailableError) {
+      return apiError(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        { operation: 'manual_ai_processing', retryable: true },
+        503,
+      );
+    }
+    if (error instanceof OperationConflictError) {
       return apiError(ErrorCode.JOB_ALREADY_RUNNING, error.message);
     }
     throw error;
   }
-
-  const workerPath = getWorkerPath('ai-processing-worker');
-  launchWorker({
-    jobId,
-    dbPath: locals.config.DATABASE_URL,
-    workerScriptPath: workerPath,
-    taskData: { reprocess, documentIds },
-  });
-
-  return apiSuccess({ jobId }, undefined, 202);
 };
 
 function resolveScope(

@@ -14,6 +14,7 @@ export const job = sqliteTable(
     phaseProgress: real('phase_progress'),
     progressMessage: text('progress_message'),
     startedAt: text('started_at'),
+    executionToken: text('execution_token'),
     completedAt: text('completed_at'),
     errorMessage: text('error_message'),
     resultJson: text('result_json'),
