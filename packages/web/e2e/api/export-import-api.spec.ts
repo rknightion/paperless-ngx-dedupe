@@ -84,7 +84,7 @@ test.describe('Export/Import API', () => {
     const exportedConfig = await exportResponse.json();
 
     // Modify a safe mutable setting.
-    exportedConfig.appConfig.theme = 'dark';
+    exportedConfig.appConfig['ai.model'] = 'gpt-5.4';
 
     // Import the modified config
     const importResponse = await request.post('/api/v1/import/config', {
@@ -101,7 +101,7 @@ test.describe('Export/Import API', () => {
     // Verify the imported config persisted
     const configResponse = await request.get('/api/v1/config');
     const configBody = await configResponse.json();
-    expect(configBody.data.theme).toBe('dark');
+    expect(configBody.data['ai.model']).toBe('gpt-5.4');
   });
 
   test('POST /api/v1/import/config rejects invalid body', async ({ request }) => {
@@ -123,6 +123,20 @@ test.describe('Export/Import API', () => {
     });
 
     // Should return 400 for invalid JSON
+    expect(response.status()).toBe(400);
+  });
+
+  test('POST /api/v1/import/config rejects duplicate JSON property names', async ({ request }) => {
+    const response = await request.post('/api/v1/import/config', {
+      headers: { 'Content-Type': 'application/json' },
+      data: `{
+        "version":"1.0",
+        "exportedAt":"2026-07-24T00:00:00.000Z",
+        "appConfig":{"ai.model":"gpt-5.4-mini","ai.model":"gpt-5.4"},
+        "dedupConfig":{}
+      }`,
+    });
+
     expect(response.status()).toBe(400);
   });
 });

@@ -1,4 +1,5 @@
 import { context, propagation, trace, ROOT_CONTEXT, type Context } from '@opentelemetry/api';
+import { DEFAULT_OTEL_SERVICE_NAME } from './constants.js';
 
 let workerSdk: { shutdown: () => Promise<void> } | null = null;
 
@@ -23,7 +24,7 @@ export async function initWorkerTelemetry(workerName: string): Promise<void> {
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-ngx-dedupe',
+      [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || DEFAULT_OTEL_SERVICE_NAME,
       [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
       'service.namespace': process.env.OTEL_SERVICE_NAMESPACE || 'paperless-dedupe',
       'deployment.environment':

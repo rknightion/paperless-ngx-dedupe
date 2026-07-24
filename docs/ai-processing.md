@@ -28,30 +28,36 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `model` | `gpt-5.4-mini` | see below | Model identifier |
 | `promptTemplate` | built-in | string | Prompt template with placeholders |
 | `maxContentLength` | `8000` | 500--100,000 | Max characters of document text sent to the model |
-| `batchSize` | `10` | 1--100 | Maximum concurrent AI requests |
+| `batchSize` | `100` | 1--500 | Maximum concurrent AI requests |
 | `rateDelayMs` | `0` | 0--60,000 | Delay (ms) between launching requests. 0 = auto-pacing |
-| `autoProcess` | `false` | boolean | Auto-start processing after sync |
+| `maxOutputTokens` | `1000` | 1--100,000 | Maximum output tokens per request |
 | `processedTagName` | `ai-processed` | string | Tag name added when suggestions are applied |
 | `addProcessedTag` | `false` | boolean | Whether to add the processed tag on apply |
 | `includeCorrespondents` | `false` | boolean | Send existing correspondents as reference data |
 | `includeDocumentTypes` | `false` | boolean | Send existing document types as reference data |
 | `includeTags` | `false` | boolean | Send existing tags as reference data |
+| `extractTitle` | `true` | boolean | Include title recommendations in results |
+| `extractCorrespondent` | `true` | boolean | Include correspondent recommendations in results |
+| `extractDocumentType` | `true` | boolean | Include document-type recommendations in results |
+| `extractTags` | `true` | boolean | Include tag recommendations in results |
 | `extractCustomFields` | `false` | boolean | Recommend values for existing Paperless custom fields |
 | `flexProcessing` | `true` | boolean | Use OpenAI Flex Processing for ~50% lower costs |
 | `reasoningEffort` | `low` | `none`, `low`, `medium`, `high` | Reasoning effort level |
-| `maxRetries` | `3` | 0--10 | Retry count on transient API failures |
+| `maxRetries` | `10` | 0--20 | Retry count on transient API failures |
 | `confidenceThresholdGlobal` | `0` | 0--1 | Minimum confidence for all fields (floor) |
+| `confidenceThresholdTitle` | `0` | 0--1 | Per-field override for title |
 | `confidenceThresholdCorrespondent` | `0` | 0--1 | Per-field override for correspondent |
 | `confidenceThresholdDocumentType` | `0` | 0--1 | Per-field override for document type |
 | `confidenceThresholdTags` | `0` | 0--1 | Per-field override for tags |
-| `neverAutoCreateEntities` | `false` | boolean | Block suggestions that would create new correspondents, document types, or tags |
-| `neverOverwriteNonEmpty` | `false` | boolean | Block suggestions that would overwrite an existing non-empty value |
-| `tagsOnlyAutoApply` | `false` | boolean | When auto-applying, only touch tags -- leave correspondent and document type for manual review |
-| `autoApplyEnabled` | `false` | boolean | Enable automatic application of high-confidence results after processing |
-| `autoApplyRequireAllAboveThreshold` | `true` | boolean | All fields must meet their confidence threshold |
-| `autoApplyRequireNoNewEntities` | `true` | boolean | Block auto-apply if new entities would be created |
-| `autoApplyRequireNoClearing` | `true` | boolean | Block auto-apply if existing values would be cleared |
-| `autoApplyRequireOcrText` | `true` | boolean | Block auto-apply for documents with no OCR text |
+| `protectedTagsEnabled` | `false` | boolean | Preserve configured tags during reviewed apply |
+| `protectedTagNames` | `["email"]` | string array | Tags protected from AI-driven changes |
+| `tagAliasesEnabled` | `false` | boolean | Normalize suggested tags through the alias map |
+| `tagAliasMap` | built-in | YAML string | Canonical tag-to-alias mappings |
+| `applyConcurrency` | `5` | 1--50 | Concurrent Paperless requests for a reviewed apply job |
+
+AI processing can be scheduled under **Settings > Automation**. Scheduled processing is an
+explicit opt-in and is disabled by default. It creates results for review; it never applies AI
+suggestions to Paperless automatically.
 
 ### Available Models
 
@@ -191,35 +197,20 @@ Before applying results in bulk, you can run a preflight check (`POST /api/v1/ai
 - How many results are no-ops (already matching)
 - How many results would destructively clear existing values
 - A confidence distribution breakdown (high/medium/low)
-- Gate evaluation results showing how many results would auto-apply vs. be blocked, with reasons
+- Confidence evaluation showing how many results fall below the configured review thresholds
 
-## Confidence Gates and Auto-Apply
+## Confidence Thresholds
 
-### Confidence Gates
-
-Confidence gates control which AI results are eligible for automatic application. Each suggestion's per-field confidence score is checked against configurable thresholds:
+Confidence thresholds highlight uncertain suggestions during review and preflight. Each
+suggestion's per-field confidence score is checked against configurable thresholds:
 
 - **Global threshold** (`confidenceThresholdGlobal`) -- floor applied to all fields
-- **Per-field thresholds** (`confidenceThresholdCorrespondent`, `confidenceThresholdDocumentType`, `confidenceThresholdTags`) -- per-field overrides; the effective threshold is the higher of global and per-field
+- **Per-field thresholds** (`confidenceThresholdTitle`, `confidenceThresholdCorrespondent`,
+  `confidenceThresholdDocumentType`, `confidenceThresholdTags`) -- per-field overrides; the
+  effective threshold is the higher of global and per-field
 
-Additional gates refine eligibility:
-
-- **`neverAutoCreateEntities`** -- blocks any suggestion that would create a new correspondent, document type, or tag
-- **`neverOverwriteNonEmpty`** -- blocks any suggestion that would overwrite an existing non-empty value with a different one
-- **`tagsOnlyAutoApply`** -- restricts auto-apply to tags only; correspondent and document type are left for manual review
-
-### Auto-Apply
-
-When `autoApplyEnabled` is turned on, results that pass all configured gates are automatically applied to Paperless-NGX after processing completes. Auto-apply is maximally conservative by default -- all four safety requirements are enabled:
-
-| Requirement | Default | Description |
-| --- | --- | --- |
-| `autoApplyRequireAllAboveThreshold` | `true` | Every field must meet its confidence threshold |
-| `autoApplyRequireNoNewEntities` | `true` | No new correspondents, types, or tags may be created |
-| `autoApplyRequireNoClearing` | `true` | Existing values may not be cleared |
-| `autoApplyRequireOcrText` | `true` | The document must have OCR text |
-
-Auto-apply never passes `allowClearing: true`, so existing metadata is always preserved. Results that fail gate evaluation remain in `pending_review` for manual review.
+Thresholds do not authorize mutation. Every result remains review-only until an operator previews
+and explicitly applies a selected set of fields.
 
 ## Cost Tracking
 

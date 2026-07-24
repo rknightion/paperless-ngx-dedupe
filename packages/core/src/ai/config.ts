@@ -1,13 +1,13 @@
 import { like } from 'drizzle-orm';
+import { coerceConfigBatch } from '../config/registry.js';
 import { appConfig } from '../schema/sqlite/app.js';
 import type { AppDatabase } from '../db/client.js';
-import { aiConfigSchema, AI_CONFIG_PREFIX } from './types.js';
+import { aiConfigSchema, AI_CONFIG_PREFIX, DEFAULT_AI_CONFIG } from './types.js';
 import type { AiConfig } from './types.js';
 
 function parseConfigValue(key: string, value: string): unknown {
   const shortKey = key.replace(AI_CONFIG_PREFIX, '');
   if (
-    shortKey === 'autoProcess' ||
     shortKey === 'addProcessedTag' ||
     shortKey === 'includeCorrespondents' ||
     shortKey === 'includeDocumentTypes' ||
@@ -55,6 +55,7 @@ export function getAiConfig(db: AppDatabase): AiConfig {
   const raw: Record<string, unknown> = {};
   for (const row of rows) {
     const shortKey = row.key.replace(AI_CONFIG_PREFIX, '');
+    if (!Object.hasOwn(DEFAULT_AI_CONFIG, shortKey)) continue;
     raw[shortKey] = parseConfigValue(row.key, row.value);
   }
 
@@ -62,6 +63,11 @@ export function getAiConfig(db: AppDatabase): AiConfig {
 }
 
 export function setAiConfig(db: AppDatabase, config: Partial<AiConfig>): AiConfig {
+  coerceConfigBatch(
+    Object.fromEntries(
+      Object.entries(config).map(([key, value]) => [`${AI_CONFIG_PREFIX}${key}`, value]),
+    ),
+  );
   const existing = getAiConfig(db);
   const merged = { ...existing, ...config };
   const validated = aiConfigSchema.parse(merged) as AiConfig;

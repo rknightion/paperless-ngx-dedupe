@@ -31,6 +31,9 @@ export function validateTagAliasYaml(yaml: string): TagAliasValidationResult {
   }
 
   for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      return { valid: false, error: `"${key}" is not a valid canonical tag` };
+    }
     if (!Array.isArray(value)) {
       return { valid: false, error: `"${key}" must map to an array of aliases` };
     }

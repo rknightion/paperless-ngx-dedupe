@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type Database from 'better-sqlite3';
+
+import type { AppDatabase } from '../../db/client.js';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import type { AppDatabase } from '../../db/client.js';
-import { setConfig, getConfig } from '../../queries/config.js';
-import { getDedupConfig } from '../../dedup/config.js';
 import { DEFAULT_DEDUP_CONFIG } from '../../dedup/types.js';
-import { exportConfig, importConfig } from '../config.js';
+import { getDedupConfig, setDedupConfig } from '../../dedup/config.js';
+import { getConfig, setConfig } from '../../queries/config.js';
+import { exportConfig, importConfig, previewConfigImport } from '../config.js';
 
 let db: AppDatabase;
 let sqlite: Database.Database;
@@ -18,162 +19,409 @@ beforeEach(async () => {
   await migrateDatabase(handle.sqlite);
 });
 
+function backup(appConfig: Record<string, unknown> = {}) {
+  return {
+    version: '1.0',
+    exportedAt: '2024-01-01T00:00:00Z',
+    appConfig,
+    dedupConfig: DEFAULT_DEDUP_CONFIG,
+  };
+}
+
 describe('exportConfig', () => {
-  it('excludes schema_ddl_ keys from appConfig', () => {
-    setConfig(db, 'schema_ddl_hash', 'abc123');
-    setConfig(db, 'schema_ddl_snapshot', 'CREATE TABLE...');
-    setConfig(db, 'theme', 'dark');
-
-    const backup = exportConfig(db);
-
-    expect(backup.appConfig).not.toHaveProperty('schema_ddl_hash');
-    expect(backup.appConfig).not.toHaveProperty('schema_ddl_snapshot');
-    expect(backup.appConfig.theme).toBe('dark');
-  });
-
-  it('filters legacy stored credential rows from backups', () => {
+  it('exports only registered mutable keys and never stored secrets or internal state', () => {
     const now = new Date().toISOString();
     const insert = sqlite.prepare(
-      'INSERT INTO app_config (key, value, updated_at) VALUES (?, ?, ?)',
+      'INSERT OR REPLACE INTO app_config (key, value, updated_at) VALUES (?, ?, ?)',
     );
     for (const [key, value] of [
-      ['paperless.url', 'http://paperless.example.test'],
+      ['schema_ddl_hash', 'abc123'],
+      ['schema_ddl_snapshot', 'CREATE TABLE secret_data'],
       ['paperless.apiToken', 'paperless-secret'],
-      ['openaiApiKey', 'openai-api-key'],
-      ['paperlessApiToken', 'paperless-api-token'],
-      ['clientSecret', 'client-secret'],
-      ['secretKey', 'secret-key'],
-      ['clientSecretKey', 'client-secret-key'],
-      ['privateKey', 'private-key'],
-      ['accessToken', 'access-token'],
-      ['databasePassword', 'database-password'],
-      ['paperlessUrl', 'http://paperless.example.test'],
-      ['paperless-url', 'http://legacy-paperless.example.test'],
+      ['AI_OPENAI_API_KEY', 'openai-secret'],
+      ['openaiApiKey', 'legacy-openai-secret'],
+      ['unknown.safe-looking', 'must-not-export'],
     ]) {
       insert.run(key, value, now);
     }
-    setConfig(db, 'theme', 'dark');
+    setConfig(db, 'ai.model', 'gpt-5.4');
+    setConfig(db, 'ai.extractCustomFields', true);
 
-    const backup = exportConfig(db);
+    const result = exportConfig(db);
+    const serialized = JSON.stringify(result);
 
-    for (const secret of [
-      'paperless-secret',
-      'openai-api-key',
-      'paperless-api-token',
-      'client-secret',
-      'secret-key',
-      'client-secret-key',
-      'private-key',
-      'access-token',
-      'database-password',
-    ]) {
-      expect(JSON.stringify(backup)).not.toContain(secret);
-    }
-    expect(backup.appConfig).toEqual({
+    expect(result.appConfig).toEqual({
+      'ai.extractCustomFields': 'true',
+      'ai.model': 'gpt-5.4',
       'automation.aiMaxDocumentsPerRun': '25',
       'automation.aiMonthlyBudgetUsd': '0',
-      theme: 'dark',
+    });
+    for (const forbidden of [
+      'paperless-secret',
+      'openai-secret',
+      'legacy-openai-secret',
+      'must-not-export',
+      'CREATE TABLE secret_data',
+    ]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+  });
+
+  it('includes the current dedup config and format metadata', () => {
+    setDedupConfig(db, { minWords: 42 });
+    const result = exportConfig(db);
+
+    expect(result.dedupConfig).toEqual({ ...DEFAULT_DEDUP_CONFIG, minWords: 42 });
+    expect(Object.keys(result.appConfig).some((key) => key.startsWith('dedup.'))).toBe(false);
+    expect(result.version).toBe('1.0');
+    expect(result.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe('previewConfigImport', () => {
+  it('previews the v0.15 auto-process migration and every retired auto-apply key', () => {
+    const result = previewConfigImport(
+      backup({
+        'ai.model': 'gpt-5.4',
+        'ai.autoProcess': 'true',
+        'ai.autoApplyEnabled': 'true',
+        'ai.autoApplyRequireAllAboveThreshold': 'true',
+        'ai.autoApplyRequireNoNewEntities': 'true',
+        'ai.autoApplyRequireNoClearing': 'true',
+        'ai.autoApplyRequireOcrText': 'true',
+        'ai.tagsOnlyAutoApply': 'true',
+        'ai.neverAutoCreateEntities': 'true',
+        'ai.neverOverwriteNonEmpty': 'true',
+      }),
+    );
+
+    expect(result.appConfig).toEqual({ 'ai.model': 'gpt-5.4' });
+    expect(result.deprecatedKeys).toEqual([
+      {
+        key: 'ai.autoProcess',
+        action: 'scheduled_ai_opt_in',
+        requiresConfirmation: true,
+      },
+    ]);
+    expect(result.droppedKeys).toEqual([
+      'ai.autoApplyEnabled',
+      'ai.autoApplyRequireAllAboveThreshold',
+      'ai.autoApplyRequireNoClearing',
+      'ai.autoApplyRequireNoNewEntities',
+      'ai.autoApplyRequireOcrText',
+      'ai.neverAutoCreateEntities',
+      'ai.neverOverwriteNonEmpty',
+      'ai.tagsOnlyAutoApply',
+    ]);
+    expect(result.scheduledAiOptIn).toEqual({
+      requested: true,
+      requiresConfirmation: true,
     });
   });
 
-  it('includes dedupConfig', () => {
-    const backup = exportConfig(db);
+  it('rejects unknown, prototype-pollution, and confusable keys', () => {
+    for (const key of ['unknown.setting', '__proto__', 'constructor', 'ai．batchSize']) {
+      const appConfig = Object.create(null) as Record<string, unknown>;
+      Object.defineProperty(appConfig, key, { value: '1', enumerable: true });
 
-    expect(backup.dedupConfig).toEqual(DEFAULT_DEDUP_CONFIG);
-    expect(backup.version).toBe('1.0');
-    expect(backup.exportedAt).toBeTruthy();
+      expect(() => previewConfigImport(backup(appConfig))).toThrow();
+    }
+  });
+
+  it.each(['unknown', '__proto__', 'constructor', 'prototype', 'minＷords'])(
+    'rejects unknown or confusable dedup key %s before schema cloning',
+    (key) => {
+      const dedupConfig = Object.create(null) as Record<string, unknown>;
+      for (const [knownKey, value] of Object.entries(DEFAULT_DEDUP_CONFIG)) {
+        Object.defineProperty(dedupConfig, knownKey, { value, enumerable: true });
+      }
+      Object.defineProperty(dedupConfig, key, { value: 50, enumerable: true });
+
+      expect(() =>
+        previewConfigImport({
+          ...backup(),
+          dedupConfig,
+        }),
+      ).toThrow();
+    },
+  );
+
+  it('rejects dedup settings duplicated across appConfig and dedupConfig', () => {
+    expect(() =>
+      previewConfigImport(
+        backup({
+          'dedup.minWords': '50',
+        }),
+      ),
+    ).toThrow(/dedupConfig/i);
+  });
+
+  it('previews known legacy environment and schema keys as dropped without retaining values', () => {
+    const result = previewConfigImport(
+      backup({
+        PAPERLESS_URL: 'https://private.example.test',
+        PAPERLESS_API_TOKEN: 'private-token',
+        AI_OPENAI_API_KEY: 'sk-private',
+        accessToken: 'legacy-access-token',
+        openai_api_key: 'legacy-openai-key',
+        schema_ddl_hash: 'private-hash',
+      }),
+    );
+
+    expect(result.appConfig).toEqual({});
+    expect(result.droppedKeys).toEqual([
+      'AI_OPENAI_API_KEY',
+      'PAPERLESS_API_TOKEN',
+      'PAPERLESS_URL',
+      'accessToken',
+      'openai_api_key',
+      'schema_ddl_hash',
+    ]);
+    expect(JSON.stringify(result)).not.toContain('private-token');
+    expect(JSON.stringify(result)).not.toContain('sk-private');
+    expect(JSON.stringify(result)).not.toContain('legacy-access-token');
   });
 });
 
 describe('importConfig', () => {
-  it('imports valid mutable data while discarding obsolete connection settings', () => {
-    const data = {
-      version: '1.0',
-      exportedAt: '2024-01-01T00:00:00Z',
-      appConfig: {
-        paperless_url: 'http://localhost:8000',
-        api_token: 'secret',
-        'paperless.apiToken': 'new-secret',
-        AI_OPENAI_API_KEY: 'sk-secret',
-        openaiApiKey: 'openai-key',
-        clientSecret: 'client-secret',
-        accessToken: 'access-token',
-        databasePassword: 'database-password',
-        secretKey: 'secret-key',
-        clientSecretKey: 'client-secret-key',
-        privateKey: 'private-key',
-        paperlessUrl: 'http://paperless.example.test',
-        'paperless-url': 'http://legacy-paperless.example.test',
-        theme: 'dark',
+  it('imports a fully validated batch and dedup settings', () => {
+    const result = importConfig(
+      db,
+      backup({
+        'ai.batchSize': '050',
+        'ai.extractCustomFields': true,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      appConfigKeys: 2,
+      dedupConfigUpdated: true,
+      scheduledAiOptIn: {
+        requested: false,
+        applied: false,
+        reason: 'not_requested',
       },
-      dedupConfig: {
-        ...DEFAULT_DEDUP_CONFIG,
-        minWords: 50,
-      },
-    };
-
-    const result = importConfig(db, data);
-
-    expect(result.appConfigKeys).toBe(1);
-    expect(result.dedupConfigUpdated).toBe(true);
-
-    const config = getConfig(db);
-    expect(config).not.toHaveProperty('paperless_url');
-    expect(config).not.toHaveProperty('api_token');
-    expect(config).not.toHaveProperty('paperless.apiToken');
-    expect(config).not.toHaveProperty('AI_OPENAI_API_KEY');
-    expect(config).not.toHaveProperty('openaiApiKey');
-    expect(config).not.toHaveProperty('clientSecret');
-    expect(config).not.toHaveProperty('accessToken');
-    expect(config).not.toHaveProperty('databasePassword');
-    expect(config).not.toHaveProperty('secretKey');
-    expect(config).not.toHaveProperty('clientSecretKey');
-    expect(config).not.toHaveProperty('privateKey');
-    expect(config).not.toHaveProperty('paperlessUrl');
-    expect(config).not.toHaveProperty('paperless-url');
-    expect(config.theme).toBe('dark');
-
-    const dedupConfig = getDedupConfig(db);
-    expect(dedupConfig.minWords).toBe(50);
+    });
+    expect(getConfig(db)).toMatchObject({
+      'ai.batchSize': '50',
+      'ai.extractCustomFields': 'true',
+    });
   });
 
-  it('rejects invalid version', () => {
-    const data = {
-      version: '2.0',
-      exportedAt: '2024-01-01T00:00:00Z',
-      appConfig: {},
-      dedupConfig: DEFAULT_DEDUP_CONFIG,
-    };
+  it('does not parse an unrelated schedule when no scheduled-AI migration is requested', () => {
+    sqlite
+      .prepare(
+        `UPDATE automation_schedule
+         SET cadence_json = 'not-json'
+         WHERE task = 'ai_processing'`,
+      )
+      .run();
 
-    expect(() => importConfig(db, data)).toThrow();
+    const result = importConfig(db, backup({ 'ai.model': 'gpt-5.4' }));
+
+    expect(result.scheduledAiOptIn).toEqual({
+      requested: false,
+      applied: false,
+      reason: 'not_requested',
+    });
+    expect(getConfig(db)['ai.model']).toBe('gpt-5.4');
   });
 
-  it('filters out schema_ddl_ keys from appConfig before applying', () => {
-    const data = {
-      version: '1.0',
-      exportedAt: '2024-01-01T00:00:00Z',
-      appConfig: {
-        schema_ddl_hash: 'should_be_filtered',
-        schema_ddl_snapshot: 'should_also_be_filtered',
-        theme: 'dark',
-      },
-      dedupConfig: DEFAULT_DEDUP_CONFIG,
-    };
+  it('validates all app settings before changing app or dedup configuration', () => {
+    setConfig(db, 'ai.model', 'gpt-5.4-mini');
+    const beforeDedup = getDedupConfig(db);
 
-    const result = importConfig(db, data);
+    expect(() =>
+      importConfig(db, {
+        ...backup({
+          'ai.model': 'gpt-5.4',
+          'ai.batchSize': 'not-an-integer',
+        }),
+        dedupConfig: { ...DEFAULT_DEDUP_CONFIG, minWords: 99 },
+      }),
+    ).toThrow();
 
-    expect(result.appConfigKeys).toBe(1);
-
-    const config = getConfig(db);
-    expect(config.theme).toBe('dark');
-    // schema_ddl_ keys from import should not overwrite existing ones
+    expect(getConfig(db)['ai.model']).toBe('gpt-5.4-mini');
+    expect(getDedupConfig(db)).toEqual(beforeDedup);
   });
 
-  it('imports 1.1.0 backup with 3-weight config (backward compat)', () => {
-    const data = {
-      version: '1.0',
-      exportedAt: '2024-01-01T00:00:00Z',
-      appConfig: {},
+  it('never enables a deprecated auto-process request without explicit confirmation', () => {
+    const result = importConfig(db, backup({ 'ai.autoProcess': 'true' }));
+    const schedule = sqlite
+      .prepare(
+        "SELECT enabled, cadence_json AS cadenceJson FROM automation_schedule WHERE task = 'ai_processing'",
+      )
+      .get() as { enabled: number; cadenceJson: string };
+
+    expect(result.scheduledAiOptIn).toEqual({
+      requested: true,
+      applied: false,
+      reason: 'confirmation_required',
+    });
+    expect(schedule.enabled).toBe(0);
+    expect(getConfig(db)).not.toHaveProperty('ai.autoProcess');
+  });
+
+  it('leaves a confirmed request unapplied when the AI schedule is manual', () => {
+    const result = importConfig(db, backup({ 'ai.autoProcess': 'true' }), {
+      confirmScheduledAiOptIn: true,
+    });
+    const schedule = sqlite
+      .prepare("SELECT enabled FROM automation_schedule WHERE task = 'ai_processing'")
+      .get() as { enabled: number };
+
+    expect(result.scheduledAiOptIn).toEqual({
+      requested: true,
+      applied: false,
+      reason: 'schedule_not_configured',
+    });
+    expect(schedule.enabled).toBe(0);
+  });
+
+  it('enables only an already-configured AI schedule after explicit confirmation', () => {
+    sqlite
+      .prepare(
+        `UPDATE automation_schedule
+         SET enabled = 0, cadence_json = ?, timezone = 'Europe/London', next_due_at = NULL
+         WHERE task = 'ai_processing'`,
+      )
+      .run(JSON.stringify({ kind: 'daily', hour: 3, minute: 15 }));
+    sqlite
+      .prepare(
+        `UPDATE app_config SET value = '5'
+         WHERE key = 'automation.aiMonthlyBudgetUsd'`,
+      )
+      .run();
+
+    const result = importConfig(db, backup({ 'ai.autoProcess': 'true' }), {
+      confirmScheduledAiOptIn: true,
+    });
+    const schedule = sqlite
+      .prepare(
+        `SELECT enabled, cadence_json AS cadenceJson, timezone
+         FROM automation_schedule WHERE task = 'ai_processing'`,
+      )
+      .get() as { enabled: number; cadenceJson: string; timezone: string };
+
+    expect(result.scheduledAiOptIn).toEqual({
+      requested: true,
+      applied: true,
+      reason: 'confirmed',
+    });
+    expect(schedule).toEqual({
+      enabled: 1,
+      cadenceJson: JSON.stringify({ kind: 'daily', hour: 3, minute: 15 }),
+      timezone: 'Europe/London',
+    });
+    expect(getConfig(db)).not.toHaveProperty('ai.autoProcess');
+  });
+
+  it('leaves a confirmed request unapplied when a scheduled cadence has no budget', () => {
+    sqlite
+      .prepare(
+        `UPDATE automation_schedule
+         SET cadence_json = ?
+         WHERE task = 'ai_processing'`,
+      )
+      .run(JSON.stringify({ kind: 'interval', hours: 6 }));
+
+    const result = importConfig(db, backup({ 'ai.autoProcess': 'true' }), {
+      confirmScheduledAiOptIn: true,
+    });
+    const schedule = sqlite
+      .prepare("SELECT enabled FROM automation_schedule WHERE task = 'ai_processing'")
+      .get() as { enabled: number };
+
+    expect(result.scheduledAiOptIn).toEqual({
+      requested: true,
+      applied: false,
+      reason: 'schedule_not_configured',
+    });
+    expect(schedule.enabled).toBe(0);
+  });
+
+  it('does not let the same import bootstrap schedule prerequisites', () => {
+    sqlite
+      .prepare(
+        `UPDATE automation_schedule
+         SET cadence_json = ?
+         WHERE task = 'ai_processing'`,
+      )
+      .run(JSON.stringify({ kind: 'interval', hours: 6 }));
+
+    const result = importConfig(
+      db,
+      backup({
+        'ai.autoProcess': 'true',
+        'automation.aiMonthlyBudgetUsd': '5',
+        'automation.aiMaxDocumentsPerRun': '25',
+      }),
+      { confirmScheduledAiOptIn: true },
+    );
+
+    expect(result.scheduledAiOptIn).toEqual({
+      requested: true,
+      applied: false,
+      reason: 'schedule_not_configured',
+    });
+    expect(
+      sqlite.prepare("SELECT enabled FROM automation_schedule WHERE task = 'ai_processing'").get(),
+    ).toEqual({ enabled: 0 });
+  });
+
+  it('rejects semantically invalid tag aliases before changing any settings', () => {
+    setConfig(db, 'ai.model', 'gpt-5.4-mini');
+
+    expect(() =>
+      importConfig(
+        db,
+        backup({
+          'ai.model': 'gpt-5.4',
+          'ai.tagAliasMap': '__proto__:\n  - unsafe',
+        }),
+      ),
+    ).toThrow();
+
+    expect(getConfig(db)['ai.model']).toBe('gpt-5.4-mini');
+  });
+
+  it('never revives retired auto-apply keys even when schedule opt-in is confirmed', () => {
+    sqlite
+      .prepare(
+        `UPDATE automation_schedule
+         SET cadence_json = ?
+         WHERE task = 'ai_processing'`,
+      )
+      .run(JSON.stringify({ kind: 'interval', hours: 6 }));
+    sqlite
+      .prepare(
+        `UPDATE app_config SET value = '5'
+         WHERE key = 'automation.aiMonthlyBudgetUsd'`,
+      )
+      .run();
+
+    importConfig(
+      db,
+      backup({
+        'ai.autoProcess': 'true',
+        'ai.autoApplyEnabled': 'true',
+        'ai.tagsOnlyAutoApply': 'true',
+      }),
+      { confirmScheduledAiOptIn: true },
+    );
+
+    const retiredRows = sqlite
+      .prepare(
+        `SELECT key FROM app_config
+         WHERE key LIKE 'ai.autoApply%' OR key = 'ai.tagsOnlyAutoApply'`,
+      )
+      .all();
+    expect(retiredRows).toEqual([]);
+  });
+
+  it('imports legacy 3-weight dedup configuration', () => {
+    const result = importConfig(db, {
+      ...backup(),
       dedupConfig: {
         numPermutations: 256,
         numBands: 32,
@@ -186,35 +434,17 @@ describe('importConfig', () => {
         fuzzySampleSize: 10000,
         autoAnalyze: true,
       },
-    };
+    });
 
-    const result = importConfig(db, data);
     expect(result.dedupConfigUpdated).toBe(true);
-
-    const dedupConfig = getDedupConfig(db);
-    // J+F redistributed to sum to 100
-    expect(dedupConfig.confidenceWeightJaccard + dedupConfig.confidenceWeightFuzzy).toBe(100);
-    // Penalty strength derived from old D weight
-    expect(dedupConfig.discriminativePenaltyStrength).toBe(70);
-    // Old field should not exist
-    expect('confidenceWeightDiscriminative' in dedupConfig).toBe(false);
+    expect(getDedupConfig(db)).toMatchObject({
+      confidenceWeightJaccard: 59,
+      confidenceWeightFuzzy: 41,
+      discriminativePenaltyStrength: 70,
+    });
   });
 
-  it('returns correct counts', () => {
-    const data = {
-      version: '1.0',
-      exportedAt: '2024-01-01T00:00:00Z',
-      appConfig: {
-        key1: 'val1',
-        key2: 'val2',
-        key3: 'val3',
-      },
-      dedupConfig: DEFAULT_DEDUP_CONFIG,
-    };
-
-    const result = importConfig(db, data);
-
-    expect(result.appConfigKeys).toBe(3);
-    expect(result.dedupConfigUpdated).toBe(true);
+  it('rejects unsupported backup versions', () => {
+    expect(() => importConfig(db, { ...backup(), version: '2.0' })).toThrow();
   });
 });

@@ -120,53 +120,83 @@ export const OPENAI_MODELS = [
   { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano' },
 ] as const;
 
-export const aiConfigSchema = z.object({
-  provider: z.literal('openai').default('openai'),
-  model: z.string().default('gpt-5.4-mini'),
-  promptTemplate: z.string().default(DEFAULT_EXTRACTION_PROMPT),
-  maxContentLength: z.number().int().min(500).max(100000).default(8000),
-  batchSize: z.number().int().min(1).max(500).default(100),
-  rateDelayMs: z.number().int().min(0).max(60000).default(0),
-  autoProcess: z.boolean().default(false),
-  processedTagName: z.string().default('ai-processed'),
-  addProcessedTag: z.boolean().default(false),
-  includeCorrespondents: z.boolean().default(false),
-  includeDocumentTypes: z.boolean().default(false),
-  includeTags: z.boolean().default(false),
-  reasoningEffort: z.enum(['none', 'low', 'medium', 'high']).default('low'),
-  maxRetries: z.number().int().min(0).max(20).default(10),
-  maxOutputTokens: z.number().int().min(1).max(100000).default(1000),
-  flexProcessing: z.boolean().default(true),
+export const aiConfigSchema = z
+  .object({
+    provider: z.literal('openai').default('openai'),
+    model: z.string().default('gpt-5.4-mini'),
+    promptTemplate: z.string().default(DEFAULT_EXTRACTION_PROMPT),
+    maxContentLength: z.number().int().min(500).max(100000).default(8000),
+    batchSize: z.number().int().min(1).max(500).default(100),
+    rateDelayMs: z.number().int().min(0).max(60000).default(0),
+    processedTagName: z.string().default('ai-processed'),
+    addProcessedTag: z.boolean().default(false),
+    includeCorrespondents: z.boolean().default(false),
+    includeDocumentTypes: z.boolean().default(false),
+    includeTags: z.boolean().default(false),
+    reasoningEffort: z.enum(['none', 'low', 'medium', 'high']).default('low'),
+    maxRetries: z.number().int().min(0).max(20).default(10),
+    maxOutputTokens: z.number().int().min(1).max(100000).default(1000),
+    flexProcessing: z.boolean().default(true),
 
-  // Per-field extraction enable/disable (prompt always extracts all; disabled fields are ignored in review/apply)
-  extractTitle: z.boolean().default(true),
-  extractCorrespondent: z.boolean().default(true),
-  extractDocumentType: z.boolean().default(true),
-  extractTags: z.boolean().default(true),
-  extractCustomFields: z.boolean().default(false),
+    // Per-field extraction enable/disable (prompt always extracts all; disabled fields are ignored in review/apply)
+    extractTitle: z.boolean().default(true),
+    extractCorrespondent: z.boolean().default(true),
+    extractDocumentType: z.boolean().default(true),
+    extractTags: z.boolean().default(true),
+    extractCustomFields: z.boolean().default(false),
 
-  // Confidence gates
-  confidenceThresholdGlobal: z.number().min(0).max(1).default(0),
-  confidenceThresholdTitle: z.number().min(0).max(1).default(0),
-  confidenceThresholdCorrespondent: z.number().min(0).max(1).default(0),
-  confidenceThresholdDocumentType: z.number().min(0).max(1).default(0),
-  confidenceThresholdTags: z.number().min(0).max(1).default(0),
+    // Confidence gates
+    confidenceThresholdGlobal: z.number().min(0).max(1).default(0),
+    confidenceThresholdTitle: z.number().min(0).max(1).default(0),
+    confidenceThresholdCorrespondent: z.number().min(0).max(1).default(0),
+    confidenceThresholdDocumentType: z.number().min(0).max(1).default(0),
+    confidenceThresholdTags: z.number().min(0).max(1).default(0),
 
-  // Protected tags — never add or remove these tags during AI apply
-  protectedTagsEnabled: z.boolean().default(false),
-  protectedTagNames: z.array(z.string()).default(['email']),
+    // Protected tags — never add or remove these tags during AI apply
+    protectedTagsEnabled: z.boolean().default(false),
+    protectedTagNames: z.array(z.string()).default(['email']),
 
-  // Tag alias mapping — normalise LLM tag suggestions via canonical→alias YAML map
-  tagAliasesEnabled: z.boolean().default(false),
-  tagAliasMap: z.string().default(DEFAULT_TAG_ALIAS_MAP),
+    // Tag alias mapping — normalise LLM tag suggestions via canonical→alias YAML map
+    tagAliasesEnabled: z.boolean().default(false),
+    tagAliasMap: z.string().default(DEFAULT_TAG_ALIAS_MAP),
 
-  // Concurrency for applying results to Paperless-NGX
-  applyConcurrency: z.number().int().min(1).max(50).default(5),
-});
+    // Concurrency for applying results to Paperless-NGX
+    applyConcurrency: z.number().int().min(1).max(50).default(5),
+  })
+  .strict();
 
 export type AiConfig = z.infer<typeof aiConfigSchema>;
 
 export const DEFAULT_AI_CONFIG: AiConfig = aiConfigSchema.parse({});
+
+export const aiFieldSelectionSchema = z
+  .object({
+    title: z.boolean(),
+    correspondent: z.boolean(),
+    documentType: z.boolean(),
+    tags: z.boolean(),
+    processedTag: z.boolean(),
+    customFieldIds: z
+      .array(z.number().int().positive())
+      .transform((ids) => [...new Set(ids)].sort((a, b) => a - b)),
+  })
+  .superRefine((selection, context) => {
+    if (
+      !selection.title &&
+      !selection.correspondent &&
+      !selection.documentType &&
+      !selection.tags &&
+      !selection.processedTag &&
+      selection.customFieldIds.length === 0
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'At least one AI field must be selected',
+      });
+    }
+  });
+
+export type AiFieldSelection = z.infer<typeof aiFieldSelectionSchema>;
 
 export interface AiBatchResult {
   totalDocuments: number;

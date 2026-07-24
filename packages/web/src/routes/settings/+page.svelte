@@ -19,6 +19,7 @@
   } from 'lucide-svelte';
   import { parse as parseYaml } from 'yaml';
   import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
+  import DiagnosticsSettings from '$lib/components/settings/DiagnosticsSettings.svelte';
 
   /** Validate YAML string as a tag alias map (Record<string, string[]>). */
   function validateTagAliasYaml(yaml: string): { valid: boolean; error?: string } {
@@ -78,7 +79,6 @@
   // AI Settings
   const initialAiConfig = untrack(() => data.aiConfig);
   let aiModel = $state(initialAiConfig?.model ?? 'gpt-5-mini');
-  let aiAutoProcess = $state(initialAiConfig?.autoProcess ?? false);
   let aiAddProcessedTag = $state(initialAiConfig?.addProcessedTag ?? false);
   let aiProcessedTagName = $state(initialAiConfig?.processedTagName ?? 'ai-processed');
   let aiProtectedTagsEnabled = $state(initialAiConfig?.protectedTagsEnabled ?? false);
@@ -274,7 +274,6 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: aiModel,
-          autoProcess: aiAutoProcess,
           addProcessedTag: aiAddProcessedTag,
           processedTagName: aiProcessedTagName,
           promptTemplate: aiPromptTemplate,
@@ -859,14 +858,8 @@
         </RichTooltip>
       </div>
 
-      <!-- Auto-Process & Tag -->
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <div class="flex items-center">
-          <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiAutoProcess} class="rounded" />
-            Auto-process new documents after sync
-          </label>
-        </div>
+      <!-- Processed tag -->
+      <div class="mt-4">
         <div class="flex items-center gap-3">
           <label class="text-muted flex items-center gap-2 text-sm">
             <input type="checkbox" bind:checked={aiAddProcessedTag} class="rounded" />
@@ -1400,6 +1393,8 @@
       </div>
     </dl>
   </div>
+
+  <DiagnosticsSettings />
 
   <!-- Backup & Restore -->
   <div class="panel" id="backup">

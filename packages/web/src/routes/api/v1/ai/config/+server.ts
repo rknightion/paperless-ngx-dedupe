@@ -1,4 +1,5 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
+import { parseUniqueJson } from '$lib/server/unique-json';
 import {
   getAiConfig,
   setAiConfig,
@@ -20,7 +21,12 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = parseUniqueJson(await request.text());
+  } catch {
+    return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid JSON body');
+  }
   const result = aiConfigSchema.partial().safeParse(body);
 
   if (!result.success) {

@@ -22,56 +22,58 @@ test.describe('Config API', () => {
     expect(body.data['paperless.apiToken']).toBeUndefined();
   });
 
-  test('PUT /api/v1/config never persists credential values', async ({ request }) => {
+  test('PUT /api/v1/config rejects credential values without partial writes', async ({
+    request,
+  }) => {
     const secret = 'paperless-secret-that-must-not-return';
     const response = await request.put('/api/v1/config', {
       data: {
         settings: {
           'paperless.apiToken': secret,
           'openai.apiKey': 'sk-secret-that-must-not-return',
-          theme: 'dark',
+          'ai.model': 'must-not-persist',
         },
       },
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(400);
     const body = await response.json();
     expect(JSON.stringify(body)).not.toContain(secret);
-    expect(body.data).not.toHaveProperty('paperless.apiToken');
-    expect(body.data).not.toHaveProperty('openai.apiKey');
-    expect(body.data.theme).toBe('dark');
+    expect(body.error.code).toBe('VALIDATION_FAILED');
+    const getBody = await (await request.get('/api/v1/config')).json();
+    expect(getBody.data).not.toHaveProperty('ai.model');
   });
 
   test('PUT /api/v1/config updates single config key', async ({ request }) => {
     const response = await request.put('/api/v1/config', {
-      data: { key: 'test.setting', value: 'hello-world' },
+      data: { key: 'ai.model', value: 'gpt-5.4' },
     });
 
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.data).toBeDefined();
-    expect(body.data['test.setting']).toBe('hello-world');
+    expect(body.data['ai.model']).toBe('gpt-5.4');
 
     // Verify persistence
     const getResponse = await request.get('/api/v1/config');
     const getBody = await getResponse.json();
-    expect(getBody.data['test.setting']).toBe('hello-world');
+    expect(getBody.data['ai.model']).toBe('gpt-5.4');
   });
 
   test('PUT /api/v1/config updates batch config', async ({ request }) => {
     const response = await request.put('/api/v1/config', {
       data: {
         settings: {
-          'batch.key1': 'value1',
-          'batch.key2': 'value2',
+          'ai.batchSize': 50,
+          'ai.extractCustomFields': true,
         },
       },
     });
 
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body.data['batch.key1']).toBe('value1');
-    expect(body.data['batch.key2']).toBe('value2');
+    expect(body.data['ai.batchSize']).toBe('50');
+    expect(body.data['ai.extractCustomFields']).toBe('true');
   });
 
   test('PUT /api/v1/config rejects invalid body', async ({ request }) => {
@@ -83,6 +85,31 @@ test.describe('Config API', () => {
     const body = await response.json();
     expect(body.error).toBeDefined();
     expect(body.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  test('all config mutation routes reject duplicate JSON property names', async ({ request }) => {
+    const cases = [
+      {
+        path: '/api/v1/config',
+        body: '{"settings":{"ai.model":"gpt-5.4-mini","ai.model":"gpt-5.4"}}',
+      },
+      {
+        path: '/api/v1/ai/config',
+        body: '{"model":"gpt-5.4-mini","m\\u006fdel":"gpt-5.4"}',
+      },
+      {
+        path: '/api/v1/config/dedup',
+        body: '{"minWords":10,"minWords":20}',
+      },
+    ];
+
+    for (const item of cases) {
+      const response = await request.put(item.path, {
+        headers: { 'Content-Type': 'application/json' },
+        data: item.body,
+      });
+      expect(response.status(), item.path).toBe(400);
+    }
   });
 
   test('GET /api/v1/config/dedup returns dedup config', async ({ request }) => {

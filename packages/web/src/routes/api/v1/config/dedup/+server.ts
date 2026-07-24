@@ -1,4 +1,5 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
+import { parseUniqueJson } from '$lib/server/unique-json';
 import {
   getDedupConfig,
   setDedupConfig,
@@ -21,7 +22,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = parseUniqueJson(await request.text());
   } catch {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid JSON body');
   }

@@ -32,12 +32,12 @@ describe('getConfig', () => {
   });
 
   it('returns all mutable config rows as key-value pairs', () => {
-    setConfig(db, 'sync.batchSize', '100');
-    setConfig(db, 'theme', 'dark');
+    setConfig(db, 'ai.batchSize', '100');
+    setConfig(db, 'ai.model', 'gpt-5.4');
 
     const config = getConfig(db);
-    expect(config['sync.batchSize']).toBe('100');
-    expect(config.theme).toBe('dark');
+    expect(config['ai.batchSize']).toBe('100');
+    expect(config['ai.model']).toBe('gpt-5.4');
     expect(Object.keys(config).length).toBe(baseKeyCount + 2);
   });
 });
@@ -54,27 +54,27 @@ describe('setConfig', () => {
   });
 
   it('inserts a new key', () => {
-    setConfig(db, 'theme', 'dark');
+    setConfig(db, 'ai.model', 'gpt-5.4');
 
     const config = getConfig(db);
-    expect(config.theme).toBe('dark');
+    expect(config['ai.model']).toBe('gpt-5.4');
   });
 
   it('updates an existing key (upsert)', () => {
-    setConfig(db, 'theme', 'dark');
-    setConfig(db, 'theme', 'light');
+    setConfig(db, 'ai.model', 'gpt-5.4-mini');
+    setConfig(db, 'ai.model', 'gpt-5.4');
 
     const config = getConfig(db);
-    expect(config.theme).toBe('light');
+    expect(config['ai.model']).toBe('gpt-5.4');
   });
 
   it('does not create duplicate keys on upsert', () => {
-    setConfig(db, 'key1', 'value1');
-    setConfig(db, 'key1', 'value2');
+    setConfig(db, 'ai.model', 'gpt-5.4-mini');
+    setConfig(db, 'ai.model', 'gpt-5.4');
 
     const config = getConfig(db);
     expect(Object.keys(config).length).toBe(baseKeyCount + 1);
-    expect(config.key1).toBe('value2');
+    expect(config['ai.model']).toBe('gpt-5.4');
   });
 });
 
@@ -91,41 +91,87 @@ describe('setConfigBatch', () => {
 
   it('inserts multiple keys atomically', () => {
     setConfigBatch(db, {
-      theme: 'dark',
-      language: 'en',
-      'sync.batchSize': '100',
+      'ai.model': 'gpt-5.4',
+      'ai.batchSize': '100',
+      'ai.extractCustomFields': 'true',
     });
 
     const config = getConfig(db);
-    expect(config.theme).toBe('dark');
+    expect(config['ai.model']).toBe('gpt-5.4');
     expect(Object.keys(config).length).toBe(baseKeyCount + 3);
   });
 
   it('handles mixed insert and update', () => {
-    setConfig(db, 'theme', 'dark');
-    setConfig(db, 'lang', 'en');
+    setConfig(db, 'ai.model', 'gpt-5.4-mini');
+    setConfig(db, 'ai.processedTagName', 'processed');
 
     setConfigBatch(db, {
-      theme: 'light', // update existing
-      new_key: 'new_val', // insert new
+      'ai.model': 'gpt-5.4', // update existing
+      'ai.batchSize': '50', // insert new
     });
 
     const config = getConfig(db);
-    expect(config.theme).toBe('light');
-    expect(config.new_key).toBe('new_val');
-    expect(config.lang).toBe('en'); // unchanged
+    expect(config['ai.model']).toBe('gpt-5.4');
+    expect(config['ai.batchSize']).toBe('50');
+    expect(config['ai.processedTagName']).toBe('processed'); // unchanged
   });
 
   it('all values are correct after batch', () => {
-    setConfigBatch(db, { a: '1', b: '2', c: '3' });
-    setConfigBatch(db, { b: '20', d: '4' });
+    setConfigBatch(db, {
+      'ai.batchSize': '10',
+      'ai.maxRetries': '2',
+      'ai.applyConcurrency': '3',
+    });
+    setConfigBatch(db, { 'ai.maxRetries': '4', 'ai.maxOutputTokens': '500' });
 
     const config = getConfig(db);
-    expect(config.a).toBe('1');
-    expect(config.b).toBe('20');
-    expect(config.c).toBe('3');
-    expect(config.d).toBe('4');
+    expect(config['ai.batchSize']).toBe('10');
+    expect(config['ai.maxRetries']).toBe('4');
+    expect(config['ai.applyConcurrency']).toBe('3');
+    expect(config['ai.maxOutputTokens']).toBe('500');
     expect(Object.keys(config).length).toBe(baseKeyCount + 4);
+  });
+
+  it('validates the complete batch before writing anything', () => {
+    setConfig(db, 'ai.model', 'gpt-5.4-mini');
+
+    expect(() =>
+      setConfigBatch(db, {
+        'ai.model': 'gpt-5.4',
+        'unknown.setting': 'must-fail',
+      }),
+    ).toThrow(/unknown/i);
+
+    expect(getConfig(db)['ai.model']).toBe('gpt-5.4-mini');
+  });
+
+  it('rejects environment-owned settings instead of partially applying a batch', () => {
+    expect(() =>
+      setConfigBatch(db, {
+        'ai.model': 'gpt-5.4',
+        PAPERLESS_URL: 'https://private.example.test',
+      }),
+    ).toThrow(/read-only/i);
+
+    expect(getConfig(db)).not.toHaveProperty('ai.model');
+  });
+
+  it('rejects an invalid dedup weight combination before writing either key', () => {
+    expect(() =>
+      setConfigBatch(db, {
+        'dedup.confidenceWeightJaccard': 80,
+        'dedup.confidenceWeightFuzzy': 30,
+      }),
+    ).toThrow(/sum to 100/i);
+
+    expect(getConfig(db)).not.toHaveProperty('dedup.confidenceWeightJaccard');
+    expect(getConfig(db)).not.toHaveProperty('dedup.confidenceWeightFuzzy');
+  });
+
+  it('applies cross-field validation to the compatible single-key setter', () => {
+    expect(() => setConfig(db, 'dedup.confidenceWeightJaccard', 80)).toThrow(/sum to 100/i);
+
+    expect(getConfig(db)).not.toHaveProperty('dedup.confidenceWeightJaccard');
   });
 });
 
@@ -176,10 +222,12 @@ describe('redactSensitiveConfig', () => {
       api_token: 'legacy-token',
       AI_OPENAI_API_KEY: 'sk-legacy-key',
       'openai.apiKey': 'sk-config-key',
-      theme: 'dark',
+      'ai.model': 'gpt-5.4',
+      'unknown.safeLooking': 'private legacy value',
     });
 
-    expect(redacted.theme).toBe('dark');
+    expect(redacted['ai.model']).toBe('gpt-5.4');
+    expect(redacted['unknown.safeLooking']).toBeUndefined();
     expect(redacted['paperless.url']).toBeUndefined();
     expect(redacted['paperless.apiToken']).toBeUndefined();
     expect(redacted['paperless.username']).toBeUndefined();
@@ -190,39 +238,43 @@ describe('redactSensitiveConfig', () => {
     expect(redacted['openai.apiKey']).toBeUndefined();
   });
 
-  it('does not write environment-owned connection settings into app_config', () => {
-    setConfigBatch(db, {
-      'paperless.url': 'http://localhost:8000',
-      'paperless.apiToken': 'token-123',
-      'paperless.username': 'alice',
-      'paperless.password': 'super-secret',
-      theme: 'dark',
-    });
+  it('rejects legacy environment-owned connection settings without partial writes', () => {
+    expect(() =>
+      setConfigBatch(db, {
+        'ai.model': 'gpt-5.4',
+        'paperless.url': 'http://localhost:8000',
+        'paperless.apiToken': 'token-123',
+        'paperless.username': 'alice',
+        'paperless.password': 'super-secret',
+      }),
+    ).toThrow();
 
     const config = getConfig(db);
     expect(config).not.toHaveProperty('paperless.url');
     expect(config).not.toHaveProperty('paperless.apiToken');
     expect(config).not.toHaveProperty('paperless.username');
     expect(config).not.toHaveProperty('paperless.password');
-    expect(config.theme).toBe('dark');
+    expect(config).not.toHaveProperty('ai.model');
   });
 
-  it('does not persist camelCase credential keys', () => {
-    setConfigBatch(db, {
-      openaiApiKey: 'key',
-      paperlessApiToken: 'token',
-      clientSecret: 'secret',
-      secretKey: 'secret-key',
-      clientSecretKey: 'client-secret-key',
-      privateKey: 'private-key',
-      accessToken: 'token',
-      databasePassword: 'password',
-      paperlessUrl: 'http://paperless.example.test',
-      'paperless-url': 'http://paperless.example.test',
-      theme: 'dark',
-    });
+  it('rejects camelCase credential keys without persisting the valid portion', () => {
+    expect(() =>
+      setConfigBatch(db, {
+        openaiApiKey: 'key',
+        paperlessApiToken: 'token',
+        clientSecret: 'secret',
+        secretKey: 'secret-key',
+        clientSecretKey: 'client-secret-key',
+        privateKey: 'private-key',
+        accessToken: 'token',
+        databasePassword: 'password',
+        paperlessUrl: 'http://paperless.example.test',
+        'paperless-url': 'http://paperless.example.test',
+        'ai.model': 'gpt-5.4',
+      }),
+    ).toThrow();
 
-    expect(getConfig(db)).toMatchObject({ theme: 'dark' });
+    expect(getConfig(db)).not.toHaveProperty('ai.model');
     for (const key of [
       'openaiApiKey',
       'paperlessApiToken',

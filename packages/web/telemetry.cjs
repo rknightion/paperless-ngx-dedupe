@@ -13,6 +13,7 @@
 
 const otelEnabled = process.env.OTEL_ENABLED === 'true';
 const prometheusEnabled = process.env.OTEL_PROMETHEUS_ENABLED === 'true';
+const DEFAULT_OTEL_SERVICE_NAME = 'paperless-ngx-dedupe';
 
 if (!otelEnabled && !prometheusEnabled) {
   return;
@@ -70,7 +71,7 @@ const instrumentations = otelEnabled
 
 const sdk = new NodeSDK({
   resource: resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'paperless-dedupe',
+    [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || DEFAULT_OTEL_SERVICE_NAME,
     [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
     'service.namespace': process.env.OTEL_SERVICE_NAMESPACE || 'paperless-dedupe',
     'deployment.environment':
@@ -98,7 +99,7 @@ if (process.env.PYROSCOPE_ENABLED === 'true' && process.env.PYROSCOPE_SERVER_ADD
 
     Pyroscope.init({
       serverAddress: process.env.PYROSCOPE_SERVER_ADDRESS,
-      appName: process.env.OTEL_SERVICE_NAME || 'paperless-dedupe',
+      appName: process.env.OTEL_SERVICE_NAME || DEFAULT_OTEL_SERVICE_NAME,
       tags: {
         'service.namespace': process.env.OTEL_SERVICE_NAMESPACE || 'paperless-dedupe',
         'deployment.environment':

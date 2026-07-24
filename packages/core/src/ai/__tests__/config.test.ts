@@ -20,7 +20,7 @@ describe('getAiConfig', () => {
     expect(config.model).toBe('gpt-5.4-mini');
     expect(config.maxContentLength).toBe(8000);
     expect(config.batchSize).toBe(100);
-    expect(config.autoProcess).toBe(false);
+    expect(config).not.toHaveProperty('autoProcess');
     expect(config.addProcessedTag).toBe(false);
     expect(config.includeCorrespondents).toBe(false);
     expect(config.includeDocumentTypes).toBe(false);
@@ -68,7 +68,6 @@ describe('setAiConfig', () => {
 
   it('parses boolean values correctly', () => {
     setAiConfig(db, {
-      autoProcess: true,
       addProcessedTag: true,
       includeCorrespondents: true,
       includeDocumentTypes: true,
@@ -77,13 +76,27 @@ describe('setAiConfig', () => {
     });
 
     const config = getAiConfig(db);
-    expect(config.autoProcess).toBe(true);
     expect(config.addProcessedTag).toBe(true);
     expect(config.includeCorrespondents).toBe(true);
     expect(config.includeDocumentTypes).toBe(true);
     expect(config.includeTags).toBe(true);
     expect(config.extractCustomFields).toBe(true);
   });
+
+  it('rejects the retired autoProcess key without persisting it', () => {
+    expect(() =>
+      setAiConfig(db, { autoProcess: true } as unknown as Parameters<typeof setAiConfig>[1]),
+    ).toThrow();
+    expect(getAiConfig(db)).not.toHaveProperty('autoProcess');
+  });
+
+  it.each(['not-a-map', '[]', '__proto__:\n  - unsafe'])(
+    'shares semantic tag alias validation for %s',
+    (tagAliasMap) => {
+      expect(() => setAiConfig(db, { tagAliasMap })).toThrow();
+      expect(getAiConfig(db).tagAliasMap).toBe(DEFAULT_AI_CONFIG.tagAliasMap);
+    },
+  );
 
   it('parses number values correctly', () => {
     setAiConfig(db, {

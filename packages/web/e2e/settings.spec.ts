@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/test-app';
+import { readFile } from 'node:fs/promises';
 
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ seedDB }) => {
@@ -92,7 +93,7 @@ test.describe('Settings Page', () => {
     await expect(page.locator('#num-perms')).not.toBeVisible();
 
     // Click show advanced
-    await page.getByRole('button', { name: 'Show Advanced Settings' }).click();
+    await page.locator('#dedup').getByRole('button', { name: 'Show Advanced Settings' }).click();
 
     // Advanced fields should now be visible
     await expect(page.locator('#num-perms')).toBeVisible();
@@ -114,5 +115,36 @@ test.describe('Settings Page', () => {
     await expect(page.getByText('Database Path')).toHaveCount(0);
     await expect(page.getByText('Total Documents')).toBeVisible();
     await expect(page.getByText('Pending Groups')).toBeVisible();
+  });
+
+  test('downloads an accessible redacted diagnostics bundle without environment secrets', async ({
+    page,
+  }) => {
+    await page.goto('/settings');
+
+    await expect(page.getByRole('heading', { name: 'Support diagnostics' })).toBeVisible();
+    await expect(
+      page.getByText('Only aggregate operational information is included.'),
+    ).toBeVisible();
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('link', { name: 'Download diagnostics bundle' }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe('paperless-ngx-dedupe-diagnostics.json');
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+    const body = await readFile(downloadPath!, 'utf8');
+
+    expect(JSON.parse(body)).toMatchObject({
+      formatVersion: 1,
+      versions: { application: '0.15.0' },
+      readiness: { database: 'unknown', paperless: 'configured', ai: 'configured' },
+      database: { sqliteUserVersion: 0 },
+    });
+    expect(JSON.parse(body).database).not.toHaveProperty('schemaVersion');
+    expect(body).not.toContain('test-token-e2e');
+    expect(body).not.toContain('http://localhost:18923');
+    expect(body).not.toContain('./data/e2e-test.db');
   });
 });
