@@ -2,6 +2,12 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "packageRules": [
     {
+      "description": "Match pnpm 11's 24-hour package-age policy so npm update PRs do not enter CI before frozen installs can accept them.",
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "24 hours",
+      "internalChecksFilter": "strict"
+    },
+    {
       "description": "Lint/format toolchain (ESLint, Prettier, typescript-eslint and their plugins) — group into one PR; they're co-tuned and bump together.",
       "matchManagers": ["npm"],
       "matchPackageNames": [
