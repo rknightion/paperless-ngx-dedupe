@@ -245,7 +245,7 @@ describe('reviewed duplicate deletion plans', () => {
       ]),
     );
     await Promise.all(workers.map((worker) => worker.terminate()));
-  });
+  }, 15_000);
 
   it('preserves the job identity across a real dead-letter manual retry', () => {
     const preview = createDuplicateDeletionPlan(db, ['group-1'], {

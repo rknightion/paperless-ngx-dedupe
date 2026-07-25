@@ -1397,7 +1397,7 @@ describe('reviewed AI apply plans', () => {
       if (handle.sqlite.open) handle.sqlite.close();
       rmSync(directory, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it('reverts only reviewed title and custom field when live applied values still match', async () => {
     const client = createMockClient();

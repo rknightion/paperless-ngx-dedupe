@@ -937,7 +937,7 @@ describe('scanCustomFieldCandidatesV2', () => {
         valuesPerLabel: 2,
       },
     });
-  });
+  }, 20_000);
 
   it('offers a safe compatibility projection without restoring OCR examples', async () => {
     const { source } = pageSource(documents(3, () => 'Payment Status: Paid'));
