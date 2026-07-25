@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import packageMetadata from '../../../../../../../package.json';
 
 const mocks = vi.hoisted(() => ({
   collectDiagnostics: vi.fn(),
@@ -41,7 +42,7 @@ describe('diagnostics support bundle API', () => {
       { privatePath: '/srv/private/paperless.db' },
       {
         versions: {
-          application: '0.15.0',
+          application: packageMetadata.version,
           node: expect.stringMatching(/^\d+\.\d+\.\d+/),
         },
         featureFlags: {

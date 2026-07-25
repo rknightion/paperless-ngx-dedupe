@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures/test-app';
 import { readFile } from 'node:fs/promises';
+import packageMetadata from '../../../package.json' with { type: 'json' };
 
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ seedDB }) => {
@@ -164,7 +165,7 @@ test.describe('Settings Page', () => {
 
     expect(JSON.parse(body)).toMatchObject({
       formatVersion: 1,
-      versions: { application: '0.15.0' },
+      versions: { application: packageMetadata.version },
       readiness: { database: 'unknown', paperless: 'configured', ai: 'configured' },
       database: { sqliteUserVersion: 0 },
     });
