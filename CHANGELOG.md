@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.16.0...v0.16.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* migrate legacy job schemas safely ([f57d45c](https://github.com/rknightion/paperless-ngx-dedupe/commit/f57d45ceff6b23b9dc1071d8e213b18be524fb01)), closes [#480](https://github.com/rknightion/paperless-ngx-dedupe/issues/480)
+
+
+### Miscellaneous
+
+* **deps:** update dependency @playwright/test to v1.62.0 ([#474](https://github.com/rknightion/paperless-ngx-dedupe/issues/474)) ([6921446](https://github.com/rknightion/paperless-ngx-dedupe/commit/69214465f0635b340adb35bf12c276277dfe90f2))
+* **deps:** update dependency eslint to v10.8.0 ([#473](https://github.com/rknightion/paperless-ngx-dedupe/issues/473)) ([63e21bc](https://github.com/rknightion/paperless-ngx-dedupe/commit/63e21bcec9e522a45f0ee4c0914157e2b7a5b0eb))
+* **deps:** update dependency svelte to v5.56.8 ([#475](https://github.com/rknightion/paperless-ngx-dedupe/issues/475)) ([4b2391a](https://github.com/rknightion/paperless-ngx-dedupe/commit/4b2391a66616b5b04dadf04d223d9106152c6b3e))
+
 ## [0.16.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.15.0...v0.16.0) (2026-07-25)
 
 
