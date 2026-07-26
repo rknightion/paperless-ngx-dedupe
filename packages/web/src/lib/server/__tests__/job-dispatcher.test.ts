@@ -64,8 +64,9 @@ describe('createJobDispatcher', () => {
     ).toBe(expected);
   });
 
-  it('resolves the explicit production core worker layout', () => {
-    const expected = '/app/core/jobs/workers/analysis-worker.js';
+  it('resolves production workers from the deployed core package', () => {
+    const expected =
+      '/app/node_modules/@paperless-dedupe/core/dist/jobs/workers/analysis-worker.js';
 
     expect(
       resolveServerWorkerPath('analysis-worker', {

@@ -49,7 +49,7 @@ export function resolveServerWorkerPath(name: WorkerName, options: WorkerPathOpt
   const exists = options.exists ?? existsSync;
   const candidates = [
     join(cwd, '..', 'core', 'dist', 'jobs', 'workers', `${name}.js`),
-    join(cwd, 'core', 'jobs', 'workers', `${name}.js`),
+    join(cwd, 'node_modules', '@paperless-dedupe', 'core', 'dist', 'jobs', 'workers', `${name}.js`),
   ];
   const match = candidates.find((candidate) => exists(candidate));
   return match ?? (options.fallback ?? getWorkerPath)(name);

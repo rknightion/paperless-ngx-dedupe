@@ -23,8 +23,12 @@ COPY . .
 
 RUN pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedupe/web build
 
-# Create standalone deployment with flat node_modules (no pnpm symlinks)
+# Create the standalone production dependency tree
 RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
+
+# Exercise the compiled core package from its deployed dependency ancestry.
+# Raw worker threads use this same package boundary in the production image.
+RUN node -e "import('/app/deployed/node_modules/@paperless-dedupe/core/dist/scheduler/occurrences.js')"
 
 # Stage 3: Production runtime
 FROM node:24.18.0-trixie-slim AS production
@@ -39,9 +43,6 @@ COPY --from=build /app/deployed/node_modules ./node_modules
 # Copy SvelteKit build output
 COPY --from=build /app/packages/web/build ./build
 COPY --from=build /app/package.json ./
-
-# Copy pre-compiled core package (worker threads run outside SvelteKit's bundle)
-COPY --from=build /app/packages/core/dist ./core
 
 # Copy OTEL preload script (loaded via --require when OTEL_ENABLED=true)
 COPY --from=build /app/packages/web/telemetry.cjs ./telemetry.cjs
