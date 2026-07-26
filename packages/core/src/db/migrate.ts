@@ -741,29 +741,152 @@ const JOB_TABLE_SQL = `CREATE TABLE \`job\` (
   \`public_history_key\` text
 )`;
 
-const JOB_COLUMN_NAMES = [
-  'id',
-  'type',
-  'status',
-  'progress',
-  'phase_progress',
-  'progress_message',
-  'started_at',
-  'execution_token',
-  'completed_at',
-  'error_message',
-  'result_json',
-  'trigger_kind',
-  'schedule_id',
-  'due_at',
-  'parent_job_id',
-  'root_schedule_id',
-  'root_due_at',
-  'attempt',
-  'next_attempt_at',
-  'terminal_reason',
-  'created_at',
-  'public_history_key',
+interface JobColumnDefinition extends TableColumnSignature {
+  fallback: string;
+}
+
+const JOB_COLUMN_DEFINITIONS: readonly JobColumnDefinition[] = [
+  { name: 'id', type: 'TEXT', notnull: 1, defaultValue: null, pk: 1, fallback: 'NULL' },
+  { name: 'type', type: 'TEXT', notnull: 1, defaultValue: null, pk: 0, fallback: 'NULL' },
+  {
+    name: 'status',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: "'pending'",
+    pk: 0,
+    fallback: "'pending'",
+  },
+  { name: 'progress', type: 'REAL', notnull: 0, defaultValue: '0', pk: 0, fallback: '0' },
+  {
+    name: 'phase_progress',
+    type: 'REAL',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'progress_message',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'started_at',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'execution_token',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'completed_at',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'error_message',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'result_json',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'trigger_kind',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'schedule_id',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  { name: 'due_at', type: 'TEXT', notnull: 0, defaultValue: null, pk: 0, fallback: 'NULL' },
+  {
+    name: 'parent_job_id',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'root_schedule_id',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'root_due_at',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  { name: 'attempt', type: 'INTEGER', notnull: 1, defaultValue: '0', pk: 0, fallback: '0' },
+  {
+    name: 'next_attempt_at',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'terminal_reason',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'created_at',
+    type: 'TEXT',
+    notnull: 1,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
+  {
+    name: 'public_history_key',
+    type: 'TEXT',
+    notnull: 0,
+    defaultValue: null,
+    pk: 0,
+    fallback: 'NULL',
+  },
 ] as const;
 
 const JOB_BASE_INDEX_SQL = [
@@ -946,17 +1069,16 @@ function repairCompatibilityIndexes(
 function ensureJobHistoryCompatibility(sqlite: Database.Database): void {
   if (!tableSql(sqlite, 'job')) return;
   const originalColumns = tableColumnSignature(sqlite, 'job');
-  const publicKeyIndex = originalColumns.findIndex(({ name }) => name === 'public_history_key');
-  const needsTableRebuild =
-    publicKeyIndex !== -1 &&
-    (publicKeyIndex !== JOB_COLUMN_NAMES.length - 1 ||
-      !signaturesEqual(originalColumns[publicKeyIndex], {
-        name: 'public_history_key',
-        type: 'TEXT',
-        notnull: 0,
-        defaultValue: null,
-        pk: 0,
-      }));
+  const expectedColumns = JOB_COLUMN_DEFINITIONS.map(
+    ({ name, type, notnull, defaultValue, pk }) => ({
+      name,
+      type,
+      notnull,
+      defaultValue,
+      pk,
+    }),
+  );
+  const needsTableRebuild = !signaturesEqual(originalColumns, expectedColumns);
   const foreignKeysEnabled = sqlite.pragma('foreign_keys', { simple: true }) === 1;
   if (needsTableRebuild && foreignKeysEnabled) sqlite.pragma('foreign_keys = OFF');
 
@@ -986,12 +1108,19 @@ function ensureJobHistoryCompatibility(sqlite: Database.Database): void {
     }
 
     if (needsTableRebuild) {
-      const quotedColumns = JOB_COLUMN_NAMES.map(quoteSqliteIdentifier).join(', ');
+      const legacyColumns = tableColumns(sqlite, 'job');
+      const destinationColumns = JOB_COLUMN_DEFINITIONS.map(({ name }) =>
+        quoteSqliteIdentifier(name),
+      ).join(', ');
+      const sourceExpressions = JOB_COLUMN_DEFINITIONS.map(({ name, fallback }) =>
+        selectExpression(legacyColumns, name, fallback),
+      ).join(', ');
       sqlite.exec('ALTER TABLE job RENAME TO malformed_job_public_history_key');
       sqlite.exec(JOB_TABLE_SQL);
       sqlite.exec(
-        `INSERT INTO job (${quotedColumns})
-         SELECT ${quotedColumns} FROM malformed_job_public_history_key`,
+        `INSERT INTO job (${destinationColumns})
+         SELECT ${sourceExpressions}
+         FROM malformed_job_public_history_key AS legacy`,
       );
       sqlite.exec('DROP TABLE malformed_job_public_history_key');
       for (const statement of JOB_BASE_INDEX_SQL) sqlite.exec(statement);

@@ -536,6 +536,112 @@ describe('database migration fixtures', () => {
     );
   });
 
+  it('migrates the Camden legacy job schema without losing history', async () => {
+    const legacy = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(fresh.sqlite);
+    const preservedPublicKey = 'C'.repeat(32);
+
+    legacy.sqlite.exec(`
+      CREATE TABLE job (
+        id TEXT PRIMARY KEY NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        progress REAL DEFAULT 0,
+        phase_progress REAL,
+        progress_message TEXT,
+        started_at TEXT,
+        completed_at TEXT,
+        error_message TEXT,
+        result_json TEXT,
+        created_at TEXT NOT NULL,
+        execution_token TEXT,
+        public_history_key TEXT
+      );
+      CREATE INDEX job_history_order_idx
+        ON job(created_at DESC, id DESC);
+      CREATE INDEX job_history_status_order_idx
+        ON job(status, created_at DESC, id DESC);
+      CREATE INDEX job_history_type_order_idx
+        ON job(type, created_at DESC, id DESC);
+      CREATE INDEX job_history_type_status_order_idx
+        ON job(type, status, created_at DESC, id DESC);
+      CREATE UNIQUE INDEX job_public_history_key_unique
+        ON job(public_history_key);
+    `);
+    legacy.sqlite
+      .prepare(
+        `INSERT INTO job (
+           id, type, status, progress, phase_progress, progress_message,
+           started_at, completed_at, result_json, created_at,
+           execution_token, public_history_key
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        'camden-job',
+        'analysis',
+        'completed',
+        0.75,
+        0.5,
+        'Preserve this history',
+        '2026-07-23T12:00:00.000Z',
+        '2026-07-23T12:05:00.000Z',
+        '{"preserved":true}',
+        '2026-07-23T11:59:00.000Z',
+        'preserved-execution-token',
+        preservedPublicKey,
+      );
+
+    await migrateDatabase(legacy.sqlite);
+
+    expect(tableSignature(legacy.sqlite, 'job')).toEqual(tableSignature(fresh.sqlite, 'job'));
+    const migratedRow = legacy.sqlite
+      .prepare(
+        `SELECT id, type, status, progress, phase_progress AS phaseProgress,
+                progress_message AS progressMessage, started_at AS startedAt,
+                completed_at AS completedAt, result_json AS resultJson,
+                execution_token AS executionToken, trigger_kind AS triggerKind,
+                schedule_id AS scheduleId, due_at AS dueAt, attempt,
+                public_history_key AS publicHistoryKey
+         FROM job WHERE id = 'camden-job'`,
+      )
+      .get();
+    expect(migratedRow).toEqual({
+      id: 'camden-job',
+      type: 'analysis',
+      status: 'completed',
+      progress: 0.75,
+      phaseProgress: 0.5,
+      progressMessage: 'Preserve this history',
+      startedAt: '2026-07-23T12:00:00.000Z',
+      completedAt: '2026-07-23T12:05:00.000Z',
+      resultJson: '{"preserved":true}',
+      executionToken: 'preserved-execution-token',
+      triggerKind: null,
+      scheduleId: null,
+      dueAt: null,
+      attempt: 0,
+      publicHistoryKey: preservedPublicKey,
+    });
+
+    const repairedSignature = tableSignature(legacy.sqlite, 'job');
+    await migrateDatabase(legacy.sqlite);
+    expect(tableSignature(legacy.sqlite, 'job')).toEqual(repairedSignature);
+    expect(
+      legacy.sqlite
+        .prepare(
+          `SELECT id, execution_token AS executionToken,
+                  public_history_key AS publicHistoryKey
+           FROM job WHERE id = 'camden-job'`,
+        )
+        .get(),
+    ).toEqual({
+      id: 'camden-job',
+      executionToken: 'preserved-execution-token',
+      publicHistoryKey: preservedPublicKey,
+    });
+  });
+
   it('repairs missing and malformed current-hash job-history indexes exactly and idempotently', async () => {
     const current = createDatabaseWithHandle(':memory:');
     const fresh = createDatabaseWithHandle(':memory:');
