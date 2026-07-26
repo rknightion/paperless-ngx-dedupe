@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.3](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.16.2...v0.16.3) (2026-07-26)
+
+
+### Bug Fixes
+
+* authorize document comparison media ([3216100](https://github.com/rknightion/paperless-ngx-dedupe/commit/32161006dfde756eec5151d6fc15332c6a5a619e)), closes [#483](https://github.com/rknightion/paperless-ngx-dedupe/issues/483)
+
 ## [0.16.2](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.16.1...v0.16.2) (2026-07-26)
 
 
