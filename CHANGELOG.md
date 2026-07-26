@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.16.2](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.16.1...v0.16.2) (2026-07-26)
+
+
+### Bug Fixes
+
+* migrate intermediate automation schemas ([4ea2506](https://github.com/rknightion/paperless-ngx-dedupe/commit/4ea25069d212aeab2a40ccd2ab50e69da7acc71d)), closes [#480](https://github.com/rknightion/paperless-ngx-dedupe/issues/480)
+* package worker runtime dependencies ([d3e2c05](https://github.com/rknightion/paperless-ngx-dedupe/commit/d3e2c055c13808e3a0691e566c8ace31bfe0c548))
+
 ## [0.16.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.16.0...v0.16.1) (2026-07-26)
 
 
