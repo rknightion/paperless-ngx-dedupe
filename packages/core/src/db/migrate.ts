@@ -134,12 +134,11 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: add title-related columns to ai_processing_result
   migrateAiTitleColumns(sqlite);
 
-  // Compatibility migration: generated DDL is skipped when a stale database
-  // carries the current schema hash, so repair the durable payload column
-  // explicitly before that early return can occur.
-  migrateDispatchIntentTaskData(sqlite);
+  // Compatibility migrations run independently of the stored schema hash so
+  // released intermediate schemas are canonical before generated DDL executes.
   migrateJobExecutionToken(sqlite);
   migrateAiAutomationCompatibility(sqlite);
+  ensureAutomationSchemaCompatibility(sqlite);
   ensureReviewedMutationCompatibility(sqlite);
   ensureJobHistoryCompatibility(sqlite);
   ensureDocumentLibraryAddedDateIndex(sqlite);
@@ -745,6 +744,425 @@ interface JobColumnDefinition extends TableColumnSignature {
   fallback: string;
 }
 
+interface AutomationColumnDefinition extends TableColumnSignature {
+  fallback: string;
+}
+
+interface AutomationTableDefinition {
+  name: string;
+  createSql: string;
+  columns: readonly AutomationColumnDefinition[];
+}
+
+const DISPATCH_INTENT_TABLE_SQL = `CREATE TABLE \`dispatch_intent\` (
+  \`id\` text PRIMARY KEY NOT NULL,
+  \`task\` text NOT NULL,
+  \`operation\` text NOT NULL,
+  \`job_id\` text,
+  \`trigger_kind\` text NOT NULL,
+  \`schedule_id\` text,
+  \`due_at\` text,
+  \`parent_job_id\` text,
+  \`root_schedule_id\` text,
+  \`root_due_at\` text,
+  \`status\` text DEFAULT 'pending' NOT NULL,
+  \`attempt_count\` integer DEFAULT 0 NOT NULL,
+  \`next_attempt_at\` text,
+  \`terminal_reason\` text,
+  \`task_data_json\` text,
+  \`dispatch_key\` text,
+  \`dispatch_claim_token\` text,
+  \`dispatch_claimed_at\` text,
+  \`dispatch_claim_expires_at\` text,
+  \`created_at\` text NOT NULL,
+  \`updated_at\` text NOT NULL,
+  CONSTRAINT "dispatch_intent_task_check" CHECK("dispatch_intent"."task" IN (
+    'sync', 'analysis', 'duplicate_delete', 'ai_processing', 'ai_apply',
+    'ai_revert', 'backup', 'checkpoint', 'vacuum', 'job_cleanup'
+  )),
+  CONSTRAINT "dispatch_intent_operation_check" CHECK("dispatch_intent"."operation" IN (
+    'sync', 'analysis', 'duplicate_delete', 'ai_processing', 'ai_apply',
+    'ai_revert', 'backup', 'checkpoint', 'vacuum', 'job_cleanup'
+  )),
+  CONSTRAINT "dispatch_intent_status_check" CHECK("dispatch_intent"."status" IN ('pending', 'dispatching', 'dispatched', 'failed', 'dead_letter', 'cancelled')),
+  CONSTRAINT "dispatch_intent_trigger_lineage_check" CHECK((
+    ("dispatch_intent"."trigger_kind" = 'schedule'
+      AND "dispatch_intent"."schedule_id" IS NOT NULL
+      AND "dispatch_intent"."due_at" IS NOT NULL
+      AND "dispatch_intent"."parent_job_id" IS NULL
+      AND "dispatch_intent"."root_schedule_id" IS NULL
+      AND "dispatch_intent"."root_due_at" IS NULL)
+    OR
+    ("dispatch_intent"."trigger_kind" = 'manual'
+      AND "dispatch_intent"."schedule_id" IS NULL
+      AND "dispatch_intent"."due_at" IS NULL
+      AND "dispatch_intent"."parent_job_id" IS NULL
+      AND "dispatch_intent"."root_schedule_id" IS NULL
+      AND "dispatch_intent"."root_due_at" IS NULL)
+    OR
+    ("dispatch_intent"."trigger_kind" = 'dependency'
+      AND "dispatch_intent"."schedule_id" IS NULL
+      AND "dispatch_intent"."due_at" IS NULL
+      AND "dispatch_intent"."parent_job_id" IS NOT NULL
+      AND "dispatch_intent"."root_schedule_id" IS NOT NULL
+      AND "dispatch_intent"."root_due_at" IS NOT NULL)
+  ))
+)`;
+
+const OPERATION_LEASE_TABLE_SQL = `CREATE TABLE \`operation_lease\` (
+  \`id\` text PRIMARY KEY NOT NULL,
+  \`operation\` text NOT NULL,
+  \`owner_id\` text NOT NULL,
+  \`acquired_at\` text NOT NULL,
+  \`heartbeat_at\` text,
+  \`expires_at\` text
+)`;
+
+const SYNC_CHANGE_GENERATION_TABLE_SQL = `CREATE TABLE \`sync_change_generation\` (
+  \`id\` text PRIMARY KEY NOT NULL,
+  \`sync_job_id\` text NOT NULL,
+  \`root_schedule_id\` text,
+  \`root_due_at\` text,
+  \`changed_at\` text,
+  \`status\` text DEFAULT 'pending' NOT NULL,
+  \`created_at\` text NOT NULL,
+  \`completed_at\` text
+)`;
+
+const AUTOMATION_TABLE_DEFINITIONS: readonly AutomationTableDefinition[] = [
+  {
+    name: 'dispatch_intent',
+    createSql: DISPATCH_INTENT_TABLE_SQL,
+    columns: [
+      { name: 'id', type: 'TEXT', notnull: 1, defaultValue: null, pk: 1, fallback: 'NULL' },
+      { name: 'task', type: 'TEXT', notnull: 1, defaultValue: null, pk: 0, fallback: 'NULL' },
+      {
+        name: 'operation',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      { name: 'job_id', type: 'TEXT', notnull: 0, defaultValue: null, pk: 0, fallback: 'NULL' },
+      {
+        name: 'trigger_kind',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'schedule_id',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      { name: 'due_at', type: 'TEXT', notnull: 0, defaultValue: null, pk: 0, fallback: 'NULL' },
+      {
+        name: 'parent_job_id',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'root_schedule_id',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'root_due_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'status',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: "'pending'",
+        pk: 0,
+        fallback: "'pending'",
+      },
+      {
+        name: 'attempt_count',
+        type: 'INTEGER',
+        notnull: 1,
+        defaultValue: '0',
+        pk: 0,
+        fallback: '0',
+      },
+      {
+        name: 'next_attempt_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'terminal_reason',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'task_data_json',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'dispatch_key',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'dispatch_claim_token',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'dispatch_claimed_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'dispatch_claim_expires_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'created_at',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'updated_at',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+    ],
+  },
+  {
+    name: 'operation_lease',
+    createSql: OPERATION_LEASE_TABLE_SQL,
+    columns: [
+      { name: 'id', type: 'TEXT', notnull: 1, defaultValue: null, pk: 1, fallback: 'NULL' },
+      {
+        name: 'operation',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'owner_id',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'acquired_at',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'heartbeat_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'expires_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+    ],
+  },
+  {
+    name: 'sync_change_generation',
+    createSql: SYNC_CHANGE_GENERATION_TABLE_SQL,
+    columns: [
+      { name: 'id', type: 'TEXT', notnull: 1, defaultValue: null, pk: 1, fallback: 'NULL' },
+      {
+        name: 'sync_job_id',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'root_schedule_id',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'root_due_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'changed_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'status',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: "'pending'",
+        pk: 0,
+        fallback: "'pending'",
+      },
+      {
+        name: 'created_at',
+        type: 'TEXT',
+        notnull: 1,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+      {
+        name: 'completed_at',
+        type: 'TEXT',
+        notnull: 0,
+        defaultValue: null,
+        pk: 0,
+        fallback: 'NULL',
+      },
+    ],
+  },
+] as const;
+
+const AUTOMATION_INDEX_DEFINITIONS: readonly CompatibilityIndexDefinition[] = [
+  {
+    table: 'dispatch_intent',
+    name: 'dispatch_intent_schedule_due_unique',
+    unique: 1,
+    partial: 0,
+    columns: [
+      { name: 'schedule_id', desc: 0, coll: 'BINARY' },
+      { name: 'due_at', desc: 0, coll: 'BINARY' },
+    ],
+    createSql: `CREATE UNIQUE INDEX dispatch_intent_schedule_due_unique
+      ON dispatch_intent(schedule_id, due_at)`,
+  },
+  {
+    table: 'dispatch_intent',
+    name: 'dispatch_intent_job_id_unique',
+    unique: 1,
+    partial: 0,
+    columns: [{ name: 'job_id', desc: 0, coll: 'BINARY' }],
+    createSql: `CREATE UNIQUE INDEX dispatch_intent_job_id_unique
+      ON dispatch_intent(job_id)`,
+  },
+  {
+    table: 'dispatch_intent',
+    name: 'dispatch_intent_dependency_parent_task_unique',
+    unique: 1,
+    partial: 0,
+    columns: [
+      { name: 'parent_job_id', desc: 0, coll: 'BINARY' },
+      { name: 'task', desc: 0, coll: 'BINARY' },
+    ],
+    createSql: `CREATE UNIQUE INDEX dispatch_intent_dependency_parent_task_unique
+      ON dispatch_intent(parent_job_id, task)`,
+  },
+  {
+    table: 'dispatch_intent',
+    name: 'dispatch_intent_pending_idx',
+    unique: 0,
+    partial: 0,
+    columns: [
+      { name: 'status', desc: 0, coll: 'BINARY' },
+      { name: 'next_attempt_at', desc: 0, coll: 'BINARY' },
+    ],
+    createSql: `CREATE INDEX dispatch_intent_pending_idx
+      ON dispatch_intent(status, next_attempt_at)`,
+  },
+  {
+    table: 'operation_lease',
+    name: 'operation_lease_operation_unique',
+    unique: 1,
+    partial: 0,
+    columns: [{ name: 'operation', desc: 0, coll: 'BINARY' }],
+    createSql: `CREATE UNIQUE INDEX operation_lease_operation_unique
+      ON operation_lease(operation)`,
+  },
+  {
+    table: 'sync_change_generation',
+    name: 'sync_change_generation_sync_job_id_unique',
+    unique: 1,
+    partial: 0,
+    columns: [{ name: 'sync_job_id', desc: 0, coll: 'BINARY' }],
+    createSql: `CREATE UNIQUE INDEX sync_change_generation_sync_job_id_unique
+      ON sync_change_generation(sync_job_id)`,
+  },
+  {
+    table: 'sync_change_generation',
+    name: 'sync_change_generation_status_idx',
+    unique: 0,
+    partial: 0,
+    columns: [{ name: 'status', desc: 0, coll: 'BINARY' }],
+    createSql: `CREATE INDEX sync_change_generation_status_idx
+      ON sync_change_generation(status)`,
+  },
+] as const;
+
 const JOB_COLUMN_DEFINITIONS: readonly JobColumnDefinition[] = [
   { name: 'id', type: 'TEXT', notnull: 1, defaultValue: null, pk: 1, fallback: 'NULL' },
   { name: 'type', type: 'TEXT', notnull: 1, defaultValue: null, pk: 0, fallback: 'NULL' },
@@ -1064,6 +1482,63 @@ function repairCompatibilityIndexes(
     }
     sqlite.exec(definition.createSql);
   }
+}
+
+function ensureAutomationSchemaCompatibility(sqlite: Database.Database): void {
+  const incompatibleTables = AUTOMATION_TABLE_DEFINITIONS.filter((definition) => {
+    const sql = tableSql(sqlite, definition.name);
+    if (sql === null) return false;
+    const expectedColumns = definition.columns.map(({ name, type, notnull, defaultValue, pk }) => ({
+      name,
+      type,
+      notnull,
+      defaultValue,
+      pk,
+    }));
+    return (
+      !signaturesEqual(tableColumnSignature(sqlite, definition.name), expectedColumns) ||
+      !signaturesEqual(checkSignatures(sql), checkSignatures(definition.createSql))
+    );
+  });
+
+  sqlite.transaction(() => {
+    for (const definition of incompatibleTables) {
+      const legacyColumns = tableColumns(sqlite, definition.name);
+      const destinationColumns = definition.columns
+        .map(({ name }) => quoteSqliteIdentifier(name))
+        .join(', ');
+      const sourceExpressions = definition.columns
+        .map(({ name, fallback }) => selectExpression(legacyColumns, name, fallback))
+        .join(', ');
+      const legacyTable = `malformed_${definition.name}_compatibility`;
+
+      sqlite.exec(
+        `ALTER TABLE ${quoteSqliteIdentifier(definition.name)}
+         RENAME TO ${quoteSqliteIdentifier(legacyTable)}`,
+      );
+      sqlite.exec(definition.createSql);
+      sqlite.exec(
+        `INSERT INTO ${quoteSqliteIdentifier(definition.name)} (${destinationColumns})
+         SELECT ${sourceExpressions}
+         FROM ${quoteSqliteIdentifier(legacyTable)} AS legacy`,
+      );
+      sqlite.exec(`DROP TABLE ${quoteSqliteIdentifier(legacyTable)}`);
+    }
+
+    for (const table of AUTOMATION_TABLE_DEFINITIONS) {
+      if (!tableSql(sqlite, table.name)) continue;
+      const indexes = AUTOMATION_INDEX_DEFINITIONS.filter(
+        (definition) => definition.table === table.name,
+      );
+      if (indexes.every((definition) => isCompatibilityIndexValid(sqlite, definition))) {
+        continue;
+      }
+      for (const index of indexes) {
+        sqlite.exec(`DROP INDEX IF EXISTS ${quoteSqliteIdentifier(index.name)}`);
+      }
+      for (const index of indexes) sqlite.exec(index.createSql);
+    }
+  })();
 }
 
 function ensureJobHistoryCompatibility(sqlite: Database.Database): void {
@@ -1431,13 +1906,6 @@ function migrateAiTitleColumns(sqlite: Database.Database): void {
   if (!tableHasColumn(sqlite, 'ai_processing_result', 'applied_title')) {
     sqlite.exec(`ALTER TABLE ai_processing_result ADD COLUMN applied_title TEXT`);
   }
-}
-
-/** Add the durable manual route-options column to old coordinator databases. */
-function migrateDispatchIntentTaskData(sqlite: Database.Database): void {
-  if (!tableHasColumn(sqlite, 'dispatch_intent', 'id')) return;
-  if (tableHasColumn(sqlite, 'dispatch_intent', 'task_data_json')) return;
-  sqlite.exec(`ALTER TABLE dispatch_intent ADD COLUMN task_data_json TEXT`);
 }
 
 /** Add the per-launch worker ownership token even when an old hash claims current DDL. */

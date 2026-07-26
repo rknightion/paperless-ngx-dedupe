@@ -642,6 +642,198 @@ describe('database migration fixtures', () => {
     });
   });
 
+  it('migrates the released intermediate automation schemas without losing state', async () => {
+    const legacy = createDatabaseWithHandle(':memory:');
+    const fresh = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(fresh.sqlite);
+    legacy.sqlite.exec(`
+      CREATE TABLE dispatch_intent (
+        id text PRIMARY KEY NOT NULL,
+        task text NOT NULL,
+        operation text NOT NULL,
+        trigger_kind text NOT NULL,
+        schedule_id text,
+        due_at text,
+        parent_job_id text,
+        root_schedule_id text,
+        root_due_at text,
+        status text DEFAULT 'pending' NOT NULL,
+        attempt_count integer DEFAULT 0 NOT NULL,
+        next_attempt_at text,
+        terminal_reason text,
+        created_at text NOT NULL,
+        updated_at text NOT NULL,
+        task_data_json text,
+        CONSTRAINT dispatch_intent_task_check
+          CHECK(task IN ('sync', 'analysis', 'ai_processing')),
+        CONSTRAINT dispatch_intent_operation_check
+          CHECK(operation IN (
+            'sync', 'analysis', 'duplicate_delete', 'ai_processing', 'ai_apply',
+            'ai_revert', 'backup', 'checkpoint', 'vacuum', 'job_cleanup'
+          )),
+        CONSTRAINT dispatch_intent_status_check
+          CHECK(status IN (
+            'pending', 'dispatching', 'dispatched', 'failed', 'dead_letter', 'cancelled'
+          )),
+        CONSTRAINT dispatch_intent_trigger_lineage_check CHECK(
+          (trigger_kind = 'schedule' AND schedule_id IS NOT NULL AND due_at IS NOT NULL
+            AND parent_job_id IS NULL AND root_schedule_id IS NULL AND root_due_at IS NULL)
+          OR
+          (trigger_kind = 'manual' AND schedule_id IS NULL AND due_at IS NULL
+            AND parent_job_id IS NULL AND root_schedule_id IS NULL AND root_due_at IS NULL)
+          OR
+          (trigger_kind = 'dependency' AND schedule_id IS NULL AND due_at IS NULL
+            AND parent_job_id IS NOT NULL AND root_schedule_id IS NOT NULL
+            AND root_due_at IS NOT NULL)
+        )
+      );
+      CREATE UNIQUE INDEX dispatch_intent_schedule_due_unique
+        ON dispatch_intent(schedule_id, due_at);
+      CREATE INDEX dispatch_intent_pending_idx
+        ON dispatch_intent(status, next_attempt_at);
+
+      CREATE TABLE operation_lease (
+        id text PRIMARY KEY NOT NULL,
+        operation text NOT NULL,
+        owner_id text NOT NULL,
+        acquired_at text NOT NULL,
+        expires_at text NOT NULL
+      );
+      CREATE UNIQUE INDEX operation_lease_operation_unique
+        ON operation_lease(operation);
+
+      CREATE TABLE sync_change_generation (
+        id text PRIMARY KEY NOT NULL,
+        sync_job_id text NOT NULL,
+        status text DEFAULT 'pending' NOT NULL,
+        created_at text NOT NULL,
+        completed_at text
+      );
+      CREATE UNIQUE INDEX sync_change_generation_sync_job_id_unique
+        ON sync_change_generation(sync_job_id);
+      CREATE INDEX sync_change_generation_status_idx
+        ON sync_change_generation(status);
+
+      INSERT INTO dispatch_intent (
+        id, task, operation, trigger_kind, status, attempt_count,
+        next_attempt_at, terminal_reason, created_at, updated_at, task_data_json
+      ) VALUES (
+        'legacy-intent', 'analysis', 'analysis', 'manual', 'failed', 3,
+        '2026-07-26T18:00:00.000Z', 'retry me',
+        '2026-07-26T17:00:00.000Z', '2026-07-26T17:30:00.000Z',
+        '{"mode":"incremental"}'
+      );
+      INSERT INTO operation_lease (
+        id, operation, owner_id, acquired_at, expires_at
+      ) VALUES (
+        'legacy-lease', 'analysis', 'legacy-owner',
+        '2026-07-26T17:00:00.000Z', '2026-07-26T19:00:00.000Z'
+      );
+      INSERT INTO sync_change_generation (
+        id, sync_job_id, status, created_at, completed_at
+      ) VALUES (
+        'legacy-generation', 'legacy-sync-job', 'completed',
+        '2026-07-26T16:00:00.000Z', '2026-07-26T16:30:00.000Z'
+      );
+    `);
+
+    await migrateDatabase(legacy.sqlite);
+
+    for (const table of ['dispatch_intent', 'operation_lease', 'sync_change_generation']) {
+      expect(tableSignature(legacy.sqlite, table)).toEqual(tableSignature(fresh.sqlite, table));
+    }
+    expect(
+      legacy.sqlite
+        .prepare(
+          `SELECT id, task, operation, job_id AS jobId, trigger_kind AS triggerKind,
+                  status, attempt_count AS attemptCount, next_attempt_at AS nextAttemptAt,
+                  terminal_reason AS terminalReason, task_data_json AS taskDataJson,
+                  dispatch_key AS dispatchKey, dispatch_claim_token AS dispatchClaimToken,
+                  dispatch_claimed_at AS dispatchClaimedAt,
+                  dispatch_claim_expires_at AS dispatchClaimExpiresAt,
+                  created_at AS createdAt, updated_at AS updatedAt
+           FROM dispatch_intent WHERE id = 'legacy-intent'`,
+        )
+        .get(),
+    ).toEqual({
+      id: 'legacy-intent',
+      task: 'analysis',
+      operation: 'analysis',
+      jobId: null,
+      triggerKind: 'manual',
+      status: 'failed',
+      attemptCount: 3,
+      nextAttemptAt: '2026-07-26T18:00:00.000Z',
+      terminalReason: 'retry me',
+      taskDataJson: '{"mode":"incremental"}',
+      dispatchKey: null,
+      dispatchClaimToken: null,
+      dispatchClaimedAt: null,
+      dispatchClaimExpiresAt: null,
+      createdAt: '2026-07-26T17:00:00.000Z',
+      updatedAt: '2026-07-26T17:30:00.000Z',
+    });
+    expect(
+      legacy.sqlite
+        .prepare(
+          `SELECT id, operation, owner_id AS ownerId, acquired_at AS acquiredAt,
+                  heartbeat_at AS heartbeatAt, expires_at AS expiresAt
+           FROM operation_lease WHERE id = 'legacy-lease'`,
+        )
+        .get(),
+    ).toEqual({
+      id: 'legacy-lease',
+      operation: 'analysis',
+      ownerId: 'legacy-owner',
+      acquiredAt: '2026-07-26T17:00:00.000Z',
+      heartbeatAt: null,
+      expiresAt: '2026-07-26T19:00:00.000Z',
+    });
+    expect(
+      legacy.sqlite
+        .prepare(
+          `SELECT id, sync_job_id AS syncJobId, root_schedule_id AS rootScheduleId,
+                  root_due_at AS rootDueAt, changed_at AS changedAt, status,
+                  created_at AS createdAt, completed_at AS completedAt
+           FROM sync_change_generation WHERE id = 'legacy-generation'`,
+        )
+        .get(),
+    ).toEqual({
+      id: 'legacy-generation',
+      syncJobId: 'legacy-sync-job',
+      rootScheduleId: null,
+      rootDueAt: null,
+      changedAt: null,
+      status: 'completed',
+      createdAt: '2026-07-26T16:00:00.000Z',
+      completedAt: '2026-07-26T16:30:00.000Z',
+    });
+
+    legacy.sqlite.exec(`
+      DROP INDEX dispatch_intent_job_id_unique;
+      CREATE INDEX dispatch_intent_job_id_unique ON dispatch_intent(task);
+      DROP INDEX operation_lease_operation_unique;
+      CREATE UNIQUE INDEX operation_lease_operation_unique ON operation_lease(owner_id);
+      DROP INDEX sync_change_generation_status_idx;
+      CREATE UNIQUE INDEX sync_change_generation_status_idx
+        ON sync_change_generation(completed_at);
+    `);
+    await migrateDatabase(legacy.sqlite);
+    for (const table of ['dispatch_intent', 'operation_lease', 'sync_change_generation']) {
+      expect(tableSignature(legacy.sqlite, table)).toEqual(tableSignature(fresh.sqlite, table));
+    }
+
+    const repairedSignatures = ['dispatch_intent', 'operation_lease', 'sync_change_generation'].map(
+      (table) => tableSignature(legacy.sqlite, table),
+    );
+    await migrateDatabase(legacy.sqlite);
+    expect(
+      ['dispatch_intent', 'operation_lease', 'sync_change_generation'].map((table) =>
+        tableSignature(legacy.sqlite, table),
+      ),
+    ).toEqual(repairedSignatures);
+  });
+
   it('repairs missing and malformed current-hash job-history indexes exactly and idempotently', async () => {
     const current = createDatabaseWithHandle(':memory:');
     const fresh = createDatabaseWithHandle(':memory:');
