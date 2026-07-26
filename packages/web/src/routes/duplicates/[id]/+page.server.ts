@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { getDuplicateGroupLight, getDedupConfig } from '@paperless-dedupe/core';
+import { createPaperlessMediaUrl } from '$lib/server/paperless-auth';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -9,9 +10,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   }
 
   const dedupConfig = getDedupConfig(locals.db);
+  const mediaByDocumentId = Object.fromEntries(
+    group.members.map((member) => [
+      member.documentId,
+      {
+        thumbnailUrl: createPaperlessMediaUrl(locals.config, member.paperlessId, 'thumb'),
+        previewUrl: createPaperlessMediaUrl(locals.config, member.paperlessId, 'preview'),
+      },
+    ]),
+  );
 
   return {
     group,
+    mediaByDocumentId,
     paperlessUrl: locals.config.PAPERLESS_URL,
     weights: {
       jaccard: dedupConfig.confidenceWeightJaccard,

@@ -393,6 +393,8 @@
           <DocumentVisualCompare
             primary={primaryMember}
             secondary={selectedSecondary}
+            primaryMedia={data.mediaByDocumentId[primaryMember.documentId]}
+            secondaryMedia={data.mediaByDocumentId[selectedSecondary.documentId]}
             secondaryIndex={selectedSecondaryIndex}
             secondaryCount={secondaryMembers.length}
             onnavigate={(i) => {

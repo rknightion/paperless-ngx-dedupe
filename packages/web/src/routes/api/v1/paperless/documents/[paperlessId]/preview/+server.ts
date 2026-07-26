@@ -12,7 +12,10 @@ export const GET: RequestHandler = async ({ params, locals, request }) => {
   }
 
   const config = locals.config;
-  const unauthorized = requirePaperlessAuthorization(request, config);
+  const unauthorized = requirePaperlessAuthorization(request, config, {
+    paperlessId,
+    assetKind: 'preview',
+  });
   if (unauthorized) {
     return unauthorized;
   }

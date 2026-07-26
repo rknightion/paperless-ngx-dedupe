@@ -5,12 +5,22 @@
   interface Props {
     primary: DuplicateGroupMember;
     secondary: DuplicateGroupMember;
+    primaryMedia: { thumbnailUrl: string; previewUrl: string };
+    secondaryMedia: { thumbnailUrl: string; previewUrl: string };
     secondaryIndex?: number;
     secondaryCount?: number;
     onnavigate?: (index: number) => void;
   }
 
-  let { primary, secondary, secondaryIndex = 0, secondaryCount = 1, onnavigate }: Props = $props();
+  let {
+    primary,
+    secondary,
+    primaryMedia,
+    secondaryMedia,
+    secondaryIndex = 0,
+    secondaryCount = 1,
+    onnavigate,
+  }: Props = $props();
 
   const hasPrev = $derived(secondaryIndex > 0);
   const hasNext = $derived(secondaryIndex < secondaryCount - 1);
@@ -19,14 +29,6 @@
   let showPdfSecondary = $state(false);
   let thumbErrorPrimary = $state(false);
   let thumbErrorSecondary = $state(false);
-
-  function thumbUrl(paperlessId: number): string {
-    return `/api/v1/paperless/documents/${paperlessId}/thumb`;
-  }
-
-  function previewUrl(paperlessId: number): string {
-    return `/api/v1/paperless/documents/${paperlessId}/preview`;
-  }
 </script>
 
 <div class="grid grid-cols-1 gap-4 overflow-hidden lg:grid-cols-2">
@@ -49,7 +51,7 @@
 
     {#if showPdfPrimary}
       <iframe
-        src={previewUrl(primary.paperlessId)}
+        src={primaryMedia.previewUrl}
         title="PDF preview: {primary.title}"
         class="border-soft h-[600px] w-full rounded-lg border"
       ></iframe>
@@ -61,7 +63,7 @@
       </div>
     {:else}
       <img
-        src={thumbUrl(primary.paperlessId)}
+        src={primaryMedia.thumbnailUrl}
         alt="Thumbnail: {primary.title}"
         class="border-soft max-h-[600px] w-full rounded-lg border object-contain"
         onerror={() => (thumbErrorPrimary = true)}
@@ -110,7 +112,7 @@
 
     {#if showPdfSecondary}
       <iframe
-        src={previewUrl(secondary.paperlessId)}
+        src={secondaryMedia.previewUrl}
         title="PDF preview: {secondary.title}"
         class="border-soft h-[600px] w-full rounded-lg border"
       ></iframe>
@@ -122,7 +124,7 @@
       </div>
     {:else}
       <img
-        src={thumbUrl(secondary.paperlessId)}
+        src={secondaryMedia.thumbnailUrl}
         alt="Thumbnail: {secondary.title}"
         class="border-soft max-h-[600px] w-full rounded-lg border object-contain"
         onerror={() => (thumbErrorSecondary = true)}

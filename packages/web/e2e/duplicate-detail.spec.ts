@@ -107,6 +107,40 @@ test.describe('Duplicate Detail Page', () => {
     await expect(page.getByText('Document Comparison')).toBeVisible();
   });
 
+  test('visual comparison uses browser-authorized thumbnail and PDF proxy URLs', async ({
+    page,
+  }) => {
+    const mediaResponses: Array<{ url: string; status: number }> = [];
+    page.on('response', (response) => {
+      if (/\/api\/v1\/paperless\/documents\/\d+\/(thumb|preview)/.test(response.url())) {
+        mediaResponses.push({ url: response.url(), status: response.status() });
+      }
+    });
+
+    await page.goto(`/duplicates/${seed.groupIds[0]}`);
+    await expect
+      .poll(() => mediaResponses.filter(({ url }) => url.includes('/thumb')).length)
+      .toBe(2);
+
+    const thumbnailResponses = mediaResponses.filter(({ url }) => url.includes('/thumb'));
+    expect(thumbnailResponses).toHaveLength(2);
+    for (const response of thumbnailResponses) {
+      expect(response.url).toMatch(/\/thumb\?access=\d+\.[\w-]+$/);
+      expect(response.url).not.toContain('test-token-e2e');
+      expect(response.status).not.toBe(401);
+    }
+
+    await page.getByRole('button', { name: 'View PDF' }).first().click();
+    await expect
+      .poll(() => mediaResponses.filter(({ url }) => url.includes('/preview')).length)
+      .toBe(1);
+
+    const previewResponse = mediaResponses.find(({ url }) => url.includes('/preview'));
+    expect(previewResponse?.url).toMatch(/\/preview\?access=\d+\.[\w-]+$/);
+    expect(previewResponse?.url).not.toContain('test-token-e2e');
+    expect(previewResponse?.status).not.toBe(401);
+  });
+
   test('confidence breakdown section renders', async ({ page }) => {
     const groupId = seed.groupIds[0];
     await page.goto(`/duplicates/${groupId}`);
