@@ -13,7 +13,7 @@ importers:
     dependencies:
       openai:
         specifier: ^7.0.0
-        version: 7.1.0(zod@4.4.3)
+        version: 7.2.0(zod@4.4.3)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -216,7 +216,7 @@ importers:
         version: 6.0.0
       openai:
         specifier: ^7.0.0
-        version: 7.1.0(zod@4.4.3)
+        version: 7.2.0(zod@4.4.3)
       pino:
         specifier: ^10.0.0
         version: 10.3.1
@@ -2978,8 +2978,8 @@ packages:
       zod:
         optional: true
 
-  openai@7.1.0:
-    resolution: {integrity: sha512-7xWJ9iO5z5u1dnIUGwoUmZHkSyrUYXX2cUxo2E/26iKFrSC8IdEak7z94d5UntU7z+S/Cid33hYymwMSab2fZQ==}
+  openai@7.2.0:
+    resolution: {integrity: sha512-/P0jZP2WDSwSuiilTTcU4mkepzdSAiRrnTK2e9pk9KOzBoE3L9aHz2oIyIXqGbqnnMsGC0Izr223MOUhG2JuvQ==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
@@ -6108,7 +6108,7 @@ snapshots:
     optionalDependencies:
       zod: 4.4.3
 
-  openai@7.1.0(zod@4.4.3):
+  openai@7.2.0(zod@4.4.3):
     optionalDependencies:
       zod: 4.4.3
 
