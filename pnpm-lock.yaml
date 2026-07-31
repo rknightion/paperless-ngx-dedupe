@@ -144,10 +144,10 @@ importers:
     dependencies:
       '@grafana/faro-web-sdk':
         specifier: ^2.3.1
-        version: 2.8.2
+        version: 2.9.0
       '@grafana/faro-web-tracing':
         specifier: ^2.3.1
-        version: 2.8.2(supports-color@7.2.0)
+        version: 2.9.0(supports-color@7.2.0)
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
@@ -820,17 +820,17 @@ packages:
   '@grafana/faro-bundlers-shared@0.11.0':
     resolution: {integrity: sha512-hwu3dzQS+Rbkl6YKucFwXdg1s/9NAJqHaPU9xnXeSDwHqvsOrlXrKIhf7Mezjf77ium+QHccCSlRhx5RqcFytg==}
 
-  '@grafana/faro-core@2.8.2':
-    resolution: {integrity: sha512-63C6+N/P9/ySUMaGut8yVb1DkPuHS5I/lfRm97+aDXFj3+8pxRT/QzyXNe0r6KMU5O95wC9FLVGxG9ZvkwEhJQ==}
+  '@grafana/faro-core@2.9.0':
+    resolution: {integrity: sha512-v7vrNYuoW273hOQ3rQgo3wYYBD8kH5TTfFes0dbsx2/8L+BclIsrsRCUHdlCqme2ZP42iyLkyPgCSDav8S0Niw==}
 
   '@grafana/faro-rollup-plugin@0.11.0':
     resolution: {integrity: sha512-bIWTckqtzEDsDuVG5us1V7M17medp+H5qQgLgtpam965NrBKsfIpiFsAnf9+OqrOxrRfj1l5A+lRYKWbK+Y2dw==}
 
-  '@grafana/faro-web-sdk@2.8.2':
-    resolution: {integrity: sha512-WnUDnyQSQRq22Nb5kqm+g9SellSEUfiEuWQ7Pgwnvj5tnIO72E9JHNnJdurk4MveX8ulWrdyKxyk1L10FUJyzg==}
+  '@grafana/faro-web-sdk@2.9.0':
+    resolution: {integrity: sha512-CfeIoW8m/9Y4LEASQpflhRSg1hJRqJ0gUADdmSFVI6f134+DWoT9e9qsO3v64mSuUPsdD3qYi2EkO+16u7hhTQ==}
 
-  '@grafana/faro-web-tracing@2.8.2':
-    resolution: {integrity: sha512-3MTOVHaW138Te2k1RTlM8a0WngYHwAJoSMX2EcZNn9elq1/5eNADN+75k89jYcCtcdiQAIq/hmT2WfRtUTD+kQ==}
+  '@grafana/faro-web-tracing@2.9.0':
+    resolution: {integrity: sha512-Omh85Ex3dugDIRsVrCBtRSEmomdRCtE75xu3gI6P4WehQg0CWfjzbk5im/ytyNkOTRNn0kPQo1Rssw9UPM5w0w==}
 
   '@grpc/grpc-js@1.14.4':
     resolution: {integrity: sha512-k9Dj3DV/itK9D06Y8f190Qgop7/Ui+D0njFV3LHMPwPT75DpXLQohE9Wmz0QElrJnzsjB7KPWiKJbOl7IPDArQ==}
@@ -3941,7 +3941,7 @@ snapshots:
       tar: 7.5.22
       undici: 8.9.0
 
-  '@grafana/faro-core@2.8.2':
+  '@grafana/faro-core@2.9.0':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/otlp-transformer': 0.219.0(@opentelemetry/api@1.9.1)
@@ -3952,15 +3952,15 @@ snapshots:
       magic-string: 0.30.21
       rollup: 4.62.2
 
-  '@grafana/faro-web-sdk@2.8.2':
+  '@grafana/faro-web-sdk@2.9.0':
     dependencies:
-      '@grafana/faro-core': 2.8.2
+      '@grafana/faro-core': 2.9.0
       ua-parser-js: 1.0.41
       web-vitals: 5.3.0
 
-  '@grafana/faro-web-tracing@2.8.2(supports-color@7.2.0)':
+  '@grafana/faro-web-tracing@2.9.0(supports-color@7.2.0)':
     dependencies:
-      '@grafana/faro-web-sdk': 2.8.2
+      '@grafana/faro-web-sdk': 2.9.0
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/core': 2.10.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/exporter-trace-otlp-http': 0.219.0(@opentelemetry/api@1.9.1)
@@ -5038,10 +5038,6 @@ snapshots:
     optional: true
 
   '@standard-schema/spec@1.1.0': {}
-
-  '@sveltejs/acorn-typescript@1.0.11(acorn@8.17.0)':
-    dependencies:
-      acorn: 8.17.0
 
   '@sveltejs/acorn-typescript@1.0.11(acorn@8.18.0)':
     dependencies:
@@ -6453,10 +6449,10 @@ snapshots:
     dependencies:
       '@jridgewell/remapping': 2.3.5
       '@jridgewell/sourcemap-codec': 1.5.5
-      '@sveltejs/acorn-typescript': 1.0.11(acorn@8.17.0)
+      '@sveltejs/acorn-typescript': 1.0.11(acorn@8.18.0)
       '@types/estree': 1.0.9
       '@types/trusted-types': 2.0.7
-      acorn: 8.17.0
+      acorn: 8.18.0
       aria-query: 5.3.1
       axobject-query: 4.1.0
       clsx: 2.1.1
