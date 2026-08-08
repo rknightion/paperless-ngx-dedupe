@@ -18,6 +18,7 @@ jobs:
     permissions:
       contents: write # create releases and tags
       pull-requests: write # create/update release PRs
+      id-token: write # exchanged for a tailnet identity and an OpenBao token
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
@@ -25,11 +26,27 @@ jobs:
       major: ${{ steps.release.outputs.major }}
       minor: ${{ steps.release.outputs.minor }}
     steps:
+      # Mints a short-lived GitHub App installation token scoped to THIS repo,
+      # replacing RELEASE_PLEASE_TOKEN -- a PAT scoped across every rknightion repo.
+      # Nothing durable is stored here to leak. The release PR's author becomes the
+      # App rather than rknightion; CI still runs unattended on it, because the
+      # action_required gate applies to github-actions[bot], not to bot identities
+      # generally -- Renovate, a GitHub App, already runs fine.
+      #
+      # Releases now depend on camden being up, unsealed and on the tailnet; a
+      # failure here is infrastructure, not the commit.
+      - name: Mint a scoped release token
+        id: bao
+        uses: rknightion/.github/.github/actions/broker-token@b9ab5f80961f2c29c47a8d7d5dff112b6551169c
+        with:
+          permission-set: release-please-paperless-ngx-dedupe
+          tailscale-client-id: ${{ secrets.TS_WIF_CLIENT_ID }}
+          tailscale-audience: ${{ secrets.TS_WIF_AUDIENCE }}
+
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          # PAT (not GITHUB_TOKEN): bot-authored release PRs need a non-default-token author for CI to run without manual approval
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          token: ${{ steps.bao.outputs.token }}
 
   publish:
     needs: release-please
