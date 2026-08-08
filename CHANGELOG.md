@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.17.0...v0.17.1) (2026-08-08)
+
+
+### Documentation
+
+* adopt the m7kni.io inverted docs model ([f3f5303](https://github.com/rknightion/paperless-ngx-dedupe/commit/f3f5303278fa7c70994200932ec8ba799383a44b))
+* fix broken internal links ([0657785](https://github.com/rknightion/paperless-ngx-dedupe/commit/06577850990397233a60e563d15907c9926d8fca))
+
 ## [0.17.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.16.3...v0.17.0) (2026-08-08)
 
 
