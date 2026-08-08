@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'docs/**'
-      - 'zensical.toml'
+      - 'docs.toml'
   workflow_dispatch:
 
 concurrency:
