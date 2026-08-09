@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { NextAction } from '@paperless-dedupe/core';
   import { ArrowRight, Play, RefreshCw } from 'lucide-svelte';
+  import Button from '$lib/components/ui/Button.svelte';
 
   interface Props {
     actions: NextAction[];
@@ -41,30 +42,30 @@
           </div>
           <div class="shrink-0">
             {#if action.safeAction === 'sync'}
-              <button
-                type="button"
-                onclick={onSync}
+              <Button
+                icon={RefreshCw}
                 disabled={syncDisabled}
-                aria-describedby={syncDisabled ? 'sync-active-help' : undefined}
-                class="bg-accent hover:bg-accent-hover text-on-accent inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                describedBy={syncDisabled ? 'sync-active-help' : undefined}
+                onclick={onSync}
+                class="min-h-10"
               >
-                <RefreshCw class="h-4 w-4" /> Sync Now
-              </button>
+                Sync Now
+              </Button>
               {#if syncDisabled}
                 <p id="sync-active-help" class="text-muted mt-2 text-xs" role="status">
                   A sync is already active. Follow its progress in Current activity.
                 </p>
               {/if}
             {:else if action.safeAction === 'analysis'}
-              <button
-                type="button"
-                onclick={onAnalysis}
+              <Button
+                icon={Play}
                 disabled={analysisDisabled}
-                aria-describedby={analysisDisabled ? 'analysis-active-help' : undefined}
-                class="bg-accent hover:bg-accent-hover text-on-accent inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                describedBy={analysisDisabled ? 'analysis-active-help' : undefined}
+                onclick={onAnalysis}
+                class="min-h-10"
               >
-                <Play class="h-4 w-4" /> Run Analysis
-              </button>
+                Run Analysis
+              </Button>
               {#if analysisDisabled}
                 <p id="analysis-active-help" class="text-muted mt-2 text-xs" role="status">
                   Duplicate analysis is already active. Follow its progress in Current activity.
@@ -98,15 +99,16 @@
       </div>
       <div class="flex flex-wrap gap-2">
         {#if !includesSync}
-          <button
-            type="button"
-            onclick={onSync}
+          <Button
+            variant="secondary"
+            icon={RefreshCw}
             disabled={syncDisabled}
-            aria-describedby={syncDisabled ? 'sync-active-help' : undefined}
-            class="border-soft text-ink hover:bg-canvas-deep inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+            describedBy={syncDisabled ? 'sync-active-help' : undefined}
+            onclick={onSync}
+            class="min-h-10"
           >
-            <RefreshCw class="h-4 w-4" /> Sync Now
-          </button>
+            Sync Now
+          </Button>
           {#if syncDisabled}
             <p id="sync-active-help" class="text-muted mt-2 text-xs" role="status">
               A sync is already active. Follow its progress in Current activity.
@@ -114,15 +116,16 @@
           {/if}
         {/if}
         {#if !includesAnalysis}
-          <button
-            type="button"
-            onclick={onAnalysis}
+          <Button
+            variant="secondary"
+            icon={Play}
             disabled={analysisDisabled}
-            aria-describedby={analysisDisabled ? 'analysis-active-help' : undefined}
-            class="border-soft text-ink hover:bg-canvas-deep inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+            describedBy={analysisDisabled ? 'analysis-active-help' : undefined}
+            onclick={onAnalysis}
+            class="min-h-10"
           >
-            <Play class="h-4 w-4" /> Run Analysis
-          </button>
+            Run Analysis
+          </Button>
           {#if analysisDisabled}
             <p id="analysis-active-help" class="text-muted mt-2 text-xs" role="status">
               Duplicate analysis is already active. Follow its progress in Current activity.

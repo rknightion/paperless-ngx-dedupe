@@ -27,6 +27,8 @@
     fullWidth?: boolean;
     title?: string;
     ariaLabel?: string;
+    /** id of an element explaining the control, e.g. why it is disabled. */
+    describedBy?: string;
     class?: string;
     onclick?: (e: MouseEvent) => void;
     children?: Snippet;
@@ -45,6 +47,7 @@
     fullWidth = false,
     title,
     ariaLabel,
+    describedBy,
     class: className = '',
     onclick,
     children,
@@ -101,6 +104,7 @@
     class={classes}
     {title}
     aria-label={ariaLabel}
+    aria-describedby={describedBy}
     download={download || undefined}
     {onclick}
   >
@@ -113,6 +117,7 @@
     disabled={inactive}
     {title}
     aria-label={ariaLabel}
+    aria-describedby={describedBy}
     aria-busy={loading ? 'true' : undefined}
     {onclick}
   >

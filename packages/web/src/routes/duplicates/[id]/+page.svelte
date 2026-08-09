@@ -12,7 +12,7 @@
     DocumentVisualCompare,
     MatchExplanation,
   } from '$lib/components';
-  import { ConfirmDialog } from '$lib/components';
+  import { ConfirmDialog, Button, Spinner } from '$lib/components';
   import { trackGroupViewed, trackMemberAction } from '$lib/faro-events';
   import { safeDocumentReturnTarget } from '$lib/utils/safe-return';
   import { ArrowLeft, ExternalLink, Trash2, UserMinus } from 'lucide-svelte';
@@ -258,13 +258,14 @@
                 <td class="py-2.5">
                   <div class="flex items-center gap-2">
                     {#if !member.isPrimary}
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={isSettingPrimary}
                         onclick={() => setPrimary(member.documentId)}
-                        disabled={isSettingPrimary}
-                        class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1 text-xs font-medium disabled:opacity-50"
                       >
                         {isSettingPrimary ? 'Setting...' : 'Set as Primary'}
-                      </button>
+                      </Button>
                     {/if}
                     <a
                       href="{data.paperlessUrl}/documents/{member.paperlessId}/details"
@@ -345,26 +346,26 @@
                   : selectedSecondary.title}</strong
               >:
             </span>
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={UserMinus}
+              disabled={isMemberAction}
               onclick={() => (showRemoveFromGroup = true)}
-              disabled={isMemberAction}
-              class="border-soft text-ink hover:bg-canvas inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             >
-              <UserMinus class="h-3.5 w-3.5" />
               Remove from Group
-            </button>
-            <button
-              onclick={() => (showDeleteFromPaperless = true)}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              icon={Trash2}
               disabled={isMemberAction}
-              class="bg-ember text-on-accent inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 disabled:opacity-50"
+              onclick={() => (showDeleteFromPaperless = true)}
             >
-              <Trash2 class="h-3.5 w-3.5" />
               Delete from Paperless
-            </button>
+            </Button>
             {#if isMemberAction}
-              <span
-                class="border-accent inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
-              ></span>
+              <Spinner size="sm" class="text-accent" />
             {/if}
             {#if memberActionError}
               <span class="text-ember text-xs">{memberActionError}</span>
