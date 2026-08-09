@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import { connectJobSSE } from '$lib/sse';
-  import { ConfirmDialog, GroupPreviewModal, RecycleBinPrompt } from '$lib/components';
+  import { Button, ConfirmDialog, GroupPreviewModal, RecycleBinPrompt } from '$lib/components';
   import BulkDeletePreview from '$lib/components/duplicates/BulkDeletePreview.svelte';
   import DuplicateInboxFilters from '$lib/components/duplicates/DuplicateInboxFilters.svelte';
   import DuplicateInboxList from '$lib/components/duplicates/DuplicateInboxList.svelte';
@@ -121,35 +121,31 @@
       </span>
     </div>
     <div class="grid grid-cols-2 gap-2 sm:flex">
-      <a
-        href="/duplicates/graph"
-        class="border-soft text-ink flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
-      >
-        <Network class="h-4 w-4" /> Similarity Graph
-      </a>
-      <a
+      <Button variant="secondary" href="/duplicates/graph" icon={Network} fullWidth>
+        Similarity Graph
+      </Button>
+      <Button
+        variant="secondary"
         href="/api/v1/export/duplicates.csv?{$page.url.searchParams.toString()}"
-        download
+        icon={Download}
+        fullWidth
         onclick={() => trackCsvExported()}
-        class="border-soft text-ink flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
       >
-        <Download class="h-4 w-4" /> Export CSV
-      </a>
-      <a
-        href="/duplicates/wizard"
-        class="bg-accent text-on-accent flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
-      >
-        <Wand2 class="h-4 w-4" /> Bulk Operations Wizard
-      </a>
+        Export CSV
+      </Button>
+      <!-- One primary action per view: this is the committing one. -->
+      <Button href="/duplicates/wizard" icon={Wand2} fullWidth>Bulk Operations Wizard</Button>
       {#if data.deletedGroupCount > 0}
-        <button
-          type="button"
-          onclick={() => (showPurgeConfirm = true)}
+        <Button
+          variant="secondary"
+          icon={Trash2}
+          fullWidth
           disabled={isSubmitting}
-          class="border-soft text-ember flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
+          class="text-ember"
+          onclick={() => (showPurgeConfirm = true)}
         >
-          <Trash2 class="h-4 w-4" /> Purge {data.deletedGroupCount} Deleted
-        </button>
+          Purge {data.deletedGroupCount} Deleted
+        </Button>
       {/if}
     </div>
   </header>
@@ -181,30 +177,25 @@
       aria-label="Bulk actions"
     >
       <span class="text-ink text-sm font-medium">{selectedIds.size} selected</span>
-      <button
-        type="button"
-        onclick={() => batchStatus('false_positive')}
+      <Button
+        variant="secondary"
+        size="sm"
         disabled={isSubmitting}
-        class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm font-medium"
+        onclick={() => batchStatus('false_positive')}
       >
         Not Duplicates
-      </button>
-      <button
-        type="button"
-        onclick={() => batchStatus('ignored')}
-        disabled={isSubmitting}
-        class="bg-accent text-on-accent rounded-lg px-3 py-1.5 text-sm font-medium"
-      >
+      </Button>
+      <Button size="sm" disabled={isSubmitting} onclick={() => batchStatus('ignored')}>
         Keep All
-      </button>
-      <button
-        type="button"
-        onclick={() => (showDeletePreview = true)}
+      </Button>
+      <Button
+        variant="destructive"
+        size="sm"
         disabled={isSubmitting}
-        class="bg-ember text-on-accent rounded-lg px-3 py-1.5 text-sm font-medium"
+        onclick={() => (showDeletePreview = true)}
       >
         Delete Non-Primary
-      </button>
+      </Button>
       <button
         type="button"
         onclick={() => (selectedIds = new Set())}

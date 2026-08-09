@@ -2,7 +2,7 @@
   import { untrack, setContext } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
-  import { ProgressBar, ConfirmDialog } from '$lib/components';
+  import { ProgressBar, ConfirmDialog, Tabs } from '$lib/components';
   import AiToastContainer from '$lib/components/ai/AiToastContainer.svelte';
   import AiDocumentPickerModal from '$lib/components/ai/AiDocumentPickerModal.svelte';
   import { addToast, resetStore } from '$lib/components/ai/AiReviewStore.svelte';
@@ -64,34 +64,38 @@
     return limit ? `${path}?limit=${limit}` : path;
   }
 
-  // Counts are thunks so each stays reactive through the {#each}.
-  const TABS = [
+  // `value` is the path prefix the tab owns, which is also what isActive()
+  // matches on. Custom Fields carries no limit param, so it links directly.
+  const tabs = $derived([
     {
-      href: '/ai-processing/queue',
+      value: '/ai-processing/queue',
       label: 'Queue',
-      count: () => queueCount,
-      countClass: 'bg-accent-light text-accent',
+      href: tabHref('/ai-processing/queue'),
+      count: queueCount,
+      countTone: 'accent' as const,
     },
     {
-      href: '/ai-processing/review',
+      value: '/ai-processing/review',
       label: 'Review',
-      count: () => pendingReviewCount,
-      countClass: 'bg-warn-light text-warn',
+      href: tabHref('/ai-processing/review'),
+      count: pendingReviewCount,
+      countTone: 'warn' as const,
     },
     {
-      href: '/ai-processing/history',
+      value: '/ai-processing/history',
       label: 'History',
-      count: () => historyCount,
-      countClass: 'bg-canvas-deep text-ink-faint',
+      href: tabHref('/ai-processing/history'),
+      count: historyCount,
+      countTone: 'neutral' as const,
     },
     {
-      href: '/ai-processing/custom-fields',
+      value: '/ai-processing/custom-fields',
       label: 'Custom Fields',
-      count: () => 0,
-      countClass: '',
-      exact: true,
+      href: '/ai-processing/custom-fields',
     },
-  ];
+  ]);
+
+  const activeTab = $derived(tabs.find((t) => isActive(t.value))?.value ?? '');
 
   // ── SSE Connection ──
   function connectSSE(id: string) {
@@ -527,27 +531,7 @@
     </div>
   {/if}
 
-  <!-- Tab Bar. Active is the accent underline plus accent text; counts are
-       tinted pills. No dark: variants needed — the tokens swap themselves. -->
-  <nav class="border-border flex border-b">
-    {#each TABS as tab (tab.href)}
-      {@const count = tab.count()}
-      <a
-        href={tab.exact ? tab.href : tabHref(tab.href)}
-        aria-current={isActive(tab.href) ? 'page' : undefined}
-        class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {isActive(tab.href)
-          ? 'border-accent text-accent'
-          : 'text-ink-faint hover:text-ink border-transparent'}"
-      >
-        {tab.label}
-        {#if count > 0}
-          <span class="ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium {tab.countClass}"
-            >{count}</span
-          >
-        {/if}
-      </a>
-    {/each}
-  </nav>
+  <Tabs {tabs} active={activeTab} ariaLabel="AI processing sections" />
 
   <!-- Child Page Content -->
   {@render children()}

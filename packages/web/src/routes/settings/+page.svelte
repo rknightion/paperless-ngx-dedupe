@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
-  import { InfoIcon, RichTooltip, StaleAnalysisBanner } from '$lib/components';
+  import { InfoIcon, RichTooltip, StaleAnalysisBanner, Tabs } from '$lib/components';
   import {
     trackSettingsSaved,
     trackConnectionTested,
@@ -139,6 +139,14 @@
 
   let weightSum = $derived(weightJaccard + weightFuzzy);
   let weightsValid = $derived(weightSum === 100);
+
+  const settingsTabs = $derived([
+    { value: 'connection', label: 'Connection' },
+    { value: 'dedup', label: 'Deduplication' },
+    ...(data.aiEnabled ? [{ value: 'ai', label: 'AI Processing' }] : []),
+    { value: 'automation', label: 'Automation' },
+    { value: 'system', label: 'System & backup' },
+  ]);
 
   async function testConnection() {
     isTesting = true;
@@ -410,49 +418,15 @@
     <p class="text-muted mt-1">Configure Paperless-NGX connection and deduplication parameters.</p>
   </header>
 
-  <!-- Sticky Mini-Nav -->
-  <div
-    role="tablist"
-    aria-label="Settings sections"
-    class="bg-canvas/80 sticky top-0 z-10 -mx-4 flex gap-1 rounded-lg px-4 py-2 backdrop-blur-sm sm:-mx-6 md:-mx-8"
-  >
-    <button
-      role="tab"
-      aria-selected={activeSettingsSection === 'connection'}
-      onclick={() => (activeSettingsSection = 'connection')}
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
-      >Connection</button
-    >
-    <button
-      role="tab"
-      aria-selected={activeSettingsSection === 'dedup'}
-      onclick={() => (activeSettingsSection = 'dedup')}
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
-      >Deduplication</button
-    >
-    {#if data.aiEnabled}
-      <button
-        role="tab"
-        aria-selected={activeSettingsSection === 'ai'}
-        onclick={() => (activeSettingsSection = 'ai')}
-        class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
-        >AI Processing</button
-      >
-    {/if}
-    <button
-      role="tab"
-      aria-selected={activeSettingsSection === 'automation'}
-      onclick={() => (activeSettingsSection = 'automation')}
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
-      >Automation</button
-    >
-    <button
-      role="tab"
-      aria-selected={activeSettingsSection === 'system'}
-      onclick={() => (activeSettingsSection = 'system')}
-      class="text-muted hover:text-accent rounded-md px-3 py-1.5 text-sm font-medium"
-      >System & backup</button
-    >
+  <!-- Sticky Mini-Nav. Translucent + blurred is deliberate and one of only two
+       places the system allows it: a surface that scrolls under content. -->
+  <div class="bg-canvas/80 sticky top-0 z-10 -mx-4 px-4 py-2 backdrop-blur-sm sm:-mx-6 md:-mx-8">
+    <Tabs
+      tabs={settingsTabs}
+      active={activeSettingsSection}
+      ariaLabel="Settings sections"
+      onchange={(v) => (activeSettingsSection = v as SettingsSection)}
+    />
   </div>
 
   <!-- Paperless-NGX Connection -->

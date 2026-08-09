@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { StatCard, EChart, ProgressBar } from '$lib/components';
+  import { StatCard, EChart, ProgressBar, Button, PageHeader } from '$lib/components';
   import DocumentLibraryFilters from '$lib/components/documents/DocumentLibraryFilters.svelte';
   import DocumentLibraryTable from '$lib/components/documents/DocumentLibraryTable.svelte';
   import DocumentQualitySummary from '$lib/components/documents/DocumentQualitySummary.svelte';
@@ -126,20 +126,14 @@
 
 <div class="space-y-8">
   {#if data.library}
-    <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 class="text-ink text-2xl font-semibold tracking-tight">Document Library</h1>
-        <p class="text-muted mt-1">
-          Find synced documents and move directly into the relevant review workflow.
-        </p>
-      </div>
-      <a
-        href="/documents"
-        class="border-soft text-ink rounded-lg border px-3 py-2 text-center text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        View statistics only
-      </a>
-    </header>
+    <PageHeader
+      title="Document Library"
+      description="Find synced documents and move directly into the relevant review workflow."
+    >
+      {#snippet actions()}
+        <Button variant="secondary" href="/documents">View statistics only</Button>
+      {/snippet}
+    </PageHeader>
 
     <DocumentLibraryFilters query={data.library.query} />
     <DocumentQualitySummary
@@ -154,18 +148,11 @@
       paperlessUrl={data.paperlessUrl}
     />
   {:else}
-    <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div class="space-y-1">
-        <h1 class="text-ink text-2xl font-semibold tracking-tight">Documents</h1>
-        <p class="text-muted mt-1">Library statistics and document overview.</p>
-      </div>
-      <a
-        href="/documents?library=true"
-        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-center text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        Browse document library
-      </a>
-    </header>
+    <PageHeader title="Documents" description="Library statistics and document overview.">
+      {#snippet actions()}
+        <Button href="/documents?library=true">Browse document library</Button>
+      {/snippet}
+    </PageHeader>
   {/if}
 
   <!-- Overview Divider -->

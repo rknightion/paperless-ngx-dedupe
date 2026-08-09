@@ -1,3 +1,22 @@
+// ── m7kni design system components ──────────────────────────────────────
+// Svelte 5 ports of the shared system's component contracts. Read the
+// component's own header before using one; several encode rules that are not
+// preferences (Badge has no solid variant, Button has no semantic tint).
+export { default as Button } from './ui/Button.svelte';
+export { default as Badge } from './ui/Badge.svelte';
+export { default as Spinner } from './ui/Spinner.svelte';
+export { default as Skeleton } from './ui/Skeleton.svelte';
+export { default as TextField } from './ui/TextField.svelte';
+export { default as SearchInput } from './ui/SearchInput.svelte';
+export { default as Select } from './ui/Select.svelte';
+export { default as Toggle } from './ui/Toggle.svelte';
+export { default as Checkbox } from './ui/Checkbox.svelte';
+export { default as EmptyState } from './ui/EmptyState.svelte';
+export { default as ErrorState } from './ui/ErrorState.svelte';
+export { default as PageHeader } from './ui/PageHeader.svelte';
+export { default as Tabs } from './ui/Tabs.svelte';
+export { default as ThemeToggle } from './ui/ThemeToggle.svelte';
+
 export { default as ProgressBar } from './ui/ProgressBar.svelte';
 export { default as ConfidenceBadge } from './ui/ConfidenceBadge.svelte';
 export { default as StatusBadge } from './ui/StatusBadge.svelte';
