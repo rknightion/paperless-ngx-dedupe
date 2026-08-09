@@ -4,6 +4,32 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
+    <!--
+      Theme, applied before first paint. This is deliberately an inline,
+      render-blocking script in <head>: the app is server-rendered, so any
+      class applied from a component's onMount lands after the browser has
+      already painted the light palette, and the result is a white flash on
+      every load for dark-mode users.
+
+      Kept in sync by hand with lib/theme/ThemeStore.svelte.ts — the storage
+      key and the accepted values must match, and the store's init() assumes
+      this has already run.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('pngx-dedupe-theme');
+          var dark =
+            stored === 'dark' ||
+            ((stored === 'system' || stored === null) &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {
+          /* Storage blocked, or no matchMedia. Light is the safe default. */
+        }
+      })();
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

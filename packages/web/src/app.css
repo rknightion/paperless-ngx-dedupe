@@ -2,63 +2,225 @@
 @import '@fontsource/geist-sans';
 @import '@fontsource-variable/jetbrains-mono';
 
-/* ─── Design System ─────────────────────────────────────────────────────
- * Semantic color tokens using oklch for perceptual uniformity.
- * All interactive elements use accent (teal family).
- * Destructive actions use ember (red family).
- * Status colors: success (green), accent (blue/teal), ember (red).
+/* ─── m7kni Design System ───────────────────────────────────────────────
+ * Tokens mirror the shared system (Claude Design project "m7kni Design
+ * System"). Authored in oklch for perceptually even ramps.
+ *
+ * Paper is warm (hue 85), ink is cool (hue 260). That pairing is what keeps
+ * the density from reading clinical; the move to a green accent deliberately
+ * left it alone.
+ *
+ * Accent is Jade — the ONLY colour meaning "interactive". Per-project colour
+ * is --color-accent-product (violet), shared across every m7kni repo rather
+ * than invented per project. This app's old teal was retired because it sat
+ * 13° from Jade and the two read as the same family.
+ *
+ * Never hard-code a colour; never lighten a semantic foreground. Each one
+ * sits at the lightest value that still clears WCAG AA *on its own tint*,
+ * not on white. Tinted pills carry real text here, so that distinction is
+ * the whole point — see ConfidenceBadge.svelte.
  * ──────────────────────────────────────────────────────────────────────── */
 
-@theme {
-  --color-canvas: oklch(0.97 0.005 90);
-  --color-canvas-deep: oklch(0.94 0.008 90);
-  --color-ink: oklch(0.2 0.02 260);
-  --color-ink-light: oklch(0.35 0.02 260);
-  --color-accent: oklch(0.47 0.15 195);
-  --color-accent-light: oklch(0.92 0.04 195);
-  --color-accent-subtle: oklch(0.96 0.02 195);
-  --color-accent-hover: oklch(0.42 0.15 195);
-  --color-ember: oklch(0.55 0.2 25);
-  --color-ember-light: oklch(0.92 0.05 25);
-  --color-soft: oklch(0.88 0.01 260);
+/* Class-based dark mode. Tailwind v4's default `dark:` keys off
+   prefers-color-scheme, which cannot be overridden by a user toggle. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* `static` is load-bearing: by default Tailwind v4 emits only the theme
+   variables it can see used by a utility. Many tokens here are referenced
+   through raw var() — in the .dark block below, in inline styles, and from
+   the ECharts theme — so without `static` they would be silently dropped
+   from the output and dark mode would half-fail.
+   NOT `inline`: that resolves tokens to literal values inside utilities,
+   which would bake the light palette into every class and defeat .dark. */
+@theme static {
+  /* ── Surfaces ─────────────────────────────────────────────────────── */
+  --color-canvas: oklch(0.975 0.006 85);
+  --color-canvas-deep: oklch(0.945 0.009 85);
   --color-surface: oklch(1 0 0);
-  --color-muted: oklch(0.54 0.015 260);
-  --color-success: oklch(0.46 0.15 155);
+  --color-surface-raised: oklch(1 0 0);
+
+  /* ── Ink ramp — pick by role, not by taste ────────────────────────── */
+  --color-ink: oklch(0.2 0.02 260); /* headings */
+  --color-ink-light: oklch(0.35 0.02 260); /* body */
+  --color-ink-faint: oklch(0.48 0.015 260); /* subtitles, descriptions */
+  --color-muted: oklch(0.55 0.015 260); /* meta, placeholders */
+
+  /* ── Accent — Jade. White on it 5.66:1, on canvas 5.26:1,
+     on its own tint 4.67:1. Lighten it and it fails AA. ─────────────── */
+  --color-accent: oklch(0.49 0.13 165);
+  --color-accent-hover: oklch(0.42 0.13 165);
+  --color-accent-light: oklch(0.93 0.035 165);
+  --color-accent-subtle: oklch(0.965 0.018 165);
+
+  /* ── Per-product accent — violet, 135° from the brand accent ──────── */
+  --color-accent-product: oklch(0.53 0.16 300);
+  --color-accent-product-light: oklch(0.93 0.04 300);
+
+  /* ── Semantic. Foregrounds are AA-verified against their own tint.
+     Do not lighten. If you need a lighter look, change the tint. ────── */
+  --color-ember: oklch(0.52 0.2 25); /* 4.68:1 on ember-light */
+  --color-ember-light: oklch(0.92 0.05 25);
+  --color-success: oklch(0.49 0.15 155); /* 4.53:1 on success-light */
   --color-success-light: oklch(0.92 0.04 155);
-  --color-warn: oklch(0.7 0.15 85);
+  --color-warn: oklch(0.52 0.15 85); /* 4.64:1 on warn-light */
   --color-warn-light: oklch(0.94 0.04 85);
+
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  --color-soft: oklch(0.885 0.009 85);
+  --color-border: oklch(0.9 0.007 85);
+  --color-border-hover: oklch(0.8 0.011 85);
+
+  /* ── Sidebar — its own near-black ramp at hue 260 ─────────────────── */
   --color-sidebar: oklch(0.18 0.025 260);
+  --color-sidebar-top: oklch(0.22 0.03 260);
   --color-sidebar-hover: oklch(0.3 0.02 260);
-  --color-sidebar-active: oklch(0.3 0.03 195);
+  --color-sidebar-active: oklch(0.36 0.06 165);
+  --color-sidebar-border: oklch(0.28 0.02 260);
 
-  /* Chart palette — 6 distinct colors */
-  --color-chart-1: oklch(0.55 0.15 195);
-  --color-chart-2: oklch(0.6 0.16 155);
-  --color-chart-3: oklch(0.65 0.14 265);
-  --color-chart-4: oklch(0.7 0.15 85);
-  --color-chart-5: oklch(0.6 0.18 330);
-  --color-chart-6: oklch(0.6 0.12 140);
+  /* ── Charts — 6 series, none of which reads as the brand accent.
+     Series 1 is violet so a single-series chart never looks like a
+     primary action. ─────────────────────────────────────────────────── */
+  --color-chart-1: oklch(0.52 0.16 300);
+  --color-chart-2: oklch(0.55 0.14 245);
+  --color-chart-3: oklch(0.55 0.1 205);
+  --color-chart-4: oklch(0.58 0.13 70);
+  --color-chart-5: oklch(0.58 0.16 10);
+  --color-chart-6: oklch(0.55 0.1 130);
 
-  --font-sans: 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
+  /* ── Type ─────────────────────────────────────────────────────────── */
+  --font-sans: 'Geist Sans', 'Geist', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --tracking-tight: -0.02em;
+  --tracking-wider: 0.1em;
+
+  /* ── Elevation. A card's shadow is a hint, not a lift. Shadows step up
+     only for things that genuinely float: menus, dialogs, toasts. ───── */
+  --shadow-sm: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.04);
+  --shadow-md: 0 4px 6px -1px oklch(0.2 0.02 260 / 0.06), 0 2px 4px -2px oklch(0.2 0.02 260 / 0.04);
+  --shadow-lg:
+    0 10px 15px -3px oklch(0.2 0.02 260 / 0.08), 0 4px 6px -4px oklch(0.2 0.02 260 / 0.04);
+  --shadow-panel: 0 1px 2px oklch(0.2 0.02 260 / 0.04), 0 2px 8px oklch(0.2 0.02 260 / 0.03);
+  /* Tracks --color-accent BY HAND. These are literal values, not var()
+     references, because a colour cannot be given an alpha channel inside a
+     shadow without re-declaring it. Change the accent, change this. */
+  --shadow-glow: 0 0 0 3px oklch(0.49 0.13 165 / 0.15);
+
+  /* ── Motion — one curve, three durations. No bounce, no spring. ───── */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Tokens Tailwind has no namespace for. Plain custom properties. */
+:root {
+  --duration-fast: 150ms; /* colour, border, opacity on interactive elements */
+  --duration-base: 200ms; /* surfaces appearing */
+  --duration-slow: 300ms; /* progress fills, page-level fade-in-up */
+  --press-scale: 0.98;
+
+  /* Layout constants */
+  --sidebar-width-wide: 16rem; /* 256px rail */
+  --content-max: 72rem;
+  --panel-padding: 1.75rem;
+  --panel-inset-padding: 1.25rem;
+  --stack-gap: 2rem;
+
+  /* Semantic aliases */
+  --text-heading: var(--color-ink);
+  --text-body: var(--color-ink-light);
+  --text-secondary: var(--color-ink-faint);
+  --text-link: var(--color-accent);
+  --text-link-hover: var(--color-accent-hover);
+  --text-on-accent: #fff;
+  --focus-ring: var(--color-accent);
+}
+
+/* ─── Dark scope ────────────────────────────────────────────────────────
+ * Surfaces LIFT rather than invert (canvas 0.165 → surface 0.205 → raised
+ * 0.225) and the accent brightens so it survives on dark. The warm hue-85
+ * paper carries through, so this is a warm near-black, not a blue one.
+ *
+ * `:root.dark` (0,1,1) is listed first so it outranks the `:root` that
+ * Tailwind emits @theme into, regardless of which lands first in the
+ * bundle. The bare `.dark` covers scoping to a wrapper element.
+ *
+ * The semantic foregrounds are NOT the light-scope values: on dark they sit
+ * near 0.68 on tints near 0.25 and already clear AA comfortably. Applying
+ * the light-scope AA darkening here would only make the pills muddier.
+ * ──────────────────────────────────────────────────────────────────────── */
+:root.dark,
+.dark {
+  --color-canvas: oklch(0.165 0.008 85);
+  --color-canvas-deep: oklch(0.135 0.009 85);
+  --color-surface: oklch(0.205 0.009 85);
+  --color-surface-raised: oklch(0.225 0.011 85);
+
+  --color-ink: oklch(0.92 0.01 90);
+  --color-ink-light: oklch(0.78 0.01 90);
+  --color-ink-faint: oklch(0.58 0.01 90);
+  --color-muted: oklch(0.6 0.015 260);
+
+  --color-accent: oklch(0.68 0.12 165);
+  --color-accent-hover: oklch(0.74 0.12 165);
+  --color-accent-light: oklch(0.28 0.05 165);
+  --color-accent-subtle: oklch(0.22 0.03 165);
+
+  --color-accent-product: oklch(0.7 0.14 300);
+  --color-accent-product-light: oklch(0.28 0.06 300);
+
+  --color-ember: oklch(0.68 0.18 25);
+  --color-ember-light: oklch(0.25 0.06 25);
+  --color-success: oklch(0.68 0.14 155);
+  --color-success-light: oklch(0.25 0.05 155);
+  --color-warn: oklch(0.78 0.14 85);
+  --color-warn-light: oklch(0.25 0.05 85);
+
+  --color-soft: oklch(0.3 0.011 85);
+  --color-border: oklch(0.305 0.009 85);
+  --color-border-hover: oklch(0.4 0.012 85);
+
+  --color-sidebar: oklch(0.13 0.02 260);
+  --color-sidebar-top: oklch(0.17 0.025 260);
+  --color-sidebar-hover: oklch(0.25 0.02 260);
+  --color-sidebar-active: oklch(0.32 0.06 165);
+  --color-sidebar-border: oklch(0.22 0.015 260);
+
+  /* Plain black at higher opacity — a soft tinted shadow is invisible on a
+     dark surface. */
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.2);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.3), 0 2px 4px -2px oklch(0 0 0 / 0.2);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.35), 0 4px 6px -4px oklch(0 0 0 / 0.2);
+  --shadow-panel: 0 1px 2px oklch(0 0 0 / 0.25), 0 2px 8px oklch(0 0 0 / 0.2);
+  --shadow-glow: 0 0 0 3px oklch(0.68 0.12 165 / 0.2);
+}
+
+/* ─── Surface utilities ─────────────────────────────────────────────────
+ * A card is: surface fill, 1px hairline, 12px radius, and a shadow so soft
+ * it reads as a hint. Nested blocks take the *inset* treatment — canvas
+ * fill, same hairline, 8px radius, less padding.
+ * ──────────────────────────────────────────────────────────────────────── */
 
 @utility panel {
   background-color: var(--color-surface);
-  border: 1px solid var(--color-soft);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: calc(var(--spacing) * 4);
-  box-shadow:
-    0 1px 2px oklch(0.2 0.02 260 / 0.04),
-    0 2px 8px oklch(0.2 0.02 260 / 0.03);
-  transition: box-shadow 0.2s ease;
+  box-shadow: var(--shadow-panel);
+  transition: box-shadow var(--duration-base) var(--ease-standard);
 }
 
 @utility panel-inset {
   background-color: var(--color-canvas);
-  border: 1px solid var(--color-soft);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: calc(var(--spacing) * 3);
+}
+
+/* For things that genuinely float: dropdowns, dialogs, toasts. */
+@utility panel-raised {
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: calc(var(--spacing) * 4);
+  box-shadow: var(--shadow-lg);
 }
 
 @utility divider {
@@ -67,20 +229,34 @@
 }
 
 @layer base {
+  /* Load-bearing, not a preference. Every control in this system pairs
+     `width: 100%` with its own padding; under the default content-box those
+     add together and the field overflows its container by the width of that
+     padding. It hides inside a flex-1 column and is obvious the moment a
+     field sits in the fixed sidebar. Do not scope this narrower. */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   html {
     font-family: var(--font-sans);
     color: var(--color-ink);
+    background-color: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
   }
 
+  /* Focus is :focus-visible only — never a persistent ring on click. */
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
 
   button:active:not(:disabled),
   a:active {
-    transform: scale(0.98);
+    transform: scale(var(--press-scale));
   }
 
   a,
@@ -89,8 +265,15 @@
   select,
   textarea {
     transition-property: color, background-color, border-color, box-shadow, transform, opacity;
-    transition-duration: 0.15s;
-    transition-timing-function: ease;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-standard);
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
   }
 
   details > summary {
@@ -105,11 +288,61 @@
     content: '\25B8';
     display: inline-block;
     margin-right: 0.35em;
-    transition: transform 0.15s ease;
+    transition: transform var(--duration-fast) var(--ease-standard);
   }
 
   details[open] > summary::before {
     transform: rotate(90deg);
+  }
+}
+
+/* ─── Motion ────────────────────────────────────────────────────────────
+ * Surfaces appear at 200ms: menus slide down 4px, dialogs scale in from
+ * 0.96, toasts slide in 16px from the right. Page-level fade-in-up is a
+ * 300ms 8px rise. Skeletons shimmer on a 1.5s loop.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
@@ -137,6 +370,7 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
