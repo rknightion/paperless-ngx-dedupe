@@ -1,3 +1,13 @@
+---
+description: Paperless NGX Dedupe can download a consistent snapshot of its SQLite
+  database from Settings > Database backup.
+tags:
+- paperless-ngx
+- document-deduplication
+- minhash
+- duplicate-detection
+---
+
 # Database backup and offline restore
 
 Paperless NGX Dedupe can download a consistent snapshot of its SQLite database

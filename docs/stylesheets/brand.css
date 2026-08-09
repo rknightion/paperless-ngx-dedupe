@@ -1,0 +1,134 @@
+/* m7kni.io fleet brand — the shared visual layer for every m7kni docs site.
+ *
+ * ┌─ DESIGN SEAM ───────────────────────────────────────────────────────────┐
+ * │ SOURCE OF TRUTH: the m7kni design system, `guidelines/docs-sites.md`     │
+ * │ and `guidelines/brand.css` (checked out at ~/repos/m7kni-design-system). │
+ * │ This file is that guideline applied. When the design system moves, edit  │
+ * │ it there first, then port the change here — not the other way round.     │
+ * │                                                                          │
+ * │ It must keep expressing itself as Material/Zensical custom properties    │
+ * │ (--md-*) plus `.m7-*` classes. Zensical renders Material's HTML and we   │
+ * │ do not control that markup, so the system's React component library      │
+ * │ (components/**) cannot drop in here — it targets product surfaces.       │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * OWNED BY THE HUB. Copied into each child clone at build time, and into the
+ * hub's own docs/stylesheets/ — a repo must not keep a tracked copy.
+ *
+ * LOAD ORDER: first, before the repo's own project.css. Under the inverted
+ * model a project stylesheet carries components only and never branding, so
+ * brand goes first and per-project components build on these tokens. (The
+ * design system used to say "last" — written for the pre-inversion fleet,
+ * where each repo owned its palette and brand had to beat it. It now says
+ * first too, so the two agree.)
+ *
+ * DELIBERATELY RESTRAINED, and the restraint is the design system's own
+ * instruction, not our caution. From guidelines/docs-sites.md: unify colour
+ * and type, then stop. Body size, line-height, nav, TOC, admonition shapes,
+ * table styling and search stay as the theme ships them — "the theme has
+ * spent years on those; this system has no opinion that beats them."
+ *
+ * FONTS ARE SELF-HOSTED, and they have to be. The obvious route is
+ * `theme.font.text = "Geist"`, which makes Zensical emit a Google Fonts link,
+ * plus the privacy plugin to pull those files local at build time. That does
+ * not work here: ZENSICAL DOES NOT IMPLEMENT THE PRIVACY PLUGIN
+ * (zensical/backlog#35, still open). Configuring it is silently inert — the
+ * fleet has carried `[project.plugins.privacy]` since the migration and every
+ * built page still linked fonts.gstatic.com. Measured on a real build, not
+ * assumed. So `theme.font = false` turns the Google link off entirely and the
+ * faces below are served from the site's own origin.
+ *
+ * The two variable woff2 files are google/fonts builds under the SIL Open
+ * Font License 1.1, converted from the TTFs the design system vendors; the
+ * licence texts sit beside them in shared/fonts/.
+ */
+
+@font-face {
+  font-family: "Geist";
+  src: url("../fonts/Geist-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/JetBrainsMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Accent — the one colour that means "interactive". */
+  --md-primary-fg-color: #00764d;
+  --md-primary-fg-color--light: #3eaf86;
+  --md-primary-fg-color--dark: #00623a;
+  --md-accent-fg-color: #00623a;
+
+  /* Surfaces — cool ink on warm paper, matching the products. The canvas
+   * carries a trace of warmth (hue 85) while text greys stay cool (hue 260);
+   * that pairing is what keeps a dense reference page from reading clinical. */
+  --md-default-bg-color: #ffffff;
+  --md-code-bg-color: oklch(0.945 0.009 85);
+  --md-typeset-table-color: oklch(0.9 0.007 85);
+
+  /* Geist for everything, JetBrains Mono for machine text. Set as variables
+   * rather than font-family, which is what preserves the system fallback. */
+  --md-text-font: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --md-code-font: "JetBrains Mono", ui-monospace, monospace;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #3eaf86;
+  --md-primary-fg-color--light: #54c398;
+  --md-primary-fg-color--dark: #00764d;
+  --md-accent-fg-color: #54c398;
+
+  /* Dark surfaces lift rather than invert: canvas 0.165 → surface 0.205. */
+  --md-default-bg-color: oklch(0.205 0.009 85);
+  --md-code-bg-color: oklch(0.165 0.008 85);
+}
+
+/* ROOT-SIZE CORRECTION. The system's type tokens are authored against a 16px
+ * root; Material sets `html { font-size: 125% }`, so every --text-* and rem
+ * line-height renders 1.25x — --text-xs measures 15px, not 12px — silently, on
+ * a clean build. tokens/typography.css multiplies by this basis, defaulting to
+ * 1, so 16px-root consumers are untouched. Type only: spacing, radius and
+ * shadow should scale with the theme's larger root, and shrinking them would
+ * leave correctly-sized text in cramped gutters. */
+:root { --m7-root-basis: 0.8; }   /* exactly 16/20 */
+
+/* Brand-tint links so the accent reads consistently with the hub, without
+ * altering spacing or type.
+ *
+ * `:not(.md-button)` is load-bearing. Material paints a filled button's
+ * background with --md-primary-fg-color, so tinting its label the same
+ * variable makes the text invisible against its own background. The rule
+ * cannot be undone downstream either: it ends in a type selector and scores
+ * (0,2,1), which the obvious `.md-typeset .md-button--primary` override
+ * (0,2,0) loses to however late it loads. Excluding buttons at source is the
+ * only fix that is not a specificity arms race.
+ *
+ * `.m7-btn` is excluded for the same reason and is NOT optional. The hub's
+ * landing page paints its primary button with the same accent, and it used to
+ * survive on load order alone: this rule was (0,2,1), the page's
+ * `.md-typeset a.m7-btn--primary` was also (0,2,1), and extra.css loads
+ * second. Adding `:not(.md-button)` raised this rule to (0,3,1) — enough to
+ * win outright — and the button's label went jade-on-jade, invisible. Caught
+ * on a light-mode screenshot; the build was clean and dark mode looked fine.
+ * Any future `:not()` added here raises the specificity again, so re-check the
+ * landing page's buttons when you touch this selector. */
+[data-md-color-scheme="default"] .md-typeset a:not(.md-button):not(.m7-btn) {
+  color: var(--md-primary-fg-color);
+}
+
+/* Corners follow the system's control (6px) and card (12px) radii. */
+.md-typeset code {
+  border-radius: 0.375rem;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 0.75rem;
+}
