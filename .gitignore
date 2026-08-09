@@ -32,3 +32,12 @@ docker-data/
 .claude/
 
 .env2
+
+# Injected by the m7kni.io hub at build time — never commit these.
+# The hub copies its own SEO template, brand stylesheet and fonts into a clone
+# and generates zensical.toml from docs.toml. A tracked copy here is drift, and
+# is exactly what the manifest model exists to prevent.
+/zensical.toml
+docs/overrides/
+docs/stylesheets/brand.css
+docs/fonts/
