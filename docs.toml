@@ -37,6 +37,12 @@ Home = "index.md"
 ]
 
 [[site.nav]]
+Security = "security.md"
+
+[[site.nav]]
+"When to Use This" = "comparison.md"
+
+[[site.nav]]
 Reference = [
     { "API Reference" = "api-reference.md" },
     { "Paperless-NGX 3 Compatibility" = "paperless-3-compatibility.md" },
@@ -50,6 +56,7 @@ Development = [
 
 [[site.nav]]
 Support = [
+    { FAQ = "faq.md" },
     { Troubleshooting = "troubleshooting.md" },
 ]
 
