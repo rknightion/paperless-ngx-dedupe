@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.17.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.17.0...v0.17.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* remove hub build artifacts committed by mistake ([14b73b0](https://github.com/rknightion/paperless-ngx-dedupe/commit/14b73b09b0e788582d630be7046502d61a428a62))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @sveltejs/vite-plugin-svelte to v7.3.0 ([#529](https://github.com/rknightion/paperless-ngx-dedupe/issues/529)) ([c457100](https://github.com/rknightion/paperless-ngx-dedupe/commit/c457100e0306f80f1171ab1d26203ecdb0fbccaf))
+* **deps:** update dependency eslint to v10.8.1 ([#528](https://github.com/rknightion/paperless-ngx-dedupe/issues/528)) ([34a7cef](https://github.com/rknightion/paperless-ngx-dedupe/commit/34a7cef73b42f223300ce9f8fb7c40ce21b9d42c))
+
+
+### Documentation
+
+* add an FAQ, a security page and a comparison ([dab259b](https://github.com/rknightion/paperless-ngx-dedupe/commit/dab259b4a95404af94cac6f3ef532e5275cf7b63))
+* adopt the m7kni.io inverted docs model ([f3f5303](https://github.com/rknightion/paperless-ngx-dedupe/commit/f3f5303278fa7c70994200932ec8ba799383a44b))
+* drop MathJax — the hub renders maths at build time now ([4f4ad13](https://github.com/rknightion/paperless-ngx-dedupe/commit/4f4ad1331a18237f405a88a57582658dd9ec03ca))
+* drop the unused ES6 polyfill ([ec00bec](https://github.com/rknightion/paperless-ngx-dedupe/commit/ec00becaa14c03d1352507e0653aff0cf7defa0d))
+* fix broken internal links ([0657785](https://github.com/rknightion/paperless-ngx-dedupe/commit/06577850990397233a60e563d15907c9926d8fca))
+
 ## [0.17.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.16.3...v0.17.0) (2026-08-08)
 
 
