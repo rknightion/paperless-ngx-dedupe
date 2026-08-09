@@ -64,8 +64,6 @@ Support = [
 Changelog = "changelog.md"
 
 [assets]
-logo = "assets/logo.png"
-favicon = "assets/favicon.png"
 social_image = "assets/social-card.png"
 social_image_alt = "Paperless NGX Dedupe documentation social preview card"
 extra_css = [

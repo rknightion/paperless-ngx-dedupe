@@ -40,4 +40,6 @@ docker-data/
 /zensical.toml
 docs/overrides/
 docs/stylesheets/brand.css
+docs/assets/project-icon.svg
+docs/assets/project-icon-solid.svg
 docs/fonts/
