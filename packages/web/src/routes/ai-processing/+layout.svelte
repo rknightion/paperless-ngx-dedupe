@@ -64,6 +64,35 @@
     return limit ? `${path}?limit=${limit}` : path;
   }
 
+  // Counts are thunks so each stays reactive through the {#each}.
+  const TABS = [
+    {
+      href: '/ai-processing/queue',
+      label: 'Queue',
+      count: () => queueCount,
+      countClass: 'bg-accent-light text-accent',
+    },
+    {
+      href: '/ai-processing/review',
+      label: 'Review',
+      count: () => pendingReviewCount,
+      countClass: 'bg-warn-light text-warn',
+    },
+    {
+      href: '/ai-processing/history',
+      label: 'History',
+      count: () => historyCount,
+      countClass: 'bg-canvas-deep text-ink-faint',
+    },
+    {
+      href: '/ai-processing/custom-fields',
+      label: 'Custom Fields',
+      count: () => 0,
+      countClass: '',
+      exact: true,
+    },
+  ];
+
   // ── SSE Connection ──
   function connectSSE(id: string) {
     sseConnection?.close();
@@ -254,7 +283,7 @@
       <button
         onclick={handleProcessNew}
         disabled={isProcessing}
-        class="bg-accent hover:bg-accent-hover flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+        class="bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
       >
         {#if isProcessing}
           <Loader2 class="h-4 w-4 animate-spin" />
@@ -374,7 +403,7 @@
       class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
       data-sveltekit-preload-data
     >
-      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+      <div class="bg-canvas-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <CircleX class="text-muted h-4 w-4" />
       </div>
       <div class="min-w-0">
@@ -498,57 +527,26 @@
     </div>
   {/if}
 
-  <!-- Tab Bar -->
-  <nav class="flex border-b border-zinc-200 dark:border-zinc-700">
-    <a
-      href={tabHref('/ai-processing/queue')}
-      class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/queue')
-        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
-    >
-      Queue
-      {#if queueCount > 0}
-        <span
-          class="bg-accent-light text-accent ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
-          >{queueCount}</span
-        >
-      {/if}
-    </a>
-    <a
-      href={tabHref('/ai-processing/review')}
-      class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/review')
-        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
-    >
-      Review
-      {#if pendingReviewCount > 0}
-        <span class="bg-warn-light text-warn ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
-          >{pendingReviewCount}</span
-        >
-      {/if}
-    </a>
-    <a
-      href={tabHref('/ai-processing/history')}
-      class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/history')
-        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
-    >
-      History
-      {#if historyCount > 0}
-        <span
-          class="ml-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-          >{historyCount}</span
-        >
-      {/if}
-    </a>
-    <a
-      href="/ai-processing/custom-fields"
-      class="border-b-2 px-4 py-2 text-sm font-medium {isActive('/ai-processing/custom-fields')
-        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-        : 'border-transparent text-zinc-600 hover:text-zinc-700 dark:text-zinc-400'}"
-    >
-      Custom Fields
-    </a>
+  <!-- Tab Bar. Active is the accent underline plus accent text; counts are
+       tinted pills. No dark: variants needed — the tokens swap themselves. -->
+  <nav class="border-border flex border-b">
+    {#each TABS as tab (tab.href)}
+      {@const count = tab.count()}
+      <a
+        href={tab.exact ? tab.href : tabHref(tab.href)}
+        aria-current={isActive(tab.href) ? 'page' : undefined}
+        class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {isActive(tab.href)
+          ? 'border-accent text-accent'
+          : 'text-ink-faint hover:text-ink border-transparent'}"
+      >
+        {tab.label}
+        {#if count > 0}
+          <span class="ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium {tab.countClass}"
+            >{count}</span
+          >
+        {/if}
+      </a>
+    {/each}
   </nav>
 
   <!-- Child Page Content -->

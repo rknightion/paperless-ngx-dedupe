@@ -5,15 +5,22 @@
 
   let { status }: Props = $props();
 
-  /* Static class map for Tailwind detection */
+  /**
+   * Always a tinted pill, never a solid fill — that treatment is what tells
+   * state apart from the accent, which is also green.
+   *
+   * `paused` uses the shared per-product violet rather than a raw palette
+   * colour; neutral states use the canvas-deep tint. Static class strings so
+   * Tailwind sees every variant.
+   */
   const statusClasses: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-700',
+    pending: 'bg-warn-light text-warn',
     running: 'bg-accent-light text-accent',
     completed: 'bg-success-light text-success',
     failed: 'bg-ember-light text-ember',
-    paused: 'bg-violet-100 text-violet-700',
-    cancelled: 'bg-gray-100 text-gray-600',
-    false_positive: 'bg-gray-100 text-gray-600',
+    paused: 'bg-accent-product-light text-accent-product',
+    cancelled: 'bg-canvas-deep text-ink-faint',
+    false_positive: 'bg-canvas-deep text-ink-faint',
     ignored: 'bg-accent-light text-accent',
     deleted: 'bg-success-light text-success',
   };
@@ -22,7 +29,7 @@
     false_positive: 'False Positive',
   };
 
-  let classes = $derived(statusClasses[status] ?? 'bg-gray-100 text-gray-600');
+  let classes = $derived(statusClasses[status] ?? 'bg-canvas-deep text-ink-faint');
 </script>
 
 <span

@@ -82,7 +82,7 @@
       <button
         onclick={generateRecommendations}
         disabled={loading}
-        class="bg-accent hover:bg-accent-hover flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        class="bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
       >
         {#if loading}
           <Loader2 class="h-4 w-4 animate-spin" />

@@ -132,7 +132,7 @@
             class="bg-canvas text-muted rounded-full px-2 py-0.5 text-xs {!primary.tags.includes(
               tag,
             )
-              ? 'ring-1 ring-amber-300'
+              ? 'ring-warn/40 ring-1'
               : ''}">{tag}</span
           >
         {/each}

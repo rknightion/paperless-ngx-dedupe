@@ -4,6 +4,7 @@
   import { EChart } from '$lib/components';
   import type { ECharts } from 'echarts';
   import type { GraphNode, GraphEdge } from '@paperless-dedupe/core';
+  import { chartPalette, readToken } from '$lib/theme/tokens';
 
   let { data } = $props();
 
@@ -11,36 +12,37 @@
   let selectedEdge: (GraphEdge & { sourceTitle: string; targetTitle: string }) | null =
     $state(null);
 
-  // Assign colors to correspondents
-  const PALETTE = [
-    '#6366f1', // indigo
-    '#f59e0b', // amber
-    '#10b981', // emerald
-    '#ef4444', // red
-    '#8b5cf6', // violet
-    '#06b6d4', // cyan
-    '#f97316', // orange
-    '#ec4899', // pink
-    '#14b8a6', // teal
-    '#84cc16', // lime
-  ];
+  // Correspondents cycle the design system's six-series chart ramp rather than
+  // inventing a palette. More correspondents than series is expected here —
+  // colour separates neighbours in the graph, it is not a legend key.
+  const correspondentPalette = $derived(chartPalette());
 
   let correspondentColors = $derived(() => {
+    const palette = correspondentPalette;
     const colors: Record<string, string> = {};
     const correspondents = [...new Set(data.graph.nodes.map((n) => n.correspondent ?? 'Unknown'))];
     correspondents.forEach((c, i) => {
-      colors[c] = PALETTE[i % PALETTE.length];
+      colors[c] = palette[i % palette.length];
     });
     return colors;
   });
 
   let nodeMap = $derived(new Map(data.graph.nodes.map((n) => [n.id, n])));
 
+  // Edge colour is state, so it reads from the semantic tokens: resolved,
+  // because ECharts paints to a canvas and cannot take a var() reference.
+  const edgeColors = $derived({
+    deleted: readToken('--color-success'),
+    ignored: readToken('--color-accent'),
+    falsePositive: readToken('--color-muted'),
+    pending: readToken('--color-accent-product'),
+  });
+
   function edgeColor(e: GraphEdge): string {
-    if (e.status === 'deleted') return '#22c55e'; // green
-    if (e.status === 'ignored') return '#3b82f6'; // blue
-    if (e.status === 'false_positive') return '#9ca3af'; // gray
-    return '#6366f1'; // indigo (pending)
+    if (e.status === 'deleted') return edgeColors.deleted;
+    if (e.status === 'ignored') return edgeColors.ignored;
+    if (e.status === 'false_positive') return edgeColors.falsePositive;
+    return edgeColors.pending;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -108,7 +110,7 @@
           name: n.id,
           symbolSize: Math.max(16, Math.min(40, 12 + n.groupCount * 8)),
           itemStyle: {
-            color: correspondentColors()[n.correspondent ?? 'Unknown'] ?? '#94a3b8',
+            color: correspondentColors()[n.correspondent ?? 'Unknown'] ?? edgeColors.falsePositive,
           },
           meta: n,
         })),
@@ -280,20 +282,29 @@
         <div class="flex flex-wrap gap-6 text-xs">
           <div class="space-y-1">
             <p class="text-muted font-medium">Edge Colors</p>
+            <!-- Markup, so these take var() references directly and follow the
+                 theme. They must stay in step with edgeColor() above, which
+                 resolves the same tokens for the canvas. -->
             <div class="flex items-center gap-1.5">
-              <span class="inline-block h-0.5 w-4 rounded" style="background: #6366f1"></span>
+              <span
+                class="inline-block h-0.5 w-4 rounded"
+                style="background: var(--color-accent-product)"
+              ></span>
               <span class="text-ink">Pending</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <span class="inline-block h-0.5 w-4 rounded" style="background: #9ca3af"></span>
+              <span class="inline-block h-0.5 w-4 rounded" style="background: var(--color-muted)"
+              ></span>
               <span class="text-ink">False Positive</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <span class="inline-block h-0.5 w-4 rounded" style="background: #3b82f6"></span>
+              <span class="inline-block h-0.5 w-4 rounded" style="background: var(--color-accent)"
+              ></span>
               <span class="text-ink">Ignored</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <span class="inline-block h-0.5 w-4 rounded" style="background: #22c55e"></span>
+              <span class="inline-block h-0.5 w-4 rounded" style="background: var(--color-success)"
+              ></span>
               <span class="text-ink">Deleted</span>
             </div>
           </div>
@@ -371,7 +382,7 @@
             </dl>
             <a
               href="/duplicates/{selectedEdge.groupId}"
-              class="bg-accent hover:bg-accent-hover mt-3 inline-block rounded-lg px-3 py-1.5 text-sm font-medium text-white"
+              class="bg-accent hover:bg-accent-hover text-on-accent mt-3 inline-block rounded-lg px-3 py-1.5 text-sm font-medium"
             >
               View Group
             </a>

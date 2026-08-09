@@ -91,7 +91,7 @@
   <div class="mt-8 flex gap-3">
     <a
       href="/"
-      class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
+      class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
     >
       Back to Dashboard
     </a>

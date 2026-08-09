@@ -52,6 +52,18 @@
   --color-accent-light: oklch(0.93 0.035 165);
   --color-accent-subtle: oklch(0.965 0.018 165);
 
+  /* Foreground for anything sitting ON a solid accent or semantic fill —
+     primary buttons, destructive buttons, active pills. Named to match the
+     design system's own --text-on-accent.
+     NOT interchangeable with white: the dark scope
+     brightens the accent to 0.68 so it survives as a link on a dark canvas,
+     and white on that measures about 2.3:1. The design system defines the
+     accent for both schemes but has never rendered dark (see its
+     guidelines/dark-mode.md, "not demonstrated on purpose"), so this token
+     is the missing half. Use `text-on-accent`, never `text-white`, on an
+     accent fill. */
+  --color-on-accent: oklch(1 0 0);
+
   /* ── Per-product accent — violet, 135° from the brand accent ──────── */
   --color-accent-product: oklch(0.53 0.16 300);
   --color-accent-product-light: oklch(0.93 0.04 300);
@@ -155,13 +167,21 @@
 
   --color-ink: oklch(0.92 0.01 90);
   --color-ink-light: oklch(0.78 0.01 90);
-  --color-ink-faint: oklch(0.58 0.01 90);
-  --color-muted: oklch(0.6 0.015 260);
+  /* The design system ships these at 0.58 and 0.60. Measured here, 0.58 gives
+     only 4.17:1 on the dark surface and 4.00:1 on raised — both under AA, and
+     both carry real subtitle text. 0.61/0.62 is the lightest pair that clears
+     4.5:1 on canvas, surface AND raised. The system has never rendered dark
+     ("not demonstrated on purpose"), so this is the first measurement of it. */
+  --color-ink-faint: oklch(0.61 0.01 90);
+  --color-muted: oklch(0.62 0.015 260);
 
   --color-accent: oklch(0.68 0.12 165);
   --color-accent-hover: oklch(0.74 0.12 165);
   --color-accent-light: oklch(0.28 0.05 165);
   --color-accent-subtle: oklch(0.22 0.03 165);
+
+  /* Near-black on the brightened accent — the inverse of the light scope. */
+  --color-on-accent: oklch(0.16 0.01 165);
 
   --color-accent-product: oklch(0.7 0.14 300);
   --color-accent-product-light: oklch(0.28 0.06 300);

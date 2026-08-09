@@ -40,8 +40,8 @@
   }
 
   const confirmClasses = {
-    accent: 'bg-accent text-white hover:bg-accent-hover',
-    ember: 'bg-ember text-white hover:opacity-90',
+    accent: 'bg-accent text-on-accent hover:bg-accent-hover',
+    ember: 'bg-ember text-on-accent hover:opacity-90',
   } as const;
 </script>
 

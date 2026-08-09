@@ -161,7 +161,7 @@
         type="button"
         onclick={savePolicy}
         disabled={saving}
-        class="bg-accent hover:bg-accent-hover rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50"
       >
         {saving ? 'Saving…' : `Save selected fields (${selectedCount}/50)`}
       </button>

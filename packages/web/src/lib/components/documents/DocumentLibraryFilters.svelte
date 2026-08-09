@@ -320,7 +320,7 @@
       <button
         type="submit"
         disabled={submitting}
-        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         Apply library filters
       </button>

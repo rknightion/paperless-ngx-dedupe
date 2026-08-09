@@ -112,7 +112,7 @@
     <button
       onclick={() => setStatus('ignored')}
       disabled={isUpdating}
-      class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
     >
       <span class="flex items-center gap-2">
         <CheckCircle class="h-4 w-4" />
@@ -125,7 +125,7 @@
         showDeleteConfirm = true;
       }}
       disabled={isUpdating || memberCount < 2}
-      class="bg-ember rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+      class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
     >
       <span class="flex items-center gap-2">
         <Trash2 class="h-4 w-4" />

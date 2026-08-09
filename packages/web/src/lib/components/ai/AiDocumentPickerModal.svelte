@@ -158,7 +158,7 @@
         </div>
         <button
           onclick={handleSearchClick}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
+          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
         >
           Search
         </button>
@@ -294,7 +294,7 @@
         <button
           onclick={handleSubmit}
           disabled={selectedIds.size === 0}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           Process {selectedIds.size} Document{selectedIds.size === 1 ? '' : 's'}
         </button>

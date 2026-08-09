@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ConfidenceBadge, EChart } from '$lib/components';
   import type { EChartsOption } from 'echarts';
+  import { readToken } from '$lib/theme/tokens';
 
   interface Props {
     overallScore: number;
@@ -13,12 +14,20 @@
   let { overallScore, jaccardSimilarity, fuzzyTextRatio, discriminativeScore, weights }: Props =
     $props();
 
+  // Same three bands as ConfidenceBadge — keep them in step. Resolved rather
+  // than var() references because these are painted onto an ECharts canvas.
+  const bandColors = $derived({
+    none: readToken('--color-muted'),
+    high: readToken('--color-success'),
+    medium: readToken('--color-warn'),
+    low: readToken('--color-ember'),
+  });
+
   function scoreColor(score: number | null): string {
-    if (score === null) return 'oklch(0.75 0.01 260)';
-    if (score >= 0.9) return 'oklch(0.55 0.15 155)';
-    if (score >= 0.8) return 'oklch(0.65 0.15 85)';
-    if (score >= 0.75) return 'oklch(0.6 0.15 55)';
-    return 'oklch(0.55 0.2 25)';
+    if (score === null) return bandColors.none;
+    if (score >= 0.9) return bandColors.high;
+    if (score >= 0.75) return bandColors.medium;
+    return bandColors.low;
   }
 
   const components = $derived([

@@ -11,12 +11,13 @@
     return score !== null ? `${Math.round(score * 100)}%` : 'N/A';
   }
 
+  // Same three bands as ConfidenceBadge and ConfidenceBreakdown — keep the
+  // three in step.
   function barColor(score: number | null): string {
     if (score === null) return 'bg-white/30';
-    if (score >= 0.9) return 'bg-green-400';
-    if (score >= 0.8) return 'bg-amber-400';
-    if (score >= 0.75) return 'bg-orange-400';
-    return 'bg-red-400';
+    if (score >= 0.9) return 'bg-success';
+    if (score >= 0.75) return 'bg-warn';
+    return 'bg-ember';
   }
 
   let components = $derived([

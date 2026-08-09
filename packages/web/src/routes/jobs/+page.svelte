@@ -162,8 +162,8 @@
       role={feedback.type === 'error' ? 'alert' : 'status'}
       aria-live={feedback.type === 'error' ? 'assertive' : 'polite'}
       class="rounded-lg border px-4 py-3 text-sm {feedback.type === 'success'
-        ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400'
-        : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'}"
+        ? 'border-success/30 bg-success-light text-success'
+        : 'border-ember/30 bg-ember-light text-ember'}"
     >
       {feedback.message}
     </div>

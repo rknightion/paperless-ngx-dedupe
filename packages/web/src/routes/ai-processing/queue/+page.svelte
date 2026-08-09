@@ -206,7 +206,7 @@
           <button
             onclick={handleProcessSelected}
             disabled={layoutCtx.isProcessing}
-            class="bg-accent hover:bg-accent-hover flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+            class="bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
           >
             <Play class="h-4 w-4" />
             Process {selectedDocIds.size} Selected

@@ -5,8 +5,11 @@
   import DocumentQualitySummary from '$lib/components/documents/DocumentQualitySummary.svelte';
   import { FileStack, Clock, Type, Copy } from 'lucide-svelte';
   import type { EChartsOption } from 'echarts';
+  import { readToken } from '$lib/theme/tokens';
 
   let { data } = $props();
+
+  const surfaceColor = $derived(readToken('--color-surface'));
 
   // Correspondent distribution bar chart
   let correspondentOption: EChartsOption = $derived({
@@ -23,7 +26,6 @@
       {
         type: 'bar',
         data: data.stats.correspondentDistribution.map((c) => c.count).reverse(),
-        itemStyle: { color: 'oklch(0.7 0.15 85)' },
         barMaxWidth: 24,
       },
     ],
@@ -32,15 +34,9 @@
 
   // Document type donut chart
   let docTypeOption: EChartsOption = $derived({
+    // No `color` array: the registered ECharts theme carries the design
+    // system's six-series ramp, so charts inherit it and follow the theme.
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    color: [
-      'oklch(0.55 0.15 195)',
-      'oklch(0.6 0.16 155)',
-      'oklch(0.65 0.14 265)',
-      'oklch(0.7 0.15 85)',
-      'oklch(0.6 0.18 330)',
-      'oklch(0.6 0.12 140)',
-    ],
     series: [
       {
         type: 'pie',
@@ -60,14 +56,6 @@
   // Tag treemap
   let tagOption: EChartsOption = $derived({
     tooltip: { formatter: '{b}: {c} documents' },
-    color: [
-      'oklch(0.55 0.15 195)',
-      'oklch(0.6 0.16 155)',
-      'oklch(0.65 0.14 265)',
-      'oklch(0.7 0.15 85)',
-      'oklch(0.6 0.18 330)',
-      'oklch(0.6 0.12 140)',
-    ],
     series: [
       {
         type: 'treemap',
@@ -80,7 +68,9 @@
         levels: [
           {
             itemStyle: {
-              borderColor: '#fff',
+              // Gaps read as the card surface beneath, so this must follow the
+              // theme rather than stay white.
+              borderColor: surfaceColor,
               borderWidth: 2,
               gapWidth: 2,
             },
@@ -105,7 +95,6 @@
         data: data.stats.documentsOverTime.map((d) => d.count),
         areaStyle: { opacity: 0.3 },
         smooth: true,
-        itemStyle: { color: 'oklch(0.55 0.15 195)' },
       },
     ],
     grid: { left: 50, right: 20, top: 30, bottom: 40 },
@@ -124,7 +113,6 @@
       {
         type: 'bar',
         data: data.stats.wordCountDistribution.map((d) => d.count),
-        itemStyle: { color: 'oklch(0.6 0.16 155)' },
         barMaxWidth: 40,
       },
     ],
@@ -173,7 +161,7 @@
       </div>
       <a
         href="/documents?library=true"
-        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-center text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-center text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         Browse document library
       </a>
@@ -339,7 +327,7 @@
       </div>
       <a
         href="/ai-processing/queue"
-        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-center text-sm font-medium text-white"
+        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-center text-sm font-medium"
       >
         Go to AI Processing
       </a>
@@ -356,7 +344,7 @@
       href="{data.paperlessUrl}/documents/"
       target="_blank"
       rel="noopener noreferrer"
-      class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
+      class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
     >
       Open Paperless-NGX
     </a>

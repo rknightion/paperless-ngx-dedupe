@@ -22,10 +22,8 @@
     series: [
       {
         type: 'bar',
-        data: confidenceDistribution.map((bucket) => ({
-          value: bucket.count,
-          itemStyle: { color: 'oklch(0.55 0.15 195)' },
-        })),
+        // Colour comes from the registered theme's first series.
+        data: confidenceDistribution.map((bucket) => bucket.count),
         barMaxWidth: 40,
       },
     ],

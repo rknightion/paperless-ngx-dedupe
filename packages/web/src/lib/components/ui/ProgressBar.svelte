@@ -18,7 +18,7 @@
   );
 
   let isIndeterminate = $derived(barPct === 0 && animated);
-  let barColor = $derived(barPct >= 100 ? 'bg-success' : paused ? 'bg-amber-400' : 'bg-accent');
+  let barColor = $derived(barPct >= 100 ? 'bg-success' : paused ? 'bg-warn' : 'bg-accent');
 
   // ETA calculation from phaseProgress rate
   let etaStartTime = $state<number | null>(null);
@@ -93,7 +93,7 @@
     {#if isIndeterminate}
       <div
         class="h-full w-full rounded-full"
-        style="background: linear-gradient(90deg, transparent 0%, oklch(0.55 0.15 195 / 0.4) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite;"
+        style="background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--color-accent) 40%, transparent) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite;"
       ></div>
     {:else}
       <div

@@ -78,7 +78,7 @@
       <button
         onclick={() => (showEmptyConfirm = true)}
         disabled={isEmptying}
-        class="bg-ember mt-3 rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+        class="bg-ember text-on-accent mt-3 rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
       >
         {isEmptying ? 'Emptying...' : 'Empty Recycle Bin'}
       </button>

@@ -415,7 +415,7 @@
         <button
           onclick={handleApply}
           disabled={isApplying || checkedCount === 0}
-          class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
         >
           {#if isApplying}
             <Loader2 class="h-4 w-4 animate-spin" />
@@ -458,7 +458,7 @@
           <button
             onclick={handleReprocess}
             disabled={isReprocessing}
-            class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+            class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
           >
             {#if isReprocessing}
               <Loader2 class="h-4 w-4 animate-spin" />
@@ -472,7 +472,7 @@
           <button
             onclick={handleRetry}
             disabled={isRetrying}
-            class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+            class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
           >
             {#if isRetrying}
               <Loader2 class="h-4 w-4 animate-spin" />

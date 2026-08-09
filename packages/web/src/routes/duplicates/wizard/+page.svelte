@@ -13,6 +13,7 @@
     WizardGroupCard,
   } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
+  import { readToken } from '$lib/theme/tokens';
   import {
     trackWizardStepChanged,
     trackWizardThresholdSet,
@@ -89,6 +90,12 @@
 
   let stepLabels = ['Filter', 'Review', 'Action', 'Confirm', 'Execute', 'Results'];
 
+  // Resolved rather than var() references — these are painted to a canvas.
+  const bucketColors = $derived({
+    included: readToken('--color-chart-1'),
+    excluded: readToken('--color-soft'),
+  });
+
   let chartOption = $derived<EChartsOption>({
     tooltip: { trigger: 'axis' },
     xAxis: {
@@ -103,10 +110,13 @@
     series: [
       {
         type: 'bar',
+        // Buckets the threshold includes take the first chart series; the rest
+        // drop back to the hairline grey. Series 1 rather than the accent —
+        // this is data, not an action.
         data: data.stats.confidenceDistribution.map((b) => ({
           value: b.count,
           itemStyle: {
-            color: b.min * 100 >= threshold ? 'oklch(0.55 0.15 195)' : 'oklch(0.88 0.01 260)',
+            color: b.min * 100 >= threshold ? bucketColors.included : bucketColors.excluded,
           },
         })),
         barWidth: '60%',
@@ -419,9 +429,9 @@
         <div
           class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold
             {isCurrent
-            ? 'bg-accent shadow-accent/25 text-white shadow-md'
+            ? 'bg-accent shadow-accent/25 text-on-accent shadow-md'
             : isCompleted
-              ? 'bg-success text-white'
+              ? 'bg-success text-on-accent'
               : 'bg-soft text-muted'}"
         >
           {#if isCompleted}
@@ -487,7 +497,7 @@
         <button
           onclick={handleNext}
           disabled={!canProceedStep1}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Next
         </button>
@@ -524,7 +534,7 @@
             <button
               onclick={() => (viewMode = 'condensed')}
               class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'condensed'
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-on-accent'
                 : 'text-muted hover:text-ink'}"
               title="Condensed view"
             >
@@ -536,7 +546,7 @@
                 fetchMembersForExpandedView();
               }}
               class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'expanded'
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-on-accent'
                 : 'text-muted hover:text-ink'}"
               title="Expanded view"
             >
@@ -654,7 +664,7 @@
         <button
           onclick={handleNext}
           disabled={selectedCount === 0}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Next
         </button>
@@ -749,7 +759,7 @@
         </button>
         <button
           onclick={handleNext}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
+          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
         >
           Next
         </button>
@@ -895,7 +905,7 @@
         </button>
         <button
           onclick={resetWizard}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white"
+          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
         >
           Run Another Batch
         </button>

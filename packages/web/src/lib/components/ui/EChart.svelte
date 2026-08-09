@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import type { EChartsOption, ECharts } from 'echarts';
+  import type * as EChartsNS from 'echarts';
+  import { theme } from '$lib/theme/ThemeStore.svelte';
+  import { echartsTheme } from '$lib/theme/tokens';
 
   interface Props {
     option: EChartsOption;
@@ -14,40 +17,61 @@
   let container: HTMLDivElement;
   let chart: ECharts | undefined;
   let loading = $state(true);
+  let echartsModule: typeof EChartsNS | undefined;
+  let resizeObserver: ResizeObserver | undefined;
+
+  const THEME_NAME = 'm7kni';
+
+  function build(echarts: typeof EChartsNS) {
+    if (!container) return;
+
+    // Registered from the live tokens rather than literals, so the palette
+    // follows the light/dark swap. ECharts bakes theme values in at init(),
+    // which is why a theme change disposes and rebuilds rather than
+    // re-optioning an existing instance.
+    echarts.registerTheme(THEME_NAME, echartsTheme());
+
+    chart = echarts.init(container, THEME_NAME);
+    chart.setOption(option);
+    loading = false;
+    onChartReady?.(chart);
+
+    resizeObserver = new ResizeObserver(() => chart?.resize());
+    resizeObserver.observe(container);
+  }
+
+  function teardown() {
+    resizeObserver?.disconnect();
+    resizeObserver = undefined;
+    chart?.dispose();
+    chart = undefined;
+  }
 
   onMount(() => {
-    let resizeObserver: ResizeObserver | undefined;
-
     import('echarts').then((echarts) => {
-      if (!container) return;
-
-      // Register custom theme with chart palette
-      echarts.registerTheme('paperless', {
-        color: [
-          'oklch(0.55 0.15 195)',
-          'oklch(0.6 0.16 155)',
-          'oklch(0.65 0.14 265)',
-          'oklch(0.7 0.15 85)',
-          'oklch(0.6 0.18 330)',
-          'oklch(0.6 0.12 140)',
-        ],
-      });
-
-      chart = echarts.init(container, 'paperless');
-      chart.setOption(option);
-      loading = false;
-      onChartReady?.(chart);
-
-      resizeObserver = new ResizeObserver(() => {
-        chart?.resize();
-      });
-      resizeObserver.observe(container);
+      echartsModule = echarts;
+      build(echarts);
     });
 
-    return () => {
-      resizeObserver?.disconnect();
-      chart?.dispose();
-    };
+    return teardown;
+  });
+
+  // Rebuild on a theme change. `theme.resolved` is the read that makes this
+  // reactive; the tokens themselves are plain CSS and cannot be tracked.
+  let lastTheme = $state<string | undefined>(undefined);
+  $effect(() => {
+    const resolved = theme.resolved;
+    if (!echartsModule || !chart) {
+      lastTheme = resolved;
+      return;
+    }
+    if (lastTheme === resolved) return;
+    lastTheme = resolved;
+
+    const mod = echartsModule;
+    teardown();
+    // Let the class change land on <html> before re-reading computed styles.
+    void tick().then(() => build(mod));
   });
 
   $effect(() => {

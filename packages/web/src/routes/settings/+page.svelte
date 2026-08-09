@@ -486,7 +486,7 @@
       <button
         onclick={testConnection}
         disabled={isTesting || !data.connection.url}
-        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
       >
         {#if isTesting}
           <span class="flex items-center gap-2">
@@ -591,14 +591,16 @@
       <!-- Weight Budget Bar -->
       <div class="mt-4">
         <div class="flex h-3 overflow-hidden rounded-full">
+          <!-- Two data series, so the first two chart tokens rather than the
+               accent — this is a composition readout, not an action. -->
           <div
             class="transition-all duration-200"
-            style="width: {weightJaccard}%; background: oklch(0.55 0.15 195);"
+            style="width: {weightJaccard}%; background: var(--color-chart-1);"
             title="Jaccard: {weightJaccard}"
           ></div>
           <div
             class="transition-all duration-200"
-            style="width: {weightFuzzy}%; background: oklch(0.6 0.16 155);"
+            style="width: {weightFuzzy}%; background: var(--color-chart-2);"
             title="Fuzzy: {weightFuzzy}"
           ></div>
         </div>
@@ -606,11 +608,13 @@
           <span class="flex items-center gap-1"
             ><span
               class="inline-block h-2 w-2 rounded-full"
-              style="background: oklch(0.55 0.15 195)"
+              style="background: var(--color-chart-1)"
             ></span> Jaccard</span
           >
           <span class="flex items-center gap-1"
-            ><span class="inline-block h-2 w-2 rounded-full" style="background: oklch(0.6 0.16 155)"
+            ><span
+              class="inline-block h-2 w-2 rounded-full"
+              style="background: var(--color-chart-2)"
             ></span> Fuzzy</span
           >
         </div>
@@ -771,7 +775,7 @@
       <button
         onclick={saveDedupConfig}
         disabled={!weightsValid || isSavingDedup}
-        class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
       >
         {isSavingDedup ? 'Saving...' : 'Save Configuration'}
       </button>
@@ -871,7 +875,7 @@
               href="https://developers.openai.com/api/docs/guides/flex-processing"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-blue-300 underline hover:text-blue-200">Learn more</a
+              class="text-white underline hover:text-white/80">Learn more</a
             >
           {/snippet}
         </RichTooltip>
@@ -1129,10 +1133,10 @@
                   bind:value={aiTagAliasMap}
                   rows="16"
                   class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none {tagAliasValidationError
-                    ? 'border-red-500'
+                    ? 'border-ember'
                     : ''}"></textarea>
                 {#if tagAliasValidationError}
-                  <p class="text-xs text-red-600">{tagAliasValidationError}</p>
+                  <p class="text-ember text-xs">{tagAliasValidationError}</p>
                 {/if}
               </div>
             {/if}
@@ -1155,7 +1159,7 @@
                 <button
                   onclick={resetProcessingHistory}
                   disabled={isResetting}
-                  class="bg-ember hover:bg-ember/90 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                  class="bg-ember hover:bg-ember/90 text-on-accent rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
                 >
                   {isResetting ? 'Resetting...' : 'Confirm Reset'}
                 </button>
@@ -1285,7 +1289,7 @@
               min="0"
               max="100"
               bind:value={aiConfidenceGlobal}
-              class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+              class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
             />
             <span class="text-ink w-12 text-right text-sm font-medium">{aiConfidenceGlobal}%</span>
           </div>
@@ -1308,7 +1312,7 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceTitle}
-                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
                 />
                 <span class="text-ink w-12 text-right text-sm">{aiConfidenceTitle}%</span>
               </div>
@@ -1322,7 +1326,7 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceCorrespondent}
-                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
                 />
                 <span class="text-ink w-12 text-right text-sm">{aiConfidenceCorrespondent}%</span>
               </div>
@@ -1336,7 +1340,7 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceDocType}
-                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
                 />
                 <span class="text-ink w-12 text-right text-sm">{aiConfidenceDocType}%</span>
               </div>
@@ -1350,7 +1354,7 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceTags}
-                  class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
                 />
                 <span class="text-ink w-12 text-right text-sm">{aiConfidenceTags}%</span>
               </div>
@@ -1368,7 +1372,7 @@
         <button
           onclick={saveAiConfig}
           disabled={isSavingAi}
-          class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {isSavingAi ? 'Saving...' : 'Save AI Configuration'}
         </button>
@@ -1480,7 +1484,7 @@
             <button
               onclick={handleImport}
               disabled={!importFile || isImporting}
-              class="bg-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {isImporting ? 'Importing...' : 'Import'}
             </button>

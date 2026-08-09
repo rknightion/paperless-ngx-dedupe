@@ -117,7 +117,7 @@
                   }}
                   class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {selectedSecondaryIndex ===
                   i
-                    ? 'bg-accent text-white'
+                    ? 'bg-accent text-on-accent'
                     : 'border-soft text-muted hover:bg-canvas border'}"
                 >
                   {(sec.title ?? 'Untitled').length > 25

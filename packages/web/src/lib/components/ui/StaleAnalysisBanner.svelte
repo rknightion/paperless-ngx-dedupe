@@ -38,7 +38,7 @@
         {#if showRunButton && onrunAnalysis}
           <button
             onclick={onrunAnalysis}
-            class="bg-accent hover:bg-accent-hover mt-3 rounded-lg px-4 py-2 text-sm font-medium text-white"
+            class="bg-accent hover:bg-accent-hover text-on-accent mt-3 rounded-lg px-4 py-2 text-sm font-medium"
           >
             Run Full Analysis
           </button>

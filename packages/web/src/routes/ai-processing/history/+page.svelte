@@ -573,7 +573,7 @@
                 <button
                   onclick={() => activeResultDetail && handleRetryExtraction(activeResultDetail.id)}
                   disabled={isRetryingExtraction}
-                  class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+                  class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
                 >
                   {#if isRetryingExtraction}
                     <Loader2 class="h-4 w-4 animate-spin" />
@@ -587,7 +587,7 @@
                 <button
                   onclick={() => activeResultDetail && handleRetryApply(activeResultDetail.id)}
                   disabled={isRetryingApply}
-                  class="bg-accent hover:bg-accent-hover flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:opacity-50"
+                  class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
                 >
                   {#if isRetryingApply}
                     <Loader2 class="h-4 w-4 animate-spin" />

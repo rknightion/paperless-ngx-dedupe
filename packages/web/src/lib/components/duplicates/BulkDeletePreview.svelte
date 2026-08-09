@@ -245,7 +245,7 @@
           type="button"
           disabled={!reviewed || loading || executing}
           onclick={() => (showConfirm = true)}
-          class="bg-ember rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Delete {preview.documentCount} document{preview.documentCount === 1 ? '' : 's'}
         </button>

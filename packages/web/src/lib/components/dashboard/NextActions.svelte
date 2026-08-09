@@ -46,7 +46,7 @@
                 onclick={onSync}
                 disabled={syncDisabled}
                 aria-describedby={syncDisabled ? 'sync-active-help' : undefined}
-                class="bg-accent hover:bg-accent-hover inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                class="bg-accent hover:bg-accent-hover text-on-accent inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw class="h-4 w-4" /> Sync Now
               </button>
@@ -61,7 +61,7 @@
                 onclick={onAnalysis}
                 disabled={analysisDisabled}
                 aria-describedby={analysisDisabled ? 'analysis-active-help' : undefined}
-                class="bg-accent hover:bg-accent-hover inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                class="bg-accent hover:bg-accent-hover text-on-accent inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Play class="h-4 w-4" /> Run Analysis
               </button>

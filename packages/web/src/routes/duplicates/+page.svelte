@@ -137,7 +137,7 @@
       </a>
       <a
         href="/duplicates/wizard"
-        class="bg-accent flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white"
+        class="bg-accent text-on-accent flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
       >
         <Wand2 class="h-4 w-4" /> Bulk Operations Wizard
       </a>
@@ -193,7 +193,7 @@
         type="button"
         onclick={() => batchStatus('ignored')}
         disabled={isSubmitting}
-        class="bg-accent rounded-lg px-3 py-1.5 text-sm font-medium text-white"
+        class="bg-accent text-on-accent rounded-lg px-3 py-1.5 text-sm font-medium"
       >
         Keep All
       </button>
@@ -201,7 +201,7 @@
         type="button"
         onclick={() => (showDeletePreview = true)}
         disabled={isSubmitting}
-        class="bg-ember rounded-lg px-3 py-1.5 text-sm font-medium text-white"
+        class="bg-ember text-on-accent rounded-lg px-3 py-1.5 text-sm font-medium"
       >
         Delete Non-Primary
       </button>

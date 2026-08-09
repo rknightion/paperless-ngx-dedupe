@@ -306,7 +306,7 @@
                   }}
                   class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {selectedSecondaryIndex ===
                   i
-                    ? 'bg-accent text-white'
+                    ? 'bg-accent text-on-accent'
                     : 'border-soft text-muted hover:bg-canvas border'}"
                 >
                   {sec.title.length > 30 ? sec.title.slice(0, 30) + '...' : sec.title}
@@ -356,7 +356,7 @@
             <button
               onclick={() => (showDeleteFromPaperless = true)}
               disabled={isMemberAction}
-              class="bg-ember inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              class="bg-ember text-on-accent inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 disabled:opacity-50"
             >
               <Trash2 class="h-3.5 w-3.5" />
               Delete from Paperless

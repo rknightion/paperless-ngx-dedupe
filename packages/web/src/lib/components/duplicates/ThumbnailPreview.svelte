@@ -58,7 +58,9 @@
         alt="{alt} (enlarged)"
         class="border-soft bg-surface h-auto w-[500px] max-w-none rounded-lg border shadow-lg"
       />
-      <div class="bg-ink absolute top-full left-1/2 -mt-1 h-2 w-2 -translate-x-1/2 rotate-45"></div>
+      <div
+        class="bg-sidebar absolute top-full left-1/2 -mt-1 h-2 w-2 -translate-x-1/2 rotate-45"
+      ></div>
     </div>
   {/if}
 </span>
