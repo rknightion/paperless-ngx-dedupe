@@ -8,6 +8,23 @@ image: assets/social-card.png
 
 **Intelligent document deduplication and AI metadata extraction for Paperless-NGX**
 
+## Quickstart
+
+Clone the repo for its `compose.yml` (the image itself is pulled prebuilt), add a
+`.env` with your Paperless-NGX details, and start it:
+
+```env
+PAPERLESS_URL=http://your-paperless-instance:8000
+PAPERLESS_API_TOKEN=your-api-token-here
+```
+
+```bash
+docker compose up -d
+```
+
+Then open `http://localhost:3000`, use **Settings > Test Connection** to check
+connectivity, and click **Sync** followed by **Analyze**.
+
 ## Features
 
 ### :material-magnify-scan: Intelligent Duplicate Detection
