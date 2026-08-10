@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.18.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.17.1...v0.18.0) (2026-08-10)
+
+
+### Features
+
+* **docs:** take the fleet project icon for the site logo and favicon ([4442a78](https://github.com/rknightion/paperless-ngx-dedupe/commit/4442a7816ca3e52c9ade274b18f9951e96b4430c))
+* **docs:** take the fleet-generated social card ([4fd6ed9](https://github.com/rknightion/paperless-ngx-dedupe/commit/4fd6ed9c876f409cd675bf3e4d694f3f23fcbb4b))
+* **web:** add the design system component layer and start adopting it ([d7a6584](https://github.com/rknightion/paperless-ngx-dedupe/commit/d7a6584a92097cd23e0dec5d70d46b6f710cdf38))
+* **web:** adopt Button across the UI-kit-covered screens ([56ab469](https://github.com/rknightion/paperless-ngx-dedupe/commit/56ab469a391f9da5aa7aa5d214971511234be4c9))
+* **web:** adopt m7kni design system tokens and add dark mode ([399b015](https://github.com/rknightion/paperless-ngx-dedupe/commit/399b01574553dace245b682b52e03004af1dc8a3))
+
+
+### Bug Fixes
+
+* **brand:** use the project icon as the web favicon ([fb51ac2](https://github.com/rknightion/paperless-ngx-dedupe/commit/fb51ac279ea0ce73cbb10284aa2b07f083ab1dad))
+* **web:** move every colour off literals and onto design system tokens ([15a7f60](https://github.com/rknightion/paperless-ngx-dedupe/commit/15a7f605e3dd6118e7334c46e6258151e1dde049))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#532](https://github.com/rknightion/paperless-ngx-dedupe/issues/532)) ([bbc5ef8](https://github.com/rknightion/paperless-ngx-dedupe/commit/bbc5ef8684b3d736b02af7fd6efa67c73a779a0b))
+
 ## [0.17.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.17.0...v0.17.1) (2026-08-09)
 
 
