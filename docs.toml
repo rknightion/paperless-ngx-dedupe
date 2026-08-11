@@ -5,7 +5,7 @@
 [site]
 name = "Paperless NGX Dedupe"
 description = "A document deduplication companion for Paperless-NGX using MinHash/LSH algorithms with a web UI for reviewing and resolving duplicates"
-author = "Rob Knighton"
+author = "Rob Knight"
 keywords = [
     "paperless-ngx",
     "document deduplication",
