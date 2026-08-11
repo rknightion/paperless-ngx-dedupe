@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.18.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.18.0...v0.18.1) (2026-08-11)
+
+
+### Miscellaneous
+
+* **deps:** update dependency tsx to v4.23.12 ([#534](https://github.com/rknightion/paperless-ngx-dedupe/issues/534)) ([5ab8476](https://github.com/rknightion/paperless-ngx-dedupe/commit/5ab84768099a0bd996f88907a407d37c7d90ed7f))
+
+
+### Documentation
+
+* put a copy-paste quickstart on the landing page ([60f2bd5](https://github.com/rknightion/paperless-ngx-dedupe/commit/60f2bd557247a93054ea375fdb30fbd3a10df1f5))
+
 ## [0.18.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.17.1...v0.18.0) (2026-08-10)
 
 
