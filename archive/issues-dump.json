@@ -1,0 +1,949 @@
+[
+  {
+    "assignees": [],
+    "author": {
+      "is_bot": true,
+      "login": "app/renovate"
+    },
+    "body": "This issue lists Renovate updates and detected dependencies. Read the [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) docs to learn more.<br>[View this repository on the Mend.io Web Portal](https://developer.mend.io/github/rknightion/paperless-ngx-dedupe).\n\n## Rate-Limited\n\nThe following updates are currently rate-limited. To force their creation now, click on a checkbox below.\n\n - [ ] <!-- unlimit-branch=renovate/eslint-monorepo -->chore(deps): update dependency eslint to v10.0.3\n - [ ] <!-- unlimit-branch=renovate/eslint-plugin-svelte-3.x-lockfile -->chore(deps): update dependency eslint-plugin-svelte to v3.15.2\n - [ ] <!-- unlimit-branch=renovate/nanoid-5.x-lockfile -->chore(deps): update dependency nanoid to v5.1.7\n - [ ] <!-- unlimit-branch=renovate/svelte-check-4.x-lockfile -->chore(deps): update dependency svelte-check to v4.4.5\n - [ ] <!-- unlimit-branch=renovate/sveltejs-kit-2.x-lockfile -->chore(deps): update dependency @sveltejs/kit to v2.55.0\n - [ ] <!-- unlimit-branch=renovate/better-sqlite3-12.x-lockfile -->chore(deps): update dependency better-sqlite3 to v12.8.0\n - [ ] <!-- unlimit-branch=renovate/pnpm-10.x -->chore(deps): update pnpm to v10.32.1\n - [ ] <!-- unlimit-branch=renovate/typescript-eslint-monorepo -->chore(deps): update typescript-eslint monorepo to v8.57.0 (`@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `typescript-eslint`)\n - [ ] <!-- unlimit-branch=renovate/vitest-monorepo -->chore(deps): update vitest monorepo to v4.1.0 (`@vitest/coverage-v8`, `vitest`)\n - [ ] <!-- unlimit-branch=renovate/opentelemetry-js-contrib-monorepo -->fix(deps): update opentelemetry-js-contrib monorepo (`@opentelemetry/auto-instrumentations-node`, `@opentelemetry/instrumentation-undici`)\n - [ ] <!-- unlimit-branch=renovate/sveltejs-vite-plugin-svelte-7.x -->chore(deps): update dependency @sveltejs/vite-plugin-svelte to v7\n - [ ] <!-- unlimit-branch=renovate/vite-8.x -->chore(deps): update dependency vite to v8\n - [ ] <!-- unlimit-branch=renovate/docker-build-push-action-7.x -->chore(deps): update docker/build-push-action action to v7\n - [ ] <!-- unlimit-branch=renovate/docker-metadata-action-6.x -->chore(deps): update docker/metadata-action action to v6\n - [ ] <!-- unlimit-branch=renovate/docker-setup-buildx-action-4.x -->chore(deps): update docker/setup-buildx-action action to v4\n - [ ] <!-- create-all-rate-limited-prs -->🔐 **Create all rate-limited PRs at once** 🔐\n\n## Open\n\nThe following updates have all been created. To force a retry/rebase of any, click on a checkbox below.\n\n - [ ] <!-- rebase-branch=renovate/actions-download-artifact-digest -->[chore(deps): update actions/download-artifact digest to 3e5f45b](../pull/210)\n - [ ] <!-- rebase-branch=renovate/pnpm-action-setup-digest -->[chore(deps): update pnpm/action-setup digest to fc06bc1](../pull/211)\n - [ ] <!-- rebase-branch=renovate/prettier-plugin-svelte-3.x-lockfile -->[chore(deps): update dependency prettier-plugin-svelte to v3.5.1](../pull/204)\n - [ ] <!-- rebase-branch=renovate/svelte-5.x-lockfile -->[chore(deps): update dependency svelte to v5.53.12](../pull/205)\n - [ ] <!-- rebase-branch=renovate/globals-17.x-lockfile -->[chore(deps): update dependency globals to v17.4.0](../pull/199)\n - [ ] <!-- rebase-branch=renovate/lucide-monorepo -->[fix(deps): update dependency lucide-svelte to ^0.577.0](../pull/201)\n - [ ] <!-- rebase-branch=renovate/opentelemetry-js-monorepo -->[fix(deps): update opentelemetry-js monorepo](../pull/206) (`@opentelemetry/exporter-metrics-otlp-proto`, `@opentelemetry/exporter-trace-otlp-proto`, `@opentelemetry/resources`, `@opentelemetry/sdk-metrics`, `@opentelemetry/sdk-node`)\n - [ ] <!-- rebase-branch=renovate/docker-login-action-4.x -->[chore(deps): update docker/login-action action to v4](../pull/208)\n - [ ] <!-- rebase-branch=renovate/lock-file-maintenance -->[chore(deps): lock file maintenance](../pull/200)\n - [ ] <!-- rebase-all-open-prs -->**Click on this checkbox to rebase all open PRs at once**\n\n## Detected Dependencies\n\n<details><summary>docker-compose (1)</summary>\n<blockquote>\n\n<details><summary>compose.yml</summary>\n\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>dockerfile (1)</summary>\n<blockquote>\n\n<details><summary>Dockerfile (2)</summary>\n\n - `node 24-slim`\n - `node 24-slim`\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>github-actions (5)</summary>\n<blockquote>\n\n<details><summary>.github/actions/setup-node-pnpm/action.yml (4)</summary>\n\n - `pnpm/action-setup v4@41ff72655975bd51cab0327fa583b6e92b6d3061` → [Updates: `v4`]\n - `actions/setup-node v6@53b83947a5a98c8d113130e565377fae1a50d02f`\n - `actions/cache v5@cdf6c1fa76f9f475f3d7449005a359c84ca0f306`\n - `node 24`\n\n</details>\n\n<details><summary>.github/workflows/ci.yml (37)</summary>\n\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `pnpm/action-setup v4@41ff72655975bd51cab0327fa583b6e92b6d3061` → [Updates: `v4`]\n - `actions/setup-node v6@53b83947a5a98c8d113130e565377fae1a50d02f`\n - `actions/cache v5@cdf6c1fa76f9f475f3d7449005a359c84ca0f306`\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `actions/upload-artifact v7@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f`\n - `actions/upload-artifact v7@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f`\n - `dorny/test-reporter v2@3d76b34a4535afbd0600d347b09a6ee5deb3ed7f`\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `actions/cache v5@cdf6c1fa76f9f475f3d7449005a359c84ca0f306`\n - `actions/upload-artifact v7@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f`\n - `actions/upload-artifact v7@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f`\n - `dorny/test-reporter v2@3d76b34a4535afbd0600d347b09a6ee5deb3ed7f`\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `actions/download-artifact v8@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3` → [Updates: `v8`]\n - `davelosert/vitest-coverage-report-action v2@2500dafcee7dd64f85ab689c0b83798a8359770e`\n - `davelosert/vitest-coverage-report-action v2@2500dafcee7dd64f85ab689c0b83798a8359770e`\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `docker/setup-buildx-action v3@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f` → [Updates: `v4`]\n - `docker/build-push-action v6@10e90e3645eae34f1e60eeb005ba3a3d33f178e8` → [Updates: `v7`]\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `docker/setup-buildx-action v3@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f` → [Updates: `v4`]\n - `docker/login-action v3@c94ce9fb468520275223c153574b00df6fe4bcc9` → [Updates: `v4`]\n - `docker/build-push-action v6@10e90e3645eae34f1e60eeb005ba3a3d33f178e8` → [Updates: `v7`]\n - `actions/upload-artifact v7@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f`\n - `actions/download-artifact v8@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3` → [Updates: `v8`]\n - `docker/setup-buildx-action v3@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f` → [Updates: `v4`]\n - `docker/login-action v3@c94ce9fb468520275223c153574b00df6fe4bcc9` → [Updates: `v4`]\n - `ubuntu 24.04`\n - `node 24`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n\n</details>\n\n<details><summary>.github/workflows/codacy.yml (3)</summary>\n\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `codacy/codacy-analysis-cli-action 30783d03e758713bb5ed7b79292cfb14b9dd9a4a`\n - `github/codeql-action v4@b1bff81932f5cdfc8695c7752dcee935dcd061c8`\n\n</details>\n\n<details><summary>.github/workflows/release-please.yml (12)</summary>\n\n - `googleapis/release-please-action v4@16a9c90856f42705d54a6fda1823352bdc62cf38`\n - `actions/checkout v6@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `docker/setup-buildx-action v3@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f` → [Updates: `v4`]\n - `docker/login-action v3@c94ce9fb468520275223c153574b00df6fe4bcc9` → [Updates: `v4`]\n - `docker/build-push-action v6@10e90e3645eae34f1e60eeb005ba3a3d33f178e8` → [Updates: `v7`]\n - `actions/upload-artifact v7@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f`\n - `actions/download-artifact v8@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3` → [Updates: `v8`]\n - `docker/setup-buildx-action v3@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f` → [Updates: `v4`]\n - `docker/login-action v3@c94ce9fb468520275223c153574b00df6fe4bcc9` → [Updates: `v4`]\n - `docker/metadata-action v5@c299e40c65443455700f0fdfc63efafe5b349051` → [Updates: `v6`]\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n\n</details>\n\n<details><summary>.github/workflows/trigger-docs-sync.yml (1)</summary>\n\n - `peter-evans/repository-dispatch v4@28959ce8df70de7be546dd1250a005dd32156697`\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>npm (6)</summary>\n<blockquote>\n\n<details><summary>package.json (16)</summary>\n\n - `@eslint/js ^10.0.1`\n - `@typescript-eslint/eslint-plugin 8.56.1` → [Updates: `8.57.0`]\n - `@typescript-eslint/parser 8.56.1` → [Updates: `8.57.0`]\n - `@vitest/coverage-v8 ^4.0.18` → [Updates: `^4.0.18`]\n - `eslint ^10.0.0` → [Updates: `^10.0.0`]\n - `eslint-config-prettier ^10.1.8`\n - `eslint-plugin-svelte ^3.15.0` → [Updates: `^3.15.0`]\n - `globals ^17.3.0` → [Updates: `^17.3.0`]\n - `prettier ~3.8.1`\n - `prettier-plugin-svelte ^3.4.1` → [Updates: `^3.4.1`]\n - `prettier-plugin-tailwindcss ^0.7.2`\n - `typescript-eslint 8.56.1` → [Updates: `8.57.0`]\n - `vitest ^4.0.18` → [Updates: `^4.0.18`]\n - `node >=24.0.0`\n - `pnpm >=9.15.0`\n - `pnpm 10.30.3` → [Updates: `10.32.1`]\n\n</details>\n\n<details><summary>packages/cli/package.json (6)</summary>\n\n - `better-sqlite3 ^12.0.0` → [Updates: `^12.0.0`]\n - `commander ^14.0.0`\n - `dotenv ^17.0.0`\n - `@types/better-sqlite3 ^7.6.0`\n - `tsx ^4.21.0`\n - `typescript ^5.7.0`\n\n</details>\n\n<details><summary>packages/core/package.json (21)</summary>\n\n - `@opentelemetry/api ^1.9.0`\n - `@opentelemetry/auto-instrumentations-node ^0.70.0` → [Updates: `^0.71.0`]\n - `@opentelemetry/exporter-metrics-otlp-proto ^0.212.0` → [Updates: `^0.213.0`]\n - `@opentelemetry/exporter-trace-otlp-proto ^0.212.0` → [Updates: `^0.213.0`]\n - `@opentelemetry/instrumentation-undici ^0.22.0` → [Updates: `^0.23.0`]\n - `@opentelemetry/resources ^2.5.1` → [Updates: `^2.5.1`]\n - `@opentelemetry/sdk-metrics ^2.5.1` → [Updates: `^2.5.1`]\n - `@opentelemetry/sdk-node ^0.212.0` → [Updates: `^0.213.0`]\n - `@opentelemetry/semantic-conventions ^1.39.0`\n - `better-sqlite3 ^12.0.0` → [Updates: `^12.0.0`]\n - `drizzle-kit ^0.31.0`\n - `drizzle-orm ^0.45.0`\n - `fastest-levenshtein ^1.0.16`\n - `nanoid ^5.0.0` → [Updates: `^5.0.0`]\n - `pino ^10.0.0`\n - `zod ^4.0.0`\n - `@types/better-sqlite3 ^7.6.0`\n - `@vitest/coverage-v8 ^4.0.18` → [Updates: `^4.0.18`]\n - `tsx ^4.21.0`\n - `typescript ^5.7.0`\n - `vitest ^4.0.18` → [Updates: `^4.0.18`]\n\n</details>\n\n<details><summary>packages/sdk/package.json (3)</summary>\n\n - `@vitest/coverage-v8 ^4.0.18` → [Updates: `^4.0.18`]\n - `typescript ^5.7.0`\n - `vitest ^4.0.18` → [Updates: `^4.0.18`]\n\n</details>\n\n<details><summary>packages/web/package.json (33)</summary>\n\n - `@opentelemetry/api ^1.9.0`\n - `@opentelemetry/auto-instrumentations-node ^0.70.0` → [Updates: `^0.71.0`]\n - `@opentelemetry/exporter-metrics-otlp-proto ^0.212.0` → [Updates: `^0.213.0`]\n - `@opentelemetry/exporter-trace-otlp-proto ^0.212.0` → [Updates: `^0.213.0`]\n - `@opentelemetry/instrumentation-undici ^0.22.0` → [Updates: `^0.23.0`]\n - `@opentelemetry/resources ^2.5.1` → [Updates: `^2.5.1`]\n - `@opentelemetry/sdk-metrics ^2.5.1` → [Updates: `^2.5.1`]\n - `@opentelemetry/sdk-node ^0.212.0` → [Updates: `^0.213.0`]\n - `@opentelemetry/semantic-conventions ^1.39.0`\n - `better-sqlite3 ^12.6.2` → [Updates: `^12.6.2`]\n - `diff-match-patch ^1.0.5`\n - `drizzle-kit ^0.31.0`\n - `drizzle-orm ^0.45.1`\n - `echarts ^6.0.0`\n - `fastest-levenshtein ^1.0.16`\n - `lucide-svelte ^0.575.0` → [Updates: `^0.577.0`]\n - `nanoid ^5.0.0` → [Updates: `^5.0.0`]\n - `pino ^10.0.0`\n - `zod ^4.0.0`\n - `@fontsource-variable/jetbrains-mono ^5.2.8`\n - `@fontsource/geist-sans ^5.2.5`\n - `@playwright/test ^1.58.2`\n - `@sveltejs/adapter-node ^5.0.0`\n - `@sveltejs/kit ^2.0.0` → [Updates: `^2.0.0`]\n - `@sveltejs/vite-plugin-svelte ^6.0.0` → [Updates: `^7.0.0`]\n - `@tailwindcss/vite ^4.0.0`\n - `@types/better-sqlite3 ^7.6.13`\n - `@types/diff-match-patch ^1.0.36`\n - `svelte ^5.0.0` → [Updates: `^5.0.0`]\n - `svelte-check ^4.0.0` → [Updates: `^4.0.0`]\n - `tailwindcss ^4.0.0`\n - `typescript ^5.7.0`\n - `vite ^7.0.0` → [Updates: `^8.0.0`]\n\n</details>\n\n<details><summary>pnpm-workspace.yaml</summary>\n\n\n</details>\n\n</blockquote>\n</details>\n\n---\n\n- [ ] <!-- manual job -->Check this box to trigger a request for Renovate to run again on this repository\n\n",
+    "closedAt": "2026-03-16T16:44:33Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M7yiTxi",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Closed: replaced by self-hosted Renovate dashboard.",
+        "createdAt": "2026-03-16T16:44:32Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/4#issuecomment-4069080162",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2025-08-18T14:10:56Z",
+    "labels": [],
+    "milestone": null,
+    "number": 4,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Dependency Dashboard",
+    "updatedAt": "2026-03-16T16:44:33Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/4"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "is_bot": true,
+      "login": "app/renovate"
+    },
+    "body": "There is an error with this repository's Renovate configuration that needs to be fixed. As a precaution, Renovate will stop PRs until it is resolved.\n\nError type: Cannot find preset's package (:dependencyDashboardAutoclose)\n",
+    "closedAt": "2025-09-26T18:54:36Z",
+    "comments": [],
+    "createdAt": "2025-09-26T18:46:26Z",
+    "labels": [],
+    "milestone": null,
+    "number": 25,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Action Required: Fix Renovate Configuration",
+    "updatedAt": "2025-09-26T18:54:36Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/25"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "U_kgDOCZvxUg",
+      "is_bot": false,
+      "login": "fsky12",
+      "name": "Frank"
+    },
+    "body": "Hello, I tried to install dedupe on syno using the recommended docker way. \nthe container worker, frontend and dedupe changes starting in restart and dedupe stays in unhealthy.\nany hints what's going wrong?\nthx frank ",
+    "closedAt": "2026-02-14T21:02:59Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M7YPE-n",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Hi @fsky12 - do you have any logs you can share?",
+        "createdAt": "2025-12-08T16:23:56Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/33#issuecomment-3627831207",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M7doiIw",
+        "author": {
+          "login": "fsky12"
+        },
+        "authorAssociation": "NONE",
+        "body": "Hi Rob, I deleted the paperless ngx container and tried to reinstall paperless + dedupe in a single yaml file. Honestly I didn't manage to start the container.  Pls can you out an all in one yaml into this repository that could help?\nthx in advance Frank",
+        "createdAt": "2026-01-07T11:13:19Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/33#issuecomment-3718390320",
+        "viewerDidAuthor": false
+      },
+      {
+        "id": "IC_kwDOPeVI0M7gGsJ9",
+        "author": {
+          "login": "fsky12"
+        },
+        "authorAssociation": "NONE",
+        "body": "Hi Rob, what I have done 1. I installed paperless-nix using the yaml file from paperless-nix, append your yaml and follow your instructions to create the dedupe database while paperless ist running. stopped paperless-nix, include your yaml and restated paperless+dedupe. The following error comes up:\nError response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"celery\": executable file not found in $PATH\nmy setup: macbook, virtualbox and ubutu server.\n\nany ideas? thx best frank\n ",
+        "createdAt": "2026-01-16T12:38:49Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [
+          {
+            "content": "EYES",
+            "users": {
+              "totalCount": 1
+            }
+          }
+        ],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/33#issuecomment-3759850109",
+        "viewerDidAuthor": false
+      },
+      {
+        "id": "IC_kwDOPeVI0M7om7IK",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "@fsky12 I've completely redone this project. Now only a single container and it's much better in every regard. Doesn't need postgres anymore and only a single folder is a mount into the container worth trying it out. ",
+        "createdAt": "2026-02-14T21:02:59Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/33#issuecomment-3902517770",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2025-12-02T14:28:23Z",
+    "labels": [],
+    "milestone": null,
+    "number": 33,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Installation dedupe on Synology not possible",
+    "updatedAt": "2026-02-14T21:02:59Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/33"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjI1NDA1MDQ3",
+      "is_bot": false,
+      "login": "AKASGaming",
+      "name": "Ashton"
+    },
+    "body": "First time using this because it sounded pretty good to what I needed. Every install would just show \"ModuleNotFoundError: No module named 'psycopg2'\". After having to build a custom image that installs that on top of your latest build, it would still fail to connect to a database. The frontend would never become healthy and the 2 other containers were stuck at starting because they couldn't connect.",
+    "closedAt": "2026-02-13T13:32:37Z",
+    "comments": [],
+    "createdAt": "2026-01-15T22:55:22Z",
+    "labels": [],
+    "milestone": null,
+    "number": 103,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "ModuleNotFoundError: No module named 'psycopg2'",
+    "updatedAt": "2026-02-13T13:32:37Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/103"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "is_bot": true,
+      "login": "app/rknightion-renovate"
+    },
+    "body": "This issue lists Renovate updates and detected dependencies. Read the [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) docs to learn more.\n\n## Deprecations / Replacements\n> [!WARNING]\nThe following dependencies are either deprecated or have replacements available.\n\n| Datasource | Package | Replacement PR? |\n|------------|------|--------------|\n| npm | [lucide-svelte](https://redirect.github.com/lucide-icons/lucide) | ![Unavailable](https://img.shields.io/badge/unavailable-orange?style=flat-square) |\n\n## Awaiting Schedule\n\nThe following updates are awaiting their schedule. To get an update now, click on a checkbox below.\n\n - [ ] <!-- unschedule-branch=renovate/lock-file-maintenance -->chore(deps): lock file maintenance\n\n## Open\n\nThe following updates have all been created. To force a retry/rebase of any, click on a checkbox below.\n\n - [ ] <!-- rebase-branch=renovate/pnpm-11.x -->[chore(deps): update pnpm to v11.21.0](../pull/508)\n\n## Detected Dependencies\n\n<details><summary>docker-compose (2)</summary>\n<blockquote>\n\n<details><summary>compose.dev.yml</summary>\n\n\n</details>\n\n<details><summary>compose.yml</summary>\n\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>dockerfile (2)</summary>\n<blockquote>\n\n<details><summary>Dockerfile (2)</summary>\n\n - `node 24.19.0-trixie-slim`\n - `node 24.19.0-trixie-slim`\n\n</details>\n\n<details><summary>Dockerfile.dev (1)</summary>\n\n - `node 24-slim`\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>github-actions (7)</summary>\n<blockquote>\n\n<details><summary>.github/actions/setup-node-pnpm/action.yml (3)</summary>\n\n - `pnpm/action-setup v6.0.10@0977fd99725f1db4007ccb2928dbb4e90d06cc86`\n - `actions/setup-node v7.0.0@820762786026740c76f36085b0efc47a31fe5020`\n - `node 24`\n\n</details>\n\n<details><summary>.github/workflows/ci.yml (32)</summary>\n\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `pnpm/action-setup v6.0.10@0977fd99725f1db4007ccb2928dbb4e90d06cc86`\n - `actions/setup-node v7.0.0@820762786026740c76f36085b0efc47a31fe5020`\n - `actions/cache v6.1.0@55cc8345863c7cc4c66a329aec7e433d2d1c52a9`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `actions/upload-artifact v7.0.1@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`\n - `actions/upload-artifact v7.0.1@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`\n - `codacy/codacy-coverage-reporter-action v1.3.0@89d6c85cfafaec52c72b6c5e8b2878d33104c699`\n - `dorny/test-reporter v3@a43b3a5f7366b97d083190328d2c652e1a8b6aa2`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `actions/cache v6.1.0@55cc8345863c7cc4c66a329aec7e433d2d1c52a9`\n - `actions/upload-artifact v7.0.1@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`\n - `actions/upload-artifact v7.0.1@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`\n - `dorny/test-reporter v3@a43b3a5f7366b97d083190328d2c652e1a8b6aa2`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `actions/download-artifact v8@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c`\n - `davelosert/vitest-coverage-report-action v2.12.2@8b157684c6a6b259b97d45e72b44242865c0f6a5`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `docker/setup-buildx-action v4.2.0@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c`\n - `docker/build-push-action v7.3.0@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `actions/upload-artifact v7.0.1@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`\n - `ubuntu 24.04`\n - `node 24`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n - `ubuntu 24.04`\n\n</details>\n\n<details><summary>.github/workflows/docker-security.yml (6)</summary>\n\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `hadolint/hadolint-action v3.4.0@2a66e89f53d0771bb131a7fa31f3136336094aa6`\n - `github/codeql-action v4.37.7@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `aquasecurity/trivy-action v0.36.0@ed142fd0673e97e23eac54620cfb913e5ce36c25`\n - `github/codeql-action v4.37.7@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd`\n\n</details>\n\n<details><summary>.github/workflows/publish.yml</summary>\n\n\n</details>\n\n<details><summary>.github/workflows/release-please.yml (2)</summary>\n\n - `googleapis/release-please-action v5.0.0@45996ed1f6d02564a971a2fa1b5860e934307cf7`\n - `ubuntu 24.04`\n\n</details>\n\n<details><summary>.github/workflows/scorecard.yml</summary>\n\n\n</details>\n\n<details><summary>.github/workflows/trigger-docs-sync.yml (1)</summary>\n\n - `peter-evans/repository-dispatch v4@28959ce8df70de7be546dd1250a005dd32156697`\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>npm (4)</summary>\n<blockquote>\n\n<details><summary>package.json (18)</summary>\n\n - `openai ^7.0.0`\n - `@eslint/js ^10.0.1`\n - `@types/node ^25.5.0`\n - `@typescript-eslint/eslint-plugin 8.67.0`\n - `@typescript-eslint/parser 8.67.0`\n - `@vitest/coverage-v8 ^4.1.2`\n - `eslint ^10.1.0`\n - `eslint-config-prettier ^10.1.8`\n - `eslint-plugin-svelte ^3.16.0`\n - `globals ^17.4.0`\n - `prettier ~3.9.0`\n - `prettier-plugin-svelte ^4.0.0`\n - `prettier-plugin-tailwindcss ^0.8.0`\n - `typescript-eslint 8.67.0`\n - `vitest ^4.1.2`\n - `node >=24.0.0`\n - `pnpm >=9.15.0`\n - `pnpm 11.18.0` → [Updates: `11.21.0`]\n\n</details>\n\n<details><summary>packages/core/package.json (26)</summary>\n\n - `@opentelemetry/api ^1.9.0`\n - `@opentelemetry/api-logs ^0.221.0`\n - `@opentelemetry/auto-instrumentations-node ^0.79.0`\n - `@opentelemetry/exporter-metrics-otlp-proto ^0.221.0`\n - `@opentelemetry/exporter-trace-otlp-proto ^0.221.0`\n - `@opentelemetry/instrumentation-undici ^0.31.0`\n - `@opentelemetry/resources ^2.5.1`\n - `@opentelemetry/sdk-metrics ^2.5.1`\n - `@opentelemetry/sdk-node ^0.221.0`\n - `@opentelemetry/semantic-conventions ^1.39.0`\n - `better-sqlite3 ^13.0.0`\n - `croner ^10.0.1`\n - `drizzle-kit ^0.31.0`\n - `drizzle-orm ^0.45.0`\n - `fastest-levenshtein ^1.0.16`\n - `js-tiktoken ^1.0.21`\n - `nanoid ^6.0.0`\n - `pino ^10.0.0`\n - `yaml ^2.8.3`\n - `zod ^4.0.0`\n - `@types/better-sqlite3 ^9.0.0`\n - `@vitest/coverage-v8 ^4.0.18`\n - `tsx ^4.21.0`\n - `typescript ^6.0.0`\n - `vitest ^4.0.18`\n - `openai ^6.0.0 || ^7.0.0`\n\n</details>\n\n<details><summary>packages/web/package.json (43)</summary>\n\n - `@grafana/faro-web-sdk ^2.3.1`\n - `@grafana/faro-web-tracing ^2.3.1`\n - `@opentelemetry/api ^1.9.0`\n - `@opentelemetry/api-logs ^0.221.0`\n - `@opentelemetry/auto-instrumentations-node ^0.79.0`\n - `@opentelemetry/exporter-metrics-otlp-proto ^0.221.0`\n - `@opentelemetry/exporter-prometheus ^0.221.0`\n - `@opentelemetry/exporter-trace-otlp-proto ^0.221.0`\n - `@opentelemetry/instrumentation-undici ^0.31.0`\n - `@opentelemetry/resources ^2.5.1`\n - `@opentelemetry/sdk-metrics ^2.5.1`\n - `@opentelemetry/sdk-node ^0.221.0`\n - `@opentelemetry/semantic-conventions ^1.39.0`\n - `@pyroscope/nodejs ^0.6.0`\n - `better-sqlite3 ^13.0.0`\n - `diff-match-patch ^1.0.5`\n - `drizzle-kit ^0.31.0`\n - `drizzle-orm ^0.45.1`\n - `echarts ^6.0.0`\n - `fastest-levenshtein ^1.0.16`\n - `js-tiktoken ^1.0.21`\n - `lucide-svelte ^1.0.0`\n - `nanoid ^6.0.0`\n - `openai ^7.0.0`\n - `pino ^10.0.0`\n - `yaml ^2.8.3`\n - `zod ^4.0.0`\n - `@axe-core/playwright ^4.12.1`\n - `@fontsource-variable/jetbrains-mono ^5.2.8`\n - `@fontsource/geist-sans ^5.2.5`\n - `@grafana/faro-rollup-plugin ^0.11.0`\n - `@playwright/test ^1.61.1`\n - `@sveltejs/adapter-node ^5.0.0`\n - `@sveltejs/kit ^2.0.0`\n - `@sveltejs/vite-plugin-svelte ^7.0.0`\n - `@tailwindcss/vite ^4.0.0`\n - `@types/better-sqlite3 ^9.0.0`\n - `@types/diff-match-patch ^1.0.36`\n - `svelte ^5.0.0`\n - `svelte-check ^4.0.0`\n - `tailwindcss ^4.0.0`\n - `typescript ^6.0.0`\n - `vite ^8.0.0`\n\n</details>\n\n<details><summary>pnpm-workspace.yaml (1)</summary>\n\n - `@opentelemetry/api 1.9.1`\n\n</details>\n\n</blockquote>\n</details>\n\n",
+    "closedAt": null,
+    "comments": [],
+    "createdAt": "2026-03-16T16:38:22Z",
+    "labels": [],
+    "milestone": null,
+    "number": 221,
+    "state": "OPEN",
+    "stateReason": "",
+    "title": "Dependency Dashboard",
+    "updatedAt": "2026-08-14T06:36:28Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/221"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "U_kgDOBwhITQ",
+      "is_bot": false,
+      "login": "gima84",
+      "name": ""
+    },
+    "body": "Hi and thanks for this great pice of software.\n\nWhen I go through the list of duplicates, select status as pending I get a list. After I have confirmed the document (delete duplicate), its goes back to the initial screen, but the filter \"Status=pending\" is gone.\n\nI am using Safari on Mac. \n\nIs there anything what I can do? Maybe my way of working is not correct?\n\nBest regards,\nMartin",
+    "closedAt": "2026-03-20T13:18:50Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M70QREJ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Nope not your fault -  users would expect to return to their filtered pending list to continue reviewing, but they lose their filter context. Fix incoming!",
+        "createdAt": "2026-03-20T13:15:04Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [
+          {
+            "content": "HEART",
+            "users": {
+              "totalCount": 1
+            }
+          }
+        ],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/228#issuecomment-4097904905",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M70QYPd",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Should be fixed in release 0.6.2",
+        "createdAt": "2026-03-20T13:20:38Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/228#issuecomment-4097934301",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-03-20T12:48:13Z",
+    "labels": [],
+    "milestone": null,
+    "number": 228,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Save view as standard / Filter gone after processing document.",
+    "updatedAt": "2026-03-20T13:20:38Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/228"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "U_kgDOBwhITQ",
+      "is_bot": false,
+      "login": "gima84",
+      "name": ""
+    },
+    "body": "Today I had a look again for update and tried (just curiosity :-). \nBut it looks like every release after 0.6.2 have an issue with the api token / configuration.\n\nI get following error when I do a connection test:\n\n\"Client error: 406 Not Acceptable\"\n\nSame with username and password. \n\nIn the following page there is the error maintained (but with ngx version 1.30...)\nhttps://docs.paperless-ngx.com/api/#api-versioning\n\nMy installed Paperless-ngx version is 2.20.13\n\nI am using portainer and have configured the \"PAPERLESS_URL\" and \"PAPERLESS_API_TOKEN\" as environment variable.\n",
+    "closedAt": "2026-03-29T15:42:33Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M73YbJx",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "I know what's causing this (I'm on paperless-ngx:dev which had some API changes which broke for everyone else) fix incoming!",
+        "createdAt": "2026-03-29T15:27:24Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/269#issuecomment-4150375025",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-03-29T13:34:54Z",
+    "labels": [],
+    "milestone": null,
+    "number": 269,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Client error: 406 Not Acceptable for every release after 0.6.2",
+    "updatedAt": "2026-03-29T15:42:33Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/269"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "Part of the fleet-wide docs effort tracked in **rknightion/m7kni-net-site#28** (Phase 2). This repo's doc site is served under the m7kni.io hub at `/paperless-ngx-dedupe/`, so its own Zensical build + theme overrides determine what search engines and LLMs see for these pages.\n\nTwo things are bundled here because they touch the same files:\n\n1. **Redesign & rebrand alignment** — adopt the new m7kni.io brand and colour scheme (light-first, the shared wordmark / palette / type tokens) so the whole fleet reads as one product family. **Tune it for documentation, not marketing:** unlike the vibrant hub *landing* page, these are end-user **product documentation** sites — prioritise a clean, professional, highly readable, documentation-friendly presentation (sensible density, strong nav/TOC/search, scannable reference content) while staying on-brand in palette, type, and logo. Brand-consistent, docs-first. The exact spec follows from the hub redesign — treat the visual details as **pending finalization in rknightion/m7kni-net-site#28** and don't front-run them.\n2. **SEO / LLM discoverability** — the metadata improvements below, fully specified now and able to proceed independently of the visual spec.\n\n## Why (SEO/LLM part)\n\nLike the hub, this site's `docs/overrides/main.html` is an empty passthrough, so OpenGraph/Twitter/JSON-LD/robots meta are either absent or (if copied from the hub) injected client-side and invisible to non-JS crawlers and LLMs (GPTBot, ClaudeBot, PerplexityBot, CCBot, social unfurlers). Render them server-side.\n\n## Tasks\n\n- [ ] **Redesign & rebrand alignment** — apply the finalized hub brand/scheme in a professional, documentation-friendly way (spec via rknightion/m7kni-net-site#28). Brand-consistent palette/type/logo; docs-first layout, density, and navigation.\n- [ ] **Server-render head tags** — `main.html` `extrahead` override emitting canonical, `theme-color`, OpenGraph, Twitter (`summary_large_image`), and `robots` meta server-side, reading `config.extra.*` + `page.meta.*`. Mirror the hub's implementation once #29 lands (reuse the same override pattern). ⚠️ MiniJinja — no Python string methods.\n- [ ] **JSON-LD** — per-page `Article` (not `TechArticle`) + a repo-level `SoftwareSourceCode`/`SoftwareApplication` node (name, description, `programmingLanguage`, `codeRepository` → this GitHub repo). `Organization` site-wide.\n- [ ] **Remove any client-side `seo.js`** if this repo carries a copy; server-side supersedes it.\n- [ ] **GEO content-shape pass** on the docs prose (biggest evidence-backed LLM-citation win): definition-first sentences (lead a config option with what it does), self-contained/chunkable `##`/`###` sections (restate the subject, don't rely on \"it\"/\"this\"), config/flag/env reference as **tables** not prose, language-tagged code fences (```yaml/```bash), strict one-H1-per-page hierarchy.\n- [ ] **robots.txt** — ensure this repo's `docs/robots.txt` allows the current AI UAs (`GPTBot`, `ClaudeBot`, `OAI-SearchBot`, `PerplexityBot`, `CCBot`, `Applebot-Extended`, `Meta-ExternalAgent`, plus user-action bots). (Note: the hub regenerates per-site `robots.txt` at merge time — keep the source consistent with the hub's policy.)\n- [ ] **Align zensical version** — match the fleet's pinned zensical version and Renovate handling as decided in Phase 1 (rknightion/m7kni-net-site#29). Depending on that decision this repo may drop zensical from its own CI entirely (if the hub build is the only consumer) or keep it pinned + Renovate-grouped for local/preview builds — follow the fleet approach from #29, don't invent a per-repo variant.\n\n## Acceptance criteria\n\n- [ ] Site is on-brand with the new m7kni.io scheme while reading as a clean, professional product-documentation site.\n- [ ] `curl` of a deployed page under m7kni.io/paperless-ngx-dedupe/ (no JS) shows server-rendered OG/Twitter/canonical/JSON-LD/robots meta.\n- [ ] Docs pages follow the GEO content-shape checklist above.\n- [ ] zensical version handling matches the fleet decision in #29.\n- [ ] Site build green; renders correctly under the hub.\n\n## Notes\n\n- llms.txt / llms-full.txt / sitemaps for this site are generated centrally by the hub's scripts over this repo's Markdown — **not** per-repo work here.\n- Do the SEO/LLM + version tasks whenever useful; gate only the visual-redesign task on the hub spec.\n",
+    "closedAt": "2026-07-03T11:55:29Z",
+    "comments": [],
+    "createdAt": "2026-07-03T10:25:23Z",
+    "labels": [],
+    "milestone": null,
+    "number": 397,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Docs site: redesign & rebrand alignment + SEO/LLM discoverability",
+    "updatedAt": "2026-07-03T11:55:29Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/397"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Why\n\nThe app still carries a full Ask Documents/RAG implementation that we no longer use, while the AI classifier is useful and should stay. Paperless-ngx 3.x also moved the default REST contract to API v10, so the client and metrics collectors need checking against the current API rather than relying on compatibility by accident.\n\nThere is also enough OCR data in the local database to recommend a sensible custom-field schema, then use a reviewed list of fields during normal AI processing. That should be part of the existing classify/review/apply flow rather than a second disconnected AI feature.\n\nFinally, the open Renovate updates have actual CI failures and need fixing rather than left blocked.\n\n## Scope\n\n- Remove Ask Documents and the RAG implementation from the UI, API, workers, core exports, configuration, database runtime, tests, docs, telemetry and dependencies.\n- Keep AI document classification, review, batch/flex processing and apply/revert functionality.\n- Compare every Paperless client and metrics endpoint with paperless-ngx 3.x / API v10, including auth, version negotiation, pagination and response shapes.\n- Add custom-field discovery from the local OCR corpus with a cost/size-aware review step.\n- Add per-document custom-field value recommendations from a user-approved field list.\n- Safely apply approved values without losing existing custom fields, including API v7+ select option IDs.\n- Fix or supersede the blocked Renovate PRs and get the dependency updates onto `main`.\n- Pick up small, evidence-backed bugs or QoL fixes found while doing the work.\n\n## Plan\n\n1. Freeze the current integration inventory and API contract.\n2. Remove RAG in focused slices, with tests proving the classifier remains intact.\n3. Add API v10 headers/types/tests and repair any endpoint-specific incompatibilities.\n4. Build custom-field schema recommendation, review and document-value recommendation into the existing AI workflow.\n5. Repair dependency upgrade failures and land the updates.\n6. Run unit, E2E, type-check, lint, format, build and Docker verification before closing.\n\n## Acceptance criteria\n\n- [x] No Ask Documents/RAG route, endpoint, worker, config setting, schema export, dependency, test or documentation remains.\n- [x] AI classification and its existing processing modes still pass focused and end-to-end tests.\n- [x] Paperless requests explicitly negotiate the supported API version and expose a clear compatibility failure.\n- [x] All client and metrics endpoints have contract coverage against paperless-ngx 3.x/API v10 response shapes.\n- [x] A user can generate a proposed custom-field schema from the locally stored OCR corpus without sending an unbounded corpus in one model request.\n- [x] A user can choose/provide the custom fields used for per-document recommendations.\n- [x] Recommended values are reviewable and can be applied without removing unrelated existing field values.\n- [x] Select fields use option IDs and all field types are validated before apply.\n- [x] Open Renovate updates are merged, replaced by an equivalent update on `main`, or closed with a specific incompatibility recorded.\n- [x] `pnpm lint`, `pnpm format`, `pnpm check`, `pnpm test`, `pnpm build`, relevant Playwright tests and Docker validation pass.\n\n",
+    "closedAt": "2026-07-23T20:00:07Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLb9Jiw",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "First lane is done in `18e09ff`.\n\n- Removed Ask Documents, all RAG API routes, workers, vector/search code, conversations, config, telemetry events and UI.\n- Removed the Drizzle schema registration plus `sqlite-vec`, Vercel AI SDK and embedding dependencies.\n- Cleaned the docs, nav, settings, job history and environment examples.\n- Kept AI classification intact and added a focused config regression test for that boundary.\n\nVerification for this commit:\n\n- 41 unit-test files passed, 650 tests passed, 9 skipped\n- type-check clean\n- lint clean\n- formatting clean\n- production build clean\n\nNext is the Paperless 3.x/API v10 contract audit, starting with the shared request path and then every metrics collector.\n",
+        "createdAt": "2026-07-23T19:26:31Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/468#issuecomment-5062478219",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLcPliQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "The remaining implementation is now in `e273974` and `e291324`.\n\n- Audited the client and metrics collectors against Paperless-NGX 3.0.0 / API v10. The existing response-header negotiation is the right compatibility boundary, so it stays instead of hard-coding v10 and breaking older 2.x installations.\n- Added v10 custom-field schemas, select option IDs, document sync, typed AI recommendations, validation, safe read-modify-write apply, audit snapshots, and full revert support.\n- Added a local OCR corpus analyser under **AI Processing > Custom Fields**. It ranks recurring labelled values, infers Paperless field types, excludes first-class/existing metadata, and does not call an LLM or mutate Paperless.\n- Fixed duplicate `/api/statistics/` calls during one metrics scrape. `statistics` and `document` now share the same request, then refresh normally on the next scrape.\n- Updated the compatibility and metrics permission docs for `paperless.view_system_monitoring` and `paperless.view_global_statistics`.\n- Replaced the blocked `better-sqlite3` 13 and pnpm 11 Renovate changes on `main`, including pnpm 11's workspace settings migration and the native build toolchain needed by the Docker dependency stage.\n- Pinned Renovate below TypeScript 7 until `typescript-eslint` supports its compiler API. The current TypeScript 7 PR fails for that exact upstream reason.\n\nVerification on the final tree:\n\n- 44 unit-test files passed; 663 tests passed and 9 skipped\n- 126 Playwright API/browser tests passed\n- type-check and Svelte diagnostics clean\n- formatting clean\n- lint has no errors (two pre-existing generated coverage warnings)\n- production build clean\n- pnpm 11 frozen install and supply-chain policy check clean\n- `better-sqlite3` 13 native module load verified\n\nThe local Docker daemon was unavailable, so the pushed Docker CI job is the final verification for the image change.\n",
+        "createdAt": "2026-07-23T19:59:57Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/468#issuecomment-5062780297",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLcVsOA",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Final verification is complete.\n\n- Main CI passed: install, quality, unit tests, E2E tests, source maps, and the required aggregate check.\n- The temporary main-branch Docker verification also built the image and proved the container starts healthy.\n- More importantly, the normal Release Please edge workflow built and pushed both linux/amd64 and linux/arm64 images, created the manifest, signed it, generated provenance and SBOMs, and completed the Trivy scan.\n- The short-lived CI change that duplicated the Release Please build was reverted in `3264f06`; the final tree is unchanged from the tested implementation.\n- All dependency-update PRs are resolved. `better-sqlite3` 13 and pnpm 11 are on `main`; TypeScript 7 is held with the upstream incompatibility documented; the obsolete AI SDK grouping PR is closed.\n\nAll acceptance criteria are checked off. The final implementation is on `main`.\n",
+        "createdAt": "2026-07-23T20:09:27Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/468#issuecomment-5062880312",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-23T19:18:08Z",
+    "labels": [],
+    "milestone": null,
+    "number": 468,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Modernise Paperless 3.x integration, remove RAG, and add custom-field AI workflows",
+    "updatedAt": "2026-07-23T20:09:27Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/468"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Why\n\nThe RAG removal, Paperless 3 work & custom-field support cleared the main blockers, but the app still behaved like a collection of feature pages rather than one coherent workflow.\n\nThis pass makes it obvious whether the system is healthy, what is running, what needs review & what useful work has completed. It also deals with older engineering debt: fragmented job state, a very large settings page, incomplete AI/jobs E2E coverage, stale coverage accounting, cursor/pagination gaps & a few unsafe review races.\n\nThis remains a single-operator app for a trusted network. No user accounts or multi-tenant work.\n\n## Status as of 24 July 2026\n\nWaves 1 through 6 are complete on main. The final Wave 5/6 implementation is 27af8de, integrated with the concurrent pnpm maintenance update as 22b2ae6. All local gates, remote CI and Release Please receipts are recorded in the closing comment. The historical browser-config privacy audit remains deliberately deferred; targeted no-secret, no-OCR and no-document-ID regressions remain covered.\n\n## Delivered before this tracker\n\n- [x] Remove document Q&A/RAG (`18e09ff`)\n- [x] Paperless 3 custom-field workflows (`e273974`)\n- [x] Share Paperless statistics across metrics collectors (`d451fe0`)\n- [x] Clear the outstanding Renovate/native/package-manager blockers (`e291324`)\n\n## Safety boundaries\n\n- Sync & duplicate analysis may run automatically.\n- Scheduled AI is explicit opt-in, defaults off & has document/spend caps.\n- AI only creates suggestions. Metadata, custom fields & processed tags always require review.\n- Document deletion always requires review and a refreshed preflight.\n- Every Paperless mutation uses a frozen, expiring review plan and live conflict checks.\n- Camden performance checks are GET/read-only only. No deployment or mutation is authorised by this issue.\n\n## Plan\n\n### Wave 1: foundation & cockpit - complete\n\n- [x] Typed API/error contracts without leaking secrets (`54adb7b`)\n- [x] Environment-owned Paperless connection settings made read-only (`420ec6e`)\n- [x] Persistent global job activity with reconnect/recovery (`b31a589`)\n- [x] Readiness and next-action model (`54adb7b`)\n- [x] Workflow-first Overview (`85ee926`)\n- [x] Current-source coverage cleanup (`ec979f5`)\n\n### Wave 2: safe automation - complete\n\n- [x] Remove unattended AI apply (`3493920`)\n- [x] Durable schedules, intents, leases & retry/dead-letter state (`479de8b`, `b422025`)\n- [x] Database-enforced operation compatibility matrix (`479de8b`)\n- [x] Cold-start scheduler lifecycle independent of HTTP traffic (`479de8b`)\n- [x] Sync-generation scoping for scheduled AI (`b422025`)\n- [x] Hard monthly AI budget and per-run document caps (`b422025`)\n\n### Wave 3: review workflows - implementation complete, final integration pending\n\n- [x] Cursor-based duplicate inbox (`0553572`)\n- [x] Frozen deletion preflight (`0553572`)\n- [x] Better duplicate match explanations (reviewed local integration)\n- [x] Exact field/custom-field AI selection (reviewed local integration)\n- [x] Frozen AI apply/revert plans with live conflict checks (reviewed local integration)\n- [x] Cursor-based AI review/failure queues (reviewed local integration)\n\n### Wave 4: library intelligence - one Camden receipt outstanding\n\n- [x] Paginated searchable document library (reviewed local integration)\n- [x] Filtered streaming CSV (reviewed local integration)\n- [x] Data-quality insights (reviewed local integration)\n- [x] Paginated job history (reviewed local integration)\n- [x] 50,000-document synthetic benchmark and measured indexes (local: all p95s under 500 ms)\n- [x] Camden read-only baseline with deployed SHA recorded (Paperless 3.0.0 revision 2ab1ac7cb82a12a8cbe81c23d4063cf4a4209fd6; Dedupe is not deployed on Camden)\n\n### Wave 5: settings & operations - complete\n\n- [x] Typed configuration registry and legacy import preview (`edcdbb6`)\n- [x] Split settings into focused sections (27af8de)\n- [x] Redacted diagnostics bundle (`edcdbb6`)\n- [x] Consistent online SQLite backup (reviewed local integration)\n- [x] Leased maintenance, retention & storage reporting (27af8de)\n- [x] First-run checklist (27af8de)\n\n### Wave 6: hardening - complete\n\n- [x] Current-source coverage thresholds (27af8de)\n- [x] Complete AI/jobs/automation E2E matrix (27af8de)\n- [x] Mobile and keyboard journeys (27af8de)\n- [x] Automated accessibility checks (27af8de)\n- [x] Validated Codacy fixes and narrow false-positive suppression (27af8de)\n- [x] Verify the existing non-root container runtime (27af8de)\n- [x] Documentation and upgrade guidance (27af8de)\n\n## Acceptance criteria\n\n- [x] Warm median queries are at or below 500 ms and p95 at or below 1,000 ms on the documented 50k reference environment (local synthetic receipt; Camden still pending)\n- [x] CI gates query correctness/plans without flaky hardware timing assertions (local integration; pending push)\n- [x] Unit, coverage, E2E desktop/mobile, accessibility, typecheck, lint, format, app build & docs build pass (27af8de)\n- [x] No automatic Paperless mutation path remains\n- [ ] No secrets/OCR/private metadata appear in browser config, exports, diagnostics, logs or benchmark artifacts (final security/privacy pass pending)\n- [x] Release Please builds and publishes amd64/arm64 edge images, then signs, attests, generates SBOMs & runs Trivy (ccd231f receipt: run 30079997661)\n- [x] Each wave lands deployable on main with 27af8de integrated by 22b2ae6",
+    "closedAt": "2026-07-24T09:39:37Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLdtWyg",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Wave 1 is implemented locally across `54adb7b`, `420ec6e`, `b31a589`, `85ee926` & the lint follow-up `ec979f5`.\n\n- [x] typed, redacted API errors & readiness\n- [x] connection secrets kept server-side\n- [x] global job activity survives navigation and dropped SSE connections\n- [x] workflow-first Overview with safe actions\n- [ ] clean-source coverage and the full wave gate\n\nThe focused activity/dashboard run is green: 4 Playwright cases passed, with web type-check reporting 0 errors and 0 warnings.\n\nWave 2 has also removed unattended AI apply (`3493920`) and added the schedule/occurrence schema (`4b85911`). The coordinator is deliberately still uncommitted. Its adversarial review found two races around an expired dispatch claim and restart lease recovery, plus a missing durable payload for manual route options. Regression tests and fixes are in progress now, then it goes back through the same review before I wire the server runtime to it.\n\nNothing has been pushed yet. I want the coordinator boundary green first rather than putting a known race on `main`.\n",
+        "createdAt": "2026-07-23T22:52:55Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5064316618",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLeLahA",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Wave 2 runtime dispatch is now committed as 479de8b. This ended up getting a fairly aggressive concurrency review before I let it land: worker startup now has durable token-bound ownership, crash and timeout recovery are retry-safe, shutdown stops new manual and scheduled work without killing active workers, and the test server always starts from the intended E2E database. The final review is clean, with 71 focused core tests, 38 focused web tests, and 29 relevant browser tests passing.\n\nI am moving on to the final Wave 2 block now: schedule settings/API, AI monthly budget reservations, sync-generation reprocessing rules, and AI result revision history. Still holding the push until the full wave is integrated and green.",
+        "createdAt": "2026-07-24T00:16:57Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5064809092",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLeryBA",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Wave 2 is complete and committed. The final automation/settings block is b422025, on top of the shared runtime in 479de8b.\n\nThe important bit is that scheduled AI is now genuinely bounded rather than just configurable: default off, review-only, per-provider-attempt reservations, monotonic spend accounting if provider usage exceeds the estimate, durable sync-generation eligibility, and revision history before suggestion replacement. The 50k query paths now use anti-joins/JSON binds rather than giant SQLite variable lists.\n\nFinal receipts for that block: 830 core tests passed with 9 skipped, 17 automation/settings browser tests passed, check/build/lint/scoped-format/diff gates passed, and the adversarial review is clean. Wave 3 review workflows are now in progress.",
+        "createdAt": "2026-07-24T01:48:00Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5065339396",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLfK4yg",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Wave 3 foundation is now in on 0553572.\n\nThis adds the cursor-backed duplicate inbox and immutable deletion previews, with crash-resumable execution, per-document checkpoints, common mutation leases, exact schema compatibility repair, and preserved legacy API/wizard behaviour.\n\nThe final integration gate passed 856 core tests (9 skipped), type checks, production build, focused browser/API coverage, and lint with only the two existing generated coverage warnings.\n\nI have started the next two independent lanes: duplicate match explanations, and field-level AI apply/revert review plans. Both will go through the same separate adversarial review before I integrate them.",
+        "createdAt": "2026-07-24T03:27:58Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5065849034",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLhKQbQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "The integrated modernization work is now on main in ccd231f (rebased onto the current main tip before push).\\n\\nLocal receipts:\\n- core: 1,183 passed, 9 skipped; coverage run completed\\n- web typecheck: 0 errors, 0 warnings\\n- lint: 0 errors (the two existing generated-coverage warnings remain)\\n- format and production build passed\\n- Playwright: 185/185 passed\\n\\nThis includes the durable aggregate-only custom-field discovery workflow, review-only AI apply/revert plans, duplicate review hardening, document library/export/data-quality/job history work, policy/diagnostics/backup work and the synthetic 50k benchmark. Docker publishing remains in Release Please, not ci.yml.\\n\\nDeliberately still deferred: the Camden live baseline/deployment and the broad historical browser-config privacy audit (new routes have targeted non-exposure tests).",
+        "createdAt": "2026-07-24T08:44:36Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5067935853",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLhKX6w",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Reopened because the commit closes the integrated work, while this tracker still deliberately retains the deferred Camden baseline and broad historical privacy audit plus the remaining unchecked hardening/release items. The checklist is the source of truth for that follow-up scope.",
+        "createdAt": "2026-07-24T08:44:50Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5067937771",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLhNcCQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Starting the follow-up from `ccd231f`.\n\nPlan:\n\n- Capture Camden's deployed SHA plus a GET-only Paperless/API timing receipt. No deployment, no writes.\n- Close the actual Wave 5/6 gaps: focused settings, leased maintenance/retention/storage reporting, first-run state, current-source coverage gates, the remaining E2E/accessibility/mobile/keyboard matrix, Codacy reconciliation, non-root runtime proof, docs/upgrade guidance, then Release Please receipts.\n- Keep the broad historical browser-config audit deferred. New routes keep their targeted no-OCR/no-document-ID/no-secret regression tests.\n- Run every behaviour change test-first, then the complete local gates before each commit. Docker remains Release Please-only.\n\nAdversarial check:\n\n- Camden access is read-only by construction: only GET/HEAD calls with no Paperless mutation endpoints, no deployment path, and the deployed SHA captured separately from the local commit.\n- Settings and maintenance work must not create an unattended mutation path. Scheduled AI stays opt-in/default-off and review-only.\n- Retention/storage work needs lease ownership, idempotent execution and an operator-visible report; it must not delete data outside a reviewed plan.\n- Coverage gates must measure current source, not generated or stale artifacts. Accessibility/mobile/keyboard claims need real browser receipts, not component assertions alone.\n- Release claims wait for the actual Release Please and publish workflow run URLs/statuses. `ci.yml` must continue to build only, never publish.\n",
+        "createdAt": "2026-07-24T08:51:00Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5067987977",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLhP1Gg",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Camden baseline receipt, captured without deployment or mutation:\n\n- Paperless is `3.0.0`, revision `2ab1ac7cb82a12a8cbe81c23d4063cf4a4209fd6`, image digest `sha256:80f96a38de1a04c49a466b236b9c34491e6c4b29cc1e216a4a5134ba5dd22059`.\n- No Paperless NGX Dedupe container is deployed on Camden, so there is no Dedupe SHA to claim. This is a Paperless baseline only.\n- Public `GET /api/` returned 200 in 81 ms. The protected document endpoint returned 401 without credentials, as expected.\n- Using the existing Paperless token without printing it, ten authenticated GETs from the service reported: documents page 100 median 52.1 ms / p95 263.0 ms; statistics median 11.3 ms / p95 22.9 ms; tags page 100 median 83.1 ms / p95 199.1 ms. All returned 200.\n\nRelease receipt for `ccd231f`: [Release Please run 30079997661](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30079997661) passed, including amd64 and arm64 image builds, manifest publication, image signing, provenance, SPDX/CycloneDX SBOM generation and Trivy. It ran through Release Please's `edge` path, not `ci.yml`.\n",
+        "createdAt": "2026-07-24T08:54:49Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5068027162",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLhscVA",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Completed on main.\n\n- Wave 5/6 implementation: 27af8de, integrated at main SHA 22b2ae6.\n- Local gates: 1,185 passing unit tests, thresholded coverage 84.00% statements, 77.77% branches, 85.98% functions and 85.20% lines; 193 Playwright tests; typecheck, lint, format, build and docs build passed.\n- Settings now use focused sections; the dashboard has the review-only first-run checklist; maintenance reporting is read-only and lease-aware; upgrade guidance is published.\n- Container receipt: the built image entrypoint runs the application as uid/gid 1000, not root.\n- Codacy: fixed GCM tag-length handling and documented only the validated false positives. The old esbuild alert remains visible because it is a transitive Drizzle tooling dependency.\n- CI: https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30083372535\n- Release Please: https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30083373051. Both amd64 and arm64 images were pushed, then the manifest was signed and attested, SBOMs generated, and Trivy completed. Docker publication remains confined to Release Please.\n\nThe broad historical browser-config privacy audit remains deferred by scope. The targeted no-secret, no-OCR and no-document-ID regressions remain in place.",
+        "createdAt": "2026-07-24T09:52:41Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469#issuecomment-5068495956",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-23T20:59:48Z",
+    "labels": [],
+    "milestone": null,
+    "number": 469,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Workflow-first application modernization",
+    "updatedAt": "2026-07-24T09:52:41Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/469"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Problem\n\nRenovate dependency PRs were blocked by predictable CI failures before their updated npm packages were old enough for pnpm 11's supply-chain policy.\n\nEvidence from open PRs #471-#475:\n\n- `install` failed during `pnpm install --frozen-lockfile` with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`.\n- `docker-build-verify` failed at the same frozen install in `Dockerfile`.\n- `ci-success` then failed because the required install path failed.\n- CI timestamps showed pnpm enforcing a 24-hour cutoff, while the inherited fleet Renovate configuration used `minimumReleaseAge: '12 hours'`.\n\nThis was a policy coordination defect, not a dependency incompatibility.\n\n## Scope\n\n- Override Renovate's npm release-age cooldown in this repository to match pnpm's 24-hour enforcement.\n- Preserve the pnpm supply-chain policy; do not weaken or bypass frozen installs.\n- Re-run mature open Renovate PRs and verify CI/automerge behavior.\n- Leave packages younger than 24 hours to mature rather than forcing them through.\n\n## Approach\n\n1. Add a repo-local npm package rule with `minimumReleaseAge: '24 hours'` and strict internal checks.\n2. Validate the Renovate configuration and run the repository's full local gate.\n3. Push the fix to `main` with `Closes` in the commit.\n4. Re-run mature Renovate PR checks and monitor terminal results; let Renovate refresh younger PRs after their cooldown.\n\n## Acceptance criteria\n\n- [x] Repo Renovate config holds npm updates until they are at least 24 hours old.\n- [x] Renovate config validates.\n- [x] Full local test/build/lint/format/docs gate passes.\n- [x] Fix is pushed to `main` and post-push CI is green.\n- [x] Mature blocked Renovate PRs are re-run and their resulting state is recorded.\n- [x] No pnpm supply-chain policy is weakened.\n",
+    "closedAt": "2026-07-25T11:27:43Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLrFMsA",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Implemented and verified in `434d014`.\n\nReceipts:\n\n- Root cause: fleet Renovate waited 12 hours, while pnpm 11 frozen installs enforced a 24-hour package-age cutoff.\n- Added a repo-local strict npm `minimumReleaseAge: '24 hours'` override; pnpm policy and frozen installs remain unchanged.\n- Renovate config validation passed.\n- Local full gate passed: 1,185 tests passed / 9 skipped, type checks, lint, format, production build, Zensical build, and `git diff --check`.\n- Post-push CI run 30156277278 succeeded.\n- #472 rerun cleared the package-age failure; a loaded-runner timeout in the 50k-document performance test passed on retry. PR auto-merged as `0628aea`.\n- #471 rerun cleared the package-age failure; a Docker Hub connection timeout passed on retry. PR auto-merged as `4e9cf4a`.\n- #473 remains inside its legitimate cooldown until eslint 10.8.0 matures at 2026-07-25 20:15:20 UTC.\n- #474 remains inside its legitimate cooldown until Playwright 1.62.0 matures at 2026-07-25 21:56:56 UTC.\n- #475 remains inside its legitimate cooldown until Svelte 5.56.8 matures at 2026-07-25 22:09:08 UTC.\n\nRenovate owns refreshing the three younger branches after those timestamps; rerunning them early would intentionally reproduce the pnpm rejection.\n",
+        "createdAt": "2026-07-25T11:36:37Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/476#issuecomment-5078338736",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-25T11:25:01Z",
+    "labels": [],
+    "milestone": null,
+    "number": 476,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Align Renovate cooldown with pnpm 11 package-age policy",
+    "updatedAt": "2026-07-25T11:36:37Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/476"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Problem\n\nRelease PR #298 updates the root package version from `0.15.0` to `0.16.0`. The diagnostics endpoint correctly reports the root package version, but its E2E assertion hard-codes `0.15.0`. CI run 30156603717 therefore fails deterministically in `e2e-tests` job 89675492249 on all three attempts.\n\nThe diagnostics API unit test contains the same stale hard-coded expectation, so both assertions should use the same root package metadata as the endpoint.\n\n## Approach\n\n- Import the root package metadata in the diagnostics API unit test and settings E2E test.\n- Assert the emitted application version against that metadata instead of a release-specific literal.\n- Run the targeted diagnostics tests, the full local gate, and verify the release PR reruns successfully.\n\n## Acceptance criteria\n\n- [x] Diagnostics tests assert the application version from the root package metadata.\n- [x] The targeted diagnostics unit and E2E tests pass.\n- [x] The full repository gate passes.\n- [x] The completing commit is pushed to `main`.\n- [x] Release PR #298 CI reaches terminal success.\n",
+    "closedAt": "2026-07-25T11:52:59Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLrH6-A",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Implemented release-safe diagnostics version assertions in both the API unit test and Playwright coverage.\n\nLocal verification before commit:\n- diagnostics API unit test: 2/2 passed\n- full Playwright suite: 193/193 passed\n- full gate: 1,185 unit tests passed (9 skipped), type-check, lint (0 errors), format, production build, Zensical docs build, and `git diff --check` all completed successfully\n\nThe first full unit run hit the exact 5-second timeout in two unrelated SQLite concurrency tests; both passed immediately in isolation and the complete repeated gate passed.",
+        "createdAt": "2026-07-25T11:52:56Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/477#issuecomment-5078383352",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLrKZ9w",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Delivered in `7d61bd2994943554b495e53f3a3bba9bbbed768e`. Release PR #298 refreshed to `e6b876316f15a5f11d5b590a2ce65bafc7244272`; CI run 30157313698 completed successfully, including `e2e-tests` and the aggregate `ci-success` job.",
+        "createdAt": "2026-07-25T12:07:13Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/477#issuecomment-5078424055",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-25T11:47:48Z",
+    "labels": [],
+    "milestone": null,
+    "number": 477,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "fix(ci): keep diagnostics version assertions release-safe",
+    "updatedAt": "2026-07-25T12:07:13Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/477"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Problem\n\nAfter the release-version E2E fix refreshed release PR #298, CI run 30157054665 exposed a separate unit-test blocker. `scanCustomFieldCandidatesV2 > completely scans 50k documents twice with bounded state` timed out at Vitest's default 5 seconds under coverage. The test intentionally processes 100,000 document reads and has no explicit timeout.\n\nThis is a test-budget issue rather than a product failure: the same high-cardinality test passes locally, and comparable 50k repository tests explicitly use 15-20 second budgets.\n\n## Approach\n\nGive this deliberately high-cardinality test a 20-second timeout, matching existing 50k tests, then verify it under the CI coverage command and repeat the full gate.\n\n## Acceptance criteria\n\n- [x] The 50k discovery test has an explicit realistic timeout.\n- [x] The test passes under coverage.\n- [x] The full repository gate passes.\n- [x] The completing commit is pushed to `main`.\n- [x] Release PR #298 reaches terminal CI success.\n",
+    "closedAt": "2026-07-25T12:00:20Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLrI8iw",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "The repeated full local gate exposed the same default-timeout defect in two worker-thread/SQLite contention tests:\n\n- `reviewed AI apply plans > allows only one of two file-backed connections to claim an AI plan`\n- `reviewed duplicate deletion plans > allows only one of two file-backed connections to claim the same token`\n\nBoth timed out at exactly 5 seconds under full-suite load and passed together in isolation in about 1.4 seconds each. Scope now includes explicit 15-second budgets for those real concurrency tests, alongside the 20-second budget for the 100k-read discovery test.",
+        "createdAt": "2026-07-25T11:58:54Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/478#issuecomment-5078400139",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLrJLFw",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Verification before commit:\n- 50k discovery test under coverage: passed in 2.25s (the targeted process then reported the expected repository-wide threshold failure because only one test was selected)\n- repeated full gate: 1,185 unit tests passed (9 skipped), including all three load-sensitive tests; type-check, lint (0 errors), formatting, production build, Zensical docs build, and `git diff --check` passed",
+        "createdAt": "2026-07-25T12:00:17Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/478#issuecomment-5078403863",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLrKaoA",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Delivered in `5708d50296cb70f6741dc358d0843e2f7b9d4e39`. Main CI run 30157216335 completed successfully. Release PR #298 refreshed to `e6b876316f15a5f11d5b590a2ce65bafc7244272`; CI run 30157313698 completed successfully, including `unit-tests`, `e2e-tests`, and the aggregate `ci-success` job.",
+        "createdAt": "2026-07-25T12:07:16Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/478#issuecomment-5078424224",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-25T11:57:33Z",
+    "labels": [],
+    "milestone": null,
+    "number": 478,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "fix(ci): give load-sensitive tests realistic timeouts",
+    "updatedAt": "2026-07-25T12:07:16Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/478"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Problem\n\nUpgrading a persisted database from an older release can make startup and `/api/v1/health` fail during `migrateDatabase()`:\n\n```text\nSqliteError: no such column: \"trigger_kind\" - should this be a string literal in single-quotes?\n  at ensureJobHistoryCompatibility\n```\n\nCamden reproduced this after the recent workflow-first modernization. This is an end-user upgrade compatibility issue, not a fresh-install issue.\n\n## Root cause\n\n`ensureJobHistoryCompatibility()` independently adds `job.public_history_key`, but its rebuild path later copies the fixed `JOB_COLUMN_NAMES` list from the legacy table. Older released `job` schemas can lack automation-era columns such as `trigger_kind`, `schedule_id`, and `due_at`. Once `public_history_key` exists, its position differs from the current canonical table, which selects the rebuild path. The resulting `INSERT ... SELECT` quotes missing column names as identifiers and SQLite raises `no such column: \"trigger_kind\"`.\n\nThe generated DDL cannot repair this reliably: `CREATE TABLE` is made `IF NOT EXISTS`, so existing tables are skipped while the current schema hash/snapshot may still be stored. Compatibility repair must therefore happen before the schema-hash early return and must tolerate every released legacy `job` shape.\n\n## Scope and approach\n\n- Reproduce the Camden-shaped legacy `job` table in the migration integration tests.\n- Change job-table compatibility migration to copy existing columns and supply explicit safe defaults/nulls for columns absent from the legacy table.\n- Preserve existing job rows and any valid public history keys.\n- Restore the exact current table signature and canonical indexes.\n- Prove migration is idempotent and fresh database behavior is unchanged.\n- Audit recent schema history for other compatibility assumptions exposed by the same upgrade path; keep fixes limited to demonstrated migration gaps.\n\n## Acceptance criteria\n\n- [x] A regression test fails on current `main` with the reported missing `trigger_kind` startup error.\n- [x] Migrating an older released `job` schema succeeds without data loss.\n- [x] Missing automation/job-history columns receive documented safe values compatible with current runtime behavior.\n- [x] Existing compatible column values and valid public history keys are preserved.\n- [x] The migrated `job` table and indexes match a fresh database.\n- [x] Running the migration again is a no-op and remains successful.\n- [x] Focused migration tests and the repository's full test, check, lint, format, build, docs, and diff gates pass.\n- [x] The completing commit references this issue and is pushed to `main`.\n\n\n\n\n## Follow-up: intermediate automation schemas\n\nAfter `f57d45c` repaired `job`, Camden advanced to the next incompatible generated rebuild:\n\n```text\nSqliteError: no such column: \"job_id\" - should this be a string literal in single-quotes?\n```\n\nLive read-only inspection shows the stored/physical `dispatch_intent` table is the first automation release shape. It lacks `job_id`, `dispatch_key`, `dispatch_claim_token`, `dispatch_claimed_at`, and `dispatch_claim_expires_at`; its task constraint is also the older three-task set. Drizzle rebuilds the table for the changed constraints but selects the current column list from that legacy shape, failing first on `job_id`.\n\nThe same intermediate release left `operation_lease` without `heartbeat_at` and with legacy `expires_at NOT NULL`, and `sync_change_generation` without `root_schedule_id`, `root_due_at`, or `changed_at`. These must be repaired in the same compatibility pass so startup does not fail one table at a time.\n\n### Follow-up acceptance criteria\n\n- [x] A real-SQLite regression fixture reproduces the reported `job_id` failure on current `main`.\n- [x] `dispatch_intent` is rebuilt transactionally to the exact fresh schema while preserving legacy rows and supplying safe nullable values for absent columns.\n- [x] `operation_lease` and `sync_change_generation` intermediate schemas are rebuilt transactionally to their exact fresh schemas while preserving legacy rows.\n- [x] Canonical constraints and indexes are restored for all repaired automation tables.\n- [x] The intermediate-release upgrade fixture migrates twice without schema or data drift.\n- [x] Recent schema history is audited for every other intermediate-table mismatch exposed by Camden.\n- [x] Focused and full local gates pass.\n- [x] A completing follow-up commit is pushed to `main` and exact remote workflows succeed.\n",
+    "closedAt": "2026-07-26T18:57:35Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxQA7A",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Live read-only Camden evidence captured before implementation:\n\n- Container: `paperless-dedupe-app-1`, image `ghcr.io/rknightion/paperless-ngx-dedupe:main`, unhealthy.\n- Database: `/opt/paperless-dedupe/docker-data/paperless-ngx-dedupe.db` (queried read-only; no deployment or database mutation).\n- The live `job` column order is exactly: `id`, `type`, `status`, `progress`, `phase_progress`, `progress_message`, `started_at`, `completed_at`, `error_message`, `result_json`, `created_at`, `execution_token`, `public_history_key`.\n- Missing current columns: `trigger_kind`, `schedule_id`, `due_at`, `parent_job_id`, `root_schedule_id`, `root_due_at`, `attempt`, `next_attempt_at`, and `terminal_reason`.\n- The four history indexes and `job_public_history_key_unique` already exist, showing that the current compatibility path partially repaired the legacy table before the failing restart.\n- Stored `schema_ddl_hash` and `schema_ddl_snapshot` were last updated at `2026-07-23T23:20:59.030Z`.\n\nConfirmed failure path: `public_history_key` is at legacy ordinal 12, so `ensureJobHistoryCompatibility()` selects its rebuild branch. That branch copies a fixed 22-column list from the 13-column legacy table; the first absent selected identifier is `trigger_kind`, matching the production stack trace.\n\nImplementation contract: compare the entire `job` signature to the canonical schema, rebuild any released legacy shape transactionally, preserve existing columns, and use explicit `NULL`/schema-default expressions only for absent columns. Strict TDD and exact fresh-schema/idempotence checks apply.\n",
+        "createdAt": "2026-07-26T18:25:59Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/480#issuecomment-5084807404",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxRLFQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Implementation and local verification complete.\n\nStrict TDD receipt:\n\n- RED: the new Camden-shaped migration test failed on unmodified production code with `SqliteError: no such column: \"trigger_kind\"` at `ensureJobHistoryCompatibility()` / `migrate.ts:992`; 1,185 existing tests passed around it.\n- GREEN: the exact fixture passed after the compatibility fix; all four focused job migration cases passed; all 12 migration tests passed.\n\nImplementation:\n\n- Compatibility now compares the entire `job` column signature with the canonical schema, so a legacy table is repaired on its first startup rather than only after `public_history_key` shifts position.\n- The transactional rebuild copies each column only when it exists in the legacy table. Missing nullable automation fields become `NULL`; missing `attempt` becomes `0`; required identity columns remain strict.\n- Existing history fields, `execution_token`, and valid `public_history_key` values are preserved.\n- The result is asserted equal to a fresh database table/index signature and is idempotent on a second migration.\n\nFull local gate:\n\n- `pnpm test`: 76 files passed; 1,186 tests passed; 9 skipped.\n- `pnpm check`: TypeScript and Svelte checks passed; 0 errors and 0 warnings.\n- `pnpm lint`: 0 errors; two pre-existing generated coverage `eslint-disable` warnings.\n- `pnpm format`: passed.\n- `pnpm build`: core and production SvelteKit builds passed. Existing Vite chunk-size/plugin-timing warnings only.\n- `uvx --from zensical zensical build`: passed with the existing `404.md#__search` anchor warning.\n- `git diff --check`: passed.\n\nCommit/push and remote workflow receipts remain pending.\n",
+        "createdAt": "2026-07-26T18:31:11Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/480#issuecomment-5084826389",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxSfLg",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Delivered and verified.\n\n- Completing commit: `f57d45ceff6b23b9dc1071d8e213b18be524fb01` (`fix: migrate legacy job schemas safely`), pushed to `main`; its `Closes #480` footer closed this issue.\n- CI run [30214893139](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30214893139): success. Install, unit/coverage, E2E, quality/audit, source maps, and required `ci-success` all passed.\n- Release Please run [30214893336](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30214893336): success. amd64/arm64 edge images built and pushed; manifest merge, signing, provenance, SPDX/CycloneDX SBOM generation, Trivy, and SARIF upload passed.\n- Docker Security run [30214893138](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30214893138): success.\n- Scorecard run [30214893247](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30214893247): success.\n\nCamden was not redeployed or mutated during this work. Its live container remains the previously inspected unhealthy image until the normal deployment/update path pulls the new edge image; the database repair will run transactionally on that startup.\n",
+        "createdAt": "2026-07-26T18:37:06Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/480#issuecomment-5084847918",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxUx7A",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Reopened after the new Camden startup failure.\n\nRead-only live evidence after pulling the `f57d45c` edge image:\n\n- Container image ID changed to `sha256:a37da68c19376f0a4960c4e83e61bcb881dcd9e6a72d911f0098377bce0c4074`, confirming the first fix is running.\n- The `job` repair completed far enough for startup to advance into generated DDL.\n- `dispatch_intent` is the initial automation schema plus the separately added `task_data_json`; it has no `job_id` or dispatch-claim columns and only the old indexes.\n- Stored snapshot `dispatch_intent` matches the same initial schema and predates `job_id`.\n- `operation_lease` is also the initial shape (no `heartbeat_at`, `expires_at NOT NULL`).\n- `sync_change_generation` is the initial shape (no root lineage or `changed_at`).\n- All four live automation tables currently contain zero rows, but the migration will preserve rows for user databases that do contain durable work.\n\nRoot cause: generated rebuild SQL assumes the snapshot's declared source columns exist after the current schema changes. It first selects `job_id` from the legacy `dispatch_intent`, causing the reported error. The fix scope is the whole intermediate automation compatibility boundary, not another isolated `ALTER COLUMN`.\n",
+        "createdAt": "2026-07-26T18:47:21Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/480#issuecomment-5084885484",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxXCow",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Follow-up implementation and local verification are complete.\n\nStrict TDD receipt:\n\n- RED: the released-intermediate fixture failed on unmodified production code with `SqliteError: no such column: job_id` in generated DDL, matching Camden.\n- GREEN: the fixture now migrates non-empty legacy `dispatch_intent`, `operation_lease`, and `sync_change_generation` rows to signatures identical to a fresh database.\n\nThe pre-DDL compatibility pass now transactionally rebuilds all three intermediate schemas, preserves every legacy field, supplies `NULL` only for newly introduced nullable fields, restores the complete current checks/indexes, repairs malformed same-named indexes, and is idempotent. The schema-history audit found no other uncovered intermediate automation table: budget/result compatibility already has explicit handling, while later discovery/review tables are either independently repaired or newly created.\n\nLocal gate:\n\n- Focused migration file: 13/13 passed.\n- `pnpm test`: 76 files passed; 1,187 tests passed; 9 skipped.\n- `pnpm check`: TypeScript and Svelte checks passed; 0 errors and 0 warnings.\n- `pnpm lint`: 0 errors; the two existing generated coverage warnings only.\n- `pnpm format`: passed.\n- `pnpm build`: core and production SvelteKit builds passed; existing Vite advisory warnings only.\n- `uvx --from zensical zensical build`: passed with the existing `404.md#__search` warning.\n- `git diff --check`: passed.\n\nCommit, push, remote workflows, and Camden image verification remain pending.",
+        "createdAt": "2026-07-26T18:57:28Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/480#issuecomment-5084922531",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxYXzQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Delivered and verified end to end.\n\n- Completing commit: `4ea25069d212aeab2a40ccd2ab50e69da7acc71d` (`fix: migrate intermediate automation schemas`), pushed to `main`; `Closes #480` closed the issue.\n- CI run [30215830777](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30215830777): success. Unit/coverage, quality, source-map build, E2E, and required `ci-success` all passed.\n- Release Please run [30215831025](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30215831025): success. amd64/arm64 edge builds, manifest merge, signing, provenance, SPDX/CycloneDX SBOM generation, Trivy, and SARIF upload passed.\n- Docker Security run [30215830759](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30215830759): success.\n- Scorecard run [30215830933](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30215830933): success.\n\nCamden delivery/readback:\n\n- Running image ID: `sha256:ef662c058c4ab810942215336d3409564c2e346ee96768f7bd9defec8357ea3`.\n- OCI revision label: exact completing SHA `4ea25069d212aeab2a40ccd2ab50e69da7acc71d`.\n- Container state: running and healthy; started `2026-07-26T19:01:51.658056814Z`.\n- Direct in-container `/api/v1/health`: HTTP 200 with `status: ok`.\n- Read-only SQLite readback confirms all 21 current `dispatch_intent` columns, all 6 current `operation_lease` columns, and all 8 current `sync_change_generation` columns are present.\n- Startup logs contain no schema exception and show normal runtime initialization plus repeated health/job API 200 responses.",
+        "createdAt": "2026-07-26T19:03:26Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/480#issuecomment-5084944333",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-26T18:23:50Z",
+    "labels": [],
+    "milestone": null,
+    "number": 480,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Fix legacy job schema migration crash on startup",
+    "updatedAt": "2026-07-26T19:03:26Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/480"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Problem\n\nThe Dashboard **Sync now** and **Run analysis** actions reach their API endpoints but do not execute their workers in the production image. The first accepted analysis remains pending, holds the analysis operation lease, and subsequent sync/analysis requests return HTTP 409.\n\n## Live Camden evidence\n\nOn image revision `4ea25069d212aeab2a40ccd2ab50e69da7acc71d`:\n\n```text\nPOST /api/v1/analysis 202\nWorker launched: /app/core/jobs/workers/analysis-worker.js\nERR_MODULE_NOT_FOUND: Cannot find package 'croner' imported from /app/core/scheduler/occurrences.js\nWorker failed without owning execution; leaving durable job unchanged\nPOST /api/v1/sync 409\nPOST /api/v1/analysis 409\n```\n\nRead-only SQLite inspection shows the resulting analysis job and dispatch intent remain `pending`, retry attempts increase, and the analysis lease remains owned by that job.\n\n## Root cause\n\n`pnpm --filter @paperless-dedupe/web deploy --legacy --prod` contains the full deployed `@paperless-dedupe/core` package and `croner`, but the Dockerfile separately copies `packages/core/dist` to `/app/core`. Raw worker threads are launched from `/app/core`, outside the deployed package ancestry. Node therefore searches `/app/core/node_modules` and `/app/node_modules`, while core-only dependencies such as `croner` are linked beside the deployed core package under pnpm's virtual store and are unreachable from `/app/core`.\n\nThe server bundle works because Vite bundles its imports; the separately launched raw workers expose the packaging defect.\n\n## Scope and approach\n\n- Resolve production workers from the deployed `@paperless-dedupe/core/dist` package so Node uses that package's runtime dependency graph.\n- Retain the local workspace `packages/core/dist` path for development/build tests.\n- Remove the detached `/app/core` copy so production cannot silently select the broken layout.\n- Add a regression test for production worker-path selection.\n- Extend container verification to import the real deployed scheduler module that requires `croner`, and run Docker verification on `main` pushes as well as pull requests.\n- Verify the existing pending Camden job is recovered after the corrected image restarts; do not mutate or delete its durable rows manually.\n\n## Acceptance criteria\n\n- [x] A focused test fails because `/app` cannot select the deployed core worker path.\n- [x] Production resolves workers under `/app/node_modules/@paperless-dedupe/core/dist/jobs/workers/`.\n- [x] The detached `/app/core` runtime copy is removed.\n- [x] The built image imports the deployed scheduler/`croner` dependency graph successfully.\n- [x] Docker build verification runs on `main` pushes and checks the worker dependency boundary.\n- [x] Focused tests and the full local gate pass.\n- [x] The completing commit is pushed to `main` and all exact remote workflows succeed.\n- [x] Camden runs the exact corrected image; the existing pending analysis job leaves `pending`, its lease is released, and a fresh manual sync/analysis action executes rather than returning 409.\n\n\n",
+    "closedAt": "2026-07-26T19:25:24Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxbBrg",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Root cause and local fix verified. Production launched raw workers from `/app/core`, outside the deployed pnpm dependency ancestry, so importing core-only dependencies such as `croner` failed before readiness.\n\nTDD / package evidence:\n- RED: the production resolver test expected `/app/node_modules/@paperless-dedupe/core/dist/jobs/workers/analysis-worker.js` and received no match.\n- GREEN: the dispatcher suite passes (22/22) with production workers resolved from the deployed core package.\n- A production image builds successfully, imports `/app/node_modules/@paperless-dedupe/core/dist/scheduler/occurrences.js`, contains no detached `/app/core`, and reaches healthy state.\n- CI Docker verification now runs on pushes as well as PRs and exercises the deployed core import before the health check.\n\nThe full local repository gate is in progress; no production state has been changed.",
+        "createdAt": "2026-07-26T19:15:00Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/482#issuecomment-5084987822",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxdLvQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Delivered in `d3e2c055c13808e3a0691e566c8ace31bfe0c548` on `main`.\n\nRemote verification:\n- CI run 30216485948: success, including quality, 1,187 core tests, Playwright E2E, source maps, and the newly enabled `docker-build-verify` job.\n- Docker Security run 30216485940: success.\n- Scorecard run 30216486130: success.\n- Release Please / signed multi-arch `:main` publication run 30216486226: success.\n\nCamden verification:\n- Running healthy OCI revision: `d3e2c055c13808e3a0691e566c8ace31bfe0c548`.\n- The original job `FjCnv-2Weir7rIXJ5m6vD` had already exhausted its six pre-readiness launches at 19:10Z, before this image was published, and was durably dead-lettered with `worker_launch_exhausted`; its analysis lease was released. No row was manually changed or deleted.\n- Button-equivalent sync POST returned 202 for job `uzoc4CvkBRzWGn0AZahCc`; it launched `/app/node_modules/@paperless-dedupe/core/dist/jobs/workers/sync-worker.js` and completed: 82 new, 5,618 updated.\n- Button-equivalent analysis POST returned 202 for job `0JF_tiYyZ3k4QuvGlznka`; it launched `/app/node_modules/@paperless-dedupe/core/dist/jobs/workers/analysis-worker.js` and completed: 8 new groups found.\n- Both jobs are durably `completed`, neither has an error/terminal reason, and the sync/analysis lease query is empty. No `croner` or `ERR_MODULE_NOT_FOUND` error appears on the corrected container.",
+        "createdAt": "2026-07-26T19:24:55Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/482#issuecomment-5085023165",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxdR8g",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Closing manually: commit `d3e2c055c13808e3a0691e566c8ace31bfe0c548` is already on the default branch and completed every acceptance criterion. Its intended closing footer was encoded with literal newline escapes, so GitHub did not auto-close the issue.",
+        "createdAt": "2026-07-26T19:25:24Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/482#issuecomment-5085024754",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-26T19:08:21Z",
+    "labels": [],
+    "milestone": null,
+    "number": 482,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Fix production workers missing core-only runtime dependencies",
+    "updatedAt": "2026-07-26T19:25:24Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/482"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Problem\n\nThe duplicate detail page’s live visual comparison is broken. Thumbnail and PDF `<img>`/`<iframe>` requests to the Paperless proxy return the JSON `UNAUTHORIZED` response instead of document media.\n\nRoot cause: the proxy hardening from #350 requires callers to repeat the configured Paperless `Authorization` header. Browser-native media requests cannot attach that header, so every comparison request made by the UI fails.\n\n## Scope and approach\n\n- Keep Paperless API credentials server-side and preserve authorization on the proxy endpoints.\n- Add short-lived signed media access tokens scoped to the Paperless document ID and asset kind (`thumb` or `preview`).\n- Mint the signed URLs in the duplicate detail server load and pass them to the comparison component.\n- Continue accepting the existing direct `Authorization` header for API clients.\n- Reject missing, expired, malformed, wrong-document, wrong-asset, and tampered signed tokens.\n- Add regression coverage for the proxy authorization behavior and the duplicate-detail UI request path.\n\n## Acceptance criteria\n\n- [x] Duplicate detail thumbnails load without exposing Paperless credentials to the browser.\n- [x] Switching to PDF preview loads the PDF through the authorized proxy.\n- [x] Signed access is limited to the intended document and asset type and expires.\n- [x] Existing valid `Authorization` header access remains supported.\n- [x] Unauthorized and tampered requests still return 401.\n- [x] Targeted regression tests and the full lint, format, check, test, build, and E2E gates pass.",
+    "closedAt": "2026-07-26T19:46:45Z",
+    "comments": [
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxiEuQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Implemented and pushed in `3216100`.\n\nVerification receipts:\n- focused web regression tests: 10/10 passed\n- core unit suite: 1,187 passed, 9 skipped\n- Playwright E2E suite: 194/194 passed\n- lint, format, type-check, and production build: passed",
+        "createdAt": "2026-07-26T19:47:00Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/483#issuecomment-5085103289",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOPeVI0M8AAAABLxkyyQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Post-push verification for `3216100`:\n\n- [CI run 30217568087](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30217568087): passed after rerunning one unrelated 5-second core test timeout; the rerun passed all required jobs, including unit tests, E2E, quality, source maps, and Docker build/health verification.\n- [Release Please run 30217568267](https://github.com/rknightion/paperless-ngx-dedupe/actions/runs/30217568267): passed.\n- Release PR #484 is open with all checks green.\n- Scorecard and Docker Security push workflows passed.",
+        "createdAt": "2026-07-26T19:58:16Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/483#issuecomment-5085147849",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-26T19:32:54Z",
+    "labels": [],
+    "milestone": null,
+    "number": 483,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Fix unauthorized live document comparison previews",
+    "updatedAt": "2026-07-26T19:58:16Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/483"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "[HELD OUT OF GIT] Body and comments of this issue carried design-system internals (project id, guidelines/*.md and ui_kits/*.jsx references, brand token values). This repo is public and this archive is committed, so the full text is kept out of tree at docs/superpowers/specs/2026-08-14-design-system-adoption.md (gitignored, synced via codex-sync). Remaining work is tracked as PND-0001. Phases 1, 2, 3 and 5 were complete at archive time (399b015, 15a7f60, d7a6584, 56ab469); phase 4 partial.",
+    "closedAt": null,
+    "comments": [
+      {
+        "author": {
+          "login": "rknightion"
+        },
+        "createdAt": "2026-08-09T19:59:32Z",
+        "body": "[HELD OUT OF GIT] see this issue's body note"
+      },
+      {
+        "author": {
+          "login": "rknightion"
+        },
+        "createdAt": "2026-08-09T20:14:52Z",
+        "body": "[HELD OUT OF GIT] see this issue's body note"
+      }
+    ],
+    "createdAt": "2026-08-09T19:33:30Z",
+    "labels": [],
+    "milestone": null,
+    "number": 530,
+    "state": "OPEN",
+    "stateReason": "",
+    "title": "Adopt the m7kni Design System across packages/web",
+    "updatedAt": "2026-08-09T20:14:52Z",
+    "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/530"
+  }
+]
