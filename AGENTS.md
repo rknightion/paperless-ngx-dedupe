@@ -109,7 +109,12 @@ the unsafe forms rather than trusting anyone to remember.
 **Never hand-edit task, doc, decision or milestone markdown.** Section boundaries are
 HTML-comment markers; break one and the section is *silently dropped* at exit 0, with the data
 still in the file but invisible to the CLI until the next write destroys it for real. There is
-no repair command — `backlog doctor` only fixes duplicate task IDs. Same hook denies this.
+no repair command — `backlog doctor` only fixes duplicate task IDs.
+
+The same hook denies this through the file-editing tools. It deliberately does **not** police
+shell commands, so a `sed` is on you to get right. The hazard is narrower than the rule: changing
+a value *inside* a section is recoverable, changing one of the marker lines is not.
+
 `backlog/config.yml` is the one exemption: list-valued keys cannot be set through
 `backlog config set`, so hand-editing it is the documented path.
 
