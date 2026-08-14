@@ -103,7 +103,7 @@ grep -rniE "rob-knight|@gmail|[0-9]{1,3}(\.[0-9]{1,3}){3}|/Users/" backlog/ && e
 
 **Never use `--notes` or `--plan` bare.** They *silently replace* the whole section — another
 session's writes vanish with no warning and exit 0. Use `--append-notes` and `--append-plan`.
-This is an open upstream bug, not a misunderstanding. `.claude/hooks/backlog-guard.py` denies
+This is an open upstream bug, not a misunderstanding. A global `PreToolUse` hook in the agent config denies
 the unsafe forms rather than trusting anyone to remember.
 
 **Never hand-edit task, doc, decision or milestone markdown.** Section boundaries are

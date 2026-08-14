@@ -30,14 +30,7 @@ blob-report/
 data/e2e-test.db*
 docker-data/
 
-# .claude/settings.json and hooks/ ARE tracked: the PreToolUse guard has to
-# enforce the Backlog.md rules (bare --notes/--plan replaces a section silently;
-# hand-edited task markdown loses one at exit 0) for anyone working in this repo.
-# Everything else under .claude/ is per-machine state: worktrees, scheduler locks,
-# and settings.local.json.
-.claude/*
-!.claude/settings.json
-!.claude/hooks/
+.claude/
 
 .env2
 
