@@ -83,7 +83,17 @@ log 'Installing repository dependencies from the frozen lockfile'
 pnpm install --frozen-lockfile
 
 log 'Installing Chromium and its Ubuntu system dependencies for Playwright tests'
-pnpm --filter @paperless-dedupe/web exec playwright install --with-deps chromium
+for attempt in 1 2 3; do
+  if [[ ${attempt} -gt 1 ]]; then
+    log "Retrying Playwright install (attempt ${attempt}/3)"
+  fi
+  if timeout 300 pnpm --filter @paperless-dedupe/web exec playwright install --with-deps chromium; then
+    break
+  elif [[ ${attempt} -eq 3 ]]; then
+    log "Playwright install failed after 3 attempts"
+    exit 1
+  fi
+done
 
 log 'Verifying the cloud task toolchain'
 node --version
