@@ -139,8 +139,16 @@ run and nothing that cannot change the outcome. Keep stable phrasing stable betw
 At the top of every goal say:
 
 ```text
-This file is your goal. Re-read it after compaction and before each new lane.
+This file is your goal. Re-read it in full after compaction. Within one context, cite the section
+you need rather than re-reading the file.
 ```
+
+**Re-read after compaction, not per lane.** Everything a context reads stays in it and is re-sent on
+every subsequent turn, so re-reading a goal five times leaves five copies of it in the root's
+context for the rest of the run. After compaction the goal is genuinely gone and must come back;
+inside one context it is already there, and the instruction to consult it is satisfied by citing the
+section. Where the launch message hands a goal to a fresh session, `@`-mention its path rather than
+telling the agent to read it — the file is attached to the first request and costs no tool call.
 
 Prefer one immutable goal file per run. A correction or new phase gets a new file that explicitly
 supersedes the old one. Do not silently rewrite the instructions an earlier run received.
@@ -260,6 +268,13 @@ grants that exact authority.
 The first routing question is: can the acceptance check be stated now? If not, use DESIGN+INTEGRATION
 to freeze the seam. If yes, use RETRIEVAL or MAPPING for read-only work and EXECUTION for
 implementation and tool-heavy work.
+
+The second is whether to spawn at all: **how much of the lane's output gets discarded?** A spawn runs
+in its own context, so it re-reads what the parent already had and pays for its own turns, and only
+its final message comes back. That trade wins when the job generates a lot of material nobody needs
+to keep — a log to reduce, a broad inventory sweep, CI output, mass file reads — and loses when the
+answer is a line or two, where doing it in the parent is cheaper than standing up a fresh context.
+Route by how much is thrown away, not by how cheap the route is.
 
 Require a one-sentence reason for every DESIGN+INTEGRATION and SECURITY child. Difficulty, a long log
 or prior use of that route is not by itself a reason. Before every follow-up, reclassify the work that
@@ -442,8 +457,9 @@ Delete empty sections and irrelevant examples. Do not keep headings that add no 
 ```markdown
 # [Project or programme] — [outcome], [date or run identifier]
 
-This file is your goal. Re-read it after compaction and before each new lane. It supersedes [older
-goal] where applicable; do not consult the superseded file unless this goal explicitly points to it.
+This file is your goal. Re-read it in full after compaction; within one context, cite the section you
+need rather than re-reading the file. It supersedes [older goal] where applicable; do not consult the
+superseded file unless this goal explicitly points to it.
 
 ## 0. Run contract
 
@@ -1043,6 +1059,8 @@ the format alone:
 - [ ] Every test target or check a wave creates is verified to be executed by CI, not only by the agent that built it.
 - [ ] Every external format is frozen from at least two instances where they exist, with per-instance assertions and empty categories named.
 - [ ] A source that is really many datasets gets a declarative descriptor seam before fan-out, so a lane contributes rows rather than parsing code.
+- [ ] The goal says to re-read in full after compaction and to cite a section within one context, not to re-read the file per lane.
+- [ ] Every spawn is justified by how much of its output is discarded, not only by the cheapest route that satisfies it.
 
 ---
 
@@ -1148,6 +1166,11 @@ Code fails in ways its own acceptance check will not catch.
    "last N turns". A lane needing partial context gets a fresh agent and the relevant facts written
    into its brief — which is what §3 prefers anyway. A fork also always runs on the parent's model;
    a `model` override on a fork is ignored.
+
+   **A fork is therefore the most expensive spawn shape available**: it copies the entire parent
+   conversation into a second context that then re-sends all of it on every one of its own turns, at
+   the parent's model, with no way to route it cheaper. Reach for it only when the lane genuinely
+   needs the conversation itself; a self-contained brief is both cheaper and the default §3 asks for.
 
 2. **`effort` is not a parameter on the `Agent` tool.** It is settable only in an agent definition's
    frontmatter or in `Workflow`'s `agent()` opts. A lane brief that specifies an effort through a
