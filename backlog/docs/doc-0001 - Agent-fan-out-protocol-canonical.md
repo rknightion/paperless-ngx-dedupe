@@ -3,7 +3,7 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-08-14 16:21'
+updated_date: '2026-08-16 20:13'
 ---
 > **Imported verbatim from the canonical `agent-fanout-generic.md` sourcebook on 2026-08-14.**
 > This in-repo copy is authoritative for this repository. Do not summarise, compress or adapt
@@ -20,7 +20,7 @@ that file. The root coordinates the campaign and owns integration; bounded child
 self-contained lane briefs and the cheapest route that can reliably satisfy them.
 
 **This document is harness-neutral and deliberately names no model.** The body talks in **roles** —
-RETRIEVAL, MAPPING, GATE, EXECUTION, REVIEW, DESIGN+INTEGRATION, SECURITY — and in **capabilities**:
+RETRIEVAL, MAPPING, GATE, EXECUTION, JUDGMENT+EXECUTION, REVIEW, DESIGN+INTEGRATION, SECURITY — and in **capabilities**:
 how much context a spawn inherits, how many lanes may run at once, how deep delegation may go. A
 **harness profile** resolves those into concrete models, reasoning depths and spawn mechanics:
 
@@ -52,12 +52,20 @@ External-write authority: [exact trackers, hosts, deployments, databases or work
 Harness: [the harness this run launches on; its profile resolves every route below]
 Root role / resolved route: [role, plus the exact values the profile resolves it to]
 Launch rationale: [one sentence]
+Selected topology: solo | single auxiliary | campaign | campaign + security
+Topology rationale: [the independent bottleneck or risk that justifies this shape]
 Run-end report: written to codex/report-[date]-[run-id].md as the final action, unprompted
 ```
 
 The report line belongs in the contract rather than only in §6's report section, because the contract
 is what an agent reads first and re-reads after compaction. §10 explains why stating it once, as a
 format, reliably fails to produce one.
+
+Reconcile the tracker and other drift-prone starting state before selecting the topology; read-only
+preflight is allowed before the declaration. **No spawn or mutation happens until the topology and
+its task-specific rationale are recorded.** `solo` is the default when an auxiliary would only repeat
+work the root must do anyway. A later declaration may escalate the topology when new evidence exposes
+an independent bottleneck or material risk; never silently downgrade or add a reviewer by habit.
 
 Daytime means the root may return a genuinely material decision that neither the goal nor a durable
 source resolves. Children still return uncovered decisions to the root; they do not ask the user.
@@ -110,6 +118,7 @@ The shape of the whole wave picks the root's role and how much reasoning depth i
 | Unresolved architecture, unknown-cause debugging or several interacting decisions | DESIGN+INTEGRATION | raised |
 | Authentication, authorisation, privilege, migration, secret or data-loss risk | SECURITY | raised; the highest tier only for exceptional risk or ambiguity |
 | Execution wave whose seams, dependencies, ownership and acceptance are fully frozen | EXECUTION | standard |
+| Execution wave with a stated acceptance check but material context, judgement or blast radius inside the implementation | JUDGMENT+EXECUTION | raised |
 | Bounded read-only audit with a fixed evidence schema and no product decisions | EXECUTION, with RETRIEVAL lanes | standard |
 
 Never launch an implementation or integration wave on a RETRIEVAL route — it is the cheapest route
@@ -244,7 +253,9 @@ route too, so inherit only when that route is exactly right for the lane.
 - GATE: deterministic gate execution, mechanical transforms and bounded validation. Runs one named
   gate once against one resolved state; reports failures verbatim and does not repair source.
 - EXECUTION: implementation against a frozen seam, with explicit file ownership and a written
-  acceptance check. This is the normal implementation worker.
+  acceptance check. The packet is fully specified and the parent can verify the result directly.
+- JUDGMENT+EXECUTION: implementation whose acceptance check is known but whose local choices need
+  broader context, material judgement, risk control or coordination across a wider blast radius.
 - REVIEW: bounded complex debugging, or correctness, regression and concurrency review across several
   sources, where the result is still externally checkable.
 - DESIGN+INTEGRATION: ambiguous design, freezing shared seams, integration, wiring and unknown-cause
@@ -266,8 +277,9 @@ grants that exact authority.
 ```
 
 The first routing question is: can the acceptance check be stated now? If not, use DESIGN+INTEGRATION
-to freeze the seam. If yes, use RETRIEVAL or MAPPING for read-only work and EXECUTION for
-implementation and tool-heavy work.
+to freeze the seam. If yes, use RETRIEVAL or MAPPING for read-only work, EXECUTION for fully specified
+bounded implementation, and JUDGMENT+EXECUTION only when the implementation itself still needs
+material context, judgement or risk control.
 
 The second is whether to spawn at all: **how much of the lane's output gets discarded?** A spawn runs
 in its own context, so it re-reads what the parent already had and pays for its own turns, and only
@@ -276,11 +288,12 @@ to keep — a log to reduce, a broad inventory sweep, CI output, mass file reads
 answer is a line or two, where doing it in the parent is cheaper than standing up a fresh context.
 Route by how much is thrown away, not by how cheap the route is.
 
-Require a one-sentence reason for every DESIGN+INTEGRATION and SECURITY child. Difficulty, a long log
-or prior use of that route is not by itself a reason. Before every follow-up, reclassify the work that
-remains. When the design route has settled the decision and only execution, evidence or validation is
-left, start a fresh EXECUTION or RETRIEVAL lane carrying the frozen facts instead of automatically
-continuing the design thread.
+Require a one-sentence reason for every JUDGMENT+EXECUTION, DESIGN+INTEGRATION and SECURITY child.
+Difficulty, a long log or prior use of that route is not by itself a reason. Before every follow-up,
+reclassify the work that remains. When the design route has settled the decision and only bounded
+execution, evidence or validation is left, start a fresh EXECUTION or RETRIEVAL lane carrying the
+frozen facts instead of automatically continuing the design thread. Use JUDGMENT+EXECUTION rather
+than retrying EXECUTION when the first result proves the packet was misclassified as fully specified.
 
 Do not put token budgets, cost targets, model-allocation quotas or artificial output allocations in
 the goal. Route by the shape and risk of the remaining work.
@@ -297,6 +310,9 @@ desirable merely because it is permitted.
 - The root freezes shared seams, assigns ownership, resolves decisions, integrates, performs
   authorised external writes, commits and pushes, owns the integrated gate and synthesises the run.
 - A child owns one bounded lane. It does not commit, push or mutate external state by default.
+- Auxiliary work substitutes for root work; it does not duplicate it. The root verifies load-bearing
+  claims and the integrated result in proportion to risk, but does not repeat a successful mechanical
+  lane merely to perform the same work twice.
 - A child may launch a grandchild only when its brief explicitly permits delegation and the child can
   supply a complete independent lane brief. The child checks and synthesises the grandchild's result.
 - Every lane says `Delegation: forbidden` or grants exact bounded grandchild authority.
@@ -365,6 +381,9 @@ is pure carrying cost. That licence is temporary — record it with its expiry, 
 - Research: RETRIEVAL and MAPPING lanes, then one EXECUTION synthesis lane.
 - Ordinary implementation: DESIGN+INTEGRATION freezes unresolved seams, EXECUTION workers implement,
   a REVIEW lane checks the bounded changes, then the root integrates and a single GATE owner validates.
+- Judgement-heavy implementation: DESIGN+INTEGRATION freezes the shared decisions,
+  JUDGMENT+EXECUTION workers own the context-heavy or wider-blast-radius implementation, then the
+  ordinary review, integration and gate sequence applies.
 - Security-sensitive implementation: the ordinary topology plus a SECURITY review after integration
   of authentication, permission, migration, secret or data-loss boundaries.
 - Premise or depth audit: independent EXECUTION evidence lanes, with DESIGN+INTEGRATION synthesis only
@@ -379,14 +398,16 @@ Custom agents are useful when the same contract recurs. Keep roles narrow:
 |---|---|---|
 | Mapper | MAPPING | Read-only maps, inventories and structured research with searched scope and completeness check |
 | Lane worker | EXECUTION | Frozen implementation, owned files, focused validation, no commit or external mutation |
+| Complex lane worker | JUDGMENT+EXECUTION | Context-heavy or wider-risk implementation with frozen architecture, owned files and focused validation |
 | Reviewer | REVIEW | Read-only correctness, regression, concurrency and false-pass review |
 | Security reviewer | SECURITY | Read-only review only for high-blast-radius security and data contracts |
 | Gate runner | GATE | Run one named gate once against one resolved state; report failures, do not repair source |
 | Worktree auditor | REVIEW | Prove dirty state, ancestry, unique commits, patch identity and cleanup safety; never clean up |
 
-Do not turn the security reviewer into a general quality reviewer. Where a harness lets a role carry
-a fixed route in its own definition, that fixed route must agree with any explicit spawn override —
-a definition and an override that disagree resolve differently per harness, and usually silently.
+Do not turn the security reviewer into a general quality reviewer. Where a harness lets a named role
+carry a fixed route in its own definition, the harness profile decides whether that definition or an
+explicit spawn value is authoritative. Follow that profile rather than attaching both and assuming
+they agree.
 
 ---
 
@@ -402,7 +423,7 @@ Context scope: [self-contained | recent orchestration context | full inherited h
 Delegation: forbidden | [exact bounded grandchild authority]
 
 Objective: [one verifiable outcome]
-Why this route: [one sentence; mandatory for DESIGN+INTEGRATION and SECURITY]
+Why this route: [one sentence; mandatory for JUDGMENT+EXECUTION, DESIGN+INTEGRATION and SECURITY]
 Prerequisites: [facts or lanes that must already be complete]
 Owned files: [exact paths or directory globs]
 Forbidden files/actions: [shared files, external state, commits, tracker writes]
@@ -471,6 +492,8 @@ superseded file unless this goal explicitly points to it.
 - Harness: [name; its profile resolves every route in this goal]
 - Root role / resolved route: [exact values]
 - Launch rationale: [why the whole wave needs this route]
+- Selected topology: solo | single auxiliary | campaign | campaign + security
+- Topology rationale: [the independent bottleneck or risk that justifies this shape]
 
 ## 1. Outcome and success criteria
 
@@ -588,6 +611,11 @@ Testing has a job rather than a quota:
 
 Returned reports are claims, not proof. Verify load-bearing facts against source, git, CI, trackers and
 live systems. A missing child report is not proof of failed work either; inspect the expected artifact.
+
+A reviewer reports findings and never implements its own corrections. **Any implementation change
+after a REVIEW or SECURITY verdict invalidates that verdict**, even when the fix appears mechanical.
+Re-run the relevant verification and obtain a fresh review against the corrected accumulated diff
+before using the earlier verdict as completion evidence.
 
 ### Freeze external data contracts from the real artifact, before the wave
 
@@ -863,7 +891,7 @@ claims about content, so require the evidence, not the adjective.
 | An attractive disproved belief returns | Preserve the wrong belief and correction together: `X was WRONG; Y is verified` |
 | A check passes while proving nothing | Name the false-pass mechanism and the artifact or state transition that constitutes proof |
 | A lane burns time on an unavailable external prerequisite | Add a check-then-branch route, retry budget and stop rule |
-| The design route becomes the default child | Require a written reason for DESIGN+INTEGRATION and SECURITY, and reclassify resumed work once decisions are frozen |
+| An expensive judgement route becomes the default child | Require a written reason for JUDGMENT+EXECUTION, DESIGN+INTEGRATION and SECURITY, and reclassify resumed work once decisions are frozen |
 | Every child receives the full root history | Use fresh, self-contained briefs; fork only the recent context the lane needs |
 | Workers all run the same expensive gate | Workers run focused checks; one owner validates the integrated state once |
 | Children collide on shared files or resources | Assign one owner per file and name integration files and mutexes before spawning |
@@ -1002,13 +1030,17 @@ the format alone:
 
 - [ ] Run mode, human availability, current layer, external-write authority and terminal condition are explicit.
 - [ ] The run contract names the harness, and the operator receives the root's role and the exact route that harness's profile resolves it to, with a one-sentence rationale.
+- [ ] Tracker and live-state preflight happened before topology selection; the selected topology and its task-specific rationale are recorded before any spawn or mutation.
 - [ ] The brief is an immutable goal file on disk and the launch message points to its absolute path.
 - [ ] Outcome and measurable success criteria replace a mere activity list.
 - [ ] Starting state, repository heads and relevant CI are re-verified now, at exact SHAs.
 - [ ] The goal contains only constraints, corrections, traps and environment facts relevant to this run.
 - [ ] A mid-run replacement says `do not pivot on receipt` and states what changed underneath it.
 - [ ] Every lane names its role, its resolved route, its context scope, dependency, ownership, acceptance and output — a role name alone is not a route.
-- [ ] Every DESIGN+INTEGRATION and SECURITY child states why an EXECUTION lane cannot safely own the remaining work.
+- [ ] Selected custom roles were preflighted for this task; pinned custom roles omit spawn model/effort overrides, while generic roles pass them explicitly.
+- [ ] Spawn metadata confirms the selected role and every exposed route field; a missing, conflicting or substituted route stops the lane.
+- [ ] A requested read-only sandbox is reported as enforced only when the observed sandbox and permission profile prove it; broader policy is handled and disclosed explicitly.
+- [ ] Every JUDGMENT+EXECUTION, DESIGN+INTEGRATION and SECURITY child states why an EXECUTION lane cannot safely own the remaining work.
 - [ ] Frozen lanes receive self-contained briefs rather than full root history by default.
 - [ ] Every follow-up reclassifies the remaining work; settled design work moves to EXECUTION or RETRIEVAL.
 - [ ] Root, child and optional grandchild authority are explicit; bounded workers do not commit.
@@ -1019,6 +1051,7 @@ the format alone:
 - [ ] Expected false-pass mechanisms are named and the required proof is observable.
 - [ ] Out-of-band work uses check-then-branch rather than asserted readiness.
 - [ ] Workers have focused validation and one owner has the integrated gate.
+- [ ] Auxiliary work substitutes for root work rather than duplicating it; parent verification is proportionate and the integrated gate still has one owner.
 - [ ] Required final reporting covers every lane, external side effect, proven fact and unproven fact.
 - [ ] A fallback queue exists only when the terminal condition says to continue after listed lanes.
 - [ ] Every append-only registry is split into per-lane stub files with pre-assigned identifiers.
@@ -1047,6 +1080,7 @@ the format alone:
 - [ ] Temporary licences granted by a previous run were re-checked against their actual ending condition, not their predicted one.
 - [ ] Every repository driven this way carries an imported copy of this sourcebook in its tracker docs, and that copy matches the canonical file as of this run.
 - [ ] Every audit or review lane's findings have a named owner in this run, or the goal states they land next run by design.
+- [ ] A correction after REVIEW or SECURITY invalidates the prior verdict and requires fresh verification and review.
 - [ ] Any document several lanes feed has a single late owner with declared dependencies, not a merge at integration.
 - [ ] A licence whose ending condition has failed to occur twice is restated as an observable check, not a predicted event.
 - [ ] New storage this run adds has an acceptance check proving something reads it, not only that it was written.
@@ -1072,20 +1106,23 @@ Complete. Everything the body defers to a profile is resolved here for Codex.
 
 ```text
 Launch model: gpt-5.6-sol
-Launch effort: medium
+Launch effort: high
 Why: this wave coordinates independent lanes, owns integration and may encounter uncovered seams.
 ```
 
 | Root role (§1) | Launch model | Effort |
 |---|---|---|
-| DESIGN+INTEGRATION, standard depth | `gpt-5.6-sol` | `medium` |
+| DESIGN+INTEGRATION, standard depth | `gpt-5.6-sol` | `high` |
 | DESIGN+INTEGRATION, raised depth | `gpt-5.6-sol` | `high` |
 | SECURITY, raised depth | `gpt-5.6-sol` | `high`; `xhigh` only for exceptional risk or ambiguity |
-| EXECUTION, standard depth | `gpt-5.6-terra` | `medium` |
-| EXECUTION with RETRIEVAL lanes | `gpt-5.6-terra` | `medium`, with Luna retrieval lanes |
+| EXECUTION, standard depth | `gpt-5.6-sol` | `high`, with Luna execution lanes |
+| JUDGMENT+EXECUTION, raised depth | `gpt-5.6-sol` | `high`, with Terra judgement lanes |
+| EXECUTION with RETRIEVAL lanes | `gpt-5.6-sol` | `high`, with Luna retrieval lanes |
 
-Do not launch an implementation or integration wave on Luna. Do not select `max` by default. If the
-shape is uncertain, use Sol/medium at the root and push bounded work down after the root freezes it.
+Keep the campaign root on Sol/high for architecture, conflict resolution, verification and acceptance.
+Luna/max is the normal fully specified implementation leaf, not a campaign root. If the packet needs
+material local judgement, context or risk control, route it to JUDGMENT+EXECUTION on Terra/high instead
+of asking Luna to redesign the packet.
 
 ### Role → model and effort
 
@@ -1094,14 +1131,35 @@ shape is uncertain, use Sol/medium at the root and push bounded work down after 
 | RETRIEVAL | `gpt-5.6-luna`, low |
 | MAPPING | `gpt-5.6-luna`, medium |
 | GATE | `gpt-5.6-terra`, low |
-| EXECUTION | `gpt-5.6-terra`, medium |
+| EXECUTION | `gpt-5.6-luna`, max |
+| JUDGMENT+EXECUTION | `gpt-5.6-terra`, high |
 | REVIEW | `gpt-5.6-terra`, high |
-| DESIGN+INTEGRATION | `gpt-5.6-sol`, medium |
+| DESIGN+INTEGRATION | `gpt-5.6-sol`, high |
 | SECURITY | `gpt-5.6-sol`, high or `xhigh` |
 
-The §4 narrow-role table resolves the same way: Mapper → Luna/medium, Lane worker → Terra/medium,
-Reviewer → Terra/high, Security reviewer → Sol/high, Gate runner → Terra/low, Worktree auditor →
-Terra/high.
+The §4 narrow-role table resolves the same way: Mapper → Luna/medium, Lane worker → Luna/max,
+Complex lane worker → Terra/high, Reviewer → Terra/high, Security reviewer → Sol/high, Gate runner →
+Terra/low, Worktree auditor → Terra/high.
+
+### Spawn resolution and task-scoped runtime preflight
+
+Codex custom-agent files are configuration layers. When a selected custom role pins `model` or
+`model_reasoning_effort`, that file wins: spawn by `agent_type`, pass the required `fork_turns`, and
+do **not** attach redundant model or effort overrides. For a built-in or generic role without pins,
+pass the resolved model, reasoning effort and `fork_turns` explicitly.
+
+Preflight only the roles selected by this task. Confirm the effective multi-agent feature, the named
+agent definition where one is used, and the requested model and effort before dispatch. After spawn,
+inspect the public role/model/effort metadata the client exposes. A missing, conflicting or silently
+substituted route is a hard stop for that lane; never accept a fallback and report the requested route
+as though it ran.
+
+A custom agent's requested `read-only` sandbox is not proof of enforced isolation: live parent
+permission overrides may broaden it. Record the observed sandbox and permission profile when the
+client exposes them. Under a broader policy, continue a behaviorally read-only review only when hard
+isolation is not required and the parent captures exact before/after repository and artifact state;
+report the broader policy as residual risk. When hard isolation is required, use a separately
+constrained session. This does not require tightening the normal campaign profile.
 
 ### Context scope → `fork_turns`
 
@@ -1111,20 +1169,27 @@ Terra/high.
 | recent orchestration context | a small positive `fork_turns`, only where those decisions bear on the lane |
 | full inherited history | full history, only where the child genuinely needs it |
 
-**Every fresh or partial-context spawn must state model, reasoning effort and `fork_turns`, and pass
-all three on spawn.** A full-history fork inherits the parent's model and effort, so use full history
-only when that inherited route is exactly right. A follow-up continues on the thread's existing model
-and effort — which is why §3 requires reclassifying the remaining work before every follow-up rather
-than letting a settled design thread drift on at the design route.
+REVIEW, SECURITY and fully specified EXECUTION workers use `fork_turns="none"` by default and receive
+the complete evidence or implementation packet explicitly. JUDGMENT+EXECUTION receives recent context
+only when the relevant decisions cannot be stated safely in its brief. Full inherited history is
+reserved for the rare child that genuinely needs the root's whole decision trail.
+
+A follow-up continues on the thread's existing model and effort. Reclassify the remaining work before
+every follow-up: when a design or judgement thread has reduced the work to bounded implementation,
+start a fresh Luna/max EXECUTION lane rather than continuing on the more expensive route.
 
 ### Concurrency and depth
 
-`max_concurrent_threads_per_session = 10`, so the pool is the root plus nine other simultaneous
-threads. `max_depth = 2` permits root → child → grandchild.
+`max_concurrent_threads_per_session = 10` excludes the primary thread, so the pool is the root plus
+**ten** simultaneous child threads.
 
-Flat, non-delegating fan-out may use all nine child slots. If any child may delegate, the root starts
-at most **six** direct children and reserves **three** slots for grandchildren, replacement lanes and
-urgent investigation. That is the concrete form of §4's two-thirds rule.
+Flat, non-delegating fan-out may use all ten child slots. In a nested campaign the root starts at most
+**six** direct children and reserves **four** child slots for grandchildren, replacement lanes and
+urgent investigation. That is the concrete form of §4's two-thirds rule for the current profiles.
+
+`max_depth` is not a documented public safety boundary. Every lane therefore defaults to
+`Delegation: forbidden`, and a child may delegate only when its brief grants exact authority. Luna is
+a leaf and never delegates. Do not claim a configured depth limit enforced this contract.
 
 ---
 
@@ -1152,6 +1217,7 @@ wrong-and-silently-propagating (a frozen seam, a data model, a cardinality or PI
 | MAPPING | Sonnet | The `Explore` agent type is purpose-built for read-only fan-out search. |
 | GATE | Sonnet, low effort | Run the gate, report failures verbatim, repair nothing. |
 | EXECUTION | Sonnet | The normal parallel-build lane, once its seams are frozen. |
+| JUDGMENT+EXECUTION | Opus | Context-heavy or wider-risk implementation where the acceptance check is known but the implementation still carries material judgement. |
 | REVIEW | Sonnet, or Opus | Sonnet for spec conformance against a written contract; Opus where the review is the judgement. |
 | DESIGN+INTEGRATION | Opus | Normally the root keeps this rather than delegating it. |
 | SECURITY | Opus, raised effort | Never delegated to a cheaper tier to save a round trip. |
