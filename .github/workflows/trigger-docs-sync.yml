@@ -44,6 +44,6 @@ jobs:
         uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4
         with:
           token: ${{ steps.bao.outputs.token }}
-          repository: rknightion/m7kni-net-site
+          repository: m7kni/m7kni-net-site
           event-type: docs-update
           client-payload: '{"repository": "paperless-ngx-dedupe"}'
