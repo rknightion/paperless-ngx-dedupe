@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-08-17 15:06'
+updated_date: '2026-08-17 18:18'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `b0d76d8`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `711db6c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -1072,6 +1072,7 @@ the format alone:
 - [ ] Starting state, repository heads and relevant CI are re-verified now, at exact SHAs.
 - [ ] The goal contains only constraints, corrections, traps and environment facts relevant to this run.
 - [ ] **Every prohibition was checked against every commissioned lane, and the acceptance criteria of every commissioned task were read before the constraints were written.** A prohibition that forbids what a lane requires is a goal defect to fix before launch, not a blocker to discover during the run.
+- [ ] **Check every prohibition against the standing PROCEDURES the goal mandates too, not only its lanes.** This defect recurred a fourth time by escaping the lane-only check: a goal forbade commits to one repository while separately instructing a document-correction procedure that writes into every consumer repository — and that repository was a consumer, so obeying the procedure required breaking the prohibition. Enumerate what each mandated procedure actually touches and intersect it with every prohibition. A prohibition scoped by repository, path or file type is the shape most likely to collide with a procedure.
 - [ ] **Any model or effort the goal names matches the harness profile's table exactly.** State the role and depth and let the profile resolve the route; a hand-written route that contradicts the table is a defect, and it silently downgrades every run that inherits it.
 - [ ] **Verify the root route and every lane route as two separate acts.** Correcting the root is the likely partial fix and it is worse than none, because a goal carrying an explicit root correction reads as already audited. One run corrected its root, left every lane on a role/effort combination appearing nowhere in the profile's table, and the run itself had to catch it — grep the goal for every model name it contains and resolve each against the table.
 - [ ] **Re-read instructions do not exceed what the context-cost rules permit** — a goal re-read once per lane leaves one copy per lane in the root's context.
