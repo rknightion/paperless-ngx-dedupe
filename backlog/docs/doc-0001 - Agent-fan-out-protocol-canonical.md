@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-08-17 10:38'
+updated_date: '2026-08-17 13:02'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `f3a9e30`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `13e0f40`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -495,8 +495,8 @@ superseded file unless this goal explicitly points to it.
 
 ## 0. Run contract
 
-- Run mode: daytime | unattended
-- Human availability: available | unavailable for the whole run
+- Run mode: daytime | front-loaded | unattended
+- Human availability: available | reachable but not to be asked | unavailable for the whole run
 - Terminal condition: stop after the listed lanes | continue into the fallback queue
 - Current layer: research | design | implementation | review | live verification | deployment
 - External-write authority: [exact scope]
@@ -550,6 +550,10 @@ Verified at [timestamp]. Do not re-derive unless a named check shows drift.
 Include only invariants, disproved beliefs, false-pass traps and environment facts that can change
 these lanes. Mark seductive disproved beliefs as: "X was WRONG; the verified truth is Y."
 
+**In front-loaded mode the answers to every fork extracted before launch belong here, as frozen
+decisions, each with its date and the person who gave it.** A fork answered in chat and not written
+into the goal did not get answered.
+
 **Check every prohibition against every lane you are commissioning, not just the headline.** A
 prohibition carried over from the previous run is the likeliest defect in a new goal: it reads as
 settled, it looks load-bearing, and nothing marks it as stale. Two runs have now been lost to the same
@@ -582,6 +586,8 @@ irreversible. One wrong constraint should cost one lane, not the run.
 - Give every lane a retry budget, stop rule and required escalation evidence.
 - An uncovered child decision returns to the root.
 - In unattended mode the root records the blocker, parks the lane and moves on.
+- In front-loaded mode nobody is asked anything mid-run either, but the questions are batched into
+  the final report rather than defaulted silently into the fallback queue.
 - State the terminal condition again and provide the ordered fallback queue if one exists.
 
 ## 9. Required final report
