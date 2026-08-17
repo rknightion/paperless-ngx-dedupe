@@ -3,7 +3,7 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-08-16 20:13'
+updated_date: '2026-08-17 07:57'
 ---
 > **Imported verbatim from the canonical `agent-fanout-generic.md` sourcebook on 2026-08-14.**
 > This in-repo copy is authoritative for this repository. Do not summarise, compress or adapt
@@ -539,6 +539,25 @@ Verified at [timestamp]. Do not re-derive unless a named check shows drift.
 Include only invariants, disproved beliefs, false-pass traps and environment facts that can change
 these lanes. Mark seductive disproved beliefs as: "X was WRONG; the verified truth is Y."
 
+**Check every prohibition against every lane you are commissioning, not just the headline.** A
+prohibition carried over from the previous run is the likeliest defect in a new goal: it reads as
+settled, it looks load-bearing, and nothing marks it as stale. Two runs have now been lost to the same
+shape — a goal forbidding exactly what one of its own lanes required.
+
+**Read the acceptance criteria of every task you commission before writing the constraints.** The
+requirement lives on the task, not in your memory of it. Both losses would have been caught by opening
+the task; in the second, the commissioned task's *first* acceptance criterion named the very change the
+goal forbade.
+
+**A prohibition that contradicts a commissioned lane is a defect in the goal, never a finding about the
+lane.** Resolve it before launch: narrow the prohibition to the surface you actually mean to protect —
+"no change to the policy signing path", not "no signing changes" — or authorise the exception
+explicitly with its review gate. A blanket prohibition plus a lane needing the exception either stops
+the run or gets quietly violated, and both are worse than a precise constraint.
+
+**Write stop rules so they park a lane and descend.** Reserve stopping the whole run for the genuinely
+irreversible. One wrong constraint should cost one lane, not the run.
+
 ## 7. Testing and evidence
 
 - Name where test-first is required and where validation replaces a test.
@@ -1035,6 +1054,11 @@ the format alone:
 - [ ] Outcome and measurable success criteria replace a mere activity list.
 - [ ] Starting state, repository heads and relevant CI are re-verified now, at exact SHAs.
 - [ ] The goal contains only constraints, corrections, traps and environment facts relevant to this run.
+- [ ] **Every prohibition was checked against every commissioned lane, and the acceptance criteria of every commissioned task were read before the constraints were written.** A prohibition that forbids what a lane requires is a goal defect to fix before launch, not a blocker to discover during the run.
+- [ ] **Any model or effort the goal names matches the harness profile's table exactly.** State the role and depth and let the profile resolve the route; a hand-written route that contradicts the table is a defect, and it silently downgrades every run that inherits it.
+- [ ] **Re-read instructions do not exceed what the context-cost rules permit** — a goal re-read once per lane leaves one copy per lane in the root's context.
+- [ ] **No acceptance criterion or definition of done was inherited from a different repository's convention** than the one the work is scoped to.
+- [ ] Stop rules park a lane and descend; only the genuinely irreversible stops the run.
 - [ ] A mid-run replacement says `do not pivot on receipt` and states what changed underneath it.
 - [ ] Every lane names its role, its resolved route, its context scope, dependency, ownership, acceptance and output — a role name alone is not a route.
 - [ ] Selected custom roles were preflighted for this task; pinned custom roles omit spawn model/effort overrides, while generic roles pass them explicitly.
