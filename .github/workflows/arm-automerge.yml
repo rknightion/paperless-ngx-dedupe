@@ -1,0 +1,21 @@
+# Applying the `release: ready` label to the release-please PR arms GitHub
+# auto-merge, so it merges itself the moment ci-success goes green instead of
+# waiting for someone to notice it went red and then came back.
+name: arm-automerge
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  arm:
+    # Quoted: the label text contains ": ", which YAML would otherwise parse as
+    # a nested mapping rather than part of the expression.
+    if: "github.event.label.name == 'release: ready'"
+    permissions:
+      contents: write      # enabling auto-merge writes the merge ref
+      pull-requests: write # gh pr merge --auto operates on the PR
+    uses: rknightion/.github/.github/workflows/arm-automerge.yml@1e0f45bfdc28163f4e3ae99a7d497638ac6d9223 # v1.7.0

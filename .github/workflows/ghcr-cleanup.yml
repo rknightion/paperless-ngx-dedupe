@@ -1,0 +1,28 @@
+# Weekly GHCR retention. Keeps every stable release forever, the newest 10 RCs,
+# and 7 days of main-<sha> edge images; sweeps orphaned cosign signatures and
+# stale buildcache layers.
+name: ghcr-cleanup
+
+on:
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Report what would be deleted without deleting it."
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    permissions:
+      contents: read
+      packages: write # delete package versions
+    uses: rknightion/.github/.github/workflows/ghcr-cleanup.yml@1e0f45bfdc28163f4e3ae99a7d497638ac6d9223 # v1.7.0
+    with:
+      packages: "paperless-ngx-dedupe"
+      # Scheduled runs prune for real; a manual dispatch defaults to dry-run.
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}

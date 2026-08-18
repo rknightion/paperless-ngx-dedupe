@@ -1,0 +1,46 @@
+# Automatic release candidates. On every push to main that passes CI, cut
+# vX.Y.Z-rc.N against the version release-please is already staging in its open
+# release PR, then publish the image for it.
+#
+# The stable release path (release-please.yml) is untouched: it still opens and
+# maintains the release PR, and a stable release still requires an explicit
+# merge. The RC path never writes to the changelog or the release PR.
+name: auto-rc
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never cancel a half-published RC; serialize instead.
+  group: auto-rc
+  cancel-in-progress: false
+
+jobs:
+  rc:
+    permissions:
+      contents: write      # create the RC tag and the GitHub prerelease
+      pull-requests: read  # find the open release-please PR
+      checks: read         # poll ci-success for this commit
+    uses: rknightion/.github/.github/workflows/auto-rc.yml@1e0f45bfdc28163f4e3ae99a7d497638ac6d9223 # v1.7.0
+    with:
+      image-ref: ghcr.io/rknightion/paperless-ngx-dedupe
+
+  # Same image path a stable release takes, just with an RC tag.
+  # container-publish suppresses `latest` for any tag containing '-', so an RC
+  # can never steal Latest from a stable release.
+  publish:
+    needs: rc
+    if: needs.rc.outputs.tag != ''
+    permissions:
+      contents: write        # attach SBOMs + notices to the RC release
+      packages: write        # push the image to GHCR
+      id-token: write        # cosign keyless signing
+      attestations: write    # SLSA build provenance
+      security-events: write # Trivy SARIF upload
+    uses: ./.github/workflows/publish.yml
+    with:
+      release_tag: ${{ needs.rc.outputs.tag }}
