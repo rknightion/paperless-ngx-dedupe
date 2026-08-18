@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.18.2](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.18.1...v0.18.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* apply CodeRabbit auto-fixes ([dc62497](https://github.com/rknightion/paperless-ngx-dedupe/commit/dc62497c71c785f8665a8a4653eb8dbaabf1f8e6))
+* author is Rob Knight, not Rob Knighton ([37523fc](https://github.com/rknightion/paperless-ngx-dedupe/commit/37523fcb7c0d700acced500c5cec1b7281e9b5e0))
+* **docs:** render the changelog instead of the include directive ([6c2e8a3](https://github.com/rknightion/paperless-ngx-dedupe/commit/6c2e8a339904bbcc6ac26b26503d1d2bd19dd2b4))
+* **hooks:** close six bypasses in the Backlog.md guard ([738b93b](https://github.com/rknightion/paperless-ngx-dedupe/commit/738b93bc6885d7667b3d1ab260ee89135268dad5))
+
+
+### Miscellaneous
+
+* add cloud environment setup script ([0a3cd5d](https://github.com/rknightion/paperless-ngx-dedupe/commit/0a3cd5d0bf08cc85742dfbf855f0a3d5a91dbf30))
+* **deps:** update dependency @axe-core/playwright to v4.13.0 ([#538](https://github.com/rknightion/paperless-ngx-dedupe/issues/538)) ([e3815e1](https://github.com/rknightion/paperless-ngx-dedupe/commit/e3815e144a645a52b22f3fb9ddd865a732dd0150))
+* **deps:** update dependency @pyroscope/nodejs to v0.6.3 ([#537](https://github.com/rknightion/paperless-ngx-dedupe/issues/537)) ([c88c6cb](https://github.com/rknightion/paperless-ngx-dedupe/commit/c88c6cb2a82422edf08fb7fa2348c5d2faaea2e9))
+* **deps:** update dependency eslint-plugin-svelte to v3.23.0 ([#542](https://github.com/rknightion/paperless-ngx-dedupe/issues/542)) ([bad23f5](https://github.com/rknightion/paperless-ngx-dedupe/commit/bad23f593c630c30487bc1e69050cd67af752e04))
+* **deps:** update dependency globals to v17.10.0 ([#539](https://github.com/rknightion/paperless-ngx-dedupe/issues/539)) ([b57cf51](https://github.com/rknightion/paperless-ngx-dedupe/commit/b57cf51e8d9177dde351cd400a7916d0cc595454))
+* **deps:** update dependency globals to v17.11.0 ([#540](https://github.com/rknightion/paperless-ngx-dedupe/issues/540)) ([a688b6e](https://github.com/rknightion/paperless-ngx-dedupe/commit/a688b6e53ee69a905d5b4a897367a3d551563aee))
+* **deps:** update dependency svelte to v5.56.9 ([#541](https://github.com/rknightion/paperless-ngx-dedupe/issues/541)) ([722d49c](https://github.com/rknightion/paperless-ngx-dedupe/commit/722d49c5f4dfdac94109c4f8a066b8d8ec9c3095))
+* **deps:** update dependency svelte-check to v4.7.6 ([#544](https://github.com/rknightion/paperless-ngx-dedupe/issues/544)) ([fc6fe3b](https://github.com/rknightion/paperless-ngx-dedupe/commit/fc6fe3b1152c1da5e6882e8d46b44f328687b603))
+* **deps:** update github/codeql-action action to v4.37.7 ([#543](https://github.com/rknightion/paperless-ngx-dedupe/issues/543)) ([899a541](https://github.com/rknightion/paperless-ngx-dedupe/commit/899a541ae64f3e7f5936b81be3656987622ae517))
+* **deps:** update linters & formatters to v8.67.0 ([#536](https://github.com/rknightion/paperless-ngx-dedupe/issues/536)) ([0e7790b](https://github.com/rknightion/paperless-ngx-dedupe/commit/0e7790bf5e13fadafd76b7b28732d5a30399aac0))
+* drop the per-repo Backlog.md guard, now global in the agent config ([8d3639b](https://github.com/rknightion/paperless-ngx-dedupe/commit/8d3639bc8eb167075b7517d3c6531b08c9120c70))
+* migrate from GitHub Issues to the in-repo Backlog.md tracker ([aea3ddf](https://github.com/rknightion/paperless-ngx-dedupe/commit/aea3ddf7422d47f7a8a5c08db1c2b76a952cbf54))
+
+
+### Documentation
+
+* re-import fan-out protocol (context-cost rules) ([a09315f](https://github.com/rknightion/paperless-ngx-dedupe/commit/a09315f738dead3c2e30ba9df64c4d008b224134))
+* re-render the fan-out protocol from agent-docs ([8241e23](https://github.com/rknightion/paperless-ngx-dedupe/commit/8241e23ce4b0f4a493ee979b2652d7fe4dcefa64))
+* re-render the fan-out protocol from agent-docs 711db6c ([8187080](https://github.com/rknightion/paperless-ngx-dedupe/commit/81870804a99f6a8eb194265fbc1427bf8ba956cd))
+* re-render the fan-out protocol from agent-docs b0d76d8 ([528722a](https://github.com/rknightion/paperless-ngx-dedupe/commit/528722a699cbcbe5744ca37caa6ba9570d8ec3b2))
+* **tracker:** align canonical fan-out protocol ([7c91dd4](https://github.com/rknightion/paperless-ngx-dedupe/commit/7c91dd4f0b105daae62fe062bfa6173d8d92f8de))
+* **tracker:** correct the canonical owner in the rendered header ([3aab1b9](https://github.com/rknightion/paperless-ngx-dedupe/commit/3aab1b961aa2536c316519fb1ec9bca904258b65))
+* **tracker:** re-import the fan-out protocol from canonical ([762b595](https://github.com/rknightion/paperless-ngx-dedupe/commit/762b595069357d7e0261f23359034b162e247440))
+* **tracker:** render agent documents from the canonical source ([1ff5fbe](https://github.com/rknightion/paperless-ngx-dedupe/commit/1ff5fbeff848ef0f3ed86f5e2d104819ad52cea9))
+
 ## [0.18.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.18.0...v0.18.1) (2026-08-11)
 
 
