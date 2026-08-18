@@ -25,7 +25,7 @@ jobs:
       contents: write      # create the RC tag and the GitHub prerelease
       pull-requests: read  # find the open release-please PR
       checks: read         # poll ci-success for this commit
-    uses: rknightion/.github/.github/workflows/auto-rc.yml@1e0f45bfdc28163f4e3ae99a7d497638ac6d9223 # v1.7.0
+    uses: rknightion/.github/.github/workflows/auto-rc.yml@08886c63bb10e8f23a2ce82a2ebbfce4d3ca932c # v1.8.0
     with:
       image-ref: ghcr.io/rknightion/paperless-ngx-dedupe
 
