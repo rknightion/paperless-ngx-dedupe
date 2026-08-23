@@ -1,6 +1,6 @@
 ---
 title: API Reference
-description: REST API reference for Paperless NGX Dedupe
+description: Use the Paperless NGX Dedupe REST API for synchronization, duplicate analysis, AI processing, configuration, and review.
 ---
 
 # API Reference

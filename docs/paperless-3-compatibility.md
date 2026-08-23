@@ -1,6 +1,6 @@
 ---
 title: Paperless-NGX 3 Compatibility
-description: Paperless-NGX 3 API compatibility and permission requirements
+description: Understand Paperless-NGX 3 API compatibility, version negotiation, authentication, and permissions required by the dedupe service.
 ---
 
 # Paperless-NGX 3 Compatibility

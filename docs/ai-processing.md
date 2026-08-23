@@ -1,6 +1,6 @@
 ---
 title: AI Processing
-description: AI-powered document classification and metadata extraction using LLMs
+description: Configure AI-assisted document classification and metadata suggestions with reviewable results and per-field confidence scores.
 ---
 
 # AI Processing

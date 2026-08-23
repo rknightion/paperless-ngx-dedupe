@@ -1,6 +1,6 @@
 ---
 title: Contributing
-description: How to contribute to the Paperless NGX Dedupe project
+description: Contribute to Paperless NGX Dedupe by reporting defects, proposing features, running tests, and submitting focused changes.
 ---
 
 # Contributing
