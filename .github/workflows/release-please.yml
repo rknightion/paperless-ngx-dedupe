@@ -37,7 +37,7 @@ jobs:
       # failure here is infrastructure, not the commit.
       - name: Mint a scoped release token
         id: bao
-        uses: rknightion/.github/.github/actions/broker-token@b9ab5f80961f2c29c47a8d7d5dff112b6551169c
+        uses: rknightion/.github/.github/actions/broker-token@bc58399e49a8d8131a379f530fffe8c9659667f9
         with:
           permission-set: release-please-paperless-ngx-dedupe
           tailscale-client-id: ${{ secrets.TS_WIF_CLIENT_ID }}
