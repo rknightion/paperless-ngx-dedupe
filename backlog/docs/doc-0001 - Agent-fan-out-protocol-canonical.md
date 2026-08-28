@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-08-28 19:54'
+updated_date: '2026-08-28 22:21'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `d17b0ec`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `d254b9c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -514,6 +514,9 @@ Success means:
 - [measurable condition]
 - [required validation and evidence]
 - [required durable tracker or handoff state]
+
+Every bullet above names the write it requires, and §0's external-write authority grants it. A
+success criterion needing a mutation the contract forbids is a defect in this goal.
 
 ## 2. Independently verified starting state
 
@@ -1091,6 +1094,7 @@ the format alone:
 - [ ] The goal contains only constraints, corrections, traps and environment facts relevant to this run.
 - [ ] **Every prohibition was checked against every commissioned lane, and the acceptance criteria of every commissioned task were read before the constraints were written.** A prohibition that forbids what a lane requires is a goal defect to fix before launch, not a blocker to discover during the run.
 - [ ] **Check every prohibition against the standing PROCEDURES the goal mandates too, not only its lanes.** This defect recurred a fourth time by escaping the lane-only check: a goal forbade commits to one repository while separately instructing a document-correction procedure that writes into every consumer repository — and that repository was a consumer, so obeying the procedure required breaking the prohibition. Enumerate what each mandated procedure actually touches and intersect it with every prohibition. A prohibition scoped by repository, path or file type is the shape most likely to collide with a procedure.
+- [ ] **Intersect the success criteria with the external-write authority, in both directions.** The prohibition checks above run from the prohibition outwards; this one runs from the goal's own definition of done. A success criterion that cannot be satisfied without a mutation §0 forbids is the same defect wearing the opposite face, and it is harder to see because both halves read as correct in isolation: the authority looks appropriately tight and the criterion looks appropriately demanding. Read every "success means" bullet and name the exact write each one requires. Where a criterion needs a deploy, a push, a tracker edit or a live mutation, either grant that write explicitly or replace the criterion with one the run can actually satisfy. A run that has to negotiate its own authority mid-flight has already lost the property the contract exists to give it.
 - [ ] **Any model or effort the goal names matches the harness profile's table exactly.** State the role and depth and let the profile resolve the route; a hand-written route that contradicts the table is a defect, and it silently downgrades every run that inherits it.
 - [ ] **Verify the root route and every lane route as two separate acts.** Correcting the root is the likely partial fix and it is worse than none, because a goal carrying an explicit root correction reads as already audited. One run corrected its root, left every lane on a role/effort combination appearing nowhere in the profile's table, and the run itself had to catch it — grep the goal for every model name it contains and resolve each against the table.
 - [ ] **Re-read instructions do not exceed what the context-cost rules permit** — a goal re-read once per lane leaves one copy per lane in the root's context.
