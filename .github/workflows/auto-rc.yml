@@ -62,8 +62,8 @@ jobs:
     with:
       release_tag: ${{ needs.rc.outputs.tag }}
     secrets:
-      # A called workflow inherits NO secrets unless they are passed. Without
-      # this the RC publish cannot authenticate, which is why this train has
-      # been red since 2026-08-28. release-please.yml passes exactly these.
+      # A called workflow inherits NO secrets unless they are passed.
+      # release-please.yml passes these; auto-rc.yml did not, so RC publishes
+      # emitted no build telemetry — silently, since the publish still succeeded.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
       OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
