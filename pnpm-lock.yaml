@@ -237,8 +237,8 @@ importers:
         specifier: ^5.2.5
         version: 5.3.0
       '@grafana/faro-rollup-plugin':
-        specifier: ^0.11.0
-        version: 0.11.0
+        specifier: ^0.12.0
+        version: 0.12.0
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.62.1
@@ -808,14 +808,14 @@ packages:
   '@fontsource/geist-sans@5.3.0':
     resolution: {integrity: sha512-AmG7cE1AvE4NHROPaOl1sN+a02cB5xy6pA/ZV76HXqWTCsJTV2SCBc9DTFHfJqnVOODm7HhXIYtUIb75NP5QXQ==}
 
-  '@grafana/faro-bundlers-shared@0.11.0':
-    resolution: {integrity: sha512-hwu3dzQS+Rbkl6YKucFwXdg1s/9NAJqHaPU9xnXeSDwHqvsOrlXrKIhf7Mezjf77ium+QHccCSlRhx5RqcFytg==}
+  '@grafana/faro-bundlers-shared@0.12.0':
+    resolution: {integrity: sha512-X/QulhlO55W4Tgw9C4RSFyTVo8Aus0ChuGHH6iuVZAB1d1UZkcy6hjBCP7esdQ8vHNphmevsdcbX5ql4pA3wng==}
 
   '@grafana/faro-core@2.11.0':
     resolution: {integrity: sha512-vaqko2foixRC9uZyqc4KzCUYqd21t27LhVgQ6hI6cmS3vRSMBoIgEg1FIrOOkT9KNRTpbKASE7iYn3QtHtq7zQ==}
 
-  '@grafana/faro-rollup-plugin@0.11.0':
-    resolution: {integrity: sha512-bIWTckqtzEDsDuVG5us1V7M17medp+H5qQgLgtpam965NrBKsfIpiFsAnf9+OqrOxrRfj1l5A+lRYKWbK+Y2dw==}
+  '@grafana/faro-rollup-plugin@0.12.0':
+    resolution: {integrity: sha512-8VOlM9L3ZQIyz80GmZGzkoUDi4hKe9tqvavu+kJMY+en+wZ/gQY+MQ24AFBLf9e9UDFUaoiWgzk38buCXOAV2A==}
 
   '@grafana/faro-web-sdk@2.11.0':
     resolution: {integrity: sha512-oGwdqlFJkIrK6V45wDlPaggNXOJCcXRFobho0PBQvohAB4Y4UTyMH18Sr1Tznp3z6POr/zh7RUtB0L/iN2X+HA==}
@@ -3823,7 +3823,7 @@ snapshots:
 
   '@fontsource/geist-sans@5.3.0': {}
 
-  '@grafana/faro-bundlers-shared@0.11.0':
+  '@grafana/faro-bundlers-shared@0.12.0':
     dependencies:
       ansis: 4.3.1
       tar: 7.5.22
@@ -3834,11 +3834,10 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/otlp-transformer': 0.221.0(@opentelemetry/api@1.9.1)
 
-  '@grafana/faro-rollup-plugin@0.11.0':
+  '@grafana/faro-rollup-plugin@0.12.0':
     dependencies:
-      '@grafana/faro-bundlers-shared': 0.11.0
+      '@grafana/faro-bundlers-shared': 0.12.0
       magic-string: 0.30.21
-      rollup: 4.63.1
 
   '@grafana/faro-web-sdk@2.11.0':
     dependencies:
