@@ -7,8 +7,18 @@
 # merge. The RC path never writes to the changelog or the release PR.
 name: auto-rc
 
+# Fires off CI's completion rather than the push itself. The old `push:` trigger
+# started this workflow immediately and then burned a runner slot in
+# `rc / wait-for-ci` polling for a CI run still queued behind it — 20.6
+# runner-hours of pure polling fleet-wide, and 5 of 17 in-flight jobs at one
+# sample. workflow_run fires only once CI has a verdict.
+#
+# `workflows:` matches the workflow's `name:` field, NOT its filename. If that
+# name changes this silently stops firing and RCs stop being cut, with no error.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -21,12 +31,19 @@ concurrency:
 
 jobs:
   rc:
+    # workflow_run fires for FAILED and cancelled runs too, so the conclusion
+    # check is what actually gates the RC on green CI.
+    if: github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: write      # create the RC tag and the GitHub prerelease
       pull-requests: read  # find the open release-please PR
       checks: read         # poll ci-success for this commit
-    uses: rknightion/.github/.github/workflows/auto-rc.yml@08886c63bb10e8f23a2ce82a2ebbfce4d3ca932c # v1.8.0
+    uses: rknightion/.github/.github/workflows/auto-rc.yml@97f4a7ad0cd1ddd83562a30b9061ef8295242405 # v1.14.0
     with:
+      # Under workflow_run, github.sha is the DEFAULT BRANCH HEAD, not the
+      # commit CI ran on — it races ahead on rapid pushes. head_sha is the
+      # commit the triggering run actually tested.
+      sha: ${{ github.event.workflow_run.head_sha }}
       image-ref: ghcr.io/rknightion/paperless-ngx-dedupe
 
   # Same image path a stable release takes, just with an RC tag.
