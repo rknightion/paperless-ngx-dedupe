@@ -13,7 +13,7 @@ importers:
     dependencies:
       openai:
         specifier: ^7.0.0
-        version: 7.8.0(undici@8.10.0)(zod@4.4.3)
+        version: 7.8.0(undici@8.10.0)(zod@4.5.1)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -122,7 +122,7 @@ importers:
         version: 2.9.0
       zod:
         specifier: ^4.0.0
-        version: 4.4.3
+        version: 4.5.1
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^9.0.0
@@ -216,7 +216,7 @@ importers:
         version: 6.0.1
       openai:
         specifier: ^7.0.0
-        version: 7.8.0(undici@8.10.0)(zod@4.4.3)
+        version: 7.8.0(undici@8.10.0)(zod@4.5.1)
       pino:
         specifier: ^10.0.0
         version: 10.3.1
@@ -225,7 +225,7 @@ importers:
         version: 2.9.0
       zod:
         specifier: ^4.0.0
-        version: 4.4.3
+        version: 4.5.1
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.12.1
@@ -3520,6 +3520,9 @@ packages:
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
+  zod@4.5.1:
+    resolution: {integrity: sha512-P3GqeAEOEDqKvafVGLezbg+39YW/ze4xrD4qdS0adOY8eoI3zfjv1PQM4UwQzgT8mZKXEbqtVt8K+ZKGqkMFKg==}
+
   zrender@6.1.0:
     resolution: {integrity: sha512-oEGMDB6pOP2S6OwRR4PdVv610zrjnA3Bh+JnSG12fYJlBKjtNAoEb5fSUoCOOINlH96I2fU38/A2UpRKs67xYQ==}
 
@@ -5909,6 +5912,11 @@ snapshots:
       undici: 8.10.0
       zod: 4.4.3
 
+  openai@7.8.0(undici@8.10.0)(zod@4.5.1):
+    optionalDependencies:
+      undici: 8.10.0
+      zod: 4.5.1
+
   optionator@0.9.4:
     dependencies:
       deep-is: 0.1.4
@@ -6439,7 +6447,10 @@ snapshots:
 
   zimmerframe@1.1.4: {}
 
-  zod@4.4.3: {}
+  zod@4.4.3:
+    optional: true
+
+  zod@4.5.1: {}
 
   zrender@6.1.0:
     dependencies:
