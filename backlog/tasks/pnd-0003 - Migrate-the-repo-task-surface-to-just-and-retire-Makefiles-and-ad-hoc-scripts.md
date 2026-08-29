@@ -1,10 +1,10 @@
 ---
 id: PND-0003
 title: Migrate the repo task surface to just and retire Makefiles and ad-hoc scripts
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-08-28 19:23'
-updated_date: '2026-08-29 14:30'
+updated_date: '2026-08-29 14:48'
 labels:
   - 'wave:2-fleet'
 dependencies: []
@@ -480,23 +480,23 @@ repo is never red between commits.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Top-level justfile exists with all seven mandatory recipes (default, setup, fmt, fmt-check, lint, test, check) plus typecheck, build, run, test-e2e, audit, docker-validate, docker-dev
-- [ ] #2 just check runs fmt-check lint typecheck test as a dependency list and passes locally, matching exactly what ci.yml's quality and unit-tests jobs enforce
-- [ ] #3 just --fmt --check passes with zero diff
-- [ ] #4 just --list shows a # doc comment and a [group(...)] for every public recipe, and lint/typecheck/test/test-e2e carry [no-exit-message]
-- [ ] #5 No Makefile exists in the repo (none exists today — confirmed no new one is introduced)
-- [ ] #6 docker-entrypoint.sh, add-correspondent.sh, add-tags.sh, and scripts/cloud-environment-setup.sh are all left in place untouched and unwrapped, per their KEEP classification
-- [ ] #7 .github/actions/setup-node-pnpm/action.yml installs just via extractions/setup-just pinned to an exact version and SHA, and its install step calls just setup
-- [ ] #8 ci.yml's quality, unit-tests (build/e2e steps), e2e-tests, and source-maps jobs call just recipes instead of raw pnpm, while the ci-success aggregator, its needs list, permissions blocks, concurrency group, persist-credentials: false, and every other workflow file (arm-automerge.yml, auto-rc.yml, docker-security.yml, ghcr-cleanup.yml, publish.yml, release-please.yml, scorecard.yml, trigger-docs-sync.yml) remain unchanged
-- [ ] #9 AGENTS.md and README.md no longer document raw pnpm commands as the primary task interface and instead point at just --list / just --show
-- [ ] #10 backlog/config.yml's definition_of_done names just check, just build, and just test-e2e instead of pnpm commands
+- [x] #1 Top-level justfile exists with all seven mandatory recipes (default, setup, fmt, fmt-check, lint, test, check) plus typecheck, build, run, test-e2e, audit, docker-validate, docker-dev
+- [x] #2 just check runs fmt-check lint typecheck test as a dependency list and passes locally, matching exactly what ci.yml's quality and unit-tests jobs enforce
+- [x] #3 just --fmt --check passes with zero diff
+- [x] #4 just --list shows a # doc comment and a [group(...)] for every public recipe, and lint/typecheck/test/test-e2e carry [no-exit-message]
+- [x] #5 No Makefile exists in the repo (none exists today — confirmed no new one is introduced)
+- [x] #6 docker-entrypoint.sh, add-correspondent.sh, add-tags.sh, and scripts/cloud-environment-setup.sh are all left in place untouched and unwrapped, per their KEEP classification
+- [x] #7 .github/actions/setup-node-pnpm/action.yml installs just via extractions/setup-just pinned to an exact version and SHA, and its install step calls just setup
+- [x] #8 ci.yml's quality, unit-tests (build/e2e steps), e2e-tests, and source-maps jobs call just recipes instead of raw pnpm, while the ci-success aggregator, its needs list, permissions blocks, concurrency group, persist-credentials: false, and every other workflow file (arm-automerge.yml, auto-rc.yml, docker-security.yml, ghcr-cleanup.yml, publish.yml, release-please.yml, scorecard.yml, trigger-docs-sync.yml) remain unchanged
+- [x] #9 AGENTS.md and README.md no longer document raw pnpm commands as the primary task interface and instead point at just --list / just --show
+- [x] #10 backlog/config.yml's definition_of_done names just check, just build, and just test-e2e instead of pnpm commands
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 pnpm lint && pnpm format --write && pnpm check && pnpm test
-- [ ] #2 pnpm build (core then web, in dependency order)
-- [ ] #3 pnpm test:e2e (only if packages/web behaviour changed)
+- [x] #1 pnpm lint && pnpm format --write && pnpm check && pnpm test
+- [x] #2 pnpm build (core then web, in dependency order)
+- [x] #3 pnpm test:e2e (only if packages/web behaviour changed)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -518,6 +518,14 @@ A local `just test-e2e` attempt did not start because its fixed preview port was
 `just audit` completed with one low and one moderate advisory finding; no high-severity finding caused a failure. The retained Docker recipes were dry-reviewed against the existing package scripts and match exactly.
 
 The justfile follows the current fleet rule that `default` and `setup` are ungrouped; this supersedes the older task example that grouped `setup`.
+
+Final verification after integrating upstream dependency updates:
+
+- Isolated local commands using the repository justfile and fresh temporary directories passed: `just setup`, `just --fmt --check`, `just --dump --dump-format json`, `just fmt`, `just check`, and `just build`. The check run passed 76 test files, 1,187 tests, with 9 intentional skips.
+- `just audit` exited 0 and reported one low and one moderate advisory finding; no high-severity finding.
+- Exact-head CI run 33258282391 for `088b67e` passed quality, unit-tests, e2e-tests, source-maps, docker-build-verify, and ci-success. Job logs show setup-just 1.58.0 plus successful `just lint`, `just fmt-check`, `just typecheck`, `just build`, and `just test-e2e` execution.
+- `just test-e2e` and the Docker recipes were not re-run locally: the local E2E preview port was occupied by unrelated work and the Docker mappings were dry-reviewed as permitted. CI supplied the E2E and container-health proof.
+- A CodeRabbit follow-up attempt was rate-limited and is not claimed as a completed review; the prior review completed before a documentation-only clarification.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -563,3 +571,9 @@ Eleven of the 42 lanes arrived at this shape independently before it was ratifie
 **If this repo has no such legs, it has no `ci` recipe at all** and `check` is the whole gate. Do not add an empty one.
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Migrated the repository task surface to a top-level justfile, wired the pinned CI setup and targeted CI recipe calls, and updated the documented task interface and Backlog definition of done. Local isolated checks and exact-head CI run 33258282391 passed, including ci-success, E2E, source maps, and Docker health verification.
+<!-- SECTION:FINAL_SUMMARY:END -->
