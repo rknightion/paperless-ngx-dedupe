@@ -13,3 +13,11 @@ CHANGELOG.md
 docs
 site
 .github
+
+# Backlog.md tracker state. These files are written by the `backlog` CLI, never by
+# hand — the operating model forbids hand-editing them — so prettier --check can
+# only ever fail on them, and prettier --write would be undone by the next CLI
+# command. Same reasoning as CHANGELOG.md above: generated, not authored.
+backlog
+archive
+AGENTS.md
