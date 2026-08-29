@@ -52,11 +52,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-node-pnpm
-      - run: pnpm lint
-      - run: pnpm format
-      - run: pnpm check
+      - run: just lint
+      - run: just fmt-check
+      - run: just typecheck
       - name: Audit dependencies
-        run: pnpm audit --audit-level=high
+        run: just audit
         continue-on-error: true
 
   unit-tests:
@@ -169,12 +169,10 @@ jobs:
         working-directory: packages/web
 
       - name: Build packages
-        run: |
-          pnpm --filter @paperless-dedupe/core build
-          pnpm --filter @paperless-dedupe/web build
+        run: just build
 
       - name: Run E2E tests
-        run: pnpm test:e2e
+        run: just test-e2e
         env:
           CI: true
 
@@ -301,7 +299,7 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
 
       - name: Build with source maps
-        run: pnpm build
+        run: just build
         env:
           FARO_SOURCEMAP_API_KEY: ${{ secrets.FARO_SOURCEMAP_API_KEY }}
 

@@ -64,16 +64,18 @@ See the [Getting Started Guide](https://m7kni.io/paperless-ngx-dedupe/getting-st
 
 ## Development
 
+Discover tasks with `just --list`, or inspect one with `just --show <recipe>`.
+
 ```bash
-pnpm install          # Install dependencies
-pnpm dev              # Start dev server (http://localhost:5173)
-pnpm build            # Production build
-pnpm check            # TypeScript type checking
-pnpm lint             # Lint
-pnpm test             # Run tests
+just setup            # Install dependencies
+just run              # Start dev server (http://localhost:5173)
+just build            # Production build
+just typecheck        # TypeScript type checking
+just lint             # Lint
+just test             # Run tests
 ```
 
-> **Note:** Background jobs (sync, analysis, batch delete) use worker threads that run outside Vite as raw Node.js processes. These do not work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `pnpm docker:dev` for local development to test the full workflow.
+> **Note:** Background jobs (sync, analysis, batch delete) use worker threads that run outside Vite as raw Node.js processes. These do not work with `just run` because Node.js cannot execute the TypeScript source files directly. Use `just docker-dev` for local development to test the full workflow.
 
 ## License
 

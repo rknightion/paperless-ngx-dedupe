@@ -2,9 +2,9 @@ project_name: "Paperless NGX Dedupe"
 default_status: "To Do"
 statuses: ["To Do", "In Progress", "Parked", "Done"]
 definition_of_done:
-  - "pnpm lint && pnpm format --write && pnpm check && pnpm test"
-  - "pnpm build (core then web, in dependency order)"
-  - "pnpm test:e2e (only if packages/web behaviour changed)"
+  - "just check"
+  - "just build"
+  - "just test-e2e (only if packages/web behaviour changed)"
 labels: []
 date_format: yyyy-mm-dd
 max_column_width: 20

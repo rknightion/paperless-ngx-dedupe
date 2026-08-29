@@ -30,27 +30,21 @@ When working in Svelte 5 files (.svelte, .svelte.ts): use `SvelteMap` and `Svelt
 
 Before changing code to fix a bug, first investigate the root cause thoroughly (check git history, trace data flow, examine API responses). Do not make speculative code fixes before understanding why the issue occurs.
 
-## Commands
+## Task interface
 
-```bash
-pnpm dev              # SvelteKit dev server (http://localhost:5173)
-pnpm build            # Build all packages in dependency order: core → web
-pnpm check            # Type-check all packages
-pnpm test             # Vitest unit tests for core
-pnpm test:e2e         # Playwright E2E tests against a built web package
-pnpm lint             # ESLint
-pnpm lint:fix         # ESLint auto-fix
-pnpm format           # Prettier check
-pnpm format:fix       # Prettier auto-fix
-pnpm docker:validate  # Docker build + compose up with health check
-pnpm docker:dev       # Docker compose dev profile with live rebuild
-```
+This repo's task surface is a `justfile`. Discover it, don't guess it:
 
-Single-package variant: `pnpm --filter @paperless-dedupe/core test`, etc.
+    just --list                        # human-readable
+    just --dump --dump-format json     # machine-readable
+    just --show <recipe>               # what a recipe actually runs
 
-## Workflow
-
-Run `pnpm lint && pnpm format --write && pnpm check && pnpm test` after completing work or before pushing. CI additionally runs `pnpm audit --audit-level=high` and a Docker build-verify job on every PR.
+- `just check` is the full local blocking gate and is exactly what CI enforces for pass/fail. It must pass before you commit.
+- CI keeps coverage/JUnit arguments for report artifacts and runs the dependency audit as advisory; neither belongs in `just check`.
+- Prefer `just <recipe>` over the underlying tool. If you are typing `pnpm test`, you want `just test`.
+- Run `just` with stdin from /dev/null. No recipe in this repo is marked `[confirm]` today; if one is
+  added later, stop and ask before running it — never pass `--yes` or `JUST_YES=1`.
+- If a task you need does not exist, add a recipe with a `#` doc comment and a `[group(...)]` rather
+  than running a bare command.
 
 ## Gotchas & Constraints
 

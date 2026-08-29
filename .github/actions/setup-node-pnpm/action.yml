@@ -11,6 +11,10 @@ runs:
         node-version: 24
         cache: pnpm
 
+    - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+      with:
+        just-version: '1.58.0'
+
     # Install directly rather than restoring a cross-job node_modules cache: pnpm rewrites
     # pnpm-lock.yaml during install, so the install job's post-install hashFiles() key never
     # matched the consumers' fresh-checkout key — every consumer missed the cache and ran with
@@ -18,4 +22,4 @@ runs:
     # keeps this fast.
     - name: Install dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: just setup

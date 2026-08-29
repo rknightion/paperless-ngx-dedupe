@@ -1,10 +1,10 @@
 ---
 id: PND-0003
 title: Migrate the repo task surface to just and retire Makefiles and ad-hoc scripts
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-08-28 19:23'
-updated_date: '2026-08-29 10:43'
+updated_date: '2026-08-29 14:30'
 labels:
   - 'wave:2-fleet'
 dependencies: []
@@ -498,6 +498,27 @@ repo is never red between commits.
 - [ ] #2 pnpm build (core then web, in dependency order)
 - [ ] #3 pnpm test:e2e (only if packages/web behaviour changed)
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Verify the current pnpm task surface, retained scripts, workflow constraints, and Just version.
+2. Add the prescribed top-level justfile and prove its formatting, recipe surface, setup, quality gate, build, e2e, audit, and Docker mappings.
+3. Wire the pinned setup-just action and targeted ci.yml calls only after local proof; update task-interface documentation and backlog definition of done.
+4. Review the exact diff and retained-script references, run proportionate workflow/config validation, commit and push main, confirm ci-success at the final SHA, then finalize the task with evidence.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Local proof: `just --fmt --check` and `just --dump --dump-format json` passed; the clean isolated `just check` passed with 76 test files and 1,187 tests (9 intentionally skipped); `just build` passed.
+
+A local `just test-e2e` attempt did not start because its fixed preview port was occupied by an unrelated local process outside this repository. The process was not touched; the final CI e2e job remains the required proof.
+
+`just audit` completed with one low and one moderate advisory finding; no high-severity finding caused a failure. The retained Docker recipes were dry-reviewed against the existing package scripts and match exactly.
+
+The justfile follows the current fleet rule that `default` and `setup` are ungrouped; this supersedes the older task example that grouped `setup`.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 

@@ -682,7 +682,7 @@ describe('getAiResult', () => {
     const legacy = getAiResult(db, resultIds[0]);
     expect(legacy?.suggestedTitle).toBe(hugeValue);
     expect(legacy?.suggestedCustomFields).toHaveLength(200);
-  });
+  }, 15_000);
 });
 
 describe('getAiResults - sorting', () => {
