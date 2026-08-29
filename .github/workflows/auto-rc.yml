@@ -61,3 +61,9 @@ jobs:
     uses: ./.github/workflows/publish.yml
     with:
       release_tag: ${{ needs.rc.outputs.tag }}
+    secrets:
+      # A called workflow inherits NO secrets unless they are passed. Without
+      # this the RC publish cannot authenticate, which is why this train has
+      # been red since 2026-08-28. release-please.yml passes exactly these.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
