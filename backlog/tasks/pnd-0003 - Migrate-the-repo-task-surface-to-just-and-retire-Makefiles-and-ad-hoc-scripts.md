@@ -4,7 +4,9 @@ title: Migrate the repo task surface to just and retire Makefiles and ad-hoc scr
 status: To Do
 assignee: []
 created_date: '2026-08-28 19:23'
-labels: []
+updated_date: '2026-08-29 09:18'
+labels:
+  - 'wave:2-fleet'
 dependencies: []
 priority: medium
 type: chore
@@ -496,3 +498,28 @@ repo is never red between commits.
 - [ ] #2 pnpm build (core then web, in dependency order)
 - [ ] #3 pnpm test:e2e (only if packages/web behaviour changed)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: campaign-ordering
+created: 2026-08-29 09:18
+---
+## Fleet ordering — WAVE 2. Starts after the Wave 0 pilot (`sf2loki` / SFL-0073) and the Wave 1 hubs land.
+
+Within Wave 2 the order is free — these repos do not depend on each other. Batching by language is worthwhile so one lane reuses its Makefile-to-recipe mapping across similar repos.
+
+Do not start before the pilot reports. The standard may be amended off the back of it, and picking this up early risks coding against a superseded seam.
+
+**Provisioning `just` in CI.** Which mechanism depends on the runner, and the two must not be mixed:
+
+| Runner | Mechanism |
+| --- | --- |
+| `arc-arm64` (m7kni self-hosted) | `just` is **baked into the runner image** by `m7kni/ci-tools` (`runner-image/Dockerfile`, `ARG JUST_VERSION`). Do **not** add `extractions/setup-just`, and delete the step if this repo already has one — it installs a second `just` earlier on `PATH` and turns the image pin into a lie. |
+| GitHub-hosted (all `rknightion` repos) | `extractions/setup-just`, SHA-pinned, with an explicit `just-version:`. |
+
+Both sides currently sit on **1.58.0** and are Renovate-managed. `ci-tools`' `Tool version drift` workflow fails if the Dockerfile `ARG` and the published image ever disagree, and lists any repo still carrying a second pin.
+
+**While you are in the workflow files, check the hub pin.** On 2026-08-29 Renovate was unfrozen for `rknightion/.github` in `m7kni/renovate-config` — it had been `enabled: false` on the mistaken belief that callers tracked `@main`, which froze the fleet across 19 different hub SHAs (v1.3.1 June → v1.9.7 August) so that no hub fix ever propagated. Bumps now arrive as one grouped, CI-gated, automerged PR per repo. **A `uses:` whose comment is not a real `# vX.Y.Z` still cannot be bumped** (it resolves to a digest-only update, which the fleet rules disable) — if you find one, repair the comment as part of this task.
+---
+<!-- COMMENTS:END -->
