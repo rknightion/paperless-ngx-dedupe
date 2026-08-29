@@ -4,7 +4,7 @@ title: Migrate the repo task surface to just and retire Makefiles and ad-hoc scr
 status: To Do
 assignee: []
 created_date: '2026-08-28 19:23'
-updated_date: '2026-08-29 09:18'
+updated_date: '2026-08-29 10:43'
 labels:
   - 'wave:2-fleet'
 dependencies: []
@@ -521,5 +521,24 @@ Do not start before the pilot reports. The standard may be amended off the back 
 Both sides currently sit on **1.58.0** and are Renovate-managed. `ci-tools`' `Tool version drift` workflow fails if the Dockerfile `ARG` and the published image ever disagree, and lists any repo still carrying a second pin.
 
 **While you are in the workflow files, check the hub pin.** On 2026-08-29 Renovate was unfrozen for `rknightion/.github` in `m7kni/renovate-config` — it had been `enabled: false` on the mistaken belief that callers tracked `@main`, which froze the fleet across 19 different hub SHAs (v1.3.1 June → v1.9.7 August) so that no hub fix ever propagated. Bumps now arrive as one grouped, CI-gated, automerged PR per repo. **A `uses:` whose comment is not a real `# vX.Y.Z` still cannot be bumped** (it resolves to a digest-only update, which the fleet rules disable) — if you find one, repair the comment as part of this task.
+---
+
+author: campaign-ordering
+created: 2026-08-29 10:43
+---
+## Standard amendment — `ci` is the sanctioned superset of `check` (RATIFIED)
+
+This supersedes the frozen wording *"`check` is the complete local gate and reproduces every CI job that can run off a GitHub runner"*, which several lanes could not honour without making the pre-commit gate depend on a Docker daemon.
+
+**The definitions now are:**
+
+- **`check`** — everything that runs with **only the language toolchain installed**. This is the pre-commit gate. A leg that runs on a bare toolchain belongs here *however long it takes*.
+- **`ci`** — `check` plus the legs CI gates that need a **Docker daemon, a service container, or cross-compilation**, and nothing else. Written as `ci: check <heavy legs>`.
+
+**Every leg you put in `ci` must carry a comment naming which of those three it needs.** That comment is the guard: without it `ci` becomes the bin for anything slow or awkward, `check` quietly stops meaning much, and the fleet is back to a per-repo gate.
+
+Eleven of the 42 lanes arrived at this shape independently before it was ratified, which is why it won.
+
+**If this repo has no such legs, it has no `ci` recipe at all** and `check` is the whole gate. Do not add an empty one.
 ---
 <!-- COMMENTS:END -->
