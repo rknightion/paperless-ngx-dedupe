@@ -18,4 +18,4 @@ jobs:
     permissions:
       contents: write      # enabling auto-merge writes the merge ref
       pull-requests: write # gh pr merge --auto operates on the PR
-    uses: rknightion/.github/.github/workflows/arm-automerge.yml@c636bd20758433033cb4fe7760867b1318523bbb # v1.17.0
+    uses: rknightion/.github/.github/workflows/arm-automerge.yml@79a72d215e806c12876526ff30fbd524250e1bf9 # v1.17.1
