@@ -24,7 +24,7 @@ jobs:
       id-token: write
       attestations: write
       security-events: write
-    uses: rknightion/.github/.github/workflows/container-publish.yml@1ee56349bfcf2568e538479918b9bdd1b9196309 # v1.15.1
+    uses: rknightion/.github/.github/workflows/container-publish.yml@c636bd20758433033cb4fe7760867b1318523bbb # v1.17.0
     with:
       release-tag: ${{ inputs.release_tag }}
       otel-tracing: true
