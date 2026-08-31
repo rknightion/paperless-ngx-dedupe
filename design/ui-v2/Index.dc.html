@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>
+  *,*::before,*::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg-canvas); }
+  a { color: var(--color-bg-accent); }
+  a:hover { color: var(--color-accent-hover); }
+</style>
+</helmet>
+<div style="min-height:100vh;padding:56px 48px 80px;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13.5px;line-height:1.45;color:var(--color-fg-default)">
+  <header style="max-width:760px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="24" height="24" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" role="img" aria-label="m7kni mark" style="flex:none;color:var(--color-bg-accent)"><rect x="9" y="25" width="38" height="38" rx="3"></rect><path d="M28 25V63M9 44H47"></path><rect x="49" y="7" width="14" height="14" rx="3"></rect></svg>
+      <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">m7kni design system v2</span>
+    </div>
+    <h1 style="margin:14px 0 0;font-size:24px;font-weight:600;letter-spacing:-0.01em">Paperless NGX Dedupe, restyled</h1>
+    <p style="margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--color-fg-soft);text-wrap:pretty">Ten archetype screens, each in light and dark, plus narrow variants of the shell, the documents list and the group detail. The information architecture, page purposes, table columns and terminology are unchanged: this replaces the visual layer only. Petrol accent, petrol-tinted neutrals at hue 227, Hanken Grotesk for interface text and JetBrains Mono for machine text, Phosphor regular icons, 3px controls and square containers, compact operator density.</p>
+    <p style="margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--color-fg-muted);text-wrap:pretty">Confidence scores and job states now read as a shape, a word and a number, so no state depends on colour. The chart palette is derived from the accent by hue rotation on a monotonic lightness ramp, measured in both themes. The product violet is retired.</p>
+  </header>
+
+  <section style="margin-top:40px">
+    <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Screens</div>
+    <div style="margin-top:12px;border:1px solid var(--color-border-default);background:var(--color-bg-surface);max-width:1000px">
+
+      <a href="01 App shell.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">01</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">App shell and navigation</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Fixed rail, one-row top bar, scrolling content region, three-way theme control, narrow drawer</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">4 frames</span>
+      </a>
+
+      <a href="02 Dashboard.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">02</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">Dashboard</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Posture strip, next actions, live activity, outcomes, charts on the derived palette, checklist completion rule</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">2 frames</span>
+      </a>
+
+      <a href="03 Documents list.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">03</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">Documents list</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">The list-page archetype: dense table, filters, selection, pinned bulk bar, empty result, narrow</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">6 frames</span>
+      </a>
+
+      <a href="04 Duplicate group detail.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">04</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">Duplicate group detail</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">The signature screen. Confidence as shape, word and number; decomposed score; side-by-side with every difference marked</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">4 frames</span>
+      </a>
+
+      <a href="05 Duplicates graph.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">05</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">Duplicates graph</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Force graph on the derived palette; connection status carried by colour and line style</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">2 frames</span>
+      </a>
+
+      <a href="06 Wizard.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">06</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">Bulk operations wizard</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Six steps, the confirm step with its consequence statement and typed confirmation, then execute and results</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">4 frames</span>
+      </a>
+
+      <a href="07 Jobs.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">07</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">Jobs</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Running, queued and finished work as rows, with inline meters, phase labels and mono durations</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">2 frames</span>
+      </a>
+
+      <a href="08 Settings and forms.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">08</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">Settings and forms</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Validation, helper text, read-only environment values, unsaved changes, and the confirm-destructive dialog</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">4 frames</span>
+      </a>
+
+      <a href="09 AI review queue.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--color-border-default);text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">09</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">AI review queue</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Human in the loop: current against proposed, per-field confidence, partial apply, reversible bulk actions</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">2 frames</span>
+      </a>
+
+      <a href="10 System states.dc.html" style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;text-decoration:none;color:inherit" style-hover="background:var(--color-bg-hover)">
+        <span style="width:26px;flex:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">10</span>
+        <span style="width:230px;flex:none;font-weight:500;color:var(--color-bg-accent)">System states</span>
+        <span style="flex:1;font-size:12.5px;color:var(--color-fg-muted)">Skeletons, refresh in place, action states, empty, inline error, and the two toasts</span>
+        <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-faint)">2 frames</span>
+      </a>
+    </div>
+  </section>
+
+  <section style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1000px">
+    <div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">For the implementation agent</div>
+      <div style="margin-top:12px;border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--color-border-default)">
+          <a href="spec/implementation-spec.md" style="font-weight:500">spec/implementation-spec.md</a>
+          <p style="margin:4px 0 0;font-size:12.5px;color:var(--color-fg-muted)">Token swap notes, type roles, spacing, the lucide to Phosphor map, per-primitive restyle notes, chart derivation with measurements, interaction states, dark deltas, the page to archetype map, an accessibility note per archetype, optional fixes, and the assumptions list.</p>
+        </div>
+        <div style="padding:12px 16px;border-bottom:1px solid var(--color-border-default)">
+          <a href="spec/app.css" style="font-weight:500">spec/app.css</a>
+          <p style="margin:4px 0 0;font-size:12.5px;color:var(--color-fg-muted)">The complete replacement token block, light and dark, in OKLCH. Paste over the token layer of packages/web/src/app.css.</p>
+        </div>
+        <div style="padding:12px 16px">
+          <a href="spec/source-notes.md" style="font-weight:500">spec/source-notes.md</a>
+          <p style="margin:4px 0 0;font-size:12.5px;color:var(--color-fg-muted)">What was read out of the repo: the v1 token block value by value, the shell, all 13 pages, the primitive library, the icon inventory and the chart usage.</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Decisions worth knowing</div>
+      <div style="margin-top:12px;border:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:12px 16px;display:flex;flex-direction:column;gap:10px;font-size:12.5px">
+        <p style="margin:0"><span style="font-weight:500">The product violet is retired.</span> Paused becomes warn, pending graph edges take chart series 1, and chart series 1 no longer needs to avoid looking like a button.</p>
+        <p style="margin:0"><span style="font-weight:500">Confidence bands moved onto the status treatment.</span> <span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-status-ok)">&#9632; HIGH 97.4%</span> replaces the tinted pill, keeping the existing 0.90 and 0.75 thresholds.</p>
+        <p style="margin:0"><span style="font-weight:500">The near-black rail is gone.</span> The sidebar is a surface with a hairline and an accent inset edge on the active item, so it inverts with the rest of the app.</p>
+        <p style="margin:0"><span style="font-weight:500">One contrast failure found and fixed.</span> White text on the dark-mode destructive fill measures 3.01:1. Semantic fills take the on-accent token, which is dark ink in the dark scope.</p>
+        <p style="margin:0"><span style="font-weight:500">The first-run checklist can now finish.</span> Three real conditions, a collapsed dismissible row when they all pass, and a return only if one regresses.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+</x-dc>
+</body>
+</html>

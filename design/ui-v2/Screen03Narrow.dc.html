@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+</helmet>
+<div style="display:flex;flex-direction:column;width:420px;height:760px;overflow:hidden;background:var(--color-bg-canvas);color:var(--color-fg-default);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13.5px;line-height:1.45">
+  <header style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 12px">
+    <button type="button" aria-label="Open navigation" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--color-border-default);border-radius:3px;background:transparent;color:var(--color-fg-soft);cursor:pointer">
+      <svg width="16" height="16" fill="currentColor"><use href="#i-list"></use></svg>
+    </button>
+    <h1 style="margin:0;font-size:15px;font-weight:600">Documents</h1>
+    <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">248</span>
+  </header>
+
+  <div style="display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:8px 12px">
+    <div style="position:relative">
+      <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);display:flex;color:var(--color-fg-faint)"><svg width="14" height="14" fill="currentColor"><use href="#i-magnifying-glass"></use></svg></span>
+      <input type="text" placeholder="Search titles and text&hellip;" style="width:100%;height:32px;padding:0 8px 0 28px;border:1px solid var(--color-border-default);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">
+    </div>
+    <div role="tablist" style="display:flex;overflow:hidden;border:1px solid var(--color-border-default);border-radius:3px">
+      <button type="button" role="tab" aria-selected="true" style="flex:1;height:30px;border:0;background:var(--color-bg-selected);color:var(--color-fg-default);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer">All</button>
+      <button type="button" role="tab" aria-selected="false" style="flex:1;height:30px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer">Duplicates</button>
+      <button type="button" role="tab" aria-selected="false" style="flex:1;height:30px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer">AI</button>
+      <button type="button" role="tab" aria-selected="false" style="flex:1;height:30px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer">Issues</button>
+    </div>
+    <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">248 documents &middot; newest first</span>
+  </div>
+
+  <main style="flex:1;min-height:0;overflow-y:auto">
+    <div style="display:flex;gap:10px;padding:8px 12px;background:var(--color-bg-selected);box-shadow:inset 2px 0 0 var(--color-bg-accent);border-bottom:1px solid var(--color-border-default)">
+      <input type="checkbox" defaultChecked="true" aria-label="Select #11842" style="width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-bg-accent)">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11842</span>
+          <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Council tax bill 2024-25</span>
+        </div>
+        <div style="margin-top:2px;font-size:12.5px;color:var(--color-fg-muted)">Hampshire County Council &middot; Bill</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span>
+          <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-bg-accent)">2 groups</a>
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-warn)">AI PENDING</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">2d 04h</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:8px 12px;background:var(--color-bg-selected);box-shadow:inset 2px 0 0 var(--color-bg-accent);border-bottom:1px solid var(--color-border-default)">
+      <input type="checkbox" defaultChecked="true" aria-label="Select #11840" style="width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-bg-accent)">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11840</span>
+          <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Council tax bill 2024-25</span>
+        </div>
+        <div style="margin-top:2px;font-size:12.5px;color:var(--color-fg-muted)">Hampshire County Council &middot; Bill</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span>
+          <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-bg-accent)">2 groups</a>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">2d 04h</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--color-border-default)">
+      <input type="checkbox" defaultChecked="true" aria-label="Select #11836" style="width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-bg-accent)">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11836</span>
+          <span style="font-weight:500">Scanned receipt</span>
+        </div>
+        <div style="margin-top:2px;font-size:12.5px;color:var(--color-fg-faint)">No correspondent</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-fail)">&#9679; MISSING</span>
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-fail)">NO TEXT</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">3d 11h</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--color-border-default)">
+      <input type="checkbox" aria-label="Select #11828" style="width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-bg-accent)">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11828</span>
+          <span style="font-weight:500">Energy statement August</span>
+        </div>
+        <div style="margin-top:2px;font-size:12.5px;color:var(--color-fg-muted)">Octopus Energy &middot; Statement</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span>
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">AI APPLIED</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">4d 02h</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--color-border-default)">
+      <input type="checkbox" aria-label="Select #11815" style="width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-bg-accent)">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11815</span>
+          <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Mortgage annual statement</span>
+        </div>
+        <div style="margin-top:2px;font-size:12.5px;color:var(--color-fg-muted)">Barclays &middot; Statement</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span>
+          <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-bg-accent)">1 group</a>
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-warn)">AI PENDING</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">6d 20h</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--color-border-default)">
+      <input type="checkbox" aria-label="Select #11803" style="width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-bg-accent)">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11803</span>
+          <span style="font-weight:500">MOT certificate</span>
+        </div>
+        <div style="margin-top:2px;font-size:12.5px;color:var(--color-fg-muted)">DVSA &middot; Certificate</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span>
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">AI APPLIED</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">8d 03h</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--color-border-default)">
+      <input type="checkbox" aria-label="Select #11794" style="width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-bg-accent)">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11794</span>
+          <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Home insurance schedule</span>
+        </div>
+        <div style="margin-top:2px;font-size:12.5px;color:var(--color-fg-muted)">Aviva &middot; Policy</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:12px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span>
+          <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-bg-accent)">3 groups</a>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">11d 09h</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div style="background:var(--color-bg-inverse);color:var(--color-fg-on-inverse);padding:10px 12px">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums">3 selected</span>
+      <span style="font-size:12.5px;opacity:0.8">Nothing is written back until you confirm.</span>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button type="button" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;border:1px solid rgba(255,255,255,0.28);border-radius:3px;background:transparent;color:inherit;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Send to AI</button>
+      <button type="button" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;border:1px solid var(--color-status-fail);border-radius:3px;background:var(--color-status-fail);color:var(--color-fg-on-accent);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Delete</button>
+      <button type="button" style="height:32px;padding:0 10px;border:0;background:transparent;color:inherit;opacity:0.75;font-family:inherit;font-size:12.5px;cursor:pointer">Clear</button>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

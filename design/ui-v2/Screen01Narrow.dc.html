@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+</helmet>
+<div style="display:flex;gap:32px;font-family:'Hanken Grotesk',system-ui,sans-serif">
+
+  <div style="width:420px;height:760px;display:flex;flex-direction:column;overflow:hidden;background:var(--color-bg-canvas);color:var(--color-fg-default);font-size:13.5px;line-height:1.45">
+    <header style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 12px">
+      <button type="button" aria-label="Open navigation" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--color-border-default);border-radius:3px;background:transparent;color:var(--color-fg-soft);cursor:pointer">
+        <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-list"></use></svg>
+      </button>
+      <h1 style="margin:0;font-size:15px;font-weight:600">Dashboard</h1>
+      <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">synced 4m</span>
+    </header>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+      <div style="padding:10px 12px;border-right:1px solid var(--color-border-default);border-bottom:1px solid var(--color-border-default)">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Groups</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">184</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">38 to review</div>
+      </div>
+      <div style="padding:10px 12px;border-bottom:1px solid var(--color-border-default)">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Documents</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">12,418</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">OCR 96.4%</div>
+      </div>
+      <div style="padding:10px 12px;border-right:1px solid var(--color-border-default)">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">AI review</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">37</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">12 low</div>
+      </div>
+      <div style="padding:10px 12px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Reclaimable</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">2.31 GB</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">614 docs</div>
+      </div>
+    </div>
+
+    <main style="flex:1;min-height:0;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:20px">
+      <section>
+        <h2 style="margin:0;font-size:15px;font-weight:600">Next actions</h2>
+        <p style="margin:2px 0 0;font-size:12.5px;color:var(--color-fg-muted)">Nothing here changes Paperless without your review.</p>
+        <div style="margin-top:10px;border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+          <div style="padding:10px 12px;border-bottom:1px solid var(--color-border-default)">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-warn)">&#9670; WARN</span>
+              <span style="font-weight:500">Review 38 duplicate groups</span>
+            </div>
+            <p style="margin:2px 0 8px;font-size:12.5px;color:var(--color-fg-muted)">12 groups are above 95%.</p>
+            <a href="#" style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--color-border-strong);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);text-decoration:none;font-size:12.5px;font-weight:500">Open duplicates</a>
+          </div>
+          <div style="padding:10px 12px">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-warn)">&#9670; WARN</span>
+              <span style="font-weight:500">Re-run analysis</span>
+            </div>
+            <p style="margin:2px 0 8px;font-size:12.5px;color:var(--color-fg-muted)">418 documents synced since the last analysis.</p>
+            <a href="#" style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--color-bg-accent);border-radius:3px;background:var(--color-bg-accent);color:var(--color-fg-on-accent);text-decoration:none;font-size:12.5px;font-weight:500">Run analysis</a>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 style="margin:0;font-size:15px;font-weight:600">Current activity</h2>
+        <div style="margin-top:10px;border:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 12px">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-bg-accent)">RUNNING</span>
+            <span style="font-weight:500">Analysis</span>
+            <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">41.2%</span>
+          </div>
+          <div style="margin-top:8px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden">
+            <div style="width:41.2%;height:100%;background:var(--color-bg-accent)"></div>
+          </div>
+          <div style="margin-top:6px;font-size:12.5px;color:var(--color-fg-muted)">Scoring candidate pairs, band 3 of 8</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div style="position:relative;width:420px;height:760px;overflow:hidden;background:var(--color-bg-canvas);color:var(--color-fg-default);font-size:13.5px;line-height:1.45">
+    <div style="position:absolute;inset:0;background:var(--color-bg-canvas);opacity:0.55"></div>
+    <header style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 12px;opacity:0.55">
+      <span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--color-border-default);border-radius:3px;color:var(--color-fg-soft)">
+        <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-list"></use></svg>
+      </span>
+      <h1 style="margin:0;font-size:15px;font-weight:600">Dashboard</h1>
+    </header>
+    <div style="position:absolute;inset:0;background:oklch(0.2 0.01 227 / 0.5)"></div>
+
+    <aside style="position:absolute;top:0;left:0;bottom:0;display:flex;flex-direction:column;width:240px;border-right:1px solid var(--color-border-default);background:var(--color-bg-surface);box-shadow:0 10px 30px oklch(0.2 0.01 227 / 0.35)">
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:12px 16px">
+        <svg width="20" height="20" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" role="img" aria-label="m7kni mark" style="flex:none;margin-top:1px;color:var(--color-bg-accent)"><rect x="9" y="25" width="38" height="38" rx="3"></rect><path d="M28 25V63M9 44H47"></path><rect x="49" y="7" width="14" height="14" rx="3"></rect></svg>
+        <span style="font-size:13.5px;font-weight:600;line-height:1.25">Paperless NGX Dedupe</span>
+        <button type="button" aria-label="Close navigation" style="margin-left:auto;display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;border:0;background:transparent;color:var(--color-fg-muted);cursor:pointer">
+          <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-x"></use></svg>
+        </button>
+      </div>
+      <nav style="display:flex;flex-direction:column;flex:1;padding:8px 0">
+        <div style="padding:0 16px 4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Views</div>
+        <a href="#" aria-current="page" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-left:2px solid var(--color-bg-accent);background:var(--color-bg-selected);color:var(--color-fg-default);text-decoration:none;font-size:13.5px">
+          <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-squares-four"></use></svg>Dashboard
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:13.5px">
+          <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-file-text"></use></svg>Documents
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">12418</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:13.5px">
+          <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-copy"></use></svg>Duplicates
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">184</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:13.5px">
+          <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-brain"></use></svg>AI Processing
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">37</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:13.5px">
+          <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-clock-counter-clockwise"></use></svg>Jobs
+          <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">2</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:13.5px">
+          <svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-gear-six"></use></svg>Settings
+        </a>
+      </nav>
+      <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-border-default);padding:10px 16px">
+        <div role="radiogroup" aria-label="Colour theme" style="display:flex;gap:2px;border:1px solid var(--color-border-default);border-radius:3px;padding:2px">
+          <button type="button" role="radio" aria-checked="true" aria-label="Light" style="display:flex;flex:1;align-items:center;justify-content:center;padding:6px 0;border:0;border-radius:2px;background:var(--color-bg-selected);color:var(--color-fg-default);cursor:pointer">
+            <svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-sun"></use></svg>
+          </button>
+          <button type="button" role="radio" aria-checked="false" aria-label="Dark" style="display:flex;flex:1;align-items:center;justify-content:center;padding:6px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer">
+            <svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-moon"></use></svg>
+          </button>
+          <button type="button" role="radio" aria-checked="false" aria-label="System" style="display:flex;flex:1;align-items:center;justify-content:center;padding:6px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer">
+            <svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-desktop"></use></svg>
+          </button>
+        </div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">synced 4m ago</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

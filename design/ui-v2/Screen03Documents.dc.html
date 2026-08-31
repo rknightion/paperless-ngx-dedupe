@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+</helmet>
+<div style="display:flex;height:900px;width:1440px;overflow:hidden;background:var(--color-bg-canvas);color:var(--color-fg-default);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13.5px;line-height:1.45">
+
+  <aside style="display:flex;flex-direction:column;width:200px;flex:none;border-right:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:12px 16px">
+      <svg width="20" height="20" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" role="img" aria-label="m7kni mark" style="flex:none;margin-top:1px;color:var(--color-bg-accent)"><rect x="9" y="25" width="38" height="38" rx="3"></rect><path d="M28 25V63M9 44H47"></path><rect x="49" y="7" width="14" height="14" rx="3"></rect></svg>
+      <span style="font-size:13.5px;font-weight:600;line-height:1.25">Paperless NGX Dedupe</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;flex:1;min-height:0;padding:8px 0">
+      <div style="padding:0 16px 4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Views</div>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-squares-four"></use></svg>Dashboard</a>
+      <a href="#" aria-current="page" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid var(--color-bg-accent);background:var(--color-bg-selected);color:var(--color-fg-default);text-decoration:none;font-size:12.5px"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-file-text"></use></svg>Documents<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">12418</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-copy"></use></svg>Duplicates<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">184</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-brain"></use></svg>AI Processing<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">37</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-clock-counter-clockwise"></use></svg>Jobs<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">2</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-gear-six"></use></svg>Settings</a>
+    </nav>
+    <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-border-default);padding:10px 16px">
+      <div role="radiogroup" aria-label="Colour theme" style="display:flex;gap:2px;border:1px solid var(--color-border-default);border-radius:3px;padding:2px">
+        <button type="button" role="radio" aria-checked="true" aria-label="Light" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:var(--color-bg-selected);color:var(--color-fg-default);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-sun"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="Dark" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-moon"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="System" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-desktop"></use></svg></button>
+      </div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">synced 4m ago</div>
+    </div>
+  </aside>
+
+  <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+    <header style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 24px">
+      <h1 style="margin:0;font-size:18px;font-weight:600">Document library</h1>
+      <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">12418 synced</span>
+      <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+        <a href="#" style="font-size:12.5px;color:var(--color-bg-accent)">Statistics</a>
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-border-strong);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:var(--color-bg-hover)"><svg width="14" height="14" fill="currentColor"><use href="#i-download-simple"></use></svg>Export CSV</button>
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-bg-accent);border-radius:3px;background:var(--color-bg-accent);color:var(--color-fg-on-accent);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:var(--color-accent-hover);border-color:var(--color-accent-hover)"><svg width="14" height="14" fill="currentColor"><use href="#i-arrows-clockwise"></use></svg>Sync</button>
+      </div>
+    </header>
+
+    <div style="display:flex;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+      <div style="flex:1;padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Documents</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">12,418</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">418 added this month</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--color-border-default);padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">OCR coverage</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">96.4%</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">447 without text</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--color-border-default);padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">In duplicate groups</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">1,204</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">9.7% of the library</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--color-border-default);padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Unclassified</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">862</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">no correspondent or type</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:8px 24px">
+      <div style="position:relative;width:260px">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);display:flex;color:var(--color-fg-faint)"><svg width="14" height="14" fill="currentColor"><use href="#i-magnifying-glass"></use></svg></span>
+        <input type="text" placeholder="Search titles and text&hellip;  /" style="width:100%;height:28px;padding:0 8px 0 28px;border:1px solid var(--color-border-default);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">
+      </div>
+      <div role="tablist" style="display:flex;border:1px solid var(--color-border-default);border-radius:3px;overflow:hidden">
+        <button type="button" role="tab" aria-selected="true" style="height:26px;padding:0 12px;border:0;background:var(--color-bg-selected);color:var(--color-fg-default);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer">All</button>
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer" style-hover="background:var(--color-bg-hover)">In duplicates</button>
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer" style-hover="background:var(--color-bg-hover)">AI pending</button>
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer" style-hover="background:var(--color-bg-hover)">Unclassified</button>
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer" style-hover="background:var(--color-bg-hover)">Issues</button>
+      </div>
+      <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 8px;border:1px solid var(--color-border-default);border-radius:3px;background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer" style-hover="background:var(--color-bg-hover);color:var(--color-fg-default)"><svg width="13" height="13" fill="currentColor"><use href="#i-funnel"></use></svg>Correspondent</button>
+      <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">248 documents &middot; newest first &middot; synced 4m ago</span>
+    </div>
+
+    <main style="flex:1;min-height:0;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+        <thead>
+          <tr>
+            <th style="position:sticky;top:0;z-index:1;width:36px;padding:6px 0 6px 24px;background:var(--color-bg-surface);border-bottom:1px solid var(--color-border-strong);text-align:left">
+              <input type="checkbox" aria-label="Select all rows" style="width:14px;height:14px;accent-color:var(--color-bg-accent)">
+            </th>
+            <th style="position:sticky;top:0;z-index:1;padding:6px 12px;background:var(--color-bg-surface);border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Document</th>
+            <th style="position:sticky;top:0;z-index:1;padding:6px 12px;background:var(--color-bg-surface);border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Classification</th>
+            <th style="position:sticky;top:0;z-index:1;width:120px;padding:6px 12px;background:var(--color-bg-surface);border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">OCR</th>
+            <th style="position:sticky;top:0;z-index:1;width:150px;padding:6px 12px;background:var(--color-bg-surface);border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Duplicate review</th>
+            <th style="position:sticky;top:0;z-index:1;width:132px;padding:6px 12px;background:var(--color-bg-surface);border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">AI review</th>
+            <th style="position:sticky;top:0;z-index:1;width:96px;padding:6px 24px 6px 12px;background:var(--color-bg-surface);border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Added</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr style="height:36px;background:var(--color-bg-selected);box-shadow:inset 2px 0 0 var(--color-bg-accent)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" defaultChecked="true" aria-label="Select Council tax bill 2024-25" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11842</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Council tax bill 2024-25</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">scan-0142.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Hampshire County Council <span style="color:var(--color-fg-faint)">Bill</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right">
+              <span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">
+                <span style="display:inline-block;width:52px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-selected));overflow:hidden"><span style="display:block;width:66%;height:100%;background:var(--color-status-warn)"></span></span>
+                <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-bg-accent)">2</a>
+              </span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-warn)">PENDING</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">2d 04h</td>
+          </tr>
+
+          <tr style="height:36px;background:var(--color-bg-selected);box-shadow:inset 2px 0 0 var(--color-bg-accent)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" defaultChecked="true" aria-label="Select Council tax bill 2024-25 copy" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11840</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Council tax bill 2024-25</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">council-tax-apr.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Hampshire County Council <span style="color:var(--color-fg-faint)">Bill</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right">
+              <span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">
+                <span style="display:inline-block;width:52px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-selected));overflow:hidden"><span style="display:block;width:66%;height:100%;background:var(--color-status-warn)"></span></span>
+                <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-bg-accent)">2</a>
+              </span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-faint)">-</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">2d 04h</td>
+          </tr>
+
+          <tr style="height:36px;background:var(--color-bg-selected);box-shadow:inset 2px 0 0 var(--color-bg-accent)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" defaultChecked="true" aria-label="Select Scanned receipt" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11836</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Scanned receipt</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">img_2291.jpg</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="color:var(--color-fg-faint)">No correspondent</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-fail)">&#9679; MISSING</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-fail)">NO TEXT</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">3d 11h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Energy statement" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11828</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Energy statement August</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">octopus-aug.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Octopus Energy <span style="color:var(--color-fg-faint)">Statement</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">APPLIED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">4d 02h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Mortgage annual statement" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11815</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Mortgage annual statement</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">barclays-2025.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Barclays <span style="color:var(--color-fg-faint)">Statement</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right">
+              <span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">
+                <span style="display:inline-block;width:52px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:33%;height:100%;background:var(--color-status-warn)"></span></span>
+                <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-bg-accent)">1</a>
+              </span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-warn)">PENDING</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">6d 20h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select MOT certificate" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11803</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">MOT certificate</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">mot-2025-08.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">DVSA <span style="color:var(--color-fg-faint)">Certificate</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">APPLIED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">8d 03h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Home insurance schedule" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11794</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Home insurance schedule</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">aviva-schedule.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Aviva <span style="color:var(--color-fg-faint)">Policy</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right">
+              <span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">
+                <span style="display:inline-block;width:52px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:100%;height:100%;background:var(--color-status-fail)"></span></span>
+                <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-bg-accent)">3</a>
+              </span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">APPLIED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">11d 09h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Payslip July 2025" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11781</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Payslip July 2025</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">payslip-07.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Grafana Labs <span style="color:var(--color-fg-faint)">Payslip</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-fail)">FAILED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">12d 14h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Broadband contract" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11770</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Broadband contract</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">vodafone-contract.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Vodafone <span style="color:var(--color-fg-faint)">Contract</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-faint)">UNPROCESSED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">14d 01h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Dental appointment letter" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11762</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Dental appointment letter</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">nhs-dental.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">NHS <span style="color:var(--color-fg-faint)">Letter</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">APPLIED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">15d 08h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Boiler service record" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11749</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Boiler service record</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">boiler-service.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="color:var(--color-fg-faint)">No correspondent</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-status-warn)">PENDING</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">18d 22h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Water bill Q2" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11733</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Water bill Q2</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">southern-water-q2.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">Southern Water <span style="color:var(--color-fg-faint)">Bill</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right">
+              <span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">
+                <span style="display:inline-block;width:52px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:33%;height:100%;background:var(--color-status-warn)"></span></span>
+                <a href="#" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-bg-accent)">1</a>
+              </span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">APPLIED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">21d 05h</td>
+          </tr>
+
+          <tr style="height:36px" style-hover="background:var(--color-bg-hover)">
+            <td style="padding:0 0 0 24px"><input type="checkbox" aria-label="Select Tax return confirmation" style="width:14px;height:14px;accent-color:var(--color-bg-accent)"></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11720</span>
+              <a href="#" style="margin-left:8px;font-weight:500;color:var(--color-fg-default);text-decoration:none" style-hover="color:var(--color-bg-accent)">Tax return confirmation</a>
+              <span style="margin-left:6px;color:var(--color-fg-faint);font-size:12.5px">hmrc-sa302.pdf</span>
+            </td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)">HMRC <span style="color:var(--color-fg-faint)">Letter</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok)">&#9632; PRESENT</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0</span></td>
+            <td style="padding:0 12px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">APPLIED</span></td>
+            <td style="padding:0 24px 0 12px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">24d 16h</td>
+          </tr>
+
+        </tbody>
+      </table>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">
+        <span>Showing 1-50 of 248</span>
+        <span style="display:flex;gap:8px">
+          <button type="button" disabled style="display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 8px;border:1px solid var(--color-border-default);border-radius:3px;background:transparent;color:var(--color-fg-faint);font-family:inherit;font-size:11px;cursor:not-allowed"><svg width="12" height="12" fill="currentColor"><use href="#i-caret-left"></use></svg>Previous</button>
+          <button type="button" style="display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 8px;border:1px solid var(--color-border-strong);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:inherit;font-size:11px;cursor:pointer" style-hover="background:var(--color-bg-hover)">Next<svg width="12" height="12" fill="currentColor"><use href="#i-caret-right"></use></svg></button>
+        </span>
+      </div>
+    </main>
+
+    <div style="display:flex;align-items:center;gap:16px;background:var(--color-bg-inverse);color:var(--color-fg-on-inverse);padding:10px 24px">
+      <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums">3 documents selected</span>
+      <span style="font-size:12.5px;opacity:0.8">Bulk actions read from Paperless only. Nothing is written back until you confirm.</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid rgba(255,255,255,0.28);border-radius:3px;background:transparent;color:inherit;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:rgba(255,255,255,0.1)"><svg width="14" height="14" fill="currentColor"><use href="#i-brain"></use></svg>Send to AI</button>
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid rgba(255,255,255,0.28);border-radius:3px;background:transparent;color:inherit;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:rgba(255,255,255,0.1)"><svg width="14" height="14" fill="currentColor"><use href="#i-copy"></use></svg>Open duplicate review</button>
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-status-fail);border-radius:3px;background:var(--color-status-fail);color:var(--color-fg-on-accent);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-trash"></use></svg>Delete in Paperless</button>
+        <button type="button" style="height:28px;padding:0 6px;border:0;background:transparent;color:inherit;opacity:0.75;font-family:inherit;font-size:12.5px;cursor:pointer">Clear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

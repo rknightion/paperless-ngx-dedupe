@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+</helmet>
+<div style="display:flex;height:900px;width:1440px;overflow:hidden;background:var(--color-bg-canvas);color:var(--color-fg-default);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13.5px;line-height:1.45">
+
+  <aside style="display:flex;flex-direction:column;width:200px;flex:none;border-right:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:12px 16px">
+      <svg width="20" height="20" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" role="img" aria-label="m7kni mark" style="flex:none;margin-top:1px;color:var(--color-bg-accent)"><rect x="9" y="25" width="38" height="38" rx="3"></rect><path d="M28 25V63M9 44H47"></path><rect x="49" y="7" width="14" height="14" rx="3"></rect></svg>
+      <span style="font-size:13.5px;font-weight:600;line-height:1.25">Paperless NGX Dedupe</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;flex:1;min-height:0;padding:8px 0">
+      <div style="padding:0 16px 4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Views</div>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-squares-four"></use></svg>Dashboard</a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-file-text"></use></svg>Documents<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">12418</span></a>
+      <a href="#" aria-current="page" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid var(--color-bg-accent);background:var(--color-bg-selected);color:var(--color-fg-default);text-decoration:none;font-size:12.5px"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-copy"></use></svg>Duplicates<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">184</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-brain"></use></svg>AI Processing<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">37</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-clock-counter-clockwise"></use></svg>Jobs<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">2</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-gear-six"></use></svg>Settings</a>
+    </nav>
+    <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-border-default);padding:10px 16px">
+      <div role="radiogroup" aria-label="Colour theme" style="display:flex;gap:2px;border:1px solid var(--color-border-default);border-radius:3px;padding:2px">
+        <button type="button" role="radio" aria-checked="true" aria-label="Light" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:var(--color-bg-selected);color:var(--color-fg-default);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-sun"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="Dark" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-moon"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="System" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-desktop"></use></svg></button>
+      </div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">synced 4m ago</div>
+    </div>
+  </aside>
+
+  <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+    <header style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 24px">
+      <h1 style="margin:0;font-size:18px;font-weight:600">Similarity graph</h1>
+      <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">duplicates / graph</span>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+        <a href="#" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-border-strong);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);text-decoration:none;font-size:12.5px;font-weight:500" style-hover="background:var(--color-bg-hover)"><svg width="14" height="14" fill="currentColor"><use href="#i-list"></use></svg>Back to list</a>
+        <a href="#" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-bg-accent);border-radius:3px;background:var(--color-bg-accent);color:var(--color-fg-on-accent);text-decoration:none;font-size:12.5px;font-weight:500" style-hover="background:var(--color-accent-hover)"><svg width="14" height="14" fill="currentColor"><use href="#i-magic-wand"></use></svg>Open wizard</a>
+      </div>
+    </header>
+
+    <div style="display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:8px 24px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--color-fg-soft)">Min confidence
+        <input type="number" defaultValue="75" style="width:64px;height:28px;padding:0 8px;border:1px solid var(--color-border-default);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--color-fg-soft)">Max groups
+        <select defaultValue="100" style="height:28px;padding:0 6px;border:1px solid var(--color-border-default);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">
+          <option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option>
+        </select>
+      </label>
+      <div role="tablist" style="display:flex;border:1px solid var(--color-border-default);border-radius:3px;overflow:hidden">
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer">All</button>
+        <button type="button" role="tab" aria-selected="true" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:var(--color-bg-selected);color:var(--color-fg-default);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer">Pending</button>
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer">False positive</button>
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer">Ignored</button>
+        <button type="button" role="tab" aria-selected="false" style="height:26px;padding:0 12px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;cursor:pointer">Deleted</button>
+      </div>
+      <span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">38 of 184 groups &middot; 41 documents &middot; 44 connections</span>
+    </div>
+
+    <main style="flex:1;min-height:0;display:flex">
+      <div style="position:relative;flex:1;min-width:0;background:var(--color-bg-canvas)">
+        <div data-graph="1" style="position:absolute;inset:0"></div>
+        <div style="position:absolute;left:16px;bottom:16px;border:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 14px">
+          <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Legend</div>
+          <div style="margin-top:8px;display:flex;gap:32px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="font-size:11.5px;color:var(--color-fg-muted)">Connection status</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="oklch(0.44 0.095 233)" stroke-width="2"></line></svg>Pending, solid</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--color-status-ok)" stroke-width="2"></line></svg>Deleted, solid</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--color-fg-muted)" stroke-width="2" stroke-dasharray="5 3"></line></svg>False positive, dashed</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--color-fg-muted)" stroke-width="2" stroke-dasharray="1.5 3"></line></svg>Ignored, dotted</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="font-size:11.5px;color:var(--color-fg-muted)">Reading the shapes</div>
+              <div style="font-size:12.5px">Node size is how many groups a document appears in</div>
+              <div style="font-size:12.5px">Node colour groups by correspondent</div>
+              <div style="font-size:12.5px">Line thickness is confidence</div>
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">drag to pan &middot; scroll to zoom</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside style="width:320px;flex:none;border-left:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:16px;display:flex;flex-direction:column;gap:16px">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <h2 style="margin:0;font-size:15px;font-weight:600">Connection</h2>
+            <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">selected</span>
+            <button type="button" aria-label="Close panel" style="margin-left:auto;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-x"></use></svg></button>
+          </div>
+          <div style="margin-top:10px;display:flex;align-items:baseline;gap:10px">
+            <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:18px;font-weight:600;color:var(--color-status-ok)">&#9632; HIGH</span>
+            <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums">97.4%</span>
+          </div>
+          <dl style="margin:12px 0 0;display:grid;grid-template-columns:88px 1fr;gap:0 12px;font-size:12.5px">
+            <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Group</dt>
+            <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">grp_7f19c4a2</dd>
+            <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Status</dt>
+            <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">&#9671; PENDING</dd>
+            <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">From</dt>
+            <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">Council tax bill 2024-25 <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">#11842</span></dd>
+            <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">To</dt>
+            <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">Council tax bill 2024-25 <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">#11840</span></dd>
+            <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Correspondent</dt>
+            <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">Hampshire County Council</dd>
+          </dl>
+          <a href="#" style="margin-top:12px;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-bg-accent);border-radius:3px;background:var(--color-bg-accent);color:var(--color-fg-on-accent);text-decoration:none;font-size:12.5px;font-weight:500">Review this group</a>
+        </div>
+
+        <div style="border-top:1px solid var(--color-border-default);padding-top:16px">
+          <h2 style="margin:0;font-size:15px;font-weight:600">Densest clusters</h2>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--color-fg-muted)">Documents appearing in the most groups.</p>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12.5px">
+              <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Home insurance schedule</span>
+              <span style="display:inline-block;width:44px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:100%;height:100%;background:var(--color-status-fail)"></span></span>
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-fail)">4</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12.5px">
+              <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Council tax bill 2024-25</span>
+              <span style="display:inline-block;width:44px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:50%;height:100%;background:var(--color-status-warn)"></span></span>
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">2</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12.5px">
+              <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Water bill Q2</span>
+              <span style="display:inline-block;width:44px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:25%;height:100%;background:var(--color-status-warn)"></span></span>
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">1</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this.charts = [];
+    const start = () => {
+      if (!window.echarts) return setTimeout(start, 120);
+      [...document.querySelectorAll('[data-graph]')].filter((el) => !el.dataset.ready).forEach((el) => {
+        el.dataset.ready = '1';
+        const dark = !!el.closest('[data-theme="dark"]');
+        const chart = window.echarts.init(el, null, { renderer: 'svg' });
+        chart.setOption(this.option(dark));
+        this.charts.push(chart);
+      });
+    };
+    start();
+  }
+
+  componentWillUnmount() {
+    (this.charts || []).forEach((c) => c.dispose());
+  }
+
+  option(dark) {
+    const series = dark
+      ? ['oklch(0.86 0.075 233)', 'oklch(0.82 0.09 281)', 'oklch(0.78 0.105 329)', 'oklch(0.74 0.11 17)', 'oklch(0.7 0.1 65)', 'oklch(0.66 0.09 161)']
+      : ['oklch(0.44 0.095 233)', 'oklch(0.48 0.115 281)', 'oklch(0.52 0.105 329)', 'oklch(0.56 0.115 17)', 'oklch(0.57 0.1 65)', 'oklch(0.6 0.095 161)'];
+    const ok = dark ? '#5fae7f' : '#2f7d4f';
+    const muted = dark ? 'oklch(0.7 0.015 227)' : 'oklch(0.5 0.018 227)';
+    const label = dark ? 'oklch(0.8 0.01 227)' : 'oklch(0.37 0.015 227)';
+
+    const groups = [
+      { c: 0, titles: ['Council tax bill 2024-25', 'Council tax bill 2024-25', 'Council tax 2024 (copy)'], status: 'pending', score: 0.974 },
+      { c: 1, titles: ['Energy statement August', 'Energy statement Aug'], status: 'pending', score: 0.912 },
+      { c: 1, titles: ['Energy statement July', 'Energy statement July (scan)'], status: 'deleted', score: 0.995 },
+      { c: 2, titles: ['Home insurance schedule', 'Home insurance schedule v2', 'Aviva schedule 2025', 'Aviva renewal'], status: 'pending', score: 0.883 },
+      { c: 3, titles: ['Mortgage annual statement', 'Mortgage statement 2025'], status: 'pending', score: 0.842 },
+      { c: 4, titles: ['Payslip July 2025', 'Payslip July'], status: 'false_positive', score: 0.771 },
+      { c: 5, titles: ['Water bill Q2', 'Water bill Q2 duplicate'], status: 'pending', score: 0.936 },
+      { c: 0, titles: ['Council tax reminder', 'Council tax reminder (2)'], status: 'ignored', score: 0.804 },
+      { c: 2, titles: ['Contents cover letter', 'Contents cover letter copy'], status: 'pending', score: 0.958 },
+      { c: 3, titles: ['Barclays fee change', 'Barclays fee change scan'], status: 'pending', score: 0.797 },
+    ];
+
+    const nodes = [];
+    const links = [];
+    let n = 0;
+    groups.forEach((g, gi) => {
+      const ids = g.titles.map((t) => {
+        const id = 'n' + n++;
+        nodes.push({
+          id,
+          name: t,
+          symbolSize: 10 + g.titles.length * 4,
+          itemStyle: { color: series[g.c % series.length], borderColor: dark ? '#0e161b' : '#ffffff', borderWidth: 1 },
+        });
+        return id;
+      });
+      for (let i = 1; i < ids.length; i += 1) {
+        links.push({
+          source: ids[0],
+          target: ids[i],
+          lineStyle: {
+            width: Math.max(1, g.score * 4),
+            opacity: 0.85,
+            color: g.status === 'deleted' ? ok : g.status === 'pending' ? series[0] : muted,
+            type: g.status === 'false_positive' ? 'dashed' : g.status === 'ignored' ? 'dotted' : 'solid',
+          },
+        });
+      }
+      if (gi === 0) nodes[0].symbolSize = 26;
+    });
+
+    return {
+      backgroundColor: 'transparent',
+      animationDuration: 400,
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: dark ? 'oklch(0.26 0.012 227)' : '#ffffff',
+        borderColor: dark ? 'oklch(0.31 0.012 227)' : 'oklch(0.9 0.008 227)',
+        textStyle: { color: label, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11 },
+      },
+      series: [{
+        type: 'graph',
+        layout: 'force',
+        roam: true,
+        draggable: true,
+        force: { repulsion: 190, edgeLength: [70, 190], gravity: 0.09 },
+        emphasis: { focus: 'adjacency', lineStyle: { width: 4 } },
+        label: {
+          show: true,
+          position: 'right',
+          color: label,
+          fontFamily: 'Hanken Grotesk, system-ui, sans-serif',
+          fontSize: 11,
+          formatter: (p) => (p.data.name.length > 28 ? p.data.name.slice(0, 26) + '\u2026' : p.data.name),
+        },
+        data: nodes,
+        links,
+      }],
+    };
+  }
+}
+</script>
+</body>
+</html>

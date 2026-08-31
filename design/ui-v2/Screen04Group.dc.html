@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+</helmet>
+<div style="display:flex;height:1280px;width:1440px;overflow:hidden;background:var(--color-bg-canvas);color:var(--color-fg-default);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13.5px;line-height:1.45">
+
+  <aside style="display:flex;flex-direction:column;width:200px;flex:none;border-right:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:12px 16px">
+      <svg width="20" height="20" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" role="img" aria-label="m7kni mark" style="flex:none;margin-top:1px;color:var(--color-bg-accent)"><rect x="9" y="25" width="38" height="38" rx="3"></rect><path d="M28 25V63M9 44H47"></path><rect x="49" y="7" width="14" height="14" rx="3"></rect></svg>
+      <span style="font-size:13.5px;font-weight:600;line-height:1.25">Paperless NGX Dedupe</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;flex:1;min-height:0;padding:8px 0">
+      <div style="padding:0 16px 4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Views</div>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-squares-four"></use></svg>Dashboard</a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-file-text"></use></svg>Documents<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">12418</span></a>
+      <a href="#" aria-current="page" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid var(--color-bg-accent);background:var(--color-bg-selected);color:var(--color-fg-default);text-decoration:none;font-size:12.5px"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-copy"></use></svg>Duplicates<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">184</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-brain"></use></svg>AI Processing<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">37</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-clock-counter-clockwise"></use></svg>Jobs<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">2</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-left:2px solid transparent;color:var(--color-fg-soft);text-decoration:none;font-size:12.5px" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-gear-six"></use></svg>Settings</a>
+    </nav>
+    <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-border-default);padding:10px 16px">
+      <div role="radiogroup" aria-label="Colour theme" style="display:flex;gap:2px;border:1px solid var(--color-border-default);border-radius:3px;padding:2px">
+        <button type="button" role="radio" aria-checked="true" aria-label="Light" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:var(--color-bg-selected);color:var(--color-fg-default);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-sun"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="Dark" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-moon"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="System" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-desktop"></use></svg></button>
+      </div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">synced 4m ago</div>
+    </div>
+  </aside>
+
+  <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+    <header style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 24px">
+      <a href="#" aria-label="Back to duplicates" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;flex:none;border:1px solid var(--color-border-default);border-radius:3px;color:var(--color-fg-soft);text-decoration:none" style-hover="background:var(--color-bg-hover);color:var(--color-fg-default)"><svg width="14" height="14" fill="currentColor"><use href="#i-arrow-left"></use></svg></a>
+      <h1 style="margin:0;font-size:18px;font-weight:600">Council tax bill 2024-25</h1>
+      <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">grp_7f19c4a2 &middot; algo v4 &middot; 3 members</span>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-border-default);border-radius:3px;background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:var(--color-bg-hover);color:var(--color-fg-default)"><svg width="14" height="14" fill="currentColor"><use href="#i-x-circle"></use></svg>Not duplicates</button>
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-border-strong);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:var(--color-bg-hover)"><svg width="14" height="14" fill="currentColor"><use href="#i-check-circle"></use></svg>Keep all</button>
+        <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-status-fail);border-radius:3px;background:var(--color-status-fail);color:var(--color-fg-on-accent);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer"><svg width="14" height="14" fill="currentColor"><use href="#i-trash"></use></svg>Delete 2 non-primary</button>
+      </div>
+    </header>
+
+    <div style="display:flex;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+      <div style="flex:1.4;padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Confidence</div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; HIGH</span>
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">97.4%</span>
+        </div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">&#9632; HIGH &ge; 90 &middot; &#9670; MEDIUM 75-90 &middot; &#9679; LOW &lt; 75</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--color-border-default);padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Status</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:24px;font-weight:600;color:var(--color-fg-soft)">&#9671; PENDING</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">created 2d 04h ago</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--color-border-default);padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Reclaimable</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">4.18 MB</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">2 non-primary documents</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--color-border-default);padding:12px 24px">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Text overlap</div>
+        <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">1,942 / 1,988</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">words shared with the primary</div>
+      </div>
+    </div>
+
+    <main style="flex:1;min-height:0;overflow-y:auto;padding:20px 24px 32px;display:flex;flex-direction:column;gap:24px">
+
+      <section>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <h2 style="margin:0;font-size:15px;font-weight:600">Why the score is 97.4%</h2>
+          <span style="font-size:12.5px;color:var(--color-fg-muted)">Weighted from three measures. A component with no value reads N/A rather than zero.</span>
+        </div>
+        <div style="margin-top:12px;border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+          <div style="display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--color-border-default)">
+            <span style="width:230px;flex:none;font-size:12.5px">Jaccard on 5-gram shingles <span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-fg-muted)">60%</span></span>
+            <span style="flex:1;height:6px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:96.4%;height:100%;background:var(--color-status-ok)"></span></span>
+            <span style="width:120px;flex:none;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 96.4%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--color-border-default)">
+            <span style="width:230px;flex:none;font-size:12.5px">Fuzzy text ratio <span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-fg-muted)">40%</span></span>
+            <span style="flex:1;height:6px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:98.1%;height:100%;background:var(--color-status-ok)"></span></span>
+            <span style="width:120px;flex:none;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 98.1%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--color-border-default)">
+            <span style="width:230px;flex:none;font-size:12.5px">Discriminative score <span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-fg-muted)">penalty 35%</span></span>
+            <span style="flex:1;height:6px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:92%;height:100%;background:var(--color-status-ok)"></span></span>
+            <span style="width:120px;flex:none;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 92.0%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--color-bg-canvas)">
+            <span style="width:230px;flex:none;font-size:12.5px;font-weight:500">Weighted result</span>
+            <span style="flex:1;height:6px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-canvas));overflow:hidden"><span style="display:block;width:97.4%;height:100%;background:var(--color-status-ok)"></span></span>
+            <span style="width:120px;flex:none;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; HIGH 97.4%</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <h2 style="margin:0;font-size:15px;font-weight:600">Side by side</h2>
+          <span style="font-size:12.5px;color:var(--color-fg-muted)">Values that differ are marked with &#8800;. Check them before deleting anything.</span>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">compare with</span>
+            <div style="display:flex;border:1px solid var(--color-border-default);border-radius:3px;overflow:hidden">
+              <button type="button" aria-pressed="true" style="height:26px;padding:0 10px;border:0;background:var(--color-bg-selected);color:var(--color-fg-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;cursor:pointer">#11840</button>
+              <button type="button" aria-pressed="false" style="height:26px;padding:0 10px;border:0;border-left:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;cursor:pointer" style-hover="background:var(--color-bg-hover)">#11402</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+          <article style="border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-on-accent);background:var(--color-bg-accent);padding:2px 6px">Primary</span>
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11842</span>
+              <a href="#" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--color-bg-accent);text-decoration:none">Open in Paperless<svg width="13" height="13" fill="currentColor"><use href="#i-arrow-square-out"></use></svg></a>
+            </div>
+            <div style="padding:12px 16px">
+              <div style="font-weight:500;font-size:15px">Council tax bill 2024-25</div>
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">scan-0142.pdf &middot; 2.10 MB &middot; 2 pages</div>
+              <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;height:150px;border:1px solid var(--color-border-default);background:var(--color-bg-canvas);color:var(--color-fg-faint)">
+                <span style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <svg width="22" height="22" fill="currentColor"><use href="#i-file-text"></use></svg>
+                  <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">page 1 of 2</span>
+                </span>
+              </div>
+              <dl style="margin:12px 0 0;display:grid;grid-template-columns:112px 1fr;gap:0 12px;font-size:12.5px">
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Correspondent</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">Hampshire County Council</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Type</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">Bill</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Tags</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">council, 2024, direct-debit</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Created</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">2024-04-02</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Added</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">2025-08-29 09:14</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Words</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums">1,988</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Checksum</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)">a41c9e02&hellip;7bd1</dd>
+              </dl>
+            </div>
+          </article>
+
+          <article style="border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--color-border-default)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-soft);border:1px solid var(--color-border-strong);padding:1px 5px">Duplicate</span>
+              <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11840</span>
+              <a href="#" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--color-bg-accent);text-decoration:none">Open in Paperless<svg width="13" height="13" fill="currentColor"><use href="#i-arrow-square-out"></use></svg></a>
+            </div>
+            <div style="padding:12px 16px">
+              <div style="font-weight:500;font-size:15px">Council tax bill 2024-25</div>
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">council-tax-apr.pdf &middot; 2.08 MB &middot; 2 pages</div>
+              <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;height:150px;border:1px solid var(--color-border-default);background:var(--color-bg-canvas);color:var(--color-fg-faint)">
+                <span style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <svg width="22" height="22" fill="currentColor"><use href="#i-file-text"></use></svg>
+                  <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">page 1 of 2</span>
+                </span>
+              </div>
+              <dl style="margin:12px 0 0;display:grid;grid-template-columns:112px 1fr;gap:0 12px;font-size:12.5px">
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Correspondent</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">Hampshire County Council</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Type</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)">Bill</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Tags</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-status-warn)">&#8800;</span> council, 2024</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Created</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">2024-04-02</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Added</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-status-warn)">&#8800;</span> 2025-08-29 09:11</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Words</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-status-warn)">&#8800;</span> 1,942</dd>
+                <dt style="padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-fg-muted)">Checksum</dt>
+                <dd style="margin:0;padding:5px 0;border-top:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-soft)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--color-status-warn)">&#8800;</span> 6b8d1f77&hellip;03ae</dd>
+              </dl>
+              <div style="margin-top:12px;display:flex;gap:8px">
+                <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-border-strong);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:var(--color-bg-hover)"><svg width="14" height="14" fill="currentColor"><use href="#i-check-circle"></use></svg>Make this the primary</button>
+                <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--color-border-default);border-radius:3px;background:transparent;color:var(--color-fg-soft);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:var(--color-bg-hover);color:var(--color-fg-default)"><svg width="14" height="14" fill="currentColor"><use href="#i-user-minus"></use></svg>Remove from group</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <h2 style="margin:0;font-size:15px;font-weight:600">Why these matched</h2>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--color-fg-muted)">Structured values found in both documents. They support the match but do not prove it.</p>
+          <div style="margin-top:12px;border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+            <div style="padding:10px 16px;border-bottom:1px solid var(--color-border-default)">
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Account number</div>
+              <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:6px"><span style="border:1px solid var(--color-border-default);background:var(--color-bg-canvas);padding:2px 6px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">8041 2266 9</span></div>
+            </div>
+            <div style="padding:10px 16px;border-bottom:1px solid var(--color-border-default)">
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Amounts</div>
+              <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:6px">
+                <span style="border:1px solid var(--color-border-default);background:var(--color-bg-canvas);padding:2px 6px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">&pound;1,842.60</span>
+                <span style="border:1px solid var(--color-border-default);background:var(--color-bg-canvas);padding:2px 6px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">&pound;153.55</span>
+              </div>
+            </div>
+            <div style="padding:10px 16px">
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Dates</div>
+              <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:6px">
+                <span style="border:1px solid var(--color-border-default);background:var(--color-bg-canvas);padding:2px 6px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">2024-04-01</span>
+                <span style="border:1px solid var(--color-border-default);background:var(--color-bg-canvas);padding:2px 6px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px">2025-03-31</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 style="margin:0;font-size:15px;font-weight:600">Text differences</h2>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--color-fg-muted)">46 of 1,988 words differ. Removed lines are marked -, added lines +.</p>
+          <div style="margin-top:12px;border:1px solid var(--color-border-default);background:var(--color-bg-surface);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;line-height:1.7">
+            <div style="padding:4px 16px;color:var(--color-fg-muted)">&nbsp; Hampshire County Council</div>
+            <div style="padding:4px 16px;color:var(--color-fg-muted)">&nbsp; Council tax demand notice 2024/25</div>
+            <div style="padding:4px 16px;background:color-mix(in oklab, var(--color-status-fail) 12%, var(--color-bg-surface));color:var(--color-fg-default)">- Issued 02 April 2024 &nbsp;ref 8041-2266-9/A</div>
+            <div style="padding:4px 16px;background:color-mix(in oklab, var(--color-status-ok) 12%, var(--color-bg-surface));color:var(--color-fg-default)">+ Issued 02 April 2024 &nbsp;ref 8041-2266-9/B</div>
+            <div style="padding:4px 16px;color:var(--color-fg-muted)">&nbsp; Total for the year &pound;1,842.60</div>
+            <div style="padding:4px 16px;background:color-mix(in oklab, var(--color-status-fail) 12%, var(--color-bg-surface));color:var(--color-fg-default)">- Scanned by ScanSnap iX1600</div>
+            <div style="padding:4px 16px;color:var(--color-fg-muted)">&nbsp; Instalment 1 &pound;153.55 due 01 May 2024</div>
+            <div style="padding:6px 16px;border-top:1px solid var(--color-border-default);color:var(--color-fg-muted)">
+              <a href="#" style="color:var(--color-bg-accent);text-decoration:none">Show the full diff</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 style="margin:0;font-size:15px;font-weight:600">Members</h2>
+        <p style="margin:2px 0 0;font-size:12.5px;color:var(--color-fg-muted)">Three documents in this group. The primary is kept; the others are what a delete would remove.</p>
+        <table style="margin-top:12px;width:100%;border-collapse:collapse;border:1px solid var(--color-border-default);background:var(--color-bg-surface);font-size:13.5px">
+          <thead>
+            <tr>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Document</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Correspondent</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Similarity to primary</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Role</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="height:36px">
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11842</span> <span style="margin-left:8px;font-weight:500">Council tax bill 2024-25</span></td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default)">Hampshire County Council</td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-faint)">-</td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-on-accent);background:var(--color-bg-accent);padding:2px 6px">Primary</span></td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">2.10 MB</td>
+            </tr>
+            <tr style="height:36px">
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default)"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11840</span> <span style="margin-left:8px;font-weight:500">Council tax bill 2024-25</span></td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default)">Hampshire County Council</td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right"><span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end"><span style="display:inline-block;width:60px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:97.4%;height:100%;background:var(--color-status-ok)"></span></span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 97.4%</span></span></td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">comparing</td>
+              <td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">2.08 MB</td>
+            </tr>
+            <tr style="height:36px">
+              <td style="padding:0 16px">
+                <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--color-fg-muted)">#11402</span> <span style="margin-left:8px;font-weight:500">Council tax 2024 (copy)</span></td>
+              <td style="padding:0 16px">Hampshire County Council</td>
+              <td style="padding:0 16px;text-align:right"><span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end"><span style="display:inline-block;width:60px;height:4px;background:color-mix(in oklab, var(--color-fg-default) 14%, var(--color-bg-surface));overflow:hidden"><span style="display:block;width:82%;height:100%;background:var(--color-status-warn)"></span></span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">&#9670; 82.0%</span></span></td>
+              <td style="padding:0 16px"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:var(--color-fg-muted)">&nbsp;</span></td>
+              <td style="padding:0 16px;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">2.10 MB</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

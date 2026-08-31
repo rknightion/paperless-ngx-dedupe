@@ -1,0 +1,169 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "cards/**",
+              "components/**",
+              "components/blocks/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Hanken Grotesk|JetBrains Mono))/i]",
+        "message": "Font not provided by the design system. Available: Hanken Grotesk, JetBrains Mono."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {},
+    "tokens": [
+      "--color-accent-hover",
+      "--color-bg-accent",
+      "--color-bg-accent-soft",
+      "--color-bg-canvas",
+      "--color-bg-hover",
+      "--color-bg-inverse",
+      "--color-bg-raised",
+      "--color-bg-selected",
+      "--color-bg-surface",
+      "--color-bg-track",
+      "--color-border-default",
+      "--color-border-strong",
+      "--color-fg-default",
+      "--color-fg-faint",
+      "--color-fg-muted",
+      "--color-fg-on-accent",
+      "--color-fg-on-inverse",
+      "--color-fg-soft",
+      "--color-status-fail",
+      "--color-status-ok",
+      "--color-status-warn",
+      "--duration-base",
+      "--duration-fast",
+      "--duration-slow",
+      "--font-family-mono",
+      "--font-family-sans",
+      "--font-size-2xl",
+      "--font-size-2xs",
+      "--font-size-lg",
+      "--font-size-md",
+      "--font-size-sm",
+      "--font-size-xl",
+      "--font-size-xs",
+      "--font-weight-bold",
+      "--font-weight-medium",
+      "--font-weight-regular",
+      "--font-weight-semibold",
+      "--radius-container",
+      "--radius-control",
+      "--radius-full",
+      "--radius-overlay",
+      "--row-table",
+      "--space-1",
+      "--space-12",
+      "--space-16",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-8",
+      "--tracking-label"
+    ],
+    "tokenKinds": {
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-8": "spacing",
+      "--space-12": "spacing",
+      "--space-16": "spacing",
+      "--radius-control": "radius",
+      "--radius-container": "radius",
+      "--radius-overlay": "radius",
+      "--radius-full": "radius",
+      "--row-table": "spacing",
+      "--font-family-sans": "font",
+      "--font-family-mono": "font",
+      "--font-size-2xs": "font",
+      "--font-size-xs": "font",
+      "--font-size-sm": "font",
+      "--font-size-md": "font",
+      "--font-size-lg": "font",
+      "--font-size-xl": "font",
+      "--font-size-2xl": "font",
+      "--font-weight-regular": "font",
+      "--font-weight-medium": "font",
+      "--font-weight-semibold": "font",
+      "--font-weight-bold": "font",
+      "--duration-fast": "other",
+      "--duration-base": "other",
+      "--duration-slow": "other",
+      "--tracking-label": "font",
+      "--color-bg-canvas": "color",
+      "--color-bg-surface": "color",
+      "--color-bg-raised": "color",
+      "--color-bg-hover": "color",
+      "--color-bg-selected": "color",
+      "--color-bg-track": "color",
+      "--color-bg-inverse": "color",
+      "--color-bg-accent": "color",
+      "--color-bg-accent-soft": "color",
+      "--color-fg-default": "color",
+      "--color-fg-soft": "color",
+      "--color-fg-muted": "color",
+      "--color-fg-faint": "color",
+      "--color-fg-on-accent": "color",
+      "--color-fg-on-inverse": "color",
+      "--color-border-default": "color",
+      "--color-border-strong": "color",
+      "--color-status-ok": "color",
+      "--color-status-warn": "color",
+      "--color-status-fail": "color",
+      "--color-accent-hover": "color"
+    },
+    "fontFamilies": [
+      "Hanken Grotesk",
+      "JetBrains Mono"
+    ]
+  }
+}

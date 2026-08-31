@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>
+  *,*::before,*::after { box-sizing: border-box; }
+  body { margin: 0; background: #e7e8ea; }
+  a { color: #1d6a8a; }
+  a:hover { color: #175874; }
+</style>
+</helmet>
+<div style="padding:56px;width:max-content;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#1b1e21">
+  <header style="max-width:860px;margin-bottom:40px">
+    <div style="font-family:JetBrains Mono,ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Archetype 09</div>
+    <h1 style="margin:6px 0 0;font-size:24px;font-weight:600;letter-spacing:-0.01em">AI review queue</h1>
+    <p style="margin:8px 0 0;font-size:13.5px;line-height:1.5;color:#4a4f54;text-wrap:pretty">The human-in-the-loop screen. Every row is a proposed change to a document in Paperless, so the current value and the suggestion sit in the same cell with the old value struck through and the new value in ink, and per-field confidence uses the same shape-plus-word band as duplicate confidence.</p>
+    <p style="margin:8px 0 0;font-size:13.5px;line-height:1.5;color:#4a4f54;text-wrap:pretty">Approve and reject are per row and per selection; both are reversible from history, and the bulk bar says so. The detail panel breaks a single result into fields with checkboxes, so a partial apply is a normal outcome rather than an all-or-nothing choice.</p>
+  </header>
+
+  <section data-screen-label="09 ai review" style="">
+    <div style="display:flex;gap:40px">
+      <figure style="margin:0">
+        <figcaption style="margin-bottom:10px;font-family:JetBrains Mono,ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Light &middot; 1440 &times; 900 &middot; 3 results selected</figcaption>
+        <div style="border:1px solid #c8cacd;box-shadow:0 2px 10px rgba(20,24,28,0.08)"><dc-import name="Screen09Review" hint-size="1440px,900px"></dc-import></div>
+      </figure>
+      <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+        <figure data-theme="dark" style="margin:0">
+          <figcaption style="margin-bottom:10px;font-family:JetBrains Mono,ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Dark &middot; 1440 &times; 900 &middot; 3 results selected</figcaption>
+          <div style="border:1px solid #33383d;box-shadow:0 2px 10px rgba(20,24,28,0.18)"><dc-import name="Screen09Review" hint-size="1440px,900px"></dc-import></div>
+        </figure>
+      </sc-if>
+    </div>
+  </section>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showDark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Board&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { showDark: this.props.showDark ?? true };
+  }
+}
+</script>
+</body>
+</html>

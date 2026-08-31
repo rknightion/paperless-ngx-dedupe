@@ -1,0 +1,4 @@
+/* @m7kni/ui — design system entry.
+ * Imports the full token + font closure. Consumers link this one file. */
+@import "./tokens/tokens.css";
+@import "./styles/fonts.css";

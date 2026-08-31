@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+<style>
+  body { margin: 0; background: #e7e8ea; }
+  a { color: #1d6a8a; }
+  a:hover { color: #175874; }
+</style>
+</helmet>
+<div style="padding:56px;width:max-content;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#1b1e21">
+  <header style="max-width:820px;margin-bottom:40px">
+    <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Archetype 03</div>
+    <h1 style="margin:6px 0 0;font-size:24px;font-weight:600;letter-spacing:-0.01em">Documents list</h1>
+    <p style="margin:8px 0 0;font-size:13.5px;line-height:1.5;color:#4a4f54;text-wrap:pretty">The list-page archetype: stat strip, filter row, then a 36px-row table that is the only scrolling region. Columns are the ones the app already has. Paperless ids and filenames are mono, the duplicate count carries an inline meter whose track derives from ink so it survives hover and selection, OCR is the row's one shape-plus-word status, and selection shows an accent inset edge with the bulk bar pinned to the bottom edge.</p>
+  </header>
+
+  <section data-screen-label="03 documents" style="display:flex;gap:40px;margin-bottom:48px">
+    <figure style="margin:0">
+      <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Light &middot; 1440 &times; 900 &middot; 3 rows selected</figcaption>
+      <div style="border:1px solid #c8cacd;box-shadow:0 2px 10px rgba(20,24,28,0.08)"><dc-import name="Screen03Documents" hint-size="1440px,900px"></dc-import></div>
+    </figure>
+    <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+      <figure data-theme="dark" style="margin:0">
+        <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Dark &middot; 1440 &times; 900 &middot; 3 rows selected</figcaption>
+        <div style="border:1px solid #33383d;box-shadow:0 2px 10px rgba(20,24,28,0.18)"><dc-import name="Screen03Documents" hint-size="1440px,900px"></dc-import></div>
+      </figure>
+    </sc-if>
+  </section>
+
+  <section data-screen-label="03 empty" style="margin-bottom:48px">
+    <h2 style="margin:0 0 6px;font-size:18px;font-weight:600">Empty result</h2>
+    <p style="margin:0 0 24px;max-width:820px;font-size:13.5px;line-height:1.5;color:#4a4f54">The filter row and table header stay put so the user can see what caused the empty result. One sentence says what happened and what to do next, with a single outline button. No illustration.</p>
+    <div style="display:flex;gap:40px">
+      <figure style="margin:0">
+        <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Light</figcaption>
+        <div style="border:1px solid #c8cacd;box-shadow:0 2px 10px rgba(20,24,28,0.08)"><dc-import name="Screen03Empty" hint-size="1216px,290px"></dc-import></div>
+      </figure>
+      <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+        <figure data-theme="dark" style="margin:0">
+          <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Dark</figcaption>
+          <div style="border:1px solid #33383d;box-shadow:0 2px 10px rgba(20,24,28,0.18)"><dc-import name="Screen03Empty" hint-size="1216px,290px"></dc-import></div>
+        </figure>
+      </sc-if>
+    </div>
+  </section>
+
+  <sc-if value="{{ showNarrow }}" hint-placeholder-val="{{ true }}">
+    <section data-screen-label="03 narrow">
+      <h2 style="margin:0 0 6px;font-size:18px;font-weight:600">Narrow</h2>
+      <p style="margin:0 0 24px;max-width:820px;font-size:13.5px;line-height:1.5;color:#4a4f54">The table becomes a row list rather than a horizontal scroll. Each row keeps its identifier, title, classification and the same status vocabulary; the meter drops out because the count alone carries it at this width. Checkboxes go to 16px in a 44px target, and the bulk bar stacks its actions.</p>
+      <div style="display:flex;gap:40px">
+        <figure style="margin:0">
+          <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Light &middot; 420 &times; 760</figcaption>
+          <div style="border:1px solid #c8cacd;box-shadow:0 2px 10px rgba(20,24,28,0.08)"><dc-import name="Screen03Narrow" hint-size="420px,760px"></dc-import></div>
+        </figure>
+        <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+          <figure data-theme="dark" style="margin:0">
+            <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Dark &middot; 420 &times; 760</figcaption>
+            <div style="border:1px solid #33383d;box-shadow:0 2px 10px rgba(20,24,28,0.18)"><dc-import name="Screen03Narrow" hint-size="420px,760px"></dc-import></div>
+          </figure>
+        </sc-if>
+      </div>
+    </section>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showDark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Board&quot;},&quot;showNarrow&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Board&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showDark: this.props.showDark ?? true,
+      showNarrow: this.props.showNarrow ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

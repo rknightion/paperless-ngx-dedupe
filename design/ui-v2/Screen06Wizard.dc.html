@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+</helmet>
+<div style="display:flex;height:900px;width:1440px;overflow:hidden;background:var(--color-bg-canvas);color:var(--color-fg-default);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13.5px;line-height:1.45">
+  <aside style="display:flex;flex-direction:column;width:200px;flex:none;border-right:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:12px 16px"><svg width="20" height="20" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" role="img" aria-label="m7kni mark" style="flex:none;margin-top:1px;color:var(--color-bg-accent)"><rect x="9" y="25" width="38" height="38" rx="3"></rect><path d="M28 25V63M9 44H47"></path><rect x="49" y="7" width="14" height="14" rx="3"></rect></svg><span style="font-size:13.5px;font-weight:600;line-height:1.25">Paperless NGX Dedupe</span></div>
+    <nav style="display:flex;flex-direction:column;flex:1;min-height:0;padding:8px 0">
+      <div style="padding:0 16px 4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Views</div>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;text-decoration:none;font-size:12.5px;border-left:2px solid transparent;color:var(--color-fg-soft)" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-squares-four"></use></svg>Dashboard</a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;text-decoration:none;font-size:12.5px;border-left:2px solid transparent;color:var(--color-fg-soft)" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-file-text"></use></svg>Documents<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">12418</span></a>
+      <a href="#" aria-current="page" style="display:flex;align-items:center;gap:8px;padding:6px 16px;text-decoration:none;font-size:12.5px;border-left:2px solid var(--color-bg-accent);background:var(--color-bg-selected);color:var(--color-fg-default)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-copy"></use></svg>Duplicates<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">184</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;text-decoration:none;font-size:12.5px;border-left:2px solid transparent;color:var(--color-fg-soft)" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-brain"></use></svg>AI Processing<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-status-warn)">37</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;text-decoration:none;font-size:12.5px;border-left:2px solid transparent;color:var(--color-fg-soft)" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-clock-counter-clockwise"></use></svg>Jobs<span style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">2</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:8px;padding:6px 16px;text-decoration:none;font-size:12.5px;border-left:2px solid transparent;color:var(--color-fg-soft)" style-hover="background:var(--color-bg-hover)"><svg width="16" height="16" fill="currentColor" style="flex:none"><use href="#i-gear-six"></use></svg>Settings</a>
+    </nav>
+    <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-border-default);padding:10px 16px">
+      <div role="radiogroup" aria-label="Colour theme" style="display:flex;gap:2px;border:1px solid var(--color-border-default);border-radius:3px;padding:2px">
+        <button type="button" role="radio" aria-checked="true" aria-label="Light" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:var(--color-bg-selected);color:var(--color-fg-default);cursor:pointer"><svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-sun"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="Dark" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-moon"></use></svg></button>
+        <button type="button" role="radio" aria-checked="false" aria-label="System" style="display:flex;flex:1;align-items:center;justify-content:center;padding:4px 0;border:0;border-radius:2px;background:transparent;color:var(--color-fg-muted);cursor:pointer"><svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-desktop"></use></svg></button>
+      </div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">synced 4m ago</div>
+    </div>
+  </aside>
+  <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+    <header style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:10px 24px">
+      <h1 style="margin:0;font-size:18px;font-weight:600">Bulk operations wizard</h1>
+      <span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--color-fg-muted)">step 4 of 6</span>
+      <div style="margin-left:auto"><button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:3px;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-soft)">Cancel</button></div>
+    </header>
+    <div style="border-bottom:1px solid var(--color-border-default);background:var(--color-bg-surface);padding:12px 24px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;border:1px solid var(--color-status-ok);color:var(--color-status-ok)"><svg width="12" height="12" fill="currentColor" style="flex:none"><use href="#i-check"></use></svg></span><span style="font-size:12.5px;font-weight:400;color:var(--color-fg-soft)">Filter</span></div>
+        <span style="flex:1;height:1px;background:var(--color-border-default)"></span>
+        <div style="display:flex;align-items:center;gap:8px"><span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;border:1px solid var(--color-status-ok);color:var(--color-status-ok)"><svg width="12" height="12" fill="currentColor" style="flex:none"><use href="#i-check"></use></svg></span><span style="font-size:12.5px;font-weight:400;color:var(--color-fg-soft)">Review</span></div>
+        <span style="flex:1;height:1px;background:var(--color-border-default)"></span>
+        <div style="display:flex;align-items:center;gap:8px"><span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;border:1px solid var(--color-status-ok);color:var(--color-status-ok)"><svg width="12" height="12" fill="currentColor" style="flex:none"><use href="#i-check"></use></svg></span><span style="font-size:12.5px;font-weight:400;color:var(--color-fg-soft)">Action</span></div>
+        <span style="flex:1;height:1px;background:var(--color-border-default)"></span>
+        <div style="display:flex;align-items:center;gap:8px"><span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;background:var(--color-bg-accent);color:var(--color-fg-on-accent);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600">4</span><span style="font-size:12.5px;font-weight:600;color:var(--color-fg-default)">Confirm</span></div>
+        <span style="flex:1;height:1px;background:var(--color-border-default)"></span>
+        <div style="display:flex;align-items:center;gap:8px"><span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;border:1px solid var(--color-border-strong);color:var(--color-fg-muted);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">5</span><span style="font-size:12.5px;font-weight:400;color:var(--color-fg-muted)">Execute</span></div>
+        <span style="flex:1;height:1px;background:var(--color-border-default)"></span>
+        <div style="display:flex;align-items:center;gap:8px"><span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;border:1px solid var(--color-border-strong);color:var(--color-fg-muted);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">6</span><span style="font-size:12.5px;font-weight:400;color:var(--color-fg-muted)">Results</span></div>
+
+      </div>
+    </div>
+    <main style="flex:1;min-height:0;overflow-y:auto;padding:24px;display:flex;gap:20px">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:20px">
+        <section>
+          <h2 style="margin:0;font-size:15px;font-weight:600">What you selected</h2>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--color-fg-muted)">Carried forward from steps 1 to 3. Go back to change any of it.</p>
+          <div style="margin-top:12px;border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+            <div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--color-border-default)"><span style="width:190px;flex:none;font-size:12.5px;color:var(--color-fg-muted)">Minimum confidence</span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">90%</span><span style="margin-left:auto;font-size:12.5px;color:var(--color-fg-muted)">set in step 1</span></div>
+
+            <div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--color-border-default)"><span style="width:190px;flex:none;font-size:12.5px;color:var(--color-fg-muted)">Group status</span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">pending</span><span style="margin-left:auto;font-size:12.5px;color:var(--color-fg-muted)">set in step 1</span></div>
+
+            <div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--color-border-default)"><span style="width:190px;flex:none;font-size:12.5px;color:var(--color-fg-muted)">Correspondent</span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">any</span><span style="margin-left:auto;font-size:12.5px;color:var(--color-fg-muted)">set in step 1</span></div>
+
+            <div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--color-border-default)"><span style="width:190px;flex:none;font-size:12.5px;color:var(--color-fg-muted)">Groups matched</span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">38</span><span style="margin-left:auto;font-size:12.5px;color:var(--color-fg-muted)">of 184</span></div>
+
+            <div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--color-border-default)"><span style="width:190px;flex:none;font-size:12.5px;color:var(--color-fg-muted)">Documents in those groups</span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">101</span></div>
+
+            <div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px"><span style="width:190px;flex:none;font-size:12.5px;color:var(--color-fg-muted)">Action</span><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px">delete non-primary</span><span style="margin-left:auto;font-size:12.5px;color:var(--color-fg-muted)">set in step 3</span></div>
+          </div>
+        </section>
+        <section>
+          <h2 style="margin:0;font-size:15px;font-weight:600">The groups this covers</h2>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--color-fg-muted)">First five of 38, worst confidence last.</p>
+          <table style="margin-top:12px;width:100%;border-collapse:collapse;border:1px solid var(--color-border-default);background:var(--color-bg-surface);font-size:13.5px">
+            <thead><tr>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Group</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Confidence</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Keeps</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Deletes</th>
+              <th style="padding:6px 16px;border-bottom:1px solid var(--color-border-strong);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--color-fg-muted)">Frees</th>
+            </tr></thead>
+            <tbody>
+              <tr style="height:36px"><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);font-weight:500">Energy statement July</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 99.5%</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">1.20 MB</td></tr>
+              <tr style="height:36px"><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);font-weight:500">Contents cover letter</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 95.8%</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0.44 MB</td></tr>
+              <tr style="height:36px"><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);font-weight:500">Council tax bill 2024-25</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 97.4%</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">2</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">4.18 MB</td></tr>
+              <tr style="height:36px"><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);font-weight:500">Water bill Q2</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 93.6%</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;border-bottom:1px solid var(--color-border-default);text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">0.86 MB</td></tr>
+              <tr style="height:36px"><td style="padding:0 16px;font-weight:500">Energy statement August</td><td style="padding:0 16px;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-status-ok)">&#9632; 91.2%</td><td style="padding:0 16px;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums">1</td><td style="padding:0 16px;text-align:right;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-fg-muted)">1.02 MB</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+      <aside style="width:420px;flex:none;display:flex;flex-direction:column;gap:16px">
+        <div style="border:1px solid var(--color-border-default);background:var(--color-bg-surface)">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--color-border-default)">
+            <h2 style="margin:0;font-size:15px;font-weight:600">What happens when you run this</h2>
+          </div>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-size:13.5px">
+            <div style="display:flex;gap:10px"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-fail);width:16px;flex:none">&#9679;</span><span><strong style="font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600">63</strong> non-primary documents move to the Paperless recycle bin.</span></div>
+            <div style="display:flex;gap:10px"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-fg-muted);width:16px;flex:none">&#9671;</span><span><strong style="font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600">38</strong> groups are marked resolved in this app.</span></div>
+            <div style="display:flex;gap:10px"><span style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;letter-spacing:0.04em;color:var(--color-status-ok);width:16px;flex:none">&#9632;</span><span><strong style="font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600">38</strong> primary documents are kept, untouched.</span></div>
+            <p style="margin:6px 0 0;font-size:12.5px;color:var(--color-fg-soft);text-wrap:pretty">Nothing is permanently deleted. The 63 documents stay in the Paperless recycle bin until you empty it there, and this app keeps its own record of every group. Tags, correspondents and document types on the primaries are not changed.</p>
+            <p style="margin:0;font-size:12.5px;color:var(--color-fg-muted);text-wrap:pretty">This cannot be undone from this app once it starts.</p>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--color-border-default);background:var(--color-bg-canvas)">
+            <label for="wz-confirm" style="display:block;font-size:12.5px;font-weight:500">Type the number of documents to confirm</label>
+            <p style="margin:2px 0 6px;font-size:12.5px;color:var(--color-fg-muted)">63 documents will be affected.</p>
+            <input id="wz-confirm" type="text" placeholder="63" style="width:96px;height:30px;padding:0 8px;border:1px solid var(--color-border-strong);border-radius:3px;background:var(--color-bg-raised);color:var(--color-fg-default);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:3px;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-bg-raised);color:var(--color-fg-default)"><svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-caret-left"></use></svg>Back to action</button>
+          <button type="button" disabled aria-describedby="wz-why" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:3px;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--color-border-default);background:transparent;color:var(--color-fg-faint);cursor:not-allowed;margin-left:auto"><svg width="14" height="14" fill="currentColor" style="flex:none"><use href="#i-trash"></use></svg>Delete 63 documents</button>
+        </div>
+        <p id="wz-why" style="margin:0;text-align:right;font-size:12.5px;color:var(--color-fg-muted)">Enter 63 above to enable this.</p>
+      </aside>
+    </main>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

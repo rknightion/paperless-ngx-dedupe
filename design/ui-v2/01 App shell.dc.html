@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/m7kni-design-system-v2-a03561c4-ff48-4ee7-8eb6-2f2a21c7ee72/styles/fonts.css">
+<script src="icons.js"></script>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+<style>
+  body { margin: 0; background: #e7e8ea; }
+  a { color: #1d6a8a; }
+  a:hover { color: #175874; }
+</style>
+</helmet>
+<div style="padding:56px;width:max-content;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#1b1e21">
+  <header style="max-width:820px;margin-bottom:40px">
+    <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Archetype 01</div>
+    <h1 style="margin:6px 0 0;font-size:24px;font-weight:600;letter-spacing:-0.01em">App shell and navigation</h1>
+    <p style="margin:8px 0 0;font-size:13.5px;line-height:1.5;color:#4a4f54;text-wrap:pretty">Fixed sidebar, one-row top bar, and a content region that is the only thing that scrolls. Navigation, page purposes and the three-way theme control are unchanged from the current app; the chrome moves onto petrol-tinted neutrals, a 200px rail on surface rather than a near-black gradient, Hanken Grotesk for labels and JetBrains Mono for counts and freshness. The m7kni house mark is used as shipped.</p>
+  </header>
+
+  <section data-screen-label="01 desktop" style="display:flex;gap:40px;margin-bottom:48px">
+    <figure style="margin:0">
+      <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Light &middot; 1440 &times; 900</figcaption>
+      <div style="border:1px solid #c8cacd;box-shadow:0 2px 10px rgba(20,24,28,0.08)"><dc-import name="Screen01Shell" hint-size="1440px,900px"></dc-import></div>
+    </figure>
+    <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+      <figure data-theme="dark" style="margin:0">
+        <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Dark &middot; 1440 &times; 900</figcaption>
+        <div style="border:1px solid #33383d;box-shadow:0 2px 10px rgba(20,24,28,0.18)"><dc-import name="Screen01Shell" hint-size="1440px,900px"></dc-import></div>
+      </figure>
+    </sc-if>
+  </section>
+
+  <sc-if value="{{ showNarrow }}" hint-placeholder-val="{{ true }}">
+    <section data-screen-label="01 narrow">
+      <h2 style="margin:0 0 6px;font-size:18px;font-weight:600">Narrow shell</h2>
+      <p style="margin:0 0 24px;max-width:820px;font-size:13.5px;line-height:1.5;color:#4a4f54">Below 768px the rail leaves the flow and returns as a drawer over a scrim. The top bar keeps the disclosure control, the title and the freshness label; the stat strip folds to two columns and keeps its dividing rules. Buttons grow to 32px so every target clears 44px with its padding.</p>
+      <div style="display:flex;gap:40px">
+        <figure style="margin:0">
+          <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Light &middot; 420 &times; 760 &middot; closed, drawer open</figcaption>
+          <div style="border:1px solid #c8cacd;box-shadow:0 2px 10px rgba(20,24,28,0.08)"><dc-import name="Screen01Narrow" hint-size="872px,760px"></dc-import></div>
+        </figure>
+        <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+          <figure data-theme="dark" style="margin:0">
+            <figcaption style="margin-bottom:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;color:#6b7075">Dark &middot; 420 &times; 760 &middot; closed, drawer open</figcaption>
+            <div style="border:1px solid #33383d;box-shadow:0 2px 10px rgba(20,24,28,0.18)"><dc-import name="Screen01Narrow" hint-size="872px,760px"></dc-import></div>
+          </figure>
+        </sc-if>
+      </div>
+    </section>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showDark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Board&quot;},&quot;showNarrow&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Board&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showDark: this.props.showDark ?? true,
+      showNarrow: this.props.showNarrow ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,402 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * app.css - m7kni Design System v2
+ * Drop-in replacement for the token layer of packages/web/src/app.css.
+ *
+ * What changed from v1: the accent is Petrol, every neutral carries the
+ * accent hue (227) at low chroma instead of the old warm-paper 85 / cool-ink
+ * 260 split, radius is 3px controls / 0px containers / 6px overlays, type is
+ * Hanken Grotesk + JetBrains Mono, and the six-series chart ramp is derived
+ * from the accent by hue rotation. Token NAMES are unchanged wherever the v1
+ * name still means the same thing, so most of the app compiles untouched.
+ *
+ * Never an em dash or an en dash in any string this app renders. A spaced
+ * hyphen is the only dash.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+@import 'tailwindcss';
+@import '@fontsource/hanken-grotesk/400.css';
+@import '@fontsource/hanken-grotesk/500.css';
+@import '@fontsource/hanken-grotesk/600.css';
+@import '@fontsource/hanken-grotesk/700.css';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* Class-based dark mode, unchanged: Tailwind v4's default `dark:` keys off
+   prefers-color-scheme, which a user toggle cannot override. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* `static` stays load-bearing. Many tokens below are only ever read through
+   raw var() - in the .dark block, in inline styles, and from the ECharts
+   theme - so without it Tailwind drops them and dark mode half-fails.
+   NOT `inline`: that would bake the light palette into every utility. */
+@theme static {
+  /* ── Surfaces. Petrol-tinted neutrals, hue 227 at low chroma. ─────── */
+  --color-canvas: oklch(0.962 0.007 227);
+  --color-canvas-deep: oklch(0.945 0.009 227); /* = bg-hover in the system */
+  --color-surface: oklch(0.982 0.004 227);
+  --color-surface-raised: oklch(1 0 0);
+  --color-selected: oklch(0.925 0.012 227); /* new: selected table row */
+  --color-track: oklch(0.85 0.01 227); /* new: fallback meter track */
+  --color-inverse: oklch(0.27 0.012 227); /* new: bulk action bar */
+  --color-on-inverse: oklch(0.93 0.005 227);
+
+  /* ── Ink ramp - pick by role, not by taste ────────────────────────── */
+  --color-ink: oklch(0.24 0.012 227); /* headings, table identifiers */
+  --color-ink-light: oklch(0.37 0.015 227); /* body */
+  --color-ink-faint: oklch(0.5 0.018 227); /* subtitles, descriptions */
+  --color-muted: oklch(0.5 0.018 227); /* meta, mono micro-labels */
+  --color-disabled: oklch(0.65 0.015 227); /* placeholder, disabled ONLY */
+
+  /* ── Accent - Petrol. The only colour that means "interactive".
+     White on it 6.03:1; itself on surface 5.74:1. ──────────────────── */
+  --color-accent: #1d6a8a;
+  --color-accent-hover: #175874;
+  --color-accent-light: #e4eef4; /* = bg-accent-soft */
+  --color-accent-subtle: #eff5f8; /* derived, for zebra-free row tints */
+  --color-on-accent: oklch(1 0 0);
+
+  /* ── Per-product accent: RETIRED. See the spec, "Retiring the product
+     violet". Keep the names for one release mapped onto the accent so
+     no import breaks, then delete them. ───────────────────────────── */
+  --color-accent-product: #1d6a8a;
+  --color-accent-product-light: #e4eef4;
+
+  /* ── Semantic. Quieter than the accent. Always paired with a shape and
+     a word, never colour alone. ───────────────────────────────────── */
+  --color-ember: #a83a2e; /* 6.04:1 on surface, white on it 6.35:1 */
+  --color-ember-light: #f7e8e6;
+  --color-success: #2f7d4f; /* 4.80:1 on surface */
+  --color-success-light: #e6f0e9;
+  --color-warn: #8f6410; /* 5.00:1 on surface */
+  --color-warn-light: #f5edda;
+
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  --color-soft: oklch(0.9 0.008 227);
+  --color-border: oklch(0.9 0.008 227);
+  --color-border-hover: oklch(0.82 0.01 227);
+
+  /* ── Sidebar. The near-black rail is gone: the rail is a surface with a
+     hairline, and the active item is an accent inset edge. These names
+     survive so the layout compiles; they now point at surface tokens. ─ */
+  --color-sidebar: oklch(0.982 0.004 227);
+  --color-sidebar-top: oklch(0.982 0.004 227);
+  --color-sidebar-hover: oklch(0.945 0.009 227);
+  --color-sidebar-active: oklch(0.925 0.012 227);
+  --color-sidebar-border: oklch(0.9 0.008 227);
+  --color-sidebar-ink: oklch(0.37 0.015 227);
+  --color-sidebar-ink-active: oklch(0.24 0.012 227);
+
+  /* ── Charts. Six series derived from the accent hue (227) by +48 degree
+     rotation, on a monotonic lightness ramp so they separate in
+     greyscale as well as by hue. Contrast measurements in the spec. ── */
+  --color-chart-1: oklch(0.44 0.095 233);
+  --color-chart-2: oklch(0.48 0.115 281);
+  --color-chart-3: oklch(0.52 0.105 329);
+  --color-chart-4: oklch(0.56 0.115 17);
+  --color-chart-5: oklch(0.57 0.1 65);
+  --color-chart-6: oklch(0.6 0.095 161);
+
+  /* ── Type ─────────────────────────────────────────────────────────── */
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 13.5px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+  --tracking-tight: -0.01em;
+  --tracking-label: 0.13em;
+
+  /* ── Radius. Precise, not soft. ───────────────────────────────────── */
+  --radius-sm: 3px;
+  --radius-md: 3px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-overlay: 6px;
+
+  /* ── Elevation. Surfaces separate by tint and hairline. Shadows only
+     for true overlays. ────────────────────────────────────────────── */
+  --shadow-sm: none;
+  --shadow-panel: none;
+  --shadow-md: 0 4px 10px oklch(0.24 0.012 227 / 0.08);
+  --shadow-lg: 0 12px 32px oklch(0.24 0.012 227 / 0.14);
+  --shadow-glow: none; /* focus is an outline, not a glow */
+
+  /* ── Motion - one curve, three durations, no bounce ───────────────── */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Tokens Tailwind has no namespace for. */
+:root {
+  --duration-fast: 120ms;
+  --duration-base: 160ms;
+  --duration-slow: 200ms;
+  --press-scale: 1; /* v2 bans scale on press. Kept so call sites compile. */
+
+  /* Layout constants */
+  --sidebar-width-wide: 200px;
+  --content-max: 76rem;
+  --panel-padding: 1rem;
+  --panel-inset-padding: 0.75rem;
+  --stack-gap: 1.5rem;
+  --row-table: 36px;
+
+  /* Spacing scale - 4px base, no intermediate steps. Ever. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Semantic aliases */
+  --text-heading: var(--color-ink);
+  --text-body: var(--color-ink-light);
+  --text-secondary: var(--color-ink-faint);
+  --text-link: var(--color-accent);
+  --text-link-hover: var(--color-accent-hover);
+  --text-on-accent: var(--color-on-accent);
+  --focus-ring: var(--color-accent);
+
+  /* In-cell furniture. Derived from ink so it survives hover and selected
+     row backgrounds. Never a fixed grey. */
+  --furniture: color-mix(in oklab, var(--color-ink) 14%, var(--color-surface));
+}
+
+/* ─── Dark scope ────────────────────────────────────────────────────────
+ * Surfaces lift rather than invert (canvas 0.195 -> surface 0.225 ->
+ * raised 0.26). The accent brightens to #66aecb and takes DARK ink text,
+ * not white: white on it measures 2.4:1.
+ * ───────────────────────────────────────────────────────────────────────── */
+:root.dark,
+.dark {
+  --color-canvas: oklch(0.195 0.01 227);
+  --color-canvas-deep: oklch(0.245 0.012 227);
+  --color-surface: oklch(0.225 0.011 227);
+  --color-surface-raised: oklch(0.26 0.012 227);
+  --color-selected: oklch(0.28 0.014 227);
+  --color-track: oklch(0.36 0.012 227);
+  --color-inverse: oklch(0.245 0.012 227);
+  --color-on-inverse: oklch(0.92 0.006 227);
+
+  --color-ink: oklch(0.92 0.006 227);
+  --color-ink-light: oklch(0.8 0.01 227);
+  --color-ink-faint: oklch(0.7 0.015 227);
+  --color-muted: oklch(0.7 0.015 227);
+  --color-disabled: oklch(0.55 0.015 227);
+
+  --color-accent: #66aecb;
+  --color-accent-hover: #7cbcd6;
+  --color-accent-light: #1f2f38;
+  --color-accent-subtle: #1b262d;
+  --color-on-accent: #0e161b;
+
+  --color-accent-product: #66aecb;
+  --color-accent-product-light: #1f2f38;
+
+  --color-ember: #d97b64;
+  --color-ember-light: #3a241f;
+  --color-success: #5fae7f;
+  --color-success-light: #1f2f26;
+  --color-warn: #c9a04a;
+  --color-warn-light: #332a17;
+
+  --color-soft: oklch(0.31 0.012 227);
+  --color-border: oklch(0.31 0.012 227);
+  --color-border-hover: oklch(0.4 0.014 227);
+
+  --color-sidebar: oklch(0.225 0.011 227);
+  --color-sidebar-top: oklch(0.225 0.011 227);
+  --color-sidebar-hover: oklch(0.245 0.012 227);
+  --color-sidebar-active: oklch(0.28 0.014 227);
+  --color-sidebar-border: oklch(0.31 0.012 227);
+  --color-sidebar-ink: oklch(0.8 0.01 227);
+  --color-sidebar-ink-active: oklch(0.92 0.006 227);
+
+  --color-chart-1: oklch(0.86 0.075 233);
+  --color-chart-2: oklch(0.82 0.09 281);
+  --color-chart-3: oklch(0.78 0.105 329);
+  --color-chart-4: oklch(0.74 0.11 17);
+  --color-chart-5: oklch(0.7 0.1 65);
+  --color-chart-6: oklch(0.66 0.09 161);
+
+  --shadow-md: 0 4px 10px oklch(0 0 0 / 0.35);
+  --shadow-lg: 0 12px 32px oklch(0 0 0 / 0.45);
+
+  --furniture: color-mix(in oklab, var(--color-ink) 14%, var(--color-surface));
+}
+
+/* ─── Surface utilities ─────────────────────────────────────────────────
+ * A panel is a surface fill with a 1px hairline and square corners. No
+ * shadow, no radius. One container level fewer than feels natural: prefer
+ * a rule between two regions over two bordered boxes.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+@utility panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: var(--space-4);
+}
+
+@utility panel-inset {
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: var(--space-3);
+}
+
+/* For things that genuinely float: menus, dialogs, toasts. */
+@utility panel-raised {
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-overlay);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-lg);
+}
+
+@utility divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* Mono uppercase micro-label. Column headers, stat labels, section kickers. */
+@utility label-micro {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* Row status: shape + mono word. Colour is the third carrier, never the first. */
+@utility status-word {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+@layer base {
+  /* Load-bearing, not a preference: every control here pairs width:100%
+     with its own padding. Do not scope this narrower. */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    color: var(--color-ink);
+    background-color: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Focus is :focus-visible only, and it is an outline - never a glow. */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* v1 scaled buttons on press. v2 does not: no bounce, no scale. */
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    transition-property: color, background-color, border-color, outline-color, opacity;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-standard);
+  }
+
+  a {
+    color: var(--text-link);
+  }
+
+  a:hover {
+    color: var(--text-link-hover);
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  /* Digits align down a column wherever they are compared. */
+  .tabular,
+  td,
+  th {
+    font-variant-numeric: tabular-nums;
+  }
+
+  details > summary {
+    list-style: none;
+  }
+
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  details > summary::before {
+    content: '\25B8';
+    display: inline-block;
+    margin-right: 0.35em;
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+
+  details[open] > summary::before {
+    transform: rotate(90deg);
+  }
+}
+
+/* ─── Motion ────────────────────────────────────────────────────────────
+ * 120-200ms, ease-out, no parallax. Menus and dialogs fade and rise 4px;
+ * toasts slide 12px from the right; skeletons shimmer on a 1.5s loop.
+ * The v1 page-level fade-in-up is dropped: content should appear, not
+ * animate in on every navigation.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
