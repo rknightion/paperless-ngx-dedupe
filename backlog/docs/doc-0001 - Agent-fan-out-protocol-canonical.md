@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-04 05:09'
+updated_date: '2026-09-04 19:56'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `c1e6cb0`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `cce8f64`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -42,6 +42,8 @@ how much context a spawn inherits, how many lanes may run at once, how deep dele
 
 The run contract names the harness once. Every lane then states its role **and the route the profile
 resolves it to** — a lane brief carrying only a role name leaves the choice to whoever reads it next.
+Codex runs also name the routing variant: `codex` or opt-in `codex-astra` (Appendix A). These are
+goal-file routing labels, not runtime profiles, installed custom agents or launcher commands.
 
 The harnesses do not differ by a lookup table of model names. Context forking, reasoning effort,
 concurrency limits, delegation depth and the return path for a child's deliverable differ in **kind**,
@@ -65,7 +67,8 @@ Root role / resolved route: [role, plus the exact values the profile resolves it
 Launch rationale: [one sentence]
 Selected topology: solo | single auxiliary | campaign | campaign + security
 Topology rationale: [the independent bottleneck or risk that justifies this shape]
-Run-end report: written to codex/report-[date]-[run-id].md as the final action, unprompted
+Report destination: file at [exact codex/report path] (default); terminal only when explicitly requested
+Run-end report: reconciliation first; the selected report is the final action, unprompted
 ```
 
 The report line belongs in the contract rather than only in §6's report section, because the contract
@@ -102,9 +105,13 @@ Three rules make it work:
 - **Extract the forks before writing the goal**, and write the answers in as frozen decisions with the
   date and the person. A fork answered in chat and not written into the goal did not get answered.
 - **State what a lane does with an uncovered decision:** take the goal's default; if there is none, take
-  the *narrowest reversible option*, implement it, and record both the question and the choice. Say
-  explicitly that a decision you had to make yourself is **not** a blocker — otherwise lanes park on
-  ambiguity and the run delivers nothing while the human sits available and uninterrupted.
+  the *narrowest reversible option within its frozen contract and granted authority* for a routine
+  implementation choice, implement it, and record the choice. A worker returns an uncovered product,
+  shared-contract, ownership or authority decision to the root; it does not change those boundaries.
+  The root applies a frozen default or resolves the decision within its existing authority. If new
+  authority or a material human choice is required, park that lane, record the question for the final
+  report and continue independent work. Routine choices are not blockers; reversibility alone never
+  grants permission to widen scope.
 - **Require a dedicated questions section in the final report**, separate from everything else. That
   section is the entire point of the mode: it is the batch. Say it must not be merged into another
   section and must not be omitted because nothing felt important enough.
@@ -205,14 +212,13 @@ codex/launch-<date>-wave<N>.txt   the launch message, copy-paste ready
 codex/report-<date>-wave<N>.md    the run-end report the agent writes (§10)
 ```
 
-**Where a repository has adopted a real tracker, two of these three change.** With per-item state
-living in tracked tasks — see `backlogconfig.md` alongside this file for the configuration proven on
-one project — the goal file stops enumerating the work and points at a query instead, and the report
-stops being a file: task state carries what landed, what parked and why, and the run's closing
-message goes to the terminal as a covering note. The `codex/` directory still earns its place for
-the goal file, the launch message, and expensive-to-re-derive source assessments — but it stops
-being the durable record of what happened, which is the job it was never good at. A report file is
-only read by whoever happens to open it; a parked task is read by the next run automatically.
+**Where a repository has adopted a real tracker, task state carries the durable per-item outcomes.**
+The goal may select work through a query, but freezes the selected task IDs and their current
+acceptance criteria before assigning lanes; a changing query must not silently widen the run.
+The report destination is an explicit run-contract choice (§10). Default to a file report whether
+or not a tracker exists, followed by a short high-level summary and a clickable file link in chat.
+File reports supplement the tracker rather than replace it. Terminal-only reporting requires an
+explicit request. The goal, launch message and file report remain in `codex/`.
 
 Three reasons this beats a scratch path outside the repo. The artefacts sit next to the code they
 describe, so an agent given only the repository can find the last three waves' goals and reports
@@ -282,9 +288,11 @@ recent orchestration context only where those decisions bear on the work, full i
 where the child genuinely needs it. The harness profile says how each is expressed, and whether the
 middle option exists at all.
 
-Every role except DESIGN+INTEGRATION and SECURITY returns uncovered decisions to the root. None of
-them invents an answer, widens scope, commits, pushes or mutates external state unless the lane
-grants that exact authority.
+Every worker may make routine implementation choices within its frozen contract and owned files.
+Uncovered product, shared-contract, ownership and authority decisions return to the root, unless a
+DESIGN+INTEGRATION or SECURITY lane explicitly owns that decision. A role name alone grants no
+decision or external-write authority. No child widens scope, commits, pushes or mutates external
+state unless the lane grants that exact authority.
 ```
 
 The first routing question is: can the acceptance check be stated now? If not, use DESIGN+INTEGRATION
@@ -292,12 +300,17 @@ to freeze the seam. If yes, use RETRIEVAL or MAPPING for read-only work, EXECUTI
 bounded implementation, and JUDGMENT+EXECUTION only when the implementation itself still needs
 material context, judgement or risk control.
 
-The second is whether to spawn at all: **how much of the lane's output gets discarded?** A spawn runs
-in its own context, so it re-reads what the parent already had and pays for its own turns, and only
-its final message comes back. That trade wins when the job generates a lot of material nobody needs
-to keep — a log to reduce, a broad inventory sweep, CI output, mass file reads — and loses when the
-answer is a line or two, where doing it in the parent is cheaper than standing up a fresh context.
-Route by how much is thrown away, not by how cheap the route is.
+The second is whether to spawn at all. Within an authorised fan-out run, delegate independent work
+when it shortens the critical path, keeps bulky intermediate material out of the root context, or
+provides an independently checkable challenge to a material assumption. Account for startup,
+repeated context and integration cost. Log reduction, inventories and broad scans often justify a
+fresh context; a two-sentence counterexample can also justify a specialist when it resolves a
+consequential uncertainty. Name the assumption and the evidence that could disprove it; a second
+agent's agreement alone is not independent proof. Do not add a general reviewer by habit.
+
+Continue useful root work while children run. Wait when their result is a real dependency, and
+integrate only against the agreed seam. This instruction authorises the declared lanes, not unlimited
+recursive delegation or spawns merely to fill slots. Children still need explicit delegation authority.
 
 Require a one-sentence reason for every JUDGMENT+EXECUTION, DESIGN+INTEGRATION and SECURITY child.
 Difficulty, a long log or prior use of that route is not by itself a reason. Before every follow-up,
@@ -505,6 +518,8 @@ superseded file unless this goal explicitly points to it.
 - Launch rationale: [why the whole wave needs this route]
 - Selected topology: solo | single auxiliary | campaign | campaign + security
 - Topology rationale: [the independent bottleneck or risk that justifies this shape]
+- Report destination: file at [exact codex/report path] (default); terminal only when explicitly requested
+- Run-end report: reconciliation first; the selected report is the final action, unprompted
 
 ## 1. Outcome and success criteria
 
@@ -595,9 +610,12 @@ irreversible. One wrong constraint should cost one lane, not the run.
 
 ## 9. Required final report
 
-Writing this is the **last action of the run** (§10) — write it to `codex/report-[date]-[run-id].md`,
-unprompted, without being asked, then reply with only its path and a short summary. The run is not
-complete until the file exists.
+Complete all verification and tracker reconciliation first. Producing the report is the **last action
+of the run** (§10), unprompted, using §0's destination. For a file report, write the exact path named
+in the goal and launch, then reply with a clickable file link and a short high-level summary; run no
+further tool afterwards. Do not paste the full report into chat.
+For a terminal report, emit the covering note only after durable findings and task outcomes are
+recorded. A partial run still produces a report with precise resume boundaries.
 
 For every lane: complete with evidence, blocked with the exact blocker, or partial with the precise
 resume point. List commits, exact-SHA CI, external side effects, proven behaviour and unproven
@@ -645,8 +663,9 @@ Testing has a job rather than a quota:
   after integration. Do not make all children repeat an expensive gate against a changing tree.
 - Run a complete repository gate for cross-cutting or high-risk changes, releases, explicit repository
   requirements or when the goal asks for it. State any skipped sub-gates and why.
-- Never claim green without seeing the output. Once acceptance and the chosen gate pass, stop repeating
-  unchanged checks.
+- Never claim green without seeing the output. Once acceptance and the chosen gate pass, proceed to
+  integration or handoff. Further testing requires a changed artifact, a failure or a named unresolved
+  concern; do not invent tests that mirror low-impact wiring or repeat unchanged checks.
 
 Returned reports are claims, not proof. Verify load-bearing facts against source, git, CI, trackers and
 live systems. A missing child report is not proof of failed work either; inspect the expected artifact.
@@ -743,6 +762,13 @@ that hides this.
   night, so name which lanes to park first and say that parking one cleanly beats half-building three.
 - Audit the available skills, tools and reference packs against the project's actual dependency graph
   before the run, and name the ones **not** to use. See the failure table.
+- Resolve conflicting instructions before launch, especially authority, report destination, testing
+  and delegation. Direct user instructions take precedence over skill guidelines within the platform's
+  instruction hierarchy. Do not reopen an already authorised action because a generic skill describes
+  an approval step. If an actual instruction prevents progress, cite the exact file and instruction,
+  distinguish it from an inferred concern, and continue independent authorised work. In front-loaded
+  or unattended mode, return the conflict through the root's recorded blocker path rather than ask
+  the human mid-run.
 - Record a temporary licence with the condition that ends it, in the same sentence. "This is free
   because X, and stops being free when Y" survives; a bare permission outlives its justification.
   **Then check at the start of the next run whether the ending condition actually happened.** A licence
@@ -920,8 +946,9 @@ rules in the goal:
   goal. Applying a stash you cannot identify is the silent-corruption path.
 - **Never drop, clear or branch it**, even after the work has landed. Deleting it is the operator's
   decision and it is not the run's to make.
-- **On conflict, reset the tree rather than fighting the apply.** The stash survives that; a
-  half-resolved working tree does not.
+- **On conflict, preserve the stash and inspect the exact conflicted paths.** Follow the repository's
+  authorised recovery procedure; never reset a shared or dirty tree or discard unrelated work merely
+  to retry an apply. Return the conflict evidence if recovery needs authority the run lacks.
 
 **A crashed run is not a lost run — sweep by patch identity, not by worktree count.** One crashed main
 thread left 11 worktrees and 20 branches across three repositories, including a commit on a *primary*
@@ -1026,47 +1053,48 @@ including any decisions needed", which is a question they should never have to t
 therefore say, in the run contract where it is read first and again in the report section, that
 emitting the report **is** the last unit of work.
 
-**With a tracker, the report narrows but the trigger does not weaken.** Per-item outcomes belong in
-task state — landed with its SHA, parked with a concrete resume boundary, discovered work filed and
-labelled for triage — and the report keeps only what no single task can carry: cross-cutting
-findings, CI evidence with run and job IDs, deviations from the goal, and anything deliberately cut.
-It goes to the terminal rather than a file, and the binding rule is that **nothing durable may live
-only in that message**: if a finding matters it is already a task or a doc edit before the message
-is written. Do not let the narrowing become an excuse to skip it. Writing a coherent account of its
-own run is how an agent notices what no individual lane noticed — a stream of task updates does not
-force that reflection, and the questions worth asking at the end are *what did this run learn that
-no single task captures*, and *what did I cut*.
+**Choose the destination once, in the run contract.** Default to a file at an exact
+`codex/report-<date>-<run-id>.md` path, followed by a short high-level summary and clickable file link
+in chat. A tracker does not change this default: record per-item outcomes and durable findings there
+before writing the report. Terminal-only reporting requires an explicit request; never infer it from
+the presence of a tracker or choose it again at closeout. Both destinations cover cross-cutting findings,
+verification, deviations, cuts and the front-loaded questions section. Nothing durable may live only
+in a terminal message. A required file report must be self-contained even when task state holds detail.
 
-Put this block in every goal, adapted only in its paths:
+Put this block in every goal, selecting one destination and its exact path where applicable:
 
 ```text
-## RUN-END PROTOCOL — the run is not over until the report exists
+## RUN-END PROTOCOL — the run is not over until the selected report is delivered
 
 Producing the final report is the last task of this run, not a response to a request. Do not stop,
 idle or report readiness on the grounds that the work is finished: the run is finished when the
-report has been written. Nobody will ask you for it.
+report has been delivered to the selected destination. Nobody will ask you for it.
 
 When the goal is complete — every lane in scope at its stop rule, and the session about to hand
 control back to the operator — do this before you hand back:
 
-1. Write the full report to `codex/report-<date>-<run-identifier>.md`.
-2. Reply with the report's path and a summary no longer than a short paragraph.
-3. Nothing else. Do NOT paste the report into the conversation.
+1. Finish verification, reconcile task outcomes and record durable findings. Resolve anything the
+   synthesis exposes before emitting the report.
+2. Use the report destination frozen in the run contract:
+   - file (default): write the full report to the exact named path, then reply with a clickable
+     file link and a short high-level summary. Do not paste the report into chat. Writing the file is the final tool action; no
+     command, inspection or mutation follows it.
+   - terminal (only when explicitly requested): emit the covering note after tracker reconciliation. Do not create an unsolicited
+     report file or leave durable findings only in the message.
+3. Hand control back. Do not begin more work after the report.
 
 Write it for a reader who has no memory of this run and cannot see the transcript. Never abbreviate
 on the grounds that the operator watched it happen — they did not, and the transcript is discarded.
 "As described above" and "as previously noted" are not permitted; restate the fact.
 
-If the goal ends with lanes unfinished, the report still gets written, marked partial, with the
+If the goal ends with lanes unfinished, the report is still delivered, marked partial, with the
 precise resume boundary for every unfinished lane. A partial report always beats no report.
 ```
 
-**The report is a file, not a chat message.** The operator hands the next session a path instead of
-pasting several hundred lines, the report survives the transcript being cleared or compacted, and it
-sits in `codex/` beside the goal that produced it. A chat dump of the same content is worse on every
-axis, so the goal must say plainly not to produce one.
+**When file reporting is selected, a chat message is not a substitute.** The operator hands the next
+session a path, the report survives transcript compaction, and it sits beside the goal in `codex/`.
 
-**Name the exact path in the launch message too, not only in the goal.** Observed: a goal carried this
+**For file reporting, name the exact path in the launch message too.** Observed: a goal carried this
 whole section, and its launch message closed with *"write the final report to the structure in section
 12"*. The run produced a long, complete, well-structured report — in chat, with no file. Naming a
 *structure* asks for a shape; naming a *path* asks for an artefact, and the launch message is what the
@@ -1132,15 +1160,15 @@ the format alone:
 - [ ] The required final report names every lane with a status, and the goal states the expected count.
 - [ ] Each required measurement is obtainable by the route the goal names, without a UI surface it cannot drive.
 - [ ] In front-loaded mode, every fork was put to the human before the goal was written and the answers are frozen in it with a date.
-- [ ] The goal says a decision the lane had to take itself is not a blocker, and names where such decisions get recorded.
+- [ ] Routine choices within the frozen contract belong to workers; uncovered product, shared-contract, ownership and authority decisions have a named root escalation path. Reversibility never expands authority.
 - [ ] The required report has a dedicated questions-for-the-human section that may not be merged or omitted.
 - [ ] Every shared contract this run changes has its consumers enumerated, each with an explicit disposition.
 - [ ] Any lane building something a user must reach names the entry point in its acceptance check.
 - [ ] Skips are required to be reported separately from passes, and inputs that were absent are named.
 - [ ] Any optimisation target requires before and after from the same harness at the same scale.
 - [ ] The run contract carries a run-end report line, and the goal states that writing the report is the run's terminal action rather than a reply to a request.
-- [ ] The report is written to `codex/` as a file, and the goal says explicitly not to paste it into the conversation.
-- [ ] Goal, launch message and report all live in a `codex/` directory that `.gitignore` excludes as a directory, not by filename pattern.
+- [ ] The report destination is frozen in the run contract. A required file is written to its exact `codex/` path as the final tool action; a terminal report follows durable tracker reconciliation.
+- [ ] Goal, launch message and any file report live in a `codex/` directory that `.gitignore` excludes as a directory, not by filename pattern.
 - [ ] The goal requires a partial report, marked partial, if it ends with lanes unfinished.
 - [ ] External side effects must be reported from a live count, not from what the run intended to create.
 - [ ] Any recurring problem must be disclosed in full rather than by its most notable instance.
@@ -1154,14 +1182,14 @@ the format alone:
 - [ ] Contention was measured in files-per-new-thing with `rg` before fan-out, and the number is in the goal.
 - [ ] A collapse-the-switches refactor states the target file count for an N+1th case, not merely that it compiles.
 - [ ] Any concurrent agent, human or job in the same checkout is named in the launch message with its files fenced, and `git commit -a` / `git add -A` are forbidden by name.
-- [ ] The exact report path appears in the launch message as well as the goal.
+- [ ] For file reporting, the exact report path appears in the launch message as well as the goal.
 - [ ] A licence mispredicted three times is replaced by a human-supplied cadence rather than a fourth prediction.
 - [ ] Suites running unattended have their skip paths removed, so an unreachable surface fails rather than reporting green.
 - [ ] Every test target or check a wave creates is verified to be executed by CI, not only by the agent that built it.
 - [ ] Every external format is frozen from at least two instances where they exist, with per-instance assertions and empty categories named.
 - [ ] A source that is really many datasets gets a declarative descriptor seam before fan-out, so a lane contributes rows rather than parsing code.
 - [ ] The goal says to re-read in full after compaction and to cite a section within one context, not to re-read the file per lane.
-- [ ] Every spawn is justified by how much of its output is discarded, not only by the cheapest route that satisfies it.
+- [ ] Every spawn earns its coordination cost through independent progress, context reduction or a checkable challenge to a material assumption; the root has useful concurrent work or a real dependency to await.
 
 ---
 
@@ -1170,6 +1198,14 @@ the format alone:
 Complete. Everything the body defers to a profile is resolved here for Codex.
 
 ### Root role → launch model and effort
+
+Select `codex` for the existing routing or `codex-astra` for a complex root, and write the selection
+into the goal. This selects a route for the run only. Never edit `config.toml`, a launcher or the
+operator's default model to make a campaign match the table; the operator may change their launch
+model at any time. If the observed root route differs, report the mismatch and use the intended
+session/model selection before starting dependent campaign work.
+
+The standard `codex` root route is:
 
 ```text
 Launch model: gpt-5.6-sol
@@ -1186,7 +1222,8 @@ Why: this wave coordinates independent lanes, owns integration and may encounter
 | JUDGMENT+EXECUTION, raised depth | `gpt-5.6-sol` | `high`, with Terra judgement lanes |
 | EXECUTION with RETRIEVAL lanes | `gpt-5.6-sol` | `high`, with Luna retrieval lanes |
 
-Keep the campaign root on Sol/high for architecture, conflict resolution, verification and acceptance.
+Under `codex`, keep the campaign root on Sol/high for architecture, conflict resolution, verification
+and acceptance. The opt-in `codex-astra` root route below is the explicit exception.
 Luna/max is the normal fully specified implementation leaf, not a campaign root. If the packet needs
 material local judgement, context or risk control, route it to JUDGMENT+EXECUTION on Terra/high instead
 of asking Luna to redesign the packet.
@@ -1207,6 +1244,72 @@ of asking Luna to redesign the packet.
 The §4 narrow-role table resolves the same way: Mapper → Luna/medium, Lane worker → Luna/max,
 Complex lane worker → Terra/high, Reviewer → Terra/high, Security reviewer → Sol/high, Gate runner →
 Terra/low, Worktree auditor → Terra/high.
+
+### Optional Astra routes
+
+Use `codex-astra` when the root must reconcile interacting unknowns, diagnose a cause across
+components, or settle consequential architecture. Its root is `gpt-6-astra`, `high`; all ordinary
+child mappings above stay unchanged. A large lane count, a long log or a high-effort label alone is
+not a reason. Prefer a bounded Astra specialist under a standard root when only one isolated problem
+needs that depth. The variant grants no additional authority and does not require spawning.
+
+| Route label | Role | Model | Effort |
+|---|---|---|---|
+| `codex-astra` root | DESIGN+INTEGRATION or SECURITY | `gpt-6-astra` | `high`; `xhigh` only with a stated exceptional risk or ambiguity |
+| `design-astra` | DESIGN+INTEGRATION | `gpt-6-astra` | `high` |
+| `review-astra` | REVIEW | `gpt-6-astra` | `high`; `xhigh` only with a stated exceptional risk or ambiguity |
+| `security-astra` | SECURITY | `gpt-6-astra` | `high`; `xhigh` only with a stated exceptional risk or ambiguity |
+
+These labels resolve to explicit model/effort values on a generic spawn. They do not imply that a
+custom `agent_type` exists. If a matching custom agent is actually installed, inspect its pins before
+using it. `security-astra` is a campaign review route, not the separate Codex Security runtime profile;
+it never changes that profile's provider, authentication or model contract.
+
+Every Astra selection states the unresolved question, why the ordinary route is insufficient, and
+the observable evidence that will settle it. Repair incomplete briefs, missing controls, tool routes
+and prerequisites before escalating. Missing permissions, unavailable data and absent live evidence
+remain missing on a stronger model. A contradictory result or an unresolved consequential hypothesis
+can justify escalation; an unchanged failing command does not.
+
+An Astra specialist receives a complete evidence packet: observations and source references,
+competing explanations, attempted checks and their results, frozen decisions, the exact question,
+and what observation would discriminate between the explanations. Ask for a conclusion supported by
+evidence, remaining uncertainty and the next discriminating check, not a transcript of reasoning.
+After the decision is frozen, send remaining bounded implementation to EXECUTION or, where material
+local judgement remains, JUDGMENT+EXECUTION. Do not keep routine follow-ups on Astra by inertia.
+
+`high` is the initial comparison point against the existing Sol/high route, not a measured optimum.
+Do not default to `max` or `ultra`; use only effort values supported by the actual client and model.
+Do not substitute Astra for RETRIEVAL, MAPPING, GATE or frozen EXECUTION simply because the root uses it.
+
+### Prompt calibration and evidence for adoption
+
+The generic contracts already cover Astra's documented tendencies to ask more questions, delegate
+less, over-test small changes and produce detailed responses. Apply them explicitly: follow through
+within granted authority, respect the run's human-availability mode, dispatch independent lanes that
+earn their cost, and proceed to handoff once acceptance and selected checks pass. Keep agent messages
+legible and concise; report outcomes and evidence rather than narrating every tool call. Do not paste
+the entire vendor prompting guide into every goal or add duplicate policy blocks.
+
+Before making Astra the normal campaign route, compare representative frozen tasks on Sol/high and
+Astra/high: a difficult diagnosis, a shared-contract design, a concurrency or migration review, and
+a routine implementation control. Use isolated starting states, equivalent tools, authority and
+acceptance checks; do not let one run see the other's answer. Assess artifacts independently and
+record missed defects, accepted outcomes, interventions, repeated checks, elapsed time and total
+root-plus-child usage. Report route and harness versions and distinguish observed usage from any
+estimated cost. One anecdote or vendor benchmark does not prove fleet-wide benefit.
+
+These are observed measurements, not token budgets, allocation quotas or new checks on every wave.
+Keep adoption optional until the evidence supports a broader change. Model capability is not proof
+of integration: new async tools or mid-conversation effort updates require separate harness/provider
+validation before a goal relies on them. Ordinary fan-out needs neither feature.
+
+Official sources, checked 2026-09-04:
+
+- [Astra prompting and migration guidance](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md)
+- [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra)
+- [Codex subagent configuration](https://developers.openai.com/codex/agent-configuration/subagents)
+- [Reasoning configuration updates and compatibility](https://developers.openai.com/api/docs/guides/reasoning#change-reasoning-mid-conversation)
 
 ### Spawn resolution and task-scoped runtime preflight
 
@@ -1234,12 +1337,16 @@ constrained session. This does not require tightening the normal campaign profil
 |---|---|
 | self-contained | `fork_turns="none"` plus the complete lane brief |
 | recent orchestration context | a small positive `fork_turns`, only where those decisions bear on the lane |
-| full inherited history | full history, only where the child genuinely needs it |
+| full inherited history | `fork_turns="all"` (or omitted); inherits parent model and effort, with no overrides |
 
 REVIEW, SECURITY and fully specified EXECUTION workers use `fork_turns="none"` by default and receive
 the complete evidence or implementation packet explicitly. JUDGMENT+EXECUTION receives recent context
 only when the relevant decisions cannot be stated safely in its brief. Full inherited history is
 reserved for the rare child that genuinely needs the root's whole decision trail.
+Never use a full-history fork to request a cheaper worker or an Astra specialist under a different
+root model. Use `none` or a small positive `fork_turns` and the explicit route instead. A root model
+change does not change the child routing table: resolve every child independently. If model is set
+without effort, the client may select that model's default effort; pass both for generic spawns.
 
 A follow-up continues on the thread's existing model and effort. Reclassify the remaining work before
 every follow-up: when a design or judgement thread has reduced the work to bounded implementation,
