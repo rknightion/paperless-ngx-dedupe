@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-08-28 22:21'
+updated_date: '2026-09-04 05:09'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `d254b9c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `c1e6cb0`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -984,6 +984,8 @@ claims about content, so require the evidence, not the adjective.
 | A goal carries a tracker reference that was true when it was written | Query every named item's **state**, not its body, before copying it into a new goal. A closed item you think is open produces confident work on something already delivered, and nothing in the repository contradicts you (§2) |
 | An identifier table assigns a route or key but no lane's owned-files list contains the file implementing it | Cross-check the table against each lane's ownership line. Every lane can pass, the gate can be green, and the feature can ship as a truthful "unavailable" page (§4) |
 | A run `pop`s the stash it was told to preserve | Say `apply`, never `pop`, in the goal, with the frozen patch id to re-verify before applying and an explicit ban on drop, clear and branch. `pop` deletes on success, so the next mistake has nothing to fall back to (§8) |
+| A log grep proves a marker that the emitting step's own command echo also printed | Query the exact emitted, timestamped log field. Command echoing puts every literal branch of the step into the log, so a raw grep for the marker also matches the code that would have printed the *other* outcomes. A TestFlight capability probe's first grep returned all three literal marker branches; only the restricted query was evidence |
+| Two acceptance criteria disagree on how many cases the work must cover | Treat it as a historical superset, not a contradiction, and prove the superset in one run. The larger criterion is usually the older one plus a case added later, so choosing between them silently drops that case and the run still reports green against the criterion it picked. Name the superset and its history in the report (§7) |
 
 ---
 
