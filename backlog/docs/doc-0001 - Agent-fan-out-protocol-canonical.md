@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-05 19:58'
+updated_date: '2026-09-05 20:46'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `5eba054`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `a173b7c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -1252,7 +1252,9 @@ Use `codex-astra` when the root must reconcile interacting unknowns, diagnose a 
 components, or settle consequential architecture. Its root is `gpt-6-astra`, `high`; all ordinary
 child mappings above stay unchanged. A large lane count, a long log or a high-effort label alone is
 not a reason. Prefer a bounded Astra specialist under a standard root when only one isolated problem
-needs that depth. The variant grants no additional authority and does not require spawning.
+needs that depth. The variant grants no additional authority by itself and does not require spawning;
+where a project's operating model grants its root a wider external-write authority, the goal's §1
+contract states that grant explicitly and the root exhausts it before parking on the state it covers.
 
 | Route label | Role | Model | Effort |
 |---|---|---|---|
