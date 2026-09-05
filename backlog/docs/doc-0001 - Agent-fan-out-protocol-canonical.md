@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-05 13:46'
+updated_date: '2026-09-05 19:58'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `4805a5c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `5eba054`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -1355,14 +1355,14 @@ start a fresh Luna/max EXECUTION lane rather than continuing on the more expensi
 
 ### Concurrency and depth
 
-`max_concurrent_threads_per_session = 10` excludes the primary thread, so the pool is the root plus
-**ten** simultaneous child threads.
+`[agents].max_concurrent_threads_per_session = 19` excludes the primary thread, so the pool is the root plus
+**nineteen** simultaneous child threads: twenty agents in total. All isolated Codex profiles use v2.
 
-Flat, non-delegating fan-out may use all ten child slots. In a nested campaign the root starts at most
-**six** direct children and reserves **four** child slots for grandchildren, replacement lanes and
+Flat, non-delegating fan-out may use all nineteen child slots. In a nested campaign the root starts at most
+**twelve** direct children and reserves **seven** child slots for grandchildren, replacement lanes and
 urgent investigation. That is the concrete form of §4's two-thirds rule for the current profiles.
 
-`max_depth` is not a documented public safety boundary. Every lane therefore defaults to
+`max_depth` applies only to v1 and is ignored by v2. Every lane therefore defaults to
 `Delegation: forbidden`, and a child may delegate only when its brief grants exact authority. Luna is
 a leaf and never delegates. Do not claim a configured depth limit enforced this contract.
 
