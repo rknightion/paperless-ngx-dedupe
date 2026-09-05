@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Product-specific additions to the central CodeRabbit defaults.
+# Keep inheritance enabled; shared review policy lives in the owner/coderabbit repository.
+inheritance: true
+reviews:
+  path_instructions:
+  - path: packages/core/**
+    instructions: >-
+      Keep this package framework agnostic and the sole owner of business logic, Paperless sync, deduplication,
+      persistence, jobs, queries, and telemetry. Flag web-framework imports, duplicated web-layer business
+      logic, unbounded sync/job work, nondeterministic MinHash/LSH changes, or telemetry that reports
+      failed/partial sync as clean empty state. For SQLite schema changes, require both the Drizzle table
+      definition and a guarded pre-DDL migration called by migrateDatabase so existing databases receive
+      new columns.
+  - path: packages/web/src/routes/**
+    instructions: >-
+      All /api/v1 responses must use the shared apiSuccess/apiError envelope and ErrorCode values with
+      correct HTTP status. Server load functions must call the same core queries as matching API routes
+      rather than duplicating logic. Check streamed or asynchronous UI state for stale updates and preserve
+      server-only credentials and Paperless tokens.
