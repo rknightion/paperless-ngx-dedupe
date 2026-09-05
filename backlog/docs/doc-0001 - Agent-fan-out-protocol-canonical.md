@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-04 19:56'
+updated_date: '2026-09-05 13:46'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `cce8f64`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `4805a5c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -1005,6 +1005,7 @@ claims about content, so require the evidence, not the adjective.
 | A collapse-the-switches refactor changes syntax and not coupling | An `if/else` chain or a call-site dictionary over the same cases is the same coupling. Require the count of files a new case touches to drop, and state the target number |
 | Another agent is working in the same checkout and its work lands in your commit | Name the concurrent party and its files in the **launch message**, forbid `git commit -a` and `git add -A` by name, require explicit pathspecs, and say the fenced files' current content must not be read as intent (§8) |
 | A run replies with its report in chat instead of writing the file | Name the exact report path in the launch message as well as the goal. A goal that names only a *structure* gets a well-structured chat message and no file (§10) |
+| The **launch message** is pasted into chat instead of written to its file | Write `codex/launch-<date>-wave<N>.txt` and reply with its absolute path, instead of the chat block rather than as well as. This is the report failure above wearing its other face, and it is harder to catch because a launch message pasted into chat still launches the run, so nothing fails and the missing file is only noticed waves later. It went unnoticed for 45 consecutive BrewMDM waves. Suspect it whenever an assistant-side always-loaded rule says to emit prompts as copy-pasteable blocks: that rule loads every turn and this document does not (§2) |
 | A licence's ending condition has now been mispredicted three times | Stop predicting and ask the human for a cadence. A schedule makes no claim about the future and cannot be wrong about it (§8) |
 | A suite reaches nothing overnight and reports green | Reporting skips separately is enough for a run read the same day. For an unattended run, remove the skip paths so an unreachable surface fails (§8) |
 | A new test target's results are only ever the agent's own account of them | Check that CI actually executes the target. Creating a check and wiring a check are different pieces of work (§8) |
@@ -1118,7 +1119,7 @@ the format alone:
 - [ ] Run mode, human availability, current layer, external-write authority and terminal condition are explicit.
 - [ ] The run contract names the harness, and the operator receives the root's role and the exact route that harness's profile resolves it to, with a one-sentence rationale.
 - [ ] Tracker and live-state preflight happened before topology selection; the selected topology and its task-specific rationale are recorded before any spawn or mutation.
-- [ ] The brief is an immutable goal file on disk and the launch message points to its absolute path.
+- [ ] The brief is an immutable goal file on disk, **the launch message is a second file beside it** at `codex/launch-<date>-wave<N>.txt`, and the launch message points to the goal's absolute path. Both are files. A launch message that exists only as a chat block fails this item even though the run it starts will work.
 - [ ] Outcome and measurable success criteria replace a mere activity list.
 - [ ] Starting state, repository heads and relevant CI are re-verified now, at exact SHAs.
 - [ ] The goal contains only constraints, corrections, traps and environment facts relevant to this run.
