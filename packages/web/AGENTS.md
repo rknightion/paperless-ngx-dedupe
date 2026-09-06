@@ -10,8 +10,7 @@ SvelteKit 2 app on `adapter-node`, deployed as the Docker image.
   `dependencies` or the build succeeds and the container fails at runtime.
 - `telemetry.cjs` in the package root is the CJS OpenTelemetry preload the image loads with
   `--require ./telemetry.cjs`. Do not delete it or add it to `.gitignore`.
-- `e2e/` is Playwright, not Vitest. It is outside `just check` and the root `pnpm test`, and needs
-  both packages built first.
+- `e2e/` at the package root is Playwright, not Vitest, so it is not picked up by any Vitest run.
 
 ## Conventions
 
