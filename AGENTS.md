@@ -25,6 +25,7 @@ pnpm workspace, Node >=24.0.0 (declared in `engines`). Do not build or test on o
 - `just audit` is advisory: CI runs it `continue-on-error`, so a finding does not block.
 - CI's unit-tests job adds coverage and JUnit reporter arguments for artifact upload. Those belong
   in the workflow, not in `just test`.
+- No recipe is marked `[confirm]`. Never bypass one added later with `--yes` or `JUST_YES=1`.
 
 ## Conventions
 
@@ -32,7 +33,8 @@ pnpm workspace, Node >=24.0.0 (declared in `engines`). Do not build or test on o
   `import type { Foo }`.
 - Unused variables and arguments must be `_`-prefixed; that is the only pattern the linter ignores.
 - Svelte 5: `SvelteMap` / `SvelteSet` from `svelte/reactivity` instead of native `Map` / `Set` in
-  reactive state, `const` (not `let`) for `$derived`, keyed `{#each}` blocks, no `<svelte:component>`.
+  reactive state, `const` (not `let`) for `$derived`, keyed `{#each}` blocks, no `<svelte:component>`,
+  and never the Svelte 4 forms `$:` or `export let` for props.
 
 ## API contract
 
