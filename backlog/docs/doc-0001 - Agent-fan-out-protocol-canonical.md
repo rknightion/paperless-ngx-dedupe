@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-05 20:46'
+updated_date: '2026-09-06 14:13'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `a173b7c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `ad7abd2`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -81,6 +81,8 @@ its task-specific rationale are recorded.** `solo` is the default when an auxili
 work the root must do anyway. A later declaration may escalate the topology when new evidence exposes
 an independent bottleneck or material risk; never silently downgrade or add a reviewer by habit.
 
+The topology rationale must explain why the task is decomposable into independently checkable work, naming sequential dependencies and the cost of coordination; [Google Research, 2026-01-28](https://research.google/blog/towards-a-science-of-scaling-agent-systems-when-and-why-agent-systems-work/) evaluated 180 configurations and found 39-70% degradation on sequential planning tasks, so task decomposition needs an argument rather than an agent count.
+
 Daytime means the root may return a genuinely material decision that neither the goal nor a durable
 source resolves. Children still return uncovered decisions to the root; they do not ask the user.
 
@@ -150,6 +152,8 @@ bounded work down after the root has frozen it.
 
 A goal file survives compaction and can be re-read before every lane. A long chat prompt cannot be
 relied on to preserve routing, authority, traps and corrections across a multi-hour campaign.
+
+For preflight, read the tracked protocol file directly, including the applicable harness appendix, or redirect `backlog doc view <id> --plain` to a file and read that file in bounded chunks; tool-output truncation can otherwise silently omit the routing appendix and force a second read.
 
 Put these in the goal file:
 
@@ -1116,6 +1120,7 @@ the format alone:
 
 ## 11. Pre-flight checklist
 
+- [ ] The root read the tracked protocol file directly, or read a saved `backlog doc view <id> --plain` export in full, so tool-output truncation did not drop the harness appendix.
 - [ ] Run mode, human availability, current layer, external-write authority and terminal condition are explicit.
 - [ ] The run contract names the harness, and the operator receives the root's role and the exact route that harness's profile resolves it to, with a one-sentence rationale.
 - [ ] Tracker and live-state preflight happened before topology selection; the selected topology and its task-specific rationale are recorded before any spawn or mutation.
@@ -1247,6 +1252,8 @@ Complex lane worker → Terra/high, Reviewer → Terra/high, Security reviewer �
 Terra/low, Worktree auditor → Terra/high.
 
 ### Optional Astra routes
+
+Rob also chooses an Astra root for autonomy in complex waves: it can often resolve a blocked lane within the existing authority and frozen contract, preserving the lane's progress. A block requiring new authority or a material human choice still follows the goal's park rule.
 
 Use `codex-astra` when the root must reconcile interacting unknowns, diagnose a cause across
 components, or settle consequential architecture. Its root is `gpt-6-astra`, `high`; all ordinary
