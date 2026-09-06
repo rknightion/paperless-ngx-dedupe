@@ -1,126 +1,103 @@
-# Project: Paperless NGX Dedupe
+# Paperless NGX Dedupe
 
-Document deduplication companion for Paperless-NGX. Syncs documents from a Paperless-NGX instance, identifies duplicates via MinHash/LSH, and provides a web UI and REST API for reviewing and resolving them.
+Document deduplication companion for Paperless-NGX: syncs documents from a Paperless-NGX instance,
+finds duplicates with MinHash/LSH, and serves a web UI plus REST API for resolving them.
 
-## Architecture
+## Package boundary
 
-pnpm monorepo (Node >=24.0.0 required) with two packages:
+pnpm workspace, Node >=24.0.0 (declared in `engines`). Do not build or test on older Node.
 
-- **`packages/core`** — Framework-agnostic TypeScript library owning all business logic: Paperless API client, sync, MinHash/LSH dedup engine, Drizzle ORM schema, SQLite job queue, queries, and telemetry. No web framework imports allowed here.
-- **`packages/web`** — SvelteKit 2 app (Svelte 5 runes). Serves the UI and REST API (`/api/v1/*`). Imports core for all logic; does not implement independent business logic.
-
-Path alias: `@paperless-dedupe/core` → `packages/core/src/index.ts`.
-
-## Quality Checks
-
-Always run the full build and type-check (`pnpm build` or equivalent) after completing any code changes. Do not consider a task done until the build passes cleanly with zero errors.
-
-After editing files, check for duplicate imports and stale references from the previous code. Run ESLint or the project linter to catch these before proceeding.
-
-## Code Style
-
-- **Inline type imports enforced** by ESLint: use `import { type Foo }` not `import type { Foo }`.
-- **Unused variables**: prefix with `_` (e.g., `_unused`) — the linter ignores `_`-prefixed names.
-
-## Svelte 5 Conventions
-
-When working in Svelte 5 files (.svelte, .svelte.ts): use `SvelteMap` and `SvelteSet` instead of native `Map`/`Set`, use `const` (not `let`) for `$derived` runes, avoid deprecated `svelte:component` syntax, and ensure all `{#each}` blocks have unique keys.
-
-## Debugging Guidelines
-
-Before changing code to fix a bug, first investigate the root cause thoroughly (check git history, trace data flow, examine API responses). Do not make speculative code fixes before understanding why the issue occurs.
+- `packages/core` owns all business logic and must stay importable without SvelteKit or browser
+  APIs. No web-framework imports here.
+- `packages/web` is the SvelteKit 2 app (Svelte 5 runes) serving the UI and `/api/v1/*`. It calls
+  core for logic rather than reimplementing it, and a page `.server.ts` load function calls the same
+  core query functions as the matching API route.
+- Path alias `@paperless-dedupe/core` resolves to `packages/core/src/index.ts`, source rather than
+  `dist`.
 
 ## Task interface
 
-This repo's task surface is a `justfile`. Discover it, don't guess it:
+`just check` (fmt-check, lint, typecheck, core unit tests) is the gate, and it is exactly what CI's
+`quality` and `unit-tests` jobs run.
 
-    just --list                        # human-readable
-    just --dump --dump-format json     # machine-readable
-    just --show <recipe>               # what a recipe actually runs
+- E2E is deliberately outside `check`. CI runs it as a separate `e2e-tests` job, `just build` then
+  `just test-e2e`, because Playwright needs both packages built first.
+- `just audit` is advisory: CI runs it `continue-on-error`, so a finding does not block.
+- CI's unit-tests job adds coverage and JUnit reporter arguments for artifact upload. Those belong
+  in the workflow, not in `just test`.
 
-- `just check` is the full local blocking gate and is exactly what CI enforces for pass/fail. It must pass before you commit.
-- CI keeps coverage/JUnit arguments for report artifacts and runs the dependency audit as advisory; neither belongs in `just check`.
-- Prefer `just <recipe>` over the underlying tool. If you are typing `pnpm test`, you want `just test`.
-- Run `just` with stdin from /dev/null. No recipe in this repo is marked `[confirm]` today; if one is
-  added later, stop and ask before running it — never pass `--yes` or `JUST_YES=1`.
-- If a task you need does not exist, add a recipe with a `#` doc comment and a `[group(...)]` rather
-  than running a bare command.
+## Conventions
 
-## Gotchas & Constraints
+- Inline type imports, enforced by ESLint `consistent-type-imports`: `import { type Foo }`, never
+  `import type { Foo }`.
+- Unused variables and arguments must be `_`-prefixed; that is the only pattern the linter ignores.
+- Svelte 5: `SvelteMap` / `SvelteSet` from `svelte/reactivity` instead of native `Map` / `Set` in
+  reactive state, `const` (not `let`) for `$derived`, keyed `{#each}` blocks, no `<svelte:component>`.
 
-- **Node >=24.0.0 is required.** Do not test or build with older Node versions.
-- `pnpm test` runs **only unit tests** (core).
-- All `/api/v1/*` routes must return JSON with consistent error shapes and correct HTTP status codes. Use the `apiSuccess(data, meta?, status)` and `apiError(code, message, details?)` helpers — responses follow `{ data, meta? }` for success and `{ error: { code, message, details? } }` for errors. Error codes are defined in the `ErrorCode` enum. SvelteKit page `.server.ts` load functions must call the same core query functions as the corresponding API routes — not duplicate logic independently.
-- **Database schema changes require TWO steps** (just editing the Drizzle table definition is NOT enough):
-  1. Edit the Drizzle table definition in `packages/core/src/schema/sqlite/`.
-  2. Add a **pre-DDL migration function** in `packages/core/src/db/migrate.ts` that uses `ALTER TABLE ADD COLUMN` with a `tableHasColumn` guard. Call it from `migrateDatabase()` alongside the other pre-DDL migrations. See `migrateArchiveColumns` or `migrateDiscriminativeScore` for the exact pattern.
+## API contract
 
-  **Why both steps are needed:** The auto-migration system stores a schema hash after "applying" DDL, but it generates `CREATE TABLE IF NOT EXISTS` statements that skip existing tables — so new columns on existing tables are never added. The pre-DDL migration runs before the hash check and handles this reliably.
+Every `/api/v1/*` route returns JSON through the `apiSuccess(data, meta?, status)` and
+`apiError(code, message, details?)` helpers in `packages/web/src/lib/server/api.ts`. Success is
+`{ data, meta? }`, failure is `{ error: { code, message, details? } }`, and codes come from the
+`ErrorCode` map in that same file.
 
-## Key Files & References
+## Database schema changes take two steps
 
-- `packages/core/src/config.ts` — all environment variables, Zod schemas, and defaults
-- `packages/core/src/schema/sqlite/` — Drizzle table definitions (source of truth for DB schema)
-- `packages/core/src/index.ts` — public API of the core library
-- `packages/core/src/jobs/worker-paths.ts` — worker module path resolution (critical for Docker)
-- `.env.example` — full environment variable reference including OpenTelemetry config
+Editing the Drizzle table definition alone does nothing to an existing database.
+
+1. Edit the table in `packages/core/src/schema/sqlite/`.
+2. Add a pre-DDL migration function in `packages/core/src/db/migrate.ts` doing
+   `ALTER TABLE ... ADD COLUMN` behind a `tableHasColumn` guard, and call it from
+   `migrateDatabase()`. `migrateArchiveColumns` and `migrateDiscriminativeScore` are the pattern.
+
+Auto-migration stores a schema hash after applying DDL, but the DDL it generates is
+`CREATE TABLE IF NOT EXISTS`, so existing tables are skipped and new columns never land. Pre-DDL
+migrations run before the hash check.
+
+## Key files
+
+- `packages/core/src/config.ts` and `packages/core/src/config/registry.ts` - environment variables,
+  Zod schemas, defaults
+- `packages/core/src/schema/sqlite/` - source of truth for the database schema
+- `packages/core/src/index.ts` - the public surface of core
+- `packages/core/src/jobs/worker-paths.ts` - worker module resolution, load-bearing in Docker
+- `.env.example` - full environment reference including the OpenTelemetry settings
 
 ## Task tracking
 
-Open work lives in the [Backlog.md](https://backlog.md) tracker under `backlog/`, not in a
-roadmap file and not in GitHub Issues. The queue is a query, not a document:
+Open work lives in the Backlog.md tracker under `backlog/`, task prefix `pnd-`. Read the
+**Agent fan-out protocol (canonical)** doc before designing a wave, and the **Wave operating model**
+doc for this project's own rules.
 
-```bash
-backlog task list --plain            # what is open
-backlog task view pnd-0001 --plain   # one task's own contract
-backlog doc list --plain             # the durable documents
-```
+### Tracker rules
 
-Read the **Agent fan-out protocol (canonical)** doc before designing a wave, and the **Wave
-operating model** doc for this project's own rules. Both are in `backlog doc list --plain`.
+Kept outside the tool-managed markers below so an upstream instructions update cannot drop them.
 
-### Non-negotiable rules
-
-These are project rules, deliberately kept outside the tool-managed markers below so an
-upstream instruction update cannot silently drop them.
-
-**`backlog/` is committed to a PUBLIC repository.** Tasks, docs and decisions must never
-contain real account identifiers or personal data — no email addresses, handles, account or
-tenant ids, device or host names, addresses, or document contents from a real Paperless
-instance. Write the shape, not the instance: "the second correspondent", `<host>/api/documents/<id>`.
-Aggregate counts, timings and structural findings are fine. This is easy to break by accident
-precisely because a tracker feels private. Sweep before committing:
+**`backlog/` ships in a public repository.** No real account identifiers or personal data in tasks,
+docs or decisions: no email addresses, handles, tenant or account ids, host or device names,
+addresses, or document contents from a real Paperless instance. Write the shape, not the instance
+(`<host>/api/documents/<id>`, "the second correspondent"). Aggregate counts, timings and structural
+findings are fine. Sweep before committing:
 
 ```bash
 grep -rniE "rob-knight|@gmail|[0-9]{1,3}(\.[0-9]{1,3}){3}|/Users/" backlog/ && echo "PII FOUND"
 ```
 
-**Never use `--notes` or `--plan` bare.** They *silently replace* the whole section — another
-session's writes vanish with no warning and exit 0. Use `--append-notes` and `--append-plan`.
-This is an open upstream bug, not a misunderstanding. A global `PreToolUse` hook in the agent config denies
-the unsafe forms rather than trusting anyone to remember.
-
-**Never hand-edit task, doc, decision or milestone markdown.** Section boundaries are
-HTML-comment markers; break one and the section is *silently dropped* at exit 0, with the data
-still in the file but invisible to the CLI until the next write destroys it for real. There is
-no repair command — `backlog doctor` only fixes duplicate task IDs.
-
-The same hook denies this through the file-editing tools. It deliberately does **not** police
-shell commands, so a `sed` is on you to get right. The hazard is narrower than the rule: changing
-a value *inside* a section is recoverable, changing one of the marker lines is not.
-
-`backlog/config.yml` is the one exemption: list-valued keys cannot be set through
-`backlog config set`, so hand-editing it is the documented path.
-
-**Finalize in one call**, so an interrupted agent cannot leave finished work looking unfinished:
-
-```bash
-backlog task edit pnd-0001 --check-ac 1 --check-ac 2 -s Done
-```
-
-**Never let two agents edit the same task.** v1.50.x fixed the concurrent-write race for the
-edit funnel, but not for reorder, draft saves, the TUI edit path, `doc update`, or decision
-updates.
+- `--notes`, `--plan` and `--final-summary` replace the whole section silently and exit 0, so
+  another session's writes vanish. Use `--append-notes`, `--append-plan`, `--append-final-summary`.
+- `--dep`, `--assignee`, `--label`, `--acceptance-criteria`, `--ref` and `--modified-file` have set
+  semantics: a second use discards the first. Pass the complete list in one call, or use the
+  `--add-label` / `--ac` / `--add-ref` forms that append.
+- Section boundaries in tracker markdown are HTML-comment markers. Break a marker line and the
+  section is dropped silently at exit 0 with no repair command (`backlog doctor` only fixes
+  duplicate task ids). Changing a value inside a section is recoverable; changing a marker is not.
+  The file-editing tools are guarded, a `sed` is not.
+- `backlog/config.yml` is the one file to hand-edit: list-valued keys cannot be set through
+  `backlog config set`.
+- Finalize in one call so an interrupted session cannot leave finished work looking unfinished:
+  `backlog task edit pnd-0001 --check-ac 1 --check-ac 2 -s Done`.
+- Never let two agents edit the same task. The concurrent-write race is fixed for the edit funnel
+  only, not for reorder, draft saves, the TUI edit path, `doc update` or decision updates.
 
 <!-- BACKLOG.MD GUIDELINES START -->
 <!-- backlog.md-instructions-version: 1.50.1 -->
