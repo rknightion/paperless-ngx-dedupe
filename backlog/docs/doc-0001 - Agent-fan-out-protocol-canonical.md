@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-06 14:13'
+updated_date: '2026-09-07 22:08'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `ad7abd2`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `efd1e7a`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -1208,8 +1208,11 @@ Complete. Everything the body defers to a profile is resolved here for Codex.
 Select `codex` for the existing routing or `codex-astra` for a complex root, and write the selection
 into the goal. This selects a route for the run only. Never edit `config.toml`, a launcher or the
 operator's default model to make a campaign match the table; the operator may change their launch
-model at any time. If the observed root route differs, report the mismatch and use the intended
-session/model selection before starting dependent campaign work.
+model at any time. An explicit operator selection of Astra authorises that root route even when an
+older goal names Sol: do not stop solely for that stale pin. The goal owner records the replacement in
+the durable run record, and the root reports the observed model/effort rather than claiming the
+requested Sol route ran. A missing, conflicting or silently substituted route without that operator
+selection remains a hard stop for the affected lane.
 
 The standard `codex` root route is:
 
@@ -1253,15 +1256,31 @@ Terra/low, Worktree auditor → Terra/high.
 
 ### Optional Astra routes
 
-Rob also chooses an Astra root for autonomy in complex waves: it can often resolve a blocked lane within the existing authority and frozen contract, preserving the lane's progress. A block requiring new authority or a material human choice still follows the goal's park rule.
+Rob may choose an Astra root for complex waves. An explicitly operator-selected Astra root is an
+authorised stronger substitute for an earlier Sol root route and may keep independent lanes moving
+while it resolves an obstacle within the task's scope.
 
 Use `codex-astra` when the root must reconcile interacting unknowns, diagnose a cause across
 components, or settle consequential architecture. Its root is `gpt-6-astra`, `high`; all ordinary
 child mappings above stay unchanged. A large lane count, a long log or a high-effort label alone is
 not a reason. Prefer a bounded Astra specialist under a standard root when only one isolated problem
-needs that depth. The variant grants no additional authority by itself and does not require spawning;
-where a project's operating model grants its root a wider external-write authority, the goal's §1
-contract states that grant explicitly and the root exhausts it before parking on the state it covers.
+needs that depth.
+
+When the operator explicitly grants it, an Astra root may make the trusted architectural,
+implementation and operating-rule judgements needed to complete the authorised task: choose and
+apply evidence-supported fixes, revise a procedural convention or frozen design choice that blocks a
+better route, and direct the remaining independent lanes accordingly. This is task-scoped root
+judgement, not blanket autonomy based on model capability. Record every material departure, its
+evidence and the verification outcome in the durable run record; preserve one-file ownership and
+existing child routes unless their own authorised briefs change.
+
+The grant does not infer authority for production or protected-key actions, expand the goal's
+external-write scope, waive a release cap or protocol-cut boundary, or bypass a mandatory security
+review for convenience. Those boundaries remain effective unless the operator separately and
+explicitly changes them. A block requiring authority outside the stated task scope or a material human
+choice still follows the goal's park rule. Where a project's operating model grants the root wider
+external-write authority, the goal's §1 contract states that grant explicitly and the root exhausts it
+before parking on the state it covers.
 
 | Route label | Role | Model | Effort |
 |---|---|---|---|
