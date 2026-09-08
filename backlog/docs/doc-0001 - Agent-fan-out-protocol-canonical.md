@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-08 09:25'
+updated_date: '2026-09-08 10:05'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `e295c5a`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `1ebf90f`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -856,6 +856,10 @@ Three specific hazards, none of which a merge strategy addresses:
 - **`git commit -a` and `git add -A` sweep the other party's half-finished work into your commit.** Say
   so by name and require explicit pathspecs. This is the one that actually loses work, because the other
   agent's change lands in your history attributed to your wave and neither run notices.
+  **Explicit pathspecs on the `add` are not enough**: `git add -- <paths>` followed by a bare
+  `git commit` still commits the whole index, so anything the other party had already staged rides
+  along under your message. Commit with pathspecs too — `git commit -- <paths>`. A merge, cherry-pick
+  or revert commit is the exception and cannot take one.
 - **Fenced files may still be changing during the run.** A fence is normally static; here the file's
   content at the end differs from its content at verification. So say the file is fenced *and* that its
   current content is not to be read for guidance — an agent that reads a half-migrated config as though
