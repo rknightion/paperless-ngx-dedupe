@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-07 22:08'
+updated_date: '2026-09-08 09:25'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `efd1e7a`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `e295c5a`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -634,6 +634,11 @@ State the section order and say the report is what the human reads *instead of* 
   and a precise resume boundary for anything parked;
 - proven versus not proven, as two explicit lists, with skips reported separately from passes;
 - integration — commits, final SHA, CI run ID and conclusion at that exact SHA;
+- root-judgement record — every decision taken under a delegated root authority grant (the protocol's
+  §9), each with its evidence, the alternatives rejected, what reversing it would cost, and one line on
+  why the root graded its materiality as it did. **The reader re-grades that materiality; the root's
+  own grading is an input, not a verdict.** State the expected row count. Say `none` explicitly if the
+  grant was carried and nothing was decided under it;
 - questions for the human — every decision the run had to take itself and every question the goal did
   not cover (mandatory in front-loaded mode, §1);
 - recommended next run, ordered.
@@ -1033,8 +1038,10 @@ There is no human available for the entire run. Asking a question is equivalent 
 - Take every explicit default in this goal.
 - A child that finds an uncovered decision returns it to the root and stops that lane. It never asks
   the user directly.
-- The root resolves the decision from the goal or a named durable source if possible. Otherwise it
-  records the exact blocker, parks the lane and moves to another independent lane.
+- The root resolves the decision from the goal or a named durable source if possible. Where the run
+  carries the delegated root authority below, the root exhausts that authority before parking
+  anything. Otherwise it records the exact blocker, parks the lane and moves to another independent
+  lane.
 - Never use a question or input tool as a sleep or wait primitive.
 - Follow the stated terminal condition. Enter the fallback queue only when explicitly told to.
 - If the run makes an integrated state fail, follow the repository's recovery policy and do not leave
@@ -1045,6 +1052,53 @@ An unattended fallback queue should contain useful, independently safe work, ord
 is not a licence to widen scope. Good candidates include reconciling durable tracker state, validating
 the premises of already-scoped backlog items, inspecting known TODOs in the authorised area, or
 improving the precise handoff for a parked lane.
+
+### Delegated root authority
+
+A correctly written park is still a failed lane. The manifest-ownership case in §8 parked exactly as
+instructed and cost the run two thirds of its work, and a cheap worker that errors out on an
+over-precise instruction produces the same outcome. Where the goal declares an unattended run and the
+root meets the tier floor, the root carries the authority below and **exhausts it before parking**.
+
+**Tier floor.** `gpt-6-astra` at any supported effort, or `gpt-5.6-sol` at `medium` or above. Below
+the floor the grant does not apply and the ordinary park rule stands. The floor is eligibility; the
+unattended declaration is what grants the authority. Capability alone never grants it, and a goal may
+withhold the grant in its §1 contract.
+
+The root may:
+
+- **Repair a defect in its own goal file** and re-dispatch the affected lane: an ownership gap, a
+  prohibition that forbids what a commissioned lane requires, a constraint that contradicts another.
+  The test is that a commissioned lane cannot satisfy its own acceptance criteria without the change.
+  Finding a constraint inconvenient is not a defect.
+- **Settle a small or medium architectural fork** where the evidence for one option is strong, apply
+  it, and record it. A fork that is genuinely ambiguous, or where the root is unsure which approach is
+  best, parks and escalates instead.
+- **Implement a small bounded prerequisite** inside the authorised area to release lanes parked behind
+  it. One file still has one owner: never edit a file a live lane owns — re-dispatch that owner.
+- **Amend a seam first frozen during this wave**, minimally and with low blast radius, then re-freeze
+  it and re-dispatch every lane coding against it. **A seam that predates this wave is not amendable.**
+  Long-standing seams have implementation exposure that a wave-old seam has not; park, and state in
+  the report why the seam needs changing.
+
+**The confidence gate.** On an architectural fork or a seam amendment, act only at roughly 70%
+confidence or better. Below that, park and escalate — a decision taken at low confidence costs more to
+unwind than the parked lane costs to resume.
+
+**Re-dispatch budget.** Three cycles per lane, extendable to five. Every cycle records its failure
+signature. **Two consecutive cycles failing the same way stop that lane immediately, even with budget
+remaining**, and escalate it as a design problem rather than an implementation one — a repeated
+identical failure means the design is wrong and no further cycle will find that out. The extension
+from three to five is available only where each cycle failed differently.
+
+**Boundaries that the grant does not touch.** No production or protected-key action, no expansion of
+the goal's external-write scope, no waiving a release cap or protocol-cut boundary, no bypassing a
+mandatory security review. A block needing authority outside the stated task scope, or a material
+human choice, still parks.
+
+**Every decision taken under the grant is recorded** in the run record and surfaced in the report's
+root-judgement record (§9), with its evidence, the alternatives rejected, and one line on why the root
+graded it as it did.
 
 ---
 
@@ -1149,6 +1203,7 @@ the format alone:
 - [ ] Nested campaigns reserve part of the pool rather than saturating it at the root, and the reserve is sized against the harness's real cap.
 - [ ] Every lane has a retry budget, stop rule and escalation-evidence requirement.
 - [ ] Rule Zero and a blocker path are present for unattended runs.
+- [ ] For an unattended run, the delegated root authority grant (§9) is either carried with its tier floor met and its re-dispatch budget stated, or explicitly withheld.
 - [ ] Expected false-pass mechanisms are named and the required proof is observable.
 - [ ] Out-of-band work uses check-then-branch rather than asserted readiness.
 - [ ] Workers have focused validation and one owner has the integrated gate.
@@ -1266,21 +1321,16 @@ child mappings above stay unchanged. A large lane count, a long log or a high-ef
 not a reason. Prefer a bounded Astra specialist under a standard root when only one isolated problem
 needs that depth.
 
-When the operator explicitly grants it, an Astra root may make the trusted architectural,
-implementation and operating-rule judgements needed to complete the authorised task: choose and
-apply evidence-supported fixes, revise a procedural convention or frozen design choice that blocks a
-better route, and direct the remaining independent lanes accordingly. This is task-scoped root
-judgement, not blanket autonomy based on model capability. Record every material departure, its
-evidence and the verification outcome in the durable run record; preserve one-file ownership and
-existing child routes unless their own authorised briefs change.
+An Astra root on an unattended run carries the delegated root authority of §9 — it clears the tier
+floor at every supported effort — so it repairs goal defects, settles well-evidenced architectural
+forks, implements bounded prerequisites and amends seams frozen during the same wave, within that
+section's confidence gate, re-dispatch budget and boundaries. Read §9 for the grant; it is not
+restated here, and it is not Astra-specific. A Sol root clears the same floor at `medium` or above.
+This is task-scoped root judgement, not blanket autonomy based on model capability. Preserve one-file
+ownership and existing child routes unless their own authorised briefs change.
 
-The grant does not infer authority for production or protected-key actions, expand the goal's
-external-write scope, waive a release cap or protocol-cut boundary, or bypass a mandatory security
-review for convenience. Those boundaries remain effective unless the operator separately and
-explicitly changes them. A block requiring authority outside the stated task scope or a material human
-choice still follows the goal's park rule. Where a project's operating model grants the root wider
-external-write authority, the goal's §1 contract states that grant explicitly and the root exhausts it
-before parking on the state it covers.
+Where a project's operating model grants the root wider external-write authority, the goal's §1
+contract states that grant explicitly and the root exhausts it before parking on the state it covers.
 
 | Route label | Role | Model | Effort |
 |---|---|---|---|
