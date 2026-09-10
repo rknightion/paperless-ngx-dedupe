@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-10 16:37'
+updated_date: '2026-09-10 18:20'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `11b9f12`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `6e790fc`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -25,6 +25,14 @@ updated_date: '2026-09-10 16:37'
 Use this sourcebook when writing a launch prompt and goal file for a long-running agent campaign. It
 is intentionally project-neutral. Copy only the contracts and checks that apply to the run; unrelated
 history and generic ceremony make a goal harder to re-read after compaction.
+
+**Authoring and execution are different reading surfaces.** Goal authors consult the relevant
+sourcebook sections and harness appendix, then freeze a self-contained execution contract in the
+goal. Running agents use that contract and the current-state record in §2; they do not reload this
+whole sourcebook, its historical examples or unused harness appendix on every context transition.
+If a goal omits a necessary rule, retrieve its named section and repair the gap within authority.
+These recovery rules concern an ongoing session only. `/new` and fresh sessions with a manual
+prompt never discover or resume an earlier campaign automatically.
 
 The durable unit of work is a goal Markdown file on disk. The launch message is a short pointer to
 that file. The root coordinates the campaign and owns integration; bounded children receive complete,
@@ -73,7 +81,7 @@ Run-end report: reconciliation first; the selected report is the final action, u
 ```
 
 The report line belongs in the contract rather than only in §6's report section, because the contract
-is what an agent reads first and re-reads after compaction. §10 explains why stating it once, as a
+is what an agent reads first and preserves in its active recovery state. §10 explains why stating it once, as a
 format, reliably fails to produce one.
 
 Reconcile the tracker and other drift-prone starting state before selecting the topology; read-only
@@ -175,12 +183,18 @@ bounded work down after the root has frozen it.
 
 ---
 
-## 2. Make the goal file the unit of work
+## 2. Goal contract and current execution state
 
-A goal file survives compaction and can be re-read before every lane. A long chat prompt cannot be
-relied on to preserve routing, authority, traps and corrections across a multi-hour campaign.
+The goal freezes the commissioned work and its authority. One root-owned current-state record
+supports continuation across context windows. Backlog remains the durable per-task outcome and
+decision archive. Neither the state record nor internal notes is a second task tracker.
 
-For preflight, read the tracked protocol file directly, including the applicable harness appendix, or redirect `backlog doc view <id> --plain` to a file and read that file in bounded chunks; tool-output truncation can otherwise silently omit the routing appendix and force a second read.
+During goal authoring, read the relevant sourcebook sections and applicable harness appendix in
+bounded chunks. The resulting goal must contain the applicable execution rules, resolved routes,
+ownership and acceptance, so a worker does not need the whole sourcebook to act. Preserve its source
+revision and section references for exceptional retrieval. Do not copy historical examples or unused
+routes. Retain standalone global/skill safeguards that also serve work outside this fan-out model;
+within a goal, state its task-specific narrowing rather than repeating all loaded policy.
 
 Put these in the goal file:
 
@@ -197,19 +211,88 @@ run and nothing that cannot change the outcome. Keep stable phrasing stable betw
 At the top of every goal say:
 
 ```text
-This file is your goal. Re-read it in full after compaction. Within one context, cite the section
-you need rather than re-reading the file.
+This file is your goal. For continuation within this session after a context transition, use
+<current-state path> and the recovery contract below. Retrieve missing or changed sections;
+do not reread this whole goal merely because compaction occurred. Fresh sessions and /new are
+outside this recovery contract and follow the operator's new prompt.
 ```
-
-**Re-read after compaction, not per lane.** Everything a context reads stays in it and is re-sent on
-every subsequent turn, so re-reading a goal five times leaves five copies of it in the root's
-context for the rest of the run. After compaction the goal is genuinely gone and must come back;
-inside one context it is already there, and the instruction to consult it is satisfied by citing the
-section. Where the launch message hands a goal to a fresh session, `@`-mention its path rather than
-telling the agent to read it — the file is attached to the first request and costs no tool call.
 
 Prefer one immutable goal file per run. A correction or new phase gets a new file that explicitly
 supersedes the old one. Do not silently rewrite the instructions an earlier run received.
+
+### Current-state record: current facts, not a wave diary
+
+Use `codex/state-<run-id>.md` unless the goal names an existing equivalent. One root owns writes;
+children return deltas and evidence, not competing root checkpoints. Keep only what changes the
+next decisions and execution. Before removing detail, save any required per-task outcome or decision
+through the Backlog CLI and retain its reference. Compact obsolete detail out of this working record;
+do not append every update or copy completed task histories into it. Keep evidence artifacts and
+published history intact. A run-end report is a terminal deliverable, not another live state record.
+
+```text
+Run/session identity; state revision; written-at time; last recorded execution boundary
+Goal path + content revision/hash; protocol revision; active amendments/corrections
+Observed profile/model/client and recovery mechanism + evidence (unknown when unavailable)
+Active outcome, acceptance/stop/report conditions and exact authority/constraints
+Current decisions with reasons and Backlog/evidence references
+Active lane ownership, dependencies, worker identities and pending returns
+Repository/worktree identity; tested SHA or dirty-state identity; CI/run/result references
+Operations: planned | attempted | running | completed | failed | unverified
+Next action; blockers/defaults; facts requiring live readback before that action
+```
+
+Write a new revision after a consequential decision or correction, ownership handoff, accepted lane
+return, completed gate, commit/deployment readback, or before an intentional in-session reset.
+Do this while ordinary tools are available; do not depend on a summarisation pass being able to write
+files. A timestamp alone is not freshness proof: compare the goal revision, last recorded boundary,
+pending operation IDs and any newer retained result. Record only observed completion and its evidence.
+Verify the completed write before intentionally resetting. Do not create a checkpoint every tool call.
+
+Internal notes and continuation prompts point to this record and revision. They may carry history
+window/item references and an explicitly marked unsaved delta, but not a second full copy of the state.
+Reconcile a newer retained result with an older disk checkpoint before proceeding; neither a summary
+nor a disk file gains authority merely by being available. If their conflict concerns authority,
+load the binding goal/amendment sections. Read the full goal only when necessary constraints cannot
+be recovered safely from identifiable sections. Do not reopen settled decisions without new evidence.
+
+### Same-session recovery: identify the mechanism first
+
+At a context transition the root records the observed mechanism, using the harness signal or retained
+item type when available. A `compacted` transcript marker alone does not identify it. Do not dump the
+raw transcript or search every profile to identify a mechanism; use session-local evidence and a
+bounded lookup if needed. Apply the following only to continuation of this session's active task:
+
+| Observed mechanism | Recovery behaviour |
+|---|---|
+| Native encrypted compaction | Use retained context and check current-state freshness. Retrieve missing or changed binding sections and evidence; do not request a second text summary. |
+| Text-summary compaction | Use the retained summary and current-state record. Resolve omissions/conflicts with targeted source reads. This is an observed harness fallback, not a prescribed campaign summarisation strategy. |
+| Experimental fresh-context reset | Explicitly read the current-state record (or its internal-note pointer), then use available history references for missing details. Previous working context must not be assumed to survive. |
+| Unknown mechanism | Read the current-state record and recover missing constraints before dependent work. Record uncertainty; never claim native/experimental retention without evidence. |
+
+`codex-nonproxy` is this fleet's only profile eligible for experimental context management. Its
+profile identity reliably selects eligibility, not activation: the running model/capabilities still
+decide whether a particular transition is experimental or native. Proxy profiles must not be given
+instructions that assume notes/history/new-context tools exist. Never enable or disable the mode,
+change a provider/model, or install a custom compaction prompt as a recovery step.
+
+Experimental resets are not cold session restarts. These instructions never trigger on `/new` or a
+fresh session with a manual prompt. Do not discover old state or auto-adopt a previous goal there.
+
+Compaction does not restart memory searches, tracker onboarding, protocol discovery or unchanged
+skill reads whose relevant content is already retained. Reuse the once-per-session Backlog overview;
+children receive it in their briefs. Re-query tracker/live/repository state when the next action
+depends on possible change; distinguish such verification from rereading instructions. Inside an
+unchanged context, refer to an already loaded section rather than loading another copy.
+
+### Keep tool results bounded without hiding evidence
+
+Inspect file size/headings before reading a large goal, log or inventory. Request only the necessary
+sections and respect the outer orchestration output limit as well as the nested command limit.
+Batch independent reads only when their combined output fits. If a result is truncated, retrieve the
+missing range rather than rereading overlapping copies of the whole file. Truncation is not proof
+that omitted constraints or failures were checked. Store bulky raw results in evidence artifacts;
+return the outcome, identity and relevant excerpt. Do not silently truncate policy by lowering the
+project-instruction byte cap, or invent an arbitrary context/token budget for the campaign.
 
 ### Re-check the STATE of every tracker item a goal names, not just its content
 
@@ -493,15 +576,21 @@ Escalation evidence: [facts the root needs to resolve an uncovered decision]
 Return exactly:
 - status: complete | blocked | partial
 - changed files or inspected scope
-- validation and evidence
+- validation result with exact tested identity and evidence artifact references
 - proven facts
 - unproven facts
-- uncovered decisions or blocker
+- uncovered decisions or blocker requiring root action
 - recommended next action
 ```
 
 Priority is not a dependency graph. State dependencies and permitted overlap explicitly. Do not spawn
 until the objective, exact scope, exclusions, ownership, acceptance and required output are all known.
+
+Return a concise result and the relevant evidence excerpt, not the exploration transcript or full
+logs. Keep bulky material in the lane's evidence artifact. The root checks consequential claims
+against that evidence and inspects more only when needed; it does not repeat successful mechanical
+work by default. Communicate changed state, a completed result or a decision request, not unchanged
+status. A child checkpoint covers only its lane and points to root-owned constraints.
 
 ### Hoist the invariant fields into one shared block
 
@@ -533,9 +622,10 @@ Delete empty sections and irrelevant examples. Do not keep headings that add no 
 ```markdown
 # [Project or programme] — [outcome], [date or run identifier]
 
-This file is your goal. Re-read it in full after compaction; within one context, cite the section you
-need rather than re-reading the file. It supersedes [older goal] where applicable; do not consult the
-superseded file unless this goal explicitly points to it.
+This file is your goal. Continue this session through [current-state path] using the same-session
+recovery contract below. Retrieve missing or changed sections after a context transition instead
+of automatically rereading this goal. Fresh sessions and /new follow the operator's manual prompt.
+It supersedes [older goal] where applicable; consult a superseded file only for a named reference.
 
 ## 0. Run contract
 
@@ -546,6 +636,9 @@ superseded file unless this goal explicitly points to it.
 - Current layer: research | design | implementation | review | live verification | deployment
 - External-write authority: [exact scope]
 - Harness: [name; its profile resolves every route in this goal]
+- Runtime profile: [observed profile; only codex-nonproxy is eligible for experimental resets]
+- Current state: [one root-owned path; revision and last boundary are maintained there]
+- Same-session recovery: [include the applicable §2 mechanism/freshness contract; not the sourcebook]
 - Root role / resolved route: [exact values]
 - Launch rationale: [why the whole wave needs this route]
 - Selected topology: solo | single auxiliary | campaign | campaign + security
@@ -585,7 +678,7 @@ Verified at [timestamp]. Do not re-derive unless a named check shows drift.
 
 ## 4. Agent routing
 
-[Paste the complete routing contract from this guide or an equivalent run-specific contract.]
+[Include the applicable run-specific routing contract and resolved routes. Omit unused routes.]
 
 ## 5. Lanes
 
@@ -1210,7 +1303,7 @@ the format alone:
 
 ## 11. Pre-flight checklist
 
-- [ ] The root read the tracked protocol file directly, or read a saved `backlog doc view <id> --plain` export in full, so tool-output truncation did not drop the harness appendix.
+- [ ] The goal author checked the relevant protocol sections and harness appendix without truncation; the execution goal carries the applicable contract and source revision without requiring a sourcebook reread.
 - [ ] Run mode, human availability, current layer, external-write authority and terminal condition are explicit.
 - [ ] Root async questions are allowed or explicitly disabled; unanswered questions cannot delay the run, and silence never grants authority.
 - [ ] The run contract names the harness, and the operator receives the root's role and the exact route that harness's profile resolves it to, with a one-sentence rationale.
@@ -1224,7 +1317,7 @@ the format alone:
 - [ ] **Intersect the success criteria with the external-write authority, in both directions.** The prohibition checks above run from the prohibition outwards; this one runs from the goal's own definition of done. A success criterion that cannot be satisfied without a mutation §0 forbids is the same defect wearing the opposite face, and it is harder to see because both halves read as correct in isolation: the authority looks appropriately tight and the criterion looks appropriately demanding. Read every "success means" bullet and name the exact write each one requires. Where a criterion needs a deploy, a push, a tracker edit or a live mutation, either grant that write explicitly or replace the criterion with one the run can actually satisfy. A run that has to negotiate its own authority mid-flight has already lost the property the contract exists to give it.
 - [ ] **Any model or effort the goal names matches the harness profile's table exactly.** State the role and depth and let the profile resolve the route; a hand-written route that contradicts the table is a defect, and it silently downgrades every run that inherits it.
 - [ ] **Verify the root route and every lane route as two separate acts.** Correcting the root is the likely partial fix and it is worse than none, because a goal carrying an explicit root correction reads as already audited. One run corrected its root, left every lane on a role/effort combination appearing nowhere in the profile's table, and the run itself had to catch it — grep the goal for every model name it contains and resolve each against the table.
-- [ ] **Re-read instructions do not exceed what the context-cost rules permit** — a goal re-read once per lane leaves one copy per lane in the root's context.
+- [ ] Recovery loads the current-state record and missing/changed sections; it does not restart onboarding or create overlapping copies of retained instructions.
 - [ ] **No acceptance criterion or definition of done was inherited from a different repository's convention** than the one the work is scoped to.
 - [ ] Stop rules park a lane and descend; only the genuinely irreversible stops the run.
 - [ ] A mid-run replacement says `do not pivot on receipt` and states what changed underneath it.
@@ -1286,7 +1379,7 @@ the format alone:
 - [ ] Every test target or check a wave creates is verified to be executed by CI, not only by the agent that built it.
 - [ ] Every external format is frozen from at least two instances where they exist, with per-instance assertions and empty categories named.
 - [ ] A source that is really many datasets gets a declarative descriptor seam before fan-out, so a lane contributes rows rather than parsing code.
-- [ ] The goal says to re-read in full after compaction and to cite a section within one context, not to re-read the file per lane.
+- [ ] The goal distinguishes native compaction, text-summary fallback, experimental reset and unknown mechanism; current-state freshness and unsaved deltas are reconciled. Fresh sessions and /new are excluded.
 - [ ] Every spawn earns its coordination cost through independent progress, context reduction or a checkable challenge to a material assumption; the root has useful concurrent work or a real dependency to await.
 
 ---
@@ -1486,6 +1579,12 @@ without effort, the client may select that model's default effort; pass both for
 A follow-up continues on the thread's existing model and effort. Reclassify the remaining work before
 every follow-up: when a design or judgement thread has reduced the work to bounded implementation,
 start a fresh Luna/max EXECUTION lane rather than continuing on the more expensive route.
+
+For work that still belongs to the same role, continue the existing worker when its evidence and
+decision context help. Start a new bounded lane when scope changes or irrelevant history dominates,
+with a complete handoff and an explicit ownership transfer. Do not duplicate a live worker's writes,
+replace workers after an arbitrary number of compactions, or add agents merely to clear root context.
+Measure root-plus-child cost and accepted outcomes; fewer root tokens alone do not prove efficiency.
 
 ### Concurrency and depth
 
