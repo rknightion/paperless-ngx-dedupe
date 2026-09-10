@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "graft": {
+      "command": "graft",
+      "args": ["mcp", "."],
+      "env": { "DO_NOT_TRACK": "1" }
+    }
+  }
+}
