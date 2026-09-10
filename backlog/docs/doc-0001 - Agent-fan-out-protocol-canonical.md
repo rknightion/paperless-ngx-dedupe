@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-10 18:20'
+updated_date: '2026-09-10 21:49'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `6e790fc`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `b256250`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -260,7 +260,13 @@ be recovered safely from identifiable sections. Do not reopen settled decisions 
 At a context transition the root records the observed mechanism, using the harness signal or retained
 item type when available. A `compacted` transcript marker alone does not identify it. Do not dump the
 raw transcript or search every profile to identify a mechanism; use session-local evidence and a
-bounded lookup if needed. Apply the following only to continuation of this session's active task:
+bounded lookup if needed. A visible prose summary, handoff, or "another model produced a summary"
+banner does not establish text-summary fallback: retained text can coexist with native encrypted
+compaction. Label text-summary only when the runtime evidence identifies that mechanism. When the
+signal/item type is unavailable or inconclusive, record **unknown**, including in commentary and the
+current-state record, rather than inferring a mechanism from the wording of the handoff.
+
+Apply the following only to continuation of this session's active task:
 
 | Observed mechanism | Recovery behaviour |
 |---|---|
@@ -1318,6 +1324,7 @@ the format alone:
 - [ ] **Any model or effort the goal names matches the harness profile's table exactly.** State the role and depth and let the profile resolve the route; a hand-written route that contradicts the table is a defect, and it silently downgrades every run that inherits it.
 - [ ] **Verify the root route and every lane route as two separate acts.** Correcting the root is the likely partial fix and it is worse than none, because a goal carrying an explicit root correction reads as already audited. One run corrected its root, left every lane on a role/effort combination appearing nowhere in the profile's table, and the run itself had to catch it — grep the goal for every model name it contains and resolve each against the table.
 - [ ] Recovery loads the current-state record and missing/changed sections; it does not restart onboarding or create overlapping copies of retained instructions.
+- [ ] The saved launch prompt, goal opening, recovery section, amendments and state instructions agree on same-session recovery. Remove stale "reread the whole goal after every compaction" instructions before launch; an explicit launch instruction can override the intended targeted recovery. Preserve the initial binding-goal read for a fresh/manual launch and the `/new` exclusion.
 - [ ] **No acceptance criterion or definition of done was inherited from a different repository's convention** than the one the work is scoped to.
 - [ ] Stop rules park a lane and descend; only the genuinely irreversible stops the run.
 - [ ] A mid-run replacement says `do not pivot on receipt` and states what changed underneath it.
