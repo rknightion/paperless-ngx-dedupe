@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-08 10:05'
+updated_date: '2026-09-10 16:37'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `1ebf90f`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `11b9f12`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -59,6 +59,7 @@ Every goal begins with an explicit run contract:
 ```text
 Run mode: daytime | front-loaded | unattended
 Human availability: available | reachable but not to be asked | unavailable for the whole run
+Root async questions: allowed without waiting (default, including unattended) | disabled
 Terminal condition: stop after the listed lanes | continue into the fallback queue
 Current layer: research | design | implementation | review | live verification | deployment
 External-write authority: [exact trackers, hosts, deployments, databases or workflows]
@@ -86,16 +87,42 @@ The topology rationale must explain why the task is decomposable into independen
 Daytime means the root may return a genuinely material decision that neither the goal nor a durable
 source resolves. Children still return uncovered decisions to the root; they do not ask the user.
 
-Unattended means no human will answer. The goal must provide defaults for expected forks and an
+Unattended means the run must finish without a human answer. Root-only asynchronous questions are
+allowed by default, including overnight: an incidental reply may unblock a lane, but sending a
+question never creates a wait dependency. The goal must provide defaults for expected forks and an
 ordered fallback queue if the terminal condition says to continue after a lane parks. Do not infer
 availability from the time of day or the expected duration.
+
+### Root-only asynchronous questions
+
+The root may use an available, genuinely nonblocking question tool to request a decision or guidance
+while the wave continues. Children return questions to the root; they never prompt the human directly.
+This applies across runtime profiles and run modes when the harness exposes that capability. A goal
+that explicitly forbids questions or notifications wins; `unattended` alone does not forbid them.
+
+- Ask a self-contained question with the affected lane, recommendation and authorised no-answer
+  outcome. Do not use questions as timers or agent waits. A redundant or low-value question is not a
+  reason to stop the wave or disable async prompting; do not deliberately generate placeholders.
+- After sending, immediately apply the existing default or delegated decision authority. If the
+  dependent action requires an unanswered material choice or new authority, record and park that
+  lane, then continue independent work or the authorised fallback queue. Never poll for an answer,
+  keep the turn alive solely for one, or postpone the terminal report for an unanswered question.
+- Delivery acknowledgement, a preselected option, an empty response and elapsed time are not consent.
+  Only an actual human answer can supply new approval. Silence never expands scope or authority.
+- On a reply, the root records the decision durably, checks that it still applies to the current
+  state and ownership, and forwards it to affected workers. Resume a parked lane only while it remains
+  in scope and its dependencies are satisfied; a late answer does not automatically restart a finished
+  wave or reverse completed work.
+- If the tool is absent or blocks, do not substitute a synchronous question in an unattended or
+  front-loaded run. Follow the same defaults, parking and reporting path. Report unresolved questions
+  and their lane outcomes even when the UI also retains them.
 
 ### Front-loaded is a third mode, and it is usually the right one
 
 **Front-loaded** means the human is awake and reachable, and precisely because of that every fork was
-put to them *before* the goal was written. The run then behaves like an unattended one — nobody is asked
-anything mid-run — but questions are **batched into the final report** rather than defaulted silently
-into a fallback queue.
+put to them *before* the goal was written. The run then behaves like an unattended one: no answer is
+required mid-run. Root async questions remain allowed unless the goal disables them; unresolved
+questions are **batched into the final report** rather than defaulted silently into a fallback queue.
 
 It is worth naming as its own mode because the two obvious modes both waste the human. Daytime invites a
 long day of interruptions over decisions that could all have been taken in one sitting beforehand.
@@ -514,6 +541,7 @@ superseded file unless this goal explicitly points to it.
 
 - Run mode: daytime | front-loaded | unattended
 - Human availability: available | reachable but not to be asked | unavailable for the whole run
+- Root async questions: allowed without waiting (default, including unattended) | disabled
 - Terminal condition: stop after the listed lanes | continue into the fallback queue
 - Current layer: research | design | implementation | review | live verification | deployment
 - External-write authority: [exact scope]
@@ -608,8 +636,9 @@ irreversible. One wrong constraint should cost one lane, not the run.
 - Give every lane a retry budget, stop rule and required escalation evidence.
 - An uncovered child decision returns to the root.
 - In unattended mode the root records the blocker, parks the lane and moves on.
-- In front-loaded mode nobody is asked anything mid-run either, but the questions are batched into
-  the final report rather than defaulted silently into the fallback queue.
+- Root async questions are allowed in unattended and front-loaded modes unless explicitly disabled;
+  neither mode waits for answers. In front-loaded mode unresolved questions are batched into the
+  final report rather than defaulted silently into the fallback queue.
 - State the terminal condition again and provide the ordered fallback queue if one exists.
 
 ## 9. Required final report
@@ -983,7 +1012,7 @@ claims about content, so require the evidence, not the adjective.
 
 | Failure | Counter |
 |---|---|
-| The root asks a question in unattended mode and idles | Pair `never ask` with `record, park and move on` plus an ordered fallback queue |
+| The root asks a question in unattended mode and idles | Allow root async questions, but immediately apply defaults or record, park and move on; never wait for an answer |
 | Workers re-derive already established facts | Label timestamped state independently verified and provide only named drift checks |
 | An attractive disproved belief returns | Preserve the wrong belief and correction together: `X was WRONG; Y is verified` |
 | A check passes while proving nothing | Name the false-pass mechanism and the artifact or state transition that constitutes proof |
@@ -1035,9 +1064,10 @@ claims about content, so require the evidence, not the adjective.
 Include this only when the run is unattended:
 
 ```text
-## RULE ZERO — no human is available, so never wait
+## RULE ZERO — no human answer is required, so never wait
 
-There is no human available for the entire run. Asking a question is equivalent to stopping.
+The run must complete without a human answer. The root may send nonblocking async questions unless
+the goal explicitly forbids them, but it must never wait for a reply or use a blocking input tool.
 
 - Take every explicit default in this goal.
 - A child that finds an uncovered decision returns it to the root and stops that lane. It never asks
@@ -1047,6 +1077,8 @@ There is no human available for the entire run. Asking a question is equivalent 
   anything. Otherwise it records the exact blocker, parks the lane and moves to another independent
   lane.
 - Never use a question or input tool as a sleep or wait primitive.
+- After an async question, apply the same defaults, authority, parking and fallback rules immediately.
+  A late reply is handled under §1's root-only async contract; silence is never approval.
 - Follow the stated terminal condition. Enter the fallback queue only when explicitly told to.
 - If the run makes an integrated state fail, follow the repository's recovery policy and do not leave
   a knowingly broken state merely to keep the campaign moving.
@@ -1180,6 +1212,7 @@ the format alone:
 
 - [ ] The root read the tracked protocol file directly, or read a saved `backlog doc view <id> --plain` export in full, so tool-output truncation did not drop the harness appendix.
 - [ ] Run mode, human availability, current layer, external-write authority and terminal condition are explicit.
+- [ ] Root async questions are allowed or explicitly disabled; unanswered questions cannot delay the run, and silence never grants authority.
 - [ ] The run contract names the harness, and the operator receives the root's role and the exact route that harness's profile resolves it to, with a one-sentence rationale.
 - [ ] Tracker and live-state preflight happened before topology selection; the selected topology and its task-specific rationale are recorded before any spawn or mutation.
 - [ ] The brief is an immutable goal file on disk, **the launch message is a second file beside it** at `codex/launch-<date>-wave<N>.txt`, and the launch message points to the goal's absolute path. Both are files. A launch message that exists only as a chat block fails this item even though the run it starts will work.
@@ -1384,8 +1417,27 @@ estimated cost. One anecdote or vendor benchmark does not prove fleet-wide benef
 
 These are observed measurements, not token budgets, allocation quotas or new checks on every wave.
 Keep adoption optional until the evidence supports a broader change. Model capability is not proof
-of integration: new async tools or mid-conversation effort updates require separate harness/provider
+of integration: use async questions only when the actual session exposes a nonblocking tool, and
+retain the no-answer path in §1. Mid-conversation effort updates require separate harness/provider
 validation before a goal relies on them. Ordinary fan-out needs neither feature.
+
+### Codex async question capability
+
+Use `functions.request_user_input_async` when it is exposed to the root. Its acknowledgement means
+the question was emitted; the human answer arrives separately as a user message. The root owns
+recording and routing that answer. Do not call the tool from children or assume an answer is forwarded
+to them automatically. Follow §1 in every run mode, including unattended runs.
+
+Keep `features.default_mode_request_user_input = false`: this controls the older synchronous tool in
+Default mode, not async availability. Async exposure depends on the actual model catalog and client;
+do not enable the older flag, change models or alter provider routing merely to obtain questions.
+When async is unavailable, unattended and front-loaded runs use their no-answer path.
+
+Codex 0.154.0 added inline TUI async answers; this does not prove that every client or provider has the
+same UI. Blank-question validation also does not establish that low-value questions are impossible.
+This protocol permits async use without making either UI quality or a human reply an acceptance gate.
+See the [Codex changelog](https://developers.openai.com/codex/changelog/) and
+[structured async question implementation](https://github.com/openai/codex/pull/42178).
 
 Official sources, checked 2026-09-04:
 
