@@ -105,31 +105,6 @@ grep -rniE "rob-knight|@gmail|[0-9]{1,3}(\.[0-9]{1,3}){3}|/Users/" backlog/ && e
 <!-- backlog.md-instructions-version: 1.50.1 -->
 <CRITICAL_INSTRUCTION>
 
-## Code graph
-
-`graft/` is a local, gitignored index of this repo: every symbol, its `file:line` span, and the call
-edges between them. Built by tree-sitter - no LLM, no key, no network. Six MCP tools serve it, and
-each refreshes the graph before answering, so results include uncommitted edits. `just graft-build`
-creates it on a fresh clone.
-
-- `graft_repo_map` - directory clusters, per-directory hub symbols, global hotspots. One call for
-  "explain this codebase" or landing in an unfamiliar area. Do not then walk every subsystem it names.
-- `graft_file_api` - every signature in one file with spans, about a tenth of the cost of reading it.
-  Use before editing or wiring into a file.
-- `graft_find_all` - regex over every indexed file, hits grouped by enclosing symbol and ranked by
-  coupling. **This is the reliable primitive.** Use it whenever you need every occurrence.
-- `graft_find_code` - ranked natural-language retrieval, lexical only. It ranks on name overlap with
-  your question, so it lands when the code is named the way you asked and drifts when it is not.
-  Weak hits mean switch tool, not re-ask.
-- `graft_trace_calls` - precomputed call edges. Correct for module-level functions. **It misses calls
-  made through a receiver** (`obj.method(...)`, `Class.method(...)`). A "no indexed callers" result is
-  not evidence a symbol is unused - confirm with `graft_find_all` before you rename it, change its
-  signature or delete it.
-- `graft_check_freshness` - drift report, never auto-refreshes.
-
-Use `Grep` and `Read` freely for anything graft does not index. It covers source files only, so
-markdown, YAML, Helm charts, the `justfile` and JSON fixtures are invisible to it.
-
 ## Backlog.md Workflow
 
 This project uses Backlog.md for task and project management.

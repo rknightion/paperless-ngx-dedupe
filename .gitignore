@@ -46,8 +46,3 @@ docs/assets/project-icon-solid.svg
 docs/assets/social-card.png
 docs/assets/social-card.svg
 docs/fonts/
-
-# graft: local, regenerable code graph, and the .ignore graft writes beside it so ripgrep
-# still reaches the cards. Both are generated on every build. Never committed.
-/graft/
-/.ignore
