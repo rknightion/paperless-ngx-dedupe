@@ -18,3 +18,10 @@ reviews:
       correct HTTP status. Server load functions must call the same core queries as matching API routes
       rather than duplicating logic. Check streamed or asynchronous UI state for stale updates and preserve
       server-only credentials and Paperless tokens.
+knowledge_base:
+  linked_repositories:
+  - repository: m7kni/m7kni-net-site
+    instructions: >-
+      Documentation hub. This repository dispatches documentation changes to the hub, which clones the
+      docs source and builds it. Check docs_path, config_file and the dispatch payload against this
+      repository's entry in the hub's docs-repos.json manifest.
