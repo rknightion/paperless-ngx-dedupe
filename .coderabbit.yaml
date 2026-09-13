@@ -6,6 +6,10 @@ reviews:
   tools:
     # Not configured in this repository. The org config no longer mutes it fleet-wide,
     # because muting a linter centrally strips it from repos that do ship its config.
+    oxc:
+      enabled: false
+    # Not configured in this repository. The org config no longer mutes it fleet-wide,
+    # because muting a linter centrally strips it from repos that do ship its config.
     biome:
       enabled: false
   path_instructions:
