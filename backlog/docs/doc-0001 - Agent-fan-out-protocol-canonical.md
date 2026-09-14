@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-14 09:25'
+updated_date: '2026-09-14 13:35'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `cc8d77f`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `6eae013`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -109,9 +109,16 @@ while the wave continues. Children return questions to the root; they never prom
 This applies across runtime profiles and run modes when the harness exposes that capability. A goal
 that explicitly forbids questions or notifications wins; `unattended` alone does not forbid them.
 
+- Ask only when a human answer could materially change an unresolved decision, scope, priority or
+  permission. Permission to ask is not an obligation or quota. An optional question may have a safe
+  no-answer default; an announcement of an already-authorised action is not a question.
+- Use ordinary commentary for status, progress and acknowledgements, and agent messages for worker
+  instructions. Never put these in an input tool, including single-option confirmations, "Continue"
+  or "no response needed" notices. Removing options does not turn an input call into commentary.
 - Ask a self-contained question with the affected lane, recommendation and authorised no-answer
-  outcome. Do not use questions as timers or agent waits. A redundant or low-value question is not a
-  reason to stop the wave or disable async prompting; do not deliberately generate placeholders.
+  outcome. Do not use questions as timers or agent waits, or deliberately generate placeholders.
+  If an unnecessary prompt was sent, continue the wave without waiting, but do not repeat it. Apply
+  a user's communication correction immediately, even if the goal previously allowed questions.
 - After sending, immediately apply the existing default or delegated decision authority. If the
   dependent action requires an unanswered material choice or new authority, record and park that
   lane, then continue independent work or the authorised fallback queue. Never poll for an answer,
@@ -753,8 +760,9 @@ irreversible. One wrong constraint should cost one lane, not the run.
 - An uncovered child decision returns to the root.
 - Apply §9's root disposition and shared attempt accounting before making a blocked lane terminal;
   a worker's blocked result alone does not park the lane. Continue independent authorised work.
-- Root async questions are allowed in unattended and front-loaded modes unless explicitly disabled;
-  neither mode waits for answers. In front-loaded mode unresolved questions are batched into the
+- Root async questions are allowed in unattended and front-loaded modes unless explicitly disabled,
+  and only for material unresolved choices under §1; status updates use commentary. Neither mode
+  waits for answers. In front-loaded mode unresolved questions are batched into the
   final report rather than defaulted silently into the fallback queue.
 - State the terminal condition again and provide the ordered fallback queue if one exists.
 
@@ -1194,6 +1202,8 @@ all implementation lanes; the repair grant below requires explicit run-contract 
 
 The run must complete without a human answer. The root may send nonblocking async questions unless
 the goal explicitly forbids them, but it must never wait for a reply or use a blocking input tool.
+Ask only when an answer could materially change an unresolved decision, scope, priority or permission.
+Status updates use commentary; worker instructions use agent messages, never an input tool.
 
 - Take every explicit default in this goal.
 - A child that finds an uncovered decision returns it to the root and stops that lane. It never asks
@@ -1555,8 +1565,9 @@ exposes the nonblocking tool. Mid-conversation effort changes require separate h
 
 ### Codex async question capability
 
-Use `functions.request_user_input_async` when it is exposed to the root. Its acknowledgement means
-the question was emitted; the human answer arrives separately as a user message. The root owns
+Use `functions.request_user_input_async` only for §1's material unresolved choices and only when it is
+exposed to the root, never for status updates or worker messages. Its acknowledgement means the
+question was emitted; the human answer arrives separately as a user message. The root owns
 recording and routing that answer. Do not call the tool from children or assume an answer is forwarded
 to them automatically. Follow §1 in every run mode, including unattended runs.
 
