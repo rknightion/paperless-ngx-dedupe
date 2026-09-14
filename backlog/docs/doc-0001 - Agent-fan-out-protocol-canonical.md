@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-10 21:49'
+updated_date: '2026-09-14 09:25'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `b256250`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `cc8d77f`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -50,8 +50,8 @@ how much context a spawn inherits, how many lanes may run at once, how deep dele
 
 The run contract names the harness once. Every lane then states its role **and the route the profile
 resolves it to** — a lane brief carrying only a role name leaves the choice to whoever reads it next.
-Codex runs also name the routing variant: `codex` or opt-in `codex-astra` (Appendix A). These are
-goal-file routing labels, not runtime profiles, installed custom agents or launcher commands.
+Codex runs use `codex` and record the protocol source revision and exact model/effort (Appendix A).
+This is a goal-file routing label, not a runtime profile, installed custom agent or launcher command.
 
 The harnesses do not differ by a lookup table of model names. Context forking, reasoning effort,
 concurrency limits, delegation depth and the return path for a child's deliverable differ in **kind**,
@@ -71,6 +71,7 @@ Root async questions: allowed without waiting (default, including unattended) | 
 Terminal condition: stop after the listed lanes | continue into the fallback queue
 Current layer: research | design | implementation | review | live verification | deployment
 External-write authority: [exact trackers, hosts, deployments, databases or workflows]
+Root repair authority: enabled | withheld [§9; default enabled for front-loaded/unattended implementation]
 Harness: [the harness this run launches on; its profile resolves every route below]
 Root role / resolved route: [role, plus the exact values the profile resolves it to]
 Launch rationale: [one sentence]
@@ -420,6 +421,21 @@ to freeze the seam. If yes, use RETRIEVAL or MAPPING for read-only work, EXECUTI
 bounded implementation, and JUDGMENT+EXECUTION only when the implementation itself still needs
 material context, judgement or risk control.
 
+Start with decisions already frozen in the wave goal and authoritative repository contracts. A
+complete packet goes directly to EXECUTION. Investigate only the unresolved portion; do not reopen
+settled decisions without contradictory evidence or an authorised amendment. Finding where behaviour
+is implemented or tracing its existing callers is MAPPING. Choosing a new responsibility boundary,
+or resolving contradictory ownership evidence, may require DESIGN+INTEGRATION.
+
+A design lane normally returns an implementation packet: the supported decision, interfaces,
+invariants, owned files, relevant edge cases, acceptance checks and remaining uncertainty. The root
+accepts the packet within its authority before assigning EXECUTION. Keep scratch specifications and
+investigation material in gitignored `codex/`; workers receive the relevant accepted packet, not
+the scratch history. No separate specification file or design agent is mandatory when the root can
+already supply the brief. If judgement remains tightly coupled to coding, use JUDGMENT+EXECUTION;
+if the implementation itself requires the design/security route, state why and assign it directly.
+Do not force a task onto a cheaper worker merely by writing a longer specification.
+
 The second is whether to spawn at all. Within an authorised fan-out run, delegate independent work
 when it shortens the critical path, keeps bulky intermediate material out of the root context, or
 provides an independently checkable challenge to a material assumption. Account for startup,
@@ -641,6 +657,7 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 - Terminal condition: stop after the listed lanes | continue into the fallback queue
 - Current layer: research | design | implementation | review | live verification | deployment
 - External-write authority: [exact scope]
+- Root repair authority: enabled | withheld [§9; default enabled for front-loaded/unattended implementation]
 - Harness: [name; its profile resolves every route in this goal]
 - Runtime profile: [observed profile; only codex-nonproxy is eligible for experimental resets]
 - Current state: [one root-owned path; revision and last boundary are maintained there]
@@ -734,7 +751,8 @@ irreversible. One wrong constraint should cost one lane, not the run.
 - State defaults for expected forks.
 - Give every lane a retry budget, stop rule and required escalation evidence.
 - An uncovered child decision returns to the root.
-- In unattended mode the root records the blocker, parks the lane and moves on.
+- Apply §9's root disposition and shared attempt accounting before making a blocked lane terminal;
+  a worker's blocked result alone does not park the lane. Continue independent authorised work.
 - Root async questions are allowed in unattended and front-loaded modes unless explicitly disabled;
   neither mode waits for answers. In front-loaded mode unresolved questions are batched into the
   final report rather than defaulted silently into the fallback queue.
@@ -806,6 +824,14 @@ Testing has a job rather than a quota:
 
 Returned reports are claims, not proof. Verify load-bearing facts against source, git, CI, trackers and
 live systems. A missing child report is not proof of failed work either; inspect the expected artifact.
+
+Acceptance includes commissioned behaviour and relevant failure cases, preserved established
+contracts, and understandable repository conventions. Avoid unnecessary abstractions, tests and
+unrelated changes. Resolve correctness, security and material maintainability defects; stylistic
+preferences alone do not justify another repair cycle. Root rescue code meets the same applicable
+checks and review requirements as worker code. Assign actionable findings to a named implementation
+owner in this wave when authorised; never leave them without a disposition or add general reviewers
+by habit. No repair may weaken the required outcome or its evidence to manufacture completion.
 
 A reviewer reports findings and never implements its own corrections. **Any implementation change
 after a REVIEW or SECURITY verdict invalidates that verdict**, even when the fix appears mechanical.
@@ -1158,9 +1184,10 @@ claims about content, so require the evidence, not the adjective.
 
 ---
 
-## 9. Unattended blocker and fallback contract
+## 9. Blocker handling, root repair and attempt limits
 
-Include this only when the run is unattended:
+Include Rule Zero for unattended/front-loaded runs. Root disposition and attempt accounting apply to
+all implementation lanes; the repair grant below requires explicit run-contract eligibility.
 
 ```text
 ## RULE ZERO — no human answer is required, so never wait
@@ -1190,15 +1217,22 @@ improving the precise handoff for a parked lane.
 
 ### Delegated root authority
 
-A correctly written park is still a failed lane. The manifest-ownership case in §8 parked exactly as
-instructed and cost the run two thirds of its work, and a cheap worker that errors out on an
-over-precise instruction produces the same outcome. Where the goal declares an unattended run and the
-root meets the tier floor, the root carries the authority below and **exhausts it before parking**.
+Every goal states `Root repair authority: enabled | withheld`. Default it to enabled for front-loaded
+and unattended implementation waves whose root meets the harness profile's eligibility floor; default
+it to withheld otherwise. A daytime implementation goal may explicitly enable it. A narrower explicit
+restriction wins. The grant applies only to commissioned implementation within existing task and
+external-write authority: research, review-only and other read-only work never become implementation
+because this field is enabled. Root capability alone grants no authority.
 
-**Tier floor.** `gpt-6-astra` at any supported effort, or `gpt-5.6-sol` at `medium` or above. Below
-the floor the grant does not apply and the ordinary park rule stands. The floor is eligibility; the
-unattended declaration is what grants the authority. Capability alone never grants it, and a goal may
-withhold the grant in its §1 contract.
+Where a harness has no defined eligibility floor, this protocol supplies no default repair grant.
+Preserve explicitly commissioned task authority; do not infer eligibility from model capability.
+
+Before a worker's blocked return becomes a terminal lane park, the root inspects its evidence and
+expected artifact and records one disposition: repair and redispatch within authority; perform an
+authorised prerequisite; wait for a real active dependency while progressing independent work; or park
+with the tested blocker, exact missing authority/evidence and resume condition. Exhaust applicable
+repair authority before parking. A missing report, permission or prerequisite is not proof of a model
+failure. Do not wait for a dependency that has no active owner or feasible completion path.
 
 The root may:
 
@@ -1216,15 +1250,32 @@ The root may:
   Long-standing seams have implementation exposure that a wave-old seam has not; park, and state in
   the report why the seam needs changing.
 
-**The confidence gate.** On an architectural fork or a seam amendment, act only at roughly 70%
-confidence or better. Below that, park and escalate — a decision taken at low confidence costs more to
-unwind than the parked lane costs to resume.
+**Evidence gate.** Before an architectural choice or seam amendment, identify the supported
+explanation, bounded correction, affected consumers and a discriminating verification check. Resolve
+material contradictory evidence first. A self-assigned confidence percentage is not authority or proof.
+When the available evidence cannot distinguish the consequential alternatives, park the decision and
+continue independent work. Never weaken success criteria, omit required consumers or relabel missing
+verification as passed to complete a lane.
 
-**Re-dispatch budget.** Three cycles per lane, extendable to five. Every cycle records its failure
-signature. **Two consecutive cycles failing the same way stop that lane immediately, even with budget
-remaining**, and escalate it as a design problem rather than an implementation one — a repeated
-identical failure means the design is wrong and no further cycle will find that out. The extension
-from three to five is available only where each cycle failed differently.
+**Shared attempt accounting.** An implementation attempt is a bounded code-change-and-verification
+cycle against the lane's acceptance, not an individual command, tool call, compaction or infrastructure
+outage. Record its number, route, inspected state, change and failure signature in the existing lane
+record. A second attempt needs new evidence or a concrete correction; unchanged reruns are forbidden.
+The default budget is three implementation attempts per commissioned lane, including root rescue.
+A stricter goal limit wins. Worker, model, packet or goal amendments do not reset the count.
+
+After at most two unsuccessful EXECUTION-worker attempts, stop that worker's retries and return the
+accumulated artifact and evidence to the root. Escalate earlier when evidence establishes an unsuitable
+route, incomplete packet or missing prerequisite. The root diagnoses the cause and, when a bounded
+implementation correction is justified and authorised, may perform one rescue attempt itself or
+through one appropriately routed worker. Transfer ownership first; do not automatically step through
+every model tier. The harness appendix resolves the worker and rescue routes.
+
+If rescue fails, reassess the design, packet, environment and acceptance check. Repeated failure alone
+proves none of them wrong. Further execution requires an evidenced correction and an explicit root
+extension, up to five total implementation attempts for the lane. No further unchanged rescue loop is
+allowed. At the limit, or without a justified authorised next correction, park precisely and continue
+independent work. This ceiling does not replace separate review budgets or grant new authority.
 
 **Boundaries that the grant does not touch.** No production or protected-key action, no expansion of
 the goal's external-write scope, no waiving a release cap or protocol-cut boundary, no bypassing a
@@ -1338,9 +1389,11 @@ the format alone:
 - [ ] Root, child and optional grandchild authority are explicit; bounded workers do not commit.
 - [ ] One file has one owner; integration files, gate owners and resource mutexes are named.
 - [ ] Nested campaigns reserve part of the pool rather than saturating it at the root, and the reserve is sized against the harness's real cap.
-- [ ] Every lane has a retry budget, stop rule and escalation-evidence requirement.
-- [ ] Rule Zero and a blocker path are present for unattended runs.
-- [ ] For an unattended run, the delegated root authority grant (§9) is either carried with its tier floor met and its re-dispatch budget stated, or explicitly withheld.
+- [ ] Every implementation lane has shared attempt accounting, a worker-to-root rescue path and a stop rule; changing worker, route or packet never resets its budget.
+- [ ] Rule Zero and a blocker path are present for unattended/front-loaded runs; terminal parks require a root disposition.
+- [ ] Root repair authority is explicitly enabled or withheld; its run-mode and harness eligibility, evidence gate and authority boundaries are satisfied, and read-only work stays read-only.
+- [ ] Existing frozen decisions are reused; design lanes resolve only missing decisions and return accepted implementation packets before execution.
+- [ ] Acceptance includes behaviour, relevant failure cases, preserved contracts and material maintainability without creating style-only repair loops.
 - [ ] Expected false-pass mechanisms are named and the required proof is observable.
 - [ ] Out-of-band work uses check-then-branch rather than asserted readiness.
 - [ ] Workers have focused validation and one owner has the integrated gate.
@@ -1395,131 +1448,110 @@ the format alone:
 
 Complete. Everything the body defers to a profile is resolved here for Codex.
 
-### Root role → launch model and effort
+### Root and worker routes
 
-Select `codex` for the existing routing or `codex-astra` for a complex root, and write the selection
-into the goal. This selects a route for the run only. Never edit `config.toml`, a launcher or the
-operator's default model to make a campaign match the table; the operator may change their launch
-model at any time. An explicit operator selection of Astra authorises that root route even when an
-older goal names Sol: do not stop solely for that stale pin. The goal owner records the replacement in
-the durable run record, and the root reports the observed model/effort rather than claiming the
-requested Sol route ran. A missing, conflicting or silently substituted route without that operator
-selection remains a hard stop for the affected lane.
+Use `codex`, record this source revision and resolve every lane independently. These defaults apply
+to newly authored goals. Existing goals retain their commissioned routes and authority until an
+explicit amendment is recorded; a new source revision never silently changes an active campaign.
+An explicit operator-selected route is authoritative and recorded as an exception. Never edit runtime
+configuration, launchers, authentication or personal model defaults to make a campaign match a goal.
 
-The standard `codex` root route is:
+The standard root is `gpt-6-astra`, `low`. It owns orchestration, decisions within granted authority,
+integration and acceptance. Use `medium` when complex technical decisions dominate the whole run,
+or `high` when consequential architecture, security or interacting risks dominate. A large lane
+count or long log alone does not justify raising the root. When only one bounded question needs more
+depth, keep the ordinary root and assign that question to a specialist.
 
-```text
-Launch model: gpt-5.6-sol
-Launch effort: high
-Why: this wave coordinates independent lanes, owns integration and may encounter uncovered seams.
-```
-
-| Root role (§1) | Launch model | Effort |
+| Role or workload | Model | Effort and boundary |
 |---|---|---|
-| DESIGN+INTEGRATION, standard depth | `gpt-5.6-sol` | `high` |
-| DESIGN+INTEGRATION, raised depth | `gpt-5.6-sol` | `high` |
-| SECURITY, raised depth | `gpt-5.6-sol` | `high`; `xhigh` only for exceptional risk or ambiguity |
-| EXECUTION, standard depth | `gpt-5.6-sol` | `high`, with Luna execution lanes |
-| JUDGMENT+EXECUTION, raised depth | `gpt-5.6-sol` | `high`, with Terra judgement lanes |
-| EXECUTION with RETRIEVAL lanes | `gpt-5.6-sol` | `high`, with Luna retrieval lanes |
+| Campaign root, ordinary orchestration and integration | `gpt-6-astra` | `low`; `medium` for a predominantly technical-decision run; `high` for consequential architecture or risk |
+| RETRIEVAL | `gpt-5.6-luna` | `medium`; deterministic lookup, inventory and extraction |
+| MAPPING, straightforward code maps and structured summaries | `gpt-5.6-luna` | `medium` |
+| MAPPING, substantial synthesis across sources | `gpt-5.6-luna` | `max`; return unresolved consequential interpretations to the root |
+| GATE | `gpt-5.6-luna` | `medium`; execute the named gate and report, never diagnose or repair source |
+| EXECUTION, fully specified implementation | `gpt-5.6-luna` | `max`; leaf worker with directly checkable acceptance |
+| JUDGMENT+EXECUTION, medium complexity and bounded local choices | `gpt-5.6-sol` | `medium`; established architecture with judgement coupled to coding |
+| REVIEW, ordinary correctness and regression | `gpt-6-astra` | `low`; `medium` for complex logic or interacting components; `high` for consequential risks |
+| DESIGN+INTEGRATION, bounded technical investigation and specification | `gpt-6-astra` | `medium`; `high` for consequential architecture or interacting decisions |
+| SECURITY, authentication, permissions, migration safety, secrets and data-loss boundaries | `gpt-6-astra` | `high` |
+| Worktree auditor, REVIEW of ancestry, patch identity and recovery | `gpt-6-astra` | `medium`; `high` when ambiguity threatens unique work |
+| Implementation requiring Astra capability from the outset or a root-owned rescue | `gpt-6-astra` | `low`, `medium` or `high` according to the remaining decision and risk; state why the ordinary worker cannot safely finish |
 
-Under `codex`, keep the campaign root on Sol/high for architecture, conflict resolution, verification
-and acceptance. The opt-in `codex-astra` root route below is the explicit exception.
-Luna/max is the normal fully specified implementation leaf, not a campaign root. If the packet needs
-material local judgement, context or risk control, route it to JUDGMENT+EXECUTION on Terra/high instead
-of asking Luna to redesign the packet.
+Luna uses only `medium` or `max` in this contract. Never select Luna `low` or non-reasoning as a
+fallback. Terra and Sol/high or xhigh have no standard route; use them only for an explicitly
+operator-selected exception or evaluation. They are not automatic fallback steps. If a selected route
+is unavailable, report it and let the root resolve an authorised alternative explicitly; never report
+a substituted route as the requested one.
 
-### Role → model and effort
+Astra `high` is for significant architecture, security and difficult interacting decisions, not all
+technical work. Astra `xhigh` or `max` requires a recorded exceptional unresolved question and a
+reason additional depth can help. Ultra is outside ordinary campaign routing; controlled delegation
+uses the explicit lanes and pool rules below. The exceptional-effort restriction does not apply to
+Luna/max, which is the standard implementation route.
 
-| Role | Route |
-|---|---|
-| RETRIEVAL | `gpt-5.6-luna`, low |
-| MAPPING | `gpt-5.6-luna`, medium |
-| GATE | `gpt-5.6-terra`, low |
-| EXECUTION | `gpt-5.6-luna`, max |
-| JUDGMENT+EXECUTION | `gpt-5.6-terra`, high |
-| REVIEW | `gpt-5.6-terra`, high |
-| DESIGN+INTEGRATION | `gpt-5.6-sol`, high |
-| SECURITY | `gpt-5.6-sol`, high or `xhigh` |
+The §4 narrow roles resolve through this table: Mapper uses MAPPING; Lane worker uses EXECUTION;
+Complex lane worker uses JUDGMENT+EXECUTION; Reviewer and Worktree auditor use their REVIEW entries;
+Security reviewer uses SECURITY; Gate runner uses GATE. These role names are not promises that a
+custom `agent_type` is installed. Inspect selected custom-role pins before dispatch.
 
-The §4 narrow-role table resolves the same way: Mapper → Luna/medium, Lane worker → Luna/max,
-Complex lane worker → Terra/high, Reviewer → Terra/high, Security reviewer → Sol/high, Gate runner →
-Terra/low, Worktree auditor → Terra/high.
+### Technical decisions and implementation
 
-### Optional Astra routes
+Astra specialists normally produce the accepted implementation packet described in §3. Start with the
+wave's frozen decisions and inspect only their gaps. An already complete goal goes straight to
+Luna/max; a separate design agent or specification document must earn its overhead.
 
-Rob may choose an Astra root for complex waves. An explicitly operator-selected Astra root is an
-authorised stronger substitute for an earlier Sol root route and may keep independent lanes moving
-while it resolves an obstacle within the task's scope.
+Discovering which component currently implements a behaviour is mapping, not automatically design.
+Astra/medium resolves material uncertainty such as contradictory evidence or a new interface choice.
+Use Astra/high when the decision changes consequential architectural, concurrency or security
+boundaries. Each specialist receives observations, source references, competing explanations,
+attempted checks, frozen constraints and the exact question with a discriminating acceptance check.
 
-Use `codex-astra` when the root must reconcile interacting unknowns, diagnose a cause across
-components, or settle consequential architecture. Its root is `gpt-6-astra`, `high`; all ordinary
-child mappings above stay unchanged. A large lane count, a long log or a high-effort label alone is
-not a reason. Prefer a bounded Astra specialist under a standard root when only one isolated problem
-needs that depth.
+The root accepts the decision within existing authority and hands a complete packet to a fresh
+Luna/max implementation worker. If Luna exposes a missing decision, return the specific gap; the root
+resolves it directly or requests a bounded specialist follow-up. Preserve prior decisions unless new
+contradictory evidence or an authorised amendment requires revisiting them.
 
-An Astra root on an unattended run carries the delegated root authority of §9 — it clears the tier
-floor at every supported effort — so it repairs goal defects, settles well-evidenced architectural
-forks, implements bounded prerequisites and amends seams frozen during the same wave, within that
-section's confidence gate, re-dispatch budget and boundaries. Read §9 for the grant; it is not
-restated here, and it is not Astra-specific. A Sol root clears the same floor at `medium` or above.
-This is task-scoped root judgement, not blanket autonomy based on model capability. Preserve one-file
-ownership and existing child routes unless their own authorised briefs change.
+Use Sol/medium when bounded local judgement remains tightly coupled to coding. Use Astra for the
+implementation itself when the task is unsuitable for Luna or separating reasoning from execution
+would lose necessary context. Explain that exception in the lane; do not require a cheap worker to
+fail first on a known unsuitable task. An Astra implementer is not also its independent reviewer.
+Once only frozen implementation remains, transfer it to Luna/max rather than continuing an expensive
+thread by inertia. Code quality, safety and verification requirements follow the work, not its price.
 
-Where a project's operating model grants the root wider external-write authority, the goal's §1
-contract states that grant explicitly and the root exhausts it before parking on the state it covers.
+### Root repair and bounded rescue
 
-| Route label | Role | Model | Effort |
-|---|---|---|---|
-| `codex-astra` root | DESIGN+INTEGRATION or SECURITY | `gpt-6-astra` | `high`; `xhigh` only with a stated exceptional risk or ambiguity |
-| `design-astra` | DESIGN+INTEGRATION | `gpt-6-astra` | `high` |
-| `review-astra` | REVIEW | `gpt-6-astra` | `high`; `xhigh` only with a stated exceptional risk or ambiguity |
-| `security-astra` | SECURITY | `gpt-6-astra` | `high`; `xhigh` only with a stated exceptional risk or ambiguity |
+For §9, the Codex root eligibility floor is `gpt-6-astra` at any supported effort, or an explicitly
+selected `gpt-5.6-sol` root at `medium` or above. Eligibility alone does not enable the repair
+grant: the run contract, implementation scope and §9 boundaries determine authority.
 
-These labels resolve to explicit model/effort values on a generic spawn. They do not imply that a
-custom `agent_type` exists. If a matching custom agent is actually installed, inspect its pins before
-using it. `security-astra` is a campaign review route, not the separate Codex Security runtime profile;
-it never changes that profile's provider, authentication or model contract.
+After at most two unsuccessful Luna/max EXECUTION attempts on the lane, the root owns diagnosis and
+may take one bounded Astra rescue attempt under §9. Escalate earlier for an unsuitable worker, missing
+decision or unavailable prerequisite. Resolve the rescue's required Astra effort from the remaining
+decision and risk. The root may implement directly only when its observed model and effort satisfy
+that route; otherwise dispatch one Astra worker at the required low/medium/high effort. A Sol root or
+an Astra/low root does not qualify for an Astra/high rescue. This is not three successive tier attempts
+and does not assume the running root can change its effort.
 
-Every Astra selection states the unresolved question, why the ordinary route is insufficient, and
-the observable evidence that will settle it. Repair incomplete briefs, missing controls, tool routes
-and prerequisites before escalating. Missing permissions, unavailable data and absent live evidence
-remain missing on a stronger model. A contradictory result or an unresolved consequential hypothesis
-can justify escalation; an unchanged failing command does not.
+The default total is three implementation attempts including rescue; a stricter goal cap wins.
+Any further implementation requires an evidenced correction and explicit extension up to five total.
+Changing model, worker, packet or goal does not reset the lane count. Environmental outages and
+individual tool calls do not count as failed implementation attempts. Stop unchanged retries.
+A failed rescue triggers reassessment of the design, packet, environment and acceptance; it proves
+none of them wrong by itself. Apply the same applicable review and verification to rescued code.
 
-An Astra specialist receives a complete evidence packet: observations and source references,
-competing explanations, attempted checks and their results, frozen decisions, the exact question,
-and what observation would discriminate between the explanations. Ask for a conclusion supported by
-evidence, remaining uncertainty and the next discriminating check, not a transcript of reasoning.
-After the decision is frozen, send remaining bounded implementation to EXECUTION or, where material
-local judgement remains, JUDGMENT+EXECUTION. Do not keep routine follow-ups on Astra by inertia.
+### Prompt calibration
 
-`high` is the initial comparison point against the existing Sol/high route, not a measured optimum.
-Do not default to `max` or `ultra`; use only effort values supported by the actual client and model.
-Do not substitute Astra for RETRIEVAL, MAPPING, GATE or frozen EXECUTION simply because the root uses it.
+State granted authority, human-availability mode, relevant ownership and success conditions clearly.
+Follow through within that authority, delegate only independent work that earns its coordination
+cost, and stop once acceptance and the selected checks pass. Return concise outcomes and evidence
+rather than exploration transcripts. Prefer existing understandable repository patterns; do not add
+unnecessary tests, abstractions or style-only repair rounds.
 
-### Prompt calibration and evidence for adoption
-
-The generic contracts already cover Astra's documented tendencies to ask more questions, delegate
-less, over-test small changes and produce detailed responses. Apply them explicitly: follow through
-within granted authority, respect the run's human-availability mode, dispatch independent lanes that
-earn their cost, and proceed to handoff once acceptance and selected checks pass. Keep agent messages
-legible and concise; report outcomes and evidence rather than narrating every tool call. Do not paste
-the entire vendor prompting guide into every goal or add duplicate policy blocks.
-
-Before making Astra the normal campaign route, compare representative frozen tasks on Sol/high and
-Astra/high: a difficult diagnosis, a shared-contract design, a concurrency or migration review, and
-a routine implementation control. Use isolated starting states, equivalent tools, authority and
-acceptance checks; do not let one run see the other's answer. Assess artifacts independently and
-record missed defects, accepted outcomes, interventions, repeated checks, elapsed time and total
-root-plus-child usage. Report route and harness versions and distinguish observed usage from any
-estimated cost. One anecdote or vendor benchmark does not prove fleet-wide benefit.
-
-These are observed measurements, not token budgets, allocation quotas or new checks on every wave.
-Keep adoption optional until the evidence supports a broader change. Model capability is not proof
-of integration: use async questions only when the actual session exposes a nonblocking tool, and
-retain the no-answer path in §1. Mid-conversation effort updates require separate harness/provider
-validation before a goal relies on them. Ordinary fan-out needs neither feature.
+Keep routing rationale, adoption history and comparative evaluation material outside this live
+contract and outside mandatory campaign reading. Ordinary runs retain their existing evidence and
+usage reporting; evaluation-specific measurements belong to the evaluation goal. Supported model
+features do not prove client/provider integration. Use async questions only when the actual session
+exposes the nonblocking tool. Mid-conversation effort changes require separate harness validation.
 
 ### Codex async question capability
 
