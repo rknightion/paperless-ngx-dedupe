@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-14 14:57'
+updated_date: '2026-09-15 11:56'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `a0820aa`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `66f473d`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -448,6 +448,13 @@ already supply the brief. If judgement remains tightly coupled to coding, use JU
 if the implementation itself requires the design/security route, state why and assign it directly.
 Do not force a task onto a cheaper worker merely by writing a longer specification.
 
+Inspect upcoming implementation lanes for unresolved contracts, identifiers, fixtures and tool
+routes. Where resolving them is authorised, dispatch a bounded decision or investigation lane early
+while independent implementation proceeds. Its output is a self-contained implementation packet
+with the resolved prerequisites, ownership, permitted actions and discriminating checks. Do not
+launch an implementation worker merely to rediscover a known blocker. A missing prerequisite calls
+for a root resolution decision under §9, not automatic parking.
+
 The second is whether to spawn at all. Within an authorised fan-out run, delegate independent work
 when it shortens the critical path, keeps bulky intermediate material out of the root context, or
 provides an independently checkable challenge to a material assumption. Account for startup,
@@ -495,6 +502,26 @@ If polling is necessary, let one tool-side watcher perform bounded checks and re
 terminal result; do not have the root and several workers poll the same state. Reuse the existing
 process or watcher rather than launching another at each check.
 
+Ordinary intermediate CI runs asynchronously by default. After a checkpoint push, record the exact
+SHA and run identity and advance ready, independent, authorised work. Reconcile available per-job
+conclusions at the next checkpoint or on completion notification. A pending run blocks only actions
+that depend on its result or cross a synchronisation boundary required by the repository or goal;
+continue other eligible work. Preserve unresolved affected checks across later commits. Before
+final acceptance or another required consequential boundary, resolve the applicable proof obligations.
+This scheduling rule grants no deployment authority and changes neither required gates nor attempt
+limits. Repository additions name their specific blocking boundaries, gates, resource constraints
+and watcher/timeout settings; ordinary asynchronous scheduling applies regardless of CI duration.
+
+While a run or worker is pending, the root advances the ready queue using the appropriate worker
+routes. Revisit readiness when a worker completes, a review clears, CI resolves or another named
+prerequisite changes. Fill available capacity with eligible work without waiting for unrelated lanes.
+Prefer work that releases blocked consumers or advances the required outcome, respecting frozen
+seams, ownership, resource isolation and concurrency limits. The root may dispatch, integrate,
+reconcile evidence or perform work appropriate to its role; it does not absorb every queued
+implementation task. A blocking boundary stops its dependent action, not unrelated authorised work.
+Wait when no eligible independent work remains. Use completion events rather than repeatedly
+polling the queue or inventing work to occupy slots.
+
 The root does useful independent work or waits on a real dependency; it does not repeatedly list
 agents, re-read unchanged logs, ask workers for status or narrate unchanged queue states. A wait
 timeout is not an implementation failure and does not justify a model escalation or a fresh worker.
@@ -527,6 +554,13 @@ desirable merely because it is permitted.
   pass. Do not put two writers on the same file.
 - Name resource mutexes such as a simulator, package manager, database migration lock or integration
   test environment. Name one integrated gate owner rather than having every worker repeat it.
+
+Before overlapping lanes, identify their checkouts and mutable resources: dependency-install
+directories, generated outputs, ports, databases, services and shared registries where applicable.
+Use separate worktrees and isolated runtime resources when authorised and useful. A worktree does
+not isolate a database, running service or external environment. Confirm isolation before release;
+otherwise serialize operations that mutate the same resource while advancing work elsewhere.
+Disjoint source files alone do not establish isolation or permit exceeding a worker-count limit.
 
 Flat, non-delegating fan-out may use the whole pool. If any child may delegate, the root starts at
 roughly two-thirds of the pool as direct children and reserves the rest for grandchildren, replacement
@@ -638,6 +672,8 @@ Frozen decisions: [answers the worker must not reopen]
 Allowed side effects: [normally local edits and focused validation only]
 Acceptance check: [observable condition]
 Validation: [targeted commands or evidence]
+Known evidence discriminators: [relevant client/tool paths, deployed identifiers, timestamped disagreements,
+  authorised checks that distinguish them, and disposition if inconclusive; omit irrelevant history]
 Retry budget: [number and evidence that would justify a retry]
 Stop rule: [observable condition that completes or parks the lane]
 Escalation evidence: [facts the root needs to resolve an uncovered decision]
@@ -654,6 +690,15 @@ Return exactly:
 
 Priority is not a dependency graph. State dependencies and permitted overlap explicitly. Do not spawn
 until the objective, exact scope, exclusions, ownership, acceptance and required output are all known.
+
+Name the source, service, schema, environment and evidence prerequisites that make each lane ready.
+Use a whole-wave barrier only when the lane depends on the whole integrated outcome or the owner
+requires that sequence. Release browser or other verification when its prerequisites are satisfied
+and its environment is stable and isolated. Retain final-integration barriers for criteria needing
+the composed result. Identify the verified snapshot and revalidate affected evidence if later changes
+invalidate it. Deferred criteria retain a named successor until their required proof is complete.
+Carry known client or environment disagreements into the relevant brief before dispatch; an existing
+UNSAFE/deny result or attempt limit remains binding unless a new attempt is explicitly authorised.
 
 Return a concise result and the relevant evidence excerpt, not the exploration transcript or full
 logs. Keep bulky material in the lane's evidence artifact. The root checks consequential claims
@@ -745,6 +790,7 @@ Verified at [timestamp]. Do not re-derive unless a named check shows drift.
 - Children do not commit, push or mutate external state unless a lane delegates that exact action.
 - One file has one owner. Name integration files and resource mutexes.
 - State which lanes may overlap and which must remain sequential.
+- Identify shared mutable resources and how overlapping lanes isolate them (§4).
 - If nested delegation is allowed, start roughly two-thirds of the pool as direct children and reserve the rest.
 
 ## 4. Agent routing
@@ -759,7 +805,8 @@ Check the root, every lane/brief, rescue routes and launch message against the s
 |---|---|---|---|---|---|---|
 | 1 | ... | ... | ... | ... | ... | ... |
 
-[Give each lane a complete child lane brief.]
+[Give each lane a complete child lane brief. Name its readiness and review-ready conditions,
+specific prerequisites and resource constraints; inherit event-driven queue scheduling from §3.]
 
 ## 6. Applicable constraints and corrections
 
@@ -796,6 +843,12 @@ irreversible. One wrong constraint should cost one lane, not the run.
 - Wait through completion events or one bounded watcher; do not multiply root/worker polling loops.
 - Quote exact outputs, SHAs and CI run IDs. Separate source, CI, deployment and live proof.
 - Never convert absence of evidence into a pass.
+
+Repository CI additions: [Inherit asynchronous ordinary CI from §3. Name this repository's exact
+synchronisation boundaries, required terminal gate and watcher/timeout or resource constraints.
+Give the rationale for a stricter boundary. One owner records SHA, run ID, selected/skipped jobs,
+conclusions, unresolved ancestor coverage and the next synchronisation point. Verify actual
+concurrency and cancellation behavior; do not assume a push cancels a pending main run.]
 
 ## 8. Blocking and stop rules
 
@@ -860,6 +913,21 @@ Keep these proof layers distinct:
 Do not say CI is green merely because the latest run is green. Resolve the commit and verify the run
 against that exact SHA. Do not treat a process restart, cached output, existing fixture or unchanged
 input as proof of a mutation path. Name each run-specific false-pass route in the goal.
+
+Record per-job selection and conclusion for the relevant exact SHA and run identity. A skipped job
+supplies no passing evidence. A narrower green follow-up run does not resolve failing or pending
+affected jobs on an earlier implementation commit. Before acceptance, reconcile the commit chain
+and obtain missing affected proof through the repository's authorised gate surface. If earlier
+proof is carried forward, identify its SHA, covered surface and why intervening changes do not
+invalidate it. Describe this as composite evidence, not every gate passing at the terminal SHA.
+
+Give each implementation lane a review-ready condition and required reviewer route. Dispatch review
+as soon as its candidate is frozen, while independent implementation continues; do not wait for
+unrelated lanes. Bind review to an exact commit or recorded candidate snapshot and keep that snapshot
+stable during review. Integrate accepted candidates when their own dependencies and required checks
+permit. Subsequent implementation changes invalidate the prior verdict under the rereview rule below.
+Early review does not replace the single-owner composed repository gate or an integrated SECURITY
+review required by the changed surface.
 
 Testing has a job rather than a quota:
 
@@ -1288,6 +1356,14 @@ with the tested blocker, exact missing authority/evidence and resume condition. 
 repair authority before parking. A missing report, permission or prerequisite is not proof of a model
 failure. Do not wait for a dependency that has no active owner or feasible completion path.
 
+For an unresolved blocker within the goal's authority, investigate it directly or dispatch a bounded,
+appropriately routed resolution agent before concluding no feasible correction exists. Give that
+agent the accumulated evidence, remaining decision, owned scope and required output; continue
+independent work while it runs. The root may then repair, redispatch or perform the authorised
+prerequisite. Apply the same shared attempt limits and independent review requirements throughout;
+delegation does not reset attempts or widen authority. Park only when authorised feasible routes are
+exhausted, required authority or evidence remains unavailable, or an explicit stop limit is reached.
+
 The root may:
 
 - **Repair a defect in its own goal file** and re-dispatch the affected lane: an ownership gap, a
@@ -1369,6 +1445,12 @@ before writing the report. Terminal-only reporting requires an explicit request;
 the presence of a tracker or choose it again at closeout. Both destinations cover cross-cutting findings,
 verification, deviations, cuts and the front-loaded questions section. Nothing durable may live only
 in a terminal message. A required file report must be self-contained even when task state holds detail.
+
+Derive aggregate tracker and run counts from a complete structured source at a named snapshot.
+Record the query or source identity and distinguish delivery tasks from board-wide totals. A display
+renderer that omits records is not the counting authority. Reconcile source acceptance, hosted gates,
+deployment/live criteria and parks separately. Carry every unmet criterion into its named next owner
+or successor so deferred work remains visible.
 
 Put this block in every goal, selecting one destination and its exact path where applicable:
 
@@ -1679,11 +1761,26 @@ Codex custom-agent files are configuration layers. When a selected custom role p
 do **not** attach redundant model or effort overrides. For a built-in or generic role without pins,
 pass the resolved model, reasoning effort and `fork_turns` explicitly.
 
-Preflight only the roles selected by this task. Confirm the effective multi-agent feature, the named
-agent definition where one is used, and the requested model and effort before dispatch. After spawn,
-inspect the public role/model/effort metadata the client exposes. A missing, conflicting or silently
-substituted route is a hard stop for that lane; never accept a fallback and report the requested route
-as though it ran.
+Preflight only the roles selected by this task. Confirm the effective multi-agent feature and selected
+agent definition where one is used; resolve model, effort and context scope before dispatch and record
+the actual spawn arguments. For an unpinned generic role, pass model and effort explicitly; a
+full-history fork cannot request a different route.
+
+After spawn, separate the requested route, active route exposed by the runtime and any independently
+recorded provider route. Use metadata for that child and its current work phase. Inherited history
+may precede the child's own active turn context: a head-first query is not a route verdict. A prewarm
+request does not prove the subsequent execution route.
+
+Classify evidence as verified, unknown or mismatched. A conflicting active route is mismatched;
+stop that lane and withhold its completion or specialist verdict until the root resolves an
+authorised correct route. Reporting the mismatch does not validate its work as the required review.
+Missing metadata is unknown and does not prove substitution. For unknown evidence, make one bounded
+check through an already-authorised task-scoped metadata source. Do not dump environment,
+configuration, credentials or raw private payloads. If the required route remains unknown, withhold
+that lane's completion or specialist verdict and apply the existing root resolution/park rule. Never
+silently accept a fallback or repeatedly respawn to obtain a different metadata display. Reports name
+the observed route and evidence source, not the requested route as though it ran. Reclassify a
+materially different follow-up phase and tie its route evidence to that phase.
 
 A custom agent's requested `read-only` sandbox is not proof of enforced isolation: live parent
 permission overrides may broaden it. Record the observed sandbox and permission profile when the
