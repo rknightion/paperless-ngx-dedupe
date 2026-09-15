@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-15 15:54'
+updated_date: '2026-09-15 16:25'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `0ab47c0`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `d6654d7`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -74,7 +74,7 @@ External-write authority: [exact trackers, hosts, deployments, databases or work
 Root repair authority: enabled | withheld [§9; default enabled for front-loaded/unattended implementation]
 Harness: [the harness this run launches on; its profile resolves every route below]
 Root ownership: this receiving session; bounded children only; no replacement root
-Wait ownership: [one owner per gate/dependency; completion signal or bounded polling cadence]
+Wait ownership: [one owner per gate/dependency; actual notification/collection path; process polling cadence and deadline if needed; no unchanged model checks]
 Launch rationale: [one sentence]
 Selected topology: solo | single auxiliary | campaign | campaign + security
 Topology rationale: [the independent bottleneck or risk that justifies this shape]
@@ -504,6 +504,15 @@ outpaces acceptance, use available capacity for bounded review, gate execution o
 before adding more implementation pressure. The root keeps final acceptance and assigned shared-file
 ownership; one bounded integration worker may own a separate slice without duplicating root work.
 
+Diagnose the queue before changing topology. Distinguish a complete, current return waiting for root
+acceptance from a packet needing repair, a running gate and work with an unmet prerequisite. Delegate
+a bounded integration slice only when eligible returns accumulate and its acceptance/ownership seam
+is clear; no permanent integration agent is required by default. For repeated gate delays, retain
+existing run/job/step timings and examine the dominant test, setup or cache costs before proposing
+more agents. When tracker-only changes repeat deployment or expensive proof, assess affected artifacts
+and the repository's gate contract before proposing narrower triggers or evidence reuse. Neither
+unchanged source nor this protocol waives a required check, deployment boundary or live criterion.
+
 There is no occupancy quota or arbitrary minimum agent count. Concurrency respects actual resource
 isolation and runtime/repository limits. Waiting on CI is justified only when no independent authorised
 ready work, useful integration or verification remains. Record the concrete blocking dependency in
@@ -518,6 +527,26 @@ appropriate wait the harness permits, while preserving required user updates and
 If polling is necessary, let one tool-side watcher perform bounded checks and return a change or
 terminal result; do not have the root and several workers poll the same state. Reuse the existing
 process or watcher rather than launching another at each check.
+
+An unchanged model-driven check still consumes inference and context tokens, including cached input.
+Distinguish that cost from ordinary process polling: a CLI watcher can check repeatedly without
+calling a model. Prefer a supported completion subscription; a longer event wait can wake on the
+same event without repeatedly re-entering the model. Respect the actual harness wait limits, user
+updates and interruptibility. Do not create an LLM lane merely to move a polling loop out of the root.
+
+Record the working notification/collection path, not just a watcher PID. External CI does not
+implicitly notify the agent mailbox. Use an exposed asynchronous completion mechanism when available;
+otherwise collect at useful work checkpoints or use one bounded wait with the longest supported
+interval appropriate to the dependency. Fallback polling belongs in one ordinary process, with a
+justified cadence/backoff, deadline and failure/timeout disposition. Return decision-relevant changes,
+terminal results or a watchdog exception; do not repeatedly scrape its unchanged log. Preserve exact
+SHA/run/job identities. If early job failure matters, verify that the chosen watcher surfaces it;
+a whole-run completion watch alone does not guarantee early failure notification.
+
+This follows [OpenAI's event-wait guidance](https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/using-superpowers/references/codex-tools.md#waiting-on-children).
+A process-level example is [GitHub CLI run watch](https://cli.github.com/manual/gh_run_watch);
+its own polling interval is distinct from model wakeups. Use current exposed capabilities, not a
+copied vendor timeout or an assumed event bridge.
 
 Ordinary intermediate CI runs asynchronously by default. After a checkpoint push, record the exact
 SHA and run identity and advance ready, independent, authorised work. Reconcile available per-job
@@ -1649,7 +1678,10 @@ Preserve replaced artifacts; deliver only the two requested files, with state ma
 Model improvements are evaluated outside live campaign prompts. Preserve sanitized historical inputs
 and outcome identities, then exercise known failure cases and held-out tasks. Compare equivalent
 acceptance scope, idle time with eligible work, integration backlog, resource collisions, stale-return
-rework and missing proof; agent count and root token share are not productivity measures. Change one
+rework and missing proof. Assess unchanged model wakeups separately from dependency duration and
+process checks; use available usage counters without attributing all waiting-window tokens to waste.
+Cached input is included in input totals; do not double-count it or invent monetary savings.
+For this comparison, agent count and root token share are not productivity measures. Change one
 mechanism at a time when isolating causality. An owner-authorized bundle is evaluated as a bundle and
 must not produce per-change causal claims. Retain only protocol additions that improve observed work;
 keep research, comparisons and obsolete examples out of generated execution contracts. Do not launch
