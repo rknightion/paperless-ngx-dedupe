@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-15 16:25'
+updated_date: '2026-09-15 23:30'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `d6654d7`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `b630333`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -117,7 +117,8 @@ that explicitly forbids questions or notifications wins; `unattended` alone does
   instructions. Never put these in an input tool, including single-option confirmations, "Continue"
   or "no response needed" notices. Removing options does not turn an input call into commentary.
 - Ask a self-contained question with the affected lane, recommendation and authorised no-answer
-  outcome. Do not use questions as timers or agent waits, or deliberately generate placeholders.
+  outcome. Do not use questions as timers or agent waits, or deliberately generate placeholders,
+  keepalives or `ignore` requests. No unresolved decision means no input call.
   If an unnecessary prompt was sent, continue the wave without waiting, but do not repeat it. Apply
   a user's communication correction immediately, even if the goal previously allowed questions.
 - After sending, immediately apply the existing default or delegated decision authority. If the
@@ -543,6 +544,19 @@ terminal results or a watchdog exception; do not repeatedly scrape its unchanged
 SHA/run/job identities. If early job failure matters, verify that the chosen watcher surfaces it;
 a whole-run completion watch alone does not guarantee early failure notification.
 
+One watcher process does not prevent inference cost if the root collects unchanged output repeatedly.
+At preparation, name the actual event/collection mechanism and runtime wait ceiling; exercise the
+no-ready-work case without assuming an event bridge exists. Use the longest appropriate permitted
+interruptible wait and useful checkpoints, preserving required user updates. If the harness forces
+periodic model returns, disclose that limit; do not promise zero wakeups, evade its limits or add an
+LLM polling supervisor. A missing efficient event mechanism is a separately scoped harness proposal.
+
+Capture full commit SHA, discovered run ID, process/session identity, terminal exit status and outcome
+evidence in the current record or its linked receipt. Use the full SHA for run discovery. Recover an
+existing terminal result before rerunning an unchanged gate merely because its status was not retained.
+If proof is genuinely unrecoverable, state the uncertainty and apply the required gate contract; never
+infer success from a vanished process, abbreviated-SHA search miss or a quiet watcher.
+
 This follows [OpenAI's event-wait guidance](https://github.com/openai/plugins/blob/main/plugins/superpowers/skills/using-superpowers/references/codex-tools.md#waiting-on-children).
 A process-level example is [GitHub CLI run watch](https://cli.github.com/manual/gh_run_watch);
 its own polling interval is distinct from model wakeups. Use current exposed capabilities, not a
@@ -613,6 +627,39 @@ roughly two-thirds of the pool as direct children and reserves the rest for gran
 lanes and urgent investigation. Read that as a ratio rather than a count — the pool size is a harness
 fact, and on some harnesses excess spawns queue rather than fail, which hides saturation instead of
 surfacing it. Never spawn merely to occupy a slot.
+
+### Choose checkout isolation at lane admission
+
+Use the existing checkout for read-only work or a small stable edit with clear ownership. Prefer one
+campaign integration worktree when unrelated dirty work or another session makes the main checkout
+unsafe to mutate. Consider separate lane worktrees for substantial independent work with demonstrated
+file, generator or installation interference, when setup and root integration capacity justify them.
+There is no worktree-per-agent requirement. Do not provision blocked reserve lanes merely to occupy
+capacity. Worktrees do not remove unsettled interface dependencies or shared service constraints.
+
+For a whole-tree gate affected by another lane's unfinished work, serialize a stable checkpoint or
+use an isolated verification snapshot of the intended accepted candidate. Record checkout, immutable
+base SHA, required prerequisite diff identity, changed/new paths, owner, resource/gate ownership and
+root integration destination in the existing lane brief/state. Preserve unrelated dirty bytes; do not
+silently omit a necessary uncommitted prerequisite or copy the entire dirty tree. Freeze a bounded
+transfer with its owner, including new files, or resolve the dependency before dispatch. Inspect actual
+base and diff: app-managed worktree defaults can differ from an explicit-SHA checkout.
+
+Prove setup readiness once using the repository's task surface. Isolate or serialize mutable installs,
+generated outputs, ports, containers, databases and simulators; share caches only when their tools
+support concurrent use. Copy only necessary authorised local configuration. Worktrees share history,
+most refs and default Git configuration; they are not independent clones or security sandboxes.
+Root retains Git/ref mutation, integration, publication and acceptance. Checkout choice grants no new
+child commit, deployment or root-launch authority and does not relax one-file ownership.
+
+Returns identify the candidate/patch, all new files, checks and environment. Review that candidate,
+not its old base. The root reconciles it with the current integration target and validates the combined
+result proportionately; separate lane passes do not establish an integrated pass. Preserve evidence
+whose inputs remain unchanged. Retain accepted, parked and rejected artifacts under the archive policy,
+including dirty/untracked material that a commit-only archive misses. Stop owned processes when their
+work ends; do not adopt vendor automatic deletion, forced removal or broad pruning as routine cleanup.
+Any authorised directory move must preserve Git administrative links. Compare avoided interference
+against setup, integration, validation and retention cost before expanding worktree use.
 
 ### Append-only registries — the contention case one-owner does not solve
 
@@ -1675,6 +1722,14 @@ criteria, and the exact terminal report action. Record the checks in the prepara
 structural check cannot prove design correctness; inspect release predicates and evidence semantics.
 Preserve replaced artifacts; deliver only the two requested files, with state maintained during the run.
 
+When compiling async permission, retain the adjacent prohibition on status, placeholder, timer and
+keepalive input calls. Also retain child identity/phase evidence resolution, checkout/base/prerequisite
+handoffs, stable integrated gates and terminal-result capture. An infrastructure or profile drift
+finding is not authority for fleet repair: carry the exact boundary into the goal and lane briefs.
+A provenance correction preserves technical findings and consumed attempts. Review incomplete-return
+repair separately from a queue of complete packets awaiting integration; measure the missing evidence
+and root repair scope before adding a permanent role.
+
 Model improvements are evaluated outside live campaign prompts. Preserve sanitized historical inputs
 and outcome identities, then exercise known failure cases and held-out tasks. Compare equivalent
 acceptance scope, idle time with eligible work, integration backlog, resource collisions, stale-return
@@ -1864,6 +1919,24 @@ recorded provider route. Use metadata for that child and its current work phase.
 may precede the child's own active turn context: a head-first query is not a route verdict. A prewarm
 request does not prove the subsequent execution route.
 
+The root owns one bounded task-scoped lookup for each child/work phase and passes its result into
+specialist handoffs. Resolve the spawn-returned agent identifier to the runtime child thread ID using
+exact parent and canonical agent-path metadata; these identifier namespaces need not be identical.
+When reading a rollout, require its own `session_meta.id` to match that child, verify parent/path,
+and select the child's active `turn_context` for the current phase after spawn or phase transition.
+Do not select files by arbitrary transcript mentions, inherited `CODEX_THREAD_ID`, first search hit,
+or the first context in inherited history. Deduplicate synchronized copies by identity and report
+conflicting or missing evidence rather than choosing whichever route matches the request. A truncated
+live record is unavailable evidence, not a mismatch. Use an existing authorised metadata reader;
+project only child identity, parent/path, phase, route, timestamp and provenance. A `list_agents`
+response lacking route fields does not exhaust an available task-scoped rollout metadata source.
+
+The default route gate requires recorded active runtime configuration for the child and phase.
+Independent upstream provider attestation is a separate evidence class, required only when the goal
+or repository explicitly demands it. Label it unknown when absent; do not invent a provider claim
+or add a new provider-attestation blocker where runtime evidence satisfies the configured gate.
+These checks apply to bounded children, never root self-routing or replacement-root bootstrap.
+
 Classify evidence as verified, unknown or mismatched. A conflicting active route is mismatched;
 stop that lane and withhold its completion or specialist verdict until the root resolves an
 authorised correct route. Reporting the mismatch does not validate its work as the required review.
@@ -1874,6 +1947,12 @@ that lane's completion or specialist verdict and apply the existing root resolut
 silently accept a fallback or repeatedly respawn to obtain a different metadata display. Reports name
 the observed route and evidence source, not the requested route as though it ran. Reclassify a
 materially different follow-up phase and tie its route evidence to that phase.
+
+If missing provenance is later resolved, reconcile the existing review/implementation packet against
+its exact candidate, scope and phase through the bounded review/repair path. Correcting metadata alone
+cannot turn a technical FAIL into PASS or discharge an unresolved finding. Preserve substantive work
+and attempts already consumed, including drafts produced before a provenance park; do not redo the
+whole review or reset the retry budget merely to replace its route-evidence header.
 
 A custom agent's requested `read-only` sandbox is not proof of enforced isolation: live parent
 permission overrides may broaden it. Record the observed sandbox and permission profile when the
