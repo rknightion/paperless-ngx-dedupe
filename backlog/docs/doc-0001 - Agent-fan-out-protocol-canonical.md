@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-15 11:56'
+updated_date: '2026-09-15 15:54'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `66f473d`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `0ab47c0`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
@@ -73,7 +73,7 @@ Current layer: research | design | implementation | review | live verification |
 External-write authority: [exact trackers, hosts, deployments, databases or workflows]
 Root repair authority: enabled | withheld [§9; default enabled for front-loaded/unattended implementation]
 Harness: [the harness this run launches on; its profile resolves every route below]
-Root role / resolved route: [role, plus the exact values the profile resolves it to]
+Root ownership: this receiving session; bounded children only; no replacement root
 Wait ownership: [one owner per gate/dependency; completion signal or bounded polling cadence]
 Launch rationale: [one sentence]
 Selected topology: solo | single auxiliary | campaign | campaign + security
@@ -162,35 +162,19 @@ Three rules make it work:
   section is the entire point of the mode: it is the batch. Say it must not be merged into another
   section and must not be omitted because nothing felt important enough.
 
-### Root role and route
+### Existing-session root ownership
 
-Every generated goal and handoff must tell the operator what to launch — as a role, and as the exact
-values that role resolves to on the named harness:
+The session receiving the manual launch is the root. It owns orchestration, integration and final
+acceptance throughout the run. Never start another root, relaunch the goal through a CLI, spawn a
+replacement coordinator, or change runtime configuration to reconcile a perceived model identity.
+The goal author's model and the receiving session's self-description do not alter this rule.
+Child agents receive bounded lane briefs, never the whole goal as a fresh campaign launch.
 
-```text
-Harness: [name]
-Root role: DESIGN+INTEGRATION
-Resolved route: [the profile's orchestration-root route, not a child role's route]
-Why: this wave coordinates independent lanes, owns integration and may encounter uncovered seams.
-```
-
-The shape of the whole wave picks the root's responsibilities and the reasoning depth the work needs.
-A harness profile with a fixed orchestration-root route takes precedence over this depth column:
-delegate bounded deeper decisions to its specialists rather than raising the root's effort.
-
-| Shape of the whole wave | Root role | Depth |
-|---|---|---|
-| Normal multi-repository or multi-lane campaign; the root integrates bounded children | DESIGN+INTEGRATION | standard |
-| Unresolved architecture, unknown-cause debugging or several interacting decisions | DESIGN+INTEGRATION | raised |
-| Authentication, authorisation, privilege, migration, secret or data-loss risk | SECURITY | raised; the highest tier only for exceptional risk or ambiguity |
-| Execution wave whose seams, dependencies, ownership and acceptance are fully frozen | EXECUTION | standard |
-| Execution wave with a stated acceptance check but material context, judgement or blast radius inside the implementation | JUDGMENT+EXECUTION | raised |
-| Bounded read-only audit with a fixed evidence schema and no product decisions | EXECUTION, with RETRIEVAL lanes | standard |
-
-Never launch an implementation or integration wave on a RETRIEVAL route — it is the cheapest route
-precisely because it is not asked to decide anything. Do not select the maximum reasoning depth by
-default. If the shape is uncertain, put DESIGN+INTEGRATION at standard depth at the root and push
-bounded work down after the root has frozen it.
+Generated goals and launch prompts omit root model/effort declarations, self-route checks and
+instructions to start a session. Resolve child routes independently using the selected appendix.
+Deeper decisions go to bounded specialists, which return evidence to this root. An actual owner
+handover requires an explicit operator instruction and recorded in-flight ownership reconciliation;
+a worker return, context transition or model claim is not a handover.
 
 ---
 
@@ -287,11 +271,10 @@ Apply the following only to continuation of this session's active task:
 | Experimental fresh-context reset | Explicitly read the current-state record (or its internal-note pointer), then use available history references for missing details. Previous working context must not be assumed to survive. |
 | Unknown mechanism | Read the current-state record and recover missing constraints before dependent work. Record uncertainty; never claim native/experimental retention without evidence. |
 
-`codex-nonproxy` is this fleet's only profile eligible for experimental context management. Its
-profile identity reliably selects eligibility, not activation: the running model/capabilities still
-decide whether a particular transition is experimental or native. Proxy profiles must not be given
-instructions that assume notes/history/new-context tools exist. Never enable or disable the mode,
-change a provider/model, or install a custom compaction prompt as a recovery step.
+Recovery eligibility depends on the running provider, authentication, model and exposed capabilities,
+not a retired profile name. Native Codex uses device-local `~/.codex`. Never assume notes/history/reset
+tools exist from a home label. Never enable or disable a mode, change provider/model, launch another
+root or install a custom compaction prompt as a recovery step.
 
 Experimental resets are not cold session restarts. These instructions never trigger on `/new` or a
 fresh session with a manual prompt. Do not discover old state or auto-adopt a previous goal there.
@@ -364,9 +347,9 @@ named something the pattern did not anticipate.
 ### Fresh launch message
 
 ```text
-Launch this run with <root route, resolved from the harness profile>. Read <absolute goal path> in
-full and adopt it as your goal. Start with the run contract and routing table. Do not begin a lane
-until its ownership and dependencies are satisfied.
+You are the root in this existing session. Read <absolute goal path> in full and adopt it as your
+goal. Do not launch a replacement root. Start with the run contract and child lane table; release
+eligible independent work while unrelated CI runs. Write <exact report path> as the terminal action.
 ```
 
 ### Mid-run replacement
@@ -491,6 +474,40 @@ interfaces, error/lifecycle cases and discriminating checks. Do not require an e
 rewrite an adequate packet or repeatedly move a tiny remaining fix between models merely to use a
 cheaper route. A root may perform a bounded authorised correction itself after taking ownership;
 the harness profile defines its capability boundary, and independent review remains independent.
+
+### Revision-aware work graph and acceptance
+
+Represent the commissioned work in the goal's lane table, not a second tracker. Each lane names its
+prerequisites and release evidence, owned files (existing versus intentionally new), mutable resources,
+shared-contract revisions, decision owner, child route, acceptance criteria and returned artifacts.
+Name the initial ready set or its exact blocking prerequisite. Reject unknown dependencies and cycles
+before dispatch; repeated repair is a bounded state transition, not a cyclic task dependency.
+
+Maintain `waiting -> ready -> running -> returned -> accepted` or `repair/parked` in the single
+current-state record. Returned is not accepted. Each return names its goal revision, consumed contract
+revisions, source/patch identity and evidence. Root acceptance releases its dependants. Reject stale
+returns as current proof; retain reusable artifacts and identify the exact revalidation needed.
+A shared-contract amendment names affected consumers and evidence; pause/rebrief only those affected
+and keep unrelated work moving. No child changes a shared seam by consensus with another child.
+
+Track implementation acceptance, required CI job coverage and deployed/live proof separately per
+criterion. A newer SHA with skipped checks cannot erase an earlier unresolved requirement. A changed
+artifact invalidates the evidence and verdicts that depend on it; perform the required fresh review
+and verification for that affected slice. Every deferred criterion has a named successor or exact park.
+
+### Integration capacity and ready work
+
+On a worker return, review verdict, CI transition or resource release, reconcile the ready set and
+release eligible work promptly. Prioritize dependencies that unlock consumers and accepted outcomes.
+Observe ready, running, awaiting-review and awaiting-integration queues separately. If returned work
+outpaces acceptance, use available capacity for bounded review, gate execution or integration packets
+before adding more implementation pressure. The root keeps final acceptance and assigned shared-file
+ownership; one bounded integration worker may own a separate slice without duplicating root work.
+
+There is no occupancy quota or arbitrary minimum agent count. Concurrency respects actual resource
+isolation and runtime/repository limits. Waiting on CI is justified only when no independent authorised
+ready work, useful integration or verification remains. Record the concrete blocking dependency in
+state rather than repeatedly narrating unchanged CI. Intermediate CI is not a whole-wave barrier.
 
 ### Wait for events without a root polling loop
 
@@ -652,6 +669,25 @@ they agree.
 
 ---
 
+### Enforce ownership at the execution boundary
+
+Before mutations, establish campaign ownership using the existing runtime session registry or an
+atomic exclusive claim on the designated execution host, recording session identity, goal revision
+and claim location in current state. Include all clients that can mutate the same campaign. A local
+PID or Git-synced note alone is not a cross-machine lock. Use one designated mutation host when an
+existing shared atomic claim is unavailable; workers on other hosts return artifacts for integration.
+If ownership cannot be established, withhold conflicting mutations and continue safe read-only work.
+Never kill a competing root or steal a stale-looking claim automatically: reconcile evidence and
+obtain explicit handover authority. Release ownership only after in-flight work is reconciled.
+
+Resource ownership is enforced by isolated working directories/services or serialized dispatch,
+not merely a mutex name in prose. Hold a shared dependency-install resource through every operation
+that requires its stable contents. Record external operations as planned, attempted and observed,
+with a stable task/operation identity and provider receipt where available. On recovery inspect the
+actual outcome before repeating an operation; use provider idempotency keys where supported. Unknown
+completion is neither permission to repeat a mutation nor evidence of success. These checks grant no
+new infrastructure or external-write authority.
+
 ## 5. Complete child lane brief
 
 Every delegated lane gets all of these fields:
@@ -751,12 +787,12 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 - External-write authority: [exact scope]
 - Root repair authority: enabled | withheld [§9; default enabled for front-loaded/unattended implementation]
 - Harness: [name; its profile resolves every route in this goal]
-- Runtime profile: [observed profile; only codex-nonproxy is eligible for experimental resets]
+- Recovery capabilities: [observed runtime signals; no profile-based eligibility assumptions]
 - Current state: [one root-owned path; revision and last boundary are maintained there]
 - Same-session recovery: [include the applicable §2 mechanism/freshness contract; not the sourcebook]
-- Root role / resolved route: [exact values]
+- Root ownership: this receiving session; no replacement root
 - Wait ownership: [one owner per gate/dependency; completion signal, bounded cadence and timeout disposition]
-- Launch rationale: [why the whole wave needs this route]
+- Launch rationale: [why this topology serves the outcome]
 - Selected topology: solo | single auxiliary | campaign | campaign + security
 - Topology rationale: [the independent bottleneck or risk that justifies this shape]
 - Report destination: file at [exact codex/report path] (default); terminal only when explicitly requested
@@ -797,7 +833,8 @@ Verified at [timestamp]. Do not re-derive unless a named check shows drift.
 
 [Include the applicable run-specific routing contract and resolved routes. Omit unused routes.
 Classify each lane's actual remaining work, name genuine decision gaps and reuse frozen decisions.
-Check the root, every lane/brief, rescue routes and launch message against the selected appendix.]
+Resolve every child lane/brief and rescue route against the selected appendix. Omit root route
+checks and root model declarations from this goal and its launch message.]
 
 ## 5. Lanes
 
@@ -1509,7 +1546,7 @@ the format alone:
 - [ ] The goal author checked the relevant protocol sections and harness appendix without truncation; the execution goal carries the applicable contract and source revision without requiring a sourcebook reread.
 - [ ] Run mode, human availability, current layer, external-write authority and terminal condition are explicit.
 - [ ] Root async questions are allowed or explicitly disabled; unanswered questions cannot delay the run, and silence never grants authority.
-- [ ] The run contract names the harness, and the operator receives the root's role and the exact route that harness's profile resolves it to, with a one-sentence rationale.
+- [ ] The run contract names the harness and existing-session root ownership; goal and launch contain no root model bootstrap or self-route check.
 - [ ] Tracker and live-state preflight happened before topology selection; the selected topology and its task-specific rationale are recorded before any spawn or mutation.
 - [ ] The brief is an immutable goal file on disk, **the launch message is a second file beside it** at `codex/launch-<date>-wave<N>.txt`, and the launch message points to the goal's absolute path. Both are files. A launch message that exists only as a chat block fails this item even though the run it starts will work.
 - [ ] Outcome and measurable success criteria replace a mere activity list.
@@ -1519,9 +1556,9 @@ the format alone:
 - [ ] **Check every prohibition against the standing PROCEDURES the goal mandates too, not only its lanes.** This defect recurred a fourth time by escaping the lane-only check: a goal forbade commits to one repository while separately instructing a document-correction procedure that writes into every consumer repository — and that repository was a consumer, so obeying the procedure required breaking the prohibition. Enumerate what each mandated procedure actually touches and intersect it with every prohibition. A prohibition scoped by repository, path or file type is the shape most likely to collide with a procedure.
 - [ ] **Intersect the success criteria with the external-write authority, in both directions.** The prohibition checks above run from the prohibition outwards; this one runs from the goal's own definition of done. A success criterion that cannot be satisfied without a mutation §0 forbids is the same defect wearing the opposite face, and it is harder to see because both halves read as correct in isolation: the authority looks appropriately tight and the criterion looks appropriately demanding. Read every "success means" bullet and name the exact write each one requires. Where a criterion needs a deploy, a push, a tracker edit or a live mutation, either grant that write explicitly or replace the criterion with one the run can actually satisfy. A run that has to negotiate its own authority mid-flight has already lost the property the contract exists to give it.
 - [ ] **Any model or effort the goal names matches the harness profile's table exactly.** State the role and depth and let the profile resolve the route; a hand-written route that contradicts the table is a defect, and it silently downgrades every run that inherits it.
-- [ ] **Verify the root route and every lane route as two separate acts.** Correcting the root is the likely partial fix and it is worse than none, because a goal carrying an explicit root correction reads as already audited. One run corrected its root, left every lane on a role/effort combination appearing nowhere in the profile's table, and the run itself had to catch it — grep the goal for every model name it contains and resolve each against the table.
-- [ ] A harness's fixed orchestration route applies to the root and nested coordinators; deeper work is assigned to bounded specialists, not used to raise an orchestrator's effort.
-- [ ] Each lane is classified by actual work, not its title; judgement/design routes name a real unresolved decision, and root, lane table, briefs, rescue rules and launch message agree.
+- [ ] Resolve every child route independently; the author's runtime is not a routing default. No route discrepancy permits spawning a replacement root.
+- [ ] Deeper work goes to bounded specialists; nested coordinators own only an explicitly commissioned subtree and never replace the receiving root.
+- [ ] Each lane is classified by actual work, not its title; judgement/design routes name a real unresolved decision, and child lane table, briefs and rescue rules agree; goal and launch preserve existing-session ownership.
 - [ ] Pending gates and dependencies have one owner and an event/watch or bounded polling path; no duplicate watchers or repeated root turns for unchanged state.
 - [ ] Recovery loads the current-state record and missing/changed sections; it does not restart onboarding or create overlapping copies of retained instructions.
 - [ ] The saved launch prompt, goal opening, recovery section, amendments and state instructions agree on same-session recovery. Remove stale "reread the whole goal after every compaction" instructions before launch; an explicit launch instruction can override the intended targeted recovery. Preserve the initial binding-goal read for a fresh/manual launch and the `/new` exclusion.
@@ -1593,6 +1630,31 @@ the format alone:
 
 ---
 
+## Preparing and improving the execution contract
+
+Use a compact binding goal plus references to relevant source sections. Resolve current tracker
+status and acceptance criteria, actual paths, preserved candidates, existing decisions and authority
+before carrying work forward. Compare the source revision at authoring and launch; record an explicit
+freeze or reconcile changed applicable contracts, never silently rewrite an active run. Validate new
+file parent paths separately from existing-file patterns. Batch material questions early while
+independent verification proceeds; finalize affected contracts only when required answers exist.
+
+Before delivering goal and launch files, validate their exact paths and source revision agreement,
+existing-session ownership, dependency references and acyclicity, one owner per file/decision/resource,
+initial runnable work or exact blocker, child routes, retry carryover, successor coverage for unmet
+criteria, and the exact terminal report action. Record the checks in the preparation evidence. A
+structural check cannot prove design correctness; inspect release predicates and evidence semantics.
+Preserve replaced artifacts; deliver only the two requested files, with state maintained during the run.
+
+Model improvements are evaluated outside live campaign prompts. Preserve sanitized historical inputs
+and outcome identities, then exercise known failure cases and held-out tasks. Compare equivalent
+acceptance scope, idle time with eligible work, integration backlog, resource collisions, stale-return
+rework and missing proof; agent count and root token share are not productivity measures. Change one
+mechanism at a time when isolating causality. An owner-authorized bundle is evaluated as a bundle and
+must not produce per-change causal claims. Retain only protocol additions that improve observed work;
+keep research, comparisons and obsolete examples out of generated execution contracts. Do not launch
+paid evaluations or replay live mutations merely to measure this protocol without authorisation.
+
 ## Appendix A — Codex profile
 
 Complete. Everything the body defers to a profile is resolved here for Codex.
@@ -1606,14 +1668,13 @@ Nonstandard worker routes require explicit operator approval and a recorded boun
 evaluation; a goal author cannot invent an automatic fallback. Never edit runtime configuration,
 launchers, authentication or personal model defaults to make a campaign match a goal.
 
-The orchestration root is always `gpt-5.6-sol`, `medium`, including nested campaign coordinators. It
-owns orchestration, routine decisions within granted authority, integration, bounded repair and
-acceptance. Never raise an orchestrator's effort for technical complexity, architecture, security,
-lane count or run length. Assign deeper questions to bounded Sol/high or Astra/medium specialists, even
-when those questions dominate the wave. They return decisions and evidence, not a second long-lived
-orchestrator. Root responsibilities and a child role with the same name do not imply the same route.
-Verify the observed root route before dispatch; a mismatch requires an explicit launch correction,
-not a silent runtime change or a rewritten goal that legitimises the mismatch.
+**Operator reference, not generated launch content:** Rob selects `gpt-5.6-sol`, `medium` for the
+campaign root outside the prompt. Goal preparation may run on another model. Do not copy either
+root or author model identity into generated goals or launch messages, test the root's self-reported
+route, or start a new root to satisfy this table. The receiving session stays root (§1).
+It owns routine decisions, integration, bounded repair and acceptance; deeper questions go to
+bounded specialists. Nested coordinators, when explicitly commissioned, own only their named subtree
+and cannot adopt the entire goal or replace the root.
 
 | Role or workload | Model | Effort and boundary |
 |---|---|---|
