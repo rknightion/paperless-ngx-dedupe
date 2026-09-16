@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-16 16:33'
+updated_date: '2026-09-16 19:41'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `d2957b7`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `a9ce5e3`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -545,8 +545,12 @@ a whole-run completion watch alone does not guarantee early failure notification
 
 One watcher process does not prevent inference cost if the root collects unchanged output repeatedly.
 At preparation, name the actual event/collection mechanism and runtime wait ceiling; exercise the
-no-ready-work case without assuming an event bridge exists. Use the longest appropriate permitted
-interruptible wait and useful checkpoints, preserving required user updates. If the harness forces
+no-ready-work case without assuming an event bridge exists. Specify the model-facing collection
+interval separately from the watcher's process-only polling cadence. For a silent running process,
+use the longest appropriate permitted interruptible wait, and align any outer tool-call wait so it
+does not cause shorter collections. A short initial command yield is not the cadence for its entire
+lifetime. Collect earlier for actionable output, a required update or useful work checkpoint; empty
+returns alone are not a reason to shorten the next wait. If the harness forces
 periodic model returns, disclose that limit; do not promise zero wakeups, evade its limits or add an
 LLM polling supervisor. A missing efficient event mechanism is a separately scoped harness proposal.
 
@@ -657,7 +661,12 @@ result proportionately; separate lane passes do not establish an integrated pass
 whose inputs remain unchanged. Retain accepted, parked and rejected artifacts under the archive policy,
 including dirty/untracked material that a commit-only archive misses. Stop owned processes when their
 work ends; do not adopt vendor automatic deletion, forced removal or broad pruning as routine cleanup.
-Any authorised directory move must preserve Git administrative links. Compare avoided interference
+Before creating or retaining a checkout, inspect the relevant test, generator and packaging scan
+boundaries. Keep retained checkouts outside those scans unless exclusion is established; a Git-ignored
+directory or one named `backups` is not necessarily excluded. Do not delete retained work or weaken a
+gate to conceal contamination. Any authorised directory move must preserve Git administrative links.
+If relocation is outside authority, preserve the original and use an authorised stable verification
+location, keeping the original gate's outcome distinct. Compare avoided interference
 against setup, integration, validation and retention cost before expanding worktree use.
 
 ### Append-only registries — the contention case one-owner does not solve
@@ -1026,6 +1035,19 @@ Do not say CI is green merely because the latest run is green. Resolve the commi
 against that exact SHA. Do not treat a process restart, cached output, existing fixture or unchanged
 input as proof of a mutation path. Name each run-specific false-pass route in the goal.
 
+Before an action changes or destroys evidence needed for acceptance, capture the required fresh
+pre-state at that boundary. Put the witness, operation identity/order, authorised action and post-state
+check together in the execution step; historical observations or stored configuration cannot replace
+a required observation of currently served state. Missing authority or an unavailable witness blocks
+that dependent action, not independent work. Preserve evidence without exposing secret payloads.
+
+Separate observed failures from proposed causes. When consequential alternatives imply different
+repairs, obtain the smallest authorised observation that distinguishes them before another speculative
+repair or carrying a cause into a successor's park reason. An HTTP status, green synthetic check or
+zero-step CI run alone may not identify the cause. Retain valid proof for its actual scope; do not
+recollect it as a substitute for the missing live witness. An already demonstrated cause needs no
+additional investigation lane.
+
 Record per-job selection and conclusion for the relevant exact SHA and run identity. A skipped job
 supplies no passing evidence. A narrower green follow-up run does not resolve failing or pending
 affected jobs on an earlier implementation commit. Before acceptance, reconcile the commit chain
@@ -1056,6 +1078,9 @@ Testing has a job rather than a quota:
 
 Returned reports are claims, not proof. Verify load-bearing facts against source, git, CI, trackers and
 live systems. A missing child report is not proof of failed work either; inspect the expected artifact.
+For repeatedly incomplete returns, reconcile each commissioned acceptance surface to its artifact and
+evidence before integration. A green repository gate does not cover an omitted parser, consumer or
+live signal. Keep this mapping in the existing return packet rather than adding another report.
 
 Acceptance includes commissioned behaviour and relevant failure cases, preserved established
 contracts, and understandable repository conventions. Avoid unnecessary abstractions, tests and
@@ -1513,6 +1538,13 @@ with the same cause into one evidenced correction rather than repairing the next
 isolation. Distinguish an unavailable environment from a broken implementation. A stronger model
 without a new causal explanation is not a retry strategy.
 
+When review exposes conflicting acceptance rules or a repair changes their interaction, settle the
+precedence with the authorised decision owner before redispatch. Record a few concrete input/output
+examples, including the failed interaction, and reuse them in implementation and review. Do not
+renegotiate settled rules without contradictory evidence or require a design ceremony for an
+unambiguous local fix. A clarification neither grants new authority nor resets attempts or clears a
+substantive FAIL.
+
 After at most two unsuccessful implementation-worker attempts, stop that worker's retries and return the
 accumulated artifact and evidence to the root. Escalate earlier when evidence establishes an unsuitable
 route, incomplete packet or missing prerequisite. The root diagnoses the cause and, when a bounded
@@ -1923,6 +1955,9 @@ specialist handoffs. Resolve the spawn-returned agent identifier to the runtime 
 exact parent and canonical agent-path metadata; these identifier namespaces need not be identical.
 When reading a rollout, require its own `session_meta.id` to match that child, verify parent/path,
 and select the child's active `turn_context` for the current phase after spawn or phase transition.
+An own-child metadata record can be followed by inherited parent metadata in the same file; do not
+overwrite the matched child identity with that later record. Inspect the actual metadata schema once
+and reuse the bounded projection rather than repeatedly guessing field paths.
 Do not select files by arbitrary transcript mentions, inherited `CODEX_THREAD_ID`, first search hit,
 or the first context in inherited history. Deduplicate synchronized copies by identity and report
 conflicting or missing evidence rather than choosing whichever route matches the request. A truncated
@@ -1952,6 +1987,12 @@ its exact candidate, scope and phase through the bounded review/repair path. Cor
 cannot turn a technical FAIL into PASS or discharge an unresolved finding. Preserve substantive work
 and attempts already consumed, including drafts produced before a provenance park; do not redo the
 whole review or reset the retry budget merely to replace its route-evidence header.
+
+At specialist handoff and final report, reconcile each phase against the latest root-held route
+receipt, retaining its identity, timestamp, source and evidence class. A worker's earlier `unknown`
+must not overwrite a subsequent verified root receipt. Prior-phase evidence cannot clear a new phase,
+and conflicting receipts need investigation. Preserve unknown provider attestation separately from
+verified runtime configuration; reporting reconciliation does not rerun or change the technical verdict.
 
 A custom agent's requested `read-only` sandbox is not proof of enforced isolation: live parent
 permission overrides may broaden it. Record the observed sandbox and permission profile when the
