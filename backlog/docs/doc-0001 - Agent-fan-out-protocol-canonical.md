@@ -3,20 +3,19 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-15 23:30'
+updated_date: '2026-09-16 16:33'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `b630333`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `d2957b7`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
-> **To change anything below, edit the source in `agent-docs` and re-render.** An edit made here is
-> silently discarded by the next render, and worse, it makes this board disagree with every other one
-> until someone notices. That has happened: five boards were synced by hand and one diverged within
-> the hour.
+> **To change this document, edit the source in `agent-docs`, commit and push it, then run
+> `just publish` on its designated publisher host.** Publication uses isolated clones. Never regenerate
+> this copy in a development checkout, including after publication or on another machine. Receive
+> published updates through normal `git pull`; do not create a second local documentation commit.
 >
-> Corrections are expected and welcome — this document is meant to absorb what each run learns. Make
-> them at the source, where one edit reaches every consuming repository, and run `bin/doctor` to prove
-> nothing is stale.
+> Corrections are expected and welcome. Make them at the source so one publication reaches every
+> consuming repository. A local edit can disagree with the model and conflict with its next update.
 >
 > Do not summarise, compress or adapt the body. A compression drifts from its source while continuing
 > to look authoritative.
