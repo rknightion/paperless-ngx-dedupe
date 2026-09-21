@@ -1,3 +1,14 @@
+# Supply-chain maturity window, in MINUTES. pnpm 11 defaults this to 1440 (24h)
+# and ENFORCES it client-side: `pnpm install --frozen-lockfile` hard-fails with
+# ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION on a lockfile carrying anything younger.
+#
+# This is pinned to the fleet Renovate npm cooldown in m7kni/renovate-config
+# (config.js, the `matchDatasources: ["npm"]` packageRule). The two MUST move
+# together and this one must never be the higher of the pair: Renovate raises the
+# PR on its own cooldown, then CI installs under this one, so a floor above the
+# Renovate window produces PRs that are guaranteed to fail CI until they age out.
+minimumReleaseAge: 360
+
 packages:
   - 'packages/*'
 
