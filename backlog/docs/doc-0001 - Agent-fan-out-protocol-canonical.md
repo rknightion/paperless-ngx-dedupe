@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-22 11:04'
+updated_date: '2026-09-22 18:43'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `8912beb`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `460cbe6`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1818,7 +1818,7 @@ Nonstandard worker routes require explicit operator approval and a recorded boun
 evaluation; a goal author cannot invent an automatic fallback. Never edit runtime configuration,
 launchers, authentication or personal model defaults to make a campaign match a goal.
 
-**Operator reference, not generated launch content:** Rob selects `gpt-5.6-sol`, `medium` for the
+**Operator reference, not generated launch content:** Rob selects `gpt-6-sol`, `medium` for the
 campaign root outside the prompt. Goal preparation may run on another model. Do not copy either
 root or author model identity into generated goals or launch messages, test the root's self-reported
 route, or start a new root to satisfy this table. The receiving session stays root (§1).
@@ -1828,26 +1828,26 @@ and cannot adopt the entire goal or replace the root.
 
 | Role or workload | Model | Effort and boundary |
 |---|---|---|
-| Campaign root and nested orchestration coordinators | `gpt-5.6-sol` | `medium` only; integration and suitable bounded repair stay here; delegate deeper decisions |
-| RETRIEVAL | `gpt-5.6-luna` | `medium`; deterministic lookup, inventory and extraction |
-| MAPPING, straightforward code maps and structured summaries | `gpt-5.6-luna` | `medium` |
-| MAPPING, substantial synthesis across sources | `gpt-5.6-luna` | `max`; return unresolved consequential interpretations to the root |
-| GATE | `gpt-5.6-terra` | `high`; execute the named gate, classify failures with evidence and report; never repair source |
-| EXECUTION, fully specified implementation | `gpt-5.6-luna` | `max`; leaf worker with directly checkable acceptance |
-| JUDGMENT+EXECUTION, bounded implementation needing local judgement | `gpt-5.6-terra` | `high`; established architecture, with local choices coupled to coding |
-| REVIEW, ordinary independent correctness and regression | `gpt-5.6-terra` | `high`; reviewer does not implement its own corrections |
-| DESIGN+INTEGRATION, nontrivial integration within settled contracts | `gpt-5.6-sol` | `medium`; root or one bounded integration worker, not both repeating the work |
-| DESIGN+INTEGRATION or REVIEW, unresolved complex technical decisions and debugging | `gpt-5.6-sol` | `high`; bounded question or review, then hand off frozen implementation |
+| Campaign root and nested orchestration coordinators | `gpt-6-sol` | `medium` only; integration and suitable bounded repair stay here; delegate deeper decisions |
+| RETRIEVAL | `gpt-6-luna` | `medium`; deterministic lookup, inventory and extraction |
+| MAPPING, straightforward code maps and structured summaries | `gpt-6-luna` | `medium` |
+| MAPPING, substantial synthesis across sources | `gpt-6-luna` | `max`; return unresolved consequential interpretations to the root |
+| GATE | `gpt-6-luna` | `max`; execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to Sol/medium (below) |
+| EXECUTION, fully specified implementation | `gpt-6-luna` | `max`; leaf worker with directly checkable acceptance |
+| JUDGMENT+EXECUTION, bounded implementation needing local judgement | `gpt-6-sol` | `medium`; established architecture, with local choices coupled to coding |
+| REVIEW, ordinary independent correctness and regression | `gpt-6-sol` | `medium`; reviewer does not implement its own corrections |
+| DESIGN+INTEGRATION, nontrivial integration within settled contracts | `gpt-6-sol` | `medium`; root or one bounded integration worker, not both repeating the work |
+| DESIGN+INTEGRATION or REVIEW, unresolved complex technical decisions and debugging | `gpt-6-sol` | `high`; bounded question or review, then hand off frozen implementation |
 | SECURITY, consequential architecture or difficult interacting risks | `gpt-6-astra` | `medium`; authentication, permissions, migration safety, secrets and data-loss boundaries |
-| Worktree auditor, ordinary REVIEW of ancestry, patch identity and recovery | `gpt-5.6-terra` | `high`; unresolved complex interpretation uses Sol/high; consequential loss risk uses Astra/medium |
-| Implementation unsuitable for Luna/Terra from the outset, or specialist rescue | `gpt-5.6-sol` or `gpt-6-astra` | Sol/high for unresolved complex work; Astra/medium for consequential architecture or security/interacting risks; state why thinking cannot be separated from coding |
+| Worktree auditor, ordinary REVIEW of ancestry, patch identity and recovery | `gpt-6-sol` | `medium`; unresolved complex interpretation uses Sol/high; consequential loss risk uses Astra/medium |
+| Implementation unsuitable for Luna or Sol/medium from the outset, or specialist rescue | `gpt-6-sol` or `gpt-6-astra` | Sol/high for unresolved complex work; Astra/medium for consequential architecture or security/interacting risks; state why thinking cannot be separated from coding |
 
 Luna uses only `medium` or `max` in this contract. Never select Luna `low` or non-reasoning as a
-fallback. Terra uses only `high`; Sol uses `medium` for orchestration/integration and `high` for
-bounded complex work; Astra uses only `medium`. Other model/effort combinations have no standard
-route. If a selected route
-is unavailable, report it and let the root resolve an authorised alternative explicitly; never report
-a substituted route as the requested one.
+fallback. Sol uses `medium` for orchestration, integration, bounded local judgement and ordinary
+review, and `high` for bounded complex work; Astra uses only `medium`. There is no GPT-6 Terra and no
+standard Terra route. Other model/effort combinations have no standard route. If a selected route is
+unavailable, report it and let the root resolve an authorised alternative explicitly; never report a
+substituted route as the requested one.
 
 Never automatically launch Astra/high, Astra/xhigh, Astra/max or Ultra, including after repeated
 lane failures. Report the failed attempts, remaining uncertainty and exact resume boundary so the
@@ -1855,6 +1855,19 @@ operator can decide whether to commission a separate Astra/high one-shot. Only a
 operator instruction can authorise that exception; retry extensions and goal-author discretion
 cannot. Controlled delegation uses the explicit lanes and pool rules below. Luna/max remains a
 standard route, not an exceptional-effort escalation.
+
+### Gate classification fallback
+
+A green gate, or a red gate whose every failure is classified with evidence, returns straight to the
+root; a red result is the gate doing its job, not a lane failure. Escalate classification to
+Sol/medium only when Luna's verdict cannot be accepted as given: a failure is left unclassified, Luna
+cannot separate environment from code or flake from real failure, or its classifications contradict
+each other or the evidence. An incomplete run or wait timeout is not a trigger; recover the terminal
+result under §3's event-wait rules instead. Sol/medium classifies from the output Luna captured and
+does not rerun the gate unless the cause was environmental and has since been corrected. The root, already Sol/medium,
+classifies small output itself and dispatches one bounded Sol/medium classifier only when the output
+would flood its context. One fallback per gate run, no further ladder. It never repairs source and
+is not an implementation attempt under §9.
 
 The §4 narrow roles resolve through this table: Mapper uses MAPPING; Lane worker uses EXECUTION;
 Complex lane worker uses JUDGMENT+EXECUTION; Reviewer and Worktree auditor use their REVIEW entries;
@@ -1870,8 +1883,8 @@ Luna/max; a separate design agent or specification document must earn its overhe
 Discovering which component currently implements a behaviour is mapping, not automatically design.
 Sol/high resolves complex technical uncertainty such as contradictory evidence or an unresolved
 interface decision. Use Astra/medium when the question concerns consequential architecture,
-security or difficult interacting risks; ordinary local choices belong to Terra/high, and integration
-within settled contracts to Sol/medium. Each specialist receives observations, source references,
+security or difficult interacting risks; ordinary local choices and integration within settled
+contracts belong to Sol/medium. Each specialist receives observations, source references,
 competing explanations, attempted checks, frozen constraints and the exact question with a
 discriminating acceptance check.
 
@@ -1880,7 +1893,7 @@ Luna/max implementation worker. If Luna exposes a missing decision, return the s
 resolves it directly or requests a bounded specialist follow-up. Preserve prior decisions unless new
 contradictory evidence or an authorised amendment requires revisiting them.
 
-Use a bounded Terra/high worker when local judgement remains tightly coupled to coding. The
+Use a bounded Sol/medium worker when local judgement remains tightly coupled to coding. The
 Sol/medium root may directly fix suitable bounded returned issues within authority and ownership;
 do not require another spawn merely because the work includes implementation. Keep independent
 parallel implementation in its assigned lanes. Use a Sol/high or Astra/medium specialist for the
@@ -1892,7 +1905,7 @@ thread by inertia. Code quality, safety and verification requirements follow the
 
 ### Root repair and bounded rescue
 
-For §9, the eligible Codex root is `gpt-5.6-sol`, `medium`. Eligibility alone does not enable the repair
+For §9, the eligible Codex root is `gpt-6-sol`, `medium`. Eligibility alone does not enable the repair
 grant: the run contract, implementation scope and §9 boundaries determine authority. Deeper rescue
 work is delegated; it never raises the root's effort.
 
@@ -1912,9 +1925,11 @@ a stricter goal cap wins. The normal Luna implementation path is:
 This is a ceiling, not a mandatory ladder. Escalate earlier for an unsuitable worker, incomplete
 packet or unavailable prerequisite; skip the root's attempt when evidence already requires a deeper
 specialist. Do not consume attempts while prerequisites or decisions are missing. Skipped stages do
-not create extra retries, and a lane starting on Terra or a specialist does not restart at Luna.
+not create extra retries, and a lane starting on Sol/medium or a specialist does not restart at Luna.
 JUDGMENT+EXECUTION has the same two-attempt worker limit; its attempts and any previous implementation
-on that lane count toward the shared budget.
+on that lane count toward the shared budget. Because that worker already runs on the root's route, the
+root's own rescue step applies only when root context supplies a concrete correction the worker
+lacked; otherwise go straight to the specialist rescue.
 
 After the final permitted rescue, further implementation requires an evidenced correction to the
 design, packet, environment or acceptance check and an explicit root extension under §9, up to five
@@ -1958,10 +1973,12 @@ This protocol permits async use without making either UI quality or a human repl
 See the [Codex changelog](https://developers.openai.com/codex/changelog/) and
 [structured async question implementation](https://github.com/openai/codex/pull/42178).
 
-Official sources, checked 2026-09-04:
+Official sources, checked 2026-09-22:
 
+- [Introducing GPT-6 Sol and Luna](https://openai.com/index/introducing-gpt-6-sol-and-luna/)
+- [Latest model guidance](https://developers.openai.com/api/docs/guides/latest-model.md)
 - [Astra prompting and migration guidance](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md)
-- [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra)
+- [Model catalog: Astra, Sol and Luna](https://developers.openai.com/api/docs/models)
 - [Codex subagent configuration](https://developers.openai.com/codex/agent-configuration/subagents)
 - [Reasoning configuration updates and compatibility](https://developers.openai.com/api/docs/guides/reasoning#change-reasoning-mid-conversation)
 
@@ -2052,7 +2069,7 @@ without effort, the client may select that model's default effort; pass both for
 
 A follow-up continues on the thread's existing model and effort. Reclassify the remaining work before
 every follow-up. At a meaningful phase boundary, move frozen implementation to Luna/max and ordinary
-review to Terra/high rather than keeping a Sol/high or Astra/medium thread for all subsequent work.
+review to Sol/medium rather than keeping a Sol/high or Astra/medium thread for all subsequent work.
 Do not create repeated handoffs for tiny finishing steps where startup and context duplication exceed
 the benefit; a bounded authorised root correction can stay on Sol/medium.
 
