@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-21 17:08'
+updated_date: '2026-09-22 10:30'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `d58560b`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `47b931b`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -327,6 +327,10 @@ codex/goal-<date>-wave<N>.md      the goal file
 codex/launch-<date>-wave<N>.txt   the launch message, copy-paste ready
 codex/report-<date>-wave<N>.md    the run-end report the agent writes (§10)
 ```
+
+Where a repository runs more than one campaign, put the campaign slug in all three names and keep
+them consistent — `goal-<date>-<slug>-wave<N>.md` alongside `report-<date>-<slug>-wave<N>.md`.
+Nothing validates these names, so an inconsistent set costs nothing but the next reader's time.
 
 **Where a repository has adopted a real tracker, task state carries the durable per-item outcomes.**
 The goal may select work through a query, but freezes the selected task IDs and their current
@@ -1620,10 +1624,10 @@ control back to the operator — do this before you hand back:
    - terminal (only when explicitly requested): emit the covering note after tracker reconciliation. Do not create an unsolicited
      report file or leave durable findings only in the message.
 3. File report only: run `~/repos/agent-docs/bin/wave-notify <exact report path>` exactly once. It
-   pushes a phone notification that this run has finished and its report is ready. It refuses a
-   missing or empty report, so never run it before the file is complete, and it never runs at any
-   other point in the run. A non-zero exit does not reopen the run: do not retry or debug it, state
-   the exit code and its one-line error in the reply.
+   pushes a phone notification that this run has finished and its report is ready. Run it after the
+   report file is complete and at no other point in the run: it never refuses, so running it early
+   pushes a ping saying the report is missing rather than failing. A non-zero exit does not reopen
+   the run: do not retry or debug it, state the exit code and its one-line error in the reply.
 4. Reply and hand control back. For a file report the reply is a clickable file link and a short
    high-level summary; do not paste the report into chat. Do not begin more work after the report.
 
@@ -1648,10 +1652,20 @@ and say in both that writing it is the run's terminal action.
 **The completion ping is the only notification a wave sends.** The operator starts a long run and
 walks away; `wave-notify` is how they learn it has ended without watching the terminal. It is an
 explicit run-end step rather than a harness hook because hooks fire on every turn of every session,
-and this must fire once, when the whole wave has finished and its report exists. The script
-validates the `codex/report-<date>-wave<N>.md` path and writes a `<report>.notified` receipt so a
-repeat call sends nothing. Credentials live in `~/repos/chat-personal/credentials/pushover.env`.
-A child lane, reviewer or gate runner never runs it; only the root does, at closeout.
+and this must fire once, when the whole wave has finished and its report exists.
+
+**The ping always sends, and the report name is free.** The script validates nothing as a condition
+of sending: a name it cannot parse, or a report that is missing, empty or unreadable, degrades the
+message and never the send. Dropping the notification is the worse outcome, because the operator has
+walked away and the thin ping is what tells them to come back and chase the report. Name the report
+whatever the campaign's `goal-` and `launch-` files are named — a campaign slug and a letter-suffixed
+wave are both fine, and a wave token anywhere in the name gives the ping a `Wave <N> done: <repo>`
+title. The message carries the report's headline paragraph and a count of the items in its questions
+section, so the phone says whether the wave is waiting on a human. A successful read writes a
+`<report>.notified` receipt so a repeat call sends nothing; a degraded send deliberately writes no
+receipt, so re-running once the report lands still delivers the real ping. Credentials live in
+`~/repos/chat-personal/credentials/pushover.env`. A child lane, reviewer or gate runner never runs
+it; only the root does, at closeout.
 
 **Two content rules that only exist because reports have got them wrong.** Neither is obvious from
 the format alone:
