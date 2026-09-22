@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-22 10:30'
+updated_date: '2026-09-22 11:04'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `47b931b`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `8912beb`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1224,14 +1224,15 @@ that hides this.
 - Put decisions and evidence in a durable source. Chat and memory are routing aids, not authoritative
   present-tense state.
 - **Carry an authoritative copy of this sourcebook inside every repository driven this way**, imported
-  whole into the repository's tracker docs with its source path and import date in a header. A
+  whole into the repository's tracker docs with its source path and rendered source commit in a header. A
   repository that carries its own copy is complete: an agent given only the checkout — in CI, on
   another machine, or a year later — has the whole model without being told where a canonical file on
   somebody's laptop lives. **Decided 2026-08-14, reversing the previous rule that the sourcebook must
   exist in exactly one place outside every repository.**
 
-  The price is a re-import discipline, and it is not optional: **an edit to the canonical file is not
-  finished until every consuming repository has been re-imported in the same change.** That discipline
+  The price is a publication discipline, and it is not optional: **an edit to the canonical file is not
+  finished until its source commit has been pushed and every consuming repository has been published
+  from that pinned revision through the designated host's isolated clones.** That discipline
   exists because the failure it prevents was measured, not imagined — before the copies were tracked
   and dated, an in-repo copy was found **126 lines and one whole wave behind**. Import it as a tracker
   document rather than a loose file at the repository root, so nothing resolves it by a cwd-relative
@@ -1427,7 +1428,7 @@ claims about content, so require the evidence, not the adjective.
 | A test passes because its input was absent and it skipped | Report skips separately from passes, and state which inputs were present. An acceptance check whose evidence is "green" cannot distinguish proven from not-run |
 | An optimisation target is met by changing how the thing is measured | Require the before and after to come from the same harness at the same scale, and say that a better number from a changed method is a false pass, not a result |
 | A temporary licence is assumed to have expired on schedule | Re-check the ending condition at the start of the next run. The event that was supposed to end it may simply not have happened |
-| An in-repo copy of the guidance has rotted behind the canonical file | Re-import every consuming repository in the same change as the edit to the canonical file. An edit that lands without its re-imports is half-finished; the copies were measured 126 lines and one whole wave behind before this was a discipline |
+| An in-repo copy of the guidance has rotted behind the canonical file | Commit and push the canonical edit, then publish every consumer from that pinned revision through the designated host's isolated clones. A source edit without completed publication is half-finished; the copies were measured 126 lines and one whole wave behind before this was a discipline |
 | A read-only audit finds a real defect it is forbidden to fix | Choose deliberately: give the audit ownership, add a named follow-up lane that owns the fixes, or state that findings land next run by design (§8) |
 | Several lanes each need to write one results document | One owner, scheduled last, with declared dependencies on the lanes feeding it. Do not shred a document into per-lane stubs and do not merge it at integration (§4) |
 | A new relational table is created and populated but nothing reads it | Make the acceptance check grep the query layer, not the schema. "The table exists and has rows" is not evidence the feature works |
