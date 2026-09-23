@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-22 18:43'
+updated_date: '2026-09-23 08:35'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `460cbe6`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `66e0c3c`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -43,9 +43,9 @@ how much context a spawn inherits, how many lanes may run at once, how deep dele
 **harness profile** resolves those into concrete models, reasoning depths and spawn mechanics:
 
 - **Appendix A — Codex profile.** Complete: model and effort routes, `fork_turns`, the thread pool.
-- **Appendix B — Claude Code profile.** Deliberately thin. It carries the role mapping and the ways
-  Claude Code's dispatch surface differs *structurally* from Codex's, and defers routing itself to
-  the always-loaded global rules rather than keeping a second copy that can drift out of step.
+- **Appendix B — Claude Code profile.** Complete: routes through pinned `agent-workflows` plugin
+  agents, effort, spawn limits, turn-ending control and the ways Claude Code's dispatch surface
+  differs *structurally* from Codex's.
 
 The run contract names the harness once. Every lane then states its role **and the route the profile
 resolves it to** — a lane brief carrying only a role name leaves the choice to whoever reads it next.
@@ -270,6 +270,7 @@ Apply the following only to continuation of this session's active task:
 | Native encrypted compaction | Use retained context and check current-state freshness. Retrieve missing or changed binding sections and evidence; do not request a second text summary. |
 | Text-summary compaction | Use the retained summary and current-state record. Resolve omissions/conflicts with targeted source reads. This is an observed harness fallback, not a prescribed campaign summarisation strategy. |
 | Experimental fresh-context reset | Explicitly read the current-state record (or its internal-note pointer), then use available history references for missing details. Previous working context must not be assumed to survive. |
+| Notes across context windows (Codex Astra, opt-in in `config.toml`) | Use the retained notes and search earlier windows for missing detail. The current-state record stays authoritative: check its freshness as for native compaction. |
 | Unknown mechanism | Read the current-state record and recover missing constraints before dependent work. Record uncertainty; never claim native/experimental retention without evidence. |
 
 Recovery eligibility depends on the running provider, authentication, model and exposed capabilities,
@@ -1877,6 +1878,11 @@ custom `agent_type` is installed. Inspect selected custom-role pins before dispa
 ### Technical decisions and implementation
 
 Sol/high and Astra/medium specialists normally produce the accepted implementation packet in §3.
+Give an Astra specialist a shorter brief than a Luna or Sol lane: the exact question, evidence and
+frozen constraints, with contextual pointers ("read X when changing Y") instead of blanket reading
+lists. OpenAI reports that guidance which helps Sol or Luna can overconstrain Astra, and that Astra
+asks clarifying questions more often; state that it takes the goal's default and returns an
+uncovered decision to the root rather than waiting on one.
 Start with the wave's frozen decisions and inspect only their gaps. An already complete goal goes straight to
 Luna/max; a separate design agent or specification document must earn its overhead.
 
@@ -1966,6 +1972,11 @@ Keep `features.default_mode_request_user_input = false`: this controls the older
 Default mode, not async availability. Async exposure depends on the actual model catalog and client;
 do not enable the older flag, change models or alter provider routing merely to obtain questions.
 When async is unavailable, unattended and front-loaded runs use their no-answer path.
+
+OpenAI's rule against combining async tools with parallel tool calls in multi-agent mode governs
+function and custom tools that an application runs through the Responses API, not hosted built-in
+tools ([async tool calling](https://developers.openai.com/api/docs/guides/async-tool-calling)). It
+places no constraint on these Codex runs; a custom Responses API harness must follow it.
 
 Codex 0.154.0 added inline TUI async answers; this does not prove that every client or provider has the
 same UI. Blank-question validation also does not establish that low-value questions are impossible.
@@ -2096,91 +2107,207 @@ a leaf and never delegates. Do not claim a configured depth limit enforced this 
 
 ## Appendix B — Claude Code profile
 
-**Routing is deliberately not restated here.** A Claude Code session already loads
-`~/.claude-personal/rules/operating-model.md` § "Model routing for sub-agents" and
-`~/.claude-personal/rules/subagent-dispatch.md` on every request, before anything asks for this
-document. Those two own the routing test, the model tiers and the dispatch mechanics, and **they win
-on any conflict with this appendix** — a second copy of a contract that is already always-loaded is
-the drift hazard, not the safety net. Read them first; this appendix carries only what they do not:
-how the body's roles map onto them, and the ways Claude Code's dispatch surface differs in *kind*
-from Appendix A.
+Complete. Everything the body defers to a profile is resolved here for Claude Code. The always-loaded
+`operating-model.md` § "Model routing for sub-agents" and `subagent-dispatch.md` rules in the
+session's own Claude home still own the routing test and general dispatch mechanics; this appendix
+resolves them into the concrete routes a fan-out goal uses, and its table is the route for a lane.
+
+### Root route
+
+**Operator reference, not generated launch content:** Rob runs the campaign root on Opus 5.5 at
+`high` effort, selected outside the prompt. Set the effort explicitly rather than relying on a
+default: Opus 5.5 defaults one level lower than Opus 5 did. As in Appendix A, goals and launch
+messages carry no root model or effort declaration and no self-route check, and the receiving session
+stays root (§1). `xhigh` is Anthropic's stated fit for agentic runs longer than 30 minutes; for the
+root it is an evaluation candidate, not the standard route.
 
 ### Role → route
 
-The routing test is `operating-model.md`'s, not a new one: **can you state the acceptance check now?**
-Yes → Sonnet. No — the lane must decide what "done" means, or the deliverable is a judgement → Opus,
-or do not delegate at all. Cross-check on blast radius: wrong-and-cheap-to-detect → Sonnet;
-wrong-and-silently-propagating (a frozen seam, a data model, a cardinality or PII call) → Opus.
+The `agent-workflows` plugin (marketplace `rob-agent-skills`, installed in every Claude home) ships
+pinned subagent definitions. A pinned definition carries both model and effort, which is the only way
+to give a plain `Agent` dispatch an effort different from the root's.
 
-| Role | Route | Note |
+| Role or workload | Spawn (`subagent_type`) | Model / effort |
 |---|---|---|
-| RETRIEVAL | Haiku, or Sonnet | Haiku only for single-fact lookups whose answer is self-evidently right or wrong. **Never where you would have to trust it finished** — it drops steps in long tool loops, so a partial sweep returns looking complete. Completeness matters → Sonnet. |
-| MAPPING | Sonnet | The `Explore` agent type is purpose-built for read-only fan-out search. |
-| GATE | Sonnet, low effort | Run the gate, report failures verbatim, repair nothing. |
-| EXECUTION | Sonnet | The normal parallel-build lane, once its seams are frozen. |
-| JUDGMENT+EXECUTION | Opus | Context-heavy or wider-risk implementation where the acceptance check is known but the implementation still carries material judgement. |
-| REVIEW | Sonnet, or Opus | Sonnet for spec conformance against a written contract; Opus where the review is the judgement. |
-| DESIGN+INTEGRATION | Opus | Normally the root keeps this rather than delegating it. |
-| SECURITY | Opus, raised effort | Never delegated to a cheaper tier to save a round trip. |
+| RETRIEVAL, single-fact lookup whose answer is self-evidently right or wrong | generic, `model: haiku` | Haiku; never where you would have to trust it finished |
+| RETRIEVAL where completeness matters; MAPPING | `agent-workflows:mapper` | Sonnet / `low`; read-only |
+| GATE | `agent-workflows:gate-runner` | Sonnet / `low`; runs the named gate, classifies, never repairs |
+| EXECUTION | `agent-workflows:lane-worker` | Sonnet / `high` |
+| JUDGMENT+EXECUTION | `agent-workflows:complex-worker` | Opus / `high` |
+| REVIEW, ordinary correctness and regression; worktree auditor | `agent-workflows:reviewer` | Opus / `medium`; read-only, does not implement its own corrections |
+| DESIGN+INTEGRATION | root; a bounded delegated decision uses generic, `model: opus` | Opus / the root's `high`, inherited |
+| SECURITY | `agent-workflows:security-reviewer` | Opus / `high`; read-only |
+| Specialist rescue (§9, below) | `agent-workflows:rescue-specialist` | Opus / `xhigh` |
 
-### Six structural differences from Appendix A
+Definitions pin the `sonnet`, `opus` and `haiku` aliases rather than model IDs, so a model release
+moves the route without an edit. Re-test the effort values when that happens and record the change.
+
+- **Do not pass `model` to a pinned definition.** The per-invocation `model` parameter outranks the
+  definition's pin, so passing one silently replaces the route.
+- **A generic spawn inherits the root's effort.** `general-purpose`, `Explore` and any other
+  unpinned type take `model` explicitly and run at the session's effort, so a generic Sonnet spawn
+  under this root is Sonnet/`high`, never Sonnet/`low`.
+- **`Workflow` lanes** pass the same `model` and `effort` values in `agent()` opts.
+- **If an `agent-workflows:*` type is absent** from the Agent tool's list, the plugin is not
+  installed in this home. Report it, dispatch generically with the table's model, and record the lane
+  as running at the root's effort. Never report the pinned route as the one that ran.
+
+### Seven structural differences from Appendix A
 
 These are not naming differences. A lane written against Appendix A's mechanics and run on Claude
 Code fails in ways its own acceptance check will not catch.
 
 1. **There is no `fork_turns`, and the middle option does not exist.** Context scope is binary:
-   `subagent_type: "fork"` inherits the whole conversation, anything else starts fresh. There is no
-   "last N turns". A lane needing partial context gets a fresh agent and the relevant facts written
-   into its brief — which is what §3 prefers anyway. A fork also always runs on the parent's model;
-   a `model` override on a fork is ignored.
+   `subagent_type: "fork"` inherits the whole conversation, anything else starts fresh. A lane needing
+   partial context gets a fresh agent and the relevant facts written into its brief, which is what §3
+   prefers anyway. A fork always runs on the parent's model; a `model` override on a fork is ignored.
+   That makes a fork the most expensive spawn shape available: it copies the whole parent
+   conversation into a second context, at the parent's model, with no way to route it cheaper.
 
-   **A fork is therefore the most expensive spawn shape available**: it copies the entire parent
-   conversation into a second context that then re-sends all of it on every one of its own turns, at
-   the parent's model, with no way to route it cheaper. Reach for it only when the lane genuinely
-   needs the conversation itself; a self-contained brief is both cheaper and the default §3 asks for.
+2. **`effort` is not a parameter on the `Agent` tool.** It is set by an agent definition's `effort:`
+   field, plugin definitions included, or by `Workflow`'s `agent()` opts. Every other spawn inherits
+   the session's effort. A lane brief that asks for an effort in prose is a silent no-op.
 
-2. **`effort` is not a parameter on the `Agent` tool.** It is settable only in an agent definition's
-   frontmatter or in `Workflow`'s `agent()` opts. A lane brief that specifies an effort through a
-   plain dispatch is a **silent no-op** — the lane runs at the session's effort and nothing reports
-   the discrepancy. Where a lane genuinely needs a different effort, it needs an agent definition or
-   a `Workflow`, not a sentence in the brief.
+3. **The concurrency cap fails rather than queues.** The `Agent` tool allows 20 running subagents per
+   session by default (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`). The 21st spawn fails with
+   `Concurrent subagent limit reached` and tells Claude not to retry. `Workflow` caps concurrent
+   agents at `min(16, CPUs − 2)` and queues the excess, so saturation there is invisible, and the
+   session's default workflow size guideline is under 10 agents unless Rob raises it in `/config`.
+   A nested campaign starts at most thirteen direct children and reserves seven slots, §4's
+   two-thirds rule against the 20 cap.
 
-3. **There is no ten-thread pool.** `Workflow` caps concurrent agents at `min(16, CPUs − 2)` and
-   **queues** the excess rather than refusing it, so saturation is invisible; the `Agent` tool has no
-   documented cap at all. §4's reserve is therefore a ratio here and not a count, and "we did not hit
-   the cap" is not evidence the fan-out was sized correctly.
-
-4. **Delegation depth is enforced differently at each surface.** `Workflow` forbids nesting outright
-   — a `workflow()` call inside a child throws. Agent-spawned subagents *can* spawn further, so
-   `Delegation: forbidden` in a lane brief is a real instruction there, not a restatement of a
-   platform limit.
+4. **Delegation depth differs by surface.** Agent-spawned subagents can nest up to three layers
+   below the main conversation by default (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`; `1` turns nesting
+   off), so `Delegation: forbidden` in a lane brief is a real instruction, not a restatement of a
+   platform limit. `Workflow` forbids nesting outright: a `workflow()` call inside a child throws.
 
 5. **Naming a background agent swallows its deliverable.** Passing `name:` promotes a one-shot
-   subagent into a persistent addressable teammate; teammates go **idle awaiting messages** instead
-   of completing, so no completion event fires and the final message never reaches the dispatcher —
-   only an idle notification. Re-asking by message produces another idle ping. This has no Codex
-   analogue, and it directly breaks §5's "Return exactly:" contract and §10's report chain. Dispatch
-   unnamed, or synchronously, or hand off through a file at an absolute path. `subagent-dispatch.md`
-   owns this, including the A/B experiment that isolated it.
+   subagent into a persistent teammate that goes idle instead of completing, so its final message
+   reaches the dispatcher late, through the teammate channel, and breaks §5's `Return exactly:`
+   contract. Dispatch unnamed, or synchronously, or hand off through a file at an absolute path.
+   `subagent-dispatch.md` owns this.
 
 6. **A lane cannot clear a permission block the root could have cleared.** Subagents inherit the
-   parent's permission mode and cannot opt out, while a soft block clears only on the *user's own*
-   message naming the action — and a subagent's transcript contains no user message. A dispatch brief
-   is explicitly refused as consent. So a lane can be blocked on work the root was allowed to do,
-   with nothing able to unblock it, and re-dispatching is treated as bad faith. **Lanes do read-only
-   investigation, code edits, tests and inventory sweeps; SSH, deploys, tenant or cloud mutations,
-   secret-store writes and destructive git stay on the root.** If a lane returns blocked, the root
-   runs that step itself.
+   parent's permission mode, and a soft block clears only on the user's own message naming the
+   action. A dispatch brief is refused as consent, and re-dispatching is treated as bad faith.
+   **Lanes do read-only investigation, code edits, tests and inventory sweeps; SSH, deploys, tenant
+   or cloud mutations, secret-store writes and destructive git stay on the root.** If a lane returns
+   blocked, the root runs that step itself.
+
+7. **Worktree isolation branches from the default branch, not the root's `HEAD`.** `isolation:
+   "worktree"` is available on the `Agent` call and in a definition. The worktree starts from the
+   repository's default branch, so a lane isolated this way cannot see the root's uncommitted or
+   unpushed integration state. Commit the prerequisite state to the base first, or share the
+   checkout under §4's ownership rules. A worktree with no changes is removed automatically.
+
+### Capability answers the body asks for
+
+- **Root async questions: unavailable.** Claude Code has no nonblocking question tool;
+  `AskUserQuestion` blocks. Unattended and front-loaded runs never call it and follow the no-answer
+  path, batching questions into the report. `PushNotification` is not a question channel, and
+  `wave-notify` remains the only run-end ping.
+- **Recovery mechanism.** Claude Code's automatic compaction leaves a retained text summary, so
+  record it as text-summary compaction unless runtime evidence says otherwise. `/compact` is
+  operator-side. Opus 5.5 receives no injected remaining-context signal and task budgets do not reach
+  Claude Code, so the §2 current-state record is the only continuity mechanism: write it at every
+  §2 boundary.
+- **Waits (§3).** Unnamed subagents report completion as a task notification. A single external
+  completion uses a background Bash command (`run_in_background`) whose `until` loop exits on every
+  terminal state, not only success. Streamed events use `Monitor`, which has a 30-minute ceiling and
+  is re-armed on expiry. Never run a foreground `sleep` longer than 60 seconds. Ending the turn while
+  that work runs is the wait (see the next section).
+
+### Turn endings: a message with no tool call stops the run
+
+Opus 5.5 keeps the operator updated as it works, and some updates end the turn with text rather than
+a tool call. Nothing in Claude Code continues the run after that, so the wave sits idle until Rob
+returns. Put this block in the run contract of every unattended or front-loaded Claude goal:
+
+```text
+## TURN ENDINGS: a message with no tool call stops the run
+
+A message with no tool call ends your turn, and the wave stops there until the operator returns.
+Four endings stop a run while work is still owed; do not use any of them:
+1. A summary of what was done that announces the next step without taking it.
+2. An offer to carry on unless the operator would prefer otherwise.
+3. A list of decisions when, by your own account, none of them blocks the remaining work.
+4. Deciding this is a good place to report because the turn was long or a milestone is done.
+Status notes and recommendations are welcome: put them in the same message as your next tool call
+and continue with whatever does not depend on an answer. End a turn only when the run-end report is
+written and pinged, or when you are waiting on a running subagent, background command or monitor.
+When waiting, make the message a single line starting `WAITING:` that names what you wait for.
+This does not override confirmation for risky or destructive actions.
+```
+
+**Harness backstop.** The plugin's `Stop` hook re-prompts a fan-out root that ends its turn while the
+run-end report does not exist. It arms only in a session whose latest operator prompt is a fan-out
+launch message, meaning it contains `You are the root` and a `codex/report-*.md` path, or a mid-run
+replacement starting `Do not pivot on receipt`. It lets the turn end when the report exists and is
+non-empty or the message starts with `WAITING:`, and gives up after three consecutive continuations.
+Any other operator prompt disarms it. Launch files must therefore keep both markers, which §10
+already requires.
+
+### Time-budget signal (trial)
+
+Opus 5.5 paces itself against elapsed time: given a budget, a lead agent keeps more subagents working
+in parallel and finishes sooner, where lowering effort would reduce the work itself. A launch message
+may add a line `Time budget: <N>s`, `<N>m` or `<N>h`. The plugin's `PostToolUse` hook then appends
+`elapsed <s>s / <budget>s` to each of the root's tool results. The budget is advisory and nothing
+stops at it: set it somewhat above the time wanted and keep the run's own stop rules. This is a
+trial, opt-in per wave. Record whether the line was used in the report, and compare equivalent waves
+under "Preparing and improving the execution contract" before making it standard.
+
+### Root repair and bounded rescue
+
+For §9, the Claude root on Opus at `high` or above meets the eligibility floor. Eligibility alone
+does not enable the grant: the run contract, implementation scope and §9 boundaries determine
+authority.
+
+The default budget is four implementation attempts per commissioned lane, including all rescues; a
+stricter goal cap wins. The normal path is:
+
+1. `lane-worker` (Sonnet/`high`) implements and may make one evidenced correction: at most two
+   implementation attempts.
+2. The root diagnoses the accumulated evidence and takes one bounded rescue attempt itself when the
+   correction suits it and is authorised. Transfer ownership first; repeating the worker's failed
+   approach is not a rescue.
+3. If that fails, dispatch one `rescue-specialist` (Opus/`xhigh`) attempt with the prior failures,
+   current artifact, proposed correction and verification check.
+4. If specialist rescue fails, stop implementation and reassess the design, packet, environment and
+   acceptance check.
+
+This is a ceiling, not a mandatory ladder. A `complex-worker` lane has the same two-attempt worker
+limit; because it already runs on the root's model and effort, the root's own rescue applies only
+when root context supplies a concrete correction the worker lacked, otherwise go straight to the
+specialist. Never automatically launch Opus at `max`, including after repeated failures. Report the
+failed attempts, remaining uncertainty and exact resume boundary so Rob can commission it. Further
+attempts follow §9's evidenced-correction extension, up to five in total.
+
+### Gate classification fallback
+
+A green gate, or a red gate whose every failure is classified with evidence, returns straight to the
+root. Escalate classification only when `gate-runner`'s verdict cannot be accepted as given: a
+failure is left unclassified, it cannot separate environment from code or flake from real failure,
+or its classifications contradict each other or the evidence. The root classifies small output
+itself and dispatches one `reviewer` classifier only when the output would flood its context. One
+fallback per gate run; it never repairs source and is not an implementation attempt.
+
+The §4 narrow roles resolve through the table: Mapper uses `mapper`; Lane worker uses `lane-worker`;
+Complex lane worker uses `complex-worker`; Reviewer and Worktree auditor use `reviewer`; Security
+reviewer uses `security-reviewer`; Gate runner uses `gate-runner`.
 
 ### `Workflow` is a second orchestration mode Codex has no analogue for
 
-Where the fan-out shape is known before the run — the lanes, their dependencies, what verifies what —
+Where the fan-out shape is known before the run (the lanes, their dependencies, what verifies what),
 `Workflow` expresses the topology as a deterministic script (`pipeline()` without barriers,
 `parallel()` where a barrier is genuinely needed, per-agent `schema` for structured returns) instead
-of trusting a prompted root to hold it across a multi-hour campaign. It is also the only surface
-where per-lane `effort` and worktree isolation are settable.
+of trusting a prompted root to hold it across a multi-hour campaign.
+
+**The root can call `Workflow` only when the operator's own message opts in**, for example "use a
+workflow" or `ultracode`. The pasted launch message is that message, so a goal that intends
+`Workflow` puts the opt-in sentence in the launch file. Without it, the root cannot call the tool.
 
 This does not replace the goal file. The goal still carries the run contract, ownership, frozen
 decisions, traps and the run-end protocol; the script carries only the topology. Use it when the
-shape is frozen, and a prompted root when the wave must still discover its own shape — which is the
+shape is frozen, and a prompted root when the wave must still discover its own shape, which is the
 same DESIGN+INTEGRATION-versus-EXECUTION question §1 already asks about the root.
