@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-23 10:40'
+updated_date: '2026-09-23 23:44'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `946d9aa`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `b312745`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -19,7 +19,15 @@ updated_date: '2026-09-23 10:40'
 >
 > Do not summarise, compress or adapt the body. A compression drifts from its source while continuing
 > to look authoritative.
-# Prompting a coding agent for long-running fan-out workflows
+# Dependency-driven coding loops and selective fan-out
+
+New runs are **loops**: one receiving root advances a dependency graph, using bounded specialists
+only where they earn their coordination cost. A loop is not a mandatory batch of agents or a global
+barrier. Existing wave reports are valid predecessor inputs; prepare a new loop without renaming or
+rewriting historical artifacts or changing an active run. The canonical filename, tracker document
+IDs, `codex/` directory and `wave-notify` helper remain stable compatibility surfaces, not old skills.
+Repository-specific per-wave release caps, protected boundaries and naming/version contracts retain
+their meaning per loop unless explicitly amended; an overnight admission batch never renews a cap.
 
 Use this sourcebook when writing a launch prompt and goal file for a long-running agent campaign. It
 is intentionally project-neutral. Copy only the contracts and checks that apply to the run; unrelated
@@ -67,7 +75,11 @@ Every goal begins with an explicit run contract:
 Run mode: daytime | front-loaded | unattended
 Human availability: available | reachable but not to be asked | unavailable for the whole run
 Root async questions: disabled | allowed without waiting [default set by the harness appendix]
-Terminal condition: stop after the listed lanes | continue into the fallback queue
+Terminal condition: stop after the listed lanes | bounded fallback queue | overnight admission until closeout (§1)
+Work admission: bounded (default daytime) | overnight continuous within a frozen selection envelope
+Admission envelope: [overnight only: repository/project/theme, priority order, exclusions and authority]
+Closeout trigger: [bounded outcome | operator awake/closeout message; exhaustion and safety stops also apply]
+Drain boundary: [safe checkpoint and existing gate deadlines; preserve incomplete work, no new backlog admissions]
 Current layer: research | design | implementation | review | live verification | deployment
 External-write authority: [exact trackers, hosts, deployments, databases or workflows]
 Root repair authority: enabled | withheld [§9; default enabled for front-loaded/unattended implementation]
@@ -101,8 +113,50 @@ Unattended means the run must finish without a human answer. Whether root-only a
 questions are allowed is set by the harness appendix and may be overridden by the goal. Where they
 are allowed, including overnight, an incidental reply may unblock a lane, but sending a question
 never creates a wait dependency. The goal must provide defaults for expected forks and an
-ordered fallback queue if the terminal condition says to continue after a lane parks. Do not infer
+ordered fallback queue or explicit overnight selection envelope if the terminal condition permits more work. Do not infer
 availability from the time of day or the expected duration.
+
+### Bounded daytime and continuing overnight loops
+
+Default new daytime work to a compact bounded loop: one useful outcome or small dependency-connected
+set, front-load material decisions, and close when its acceptance or precise park conditions are met.
+Human availability/question mode is separate from work admission; front-loaded daytime work can be
+bounded. Do not manufacture extra lanes or exhaust the backlog because capacity is available.
+
+An explicitly requested overnight loop may continue selecting work without a new human prompt for
+each batch. Freeze the **selection envelope**, not every future task ID: repositories/project/theme,
+ordered priorities and tie-breaks, excluded work, permitted mutation/deployment surfaces, resource
+limits, acceptance/review rules and any owner-specified deadline or budget. A theme alone grants no
+new external-write authority. Existing task holds, protected boundaries and attempt ceilings remain
+binding. Do not invent token/cost budgets or broaden authority to keep the session occupied.
+
+At useful admission boundaries (accepted work, dependency/resource release or depleted ready set),
+read the relevant live backlog. Choose the highest-priority eligible work within the envelope;
+explain a higher-priority deferral. Reconcile status, current criteria, dependencies, ownership and
+preserved candidates. Before mutation or spawn, record the selected task IDs/criteria revisions,
+admission reason, lane brief, route and required checks in the existing current-state record. New
+tasks may be admitted if they satisfy the same frozen envelope; a changed priority or scope outside
+it requires owner authority. Never rewrite the envelope by treating a query result as permission.
+Complete integration and proof debt before adding pressure when that is the bottleneck.
+
+Continue in the same root/session and goal; a new admission is not a new campaign, root, report or
+retry allowance. No work is admitted after the closeout trigger. In overnight mode, an operator
+message such as **"I'm awake"**, **"close out"** or **"finish this loop"** triggers normal closeout
+unless that message explicitly says to keep running. Record `draining`, notify active children to
+finish their current safe atom or return a preserved partial, and admit no additional backlog tasks.
+Finish only already-admitted work and bounded repair/verification necessary for a safe handoff,
+within existing attempt limits and gate deadlines. A newly discovered dependency is parked unless
+its bounded repair is already authorized and fits that drain boundary. Do not turn drain into another
+open-ended implementation cycle, kill an unsafe in-flight mutation, or discard candidates to finish.
+Record any pending external operation with its identity, owner, status and precise resume condition.
+Then reconcile the tracker and deliver one normal file report and completion ping (§10).
+
+Close out early if the envelope is exhausted, all remaining work is parked with no active feasible
+dependency, a safety/authority boundary prevents progress, or an explicit runtime/resource limit is
+reached. If a real running dependency can release work, use its supported event/watcher path and
+bounded deadline. Do not poll a quiet backlog or generate inference just to remain alive until the
+operator wakes. Honest early exhaustion is preferable to busywork. A later message does not restart
+a closed loop automatically.
 
 ### Root-only asynchronous questions
 
@@ -183,7 +237,8 @@ a worker return, context transition or model claim is not a handover.
 
 ## 2. Goal contract and current execution state
 
-The goal freezes the commissioned work and its authority. One root-owned current-state record
+The goal freezes authority and the bounded work or overnight selection envelope (§1). Each overnight
+admission freezes that task's criteria and brief before dispatch. One root-owned current-state record
 supports continuation across context windows. Backlog remains the durable per-task outcome and
 decision archive. Neither the state record nor internal notes is a second task tracker.
 
@@ -326,18 +381,19 @@ directory name, so renaming it to something harness-neutral silently stops the s
 failing loudly. Read `codex/` as "run artefacts", not as "Codex's directory".
 
 ```
-codex/goal-<date>-wave<N>.md      the goal file
-codex/launch-<date>-wave<N>.txt   the launch message, copy-paste ready
-codex/report-<date>-wave<N>.md    the run-end report the agent writes (§10)
+codex/goal-<date>-loop<N>.md      the goal file
+codex/launch-<date>-loop<N>.txt   the launch message, copy-paste ready
+codex/report-<date>-loop<N>.md    the run-end report the agent writes (§10)
 ```
 
 Where a repository runs more than one campaign, put the campaign slug in all three names and keep
-them consistent — `goal-<date>-<slug>-wave<N>.md` alongside `report-<date>-<slug>-wave<N>.md`.
+them consistent — `goal-<date>-<slug>-loop<N>.md` alongside `report-<date>-<slug>-loop<N>.md`.
 Nothing validates these names, so an inconsistent set costs nothing but the next reader's time.
 
 **Where a repository has adopted a real tracker, task state carries the durable per-item outcomes.**
-The goal may select work through a query, but freezes the selected task IDs and their current
-acceptance criteria before assigning lanes; a changing query must not silently widen the run.
+The goal may select work through a query, but freezes selected task IDs and current acceptance before
+assigning lanes. Bounded loops freeze the selection at preparation; overnight loops may admit more
+under §1's frozen envelope, recording each admission before dispatch. A query never widens authority.
 The report destination is an explicit run-contract choice (§10). Default to a file report whether
 or not a tracker exists, followed by a short high-level summary and a clickable file link in chat.
 File reports supplement the tracker rather than replace it. Terminal-only reporting requires an
@@ -455,6 +511,11 @@ fresh context; a two-sentence counterexample can also justify a specialist when 
 consequential uncertainty. Name the assumption and the evidence that could disprove it; a second
 agent's agreement alone is not independent proof. Do not add a general reviewer by habit.
 
+Record **Why delegate:** one sentence per child in the existing lane table/brief, naming independent
+progress, context isolation or a falsifiable consequential challenge and accounting for startup and
+integration cost. If none applies, keep the work with its existing owner. A role label or available
+slot is not a reason. Reviewers have distinct questions, not several copies of a request for approval.
+
 Continue useful root work while children run. Wait when their result is a real dependency, and
 integrate only against the agreed seam. This instruction authorises the declared lanes, not unlimited
 recursive delegation or spawns merely to fill slots. Children still need explicit delegation authority.
@@ -526,6 +587,13 @@ There is no occupancy quota or arbitrary minimum agent count. Concurrency respec
 isolation and runtime/repository limits. Waiting on CI is justified only when no independent authorised
 ready work, useful integration or verification remains. Record the concrete blocking dependency in
 state rather than repeatedly narrating unchanged CI. Intermediate CI is not a whole-wave barrier.
+
+Loop boundaries are reporting/authority boundaries, not scheduling barriers. Accept and integrate a
+ready candidate and release its dependants without waiting for unrelated lanes. Retain a barrier only
+for a named shared resource, required deployment sequence or composed acceptance criterion; name that
+dependency in the goal. Keep tightly coupled implementation with one owner rather than manufacturing
+handoffs. A larger overnight envelope changes how much work may be admitted, not these rules or the
+number of agents that must run concurrently.
 
 ### Wait for events without a root polling loop
 
@@ -729,6 +797,11 @@ is pure carrying cost. That licence is temporary — record it with its expiry, 
 
 ### Standard campaign topologies
 
+These are optional shapes, not mandatory specialist pipelines. Start with the smallest useful loop;
+the root may own settled implementation and the single gate. Add only the roles justified by the
+actual work and required independent review. Never add design, mapping, review or gate agents merely
+to complete this sequence; repository-mandated review remains binding.
+
 - Research: RETRIEVAL and MAPPING lanes, then one EXECUTION synthesis lane.
 - Ordinary implementation: DESIGN+INTEGRATION freezes unresolved seams, EXECUTION workers implement,
   a REVIEW lane checks the bounded changes, then the root integrates and a single GATE owner validates.
@@ -793,6 +866,7 @@ Context scope: [self-contained | recent orchestration context | full inherited h
 Delegation: forbidden | [exact bounded grandchild authority]
 
 Objective: [one verifiable outcome]
+Why delegate: [independent progress, useful context isolation or a falsifiable consequential challenge]
 Why this route: [actual work classification; for judgement/design/security, name the unresolved decision or risk]
 Prerequisites: [facts or lanes that must already be complete]
 Owned files: [exact paths or directory globs]
@@ -875,7 +949,11 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 - Run mode: daytime | front-loaded | unattended
 - Human availability: available | reachable but not to be asked | unavailable for the whole run
 - Root async questions: disabled | allowed without waiting [default set by the harness appendix]
-- Terminal condition: stop after the listed lanes | continue into the fallback queue
+- Terminal condition: stop after the listed lanes | bounded fallback queue | overnight admission until closeout (§1)
+- Work admission: bounded | overnight continuous within the frozen envelope below
+- Admission envelope: [overnight repository/project/theme, priorities/tie-breaks, exclusions, authority]
+- Closeout trigger: [bounded outcome | operator awake/closeout; early exhaustion/safety/explicit limits]
+- Drain boundary: [safe checkpoints, existing deadlines and precise partial handoff; no new backlog work]
 - Current layer: research | design | implementation | review | live verification | deployment
 - External-write authority: [exact scope]
 - Root repair authority: enabled | withheld [§9; default enabled for front-loaded/unattended implementation]
@@ -993,6 +1071,10 @@ concurrency and cancellation behavior; do not assume a push cancels a pending ma
   waits for answers. In front-loaded mode unresolved questions are batched into the
   final report rather than defaulted silently into the fallback queue.
 - State the terminal condition again and provide the ordered fallback queue if one exists.
+- For overnight admission, compile §1's selection, durable admission, awake-triggered drain and early
+  exhaustion rules; never silently convert a bounded loop into a continuing one.
+- Recommissioning carries the prior failure, changed premise, discriminating check and remaining
+  allowance (§9); a new loop does not renew attempts.
 
 ## 9. Required final report
 
@@ -1024,6 +1106,9 @@ State the section order and say the report is what the human reads *instead of* 
 - questions for the human — every decision the run had to take itself and every question the goal did
   not cover (mandatory in front-loaded mode, §1);
 - recommended next run, ordered.
+- outcome accounting — accepted behaviour versus partial/source-only delivery; unique consequential
+  defects caught, downstream repair carried forward, root-plus-child usage when available, and active
+  work versus external wait versus blocked time with coverage/overlap limits (§10). Reuse lane evidence.
 ```
 
 ---
@@ -1065,7 +1150,9 @@ and obtain missing affected proof through the repository's authorised gate surfa
 proof is carried forward, identify its SHA, covered surface and why intervening changes do not
 invalidate it. Describe this as composite evidence, not every gate passing at the terminal SHA.
 
-Give each implementation lane a review-ready condition and required reviewer route. Dispatch review
+Give each implementation lane a review-ready condition and reviewer route where independent review
+is required by risk or repository policy; use `none: <reason>` for proportionate validation-only work.
+Do not commission a general review for every small handoff. Dispatch required review
 as soon as its candidate is frozen, while independent implementation continues; do not wait for
 unrelated lanes. Bind review to an exact commit or recorded candidate snapshot and keep that snapshot
 stable during review. Integrate accepted candidates when their own dependencies and required checks
@@ -1104,6 +1191,24 @@ A reviewer reports findings and never implements its own corrections. **Any impl
 after a REVIEW or SECURITY verdict invalidates that verdict**, even when the fix appears mechanical.
 Re-run the relevant verification and obtain a fresh review against the corrected accumulated diff
 before using the earlier verdict as completion evidence.
+
+### Falsifiable packet checks and review yield
+
+Before freezing a packet with consequential state, schema, filesystem, permission or data-retention
+rules, identify its riskiest boundary and check a small adversarial example against the whole contract.
+Use a state-transition table, schema constraint check or disposable predicate probe as appropriate;
+do not mutate live systems to manufacture proof. The check must be capable of exposing the claimed
+failure, not simply repeat the packet's assertions. Record the example, expected/observed result and
+remaining uncertainty in the existing packet. Cross-section contradictions return to the decision
+owner before dependent implementation is dispatched. Straightforward settled glue needs no ceremony.
+
+Scope each review to a distinct risk/question and exact candidate. At material integration boundaries,
+check composed behaviour and interacting risks rather than requiring ceremonial approval at every
+handoff. Preserve mandatory security and repository/CodeRabbit gates. Prefer converting a material
+finding into a discriminating check over another broad approval pass. Record the material defect or
+`no material finding` and what it changed in the existing evidence; agreement alone is not proof.
+Stop unchanged reviews once acceptance and mandatory checks are satisfied. A changed affected candidate
+still requires fresh relevant verification/review under the existing invalidation rule.
 
 ### CodeRabbit is the review gate before code leaves the machine
 
@@ -1440,7 +1545,7 @@ claims about content, so require the evidence, not the adjective.
 | A collapse-the-switches refactor changes syntax and not coupling | An `if/else` chain or a call-site dictionary over the same cases is the same coupling. Require the count of files a new case touches to drop, and state the target number |
 | Another agent is working in the same checkout and its work lands in your commit | Name the concurrent party and its files in the **launch message**, forbid `git commit -a` and `git add -A` by name, require explicit pathspecs, and say the fenced files' current content must not be read as intent (§8) |
 | A run replies with its report in chat instead of writing the file | Name the exact report path in the launch message as well as the goal. A goal that names only a *structure* gets a well-structured chat message and no file (§10) |
-| The **launch message** is pasted into chat instead of written to its file | Write `codex/launch-<date>-wave<N>.txt` and reply with its absolute path, instead of the chat block rather than as well as. This is the report failure above wearing its other face, and it is harder to catch because a launch message pasted into chat still launches the run, so nothing fails and the missing file is only noticed waves later. It went unnoticed for 45 consecutive BrewMDM waves. Suspect it whenever an assistant-side always-loaded rule says to emit prompts as copy-pasteable blocks: that rule loads every turn and this document does not (§2) |
+| The **launch message** is pasted into chat instead of written to its file | Write `codex/launch-<date>-loop<N>.txt` and reply with its absolute path, instead of the chat block rather than as well as. This is the report failure above wearing its other face, and it is harder to catch because a launch message pasted into chat still launches the run, so nothing fails and the missing file is only noticed waves later. It went unnoticed for 45 consecutive BrewMDM waves. Suspect it whenever an assistant-side always-loaded rule says to emit prompts as copy-pasteable blocks: that rule loads every turn and this document does not (§2) |
 | A licence's ending condition has now been mispredicted three times | Stop predicting and ask the human for a cadence. A schedule makes no claim about the future and cannot be wrong about it (§8) |
 | A suite reaches nothing overnight and reports green | Reporting skips separately is enough for a run read the same day. For an unattended run, remove the skip paths so an unreachable surface fails (§8) |
 | A new test target's results are only ever the agent's own account of them | Check that CI actually executes the target. Creating a check and wiring a check are different pieces of work (§8) |
@@ -1543,6 +1648,15 @@ The harness appendix sets the default implementation budget per commissioned lan
 worker and rescue attempt. Where it specifies none, the default is three attempts. A stricter goal
 limit wins. Worker, model, packet or goal amendments do not reset the count.
 
+**Recommissioning across loops:** before admitting previously failed or parked implementation again,
+record `previous failure -> changed premise/correction -> discriminating check -> remaining allowance`
+beside its existing lane/task history. Carry cumulative attempts and preserved artifacts. A new date,
+loop, packet, worker or stronger model is not itself a changed premise or fresh budget. A model change
+qualifies only with evidence of a capability mismatch and an authorized route; it does not repair an
+unavailable environment or contradictory contract. Without a relevant change, retain the park rather
+than recommissioning the same attempt. Any extension must name its existing §9 authority and ceiling;
+overnight backlog admission grants none. A new owner grant is recorded explicitly, never inferred.
+
 For recurring fixture, schema or setup failures, inspect the complete construction and lifecycle
 path before another patch: creation, prerequisites, mutation, consumption and cleanup. Group failures
 with the same cause into one evidenced correction rather than repairing the next assertion in
@@ -1607,6 +1721,27 @@ renderer that omits records is not the counting authority. Reconcile source acce
 deployment/live criteria and parks separately. Carry every unmet criterion into its named next owner
 or successor so deferred work remains visible.
 
+### Compact outcome accounting
+
+Use one compact section of the existing report, drawing from lane evidence and task outcomes, not a
+new reporting agent or parallel ledger. Record accepted behaviour, source-only/partial delivery and
+parks separately; include each unique consequential defect caught, its disposition and downstream
+repair carried into this loop or left to a named successor. For overnight runs include all admitted
+tasks and the stop trigger; tasks merely considered but not admitted are not failed commitments.
+
+Report root-plus-child usage where available, with measurement source, window and coverage; mark
+missing usage unknown, never zero. Deduplicate response identities and distinguish additive response
+usage from cumulative turn/session counters. Cached input is a subset of input and reasoning output
+a subset of output. Do not sum cumulative snapshots or infer money without applicable rates and
+coverage. No transcript mining project or fresh telemetry deployment is required at closeout.
+
+Separate observed active-work intervals, external waits and blocked/no-feasible-work intervals using
+available events. Parallel intervals can overlap: do not sum them into wall time or attribute all
+tokens during a CI wait to waste. When interval evidence is absent, report durations as unknown and
+name the dependency rather than inventing precision. Note redundant reads/reviews only when observed.
+Use these observations to improve the next loop; response count, agent count and cached-token volume
+alone are not efficiency or accepted-outcome measures. Replace repetitive narrative with this section.
+
 Put this block in every goal, selecting one destination and its exact path where applicable:
 
 ```text
@@ -1616,8 +1751,8 @@ Producing the final report is the last task of this run, not a response to a req
 idle or report readiness on the grounds that the work is finished: the run is finished when the
 report has been delivered to the selected destination. Nobody will ask you for it.
 
-When the goal is complete — every lane in scope at its stop rule, and the session about to hand
-control back to the operator — do this before you hand back:
+When the bounded goal completes, or a closeout/exhaustion/safety trigger ends overnight admission,
+drain active work to its safe stop/partial-handoff boundary (§1), then do this before handing back:
 
 1. Finish verification, reconcile task outcomes and record durable findings. Resolve anything the
    synthesis exposes before emitting the report.
@@ -1690,7 +1825,7 @@ the format alone:
 - [ ] Root async questions are set explicitly in §0 from the harness appendix default; unanswered questions cannot delay the run, and silence never grants authority.
 - [ ] The run contract names the harness and existing-session root ownership; goal and launch contain no root model bootstrap or self-route check.
 - [ ] Tracker and live-state preflight happened before topology selection; the selected topology and its task-specific rationale are recorded before any spawn or mutation.
-- [ ] The brief is an immutable goal file on disk, **the launch message is a second file beside it** at `codex/launch-<date>-wave<N>.txt`, and the launch message points to the goal's absolute path. Both are files. A launch message that exists only as a chat block fails this item even though the run it starts will work.
+- [ ] The brief is an immutable goal file on disk, **the launch message is a second file beside it** at `codex/launch-<date>-loop<N>.txt`, and the launch message points to the goal's absolute path. Both are files. A launch message that exists only as a chat block fails this item even though the run it starts will work.
 - [ ] Outcome and measurable success criteria replace a mere activity list.
 - [ ] Starting state, repository heads and relevant CI are re-verified now, at exact SHAs.
 - [ ] The goal contains only constraints, corrections, traps and environment facts relevant to this run.
@@ -1769,6 +1904,11 @@ the format alone:
 - [ ] A source that is really many datasets gets a declarative descriptor seam before fan-out, so a lane contributes rows rather than parsing code.
 - [ ] The goal distinguishes native compaction, text-summary fallback, experimental reset and unknown mechanism; current-state freshness and unsaved deltas are reconciled. Fresh sessions and /new are excluded.
 - [ ] Every spawn earns its coordination cost through independent progress, context reduction or a checkable challenge to a material assumption; the root has useful concurrent work or a real dependency to await.
+- [ ] Bounded daytime versus explicit overnight admission is frozen; overnight envelope, priority/exclusions, durable admissions, awake-triggered drain, early exhaustion and existing gate deadlines are compiled into goal and launch.
+- [ ] Each child has a one-line delegation justification; barriers name the shared resource or composed acceptance they protect.
+- [ ] Consequential packet boundaries have falsifiable adverse examples before freeze; reviews ask distinct questions and do not repeat unchanged approval passes.
+- [ ] Recommissioned work records the previous failure, changed premise, discriminating check and remaining allowance; a loop transition never resets attempts.
+- [ ] The report accounts for accepted outcomes, unique defects/rework, available root-plus-child usage and observed work/wait/blocking with missingness and overlap explicit.
 
 ---
 
@@ -2012,7 +2152,11 @@ pass the resolved model, reasoning effort and `fork_turns` explicitly.
 Preflight only the roles selected by this task. Confirm the effective multi-agent feature and selected
 agent definition where one is used; resolve model, effort and context scope before dispatch and record
 the actual spawn arguments. For an unpinned generic role, pass model and effort explicitly; a
-full-history fork cannot request a different route.
+full-history fork cannot request a different route. Check selected child routes against the commissioned
+goal and the launching account's exposed model availability where available; unavailable routes park
+the affected lane for an authorized alternative, not a silent fallback or account/configuration change.
+Unknown availability is not a provider claim: the selected route's actual spawn/runtime result supplies
+the next evidence. Do not launch sacrificial children or test the root's model identity just for preflight.
 
 After spawn, separate the requested route, active route exposed by the runtime and any independently
 recorded provider route. Use metadata for that child and its current work phase. Inherited history
