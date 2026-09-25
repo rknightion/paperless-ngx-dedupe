@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-25 00:08'
+updated_date: '2026-09-25 09:15'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `9b176d1`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `2aecaba`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -78,14 +78,15 @@ Every goal begins with an explicit run contract:
 
 ```text
 Loop type: daytime | daytime-long | overnight
-Contract: loop-v2.0
+Contract: loop-v2.1
 Admission envelope: [daytime: the listed lanes | continuous: repository/project/theme, priority order, exclusions]
 Current layer: research | design | implementation | review | live verification | deployment
 Standing authority: [§9 defaults plus goal-specific grants; front-loaded fence confirmations]
 Harness: [the harness this run launches on; its profile resolves every route below]
 Root ownership: this receiving session; bounded children only; no replacement root
 Observed root route: [recorded by the root at launch; unknown if unavailable; no floor]
-Wait ownership: [one owner per gate/dependency; actual notification/collection path; process polling cadence and deadline if needed; no unchanged model checks]
+Admission floor: [N; default 3; daytime may set lower; §3 defines it]
+Wait ownership: [each implementation lane owns its gate, CI and CodeRabbit review to one terminal result; the root collects lanes through the agent wait and never polls; for each root-owned wait (landing CI, release, cross-lane gate): its completion wake or poller, identity, terminal conditions and deadline; no unchanged model checks]
 Launch rationale: [one sentence]
 Selected topology: solo | single auxiliary | campaign | campaign + security
 Topology rationale: [the independent bottleneck or risk that justifies this shape]
@@ -134,7 +135,7 @@ theme, ordered priorities and tie-breaks, exclusions, permitted mutation/deploym
 owner deadline. At useful admission boundaries (accepted work, dependency/resource release or a depleted
 ready set), read the live backlog and choose the highest-priority eligible work within the envelope;
 explain a higher-priority deferral. Record each admission in the state record before spawning it: task
-ID, criteria revision, reason, barrier dependencies and route. **Backlog tasks can appear at any time,
+ID, criteria revision, reason, barrier dependencies, route and the ready-queue depth. **Backlog tasks can appear at any time,
 created by the owner or by agents as local, unpushed commits; a foreign commit or diff under `backlog/`
 is expected and is never a reason to halt or investigate.** Admission is free within the envelope,
 whoever created the task. A new admission is not a new campaign, root, report or retry allowance.
@@ -190,7 +191,7 @@ Pause and resume are never RUN-END triggers.
 - **A mutation is never killed**: any commit, push, deploy, IaC change, database change or external write
   in flight finishes naturally. Never use Claude `TaskStop` or Codex `close_agent` on a child mid-mutation.
   Drain lane by lane at safe boundaries.
-- **Read-only reviewers and watchers may time out as designed**, including `xreview`'s own timeout.
+- **Read-only reviewers, watchers and pollers may time out as designed**, including `xreview`'s own timeout.
 - **Undispatched work parks.** A newly discovered dependency is parked unless its bounded repair is
   already authorised.
 - **One repair per failed lane.** A lane that fails during drain gets at most one repair attempt, which
@@ -292,11 +293,11 @@ for a live root: a state file with no report, a held mutation claim, or a live s
 ### Continuous-loop ending
 
 A continuous loop ends on close out or when no admissible work remains. When the only remaining work
-waits on an external event (CI, a release, a time of day), wait on its real event or watcher with backoff:
-30 minutes, doubling to 2 hours, at most 3 idle check-ins; then close out, listing what is pending. On
-Claude, a harness background task wakes the session and the turn ends with
-`WAITING: <what> until <YYYY-MM-DDTHH:MM[:SS]Z>` (UTC, no fractional seconds or offset); on Codex, the root waits in-turn on the cheapest measured path
-(Appendix A) and counts its wakeups. Do not poll a quiet backlog or generate inference to stay alive.
+waits on an external event (CI, a release, a time of day), wait on its real event or watcher; after 3
+idle check-ins, close out, listing what is pending. On Claude, check-ins back off from 30 minutes,
+doubling to 2 hours, and the turn ends with `WAITING: <what> until <YYYY-MM-DDTHH:MM[:SS]Z>` (UTC, no
+fractional seconds or offset). On Codex, an idle check-in is one capped `wait_agent` timeout with no
+child running and no ready work (Appendix A). Do not poll a quiet backlog or generate inference to stay alive.
 Honest early exhaustion beats busywork. A later message does not restart a completed loop.
 
 ### Drift check on continuous loops
@@ -338,7 +339,8 @@ Attempt counters per task/criterion (implementation, review-repair, infra retrie
 Error/stall log: class, start, end (UTC)
 Active outcome, acceptance/stop/report conditions and exact authority/constraints
 Current decisions with reasons and Backlog/evidence references
-Active lane ownership, dependencies, worker identities and pending returns
+Active lane ownership, dependencies, worker identities and pending returns; poller identities
+Ready-queue depth at each admission; below-floor observations: start, end (UTC) and reason
 Repository/worktree identity; tested SHA or dirty-state identity; CI/run/result references
 Operations: planned | attempted | running | completed | failed | unverified
 Next action; blockers/defaults; facts requiring live readback before that action
@@ -496,8 +498,11 @@ worktree, commit or external resource was touched when that is true.
 ```text
 ## AGENT ROUTING CONTRACT
 
-The root owns architecture, uncovered decisions, integration, tracker and other external mutations,
-commits, pushes, final gates and final synthesis unless a lane explicitly delegates an authority.
+The root owns architecture, uncovered decisions, integration order, cross-lane conflicts, tracker and
+other external mutations, commits, pushes, main-branch landing, composed gates and final synthesis
+unless a lane explicitly delegates an authority. Each implementation lane owns its own required gate,
+CI and CodeRabbit review through to one terminal result; the root collects that result and never polls them,
+and still verifies load-bearing claims and the integrated result in proportion to risk.
 
 Every spawn MUST state its role, the route the harness profile resolves that role to, and its
 context scope. Write the resolved values into the lane — a brief carrying only a role name leaves the
@@ -510,7 +515,7 @@ route too, so inherit only when that route is exactly right for the lane.
   completeness the root can check.
 - GATE: deterministic gate execution, mechanical transforms and bounded validation. Runs one named
   gate once against one resolved state; reports failures with bounded failure classification and
-  evidence, and does not repair source or reopen design.
+  evidence, and does not repair source or reopen design. A poller (§3) is a GATE lane.
 - EXECUTION: implementation against a frozen seam, with explicit file ownership and a written
   acceptance check. The packet is fully specified and the parent can verify the result directly.
 - JUDGMENT+EXECUTION: implementation whose acceptance check is known but whose local choices need
@@ -644,21 +649,45 @@ more agents. When tracker-only changes repeat deployment or expensive proof, ass
 and the repository's gate contract before proposing narrower triggers or evidence reuse. Neither
 unchanged source nor this protocol waives a required check, deployment boundary or live criterion.
 
-There is no occupancy quota or arbitrary minimum agent count. Concurrency respects actual resource
-isolation and runtime/repository limits. Waiting on CI is justified only when no independent authorised
-ready work, useful integration or verification remains. Record the concrete blocking dependency in
-state rather than repeatedly narrating unchanged CI. Intermediate CI is not a whole-loop barrier.
+**Admission floor.** While dependency-ready work exists and the pool has capacity, keep at least the
+goal's `Admission floor` lanes in flight: default 3, and a `daytime` goal may set it lower. In flight
+means dispatched and not yet returned, whether or not the lane is making model calls; pollers do not
+count. Work held by an unmet prerequisite, a named mutex or an isolation limit is not ready. The floor
+is suspended during drain, pause and closeout, and when the remaining attempt budget or time envelope
+cannot fund a new lane to return. It is not an occupancy quota: it never licenses manufacturing work,
+splitting a packet or admitting marginal work. Falling below the floor while ready work waits is an
+observation, not a failure: record its start, end and reason in the state record and report it (§10).
+Concurrency respects actual resource isolation and runtime/repository limits. The root waits only when no independent authorised ready work, useful integration or verification remains. Record
+the concrete blocking dependency in state rather than repeatedly narrating unchanged CI. Intermediate
+CI is not a whole-loop barrier.
 
 Loop boundaries are reporting/authority boundaries, not scheduling barriers. Accept and integrate a
 ready candidate and release its dependants without waiting for unrelated lanes. Retain a barrier only
 for a named shared resource, required deployment sequence or composed acceptance criterion; name that
 dependency in the goal. Keep tightly coupled implementation with one owner rather than manufacturing
 handoffs. A larger overnight envelope changes how much work may be admitted, not these rules or the
-number of agents that must run concurrently.
+admission floor.
 
 ### Wait for events without a root polling loop
 
-Assign one owner to each pending gate, CI run or external dependency, with its exact identity,
+**The lane owns its own gate, CI and CodeRabbit review through to green.** An implementation lane
+runs its required gate, runs CodeRabbit on its own candidate where §7 requires it, commits, pushes or
+lands as its packet grants or hands back a landing-ready candidate, waits on its own CI, repairs
+within its pre-granted attempts (§9) and returns one terminal result. A lane waits on its own CI
+itself, with the harness's cheapest process wait (Appendix A, B). The root collects the lane's result through
+the harness's agent wait (Codex `wait_agent`, Claude Code completion notification) and never polls a
+lane's gate, CI or review itself; it still verifies load-bearing claims and the integrated result in
+proportion to risk (§4, §7). Where the goal lets only the root land on the main branch, the lane
+pushes a candidate branch or SHA and waits on that CI; the root's landing step then waits only on the
+final main CI, through one owner as below. A lane with no push grant returns its candidate once its
+gate and CodeRabbit pass, and CI for that candidate belongs to the root's landing step. The root keeps
+integration order, cross-lane conflicts, main-branch landing where the goal reserves it, and anything
+fenced. Independent REVIEW and SECURITY lanes stay root-dispatched and are collected the same way.
+
+A child sends the root only a terminal result, a decision the root must make or a blocking exception.
+Progress and heartbeats go in the lane's own state or evidence file: any message wakes the root's wait.
+
+Assign one owner to each other pending gate, CI run or external dependency, with its exact identity,
 completion signal, bounded check cadence and terminal/timeout disposition. Prefer native agent
 completion notifications, process completion or a supported watch/wait operation. Use the longest
 appropriate wait the harness permits, while preserving required user updates and interruptibility.
@@ -666,11 +695,21 @@ If polling is necessary, let one tool-side watcher perform bounded checks and re
 terminal result; do not have the root and several workers poll the same state. Reuse the existing
 process or watcher rather than launching another at each check.
 
-An unchanged model-driven check still consumes inference and context tokens, including cached input.
-Distinguish that cost from ordinary process polling: a CLI watcher can check repeatedly without
-calling a model. Prefer a supported completion subscription; a longer event wait can wake on the
-same event without repeatedly re-entering the model. Respect the actual harness wait limits, user
-updates and interruptibility. Do not create an LLM lane merely to move a polling loop out of the root.
+An unchanged model-driven check still consumes inference and context tokens, including cached input;
+a CLI watcher can check repeatedly without calling a model. Where the harness wakes the owner of a wait
+on process completion without a model turn, use that (Appendix B). Otherwise the wait goes to a poller.
+
+**Pollers.** A poller is a GATE child that watches one exact run, SHA or process for the root and
+returns only its terminal result or a decision-relevant change. It never runs a gate or repairs
+source. The root uses a poller for a wait it owns (main CI after it lands, a release, a cross-lane
+gate, CI for a candidate a lane returned unpushed) when it must also stay free to collect lanes;
+with no lanes in flight it waits on the process itself. The brief names the watch, its terminal conditions, a deadline of the expected duration
+plus margin, and what to return. A deadline exit means "not observed": the owner re-dispatches once
+or parks. The poller waits on one quiet watch process with the longest wait the harness supports,
+never a loop of short model-driven checks. The root records each poller's identity and deadline in
+its state. A poller takes a pool slot (§4), consumes no
+attempt (§9) and does not count toward the admission floor. At closeout the root sweeps the agent
+tree and interrupts every live poller. Routes and mechanics: Appendix A, B.
 
 Record the working notification/collection path, not just a watcher PID. External CI does not
 implicitly notify the agent mailbox. Use an exposed asynchronous completion mechanism when available;
@@ -681,25 +720,26 @@ terminal results or a watchdog exception; do not repeatedly scrape its unchanged
 SHA/run/job identities. If early job failure matters, verify that the chosen watcher surfaces it;
 a whole-run completion watch alone does not guarantee early failure notification.
 
-One watcher process does not prevent inference cost if the root collects unchanged output repeatedly.
+One watcher process does not prevent inference cost if its owner collects unchanged output repeatedly.
 At preparation, name the actual event/collection mechanism and runtime wait ceiling; exercise the
 no-ready-work case without assuming an event bridge exists. Specify the model-facing collection
 interval separately from the watcher's process-only polling cadence. For a silent running process,
 use the longest appropriate permitted interruptible wait, and align any outer tool-call wait so it
 does not cause shorter collections. A short initial command yield is not the cadence for its entire
 lifetime. Collect earlier for actionable output, a required update or useful work checkpoint; empty
-returns alone are not a reason to shorten the next wait. If the harness forces
-periodic model returns, disclose that limit; do not promise zero wakeups, evade its limits or add an
-LLM polling supervisor. A missing efficient event mechanism is a separately scoped harness proposal.
+returns alone are not a reason to shorten the next wait. If the harness forces periodic model
+returns, keep them in the lane or poller that owns the wait; the root's are its capped agent-wait
+timeouts (Appendix A). Do not promise zero wakeups or evade the harness's limits. A missing efficient event mechanism is a
+separately scoped harness proposal.
 
-**Measured wait ceilings.** Measure and record the applicable harness wait ceiling (the harness appendix
-holds the current values). Goals state the ceiling as a number and default to the maximum. Report wakeups
-as a count, and call one "forced" only when it hit the ceiling.
+**Wait ceilings.** The harness appendix holds the measured wait ceilings and the root's wait timeout.
+Goals state them as numbers.
 
 **Watcher contract.** A watcher needs a successful first probe, a heartbeat, loud failure and a terminal
 receipt. A deadline exit means "not observed", never "absent"; claim absence only after a direct read of
-the source. Closeout stops or signals every watcher the run started or induced, including external
-sessions, and lists them in the report. Never hand any agent a model-driven "keep watching" prompt.
+the source. Closeout stops or signals every watcher and poller the run started or induced, including
+external sessions, and lists them in the report. Never hand any agent an open-ended "keep watching"
+prompt.
 
 Capture full commit SHA, discovered run ID, process/session identity, terminal exit status and outcome
 evidence in the current record or its linked receipt. Use the full SHA for run discovery. Recover an
@@ -712,7 +752,8 @@ A process-level example is [GitHub CLI run watch](https://cli.github.com/manual/
 its own polling interval is distinct from model wakeups. Use current exposed capabilities, not a
 copied vendor timeout or an assumed event bridge.
 
-Ordinary intermediate CI runs asynchronously by default. After a checkpoint push, record the exact
+Ordinary intermediate CI runs asynchronously by default. Whoever pushed owns the run (§3).
+After a checkpoint push, record the exact
 SHA and run identity and advance ready, independent, authorised work. Reconcile available per-job
 conclusions at the next checkpoint or on completion notification. A pending run blocks only actions
 that depend on its result or cross a synchronisation boundary required by the repository or goal;
@@ -735,9 +776,11 @@ polling the queue or inventing work to occupy slots.
 The root does useful independent work or waits on a real dependency; it does not repeatedly list
 agents, re-read unchanged logs, ask workers for status or narrate unchanged queue states. A wait
 timeout is not an implementation failure and does not justify a model escalation or a fresh worker.
-For a straightforward command the root can launch and collect directly, no GATE agent is required.
-A delegated gate earns its overhead through supervision, bounded failure classification or a useful
-evidence handoff, never by merely relaying unchanged status. Input tools are never wait primitives.
+For a straightforward command the root can launch and collect in one bounded wait, no GATE agent is
+required; one whose collection would take repeated root checks goes to a poller. A delegated gate
+earns its overhead through supervision, bounded failure classification or a useful evidence handoff,
+never by relaying unchanged status. Input tools
+are never wait primitives.
 
 Do not put token budgets, cost targets, model-allocation quotas or artificial output allocations in
 the goal. Route by the shape and risk of the remaining work. LLM spend in agentic repositories is
@@ -752,9 +795,12 @@ Appendix B give the exact numbers, and they are not the same number or even the 
 Whatever the cap, it provides runway — it does not authorise delegation, and a deep tree is not
 desirable merely because it is permitted.
 
-- The root freezes shared seams, assigns ownership, resolves decisions, integrates, performs
-  authorised external writes, commits and pushes, owns the integrated gate and synthesises the run.
-- A child owns one bounded lane. It does not commit, push or mutate external state by default.
+- The root freezes shared seams, assigns ownership, resolves decisions, sets integration order,
+  resolves cross-lane conflicts, integrates, performs authorised external writes, commits and pushes,
+  owns any composed gate no lane candidate covers and synthesises the run.
+- A child owns one bounded lane. It does not commit, push or mutate external state unless its packet
+  grants that exact action. An implementation lane owns its own gate, CI and CodeRabbit review through to one
+  terminal result (§3).
 - Auxiliary work substitutes for root work; it does not duplicate it. The root verifies load-bearing
   claims and the integrated result in proportion to risk, but does not repeat a successful mechanical
   lane merely to perform the same work twice.
@@ -764,7 +810,7 @@ desirable merely because it is permitted.
 - One file has one owner. Shared and generated integration files belong to the root or a named wiring
   pass. Do not put two writers on the same file.
 - Name resource mutexes such as a simulator, package manager, database migration lock or integration
-  test environment. Name one integrated gate owner rather than having every worker repeat it.
+  test environment. Name one owner for any composed gate rather than having every worker repeat it.
 
 Before overlapping lanes, identify their checkouts and mutable resources: dependency-install
 directories, generated outputs, ports, databases, services and shared registries where applicable.
@@ -777,7 +823,7 @@ Flat, non-delegating fan-out may use the whole pool. If any child may delegate, 
 roughly two-thirds of the pool as direct children and reserves the rest for grandchildren, replacement
 lanes and urgent investigation. Read that as a ratio rather than a count — the pool size is a harness
 fact, and on some harnesses excess spawns queue rather than fail, which hides saturation instead of
-surfacing it. Never spawn merely to occupy a slot.
+surfacing it. Never spawn merely to occupy a slot. Each poller takes a slot from the reserve (§3).
 
 **Other sessions may work in the estate while a loop runs.** The owner, or an agent preparing the next
 loop, may commit or deploy in the same repositories. The root adapts: merge before pushing, re-read
@@ -786,11 +832,11 @@ when significant parallel changes are expected. A session that prepared a loop h
 it and needs no declared ownership.
 
 **Cross-harness review.** `xreview` is the only path from one harness to the other, and only the root
-calls it (on Claude, subagents cannot). Never ask the owner to relay a prompt between harnesses. An
+starts it (on Claude, subagents cannot). Never ask the owner to relay a prompt between harnesses. An
 external reviewer is one-shot per request. Cross-harness review is off by default: preparation asks the
 owner explicitly for each slice that needs it and records the verbatim answer. Calling `xreview` under
 such a grant is the sanctioned exception to "never start another top-level session". Collect with
-`xreview collect` (Claude: as a background task, turn may end with `WAITING:`; Codex: in-turn); never
+`xreview collect` (Claude: as a background task, turn may end with `WAITING:`; Codex: the root starts it and a poller (§3) runs `xreview collect`); never
 loop model turns over its 50 s `wait`. `--max-budget-usd` comes from the goal. `xreview`'s own timeout
 and orphan handling are the read-only exceptions to the no-kill rule.
 
@@ -824,7 +870,7 @@ Prove setup readiness once using the repository's task surface. Isolate or seria
 generated outputs, ports, containers, databases and simulators; share caches only when their tools
 support concurrent use. Copy only necessary authorised local configuration. Worktrees share history,
 most refs and default Git configuration; they are not independent clones or security sandboxes.
-Root retains Git/ref mutation, integration, publication and acceptance. Checkout choice grants no new
+Root retains Git/ref mutation beyond each lane's packet grant, integration, publication and acceptance. Checkout choice grants no new
 child commit, deployment or root-launch authority and does not relax one-file ownership.
 
 Returns identify the candidate/patch, all new files, checks and environment. Review that candidate,
@@ -898,8 +944,9 @@ actual work and required independent review. Never add design, mapping, review o
 to complete this sequence; repository-mandated review remains binding.
 
 - Research: RETRIEVAL and MAPPING lanes, then one EXECUTION synthesis lane.
-- Ordinary implementation: DESIGN+INTEGRATION freezes unresolved seams, EXECUTION workers implement,
-  a REVIEW lane checks the bounded changes, then the root integrates and a single GATE owner validates.
+- Ordinary implementation: DESIGN+INTEGRATION freezes unresolved seams, EXECUTION workers implement
+  and take their own gate, CI and CodeRabbit to green, a REVIEW lane checks the bounded changes, then
+  the root integrates and a single owner validates any composed state no lane covered.
 - Judgement-heavy implementation: DESIGN+INTEGRATION freezes the shared decisions,
   JUDGMENT+EXECUTION workers own the context-heavy or wider-blast-radius implementation, then the
   ordinary review, integration and gate sequence applies.
@@ -907,7 +954,8 @@ to complete this sequence; repository-mandated review remains binding.
   of authentication, permission, migration, secret or data-loss boundaries.
 - Premise or depth audit: independent EXECUTION evidence lanes, with DESIGN+INTEGRATION synthesis only
   when the evidence exposes a genuine product, architecture or security decision.
-- CI and gates: workers run focused checks; one GATE lane validates the integrated state.
+- CI and gates: each lane runs its own gate and waits on its own CI; one GATE lane validates only a
+  composed state no lane candidate covers; root-owned waits follow §3.
 
 ### Optional narrow agent roles
 
@@ -916,11 +964,12 @@ Custom agents are useful when the same contract recurs. Keep roles narrow:
 | Role shape | Routing role | Contract |
 |---|---|---|
 | Mapper | MAPPING | Read-only maps, inventories and structured research with searched scope and completeness check |
-| Lane worker | EXECUTION | Frozen implementation, owned files, focused validation, no commit or external mutation |
-| Complex lane worker | JUDGMENT+EXECUTION | Context-heavy or wider-risk implementation with frozen architecture, owned files and focused validation |
+| Lane worker | EXECUTION | Frozen implementation, owned files, its own gate, CI and CodeRabbit review to one terminal result; commit, push or external mutation only as its packet grants |
+| Complex lane worker | JUDGMENT+EXECUTION | Context-heavy or wider-risk implementation with frozen architecture, owned files, and its own gate, CI and CodeRabbit review to one terminal result |
 | Reviewer | REVIEW | Read-only correctness, regression, concurrency and false-pass review |
 | Security reviewer | SECURITY | Read-only review only for high-blast-radius security and data contracts |
-| Gate runner | GATE | Run one named gate once against one resolved state; report failures, do not repair source |
+| Gate runner | GATE | Run one named root-owned gate once against one resolved state; report failures, do not repair source |
+| Poller | GATE | One watch for the root, to a terminal result or deadline (§3) |
 | Worktree auditor | REVIEW | Prove dirty state, ancestry, unique commits, patch identity and cleanup safety; never clean up |
 
 Do not turn the security reviewer into a general quality reviewer. Where a harness lets a named role
@@ -965,9 +1014,13 @@ Why delegate: [independent progress, useful context isolation or a falsifiable c
 Why this route: [actual work classification; for judgement/design/security, name the unresolved decision or risk]
 Prerequisites: [facts or lanes that must already be complete]
 Owned files: [exact paths or directory globs]
-Forbidden files/actions: [shared files, external state, commits, tracker writes]
+Forbidden files/actions: [shared files, external state, commits or pushes beyond the landing mode, tracker writes]
 Frozen decisions: [answers the worker must not reopen]
-Allowed side effects: [normally local edits and focused validation only]
+Allowed side effects: [local edits, the lane's own gate, CodeRabbit review and CI waits, and any commit or push its landing mode grants]
+Gate, CI and CodeRabbit review: [required gate; CodeRabbit review; CI identity it waits on;
+  landing mode: lands | pushes candidate branch | returns landing-ready candidate; wait deadline;
+  attempts pre-granted from the remaining budget (§9)]
+Landing authority: this packet's landing mode is this lane's commit and push authority for this campaign.
 Acceptance check: [observable condition]
 Validation: [targeted commands or evidence]
 Known evidence discriminators: [relevant client/tool paths, deployed identifiers, timestamped disagreements,
@@ -979,7 +1032,8 @@ Escalation evidence: [facts the root needs to resolve an uncovered decision]
 Return exactly:
 - status: complete | partial | blocked | failed
 - changed files or inspected scope
-- validation result with exact tested identity and evidence artifact references
+- gate, CI and CodeRabbit review results with exact tested SHA, run IDs and evidence artifact references
+- attempts consumed with their attempt IDs and infrastructure retries
 - proven facts
 - unproven facts
 - uncovered decisions or blocker requiring root action
@@ -991,7 +1045,7 @@ Return exactly:
 
 - both variants: `variant` (`change` | `read-only`), task and criterion IDs, job ID, manifest SHA,
   `coverage`, `status`;
-- `change` adds `attempt_id` and its counter kind (§9), and `candidate`: a full commit SHA, a patch
+- `change` adds each consumed `attempt_id` with its counter kind and the infrastructure retries (§9), and `candidate`: a full commit SHA, a patch
   artifact path plus its SHA-256 over tracked and untracked content, or `null` with an explanation;
 - a discovery or selection change adds the source of tenant authority, the permitted population and
   the negative cross-boundary cases verified on the real selector path.
@@ -1015,8 +1069,8 @@ UNSAFE/deny result or attempt limit remains binding unless a new attempt is expl
 Return a concise result and the relevant evidence excerpt, not the exploration transcript or full
 logs. Keep bulky material in the lane's evidence artifact. The root checks consequential claims
 against that evidence and inspects more only when needed; it does not repeat successful mechanical
-work by default. Communicate changed state, a completed result or a decision request, not unchanged
-status. A child checkpoint covers only its lane and points to root-owned constraints.
+work by default. A child messages the root only as §3 allows. A child checkpoint covers only its
+lane and points to root-owned constraints.
 
 ### Hoist the invariant fields into one shared block
 
@@ -1056,7 +1110,7 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 ## 0. Run contract
 
 - Loop type: daytime | daytime-long | overnight
-- Contract: loop-v2.0
+- Contract: loop-v2.1
 - Admission envelope: [daytime: the listed lanes | continuous: repository/project/theme, priorities/tie-breaks, exclusions]
 - Current layer: research | design | implementation | review | live verification | deployment
 - Standing authority: [§9 defaults; goal-specific grants; each front-loaded fence confirmation with its date]
@@ -1065,7 +1119,8 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 - Current state: [one root-owned path; revision, Phase and last control are maintained there]
 - Same-session recovery: [include the applicable §2 mechanism/freshness contract; not the sourcebook]
 - Root ownership: this receiving session; no replacement root
-- Wait ownership: [one owner per gate/dependency; completion signal, measured ceiling, timeout disposition]
+- Admission floor: [N; default 3; daytime may set lower; §3 defines it]
+- Wait ownership: [each lane owns its gate, CI and CodeRabbit review to one terminal result; the root collects lanes through the agent wait; each root-owned wait's completion wake or poller, identity, deadline and timeout disposition; root wait timeout]
 - Launch rationale: [why this topology serves the outcome]
 - Selected topology: solo | single auxiliary | campaign | campaign + security
 - Topology rationale: [the independent bottleneck or risk that justifies this shape]
@@ -1097,8 +1152,10 @@ Verified at [timestamp]. Do not re-derive unless a named check shows drift.
 
 ## 3. Authority and concurrency
 
-- The root owns decisions, integration, external writes, commits, pushes, final gates and synthesis.
-- Children do not commit, push or mutate external state unless a lane delegates that exact action.
+- The root owns decisions, integration order, cross-lane conflicts, external writes, commits, pushes,
+  main-branch landing, composed gates and synthesis.
+- Each implementation lane owns its gate, CI and CodeRabbit review to one terminal result. Children do not
+  commit, push or mutate external state unless a lane delegates that exact action.
 - One file has one owner. Name integration files and resource mutexes.
 - State which lanes may overlap and which must remain sequential.
 - Identify shared mutable resources and how overlapping lanes isolate them (§4).
@@ -1151,8 +1208,10 @@ irreversible. One wrong constraint should cost one lane, not the run.
 ## 7. Testing and evidence
 
 - Name where test-first is required and where validation replaces a test.
-- Workers run focused checks. One named gate owner runs the integrated gate after wiring.
-- Wait through completion events or one bounded watcher; do not multiply root/worker polling loops.
+- Each lane runs its required gate and CodeRabbit review and waits on its own CI. One named owner
+  runs any composed gate no lane candidate covers.
+- The root never polls a gate, CI run or review. It collects lanes through the agent wait and hands
+  its own waits to a completion wake or a poller (§3).
 - Quote exact outputs, SHAs and CI run IDs. Separate source, CI, deployment and live proof.
 - Never convert absence of evidence into a pass.
 
@@ -1210,6 +1269,8 @@ State the section order and say the report is what the human reads *instead of* 
 - outcome accounting — accepted behaviour versus partial/source-only delivery; unique consequential
   defects caught, downstream repair carried forward, root-plus-child usage when available, and active
   work versus external wait versus blocked time with coverage/overlap limits (§10). Reuse lane evidence.
+- run window and admission floor: start and end UTC and every below-floor interval the root
+  observed, at the top of `## Tokens and wakeups` (§10).
 ```
 
 ---
@@ -1259,15 +1320,17 @@ unrelated lanes. Bind review to an exact commit or recorded candidate snapshot a
 stable during review. Integrate accepted candidates when their own dependencies and required checks
 permit. Subsequent implementation changes invalidate the prior verdict under the rereview rule below.
 Early review does not replace the single-owner composed repository gate or an integrated SECURITY
-review required by the changed surface.
+review required by the changed surface. The lane's own CodeRabbit pass (below) is not this independent
+review; the root dispatches REVIEW and SECURITY lanes and collects them through the agent wait.
 
 Testing has a job rather than a quota:
 
 - Prefer a failing test first for bug fixes and for logic with real branching or contract risk.
 - Validate rather than invent tests for documentation, declarative configuration, mechanical wiring
   and dependency metadata when a parser, linter, render or dry run is the better proof.
-- Workers run focused checks covering their lane. One owner runs the proportionate integrated gate
-  after integration. Do not make all children repeat an expensive gate against a changing tree.
+- Each implementation lane runs its required gate on its own candidate and owns its CI and
+  CodeRabbit review through to green. One owner runs a proportionate composed gate only where no lane candidate covers
+  the integrated state. Do not make all children repeat an expensive gate against a changing tree.
 - Run a complete repository gate for cross-cutting or high-risk changes, releases, explicit repository
   requirements or when the goal asks for it. State any skipped sub-gates and why.
 - Never claim green without seeing the output. Once acceptance and the chosen gate pass, proceed to
@@ -1318,15 +1381,18 @@ still requires fresh relevant verification/review under the existing invalidatio
 
 ### CodeRabbit is the review gate before code leaves the machine
 
-The root runs `coderabbit review --agent` after integration and before the commit, whenever the loop
-touched code — application logic, scripts, workflows, infrastructure as code, exporters, anything
-with branching. On a repository nobody owns here, run it against the upstream default branch before
-opening the pull request instead. It is the root's job: a lane never runs it and never commits.
+The implementing lane runs `coderabbit review --agent` on its own candidate before its commit, or
+before handing back a landing-ready candidate, whenever the lane touched code: application logic,
+scripts, workflows, infrastructure as code, exporters, anything with branching. The root runs it only
+on code it changes itself, such as conflict resolution at integration or root rescue. On a repository
+nobody owns here, run it against the upstream default branch before opening the pull request instead.
+Running it grants no commit: a lane commits only as its packet grants. A CodeRabbit rate limit is a
+blocking wait for the time its response gives, never a failure, an attempt or a tight retry loop.
 
 `severity` is lowercase, `critical` > `major` > `minor` > `trivial` > `info`. Fix every `critical`
 and `major` before committing. Decide everything below case by case against what the change actually
-does — fix it where it is impactful in context, leave it where it is not, and say in the report which
-findings you left and why. Never dismiss a severity band unread.
+does: fix it where it is impactful in context, leave it where it is not, and say in the lane return
+and the report which findings were left and why. Never dismiss a severity band unread.
 
 The review exits 0 whether or not it found anything, so a zero exit is not a clean review; decide
 pass or fail from the findings, and treat a run with no `complete` line as failed. New files are
@@ -1340,7 +1406,7 @@ pre-declare a stub exemption for named seam files, paired with a zero-stub-marke
 
 Release whenever the repository is green and the release either unblocks queued work or is a
 meaningful batch. At most one release is in flight per repository. Never idle waiting on release CI;
-continue other work and collect its result at the next checkpoint. There is no per-loop release cap
+hand it to a completion wake or poller (§3), continue other work and collect its terminal result. There is no per-loop release cap
 unless the repository's `LOOP.md` sets one. Normal release-please releases of the owner's own public
 repositories are not outward-facing actions for the §9 fence.
 
@@ -1632,7 +1698,8 @@ claims about content, so require the evidence, not the adjective.
 | A lane burns time on an unavailable external prerequisite | Add a check-then-branch route, retry budget and stop rule |
 | An expensive judgement route becomes the default child | Require a written reason for JUDGMENT+EXECUTION, DESIGN+INTEGRATION and SECURITY, and reclassify resumed work once decisions are frozen |
 | Every child receives the full root history | Use fresh, self-contained briefs; fork only the recent context the lane needs |
-| Workers all run the same expensive gate | Workers run focused checks; one owner validates the integrated state once |
+| Workers all run the same expensive gate | Each lane runs its own required gate on its own candidate once; one owner validates only a composed state no lane covers |
+| The root polls a lane's gate, CI or review | The lane owns its gate, CI and CodeRabbit review to one terminal result and the root collects it through the agent wait; any wait the root owns goes to a completion wake or a poller (§3) |
 | Children collide on shared files or resources | Assign one owner per file and name integration files and mutexes before spawning |
 | A report describes only the last phase | Require final synthesis covering every lane and every external side effect |
 | A crashed run leaves many branches or worktrees | Prove dirty state, ancestry, unique commits and stable patch identity before cleanup |
@@ -1791,11 +1858,20 @@ across splits, packets and loops. Ceilings are aligned on both harnesses:
 - **Review-repair rounds: 3.**
 
 An attempt is a bounded change-and-verification cycle, not a command, tool call, compaction or outage.
-Read-only dispatches (reviewers, inventory reviews, gates, mappers, watchers) use their job identity and
-consume no slot. Every change attempt gets one `attempt_id` and one counter kind, fixed by why it was
-dispatched: a new or rescue implementation charges **implementation**; a repair of a reviewer BLOCK or
-major finding charges **review-repair**. Reserve the slot in state before execution and settle it on
-return; never charge twice. A drain repair charges the counter of the failure it repairs.
+Read-only dispatches (reviewers, inventory reviews, gates, mappers, watchers, pollers) use their job
+identity and consume no attempt. Every change attempt gets one `attempt_id` and one counter kind, fixed by
+why it was dispatched: a new or rescue implementation charges **implementation**; a repair of a reviewer
+BLOCK or major finding charges **review-repair**. Reserve the slot in state before execution and settle
+it on return; never charge twice. A drain repair charges the counter of the failure it repairs.
+
+A lane that owns its gate, CI and CodeRabbit review works from attempts its packet pre-grants out of the task's
+remaining budget; the root reserves them at dispatch. The lane classifies each red gate or CI result as
+implementation or infrastructure (a runner outage or a `cancel-in-progress` cancellation).
+Infrastructure charges the infrastructure-retry counter below (up to 2 per `attempt_id`). A rate
+limit, CodeRabbit's included, charges nothing: wait for the time its response gives (§7). Fixing CodeRabbit
+findings before its commit belongs to the attempt in progress; a repair after an implementation red is
+its next pre-granted attempt, and with none left it returns. The lane returns the attempts it consumed
+with their attempt IDs and its infrastructure retries; the root settles them and releases the rest.
 
 - A review repair whose candidate then fails acceptance consumes one review-repair round only; a fresh
   implementation afterwards charges implementation.
@@ -1872,8 +1948,12 @@ high-level summary and clickable file link in chat.
 **Report shape.** Line 1 is `# Loop: <repo> loop<N> · Goal: <goal sha256>`. The report contains these
 section headings, each on its own line and never merged: `## Outcome`, `## Evidence`, `## Pending` (open
 mutations and publications, each with identity, owner and how to check it), `## Questions`,
-`## Stalls and deaths` (every stall and death with exact UTC times) and `## Tokens and wakeups`. Write it
-to `<report>.tmp` in the same directory and rename it into place. The Claude Stop hook and the watchdog
+`## Stalls and deaths` (every stall and death with exact UTC times) and `## Tokens and wakeups`.
+`## Tokens and wakeups` opens with the run window (start and end, UTC) and every below-floor interval
+the root observed (§3), then token usage. Wakeups, poll-reaction share, active lanes and root calls per
+lane are measured centrally by Camden's `agent_efficiency_*` metrics (job `agent-sessions`) on the m7kni
+Grafana stack, dashboard "Agent Log Archive", tab "Agent efficiency", looked up by that window; roots
+do not count them. Write the report to `<report>.tmp` in the same directory and rename it into place. The Claude Stop hook and the watchdog
 count a report only when its header names this loop and it was written after the launch; a stale or
 empty file never counts. A tracker does not change this default: record per-item outcomes and durable findings there
 before writing the report. Terminal-only reporting requires an explicit request; never infer it from
@@ -1900,8 +1980,7 @@ sanity check; never rotate it.
 Report root-plus-child usage where available, with measurement source, window and coverage; mark
 missing usage unknown, never zero. Codex: the last cumulative `token_count` per session, summed across
 sessions. Claude: per-message usage deduplicated by message ID, cached and uncached reported separately.
-Count wakeups, and call one "forced" only when it hit a measured wait ceiling. Use exact timestamps and
-real session IDs. Deduplicate response identities and distinguish additive response
+Use exact timestamps and real session IDs. Deduplicate response identities and distinguish additive response
 usage from cumulative turn/session counters. Cached input is a subset of input and reasoning output
 a subset of output. Do not sum cumulative snapshots or infer money without applicable rates and
 coverage. No transcript mining project or fresh telemetry deployment is required at closeout.
@@ -2009,7 +2088,8 @@ the format alone:
 - [ ] Resolve every child route independently; the author's runtime is not a routing default. No route discrepancy permits spawning a replacement root.
 - [ ] Deeper work goes to bounded specialists; nested coordinators own only an explicitly commissioned subtree and never replace the receiving root.
 - [ ] Each lane is classified by actual work, not its title; judgement/design routes name a real unresolved decision, and child lane table, briefs and rescue rules agree; goal and launch preserve existing-session ownership.
-- [ ] Pending gates and dependencies have one owner and an event/watch or bounded polling path; no duplicate watchers or repeated root turns for unchanged state.
+- [ ] Each implementation lane owns its gate, CI and CodeRabbit review to one terminal result and states its landing mode; every root-owned wait has one owner and a completion wake or a poller with exact identity and deadline (§3); no duplicate watchers or root turns for unchanged state.
+- [ ] The run contract states the admission floor, and below-floor time with ready work is recorded as an observation (§3).
 - [ ] Recovery loads the current-state record and missing/changed sections; it does not restart onboarding or create overlapping copies of retained instructions.
 - [ ] The saved launch prompt, goal opening, recovery section, amendments and state instructions agree on same-session recovery. Remove stale "reread the whole goal after every compaction" instructions before launch; an explicit launch instruction can override the intended targeted recovery. Preserve the initial binding-goal read for a fresh/manual launch and the `/new` exclusion.
 - [ ] **No acceptance criterion or definition of done was inherited from a different repository's convention** than the one the work is scoped to.
@@ -2022,7 +2102,7 @@ the format alone:
 - [ ] Every JUDGMENT+EXECUTION, DESIGN+INTEGRATION and SECURITY child states why an EXECUTION lane cannot safely own the remaining work.
 - [ ] Frozen lanes receive self-contained briefs rather than full root history by default.
 - [ ] Every follow-up reclassifies the remaining work; settled design work moves to EXECUTION or RETRIEVAL.
-- [ ] Root, child and optional grandchild authority are explicit; bounded workers do not commit.
+- [ ] Root, child and optional grandchild authority are explicit; bounded workers commit, push or land only as their packet's landing mode grants.
 - [ ] One file has one owner; integration files, gate owners and resource mutexes are named.
 - [ ] Nested campaigns reserve part of the pool rather than saturating it at the root, and the reserve is sized against the harness's real cap.
 - [ ] Every change attempt has an `attempt_id` and counter kind (implementation 4, review-repair 3); changing worker, route, packet or loop never resets a count, and only the owner raises a ceiling.
@@ -2032,8 +2112,8 @@ the format alone:
 - [ ] Acceptance includes behaviour, relevant failure cases, preserved contracts and material maintainability without creating style-only repair loops.
 - [ ] Expected false-pass mechanisms are named and the required proof is observable.
 - [ ] Out-of-band work uses check-then-branch rather than asserted readiness.
-- [ ] Workers have focused validation and one owner has the integrated gate.
-- [ ] Auxiliary work substitutes for root work rather than duplicating it; parent verification is proportionate and the integrated gate still has one owner.
+- [ ] Each lane runs its own required gate, and one owner has any composed gate no lane covers.
+- [ ] Auxiliary work substitutes for root work rather than duplicating it; parent verification is proportionate and any composed gate still has one owner.
 - [ ] Required final reporting covers every lane, external side effect, proven fact and unproven fact.
 - [ ] Every append-only registry is split into per-lane stub files with pre-assigned identifiers.
 - [ ] Invariant lane fields are hoisted into one shared contract block instead of repeated per lane.
@@ -2080,7 +2160,7 @@ the format alone:
 - [ ] Each child has a one-line delegation justification; barriers name the shared resource or composed acceptance they protect.
 - [ ] Consequential packet boundaries have falsifiable adverse examples before freeze; reviews ask distinct questions and do not repeat unchanged approval passes.
 - [ ] Recommissioned work records the previous failure, changed premise, discriminating check and remaining allowance; a loop transition never resets attempts.
-- [ ] The report accounts for accepted outcomes, unique defects/rework, available root-plus-child usage and observed work/wait/blocking with missingness and overlap explicit.
+- [ ] The report accounts for accepted outcomes, unique defects/rework, available root-plus-child usage and observed work/wait/blocking with missingness and overlap explicit, and records its run window for the central efficiency lookup instead of self-counted wakeups.
 - [ ] The launch carries "You are the root" and exactly one `codex/report-…-loop<N>.md` path, and the goal requires the `# Loop:` header, the six report sections and an atomic write.
 - [ ] Goal ≤ ~25 KB with a ≤ 3 KB recovery digest; lane detail is in packet files; the manifest SHA is recorded at launch.
 - [ ] Repository facts are in `LOOP.md`, not restated in the goal.
@@ -2116,6 +2196,12 @@ and outcome identities, then exercise known failure cases and held-out tasks. Co
 acceptance scope, idle time with eligible work, integration backlog, resource collisions, stale-return
 rework and missing proof. Assess unchanged model wakeups separately from dependency duration and
 process checks; use available usage counters without attributing all waiting-window tokens to waste.
+When preparing the next loop, look up the previous report's run window on the "Agent efficiency" tab
+(§10): a poll-reaction share over 35% of root calls or a zero-active-lane share over 30% of the window
+is a finding the next goal addresses. Poll-reaction share counts only root calls reacting to a
+timed-out or unchanged wait or status result; calls woken by an event (a completion, a message) are
+excluded. A route marked (trial) in an appendix is kept only after loop preparation compares its park
+and false-pass rates against the previous route on the "Agent efficiency" tab and in loop reports.
 Cached input is included in input totals; do not double-count it or invent monetary savings.
 For this comparison, agent count and root token share are not productivity measures. Change one
 mechanism at a time when isolating causality. An owner-authorized bundle is evaluated as a bundle and
@@ -2150,7 +2236,8 @@ and cannot adopt the entire goal or replace the root.
 | RETRIEVAL | `gpt-6-luna` | `medium`; deterministic lookup, inventory and extraction |
 | MAPPING, straightforward code maps and structured summaries | `gpt-6-luna` | `medium` |
 | MAPPING, substantial synthesis across sources | `gpt-6-luna` | `max`; return unresolved consequential interpretations to the root |
-| GATE | `gpt-6-luna` | `max`; execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to Sol/medium (below) |
+| GATE (trial) | `gpt-6-luna` | `high`; `max` where a wrong classification is consequential. Execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to Sol/medium (below) |
+| Poller (§3): custom agents `poller` and `poller-high` | `gpt-6-luna` | `medium` (`poller`); `high` (`poller-high`) where classifying the terminal failure needs judgement |
 | EXECUTION, fully specified implementation | `gpt-6-luna` | `max`; leaf worker with directly checkable acceptance |
 | JUDGMENT+EXECUTION, bounded implementation needing local judgement | `gpt-6-sol` | `medium`; established architecture, with local choices coupled to coding |
 | REVIEW, ordinary independent correctness and regression | `gpt-6-sol` | `medium`; reviewer does not implement its own corrections |
@@ -2160,12 +2247,9 @@ and cannot adopt the entire goal or replace the root.
 | Worktree auditor, ordinary REVIEW of ancestry, patch identity and recovery | `gpt-6-sol` | `medium`; unresolved complex interpretation uses Sol/high; consequential loss risk uses Astra/medium |
 | Implementation unsuitable for Luna or Sol/medium from the outset, or specialist rescue | `gpt-6-sol` or `gpt-6-astra` | Sol/high for unresolved complex work; Astra/medium for consequential architecture or security/interacting risks; state why thinking cannot be separated from coding |
 
-Luna uses only `medium` or `max` in this contract. Never select Luna `low` or non-reasoning as a
-fallback. Sol uses `medium` for orchestration, integration, bounded local judgement and ordinary
-review, and `high` for bounded complex work; Astra uses only `medium`. There is no GPT-6 Terra and no
-standard Terra route. Other model/effort combinations have no standard route. If a selected route is
-unavailable, report it and let the root resolve an authorised alternative explicitly; never report a
-substituted route as the requested one.
+Use only the model and effort pairs this table names. Never select Luna `low` or non-reasoning, and
+there is no GPT-6 Terra route. If a named route is unavailable, report it and let the root resolve an
+authorised alternative explicitly; never report a substituted route as the requested one.
 
 Never automatically launch Astra/high, Astra/xhigh, Astra/max or Ultra, including after repeated
 lane failures. Report the failed attempts, remaining uncertainty and exact resume boundary so the
@@ -2189,7 +2273,7 @@ is not an implementation attempt under §9.
 
 The §4 narrow roles resolve through this table: Mapper uses MAPPING; Lane worker uses EXECUTION;
 Complex lane worker uses JUDGMENT+EXECUTION; Reviewer and Worktree auditor use their REVIEW entries;
-Security reviewer uses SECURITY; Gate runner uses GATE. These role names are not promises that a
+Security reviewer uses SECURITY; Gate runner uses GATE; Poller uses its own row. These role names are not promises that a
 custom `agent_type` is installed. Inspect selected custom-role pins before dispatch.
 
 ### Technical decisions and implementation
@@ -2296,10 +2380,40 @@ Default mode, not async availability. Async exposure depends on the actual model
 do not enable the older flag, change models or alter provider routing merely to obtain questions.
 When async is unavailable, every loop uses its no-answer path.
 
-**Waiting (Codex).** No closed-turn wake is assumed: the root waits in-turn. Use the cheapest measured
-path, a direct bounded process wait or `wait_agent` on a watcher child where that measurably reduces
-wakeups; never create an LLM lane merely to poll. Measured 2026-09-24: `wait_agent` holds for at least
-120 s (median 117 s over 21 calls); exec `wait` returns after about 27 s. Count wakeups.
+**Waiting (Codex).** Completion mail does not wake an idle parent, so the root waits in-turn. The
+fleet sets `[features.multi_agent_v2] min_wait_timeout_ms = 120000` and `default_wait_timeout_ms =
+1140000`. With lanes in flight and no local work, the root makes one `wait_agent` call with
+`timeout_ms` = min(1140000, time to the nearest lane, poller or envelope deadline); 1,140,000 ms stays
+under the loop-watchdog's 20-minute silence alert. The call returns early on any child message. Never
+shorten a wait because the previous one returned empty. On timeout, reconcile once (`list_agents`,
+deadlines, watchdog conditions), then wait again.
+
+**Process waits (Codex).** Any thread waiting on a process (CI, a gate, CodeRabbit, a release) waits
+in one self-polling exec cell, so the model is woken only when the process ends or the cell yields:
+
+```js
+// @exec: {"yield_time_ms": 1140000, "max_output_tokens": 400}
+const deadline = Date.now() + DEADLINE_MS; // at most 1080000
+let r = await tools.exec_command({cmd: "WATCH_COMMAND", yield_time_ms: 1000, max_output_tokens: 200});
+while (r.exit_code === undefined && r.session_id !== undefined && Date.now() < deadline) {
+  r = await tools.write_stdin({session_id: r.session_id, chars: "", yield_time_ms: 30000, max_output_tokens: 200});
+}
+text(JSON.stringify({exit_code: r.exit_code ?? null, session_id: r.session_id ?? null, output: r.output}));
+```
+
+`WATCH_COMMAND` is one quiet process that exits on the terminal state, such as
+`gh run watch <id> --exit-status --interval 60 > /dev/null 2>&1; echo exit=$?`. If the cell returns
+still running, run it again from `let r = {session_id: <id>};`. Lanes, Luna included, wait on their own
+CI this way. Collaboration tools are not callable inside a cell, so a root with lanes in flight hands a
+process wait to a poller: the custom agents `poller` (gpt-6-luna medium) and `poller-high` (gpt-6-luna
+high) carry this cell in their instructions. Spawn them with `agent_type` and `fork_turns="none"` and
+pass no model or effort.
+
+Measured 2026-09-25, Codex 0.157.0: `wait_agent` accepts `timeout_ms` from 10,000 to 3,600,000 ms and
+the harness raises any request below `min_wait_timeout_ms` to it. A cell honours its `@exec`
+`yield_time_ms`; a single `exec_command` or `write_stdin` call returns within 30 s, so a waiting loop
+belongs inside the cell. A 200 s watch cost the poller 2 model calls this way against 9 with one call
+per poll. Full-history forks inherit the parent agent type and fail.
 
 **Retry configuration.** Where the Codex route supports retry and backoff settings, the published home
 configuration retries for up to about an hour; a context whose route cannot carry the setting is
@@ -2437,6 +2551,7 @@ Measure root-plus-child cost and accepted outcomes; fewer root tokens alone do n
 Flat, non-delegating fan-out may use all nineteen child slots. In a nested campaign the root starts at most
 **twelve** direct children and reserves **seven** child slots for grandchildren, replacement lanes and
 urgent investigation. That is the concrete form of §4's two-thirds rule for the current profiles.
+Pollers are sized into the reserve as §4 says.
 
 `max_depth` applies only to v1 and is ignored by v2. Every lane therefore defaults to
 `Delegation: forbidden`, and a child may delegate only when its brief grants exact authority. Luna is
@@ -2471,6 +2586,7 @@ to give a plain `Agent` dispatch an effort different from the root's.
 | RETRIEVAL, single-fact lookup whose answer is self-evidently right or wrong | generic, `model: haiku` | Haiku; never where you would have to trust it finished |
 | RETRIEVAL where completeness matters; MAPPING | `agent-workflows:mapper` | Sonnet / `low`; read-only |
 | GATE | `agent-workflows:gate-runner` | Sonnet / `low`; runs the named gate, classifies, never repairs |
+| Poller (§3) | `agent-workflows:gate-runner` | Sonnet / `low`; the brief opens "watch only; do not run the gate; return on terminal state or deadline" |
 | EXECUTION | `agent-workflows:lane-worker` | Sonnet / `high` |
 | JUDGMENT+EXECUTION | `agent-workflows:complex-worker` | Opus / `high` |
 | REVIEW, ordinary correctness and regression; worktree auditor | `agent-workflows:reviewer` | Opus / `medium`; read-only, does not implement its own corrections |
@@ -2531,7 +2647,8 @@ Code fails in ways its own acceptance check will not catch.
    action. A dispatch brief is refused as consent, and re-dispatching is treated as bad faith.
    **Lanes do read-only investigation, code edits, tests and inventory sweeps; SSH, deploys, tenant
    or cloud mutations, secret-store writes and destructive git stay on the root.** If a lane returns
-   blocked, the root runs that step itself.
+   blocked, the root runs that step itself. A lane whose granted commit or push is blocked returns
+   its landing-ready candidate, and CI for it moves to the root's landing step (§3).
 
 7. **Worktree isolation branches from the default branch, not the root's `HEAD`.** `isolation:
    "worktree"` is available on the `Agent` call and in a definition. The worktree starts from the
@@ -2550,11 +2667,17 @@ Code fails in ways its own acceptance check will not catch.
   operator-side. Opus 5.5 receives no injected remaining-context signal and task budgets do not reach
   Claude Code, so the §2 current-state record is the only continuity mechanism: write it at every
   §2 boundary.
-- **Waits (§3).** Unnamed subagents report completion as a task notification. A single external
-  completion uses a background Bash command (`run_in_background`) whose `until` loop exits on every
-  terminal state, not only success. Streamed events use `Monitor`, which has a 30-minute ceiling and
-  is re-armed on expiry. Never run a foreground `sleep` longer than 60 seconds. Ending the turn while
-  that work runs is the wait (see the next section).
+- **Waits (§3).** Unnamed subagents report completion as a task notification; that is how the root
+  collects a lane's terminal result. The root's own single external completion (landing CI, a
+  release) uses a background Bash command (`run_in_background`) whose `until` loop exits on every
+  terminal state, not only success; it wakes the session once and needs no poller. A wait a
+  background command cannot express goes to a poller (§3; route in the table). Streamed events use `Monitor`,
+  which has a 30-minute ceiling and is re-armed on expiry. Never run a foreground `sleep` longer than
+  60 seconds. Ending the turn while that work runs is the wait (see the next section).
+- **Lane waits.** A lane waits on its own CI with a foreground bounded process wait
+  (`gh run watch --exit-status`, or an `until` loop that exits on every terminal state) within the
+  Bash tool's 10-minute timeout, re-invoked on expiry. It never ends its turn to wait: a subagent's
+  final message is its return.
 
 ### Turn endings: a message with no tool call stops the run
 
@@ -2638,7 +2761,7 @@ fallback per gate run; it never repairs source and is not an implementation atte
 
 The §4 narrow roles resolve through the table: Mapper uses `mapper`; Lane worker uses `lane-worker`;
 Complex lane worker uses `complex-worker`; Reviewer and Worktree auditor use `reviewer`; Security
-reviewer uses `security-reviewer`; Gate runner uses `gate-runner`.
+reviewer uses `security-reviewer`; Gate runner and Poller use `gate-runner`.
 
 ### `Workflow` is a second orchestration mode Codex has no analogue for
 
