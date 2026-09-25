@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-24 22:20'
+updated_date: '2026-09-25 00:08'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `64c939b`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `9b176d1`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1724,30 +1724,27 @@ fence below.
 | Fence | Can | Cannot |
 |---|---|---|
 | Irreversible data loss | Drop and recreate a database when preparation identified the target and consequences and the owner confirmed it | Any destructive action not confirmed at preparation; it parks and is reported |
-| History rewrite or force-push | Redact leaked must-never-be-public data (for example a customer name) through the redaction procedure below | Any other history cleanup; any rewrite of the backup repositories, which stay append-only |
+| History rewrite or force-push | Prepare a redaction of leaked must-never-be-public data (for example a customer name) and park it for the owner, per the redaction procedure below | Force-push anything; any other history cleanup; any rewrite of the backup repositories, which stay append-only |
 | Outward-facing actions | Normal release-please releases of the owner's own repositories | Emails, chat posts, third-party issues or PRs, making anything public |
 | Spend | LLM spend in agentic repositories; changes to existing infrastructure; a net-new billable resource estimated clearly under about $50/month, recorded with its estimate and assumptions | A net-new resource at or above the threshold, or with an unknown estimate, not front-loaded: park it |
 | Credentials | Flag a suspected leak in the report for a sanity check | Revoke or rotate any credential, ever |
 | Work context | Work named by the goal | Read or write a real customer's tenant or estate the goal does not name; send customer identifiers off the machine (reports shared onward, notifications, third-party review) |
 
-**Redaction procedure.** Only for leaked must-never-be-public data, recorded in the report.
+**Redaction procedure.** Only for leaked must-never-be-public data. A loop never force-pushes: it prepares
+the redaction, parks, and the owner pushes it.
 
-1. Record every writer in the repository and its worktrees, with its control state.
-2. Take the repository's existing mutation/admission exclusion and hold it through verification.
-3. Confirm quiescence: nothing in flight in the repository. If it cannot be established, park.
-4. Name the contaminated refs and objects.
-5. Fetch and pin the remote SHA of each contaminated ref **before** deriving the rewrite.
-6. Write recovery material (a `git bundle` of the pinned refs and an archive of dirty/untracked work)
-   under `~/.local/state/agent-loops/redaction/`, never in a publishable path. It holds the leaked data:
-   it never leaves the machine, and the report names only its local path.
-7. Rewrite from the pinned SHA and verify locally.
-8. Run `/Users/rob/.local/bin/redact-push prepare …`, then `/Users/rob/.local/bin/redact-push push
-   <record>` as the whole command. The wrapper enforces the endpoint, the lease, redaction-only scope and
-   the backup-repository refusal; direct force-pushes stay denied.
-9. Verify the remote after a fresh fetch.
-10. Release the exclusion. Restore only writers that were active before step 1 and have received no newer
-    pause, drain or stop control.
-11. List other known clones still holding the contaminated refs.
+1. Stop admitting work that touches the repository, and name the contaminated refs and objects.
+2. Fetch and pin the remote SHA of each contaminated ref **before** deriving the rewrite.
+3. Write recovery material (a `git bundle` of the pinned refs, and an archive of dirty and untracked work)
+   under `~/.local/state/agent-loops/redaction/` (mode 0700), never in a publishable path. It holds the
+   leaked data: it never leaves the machine, and the report names only its local path.
+4. Rewrite from the pinned SHA on a local branch, and verify that the leaked data is absent from every
+   rewritten object while every other change is preserved.
+5. Park the redaction as the report's **first** item: the repository, refs, pinned SHAs, replacement SHAs,
+   the recovery material paths and the exact `/Users/rob/.local/bin/redact-push prepare …` arguments for
+   the owner. Flag any other known clone that still holds the contaminated refs.
+6. The owner runs `redact-push prepare` and `redact-push push <record>` themselves. The auto-mode
+   classifier never allows a loop to force-push.
 
 Before a worker's blocked return becomes a terminal lane park, the root inspects its evidence and
 expected artifact and records one disposition: repair and redispatch within authority; perform an
