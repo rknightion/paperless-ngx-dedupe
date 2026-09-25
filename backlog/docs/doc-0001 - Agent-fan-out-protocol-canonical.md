@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-25 09:15'
+updated_date: '2026-09-25 09:51'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `2aecaba`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `8993ea4`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1952,7 +1952,7 @@ mutations and publications, each with identity, owner and how to check it), `## 
 `## Tokens and wakeups` opens with the run window (start and end, UTC) and every below-floor interval
 the root observed (§3), then token usage. Wakeups, poll-reaction share, active lanes and root calls per
 lane are measured centrally by Camden's `agent_efficiency_*` metrics (job `agent-sessions`) on the m7kni
-Grafana stack, dashboard "Agent Log Archive", tab "Agent efficiency", looked up by that window; roots
+Grafana stack, dashboard "Agent Session Archive & Index" (uid `agent-session-archive`), "Agent efficiency" section, looked up by that window; roots
 do not count them. Write the report to `<report>.tmp` in the same directory and rename it into place. The Claude Stop hook and the watchdog
 count a report only when its header names this loop and it was written after the launch; a stale or
 empty file never counts. A tracker does not change this default: record per-item outcomes and durable findings there
@@ -2196,12 +2196,12 @@ and outcome identities, then exercise known failure cases and held-out tasks. Co
 acceptance scope, idle time with eligible work, integration backlog, resource collisions, stale-return
 rework and missing proof. Assess unchanged model wakeups separately from dependency duration and
 process checks; use available usage counters without attributing all waiting-window tokens to waste.
-When preparing the next loop, look up the previous report's run window on the "Agent efficiency" tab
+When preparing the next loop, look up the previous report's run window in the "Agent efficiency" section of the "Agent Session Archive & Index" dashboard
 (§10): a poll-reaction share over 35% of root calls or a zero-active-lane share over 30% of the window
 is a finding the next goal addresses. Poll-reaction share counts only root calls reacting to a
 timed-out or unchanged wait or status result; calls woken by an event (a completion, a message) are
 excluded. A route marked (trial) in an appendix is kept only after loop preparation compares its park
-and false-pass rates against the previous route on the "Agent efficiency" tab and in loop reports.
+and false-pass rates against the previous route in the "Agent efficiency" section of the "Agent Session Archive & Index" dashboard and in loop reports.
 Cached input is included in input totals; do not double-count it or invent monetary savings.
 For this comparison, agent count and root token share are not productivity measures. Change one
 mechanism at a time when isolating causality. An owner-authorized bundle is evaluated as a bundle and
@@ -2586,7 +2586,7 @@ to give a plain `Agent` dispatch an effort different from the root's.
 | RETRIEVAL, single-fact lookup whose answer is self-evidently right or wrong | generic, `model: haiku` | Haiku; never where you would have to trust it finished |
 | RETRIEVAL where completeness matters; MAPPING | `agent-workflows:mapper` | Sonnet / `low`; read-only |
 | GATE | `agent-workflows:gate-runner` | Sonnet / `low`; runs the named gate, classifies, never repairs |
-| Poller (§3) | `agent-workflows:gate-runner` | Sonnet / `low`; the brief opens "watch only; do not run the gate; return on terminal state or deadline" |
+| Poller (§3) | `agent-workflows:poller` | Sonnet / `low`; watches one run, SHA or process to a terminal state or deadline; never runs a gate or repairs |
 | EXECUTION | `agent-workflows:lane-worker` | Sonnet / `high` |
 | JUDGMENT+EXECUTION | `agent-workflows:complex-worker` | Opus / `high` |
 | REVIEW, ordinary correctness and regression; worktree auditor | `agent-workflows:reviewer` | Opus / `medium`; read-only, does not implement its own corrections |
@@ -2761,7 +2761,7 @@ fallback per gate run; it never repairs source and is not an implementation atte
 
 The §4 narrow roles resolve through the table: Mapper uses `mapper`; Lane worker uses `lane-worker`;
 Complex lane worker uses `complex-worker`; Reviewer and Worktree auditor use `reviewer`; Security
-reviewer uses `security-reviewer`; Gate runner and Poller use `gate-runner`.
+reviewer uses `security-reviewer`; Gate runner uses `gate-runner`; Poller uses `poller`.
 
 ### `Workflow` is a second orchestration mode Codex has no analogue for
 
