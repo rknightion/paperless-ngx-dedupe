@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-26 13:24'
+updated_date: '2026-09-26 16:07'
 ---
-> **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `7d1a67f`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
+> `m7kni/agent-docs` at commit `397abdc`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -32,7 +32,9 @@ repository's `LOOP.md` sets one (§7); there is no default per-loop cap.
 **Repository loop facts live in the repository.** A committed `LOOP.md` (pointed to from `AGENTS.md`)
 holds gates and commands, release rules, environment and credential conventions, standing route
 exceptions, known traps, cross-harness eligibility, resource mutexes and, where relevant, Grafana
-stacks. Goals cite it rather than restating it.
+stacks. Goals cite it rather than restating it. Write `LOOP.md`, goals, packets and reports with no
+em or en dashes (use a spaced hyphen): several consumer repositories gate shipped text on it, and a
+dash in a committed `LOOP.md` fails their CI.
 
 Use this sourcebook when writing a launch prompt and goal file for a long-running agent campaign. It
 is intentionally project-neutral. Copy only the contracts and checks that apply to the run; unrelated
@@ -50,18 +52,18 @@ The durable unit of work is a goal Markdown file on disk. The launch message is 
 that file. The root coordinates the campaign and owns integration; bounded children receive complete,
 self-contained lane briefs and the cheapest route that can reliably satisfy them.
 
-**This document is harness-neutral and deliberately names no model.** The body talks in **roles** —
-RETRIEVAL, MAPPING, GATE, EXECUTION, JUDGMENT+EXECUTION, REVIEW, DESIGN+INTEGRATION, SECURITY — and in **capabilities**:
+**This document is harness-neutral and deliberately names no model.** The body talks in **roles** -
+RETRIEVAL, MAPPING, GATE, EXECUTION, JUDGMENT+EXECUTION, REVIEW, DESIGN+INTEGRATION, SECURITY - and in **capabilities**:
 how much context a spawn inherits, how many lanes may run at once, how deep delegation may go. A
 **harness profile** resolves those into concrete models, reasoning depths and spawn mechanics:
 
-- **Appendix A — Codex profile.** Complete: model and effort routes, `fork_turns`, the thread pool.
-- **Appendix B — Claude Code profile.** Complete: routes through pinned `agent-workflows` plugin
+- **Appendix A - Codex profile.** Complete: model and effort routes, `fork_turns`, the thread pool.
+- **Appendix B - Claude Code profile.** Complete: routes through pinned `agent-workflows` plugin
   agents, effort, spawn limits, turn-ending control and the ways Claude Code's dispatch surface
   differs *structurally* from Codex's.
 
 The run contract names the harness once. Every lane then states its role **and the route the profile
-resolves it to** — a lane brief carrying only a role name leaves the choice to whoever reads it next.
+resolves it to** - a lane brief carrying only a role name leaves the choice to whoever reads it next.
 Codex runs use `codex` and record the protocol source revision and exact model/effort (Appendix A).
 This is a goal-file routing label, not a runtime profile, installed custom agent or launcher command.
 
@@ -413,7 +415,7 @@ project-instruction byte cap, or invent an arbitrary context/token budget for th
 A goal file is copied forward, and a stale fact inside one is invisible because it reads exactly like a
 current one. One goal said an interface change would be cut "together with" two sibling items as a
 single revision rather than three. That was true when the note was written on the tracker. By then both
-siblings had shipped, eleven and twenty-one runs earlier — the cluster had dissolved and only one item
+siblings had shipped, eleven and twenty-one runs earlier - the cluster had dissolved and only one item
 survived it. The line was copied into three consecutive goal drafts, into a decision comment posted
 back to the tracker, and into a question put to the operator, before anyone queried the item's state.
 
@@ -421,7 +423,7 @@ back to the tracker, and into a question put to the operator, before anyone quer
 body. One loop covers a whole goal, and it costs seconds against a run that costs hours.
 
 The failure is asymmetric and that is what makes it dangerous: a *closed* item you believe is open
-produces confident work on something already delivered, and nothing in the repository contradicts you —
+produces confident work on something already delivered, and nothing in the repository contradicts you -
 the code is there, the tests pass, and the only signal is a tracker you did not read. Correct it on the
 item with the framing intact rather than quietly fixing the next goal; the stale version is what the
 previous goals said, and the next reader finds those first.
@@ -429,7 +431,7 @@ previous goals said, and the next reader finds those first.
 ### Where the run's artefacts live: a gitignored `codex/` in the repository
 
 Every repository driven this way gets a **`codex/` directory at its root, listed in `.gitignore`**,
-holding one set of files per loop. **The name is historical and it is load-bearing — keep it whatever
+holding one set of files per loop. **The name is historical and it is load-bearing - keep it whatever
 harness runs the loop.** `codex-sync.sh` mirrors run artefacts between machines by matching that exact
 directory name, so renaming it to something harness-neutral silently stops the syncing rather than
 failing loudly. Read `codex/` as "run artefacts", not as "Codex's directory".
@@ -448,7 +450,7 @@ a quick `rsync --dry-run` comparison when that Mac is reachable; if gfmbp is unr
 MBP16 is the only active machine and proceed. Reconciliation never blocks preparation.
 
 Where a repository runs more than one campaign, put the campaign slug in all three names and keep
-them consistent — `goal-<date>-<slug>-loop<N>.md` alongside `report-<date>-<slug>-loop<N>.md`.
+them consistent - `goal-<date>-<slug>-loop<N>.md` alongside `report-<date>-<slug>-loop<N>.md`.
 Nothing validates these names, so an inconsistent set costs nothing but the next reader's time.
 
 **Where a repository has adopted a real tracker, task state carries the durable per-item outcomes.**
@@ -464,7 +466,7 @@ Three reasons this beats a scratch path outside the repo. The artefacts sit next
 describe, so an agent given only the repository can find the last three loops' goals and reports
 without being told where they are. The whole history of what was asked and what came back is one
 `ls`. And gitignoring the directory keeps run scaffolding out of the project's history, which is the
-same rule that applies to plans and specs — they are working state, not deliverables.
+same rule that applies to plans and specs - they are working state, not deliverables.
 
 Gitignore the **directory**, not a filename pattern, so a new artefact type cannot leak by being
 named something the pattern did not anticipate.
@@ -508,7 +510,7 @@ CI and CodeRabbit review through to one terminal result; the root collects that 
 and still verifies load-bearing claims and the integrated result in proportion to risk.
 
 Every spawn MUST state its role, the route the harness profile resolves that role to, and its
-context scope. Write the resolved values into the lane — a brief carrying only a role name leaves the
+context scope. Write the resolved values into the lane - a brief carrying only a role name leaves the
 choice to whoever reads it next. A spawn that inherits the parent's context normally inherits its
 route too, so inherit only when that route is exactly right for the lane.
 
@@ -806,7 +808,7 @@ intentional and is never a reason to stop. Paid infrastructure is a separate fen
 
 Every harness caps how many lanes may run at once and how deep delegation may go; Appendix A and
 Appendix B give the exact numbers, and they are not the same number or even the same kind of limit.
-Whatever the cap, it provides runway — it does not authorise delegation, and a deep tree is not
+Whatever the cap, it provides runway - it does not authorise delegation, and a deep tree is not
 desirable merely because it is permitted.
 
 - The root freezes shared seams, assigns ownership, resolves decisions, sets integration order,
@@ -835,7 +837,7 @@ Disjoint source files alone do not establish isolation or permit exceeding a wor
 
 Flat, non-delegating fan-out may use the whole pool. If any child may delegate, the root starts at
 roughly two-thirds of the pool as direct children and reserves the rest for grandchildren, replacement
-lanes and urgent investigation. Read that as a ratio rather than a count — the pool size is a harness
+lanes and urgent investigation. Read that as a ratio rather than a count - the pool size is a harness
 fact, and on some harnesses excess spawns queue rather than fail, which hides saturation instead of
 surfacing it. Never spawn merely to occupy a slot. Each poller takes a slot from the reserve (§3).
 
@@ -901,15 +903,15 @@ If relocation is outside authority, preserve the original and use an authorised 
 location, keeping the original gate's outcome distinct. Compare avoided interference
 against setup, integration, validation and retention cost before expanding worktree use.
 
-### Append-only registries — the contention case one-owner does not solve
+### Append-only registries - the contention case one-owner does not solve
 
 One file, one owner handles files a lane can own outright. It does not handle the **single registry
 function every lane must append to**: a migration registrar, a dependency-injection container, a route
 or command table, a plugin list, a generated manifest. Those are one file by construction, so assigning
 them to the root creates a queue.
 
-The tempting answer — *lanes state their entry in their report and the root applies them all at
-integration* — is wrong for an unattended run. A lane that cannot register its own entry cannot
+The tempting answer - *lanes state their entry in their report and the root applies them all at
+integration* - is wrong for an unattended run. A lane that cannot register its own entry cannot
 exercise its own code, so it either sits blocked for hours or validates against a state that does not
 exist. Both fail quietly overnight.
 
@@ -919,18 +921,18 @@ exist. Both fail quietly overnight.
    is frozen in the goal.
 2. Reduces the shared file to a **call list** invoking those functions in a frozen order, and never
    edits it again.
-3. Pre-assigns every ordering-sensitive identifier in a table in the goal — migration numbers or names,
+3. Pre-assigns every ordering-sensitive identifier in a table in the goal - migration numbers or names,
    route paths, capability or permission names, generated-artifact keys.
 
 Each lane then owns exactly one file, is testable in isolation, and blocks nobody. A lane that wants an
 identifier other than its assigned one **stops and says so** rather than choosing its own; that is the
 point of pre-assigning them.
 
-**Assigning an identifier to a lane does not assign the work to it — the owned-files list does, and
+**Assigning an identifier to a lane does not assign the work to it - the owned-files list does, and
 that is the line that gets it wrong.** One wave pre-assigned both halves of a new read surface to a
 lane in the identifier table, then wrote that lane's ownership as its own front-end files and a
 registration stub. Nothing owned the server handlers. Every lane passed its acceptance check, the gate
-was green, and the feature shipped as a truthful "unavailable" page — the gap stayed invisible until a
+was green, and the feature shipped as a truthful "unavailable" page - the gap stayed invisible until a
 human opened the console. **Cross-check the identifier table against the owned-files line of the lane
 it names: if a row assigns a route, a migration or a generated key, that lane's ownership must include
 the file that implements it, in every repository and every language the identifier touches.** A route
@@ -939,7 +941,7 @@ is two files when the server and the client are written in different languages.
 Where a digest, lockfile or checksum covers the whole registry, it belongs to the integration pass and
 is regenerated exactly once, at the end.
 
-**A shared evidence document is a registry too — but splitting it is the wrong fix.** When several lanes
+**A shared evidence document is a registry too - but splitting it is the wrong fix.** When several lanes
 each produce a number, a finding or a row for one results document, the per-lane stub pattern above
 produces a shredded document nobody can read. Give the document **one owner, scheduled last, with real
 declared dependencies on the lanes that feed it**. That owner takes the others' figures as inputs and
@@ -948,7 +950,7 @@ the goal that it is one and say why, or the late owner reads as an accidental bo
 
 **When the project has no released users and no persisted state to preserve, prefer collapsing the
 registry to a single fresh baseline over extending it.** A chain of increments nobody will ever replay
-is pure carrying cost. That licence is temporary — record it with its expiry, per §8.
+is pure carrying cost. That licence is temporary - record it with its expiry, per §8.
 
 ### Standard campaign topologies
 
@@ -1089,7 +1091,7 @@ lane and points to root-owned constraints.
 ### Hoist the invariant fields into one shared block
 
 Repeating fourteen near-identical field sets makes the goal long, hard to re-read after compaction, and
-easy to get wrong — the fields that go missing are always the same ones, because they are the boring
+easy to get wrong - the fields that go missing are always the same ones, because they are the boring
 ones: retry budget, stop rule, escalation evidence, required output.
 
 Write a **`5.0` lane contract** immediately before the lane list, stating every field that is identical
@@ -1100,7 +1102,7 @@ which makes the exception visible instead of hiding it in boilerplate.
 
 Two definitions worth stating in that block rather than assuming:
 
-- **A retry is not a re-run.** Retrying means acting on new evidence — a different error, a corrected
+- **A retry is not a re-run.** Retrying means acting on new evidence - a different error, a corrected
   assumption, a file not previously read. Re-issuing the same failing command unchanged is a loop, and
   it will consume a whole unattended night if nothing forbids it.
 - **Escalation evidence is not "it didn't work."** It is the file and line, the command and its verbatim
@@ -1114,7 +1116,7 @@ Two definitions worth stating in that block rather than assuming:
 Delete empty sections and irrelevant examples. Do not keep headings that add no behaviour.
 
 ```markdown
-# [Project or programme] — [outcome], [date or run identifier]
+# [Project or programme] - [outcome], [date or run identifier]
 
 This file is your goal. Continue this session through [current-state path] using the same-session
 recovery contract below. Retrieve missing or changed sections after a context transition instead
@@ -1203,7 +1205,7 @@ into the goal did not get answered.
 **Check every prohibition against every lane you are commissioning, not just the headline.** A
 prohibition carried over from the previous run is the likeliest defect in a new goal: it reads as
 settled, it looks load-bearing, and nothing marks it as stale. Two runs have now been lost to the same
-shape — a goal forbidding exactly what one of its own lanes required.
+shape - a goal forbidding exactly what one of its own lanes required.
 
 **Read the acceptance criteria of every task you commission before writing the constraints.** The
 requirement lives on the task, not in your memory of it. Both losses would have been caught by opening
@@ -1211,8 +1213,8 @@ the task; in the second, the commissioned task's *first* acceptance criterion na
 goal forbade.
 
 **A prohibition that contradicts a commissioned lane is a defect in the goal, never a finding about the
-lane.** Resolve it before launch: narrow the prohibition to the surface you actually mean to protect —
-"no change to the policy signing path", not "no signing changes" — or authorise the exception
+lane.** Resolve it before launch: narrow the prohibition to the surface you actually mean to protect -
+"no change to the policy signing path", not "no signing changes" - or authorise the exception
 explicitly with its review gate. A blanket prohibition plus a lane needing the exception either stops
 the run or gets quietly violated, and both are worse than a precise constraint.
 
@@ -1265,22 +1267,22 @@ behaviour. Cover the whole run rather than only its final phase.
 
 State the section order and say the report is what the human reads *instead of* the transcript:
 
-- headline — what is true now that was not true before, in three or four sentences;
-- entry table — every entry by name with a status, the commit SHAs and one line of evidence, and the
+- headline - what is true now that was not true before, in three or four sentences;
+- entry table - every entry by name with a status, the commit SHAs and one line of evidence, and the
   expected row count stated so a short table is obvious;
-- per-entry detail — acceptance check with its verbatim output, disposition record for any conditional,
+- per-entry detail - acceptance check with its verbatim output, disposition record for any conditional,
   and a precise resume boundary for anything parked;
 - proven versus not proven, as two explicit lists, with skips reported separately from passes;
-- integration — commits, final SHA, CI run ID and conclusion at that exact SHA;
-- root-judgement record — every decision taken under a delegated root authority grant (the protocol's
+- integration - commits, final SHA, CI run ID and conclusion at that exact SHA;
+- root-judgement record - every decision taken under a delegated root authority grant (the protocol's
   §9), each with its evidence, the alternatives rejected, what reversing it would cost, and one line on
   why the root graded its materiality as it did. **The reader re-grades that materiality; the root's
   own grading is an input, not a verdict.** State the expected row count. Say `none` explicitly if the
   grant was carried and nothing was decided under it;
-- questions for the human — every decision the run had to take itself and every question the goal did
+- questions for the human - every decision the run had to take itself and every question the goal did
   not cover (mandatory, §1);
 - recommended next run, ordered.
-- outcome accounting — accepted behaviour versus partial/source-only delivery; unique consequential
+- outcome accounting - accepted behaviour versus partial/source-only delivery; unique consequential
   defects caught, downstream repair carried forward, root-plus-child usage when available, and active
   work versus external wait versus blocked time with coverage/overlap limits (§10). Reuse lane evidence.
 - run window and admission floor: start and end UTC and every below-floor interval the root
@@ -1426,8 +1428,8 @@ repositories are not outward-facing actions for the §9 fence.
 
 ### Freeze external data contracts from the real artifact, before the loop
 
-When lanes must parse, import or integrate an external format — a vendor export, a third-party API
-payload, a partner feed — **walk a real instance of it and write the measured schema into the goal as a
+When lanes must parse, import or integrate an external format - a vendor export, a third-party API
+payload, a partner feed - **walk a real instance of it and write the measured schema into the goal as a
 contract**: every field, its type, its null count, the cardinality of anything enum-shaped, and the
 value ranges. Do this before the run, not inside a lane. Two reasons, both observed:
 
@@ -1438,11 +1440,11 @@ value ranges. Do this before the run, not inside a lane. Two reasons, both obser
   fields that did not exist in the export it described, while omitting four that were present in every
   record. Where the documentation and the artifact disagree, **the artifact wins**, and the goal should
   say so by name so a lane does not "correct" working code to match a wrong document.
-  Where the export ships its **own** description of itself — a manifest, a file-descriptions table, a
-  checksum list — treat that file as an input rather than packaging, and expect its disagreements to be
+  Where the export ships its **own** description of itself - a manifest, a file-descriptions table, a
+  checksum list - treat that file as an input rather than packaging, and expect its disagreements to be
   *content*: a dataset the vendor documents and did not send is a coverage fact, not a parse error. Say
-  which reading applies, because the default handling turns the most user-relevant thing in the export —
-  here is what they say they hold, here is what they actually gave you — into a logged warning.
+  which reading applies, because the default handling turns the most user-relevant thing in the export -
+  here is what they say they hold, here is what they actually gave you - into a logged warning.
 
 State the traps separately from the schema, one per numbered item, each with the wrong-but-plausible
 handling it defeats. Anything encoded three different ways in one field, any sentinel value, any
@@ -1463,7 +1465,7 @@ Observed: two exports of the same platform, one with 5,266 comments and one with
 fourteen files empty that were populated in the busy one. Every acceptance test written against the busy
 account would pass against the sparse account **by skipping**, and the parser would ship believing it
 handled the empty case. The 200× volume difference also proves nothing in the pipeline assumes a busy
-account — an assumption that is invisible until a real user with a quiet account imports one.
+account - an assumption that is invisible until a real user with a quiet account imports one.
 
 So: name both instances in the goal, require **per-instance** assertions rather than aggregates, and
 require the report to say which categories were empty in which. "It parsed both exports" is the claim
@@ -1478,7 +1480,7 @@ that hides this.
 - Self-checking branches beat asserted readiness. Check the external prerequisite, then state both the
   ready and not-ready paths so the prompt stays valid if state changes before execution. This extends to
   a **predecessor run**: its deliverables are a prediction until it stops, because its own cut order may
-  have fired. Check them by name, and name the shape you expect — a check for a seam that landed under a
+  have fired. Check them by name, and name the shape you expect - a check for a seam that landed under a
   different name reports absent and the successor cheerfully builds a second one beside it.
 - One file has one owner. Give shared wiring and generated artifacts to the root or a dedicated
   integration lane. Fence exact files being edited elsewhere.
@@ -1505,11 +1507,11 @@ that hides this.
   whose expiry was predicted but not reached is still live, and the next goal will confidently say
   otherwise: one wave wrote "the schema is free until W5 ships a build", W5 never ran, and the following
   goal had to correct itself before it could freeze anything. **If the condition fails to occur twice,
-  the condition itself is wrong** — it is a prediction dressed as a trigger. Restate it as something the
+  the condition itself is wrong** - it is a prediction dressed as a trigger. Restate it as something the
   next run can observe and check ("is a build installed?"), not something a previous run promised.
   **If it fails a third time, stop predicting and ask the human for a cadence instead.** One licence was
   predicted to end at wave 5, then at "when a build reaches a device", then at "this is the last free
-  one" — three waves, three misses, each goal opening with a correction to the last. The human's answer
+  one" - three waves, three misses, each goal opening with a correction to the last. The human's answer
   when finally asked was a schedule: *re-ask me every third wave*. A cadence cannot be wrong about the
   future because it makes no claim about it, and it puts the decision back where it belongs.
 - **A test suite that degrades to skips is unsafe for an unattended run, and reporting the skip is not
@@ -1520,7 +1522,7 @@ that hides this.
   skipping only where the missing input is genuinely expected and named.
 - **A test target nothing in CI executes has only ever self-reported.** When a loop creates a new suite,
   target or check, verify the pipeline actually runs it before treating its results as evidence. Observed:
-  a whole UI test target was built, run locally, and reported green for two waves — CI ran four steps and
+  a whole UI test target was built, run locally, and reported green for two waves - CI ran four steps and
   none of them was that target, so every claim about it traced back to the agent's own account of its own
   run. Creating the check and wiring the check are different pieces of work, and only the asked-for one
   gets done.
@@ -1528,34 +1530,34 @@ that hides this.
   present-tense state.
 - **Carry an authoritative copy of this sourcebook inside every repository driven this way**, imported
   whole into the repository's tracker docs with its source path and rendered source commit in a header. A
-  repository that carries its own copy is complete: an agent given only the checkout — in CI, on
-  another machine, or a year later — has the whole model without being told where a canonical file on
+  repository that carries its own copy is complete: an agent given only the checkout - in CI, on
+  another machine, or a year later - has the whole model without being told where a canonical file on
   somebody's laptop lives. **Decided 2026-08-14, reversing the previous rule that the sourcebook must
   exist in exactly one place outside every repository.**
 
   The price is a publication discipline, and it is not optional: **an edit to the canonical file is not
   finished until its source commit has been pushed and every consuming repository has been published
   from that pinned revision through the designated host's isolated clones.** That discipline
-  exists because the failure it prevents was measured, not imagined — before the copies were tracked
+  exists because the failure it prevents was measured, not imagined - before the copies were tracked
   and dated, an in-repo copy was found **126 lines and one whole wave behind**. Import it as a tracker
   document rather than a loose file at the repository root, so nothing resolves it by a cwd-relative
   read in preference to the canonical one; a tracker doc is reachable only by an explicit view.
 
 ### Measure contention in files-per-new-thing before you fan out
 
-Before a loop that adds N of something — sources, providers, adapters, tenants, endpoints — count **how
+Before a loop that adds N of something - sources, providers, adapters, tenants, endpoints - count **how
 many existing files adding one of them forces you to edit**. Do it with `rg`, before writing the goal,
 and put the number in it.
 
 The number decides the shape of the entire next run. Observed: a product that had four data sources
 carried **21 exhaustive four-way switches across 13 files**, plus two hardcoded source arrays. The next
 wave planned to add five sources concurrently. Under one-file-one-owner that is not a slow path, it is an
-impossible one — five lanes each needing the same 13 files either serialise into a queue or collide, and
+impossible one - five lanes each needing the same 13 files either serialise into a queue or collide, and
 both fail quietly overnight.
 
 This is the same contention as §4's append-only registry, arriving from the opposite direction. A
 registry is one file every lane must *append to*; an exhaustive `switch` over a closed enum is N files
-every lane must *edit*. The counter is the same — collapse them to a registry the lanes append to — but
+every lane must *edit*. The counter is the same - collapse them to a registry the lanes append to - but
 nothing surfaces it unless somebody counts, because each individual switch looks harmless.
 
 Two things make the measurement honest:
@@ -1569,7 +1571,7 @@ Two things make the measurement honest:
 
 ### A second agent in the same repository is a concurrency problem, not a merge problem
 
-When another agent, a human, or a scheduled job is working in the same checkout, the run must be told —
+When another agent, a human, or a scheduled job is working in the same checkout, the run must be told -
 and told in the **launch message**, not only the goal, because a dirty worktree is the first thing the
 agent sees and it will otherwise try to make sense of it.
 
@@ -1580,32 +1582,32 @@ Three specific hazards, none of which a merge strategy addresses:
   agent's change lands in your history attributed to your loop and neither run notices.
   **Explicit pathspecs on the `add` are not enough**: `git add -- <paths>` followed by a bare
   `git commit` still commits the whole index, so anything the other party had already staged rides
-  along under your message. Commit with pathspecs too — `git commit -- <paths>`. A merge, cherry-pick
+  along under your message. Commit with pathspecs too - `git commit -- <paths>`. A merge, cherry-pick
   or revert commit is the exception and cannot take one.
 - **Fenced files may still be changing during the run.** A fence is normally static; here the file's
   content at the end differs from its content at verification. So say the file is fenced *and* that its
-  current content is not to be read for guidance — an agent that reads a half-migrated config as though
+  current content is not to be read for guidance - an agent that reads a half-migrated config as though
   it were the intended end state will faithfully build against it.
 - **"Assume it succeeded" must be explicit.** Otherwise a conscientious run spends a lane validating
   work that is not its own and is not finished, and reports a failure that is simply someone else's
   work-in-progress.
 
-State what the concurrent work does and why it cannot collide — not merely that it exists. "It adds
+State what the concurrent work does and why it cannot collide - not merely that it exists. "It adds
 manual signing to the Release configuration; simulator tests build Debug" lets the run reason about the
 next surprise itself. A bare "don't touch these files" does not.
 
 ### A freeze protects a file from editing, not a contract from changing
 
-"No lane edits this file — it is correct as it stands" is a statement about **ownership**, and it is
+"No lane edits this file - it is correct as it stands" is a statement about **ownership**, and it is
 routinely misread as a statement about **correctness**. Both can be true when written and only the first
 still true by the end of the run, because a *different* lane changed something the frozen file consumes.
 
 Observed: a goal froze the insights engine as correct, while another lane in the same loop changed which
 enum case the largest data source emitted. Nothing edited the frozen file, every lane passed its
-acceptance check, the gate was green — and the engine silently stopped counting the biggest source in the
+acceptance check, the gate was green - and the engine silently stopped counting the biggest source in the
 product. The defect was found by reading the repository a loop later, not by anything in the run.
 
-So when a loop changes a **shared contract** — an enum case, a field's meaning, a unit, a nullability —
+So when a loop changes a **shared contract** - an enum case, a field's meaning, a unit, a nullability -
 enumerate that contract's consumers in the goal and give each one an explicit disposition: *in scope this
 loop*, or *re-validated and unaffected, here is the check*. A consumer that is neither is how this fails.
 "Nobody edits it" is not a disposition.
@@ -1616,16 +1618,16 @@ The reciprocal of the freeze problem, and it costs whole entries rather than cor
 normally written by listing the files each lane will touch and declaring everything else closed. That is
 safe for files nobody needs and quietly fatal for one somebody does.
 
-Observed: a goal declared the package manifest *"owned by nobody — if you believe you need it, park and
+Observed: a goal declared the package manifest *"owned by nobody - if you believe you need it, park and
 say why"*. A lane then had to add a dependency to a test target so it could import a module the same loop
 had just built, which is a manifest edit and nothing else. It parked, correctly and exactly as
 instructed. Four downstream entries were dependency-parked behind it and the run landed a third of its
-queue. Nothing was wrong with the lane, the rule, or the agent's judgement — the ownership map was
+queue. Nothing was wrong with the lane, the rule, or the agent's judgement - the ownership map was
 incomplete, and the rule faithfully enforced the gap.
 
 **Walk the real dependency graph before freezing ownership**, not the list of files you expect to edit.
 Build manifests, registries, generated-artifact inputs and composition roots are the usual omissions,
-because they are edited rarely — and so are easy to forget — while being required by exactly the kind of
+because they are edited rarely - and so are easy to forget - while being required by exactly the kind of
 work a loop does. Where you genuinely want a file closed, say who may open it and on what evidence:
 "closed; if a lane needs it, the root edits it on request" keeps the boundary and removes the deadlock.
 **A boundary with no escape hatch is a stop condition wearing a safety label.**
@@ -1637,7 +1639,7 @@ it inspects. It is also how a real, user-facing defect gets found on day one and
 
 Observed: an accessibility and layout audit found that the product's main screen still advertised a
 single data source, on the exact run that had made the engine behind it multi-source. Every lane passed,
-the gate was green, the audit was excellent — and the defect shipped anyway, because the audit owned
+the gate was green, the audit was excellent - and the defect shipped anyway, because the audit owned
 nothing and every view file belonged to somebody else. The finding sat in a markdown file until the
 following run.
 
@@ -1647,12 +1649,12 @@ Pick one deliberately, and write down which:
   them around it. Best when the audit is the point of the run.
 - **Schedule it early** and add a named follow-up lane that owns the fixes, with the audit's output as
   its input. Costs a dependency; keeps the fix in the same run.
-- **Accept the latency**, and say in the goal that findings land next run by design. Legitimate — but
+- **Accept the latency**, and say in the goal that findings land next run by design. Legitimate - but
   only if it is a choice, and only if the next goal actually picks them up.
 
 The failure is not choosing. An audit whose findings have no owner is a document, not a lane.
 
-### Proven at scale is not shipped — put reachability in the acceptance check
+### Proven at scale is not shipped - put reachability in the acceptance check
 
 A lane can prove an engine against a real artifact at full scale, commit it green, and leave it
 **unreachable from the product**. Observed: two parsers were tested against real multi-gigabyte archives,
@@ -1662,7 +1664,7 @@ that no user could ever get into the app.
 
 Correctness of the mechanism and reachability of the feature are **different claims**, and a goal that
 only asks for the first will get only the first. Where a lane builds something a user is meant to reach,
-make the acceptance check name the entry point — the route, the menu item, the command, the picker — and
+make the acceptance check name the entry point - the route, the menu item, the command, the picker - and
 require evidence that it resolves. "It compiles and its tests pass" is not evidence that anyone can get
 to it.
 
@@ -1672,8 +1674,8 @@ Two different situations hand one run's work to a later one, and both have a cou
 
 **A preserved stash is restored with `apply`, never `pop`.** When a run parks validated work in a named
 stash for a later run to land, the later run's goal must say this outright. `pop` deletes the stash the
-moment it succeeds, so any mistake afterwards — a bad merge, a wrong repair, a lane that overwrites a
-file — has nothing left to fall back to, and in the case that produced this rule that was two runs of
+moment it succeeds, so any mistake afterwards - a bad merge, a wrong repair, a lane that overwrites a
+file - has nothing left to fall back to, and in the case that produced this rule that was two runs of
 security-reviewed work with no way to recover it. `apply` leaves it in place. Pair it with three more
 rules in the goal:
 
@@ -1685,7 +1687,7 @@ rules in the goal:
   authorised recovery procedure; never reset a shared or dirty tree or discard unrelated work merely
   to retry an apply. Return the conflict evidence if recovery needs authority the run lacks.
 
-**A crashed run is not a lost run — sweep by patch identity, not by worktree count.** One crashed main
+**A crashed run is not a lost run - sweep by patch identity, not by worktree count.** One crashed main
 thread left 11 worktrees and 20 branches across three repositories, including a commit on a *primary*
 worktree that had never been pushed. It looked like carnage. Comparing
 
@@ -1719,7 +1721,7 @@ claims about content, so require the evidence, not the adjective.
 | A crashed run leaves many branches or worktrees | Prove dirty state, ancestry, unique commits and stable patch identity before cleanup |
 | A generic template is mistaken for a product contract | Locate the authoritative product handoff and verify assumptions before implementation |
 | Lanes queue behind one append-only registry function | Split it into one stub file per lane with a frozen call list and pre-assigned identifiers, in the pre-fan-out pass (§4) |
-| A high-quality skill or reference pack is followed for the wrong stack | Audit the available packs against the real dependency graph and **name the ones not to use, with the reason**. An excellent skill for the persistence layer the project does not use produces confident, well-formed, irrelevant code that compiles as an example — the strongest false pass there is, because nothing about the output looks wrong |
+| A high-quality skill or reference pack is followed for the wrong stack | Audit the available packs against the real dependency graph and **name the ones not to use, with the reason**. An excellent skill for the persistence layer the project does not use produces confident, well-formed, irrelevant code that compiles as an example - the strongest false pass there is, because nothing about the output looks wrong |
 | Widening a single-target API produces a second parallel implementation | Name it as a false-pass route. The parallel version passes every test and works; the cost lands later as two implementations of the same logic drifting. Require the existing entry point to be widened and its callers to pass a single-element collection |
 | A temporary licence outlives its justification | Record the expiry with the permission: "free because there are no users; additive-only once a released build exists" |
 | A worker retries by re-running the same failing command | Define a retry as acting on new evidence, and say that an unchanged re-run is a loop, not a retry (§5) |
@@ -1727,7 +1729,7 @@ claims about content, so require the evidence, not the adjective.
 | A parser is proven against fixtures only | Require the acceptance check to run against a real artifact at real scale, and report the measurement as a number |
 | A conditionally-dropped lane vanishes without evidence | Never write "drop this lane if X". Use a check-then-branch lane that always runs and proves "already done", require a disposition record for every conditional, and require the final report to name every lane with a status (§7) |
 | A measurement is blocked by the UI automation surface rather than by the thing being measured | Measure the mechanism directly from a test harness. Driving a system picker, a login screen or a third-party surface is usually incidental to the number being sought; separate "does the flow work" from "how does the engine perform" and give each its own check |
-| A frozen file silently stops being correct because another lane changed a contract it consumes | A freeze is about ownership, not correctness. When a loop changes a shared contract, enumerate its consumers and give each an explicit disposition — in scope, or re-validated with the check named (§8) |
+| A frozen file silently stops being correct because another lane changed a contract it consumes | A freeze is about ownership, not correctness. When a loop changes a shared contract, enumerate its consumers and give each an explicit disposition - in scope, or re-validated with the check named (§8) |
 | A component is proven against real data at real scale but no user can reach it | Put the entry point in the acceptance check. Correctness of the mechanism and reachability of the feature are different claims and only the asked-for one gets delivered (§8) |
 | A test passes because its input was absent and it skipped | Report skips separately from passes, and state which inputs were present. An acceptance check whose evidence is "green" cannot distinguish proven from not-run |
 | An optimisation target is met by changing how the thing is measured | Require the before and after to come from the same harness at the same scale, and say that a better number from a changed method is a false pass, not a result |
@@ -1759,7 +1761,7 @@ Include Rule Zero in every loop. Root disposition, standing authority, fences an
 apply to every loop type.
 
 ```text
-## RULE ZERO — no human answer is required, so never wait
+## RULE ZERO - no human answer is required, so never wait
 
 The run must complete without a human answer. The root may send nonblocking async questions only in a
 daytime loop where the harness allows them, and it must never wait for a reply or use a blocking input
@@ -1852,7 +1854,7 @@ The root may:
   it, and record it. A fork that is genuinely ambiguous, or where the root is unsure which approach is
   best, parks and escalates instead.
 - **Implement a small bounded prerequisite** inside the authorised area to release lanes parked behind
-  it. One file still has one owner: never edit a file a live lane owns — re-dispatch that owner.
+  it. One file still has one owner: never edit a file a live lane owns - re-dispatch that owner.
 - **Amend a seam first frozen during this loop** with no accepted consumer, minimally and with low
   blast radius, then re-freeze it and re-dispatch every lane coding against it. **A seam that predates
   this loop, or has an accepted consumer, is not amendable**; park, and state in the report why it needs
@@ -1945,12 +1947,12 @@ graded it as it did.
 
 ---
 
-## 10. The run-end protocol — the report is a terminal action, not a reply
+## 10. The run-end protocol - the report is a terminal action, not a reply
 
 **The single most common reason a good run produces a bad handoff is that the report is specified as
 a format and never as a trigger.** §6's template says what the report must contain, and an agent will
 happily satisfy that specification *if asked*. Left alone it finishes the last lane, considers the
-work done, and stops — and the operator then has to ask "give me a full summary of the whole run
+work done, and stops - and the operator then has to ask "give me a full summary of the whole run
 including any decisions needed", which is a question they should never have to type. Every goal must
 therefore say, in the run contract where it is read first and again in the report section, that
 emitting the report **is** the last unit of work.
@@ -2009,7 +2011,7 @@ alone are not efficiency or accepted-outcome measures. Replace repetitive narrat
 Put this block in every goal, selecting one destination and its exact path where applicable:
 
 ```text
-## RUN-END PROTOCOL — the run is not over until the selected report is delivered
+## RUN-END PROTOCOL - the run is not over until the selected report is delivered
 
 Producing the final report is the last task of this run, not a response to a request. Do not stop,
 idle or report readiness on the grounds that the work is finished: the run is finished when the
@@ -2037,7 +2039,7 @@ back:
    high-level summary; do not paste the report into chat. Do not begin more work after the report.
 
 Write it for a reader who has no memory of this run and cannot see the transcript. Never abbreviate
-on the grounds that the operator watched it happen — they did not, and the transcript is discarded.
+on the grounds that the operator watched it happen - they did not, and the transcript is discarded.
 "As described above" and "as previously noted" are not permitted; restate the fact.
 
 If the goal ends with lanes unfinished, the report is still delivered, marked partial, with the
@@ -2049,7 +2051,7 @@ session a path, the report survives transcript compaction, and it sits beside th
 
 **For file reporting, name the exact path in the launch message too.** Observed: a goal carried this
 whole section, and its launch message closed with *"write the final report to the structure in section
-12"*. The run produced a long, complete, well-structured report — in chat, with no file. Naming a
+12"*. The run produced a long, complete, well-structured report - in chat, with no file. Naming a
 *structure* asks for a shape; naming a *path* asks for an artefact, and the launch message is what the
 agent is holding when it finishes the last lane. Say the same absolute `codex/report-<date>-loop<N>.md` path in both places, never followed by a period,
 and say in both that writing it is the run's terminal action.
@@ -2064,7 +2066,7 @@ and this must fire once, when the whole loop has finished and its report exists.
 of sending: a name it cannot parse, or a report that is missing, empty or unreadable, degrades the
 message and never the send. Dropping the notification is the worse outcome, because the operator has
 walked away and the thin ping is what tells them to come back and chase the report. Name the report
-whatever the campaign's `goal-` and `launch-` files are named — a campaign slug and a letter-suffixed
+whatever the campaign's `goal-` and `launch-` files are named - a campaign slug and a letter-suffixed
 loop are both fine. The message carries the questions and pending counts, and in Personal context a
 sanitised Outcome line; in Work context it carries no path, hostname or headline. A successful read
 writes a `<report>.notified` receipt keyed by the report's content hash, so a repeat call sends nothing
@@ -2096,7 +2098,7 @@ the format alone:
 - [ ] Starting state, repository heads and relevant CI are re-verified now, at exact SHAs.
 - [ ] The goal contains only constraints, corrections, traps and environment facts relevant to this run.
 - [ ] **Every prohibition was checked against every commissioned lane, and the acceptance criteria of every commissioned task were read before the constraints were written.** A prohibition that forbids what a lane requires is a goal defect to fix before launch, not a blocker to discover during the run.
-- [ ] **Check every prohibition against the standing PROCEDURES the goal mandates too, not only its lanes.** This defect recurred a fourth time by escaping the lane-only check: a goal forbade commits to one repository while separately instructing a document-correction procedure that writes into every consumer repository — and that repository was a consumer, so obeying the procedure required breaking the prohibition. Enumerate what each mandated procedure actually touches and intersect it with every prohibition. A prohibition scoped by repository, path or file type is the shape most likely to collide with a procedure.
+- [ ] **Check every prohibition against the standing PROCEDURES the goal mandates too, not only its lanes.** This defect recurred a fourth time by escaping the lane-only check: a goal forbade commits to one repository while separately instructing a document-correction procedure that writes into every consumer repository - and that repository was a consumer, so obeying the procedure required breaking the prohibition. Enumerate what each mandated procedure actually touches and intersect it with every prohibition. A prohibition scoped by repository, path or file type is the shape most likely to collide with a procedure.
 - [ ] **Intersect the success criteria with the external-write authority, in both directions.** The prohibition checks above run from the prohibition outwards; this one runs from the goal's own definition of done. A success criterion that cannot be satisfied without a mutation §0 forbids is the same defect wearing the opposite face, and it is harder to see because both halves read as correct in isolation: the authority looks appropriately tight and the criterion looks appropriately demanding. Read every "success means" bullet and name the exact write each one requires. Where a criterion needs a deploy, a push, a tracker edit or a live mutation, either grant that write explicitly or replace the criterion with one the run can actually satisfy. A run that has to negotiate its own authority mid-flight has already lost the property the contract exists to give it.
 - [ ] **Any model or effort the goal names matches the harness profile's table exactly.** State the role and depth and let the profile resolve the route; a hand-written route that contradicts the table is a defect, and it silently downgrades every run that inherits it.
 - [ ] Resolve every child route independently; the author's runtime is not a routing default. No route discrepancy permits spawning a replacement root.
@@ -2109,7 +2111,7 @@ the format alone:
 - [ ] **No acceptance criterion or definition of done was inherited from a different repository's convention** than the one the work is scoped to.
 - [ ] Stop rules park a lane and descend; only the genuinely irreversible stops the run.
 - [ ] A mid-run replacement says `do not pivot on receipt` and states what changed underneath it.
-- [ ] Every lane names its role, its resolved route, its context scope, dependency, ownership, acceptance and output — a role name alone is not a route.
+- [ ] Every lane names its role, its resolved route, its context scope, dependency, ownership, acceptance and output - a role name alone is not a route.
 - [ ] Selected custom roles were preflighted for this task; pinned custom roles omit spawn model/effort overrides, while generic roles pass them explicitly.
 - [ ] Spawn metadata confirms the selected role and every exposed route field; a missing, conflicting or substituted route stops the lane.
 - [ ] A requested read-only sandbox is reported as enforced only when the observed sandbox and permission profile prove it; broader policy is handled and disclosed explicitly.
@@ -2235,7 +2237,7 @@ must not produce per-change causal claims. Retain only protocol additions that i
 keep research, comparisons and obsolete examples out of generated execution contracts. Do not launch
 paid evaluations or replay live mutations merely to measure this protocol without authorisation.
 
-## Appendix A — Codex profile
+## Appendix A - Codex profile
 
 Complete. Everything the body defers to a profile is resolved here for Codex.
 
@@ -2640,7 +2642,7 @@ a leaf and never delegates. Do not claim a configured depth limit enforced this 
 
 ---
 
-## Appendix B — Claude Code profile
+## Appendix B - Claude Code profile
 
 Complete. Everything the body defers to a profile is resolved here for Claude Code. The always-loaded
 `operating-model.md` § "Model routing for sub-agents" and `subagent-dispatch.md` rules in the
