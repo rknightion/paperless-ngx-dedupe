@@ -21,3 +21,11 @@ site
 backlog
 archive
 AGENTS.md
+
+# design/ is a DesignSync export of the external "m7kni Design System v2" project
+# (design/ui-v2/github.md records the sync), not project source: .dc.html canvases, a _ds/
+# bundle, generated runtime JS (support.js, icons.js, marks.js) and vendored Phosphor SVGs.
+# Re-syncing overwrites it, so formatting it here is churn at best. At worst it is impossible:
+# support.js and the bundle are minified builds, and Screen10States.dc.html is not parseable
+# HTML. Same reasoning as CHANGELOG.md, backlog and archive above.
+design

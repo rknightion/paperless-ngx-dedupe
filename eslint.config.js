@@ -46,6 +46,18 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['**/node_modules/', '**/.svelte-kit/', '**/build/', '**/dist/', 'docs/', 'site/'],
+    ignores: [
+      '**/node_modules/',
+      '**/.svelte-kit/',
+      '**/build/',
+      '**/dist/',
+      'docs/',
+      'site/',
+      // design/ is a DesignSync export of the external "m7kni Design System v2" project, not
+      // project source: .dc.html canvases, a _ds/ bundle, generated runtime JS and vendored
+      // Phosphor SVGs. Its bundles are minified builds with their own globals, so linting them
+      // only ever produces false positives that a re-export would restore.
+      'design/',
+    ],
   },
 );
