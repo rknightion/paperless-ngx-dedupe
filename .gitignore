@@ -46,3 +46,6 @@ docs/assets/project-icon-solid.svg
 docs/assets/social-card.png
 docs/assets/social-card.svg
 docs/fonts/
+
+# Machine-local agent artefacts, never committed
+codex/
