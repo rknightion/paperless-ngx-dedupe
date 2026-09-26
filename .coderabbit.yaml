@@ -13,24 +13,24 @@ reviews:
     biome:
       enabled: false
   path_instructions:
-  - path: packages/core/**
-    instructions: >-
-      Keep this package framework agnostic and the sole owner of business logic, Paperless sync, deduplication,
-      persistence, jobs, queries, and telemetry. Flag web-framework imports, duplicated web-layer business
-      logic, unbounded sync/job work, nondeterministic MinHash/LSH changes, or telemetry that reports
-      failed/partial sync as clean empty state. For SQLite schema changes, require both the Drizzle table
-      definition and a guarded pre-DDL migration called by migrateDatabase so existing databases receive
-      new columns.
-  - path: packages/web/src/routes/**
-    instructions: >-
-      All /api/v1 responses must use the shared apiSuccess/apiError envelope and ErrorCode values with
-      correct HTTP status. Server load functions must call the same core queries as matching API routes
-      rather than duplicating logic. Check streamed or asynchronous UI state for stale updates and preserve
-      server-only credentials and Paperless tokens.
+    - path: packages/core/**
+      instructions: >-
+        Keep this package framework agnostic and the sole owner of business logic, Paperless sync, deduplication,
+        persistence, jobs, queries, and telemetry. Flag web-framework imports, duplicated web-layer business
+        logic, unbounded sync/job work, nondeterministic MinHash/LSH changes, or telemetry that reports
+        failed/partial sync as clean empty state. For SQLite schema changes, require both the Drizzle table
+        definition and a guarded pre-DDL migration called by migrateDatabase so existing databases receive
+        new columns.
+    - path: packages/web/src/routes/**
+      instructions: >-
+        All /api/v1 responses must use the shared apiSuccess/apiError envelope and ErrorCode values with
+        correct HTTP status. Server load functions must call the same core queries as matching API routes
+        rather than duplicating logic. Check streamed or asynchronous UI state for stale updates and preserve
+        server-only credentials and Paperless tokens.
 knowledge_base:
   linked_repositories:
-  - repository: m7kni/m7kni-net-site
-    instructions: >-
-      Documentation hub. This repository dispatches documentation changes to the hub, which clones the
-      docs source and builds it. Check docs_path, config_file and the dispatch payload against this
-      repository's entry in the hub's docs-repos.json manifest.
+    - repository: m7kni/m7kni-net-site
+      instructions: >-
+        Documentation hub. This repository dispatches documentation changes to the hub, which clones the
+        docs source and builds it. Check docs_path, config_file and the dispatch payload against this
+        repository's entry in the hub's docs-repos.json manifest.
