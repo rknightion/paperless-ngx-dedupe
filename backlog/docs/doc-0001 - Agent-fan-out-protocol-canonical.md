@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-26 09:06'
+updated_date: '2026-09-26 13:24'
 ---
 > **Generated file — do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `b12f35d`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `7d1a67f`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -74,11 +74,12 @@ profile before writing lanes, not after.
 
 ## 1. Define the run contract first
 
-Every goal begins with an explicit run contract:
+Every goal begins with an explicit run contract. A running root follows the contract its goal names,
+reading the protocol at the source revision its goal records; the next goal adopts a newer one.
 
 ```text
 Loop type: daytime | daytime-long | overnight
-Contract: loop-v2.1
+Contract: loop-v2.2
 Admission envelope: [daytime: the listed lanes | continuous: repository/project/theme, priority order, exclusions]
 Current layer: research | design | implementation | review | live verification | deployment
 Standing authority: [§9 defaults plus goal-specific grants; front-loaded fence confirmations]
@@ -189,7 +190,7 @@ Pause and resume are never RUN-END triggers.
 ### Drain: in-flight mutations are never killed
 
 - **A mutation is never killed**: any commit, push, deploy, IaC change, database change or external write
-  in flight finishes naturally. Never use Claude `TaskStop` or Codex `close_agent` on a child mid-mutation.
+  in flight finishes naturally. Never use Claude `TaskStop` or Codex `interrupt_agent` (v1 `close_agent`) on a child mid-mutation.
   Drain lane by lane at safe boundaries.
 - **Read-only reviewers, watchers and pollers may time out as designed**, including `xreview`'s own timeout.
 - **Undispatched work parks.** A newly discovered dependency is parked unless its bounded repair is
@@ -297,8 +298,10 @@ waits on an external event (CI, a release, a time of day), wait on its real even
 idle check-ins, close out, listing what is pending. On Claude, check-ins back off from 30 minutes,
 doubling to 2 hours, and the turn ends with `WAITING: <what> until <YYYY-MM-DDTHH:MM[:SS]Z>` (UTC, no
 fractional seconds or offset). On Codex, an idle check-in is one capped `wait_agent` timeout with no
-child running and no ready work (Appendix A). Do not poll a quiet backlog or generate inference to stay alive.
-Honest early exhaustion beats busywork. A later message does not restart a completed loop.
+child running and no ready work (Appendix A); a hold to a clock gate (Appendix A) is not an idle
+check-in until the gate time passes. Do not poll a quiet backlog or generate inference to stay alive;
+a Codex clock-gate hold (Appendix A) is the one sanctioned exception. Honest early exhaustion beats
+busywork. A later message does not restart a completed loop.
 
 ### Drift check on continuous loops
 
@@ -640,6 +643,11 @@ outpaces acceptance, use available capacity for bounded review, gate execution o
 before adding more implementation pressure. The root keeps final acceptance and assigned shared-file
 ownership; one bounded integration worker may own a separate slice without duplicating root work.
 
+Read-only bulk work goes to a MAPPING or GATE lane with a structured return, not into the root's own
+turn: a census across repositories, cross-repository reconciliation reads, and environment diagnosis
+needing more than one bounded command. The root keeps the judgement and every tracker write. Long
+in-turn tool sequences are where a root's dispatch discipline slips (Appendix A).
+
 Diagnose the queue before changing topology. Distinguish a complete, current return waiting for root
 acceptance from a packet needing repair, a running gate and work with an unmet prerequisite. Delegate
 a bounded integration slice only when eligible returns accumulate and its acceptance/ownership seam
@@ -781,6 +789,12 @@ required; one whose collection would take repeated root checks goes to a poller.
 earns its overhead through supervision, bounded failure classification or a useful evidence handoff,
 never by relaying unchanged status. Input tools
 are never wait primitives.
+
+**The root's only lane wait is the harness agent wait.** The root never calls a tool it expects to
+fail or to return nothing as a wait, and never uses a sleep or timer tool to wait: each such call is a
+full model turn and bypasses any harness wait floor. A clock-gate hold uses the agent wait (Appendix
+A). Every return from the agent wait is a scheduling boundary. Before waiting again, the root
+dispatches each eligible ready lane, or records or keeps current in state why none is eligible.
 
 Do not put token budgets, cost targets, model-allocation quotas or artificial output allocations in
 the goal. Route by the shape and risk of the remaining work. LLM spend in agentic repositories is
@@ -1110,7 +1124,7 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 ## 0. Run contract
 
 - Loop type: daytime | daytime-long | overnight
-- Contract: loop-v2.1
+- Contract: loop-v2.2
 - Admission envelope: [daytime: the listed lanes | continuous: repository/project/theme, priorities/tie-breaks, exclusions]
 - Current layer: research | design | implementation | review | live verification | deployment
 - Standing authority: [§9 defaults; goal-specific grants; each front-loaded fence confirmation with its date]
@@ -2191,6 +2205,18 @@ A provenance correction preserves technical findings and consumed attempts. Revi
 repair separately from a queue of complete packets awaiting integration; measure the missing evidence
 and root repair scope before adding a permanent role.
 
+**Carrying a long lane forward.** A lane that ran 3 hours or more and compacted 5 or more times in
+the previous loop is re-admitted only as sub-surface packets, each with its own acceptance check.
+Read both figures from the agent-history catalogue (`ah.session_rollup` `duration_s` and
+`compactions`) for that lane's session. The split is a preparation step, not the admission-time
+split §3 forbids, and every sub-packet keeps the parent's attempt lineage (§9).
+
+**Asking to raise a ceiling again.** When a lane exhausted its attempt ceiling in the previous loop and
+preparation would ask the owner to raise it again on the same packet shape and route, the owner
+question leads with the alternatives: a re-scope with a new acceptance check, or a Sol/high
+DESIGN+INTEGRATION pass on the unresolved decision followed by a frozen packet. Re-scoping never
+resets a counter (§9), and only the owner raises a ceiling.
+
 Model improvements are evaluated outside live campaign prompts. Preserve sanitized historical inputs
 and outcome identities, then exercise known failure cases and held-out tasks. Compare equivalent
 acceptance scope, idle time with eligible work, integration backlog, resource collisions, stale-return
@@ -2382,11 +2408,58 @@ When async is unavailable, every loop uses its no-answer path.
 
 **Waiting (Codex).** Completion mail does not wake an idle parent, so the root waits in-turn. The
 fleet sets `[features.multi_agent_v2] min_wait_timeout_ms` and `default_wait_timeout_ms` both to
-1140000, so every `wait_agent` lasts 19 minutes unless a child messages or finishes first; any
+1140000, so every `collaboration.wait_agent` lasts 19 minutes unless a child messages or finishes first; any
 shorter `timeout_ms` is raised to it. 19 minutes stays under the loop-watchdog's 20-minute silence
-alert. With lanes in flight and no local work, the root makes one `wait_agent` call. A lane or poller
+alert. With lanes in flight and no local work, the root makes one `collaboration.wait_agent` call. A lane or poller
 deadline is checked on the next return, up to 19 minutes late. On timeout, reconcile once
-(`list_agents`, deadlines, watchdog conditions), then wait again.
+(`collaboration.list_agents`, deadlines, watchdog conditions), then apply the returns rule below and wait again.
+
+**Returns arrive in context, not in the wait.** A child's return is delivered into the root's context
+as a `FINAL_ANSWER` agent message as soon as the child finishes, whether or not a wait is running.
+`collaboration.wait_agent` returns only on new activity: called after a return has already arrived,
+it blocks for its full timeout (up to 19 minutes) and reports nothing. Before every
+`collaboration.wait_agent` call, process each child return in context that the state record does not
+yet mark processed, and mark it there. After a context transition, reconcile `collaboration.list_agents`
+against the state record before the first wait, and re-read the return or evidence file of any
+completed child whose return is not marked processed. Wait only when no unprocessed return remains.
+
+**Root wait discipline (Codex).** With lanes in flight, the root waits only with a direct
+`collaboration.wait_agent` call. `functions.wait` is code mode's exec-cell wait: call it only with a
+`cell_id` that the root's own `exec` returned, never an invented one such as `bogus`, `none` or
+`notreal`. An unknown cell fails in milliseconds and costs a model turn. `clock.sleep` is never a lane
+wait. Codex exempts `functions.wait` from `PreToolUse` and `PostToolUse` hooks
+(`code_mode/wait_handler.rs`, 0.157.1), so no hook can enforce the `functions.wait` half of this rule.
+
+**Dispatch is a direct call.** Under the default `[features.multi_agent_v2] non_code_mode_only = true`
+(0.157.1), the collaboration tools (`collaboration.spawn_agent`, `wait_agent`, `list_agents`,
+`send_message`, `followup_task`, `interrupt_agent`) are direct-only: `ALL_TOOLS` and `tools.*` inside
+a cell do not list them, and an empty result there is not evidence that the root cannot dispatch.
+Preflight records the launching home's `non_code_mode_only`; if it is false, cell listings may differ
+and this paragraph still applies. When an eligible ready lane exists (§1 lifecycle, §3 capacity, §4
+isolation), write its admission record, any packet not already prepared, and the worktree if §4
+isolation calls for one, in one exec cell; when that cell succeeds, the next tool call is a direct
+`collaboration.spawn_agent`, never another `exec`.
+
+Never conclude that dispatch is unavailable, and never drain, park or report a stall for that reason,
+without a recorded direct `collaboration.spawn_agent` error. A thread-pool limit error means wait for a
+return, then retry. Any other error: retry once. If the retry fails with an error tied to that lane's
+arguments or route (agent type, model, fork scope), park that lane under Spawn resolution and continue.
+If direct `collaboration.spawn_agent` fails with the same error not tied to lane arguments or route
+for two different lanes, or for the only ready lane after its retry, record the errors in the state
+record and treat the run as resource exhaustion (§1). A spawn error
+consumes no attempt (§9). Other drains and parks follow §1 and §9 unchanged.
+
+**Clock-gated steps.** Nothing resumes a Codex root that ends its turn, and `WAITING:` is not a wake
+mechanism here. This applies both to a gate the goal names and to one the root discovers at run time.
+First, prefer removing the gate: trigger the scheduled job, or move its schedule, where that is within
+authority. Otherwise the root holds the turn only when the gated step is required for the goal's
+outcome. It keeps calling `collaboration.wait_agent`, which blocks with or without children, and takes
+the step on the first return after the gate time. Owner controls sent during a hold are applied on the
+next return, at most 19 minutes later (owner-input wake unverified). Each timeout before the gate time
+is a hold, not an idle check-in (§2). If the gate time falls after the goal's owner deadline or,
+for `daytime`, the working day, park the step, list it under `## Pending`, and continue; the run ends
+on its own terminal condition. Continuous loops have no window beyond an owner deadline. When
+the gated step is not required, §2's idle check-ins apply.
 
 **Process waits (Codex).** Any thread waiting on a process (CI, a gate, CodeRabbit, a release) waits
 in one self-polling exec cell, so the model is woken only when the process ends or the cell yields:
@@ -2415,6 +2488,13 @@ the harness raises any request below `min_wait_timeout_ms` to it (a 10 s request
 `yield_time_ms`; a single `exec_command` or `write_stdin` call returns within 30 s, so a waiting loop
 belongs inside the cell. A 200 s watch cost the poller 2 model calls this way against 9 with one call
 per poll. Full-history forks inherit the parent agent type and fail.
+
+Measured 2026-09-26, Codex 0.157.x, 10 s floor set per run: with no children, `wait_agent` blocked
+and returned `timed_out: true` at 10 s. A child's `FINAL_ANSWER` reached the root's context at
+completion; a `wait_agent` called 17 s later timed out after 60 s without reporting it. Inside a cell,
+`tools.spawn_agent` and `tools.wait_agent` were `undefined` and absent from `ALL_TOOLS`. The probe root
+also called `functions.wait` with `timeout_ms` and then with `cell_id` `"none"` and `""` before
+finding `wait_agent`.
 
 **Retry configuration.** Where the Codex route supports retry and backoff settings, the published home
 configuration retries for up to about an hour; a context whose route cannot carry the setting is
