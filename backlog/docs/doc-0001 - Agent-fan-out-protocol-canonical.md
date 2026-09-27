@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-26 16:07'
+updated_date: '2026-09-27 11:40'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `397abdc`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `7cce006`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -94,8 +94,9 @@ Launch rationale: [one sentence]
 Selected topology: solo | single auxiliary | campaign | campaign + security
 Topology rationale: [the independent bottleneck or risk that justifies this shape]
 Report destination: file at [exact codex/report path], first line `# Loop: <repo> loop<N> · Goal: <goal sha256>`
-Run-end report: reconciliation first; the report is the final action, unprompted, written atomically (§10)
-Completion ping: ~/repos/agent-docs/bin/wave-notify <exact report path>, once, straight after the file report
+Run-end report: tracker reconciliation first; the report is the final action, unprompted, written atomically (§10)
+Codex reconcile: ~/repos/agent-docs/bin/codex-reconcile <abs repo>, once, after the file report; a non-zero exit or unreachable peer is noted in the reply, never retried or debugged
+Completion ping: ~/repos/agent-docs/bin/wave-notify <exact report path>, once, straight after the codex reconcile
 ```
 
 The report line belongs in the contract rather than only in §6's report section, because the contract
@@ -432,9 +433,10 @@ previous goals said, and the next reader finds those first.
 
 Every repository driven this way gets a **`codex/` directory at its root, listed in `.gitignore`**,
 holding one set of files per loop. **The name is historical and it is load-bearing - keep it whatever
-harness runs the loop.** `codex-sync.sh` mirrors run artefacts between machines by matching that exact
-directory name, so renaming it to something harness-neutral silently stops the syncing rather than
-failing loudly. Read `codex/` as "run artefacts", not as "Codex's directory".
+harness runs the loop.** `~/repos/agent-docs/bin/codex-reconcile` reconciles run artefacts between
+the two Macs by targeting that exact directory name, so renaming it to something harness-neutral
+silently leaves the renamed directory unreconciled rather than failing loudly. Read `codex/` as "run
+artefacts", not as "Codex's directory".
 
 ```
 codex/goal-<date>-loop<N>.md      the goal file
@@ -445,9 +447,16 @@ codex/report-<date>-loop<N>.md    the run-end report the agent writes (§10)
 
 `<date>` is the UTC date of preparation; the loop number is the sequence.
 
-`codex/` is machine-local and never committed. When preparing a loop, reconcile it with the other Mac by
-a quick `rsync --dry-run` comparison when that Mac is reachable; if gfmbp is unreachable from MBP16, assume
-MBP16 is the only active machine and proceed. Reconciliation never blocks preparation.
+`codex/` is machine-local and never committed, and nothing mirrors it in the background. Cross-Mac
+reconciliation (MBP16 and gfmbp) happens only through `~/repos/agent-docs/bin/codex-reconcile <abs repo>`,
+run at two points: loop preparation, before reading any predecessor report, and run end, after the
+report is written and before the completion ping (§10). It is two-way and additive: it copies files
+present on one side only, never deletes and never overwrites. It skips `codex/scratch/` and any
+directory holding a `.git` entry, because a worktree copied between machines points at the wrong
+repository and is corrupt. A path present on both Macs with different content is listed as a conflict,
+left unchanged on both sides, and the tool exits non-zero: surface it to the operator, never resolve
+it silently. An unreachable peer prints one line and exits 0; assume the local Mac is the only active
+machine and proceed. Reconciliation never blocks preparation or the run end.
 
 Where a repository runs more than one campaign, put the campaign slug in all three names and keep
 them consistent - `goal-<date>-<slug>-loop<N>.md` alongside `report-<date>-<slug>-loop<N>.md`.
@@ -478,7 +487,8 @@ You are the root in this existing session. Read <absolute goal path> in full and
 goal. Do not launch a replacement root. Start with the run contract and child lane table; release
 eligible independent work while unrelated CI runs. Write <exact report path> as the terminal action,
 first line `# Loop: <repo> loop<N> · Goal: <goal sha256>`, written to a temp file and renamed into
-place, then run ~/repos/agent-docs/bin/wave-notify <exact report path> once before replying.
+place, then run ~/repos/agent-docs/bin/codex-reconcile <abs repo> once and
+~/repos/agent-docs/bin/wave-notify <exact report path> once before replying.
 ```
 
 The launch is saved as `codex/launch-<date>-loop<N>.txt`; pasting only that file's absolute path is an
@@ -1141,8 +1151,9 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 - Selected topology: solo | single auxiliary | campaign | campaign + security
 - Topology rationale: [the independent bottleneck or risk that justifies this shape]
 - Report destination: file at [exact codex/report path], first line `# Loop: <repo> loop<N> · Goal: <goal sha256>`
-- Run-end report: reconciliation first; the report is the final action, unprompted, written atomically
-- Completion ping: `~/repos/agent-docs/bin/wave-notify <exact report path>`, once, straight after the file report
+- Run-end report: tracker reconciliation first; the report is the final action, unprompted, written atomically
+- Codex reconcile: `~/repos/agent-docs/bin/codex-reconcile <abs repo>`, once, after the file report; a non-zero exit or unreachable peer is noted in the reply, never retried or debugged
+- Completion ping: `~/repos/agent-docs/bin/wave-notify <exact report path>`, once, straight after the codex reconcile
 
 ## 1. Outcome and success criteria
 
@@ -1256,7 +1267,7 @@ concurrency and cancellation behavior; do not assume a push cancels a pending ma
 
 Complete all verification and tracker reconciliation first. Producing the report is the **last action
 of the run** (§10), unprompted, using §0's destination. For a file report, write the exact path named
-in the goal and launch, run the completion ping (§10), then reply with a clickable file link and a
+in the goal and launch, run the codex reconcile and then the completion ping (§10), then reply with a clickable file link and a
 short high-level summary; run no further tool afterwards. Do not paste the full report into chat.
 For a terminal report, emit the covering note only after durable findings and task outcomes are
 recorded. A partial run still produces a report with precise resume boundaries.
@@ -2026,16 +2037,19 @@ back:
 2. Use the report destination frozen in the run contract:
    - file (default): write the full report to the exact named path, header line first, via a temp file
      and rename. Writing the file is the final
-     work action; the only command that follows it is the completion ping in step 3, and the reply
-     comes after that, in step 4.
+     work action; the only commands that follow it are the codex reconcile in step 3 and the
+     completion ping in step 4, and the reply comes after that, in step 5.
    - terminal (only when explicitly requested): emit the covering note after tracker reconciliation. Do not create an unsolicited
      report file or leave durable findings only in the message.
-3. File report only: run `~/repos/agent-docs/bin/wave-notify <exact report path>` exactly once. It
+3. File report only: run `~/repos/agent-docs/bin/codex-reconcile <abs repo>` exactly once, so the goal,
+   state and report reach the other Mac. A non-zero exit (a conflict) or an unreachable peer does not
+   reopen the run: do not retry, resolve or debug it; state the outcome line in the reply.
+4. File report only: run `~/repos/agent-docs/bin/wave-notify <exact report path>` exactly once. It
    pushes a phone notification that this run has finished and its report is ready. Run it after the
    report file is complete and at no other point in the run: it never refuses, so running it early
    pushes a ping saying the report is missing rather than failing. A non-zero exit does not reopen
    the run: do not retry or debug it, state the exit code and its one-line error in the reply.
-4. Reply and hand control back. For a file report the reply is a clickable file link and a short
+5. Reply and hand control back. For a file report the reply is a clickable file link and a short
    high-level summary; do not paste the report into chat. Do not begin more work after the report.
 
 Write it for a reader who has no memory of this run and cannot see the transcript. Never abbreviate
@@ -2149,7 +2163,7 @@ the format alone:
 - [ ] Skips are required to be reported separately from passes, and inputs that were absent are named.
 - [ ] Any optimisation target requires before and after from the same harness at the same scale.
 - [ ] The run contract carries a run-end report line, and the goal states that writing the report is the run's terminal action rather than a reply to a request.
-- [ ] The report destination is frozen in the run contract. A required file is written to its exact `codex/` path as the final work action and followed only by the one `wave-notify` completion ping; a terminal report follows durable tracker reconciliation.
+- [ ] The report destination is frozen in the run contract. A required file is written to its exact `codex/` path as the final work action and followed only by the one `codex-reconcile` run and the one `wave-notify` completion ping; a terminal report follows durable tracker reconciliation.
 - [ ] Goal, launch message and any file report live in a `codex/` directory that `.gitignore` excludes as a directory, not by filename pattern.
 - [ ] The goal requires a partial report, marked partial, if it ends with lanes unfinished.
 - [ ] External side effects must be reported from a live count, not from what the run intended to create.
