@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-27 15:31'
+updated_date: '2026-09-27 16:42'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `c677576`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `479c944`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -81,7 +81,7 @@ reading the protocol at the source revision its goal records; the next goal adop
 
 ```text
 Loop type: daytime | daytime-long | overnight
-Contract: loop-v2.2
+Contract: loop-v2.3
 Admission envelope: [daytime: the listed lanes | continuous: repository/project/theme, priority order, exclusions]
 Current layer: research | design | implementation | review | live verification | deployment
 Standing authority: [§9 defaults plus goal-specific grants; front-loaded fence confirmations]
@@ -725,7 +725,9 @@ source. The root uses a poller for a wait it owns (main CI after it lands, a rel
 gate, CI for a candidate a lane returned unpushed) when it must also stay free to collect lanes;
 with no lanes in flight it waits on the process itself. The brief names the watch, its terminal conditions, a deadline of the expected duration
 plus margin, and what to return. A deadline exit means "not observed": the owner re-dispatches once
-or parks. The poller waits on one quiet watch process with the longest wait the harness supports,
+or parks. The terminal return quotes the raw readback of the exact run it watched (for CI,
+`gh run view <id> --json headSha,status,conclusion`). A return without that readback, including "no
+runs found" or a deadline exit, is unverified: the root reads the run back itself before acting on it. The poller waits on one quiet watch process with the longest wait the harness supports,
 never a loop of short model-driven checks. The root records each poller's identity and deadline in
 its state. A poller takes a pool slot (§4), consumes no
 attempt (§9) and does not count toward the admission floor. At closeout the root sweeps the agent
@@ -1144,7 +1146,7 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 ## 0. Run contract
 
 - Loop type: daytime | daytime-long | overnight
-- Contract: loop-v2.2
+- Contract: loop-v2.3
 - Admission envelope: [daytime: the listed lanes | continuous: repository/project/theme, priorities/tie-breaks, exclusions]
 - Current layer: research | design | implementation | review | live verification | deployment
 - Standing authority: [§9 defaults; goal-specific grants; each front-loaded fence confirmation with its date]
@@ -2295,7 +2297,11 @@ and cannot adopt the entire goal or replace the root.
 | DESIGN+INTEGRATION or REVIEW, unresolved complex technical decisions and debugging | `gpt-6-sol` | `high`; bounded question or review, then hand off frozen implementation |
 | SECURITY, consequential architecture or difficult interacting risks | `gpt-6-astra` | `medium`; authentication, permissions, migration safety, secrets and data-loss boundaries |
 | Worktree auditor, ordinary REVIEW of ancestry, patch identity and recovery | `gpt-6-sol` | `medium`; unresolved complex interpretation uses Sol/high; consequential loss risk uses Astra/medium |
-| Implementation unsuitable for Luna or Sol/medium from the outset, or specialist rescue | `gpt-6-sol` or `gpt-6-astra` | Sol/high for unresolved complex work; Astra/medium for consequential architecture or security/interacting risks; state why thinking cannot be separated from coding |
+| Specialist implementation rescue (attempt 3 onward), or implementation carrying consequential architecture or security risk from the outset | `gpt-6-sol` or `gpt-6-astra` | Sol/high only as a rescue from attempt 3 onward, never to start a lane; Astra/medium for consequential architecture or security/interacting risks; state why thinking cannot be separated from coding |
+
+Every `collaboration.spawn_agent` names its route: the `agent_type` of a custom agent whose pin
+matches the table, or an explicit `model` and `reasoning_effort` from it. A spawn with neither
+inherits the root's Sol/medium and silently discards the lane's route.
 
 Use only the model and effort pairs this table names. Never select Luna `low` or non-reasoning, and
 there is no GPT-6 Terra route. If a named route is unavailable, report it and let the root resolve an
@@ -2323,8 +2329,12 @@ is not an implementation attempt under §9.
 
 The §4 narrow roles resolve through this table: Mapper uses MAPPING; Lane worker uses EXECUTION;
 Complex lane worker uses JUDGMENT+EXECUTION; Reviewer and Worktree auditor use their REVIEW entries;
-Security reviewer uses SECURITY; Gate runner uses GATE; Poller uses its own row. These role names are not promises that a
-custom `agent_type` is installed. Inspect selected custom-role pins before dispatch.
+Security reviewer uses SECURITY; Gate runner uses GATE; Poller uses its own row. The custom agents
+`lane-worker` (Luna/max), `complex-worker` (Sol/medium), `reviewer` (Sol/medium),
+`security-reviewer` (Astra/medium), `poller` and `poller-high` pin these routes and ship with the
+pollers (Process waits, below): spawn them with `agent_type` and `fork_turns="none"` and pass no model
+or effort. Any other role passes an explicit model and effort. Inspect the installed pins before
+dispatch.
 
 ### Technical decisions and implementation
 
@@ -2350,13 +2360,17 @@ Luna/max implementation worker. If Luna exposes a missing decision, return the s
 resolves it directly or requests a bounded specialist follow-up. Preserve prior decisions unless new
 contradictory evidence or an authorised amendment requires revisiting them.
 
+Deliver bounded packets. Split open-ended work into more, smaller packets, each with a directly
+checkable acceptance, rather than sizing a large one: duration estimates are unreliable and are never
+a routing input. Work that stays open-ended after splitting goes to a Sol/medium worker.
+
 Use a bounded Sol/medium worker when local judgement remains tightly coupled to coding. The
 Sol/medium root may directly fix suitable bounded returned issues within authority and ownership;
 do not require another spawn merely because the work includes implementation. Keep independent
-parallel implementation in its assigned lanes. Use a Sol/high or Astra/medium specialist for the
-implementation itself when the task is unsuitable for cheaper workers or separating reasoning from execution
-would lose necessary context. Explain that need in the lane; do not require a cheap worker to fail
-first on a known unsuitable task. An implementer is not also its independent reviewer.
+parallel implementation in its assigned lanes. Use an Astra/medium specialist for the implementation
+itself from the outset only when it carries consequential architecture or security risk that cannot be
+separated from coding; explain that need in the lane. Sol/high implements only as a rescue from
+attempt 3 onward (below). An implementer is not also its independent reviewer.
 Once only frozen implementation remains, transfer it to Luna/max rather than continuing an expensive
 thread by inertia. Code quality, safety and verification requirements follow the work, not its price.
 
@@ -2377,6 +2391,13 @@ review-repair has its own ceiling of three (§9). The normal Luna implementation
    effort. Supply the prior failures, current artifact, proposed correction and verification check.
 4. If specialist rescue fails, stop implementation and reassess the design, packet, environment and
    acceptance check. Failure is not proof that the design is wrong or that another model will fix it.
+
+**A Luna lane past 90 minutes gets a root diagnosis, not an automatic escalation.** Read its state,
+evidence and receipts and record why it is still running. Waiting on its CI or gate within the
+deadline, or making evidenced progress within its attempt and escalation limits, leaves it running.
+Signs of a complexity failure (the same check failing after corrections, the lane re-deriving frozen
+decisions, compactions without new evidence) mean the root interrupts it and re-dispatches under this
+ladder with a split or corrected packet or the next route.
 
 This is a ceiling, not a mandatory ladder. Escalate earlier for an unsuitable worker, incomplete
 packet or unavailable prerequisite; skip the root's attempt when evidence already requires a deeper
@@ -2447,12 +2468,16 @@ yet mark processed, and mark it there. After a context transition, reconcile `co
 against the state record before the first wait, and re-read the return or evidence file of any
 completed child whose return is not marked processed. Wait only when no unprocessed return remains.
 
-**Root wait discipline (Codex).** With lanes in flight, the root waits only with a direct
-`collaboration.wait_agent` call. `functions.wait` is code mode's exec-cell wait: call it only with a
-`cell_id` that the root's own `exec` returned, never an invented one such as `bogus`, `none` or
-`notreal`. An unknown cell fails in milliseconds and costs a model turn. `clock.sleep` is never a lane
-wait. Codex exempts `functions.wait` from `PreToolUse` and `PostToolUse` hooks
-(`code_mode/wait_handler.rs`, 0.157.1), so no hook can enforce the `functions.wait` half of this rule.
+**Root wait discipline (Codex).** With lanes in flight, the root's only wait is a direct
+`collaboration.wait_agent` call. That includes the wait after a lane or poller message, after the
+root's own `collaboration.send_message` or `followup_task` reply, and after any `exec` cell. Code
+mode's `functions.wait` is a different tool: it collects an exec cell the root started this turn,
+takes that cell's returned id, and never waits for agents. An `exec cell ... not found` error means
+the root called the wrong tool, not that the harness misrouted the call: the next call is
+`collaboration.wait_agent`. Never retry `functions.wait` without a real cell id, and never pause, park
+or report a stall for this reason. `clock.sleep` is never a lane wait. Codex exempts
+`functions.wait` from `PreToolUse` and `PostToolUse` hooks (`code_mode/wait_handler.rs`, 0.157.1), so
+no hook can enforce this.
 
 **Dispatch is a direct call.** Under the default `[features.multi_agent_v2] non_code_mode_only = true`
 (0.157.1), the collaboration tools (`collaboration.spawn_agent`, `wait_agent`, `list_agents`,
@@ -2520,8 +2545,7 @@ Measured 2026-09-26, Codex 0.157.x, 10 s floor set per run: with no children, `w
 and returned `timed_out: true` at 10 s. A child's `FINAL_ANSWER` reached the root's context at
 completion; a `wait_agent` called 17 s later timed out after 60 s without reporting it. Inside a cell,
 `tools.spawn_agent` and `tools.wait_agent` were `undefined` and absent from `ALL_TOOLS`. The probe root
-also called `functions.wait` with `timeout_ms` and then with `cell_id` `"none"` and `""` before
-finding `wait_agent`.
+also reached for `functions.wait` before finding `wait_agent`.
 
 **Starting a long-lived process (Codex).** A process backgrounded (`&`, `nohup`, `disown`) from an
 exec call that then returns is killed with it. Measured 2026-09-27, Codex 0.157.1: `nohup caffeinate -i
