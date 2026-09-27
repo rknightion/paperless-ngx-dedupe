@@ -13,7 +13,7 @@ importers:
     dependencies:
       openai:
         specifier: ^7.0.0
-        version: 7.8.0(undici@8.10.0)(zod@4.5.4)
+        version: 7.23.0(undici@8.10.0)(zod@4.5.4)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -216,7 +216,7 @@ importers:
         version: 6.0.1
       openai:
         specifier: ^7.0.0
-        version: 7.8.0(undici@8.10.0)(zod@4.5.4)
+        version: 7.23.0(undici@8.10.0)(zod@4.5.4)
       pino:
         specifier: ^10.0.0
         version: 10.3.1
@@ -2954,6 +2954,30 @@ packages:
   on-exit-leak-free@2.1.2:
     resolution: {integrity: sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==}
     engines: {node: '>=14.0.0'}
+
+  openai@7.23.0:
+    resolution: {integrity: sha512-0ecOXnFSMNWZq6cUBcTV6Lf93y+fm8BH/+QzFvpoP1UGNOE5pnytRa6HAPGCw+3IS9SIAW7rc1M8yyzN1PiBAQ==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      undici: '>=5 <9'
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   openai@7.8.0:
     resolution: {integrity: sha512-/2g9JzdnXNcjX1W/UlSNu+OdSFDAaAVt0n9Onom0kPenH54o59G2WrX/xjTnr26UHNSh6hxcAf58doGYRme2rw==}
@@ -6071,6 +6095,11 @@ snapshots:
   obug@2.1.4: {}
 
   on-exit-leak-free@2.1.2: {}
+
+  openai@7.23.0(undici@8.10.0)(zod@4.5.4):
+    optionalDependencies:
+      undici: 8.10.0
+      zod: 4.5.4
 
   openai@7.8.0(undici@8.10.0)(zod@4.5.4):
     optionalDependencies:
