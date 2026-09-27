@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-27 11:48'
+updated_date: '2026-09-27 14:58'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `05e93e9`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `ef96029`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -755,8 +755,16 @@ separately scoped harness proposal.
 **Wait ceilings.** The harness appendix holds the measured wait ceilings and the root's wait timeout.
 Goals state them as numbers.
 
-**Watcher contract.** A watcher needs a successful first probe, a heartbeat, loud failure and a terminal
-receipt. A deadline exit means "not observed", never "absent"; claim absence only after a direct read of
+**Watcher contract.** A watcher is one process that observes a state and owns a receipt file. After
+every observation it rewrites the receipt atomically (temporary file, then rename) with `phase`
+(`running` or `done`), `observations`, `last_observed_at` (UTC), `deadline` and, when done, `result`;
+that rewrite is its heartbeat, so a watcher that dies still leaves its observation count. It fails
+loudly: a non-zero exit and an error in the receipt. Start it by the harness launch rule
+(Appendix A, B). **Liveness witness:** one observation interval plus 30 s after launch (at most
+2 minutes) the launcher reads the receipt once. No receipt or zero observations is a launch
+failure: record it, relaunch once as infrastructure (no attempt, §9); a second failure parks the
+dependent step with both witnesses. A `running` receipt older than twice the observation interval
+is a dead watcher: "not observed", never a pass or a failure of what it watched. A deadline exit means "not observed", never "absent"; claim absence only after a direct read of
 the source. Closeout stops or signals every watcher and poller the run started or induced, including
 external sessions, and lists them in the report. Never hand any agent an open-ended "keep watching"
 prompt.
@@ -2118,7 +2126,7 @@ the format alone:
 - [ ] Resolve every child route independently; the author's runtime is not a routing default. No route discrepancy permits spawning a replacement root.
 - [ ] Deeper work goes to bounded specialists; nested coordinators own only an explicitly commissioned subtree and never replace the receiving root.
 - [ ] Each lane is classified by actual work, not its title; judgement/design routes name a real unresolved decision, and child lane table, briefs and rescue rules agree; goal and launch preserve existing-session ownership.
-- [ ] Each implementation lane owns its gate, CI and CodeRabbit review to one terminal result and states its landing mode; every root-owned wait has one owner and a completion wake or a poller with exact identity and deadline (§3); no duplicate watchers or root turns for unchanged state.
+- [ ] Each implementation lane owns its gate, CI and CodeRabbit review to one terminal result and states its landing mode; every root-owned wait has one owner and a completion wake or a poller with exact identity and deadline (§3); no duplicate watchers or root turns for unchanged state; every watcher starts by the harness launch rule and has a liveness witness (§3).
 - [ ] The run contract states the admission floor, and below-floor time with ready work is recorded as an observation (§3).
 - [ ] Recovery loads the current-state record and missing/changed sections; it does not restart onboarding or create overlapping copies of retained instructions.
 - [ ] The saved launch prompt, goal opening, recovery section, amendments and state instructions agree on same-session recovery. Remove stale "reread the whole goal after every compaction" instructions before launch; an explicit launch instruction can override the intended targeted recovery. Preserve the initial binding-goal read for a fresh/manual launch and the `/new` exclusion.
@@ -2512,6 +2520,23 @@ completion; a `wait_agent` called 17 s later timed out after 60 s without report
 also called `functions.wait` with `timeout_ms` and then with `cell_id` `"none"` and `""` before
 finding `wait_agent`.
 
+**Starting a long-lived process (Codex).** A process backgrounded (`&`, `nohup`, `disown`) from an
+exec call that then returns is killed with it. Measured 2026-09-27, Codex 0.157.1: `nohup caffeinate -i
+<script> > <log> 2>&1 &` in a one-shot `exec_command` never wrote its first line and left a 0-byte
+log with no signal trace; the same script as a foreground command whose `exec_command` returned a
+`session_id` ran its full 180 s through a root `wait_agent`
+([openai/codex#10860](https://github.com/openai/codex/issues/10860)). Start every watcher as a
+foreground command in a retained exec session: `exec_command` with `yield_time_ms` 1000 and no
+trailing `&`; record the returned `session_id` in state as its identity. The call returns at once, so
+the thread keeps spawning and collecting lanes while the watcher runs. Never use `nohup`, `&`,
+`disown` or `setsid`. A `setsid` detach survived the same probe; it is excluded deliberately because
+it outlives the root and escapes closeout. The session belongs to the thread that started it: a
+poller cannot `write_stdin` to a session the root holds. A poller waiting on a root-launched watcher
+runs a `WATCH_COMMAND` over the watcher's receipt (§3): one quiet loop that exits 0 on `phase: done`,
+3 on a stale receipt and at its deadline, and prints the receipt's `result` and `observations`. At
+closeout the owning thread sends `write_stdin` `"\u0003"` to each watcher session still running and
+records the returned `exit_code`.
+
 **Retry configuration.** Where the Codex route supports retry and backoff settings, the published home
 configuration retries for up to about an hour; a context whose route cannot carry the setting is
 recorded as unsupported, not forced. No provider-specific workaround belongs in a goal.
@@ -2771,6 +2796,10 @@ Code fails in ways its own acceptance check will not catch.
   background command cannot express goes to a poller (§3; route in the table). Streamed events use `Monitor`,
   which has a 30-minute ceiling and is re-armed on expiry. Never run a foreground `sleep` longer than
   60 seconds. Ending the turn while that work runs is the wait (see the next section).
+- **Starting a long-lived process.** Measured 2026-09-27, Claude Code 2.1.283: a `nohup … &` launch
+  from a returned Bash call and a `run_in_background` command both ran a 180 s probe to completion
+  across later turns. Use `run_in_background`, because its completion wakes the session; §3's
+  liveness witness applies either way.
 - **Lane waits.** A lane waits on its own CI with a foreground bounded process wait
   (`gh run watch --exit-status`, or an `until` loop that exits on every terminal state) within the
   Bash tool's 10-minute timeout, re-invoked on expiry. It never ends its turn to wait: a subagent's
