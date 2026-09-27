@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-27 11:40'
+updated_date: '2026-09-27 11:48'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `7cce006`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `05e93e9`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -451,9 +451,9 @@ codex/report-<date>-loop<N>.md    the run-end report the agent writes (§10)
 reconciliation (MBP16 and gfmbp) happens only through `~/repos/agent-docs/bin/codex-reconcile <abs repo>`,
 run at two points: loop preparation, before reading any predecessor report, and run end, after the
 report is written and before the completion ping (§10). It is two-way and additive: it copies files
-present on one side only, never deletes and never overwrites. It skips `codex/scratch/` and any
-directory holding a `.git` entry, because a worktree copied between machines points at the wrong
-repository and is corrupt. A path present on both Macs with different content is listed as a conflict,
+present on one side only, never deletes and never overwrites. It skips `codex/scratch/`, regenerable
+build output (`__pycache__/` and any directory named `*derived*`) and any directory holding a `.git`
+entry, because a worktree copied between machines points at the wrong repository and is corrupt. A path present on both Macs with different content is listed as a conflict,
 left unchanged on both sides, and the tool exits non-zero: surface it to the operator, never resolve
 it silently. An unreachable peer prints one line and exits 0; assume the local Mac is the only active
 machine and proceed. Reconciliation never blocks preparation or the run end.
