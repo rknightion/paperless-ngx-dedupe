@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-27 14:58'
+updated_date: '2026-09-27 15:31'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `ef96029`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `c677576`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -2504,7 +2504,10 @@ still running, run it again from `let r = {session_id: <id>};`. Lanes, Luna incl
 CI this way. Collaboration tools are not callable inside a cell, so a root with lanes in flight hands a
 process wait to a poller: the custom agents `poller` (gpt-6-luna medium) and `poller-high` (gpt-6-luna
 high) carry this cell in their instructions. Spawn them with `agent_type` and `fork_turns="none"` and
-pass no model or effort.
+pass no model or effort. Their source is `plugins/agent-workflows/codex-agents/` in `rob/agent-skills`;
+Codex plugins cannot ship agents, so `rob/agents` `sync-wave-skills` (run by `codex-update-all`)
+installs them into each Codex home's `agents/` from the installed plugin version. Change them there,
+never in a home.
 
 Measured 2026-09-25, Codex 0.157.0: `wait_agent` accepts `timeout_ms` from 10,000 to 3,600,000 ms and
 the harness raises any request below `min_wait_timeout_ms` to it (a 10 s request against the
