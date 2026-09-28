@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-28 11:09'
+updated_date: '2026-09-28 14:48'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `7a86b79`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `d2059d9`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -3055,6 +3055,19 @@ delegation.
 Every root spawn is async (`forceTopLevelAsync`); the root cannot run a foreground child. One
 top-level `subagent` call, a workflow included, admits at most 64 children across its whole tree
 (pi-subagents' `maxSubagentSpawnsPerRun` default). The session has no cumulative cap.
+
+### Dispatch: one async call per lane, never a workflow
+
+pi-subagents' built-in tool guidance tells a root to put parallel work in "exactly one top-level
+`subagent` workflow call" with every child inside it. `loop-pi` overrides that line, for two reasons:
+- only a single-agent launch gets the checkpoint steer before its run deadline;
+- the harness design leaves workflows unused (`rob/agents` `research/pi-harness/plan.md`).
+
+The home's custom tool description and `AGENTS.md` both say so, and the guard blocks any root
+`subagent` launch that carries `workflowScript` or `workflowScriptPath` (`rob/agents` HRN-0112).
+Launch each lane as its own `{agent, task}` call. A root that still reads the two instructions as
+conflicting treats this appendix and the home instruction as the operator's authorisation, and
+dispatches. It does not park the run.
 
 ### Waits
 
