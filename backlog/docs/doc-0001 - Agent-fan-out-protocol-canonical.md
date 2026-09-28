@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-28 10:52'
+updated_date: '2026-09-28 11:09'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `d827f78`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `7a86b79`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -3165,23 +3165,26 @@ A refusal parks the run with the preflight output; the root does not work around
 
 ### Guard fences
 
+The guard blocks only dangerous actions. Anything else runs, with no warning, including commands
+it cannot fully parse, `python -c`, `node -e` and `perl -e`.
+
 Blocked for every role:
 - background launches (`&`, `nohup`, `disown`, `setsid`);
-- force and destructive pushes (`--force`, `+ref`, `--mirror`, `--delete`, `:ref`);
+- force and destructive pushes (`--force`, `--force-with-lease`, `+ref`, `--mirror`, `--delete`,
+  `:ref`);
 - `git add -A` and `git commit -a`;
 - the shared Backlog and staging guards Codex and Claude Code run.
 
-Heredocs are parsed. A heredoc into `cat`, `tee` or another writer is data; into a shell it is
-checked line by line as a script; into an interpreter reading stdin (`python3 -`, `node -`) it
-counts as an inline interpreter. Lanes write files with a heredoc into `cat` and run scripts from
-a file, never `python -c` or `python3 - <<EOF`.
-
 Blocked for lanes in addition:
-- deploy and cluster or cloud mutations;
-- `ssh`;
 - secret-store writes;
-- `gh release create` and mutating `gh api`;
-- inline interpreters (`python -c`, `node -e`, `sh -c` with a string) and `eval`.
+- `gh release create` and mutating `gh api`.
+
+Lanes may deploy, change clusters and cloud resources, and use `ssh`.
+
+These apply inside brace groups, subshells, `$(...)`, process substitution, `bash -c`, `eval`, and
+heredocs or here-strings fed to a shell. A command the parser cannot read, and the code passed to
+an inline interpreter, get a text scan that blocks only when one of these commands literally
+appears in the text. A command assembled at runtime inside interpreter code is not caught.
 
 **A lane's push right is not enforced.** A child extension cannot learn which agent file it runs
 under, so every lane may make a plain, non-force `git push`. The `-push` agent variants record the
