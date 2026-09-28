@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-28 06:42'
+updated_date: '2026-09-28 10:52'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `ac72e66`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `d827f78`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -2979,8 +2979,21 @@ routes and models are Appendix A's; the mechanics are not.
 runs `gpt-6-sol` at `medium`. As in Appendices A and B, goals carry no root model declaration and
 no self-route check.
 
+**Models: the gpt-6 family only.** Every `loop-pi` session runs `gpt-6-sol`, `gpt-6-luna` or
+`gpt-6-astra` through codex-lb. Never `gpt-5.6-sol`, `gpt-5.6-luna`, `gpt-5.6-terra` or any other
+model, even though codex-lb lists them. The harness enforces this in the root and every child:
+- a `subagent` call carrying any model override is blocked (agent files pin the route);
+- selecting another model switches straight back;
+- a request for another model is sent under a name codex-lb rejects, so it never runs;
+- the installer refuses an agent file or root route outside the family.
+
+**Context window: 700,000 tokens** for all three, compacting above about 630,000. codex-lb's
+catalogue still advertises its 272,000 default; the backend's ceiling is 872,000.
+
 Spawn by agent name. Agent files pin model, thinking level, tools, run deadline and extensions.
-Pass no model or thinking override to them. The `subagent` tool is present from the root's first
+Pass no model, thinking or run-deadline (`timeoutMs`, `maxRuntimeMs`) override to them; the guard
+blocks model and deadline overrides. A shortened deadline leaves a lane only minutes of work after
+the checkpoint steer 10 minutes before it. The `subagent` tool is present from the root's first
 turn. Never enable a tool mid-run: codex-lb never acknowledges a request whose tool list grew
 mid-conversation, and the root stalls on retries.
 
@@ -3025,6 +3038,10 @@ Every agent starts fresh (`defaultContext: fresh`) with the target repository's 
 the home's global policy. There is no `fork_turns`. A lane needing recent orchestration context
 gets it written into its brief, which §3 prefers anyway. Do not request a forked context.
 
+A gate or mapper brief names the endpoints, query parameters and selectors it probes, verified
+against the handler or page source first. Never leave a gate to guess them: a guessed `/healthz`
+or an out-of-range `limit` costs a whole resumed run.
+
 ### Concurrency and depth
 
 `maxActiveAsyncRunsPerSession` is 19 and counts only the root's own active runs. **No tree-wide cap
@@ -3061,6 +3078,15 @@ top-level `subagent` call, a workflow included, admits at most 64 children acros
   before its run deadline** (pi-subagents `checkpointBeforeDeadlineMs`, single-agent launches
   only). Launch each lane as its own call, not as a workflow child, so it gets that steer. A lane
   that receives it writes its return then.
+- **Make the `WAITING:` deadline the earliest armed wake** (a `wake_at` timer or a `watch_start`
+  deadline). A later deadline makes the continuation extension arm a second timer that fires
+  stale.
+- **Keep full timer and watcher IDs in the §2 state record.** Compaction can drop them from
+  context. `wake_cancel` also accepts a unique prefix of at least 8 characters, and when nothing
+  matches it lists the armed timers. Cancelling a timer also drops its wake if it already fired
+  and is waiting for delivery.
+- **Pushes that arrive during a busy turn are delivered together** when the turn ends, and start
+  one turn between them.
 - **Clock-gated steps** are real wakes on pi. Arm `wake_at` for the gate time, end the turn with
   `WAITING:`, and take the step on the wake. The owner-deadline and working-day parking rules of
   Appendix A still apply.
@@ -3123,9 +3149,12 @@ requires a clean checkout.
 ### Target-repository preflight
 
 pi-subagents children load a target repository's `.pi/` settings, system prompt and extensions
-regardless of project trust, and repository agent files outrank the home's. Before the first spawn
-the root runs `loop-pi-preflight <repo>`. The root inherits `PI_CODING_AGENT_DIR` from `loop-pi`;
-an operator running it by hand sets `PI_CODING_AGENT_DIR=~/.loop-pi-personal`. The preflight:
+regardless of project trust, and repository agent files outrank the home's. `loop-pi` started
+inside a git repository preflights that repository and refuses to start if it fails (exit 78);
+`loop-pi --plain` starts an ordinary session with no run setup. Before spawning into any other
+repository the root runs `loop-pi-preflight <repo>` itself; it inherits `PI_CODING_AGENT_DIR` from
+`loop-pi`, and an operator running it by hand sets `PI_CODING_AGENT_DIR=~/.loop-pi-personal`.
+The preflight:
 - refuses a repository that carries `.pi/` settings, system, extension or agent files, or
   `.agents/*.md` agent definitions;
 - requires `.pi/` to be gitignored;
@@ -3142,6 +3171,11 @@ Blocked for every role:
 - `git add -A` and `git commit -a`;
 - the shared Backlog and staging guards Codex and Claude Code run.
 
+Heredocs are parsed. A heredoc into `cat`, `tee` or another writer is data; into a shell it is
+checked line by line as a script; into an interpreter reading stdin (`python3 -`, `node -`) it
+counts as an inline interpreter. Lanes write files with a heredoc into `cat` and run scripts from
+a file, never `python -c` or `python3 - <<EOF`.
+
 Blocked for lanes in addition:
 - deploy and cluster or cloud mutations;
 - `ssh`;
@@ -3155,9 +3189,16 @@ grant; they do not gate it.
 
 The root is not fenced on landing pushes. These fences catch plainly typed mistakes only. At
 closeout the root compares remote refs, tags and releases before and after the run and lists every
-change no grant covers under `## Blocked` in the report. The operator takes the before-snapshot
-with `loop-pi-audit snapshot --out <file> <repo>...` before launch; the root takes the after-snapshot
-the same way and runs `loop-pi-audit compare <before> <after> [--grants <file>]`.
+change no grant covers under `## Blocked` in the report. Every loop start gets its own run
+directory, so concurrent loops never share a snapshot:
+- `loop-pi` creates `~/.loop-pi-personal/runs/<UTC time>-<repo>-<random>/`, takes the
+  before-snapshot there with `loop-pi-audit begin`, and exports `LOOP_PI_RUN_DIR` and
+  `LOOP_PI_REPO` to the root. It refuses to start if any remote, tag list or release list cannot
+  be read, because the closeout comparison would then fail.
+- Before its first change in another repository, the root runs `loop-pi-audit add <repo>`.
+- At closeout the root runs `loop-pi-audit closeout [--grants <file>]`. It snapshots every
+  repository in the run again to `audit-after.json` and compares. Grants are keyed by the
+  repository's absolute path as `begin` or `add` recorded it.
 - `compare` exits non-zero on any ungranted change, any non-fast-forward move (granted or not), and
   any remote it could not read on either side. A non-zero result is never reported as clean.
 - `compare` does not attribute changes to lanes. The root attributes each change from lane returns
