@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-27 17:51'
+updated_date: '2026-09-28 06:42'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `91b9b6e`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `ac72e66`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -2944,11 +2944,12 @@ same DESIGN+INTEGRATION-versus-EXECUTION question §1 already asks about the roo
 
 ## Appendix C - pi profile (provisional)
 
-**Provisional.** This profile describes the `loop-pi` harness planned under `rob/agents` HRN-0106
-(`research/pi-harness/plan.md`). It becomes complete after the first live loop is evaluated.
-Until then:
+**Provisional.** This profile describes the `loop-pi` harness built under `rob/agents` HRN-0107
+(plan: HRN-0106, `research/pi-harness/plan.md`). The build proved the routes, spawning, waits by
+push, the guard and transcript sync on live models and a scripted provider. It becomes complete
+after the first live loop is evaluated. Until then:
 - a goal uses it only when the operator names `loop-pi` as the harness;
-- every "measured" line below is owed, not established.
+- a line marked **measurement owed** is not established.
 
 Where this appendix is silent, the body applies unchanged.
 
@@ -2968,6 +2969,9 @@ routes and models are Appendix A's; the mechanics are not.
 4. **The guard is an honest-mistake fence.** It is not a security boundary, and it has no parity
    with Codex's sandbox or Claude Code's auto-mode classifier. A closeout audit reports remote
    changes that no lane grant covers.
+5. **Every model call goes through codex-lb's OpenAI-compatible `/v1` endpoint** with codex-lb's own
+   API key, through pi's `openai` provider. pi's `openai-codex` provider cannot be used: it requires
+   a ChatGPT token, which codex-lb does not accept.
 
 ### Root and worker routes
 
@@ -2976,7 +2980,9 @@ runs `gpt-6-sol` at `medium`. As in Appendices A and B, goals carry no root mode
 no self-route check.
 
 Spawn by agent name. Agent files pin model, thinking level, tools, run deadline and extensions.
-Pass no model or thinking override to them.
+Pass no model or thinking override to them. The `subagent` tool is present from the root's first
+turn. Never enable a tool mid-run: codex-lb never acknowledges a request whose tool list grew
+mid-conversation, and the root stalls on retries.
 
 | Role | Agent | Model / thinking | Run deadline | Delegates |
 |---|---|---|---|---|
@@ -3006,8 +3012,10 @@ agent that is missing is a harness fault: report it and park the lane. Never sub
 agent.
 
 **Route evidence.** Record both, per child and phase:
-- the requested route, from the child session's model and thinking-level entries;
-- the provider route, from codex-lb's request log.
+- the requested route, from the child session's `model_change` and `thinking_level_change`
+  entries (`<root session dir>/<run id>/run-0/session.jsonl`);
+- the provider route, from codex-lb's `request_logs` (`model`, `reasoning_effort`,
+  `useragent_group = 'pi'`).
 
 The two are separate evidence classes, as in Appendix A.
 
@@ -3027,6 +3035,10 @@ against that reserve.
 `maxSubagentDepth` is 2. Lanes default to `Delegation: forbidden`; only a Sol agent can be granted
 delegation.
 
+Every root spawn is async (`forceTopLevelAsync`); the root cannot run a foreground child. One
+top-level `subagent` call, a workflow included, admits at most 64 children across its whole tree
+(pi-subagents' `maxSubagentSpawnsPerRun` default). The session has no cumulative cap.
+
 ### Waits
 
 - **With lanes in flight,** the root processes every return already in context, updates the state
@@ -3043,6 +3055,12 @@ delegation.
   pushed completions.
 - **Lanes wait on their own CI with `watch_process`** (`deadline_s` up to 3600), re-invoked on
   expiry. A lane never ends its turn to wait: its final message is its return.
+- **`watch_start` has no deadline ceiling.** The root sets one no later than the wait it stands
+  for.
+- **A lane launched as its own async `subagent` call is steered to checkpoint and stop 10 minutes
+  before its run deadline** (pi-subagents `checkpointBeforeDeadlineMs`, single-agent launches
+  only). Launch each lane as its own call, not as a workflow child, so it gets that steer. A lane
+  that receives it writes its return then.
 - **Clock-gated steps** are real wakes on pi. Arm `wake_at` for the gate time, end the turn with
   `WAITING:`, and take the step on the wake. The owner-deadline and working-day parking rules of
   Appendix A still apply.
@@ -3057,10 +3075,34 @@ record for their harnesses.
 
 ### Turn endings and the continuation backstop
 
-Put Appendix B's `TURN ENDINGS` block in every `loop-pi` goal unchanged. The continuation
-extension is the backstop:
+Put this block in the run contract of every `loop-pi` goal. It replaces Appendix B's block,
+whose wait and stop wording names Claude Code tools:
+
+```text
+## TURN ENDINGS: a message with no tool call stops the run
+
+A message with no tool call ends your turn. Four endings stop a run while work is still owed; do
+not use any of them:
+1. A summary of what was done that announces the next step without taking it.
+2. An offer to carry on unless the operator would prefer otherwise.
+3. A list of decisions when, by your own account, none of them blocks the remaining work.
+4. Deciding this is a good place to report because the turn was long or a milestone is done.
+Status notes and recommendations are welcome: put them in the same message as your next tool call
+and continue with whatever does not depend on an answer. End a turn only when the run-end report is
+written and pinged, when paused, or when a lane, a `watch_start` watcher or a `wake_at` timer will
+wake this session. When waiting, make the last line
+`WAITING: <what> until <YYYY-MM-DDTHH:MM[:SS]Z>` with a future deadline; arm `wake_at` for it
+first. When paused (§1), make it `PAUSED: <reason>`. Never poll `subagent` status between wakes.
+Launch each lane as its own `subagent` call. Give any `bash` call that can run past 15 minutes a
+`timeout`, or run it under `watch_start`: the watchdog reads a longer silent turn as stalled.
+This does not override confirmation for risky or destructive actions.
+```
+
+The continuation extension is the backstop:
 - It arms on the same launch message as the Claude plugin's Stop hook.
-- It releases on a counting report, a current `PAUSED:`, or a `WAITING:` backed by a timer.
+- It releases on a counting report, a current `PAUSED:`, or a `WAITING:` backed by a timer. A
+  `WAITING:` whose deadline has already passed counts as unmarked and is re-prompted; restate a
+  future deadline.
 - Otherwise it re-prompts, at most three times per chain; a pushed turn resets the count. The
   fourth stop is allowed, and an incident is written for the watchdog.
 - It never overrides an operator interrupt.
@@ -3082,7 +3124,8 @@ requires a clean checkout.
 
 pi-subagents children load a target repository's `.pi/` settings, system prompt and extensions
 regardless of project trust, and repository agent files outrank the home's. Before the first spawn
-the root runs `loop-pi-preflight <repo>`, which:
+the root runs `loop-pi-preflight <repo>`. The root inherits `PI_CODING_AGENT_DIR` from `loop-pi`;
+an operator running it by hand sets `PI_CODING_AGENT_DIR=~/.loop-pi-personal`. The preflight:
 - refuses a repository that carries `.pi/` settings, system, extension or agent files, or
   `.agents/*.md` agent definitions;
 - requires `.pi/` to be gitignored;
@@ -3104,19 +3147,33 @@ Blocked for lanes in addition:
 - `ssh`;
 - secret-store writes;
 - `gh release create` and mutating `gh api`;
-- inline interpreters (`python -c`, `node -e`, `sh -c` with a string) and `eval`;
-- `git push` in non-push agents.
+- inline interpreters (`python -c`, `node -e`, `sh -c` with a string) and `eval`.
+
+**A lane's push right is not enforced.** A child extension cannot learn which agent file it runs
+under, so every lane may make a plain, non-force `git push`. The `-push` agent variants record the
+grant; they do not gate it.
 
 The root is not fenced on landing pushes. These fences catch plainly typed mistakes only. At
-closeout the root compares remote refs, tags and releases before and after the run, attributes each
-change to a lane, and lists every change no grant covers under `## Blocked` in the report.
+closeout the root compares remote refs, tags and releases before and after the run and lists every
+change no grant covers under `## Blocked` in the report. The operator takes the before-snapshot
+with `loop-pi-audit snapshot --out <file> <repo>...` before launch; the root takes the after-snapshot
+the same way and runs `loop-pi-audit compare <before> <after> [--grants <file>]`.
+- `compare` exits non-zero on any ungranted change, any non-fast-forward move (granted or not), and
+  any remote it could not read on either side. A non-zero result is never reported as clean.
+- `compare` does not attribute changes to lanes. The root attributes each change from lane returns
+  and commits.
+
+If the guard cannot register itself for children, the root's `subagent` calls are blocked for the
+rest of the session. Treat that as a harness fault: park the run.
 
 ### Closeout sweep
 
 Before the report, the root:
 1. stops remaining async runs through `subagent`;
-2. stops `watch_start` watchers and cancels timers;
+2. stops `watch_start` watchers (`watch_stop`) and cancels timers (`wake_cancel`);
 3. runs the remote-change audit.
+
+The operator's `/loop-closeout` command stops every watcher and cancels every timer in one step.
 
 The report lists all of these. Nothing started by the run outlives it.
 
@@ -3130,15 +3187,20 @@ The report lists all of these. Nothing started by the run outlives it.
 - **Skills:** pi loads `SKILL.md` directories natively when a goal lists them. None ship by
   default.
 - **Retries:** the home retries provider failures for about an hour. A stalled stream becomes a
-  retried error after the idle timeout.
+  retried error after the 120-second idle timeout. The longest silent stream gap measured was
+  10.2 s (Sol/high) and 9.4 s (Luna/max, in a 333-second answer). codex-lb fails a request whose
+  upstream does not acknowledge it after about 120 seconds (`upstream_request_timeout`), and that
+  failure is retried too.
+- **No intercom.** pi-subagents' intercom bridge is off; a child reaches the root only through its
+  return.
 - **Known provider risk:** pi issue #4945 (openai-codex connection reliability) was open when this
-  appendix was written.
+  appendix was written. The `loop-pi` route does not use that provider.
 
 ### Structural differences a goal author must not miss
 
 1. There is no wait tool, and a `WAITING:` line without a timer is re-prompted.
-2. Delegation and push rights live in the agent file, not the brief. Choose the `-push` variant
-   when a lane may push.
+2. Delegation rights live in the agent file, not the brief. Push rights are recorded by choosing
+   the `-push` variant but are not enforced; the closeout audit is the check.
 3. Every child dies at its `timeoutMs`. Size the lane or split it; never rely on a lane outliving
    its deadline.
 4. There is no tree-wide concurrency cap.
@@ -3146,3 +3208,4 @@ The report lists all of these. Nothing started by the run outlives it.
 6. The target repository is preflighted, and a repository with its own pi configuration is refused.
 7. The guard is a fence against mistakes; the closeout audit, not the guard, is the evidence that
    no ungranted remote change happened.
+8. Every root spawn is async, and the `subagent` tool must be present from the first turn.
