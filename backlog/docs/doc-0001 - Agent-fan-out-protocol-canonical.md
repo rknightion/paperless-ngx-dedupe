@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-28 14:48'
+updated_date: '2026-09-29 06:37'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `d2059d9`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `3beb9e6`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -2948,7 +2948,8 @@ same DESIGN+INTEGRATION-versus-EXECUTION question §1 already asks about the roo
 (plan: HRN-0106, `research/pi-harness/plan.md`). The build proved the routes, spawning, waits by
 push, the guard and transcript sync on live models and a scripted provider. It becomes complete
 after the first live loop is evaluated. Until then:
-- a goal uses it only when the operator names `loop-pi` as the harness;
+- a goal uses it only when the operator names `loop-pi` (Personal) or `loop-pi-work` (Work) as the
+  harness;
 - a line marked **measurement owed** is not established.
 
 Where this appendix is silent, the body applies unchanged.
@@ -2976,7 +2977,9 @@ routes and models are Appendix A's; the mechanics are not.
 ### Root and worker routes
 
 **Operator reference, not generated launch content:** Rob starts the root with `loop-pi`, which
-runs `gpt-6-sol` at `medium`. As in Appendices A and B, goals carry no root model declaration and
+runs `gpt-6-sol` at `medium`. `loop-pi-work` is the same harness in the Work context: home
+`~/.loop-pi-work`, its own codex-lb key, transcripts in `pi-work`. Everything else in this appendix
+applies to both; `~/.loop-pi-<context>` below means the launcher's own home. As in Appendices A and B, goals carry no root model declaration and
 no self-route check.
 
 **Models: the gpt-6 family only.** Every `loop-pi` session runs `gpt-6-sol`, `gpt-6-luna` or
@@ -3166,7 +3169,7 @@ regardless of project trust, and repository agent files outrank the home's. `loo
 inside a git repository preflights that repository and refuses to start if it fails (exit 78);
 `loop-pi --plain` starts an ordinary session with no run setup. Before spawning into any other
 repository the root runs `loop-pi-preflight <repo>` itself; it inherits `PI_CODING_AGENT_DIR` from
-`loop-pi`, and an operator running it by hand sets `PI_CODING_AGENT_DIR=~/.loop-pi-personal`.
+`loop-pi`, and an operator running it by hand sets `PI_CODING_AGENT_DIR=~/.loop-pi-<context>`.
 The preflight:
 - refuses a repository that carries `.pi/` settings, system, extension or agent files, or
   `.agents/*.md` agent definitions;
@@ -3207,7 +3210,7 @@ The root is not fenced on landing pushes. These fences catch plainly typed mista
 closeout the root compares remote refs, tags and releases before and after the run and lists every
 change no grant covers under `## Blocked` in the report. Every loop start gets its own run
 directory, so concurrent loops never share a snapshot:
-- `loop-pi` creates `~/.loop-pi-personal/runs/<UTC time>-<repo>-<random>/`, takes the
+- `loop-pi` creates `~/.loop-pi-<context>/runs/<UTC time>-<repo>-<random>/`, takes the
   before-snapshot there with `loop-pi-audit begin`, and exports `LOOP_PI_RUN_DIR` and
   `LOOP_PI_REPO` to the root. It refuses to start if any remote, tag list or release list cannot
   be read, because the closeout comparison would then fail.
