@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-29 06:37'
+updated_date: '2026-09-29 11:33'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `3beb9e6`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `e0b4a80`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1247,7 +1247,8 @@ irreversible. One wrong constraint should cost one lane, not the run.
 
 ## 7. Testing and evidence
 
-- Name where test-first is required and where validation replaces a test.
+- Name the real surface each lane must exercise, where test-first is required (bug fixes by default),
+  where validation replaces a test, and the repository's slow tier.
 - Each lane runs its required gate and CodeRabbit review and waits on its own CI. One named owner
   runs any composed gate no lane candidate covers.
 - The root never polls a gate, CI run or review. It collects lanes through the agent wait and hands
@@ -1365,9 +1366,24 @@ review; the root dispatches REVIEW and SECURITY lanes and collects them through 
 
 Testing has a job rather than a quota:
 
-- Prefer a failing test first for bug fixes and for logic with real branching or contract risk.
+- For a change with runtime behaviour, prove it locally where it is used and name what was exercised
+  in the lane return. Never deploy, apply, SSH or call a live tenant to prove a change unless the lane
+  brief authorises that step. Where no cheap harness exists, return what went unverified as an open
+  item rather than building one unasked.
+- Prefer a failing reproduction first for bug fixes. Add unit or property tests only for branching
+  logic with real contract risk; otherwise a few integration tests with real collaborators, mocking
+  only at the process edge. Derive expectations from the requirement, not the implementation.
+- Before adding a test, name the bug it would catch; if you cannot, do not add it. Extend an existing
+  test before adding a sibling.
 - Validate rather than invent tests for documentation, declarative configuration, mechanical wiring
   and dependency metadata when a parser, linter, render or dry run is the better proof.
+- Never weaken, delete, skip or special-case a test, fixture or baseline to reach green. A lane
+  changes a test only when intended behaviour changed and names it in the return; an unclear conflict
+  parks that piece with the question.
+- A slow suite is the repository's named slow tier, else anything over about ten minutes. Never run
+  one in a lane's inner loop. Run it once on the final candidate with a stated reason, or leave it to
+  CI where CI runs it; after a fix, rerun the failing part, then the suite once. A repository-required
+  gate still runs once on the final candidate: this rule sets how often, not whether.
 - Each implementation lane runs its required gate on its own candidate and owns its CI and
   CodeRabbit review through to green. One owner runs a proportionate composed gate only where no lane candidate covers
   the integrated state. Do not make all children repeat an expensive gate against a changing tree.
