@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-29 11:33'
+updated_date: '2026-09-29 14:10'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `e0b4a80`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `2b2bffa`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -61,9 +61,10 @@ how much context a spawn inherits, how many lanes may run at once, how deep dele
 - **Appendix B - Claude Code profile.** Complete: routes through pinned `agent-workflows` plugin
   agents, effort, spawn limits, turn-ending control and the ways Claude Code's dispatch surface
   differs *structurally* from Codex's.
-- **Appendix C - pi profile (provisional).** OpenAI-model loops on the pi coding agent through the
-  dedicated `loop-pi` home: pinned agent files, waiting by push, process waits without model turns
-  and an honest-mistake guard. Provisional until its first live loop is evaluated.
+- **Appendix C - pi profile (provisional).** The default for OpenAI-model loops: the pi coding agent
+  through the dedicated `loop-pi` home, with pinned agent files, waiting by push, process waits without
+  model turns and an honest-mistake guard. Provisional until its first live loop is evaluated.
+  Appendix A applies only when the operator names Codex as the harness.
 
 The run contract names the harness once. Every lane then states its role **and the route the profile
 resolves it to** - a lane brief carrying only a role name leaves the choice to whoever reads it next.
@@ -2963,10 +2964,10 @@ same DESIGN+INTEGRATION-versus-EXECUTION question §1 already asks about the roo
 **Provisional.** This profile describes the `loop-pi` harness built under `rob/agents` HRN-0107
 (plan: HRN-0106, `research/pi-harness/plan.md`). The build proved the routes, spawning, waits by
 push, the guard and transcript sync on live models and a scripted provider. It becomes complete
-after the first live loop is evaluated. Until then:
-- a goal uses it only when the operator names `loop-pi` (Personal) or `loop-pi-work` (Work) as the
-  harness;
-- a line marked **measurement owed** is not established.
+after the first live loop is evaluated. It is already the default harness for OpenAI-model loops:
+a goal uses `loop-pi` (Personal) or `loop-pi-work` (Work) unless the operator names Codex (Appendix A)
+or Claude Code (Appendix B). Until the evaluation, a line marked **measurement owed** is not
+established.
 
 Where this appendix is silent, the body applies unchanged.
 
