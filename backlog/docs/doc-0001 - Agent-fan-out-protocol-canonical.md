@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-29 14:10'
+updated_date: '2026-09-29 19:45'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `2b2bffa`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `296cfdf`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1410,7 +1410,7 @@ by habit. No repair may weaken the required outcome or its evidence to manufactu
 
 **Frame review briefs as correctness, ownership and concurrency reviews**, naming the boundary and the
 candidate. A reviewer that refuses (for example a security-policy refusal) is an availability failure,
-not an attempt: retry once on Codex `gpt-6-sol` high (or the Claude equivalent route in Appendix B), and
+not an attempt: retry once on Codex `gpt-6.1-sol` high (or the Claude equivalent route in Appendix B), and
 if that refuses too, park the review and report it.
 
 A reviewer reports findings and never implements its own corrections. **Any implementation change
@@ -2259,7 +2259,7 @@ split §3 forbids, and every sub-packet keeps the parent's attempt lineage (§9)
 
 **Asking to raise a ceiling again.** When a lane exhausted its attempt ceiling in the previous loop and
 preparation would ask the owner to raise it again on the same packet shape and route, the owner
-question leads with the alternatives: a re-scope with a new acceptance check, or a Sol/high
+question leads with the alternatives: a re-scope with a new acceptance check, or a 6.1 Sol/high
 DESIGN+INTEGRATION pass on the unresolved decision followed by a frozen packet. Re-scoping never
 resets a counter (§9), and only the owner raises a ceiling.
 
@@ -2294,7 +2294,7 @@ Nonstandard worker routes require explicit operator approval and a recorded boun
 evaluation; a goal author cannot invent an automatic fallback. Never edit runtime configuration,
 launchers, authentication or personal model defaults to make a campaign match a goal.
 
-**Operator reference, not generated launch content:** Rob selects `gpt-6-sol`, `medium` for the
+**Operator reference, not generated launch content:** Rob selects `gpt-6.1-sol`, `medium` for the
 campaign root outside the prompt. Goal preparation may run on another model. Do not copy either
 root or author model identity into generated goals or launch messages, test the root's self-reported
 route, or start a new root to satisfy this table. The receiving session stays root (§1).
@@ -2304,24 +2304,27 @@ and cannot adopt the entire goal or replace the root.
 
 | Role or workload | Model | Effort and boundary |
 |---|---|---|
-| Campaign root and nested orchestration coordinators | `gpt-6-sol` | `medium` only; integration and suitable bounded repair stay here; delegate deeper decisions |
+| Campaign root and nested orchestration coordinators | `gpt-6.1-sol` | `medium` only; integration and suitable bounded repair stay here; delegate deeper decisions |
 | RETRIEVAL | `gpt-6-luna` | `medium`; deterministic lookup, inventory and extraction |
 | MAPPING, straightforward code maps and structured summaries | `gpt-6-luna` | `medium` |
 | MAPPING, substantial synthesis across sources | `gpt-6-luna` | `max`; return unresolved consequential interpretations to the root |
-| GATE (trial) | `gpt-6-luna` | `high`; `max` where a wrong classification is consequential. Execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to Sol/medium (below) |
+| GATE (trial) | `gpt-6-luna` | `high`; `max` where a wrong classification is consequential. Execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to 6.1 Sol/medium (below) |
 | Poller (§3): custom agents `poller` and `poller-high` | `gpt-6-luna` | `medium` (`poller`); `high` (`poller-high`) where classifying the terminal failure needs judgement |
-| EXECUTION, fully specified implementation | `gpt-6-luna` | `max`; leaf worker with directly checkable acceptance |
-| JUDGMENT+EXECUTION, bounded implementation needing local judgement | `gpt-6-sol` | `medium`; established architecture, with local choices coupled to coding |
-| REVIEW, ordinary independent correctness and regression | `gpt-6-sol` | `medium`; reviewer does not implement its own corrections |
-| DESIGN+INTEGRATION, nontrivial integration within settled contracts | `gpt-6-sol` | `medium`; root or one bounded integration worker, not both repeating the work |
-| DESIGN+INTEGRATION or REVIEW, unresolved complex technical decisions and debugging | `gpt-6-sol` | `high`; bounded question or review, then hand off frozen implementation |
+| EXECUTION, fully specified implementation | `gpt-6-luna` | `high`; custom agent `lane-worker`; leaf worker with directly checkable acceptance (attempt 1) |
+| EXECUTION retry or fixer (attempt 2) | `gpt-6.1-sol` | `medium`; custom agent `lane-worker-retry`; a fresh retry of the packet, or a fixer given the prior candidate, the failure evidence and the accepted correction |
+| JUDGMENT+EXECUTION, bounded implementation needing local judgement | `gpt-6.1-sol` | `medium`; established architecture, with local choices coupled to coding |
+| REVIEW, ordinary independent correctness and regression | `gpt-6.1-sol` | `medium`; reviewer does not implement its own corrections |
+| DESIGN+INTEGRATION, nontrivial integration within settled contracts | `gpt-6.1-sol` | `medium`; root or one bounded integration worker, not both repeating the work |
+| DESIGN+INTEGRATION or REVIEW, unresolved complex technical decisions and debugging | `gpt-6.1-sol` | `high`; bounded question or review, then hand off frozen implementation |
 | SECURITY, consequential architecture or difficult interacting risks | `gpt-6-astra` | `medium`; authentication, permissions, migration safety, secrets and data-loss boundaries |
-| Worktree auditor, ordinary REVIEW of ancestry, patch identity and recovery | `gpt-6-sol` | `medium`; unresolved complex interpretation uses Sol/high; consequential loss risk uses Astra/medium |
-| Specialist implementation rescue (attempt 3 onward), or implementation carrying consequential architecture or security risk from the outset | `gpt-6-sol` or `gpt-6-astra` | Sol/high only as a rescue from attempt 3 onward, never to start a lane; Astra/medium for consequential architecture or security/interacting risks; state why thinking cannot be separated from coding |
+| Worktree auditor, ordinary REVIEW of ancestry, patch identity and recovery | `gpt-6.1-sol` | `medium`; unresolved complex interpretation uses 6.1 Sol/high; consequential loss risk uses Astra/medium |
+| Specialist implementation rescue (attempt 3 onward), or implementation carrying consequential architecture or security risk from the outset | `gpt-6.1-sol` or `gpt-6-astra` | 6.1 Sol/high only as a rescue from attempt 3 onward, never to start a lane; Astra/medium for consequential architecture or security/interacting risks; state why thinking cannot be separated from coding |
 
 Every `collaboration.spawn_agent` names its route: the `agent_type` of a custom agent whose pin
 matches the table, or an explicit `model` and `reasoning_effort` from it. A spawn with neither
-inherits the root's Sol/medium and silently discards the lane's route.
+inherits the root's 6.1 Sol/medium and silently discards the lane's route.
+
+"6.1 Sol" in this protocol means `gpt-6.1-sol`. `gpt-6-sol` is not a route anywhere.
 
 Use only the model and effort pairs this table names. Never select Luna `low` or non-reasoning, and
 there is no GPT-6 Terra route. If a named route is unavailable, report it and let the root resolve an
@@ -2332,25 +2335,28 @@ lane failures. Report the failed attempts, remaining uncertainty and exact resum
 operator can decide whether to commission a separate Astra/high one-shot. Only a new explicit
 operator instruction can authorise that exception; retry extensions and goal-author discretion
 cannot. Controlled delegation uses the explicit lanes and pool rules below. Luna/max remains a
-standard route, not an exceptional-effort escalation.
+standard route only for MAPPING substantial synthesis and consequential GATE classification, not an
+exceptional-effort escalation.
 
 ### Gate classification fallback
 
 A green gate, or a red gate whose every failure is classified with evidence, returns straight to the
 root; a red result is the gate doing its job, not a lane failure. Escalate classification to
-Sol/medium only when Luna's verdict cannot be accepted as given: a failure is left unclassified, Luna
+6.1 Sol/medium only when Luna's verdict cannot be accepted as given: a failure is left unclassified, Luna
 cannot separate environment from code or flake from real failure, or its classifications contradict
 each other or the evidence. An incomplete run or wait timeout is not a trigger; recover the terminal
-result under §3's event-wait rules instead. Sol/medium classifies from the output Luna captured and
-does not rerun the gate unless the cause was environmental and has since been corrected. The root, already Sol/medium,
-classifies small output itself and dispatches one bounded Sol/medium classifier only when the output
+result under §3's event-wait rules instead. 6.1 Sol/medium classifies from the output Luna captured and
+does not rerun the gate unless the cause was environmental and has since been corrected. The root, already 6.1 Sol/medium,
+classifies small output itself and dispatches one bounded 6.1 Sol/medium classifier only when the output
 would flood its context. One fallback per gate run, no further ladder. It never repairs source and
 is not an implementation attempt under §9.
 
 The §4 narrow roles resolve through this table: Mapper uses MAPPING; Lane worker uses EXECUTION;
+the EXECUTION attempt-2 worker uses its retry row;
 Complex lane worker uses JUDGMENT+EXECUTION; Reviewer and Worktree auditor use their REVIEW entries;
 Security reviewer uses SECURITY; Gate runner uses GATE; Poller uses its own row. The custom agents
-`lane-worker` (Luna/max), `complex-worker` (Sol/medium), `reviewer` (Sol/medium),
+`lane-worker` (Luna/high), `lane-worker-retry` (6.1 Sol/medium), `complex-worker` (6.1 Sol/medium),
+`reviewer` (6.1 Sol/medium),
 `security-reviewer` (Astra/medium), `poller` and `poller-high` pin these routes and ship with the
 pollers (Process waits, below): spawn them with `agent_type` and `fork_turns="none"` and pass no model
 or effort. Any other role passes an explicit model and effort. Inspect the installed pins before
@@ -2358,40 +2364,40 @@ dispatch.
 
 ### Technical decisions and implementation
 
-Sol/high and Astra/medium specialists normally produce the accepted implementation packet in §3.
-Give an Astra specialist a shorter brief than a Luna or Sol lane: the exact question, evidence and
+6.1 Sol/high and Astra/medium specialists normally produce the accepted implementation packet in §3.
+Give an Astra specialist a shorter brief than a Luna or 6.1 Sol lane: the exact question, evidence and
 frozen constraints, with contextual pointers ("read X when changing Y") instead of blanket reading
 lists. OpenAI reports that guidance which helps Sol or Luna can overconstrain Astra, and that Astra
 asks clarifying questions more often; state that it takes the goal's default and returns an
 uncovered decision to the root rather than waiting on one.
 Start with the loop's frozen decisions and inspect only their gaps. An already complete goal goes straight to
-Luna/max; a separate design agent or specification document must earn its overhead.
+a Luna/high `lane-worker`; a separate design agent or specification document must earn its overhead.
 
 Discovering which component currently implements a behaviour is mapping, not automatically design.
-Sol/high resolves complex technical uncertainty such as contradictory evidence or an unresolved
+6.1 Sol/high resolves complex technical uncertainty such as contradictory evidence or an unresolved
 interface decision. Use Astra/medium when the question concerns consequential architecture,
 security or difficult interacting risks; ordinary local choices and integration within settled
-contracts belong to Sol/medium. Each specialist receives observations, source references,
+contracts belong to 6.1 Sol/medium. Each specialist receives observations, source references,
 competing explanations, attempted checks, frozen constraints and the exact question with a
 discriminating acceptance check.
 
 The root accepts the decision within existing authority and hands a complete packet to a fresh
-Luna/max implementation worker. If Luna exposes a missing decision, return the specific gap; the root
+Luna/high `lane-worker`. If Luna exposes a missing decision, return the specific gap; the root
 resolves it directly or requests a bounded specialist follow-up. Preserve prior decisions unless new
 contradictory evidence or an authorised amendment requires revisiting them.
 
 Deliver bounded packets. Split open-ended work into more, smaller packets, each with a directly
 checkable acceptance, rather than sizing a large one: duration estimates are unreliable and are never
-a routing input. Work that stays open-ended after splitting goes to a Sol/medium worker.
+a routing input. Work that stays open-ended after splitting goes to a 6.1 Sol/medium worker.
 
-Use a bounded Sol/medium worker when local judgement remains tightly coupled to coding. The
-Sol/medium root may directly fix suitable bounded returned issues within authority and ownership;
+Use a bounded 6.1 Sol/medium worker when local judgement remains tightly coupled to coding. The
+6.1 Sol/medium root may directly fix suitable bounded returned issues within authority and ownership;
 do not require another spawn merely because the work includes implementation. Keep independent
 parallel implementation in its assigned lanes. Use an Astra/medium specialist for the implementation
 itself from the outset only when it carries consequential architecture or security risk that cannot be
-separated from coding; explain that need in the lane. Sol/high implements only as a rescue from
+separated from coding; explain that need in the lane. 6.1 Sol/high implements only as a rescue from
 attempt 3 onward (below). An implementer is not also its independent reviewer.
-Once only frozen implementation remains, transfer it to Luna/max rather than continuing an expensive
+Once only frozen implementation remains, transfer it to a Luna/high `lane-worker` rather than continuing an expensive
 thread by inertia. Code quality, safety and verification requirements follow the work, not its price.
 
 ### Root repair and bounded rescue
@@ -2400,17 +2406,24 @@ There is no root floor (§9): any Codex root holds standing authority and record
 from its first `turn_context`. Deeper rescue work is delegated; it never raises the root's effort.
 
 The implementation ceiling is four attempts per task/criterion, including all rescues, and
-review-repair has its own ceiling of three (§9). The normal Luna implementation path is:
+review-repair has its own ceiling of three (§9). The normal EXECUTION path is:
 
-1. Luna/max implements and may make one evidenced correction: at most two implementation attempts.
-2. The root diagnoses the accumulated evidence and takes one bounded rescue attempt itself when the
-   correction is suitable for Sol/medium and authorised. Transfer ownership first. Root context must
-   supply a concrete correction; repeating the worker's failed approach is not a rescue.
-3. If the root rescue fails, dispatch one bounded Sol/high **or** Astra/medium specialist rescue,
+1. `lane-worker` on Luna/high implements: attempt 1.
+2. `lane-worker-retry` on 6.1 Sol/medium takes attempt 2: either a fresh retry of the packet, or a
+   fixer given the prior candidate, the failure evidence and the accepted correction.
+3. The root diagnoses the accumulated evidence and takes one bounded rescue attempt itself when the
+   correction is suitable for 6.1 Sol/medium and authorised. Transfer ownership first. Root context
+   must supply a concrete correction; repeating the worker's failed approach is not a rescue.
+4. If the root rescue fails, dispatch one bounded 6.1 Sol/high **or** Astra/medium specialist rescue,
    selected for the remaining difficulty and risk. It is one specialist attempt, not one at each
    effort. Supply the prior failures, current artifact, proposed correction and verification check.
-4. If specialist rescue fails, stop implementation and reassess the design, packet, environment and
-   acceptance check. Failure is not proof that the design is wrong or that another model will fix it.
+
+If specialist rescue fails, stop implementation and reassess the design, packet, environment and
+acceptance check. Failure is not proof that the design is wrong or that another model will fix it.
+
+An EXECUTION packet pre-grants `lane-worker` exactly one implementation attempt and
+`lane-worker-retry` exactly one. A worker whose own attempt ends red returns with the evidence; it
+does not repair itself into the next attempt, which belongs to the next step above.
 
 **A Luna lane past 90 minutes gets a root diagnosis, not an automatic escalation.** Read its state,
 evidence and receipts and record why it is still running. Waiting on its CI or gate within the
@@ -2422,8 +2435,9 @@ ladder with a split or corrected packet or the next route.
 This is a ceiling, not a mandatory ladder. Escalate earlier for an unsuitable worker, incomplete
 packet or unavailable prerequisite; skip the root's attempt when evidence already requires a deeper
 specialist. Do not consume attempts while prerequisites or decisions are missing. Skipped stages do
-not create extra retries, and a lane starting on Sol/medium or a specialist does not restart at Luna.
-JUDGMENT+EXECUTION has the same two-attempt worker limit; its attempts and any previous implementation
+not create extra retries, and a lane starting on 6.1 Sol/medium or a specialist does not restart at Luna.
+JUDGMENT+EXECUTION keeps its two-attempt worker limit: `complex-worker` (6.1 Sol/medium) implements
+and may make one evidenced correction. Its attempts and any previous implementation
 on that lane count toward the shared budget. Because that worker already runs on the root's route, the
 root's own rescue step applies only when root context supplies a concrete correction the worker
 lacked; otherwise go straight to the specialist rescue.
@@ -2589,7 +2603,7 @@ configuration retries for up to about an hour; a context whose route cannot carr
 recorded as unsupported, not forced. No provider-specific workaround belongs in a goal.
 
 **Review refusals.** Frame review briefs as correctness, ownership and concurrency reviews. A refusal
-retries once on `gpt-6-sol` high, then parks (§7, §9).
+retries once on `gpt-6.1-sol` high, then parks (§7, §9).
 
 OpenAI's rule against combining async tools with parallel tool calls in multi-agent mode governs
 function and custom tools that an application runs through the Responses API, not hosted built-in
@@ -2605,6 +2619,8 @@ See the [Codex changelog](https://developers.openai.com/codex/changelog/) and
 Official sources, checked 2026-09-22:
 
 - [Introducing GPT-6 Sol and Luna](https://openai.com/index/introducing-gpt-6-sol-and-luna/)
+- [Introducing GPT-6.1 Sol](https://openai.com/index/introducing-gpt-6-1-sol/)
+- [Model page: GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
 - [Latest model guidance](https://developers.openai.com/api/docs/guides/latest-model.md)
 - [Astra prompting and migration guidance](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md)
 - [Model catalog: Astra, Sol and Luna](https://developers.openai.com/api/docs/models)
@@ -2701,10 +2717,11 @@ change does not change the child routing table: resolve every child independentl
 without effort, the client may select that model's default effort; pass both for generic spawns.
 
 A follow-up continues on the thread's existing model and effort. Reclassify the remaining work before
-every follow-up. At a meaningful phase boundary, move frozen implementation to Luna/max and ordinary
-review to Sol/medium rather than keeping a Sol/high or Astra/medium thread for all subsequent work.
+every follow-up. At a meaningful phase boundary, move frozen implementation to a Luna/high
+`lane-worker` and ordinary review to 6.1 Sol/medium rather than keeping a 6.1 Sol/high or
+Astra/medium thread for all subsequent work.
 Do not create repeated handoffs for tiny finishing steps where startup and context duplication exceed
-the benefit; a bounded authorised root correction can stay on Sol/medium.
+the benefit; a bounded authorised root correction can stay on 6.1 Sol/medium.
 
 For work that still belongs to the same role, continue the existing worker when its evidence and
 decision context help. Start a new bounded lane when scope changes or irrelevant history dominates,
@@ -2994,18 +3011,18 @@ routes and models are Appendix A's; the mechanics are not.
 ### Root and worker routes
 
 **Operator reference, not generated launch content:** Rob starts the root with `loop-pi`, which
-runs `gpt-6-sol` at `medium`. `loop-pi-work` is the same harness in the Work context: home
+runs `gpt-6.1-sol` at `medium`. `loop-pi-work` is the same harness in the Work context: home
 `~/.loop-pi-work`, its own codex-lb key, transcripts in `pi-work`. Everything else in this appendix
 applies to both; `~/.loop-pi-<context>` below means the launcher's own home. As in Appendices A and B, goals carry no root model declaration and
 no self-route check.
 
-**Models: the gpt-6 family only.** Every `loop-pi` session runs `gpt-6-sol`, `gpt-6-luna` or
-`gpt-6-astra` through codex-lb. Never `gpt-5.6-sol`, `gpt-5.6-luna`, `gpt-5.6-terra` or any other
-model, even though codex-lb lists them. The harness enforces this in the root and every child:
+**Models: `gpt-6.1-sol`, `gpt-6-luna` and `gpt-6-astra` only.** Every `loop-pi` session runs one
+of them through codex-lb. Never `gpt-6-sol`, any gpt-5.x model or any other model, even though
+codex-lb lists them. The harness enforces this in the root and every child:
 - a `subagent` call carrying any model override is blocked (agent files pin the route);
 - selecting another model switches straight back;
 - a request for another model is sent under a name codex-lb rejects, so it never runs;
-- the installer refuses an agent file or root route outside the family.
+- the installer refuses an agent file or root route outside these three models.
 
 **Context window: 700,000 tokens** for all three, compacting above about 630,000. codex-lb's
 catalogue still advertises its 272,000 default; the backend's ceiling is 872,000.
@@ -3022,20 +3039,21 @@ mid-conversation, and the root stalls on retries.
 | RETRIEVAL, MAPPING | `mapper` | `gpt-6-luna` / `medium` | 1 h | no |
 | MAPPING, substantial synthesis | `mapper-deep` | `gpt-6-luna` / `max` | 2 h | no |
 | GATE | `gate-runner` | `gpt-6-luna` / `high` | 2 h | no |
-| EXECUTION | `lane-worker`, or `lane-worker-push` when the brief grants a push | `gpt-6-luna` / `max` | 4 h | no |
-| JUDGMENT+EXECUTION | `complex-worker`, or `complex-worker-push` | `gpt-6-sol` / `medium` | 4 h | only when the brief grants it |
-| REVIEW, worktree auditor, gate classification fallback | `reviewer` | `gpt-6-sol` / `medium` | 90 min | no |
-| REVIEW or DESIGN, unresolved complex decisions | `reviewer-high` | `gpt-6-sol` / `high` | 2 h | no |
+| EXECUTION (attempt 1) | `lane-worker`, or `lane-worker-push` when the brief grants a push | `gpt-6-luna` / `high` | 4 h | no |
+| EXECUTION retry or fixer (attempt 2) | `lane-worker-retry`, or `lane-worker-retry-push` when the brief grants a push | `gpt-6.1-sol` / `medium` | 4 h | no |
+| JUDGMENT+EXECUTION | `complex-worker`, or `complex-worker-push` | `gpt-6.1-sol` / `medium` | 4 h | only when the brief grants it |
+| REVIEW, worktree auditor, gate classification fallback | `reviewer` | `gpt-6.1-sol` / `medium` | 90 min | no |
+| REVIEW or DESIGN, unresolved complex decisions | `reviewer-high` | `gpt-6.1-sol` / `high` | 2 h | no |
 | SECURITY | `security-reviewer` | `gpt-6-astra` / `medium` | 2 h | no |
-| Specialist rescue (attempt 3 onward) | `rescue-sol` or `rescue-astra` | `gpt-6-sol` / `high` or `gpt-6-astra` / `medium` | 4 h | no |
-| DESIGN+INTEGRATION | root | `gpt-6-sol` / `medium` | none | n/a |
+| Specialist rescue (attempt 3 onward) | `rescue-sol` or `rescue-astra` | `gpt-6.1-sol` / `high` or `gpt-6-astra` / `medium` | 4 h | no |
+| DESIGN+INTEGRATION | root | `gpt-6.1-sol` / `medium` | none | n/a |
 
 Appendix A's rules otherwise apply unchanged:
 - the attempt ladder;
-- the 90-minute Luna diagnosis;
+- the 90-minute Luna diagnosis, for Luna lanes and for burn-mode `lane-worker` and `mapper-deep` lanes;
 - gate classification fallback;
 - no automatic Astra/high or higher;
-- frozen implementation moves to Luna/max.
+- frozen implementation moves to a Luna/high `lane-worker` (6.1 Sol/medium in burn mode, below).
 
 There is no poller role.
 
@@ -3051,6 +3069,45 @@ agent.
   `useragent_group = 'pi'`).
 
 The two are separate evidence classes, as in Appendix A.
+
+pi has no per-agent service tier. The tier is set per model per home (`samplingParams` in
+`models.json`), so every agent in a home that runs a given model gets the same tier. That is why
+`burn-fast` below is a separate home.
+
+### Burn mode (temporary, expires 2026-10-13)
+
+Burn mode is an operator-chosen, per-goal mode for Personal `loop-pi` loops only. It does not exist
+for `loop-pi-work`, Codex (Appendix A) or Claude Code (Appendix B). Each variant is its own pi home
+and launcher with the same agent names as the standard home, so lane briefs stay portable:
+
+| Mode | Home | Launcher |
+|---|---|---|
+| `burn` | `~/.loop-pi-personal-burn` | `loop-pi-burn` |
+| `burn-fast` | `~/.loop-pi-personal-burn-fast` | `loop-pi-burn-fast` |
+
+Both variants use the standard route table above except for these rows:
+
+| Role | Agent | Model / thinking | Run deadline | Delegates |
+|---|---|---|---|---|
+| MAPPING, substantial synthesis | `mapper-deep` | `gpt-6.1-sol` / `medium` | 2 h | no |
+| EXECUTION (attempt 1) | `lane-worker`, or `lane-worker-push` when the brief grants a push | `gpt-6.1-sol` / `medium` | 4 h | no |
+
+In burn mode `lane-worker-retry` runs the same route as attempt 1. Attempt 2 is still a separate
+attempt and counts toward the ladder as usual.
+
+`burn-fast` also sends every `gpt-6.1-sol` request, root and lanes, at `service_tier: "priority"`
+(OpenAI Fast mode: up to about 2.5x generation speed, consuming subscription limits at 2.5x). Luna
+and Astra requests stay on the Standard tier. Ultrafast is not offered: no codex-lb account is
+entitled to it, and 6.1 Sol Ultrafast is not released.
+
+- The goal records the mode as a frozen decision: `Burn mode: off | burn | burn-fast`. The launch
+  file names the matching launcher. A root never switches mode or harness itself.
+- **Route evidence:** codex-lb `request_logs.requested_service_tier = 'priority'` proves a fast
+  request. `actual_service_tier` reads `default` even when fast was served; never use it as
+  evidence.
+- After 2026-10-13 a goal must not select burn mode. An active goal keeps its commissioned mode
+  until closeout.
+- Transcripts from both burn homes land in the `pi-personal` namespace.
 
 ### Context scope
 
@@ -3069,8 +3126,8 @@ exists.** In a nested campaign the root therefore starts at most **twelve** dire
 keeps **seven** in reserve, as in Appendix A. A granted `complex-worker` counts its own children
 against that reserve.
 
-`maxSubagentDepth` is 2. Lanes default to `Delegation: forbidden`; only a Sol agent can be granted
-delegation.
+`maxSubagentDepth` is 2. Lanes default to `Delegation: forbidden`; only `complex-worker` or
+`complex-worker-push` can be granted delegation.
 
 Every root spawn is async (`forceTopLevelAsync`); the root cannot run a foreground child. One
 top-level `subagent` call, a workflow included, admits at most 64 children across its whole tree
@@ -3265,7 +3322,7 @@ The report lists all of these. Nothing started by the run outlives it.
   default.
 - **Retries:** the home retries provider failures for about an hour. A stalled stream becomes a
   retried error after the 120-second idle timeout. The longest silent stream gap measured was
-  10.2 s (Sol/high) and 9.4 s (Luna/max, in a 333-second answer). codex-lb fails a request whose
+  10.2 s (`gpt-6-sol` high) and 9.4 s (Luna/max, in a 333-second answer). codex-lb fails a request whose
   upstream does not acknowledge it after about 120 seconds (`upstream_request_timeout`), and that
   failure is retried too.
 - **No intercom.** pi-subagents' intercom bridge is off; a child reaches the root only through its
