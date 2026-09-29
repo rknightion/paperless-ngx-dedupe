@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-29 19:45'
+updated_date: '2026-09-29 20:00'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `296cfdf`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `ec63a96`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -2307,7 +2307,7 @@ and cannot adopt the entire goal or replace the root.
 | Campaign root and nested orchestration coordinators | `gpt-6.1-sol` | `medium` only; integration and suitable bounded repair stay here; delegate deeper decisions |
 | RETRIEVAL | `gpt-6-luna` | `medium`; deterministic lookup, inventory and extraction |
 | MAPPING, straightforward code maps and structured summaries | `gpt-6-luna` | `medium` |
-| MAPPING, substantial synthesis across sources | `gpt-6-luna` | `max`; return unresolved consequential interpretations to the root |
+| MAPPING, substantial synthesis across sources | `gpt-6-luna` | `high`; return unresolved consequential interpretations to the root |
 | GATE (trial) | `gpt-6-luna` | `high`; `max` where a wrong classification is consequential. Execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to 6.1 Sol/medium (below) |
 | Poller (§3): custom agents `poller` and `poller-high` | `gpt-6-luna` | `medium` (`poller`); `high` (`poller-high`) where classifying the terminal failure needs judgement |
 | EXECUTION, fully specified implementation | `gpt-6-luna` | `high`; custom agent `lane-worker`; leaf worker with directly checkable acceptance (attempt 1) |
@@ -2335,8 +2335,7 @@ lane failures. Report the failed attempts, remaining uncertainty and exact resum
 operator can decide whether to commission a separate Astra/high one-shot. Only a new explicit
 operator instruction can authorise that exception; retry extensions and goal-author discretion
 cannot. Controlled delegation uses the explicit lanes and pool rules below. Luna/max remains a
-standard route only for MAPPING substantial synthesis and consequential GATE classification, not an
-exceptional-effort escalation.
+standard route only for consequential GATE classification, not an exceptional-effort escalation.
 
 ### Gate classification fallback
 
@@ -3037,7 +3036,7 @@ mid-conversation, and the root stalls on retries.
 | Role | Agent | Model / thinking | Run deadline | Delegates |
 |---|---|---|---|---|
 | RETRIEVAL, MAPPING | `mapper` | `gpt-6-luna` / `medium` | 1 h | no |
-| MAPPING, substantial synthesis | `mapper-deep` | `gpt-6-luna` / `max` | 2 h | no |
+| MAPPING, substantial synthesis | `mapper-deep` | `gpt-6-luna` / `high` | 2 h | no |
 | GATE | `gate-runner` | `gpt-6-luna` / `high` | 2 h | no |
 | EXECUTION (attempt 1) | `lane-worker`, or `lane-worker-push` when the brief grants a push | `gpt-6-luna` / `high` | 4 h | no |
 | EXECUTION retry or fixer (attempt 2) | `lane-worker-retry`, or `lane-worker-retry-push` when the brief grants a push | `gpt-6.1-sol` / `medium` | 4 h | no |
