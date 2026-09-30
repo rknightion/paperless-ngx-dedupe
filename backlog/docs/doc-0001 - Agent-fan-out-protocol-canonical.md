@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-29 20:00'
+updated_date: '2026-09-30 18:52'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `ec63a96`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `18059ca`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1865,7 +1865,7 @@ the redaction, parks, and the owner pushes it.
 4. Rewrite from the pinned SHA on a local branch, and verify that the leaked data is absent from every
    rewritten object while every other change is preserved.
 5. Park the redaction as the report's **first** item: the repository, refs, pinned SHAs, replacement SHAs,
-   the recovery material paths and the exact `/Users/rob/.local/bin/redact-push prepare …` arguments for
+   the recovery material paths and the exact `redact-push prepare …` arguments for
    the owner. Flag any other known clone that still holds the contaminated refs.
 6. The owner runs `redact-push prepare` and `redact-push push <record>` themselves. The auto-mode
    classifier never allows a loop to force-push.
@@ -2008,7 +2008,7 @@ mutations and publications, each with identity, owner and how to check it), `## 
 `## Stalls and deaths` (every stall and death with exact UTC times) and `## Tokens and wakeups`.
 `## Tokens and wakeups` opens with the run window (start and end, UTC) and every below-floor interval
 the root observed (§3), then token usage. Wakeups, poll-reaction share, active lanes and root calls per
-lane are measured centrally by Camden's `agent_efficiency_*` metrics (job `agent-sessions`) on the m7kni
+lane are measured centrally by the owner's `agent_efficiency_*` metrics (job `agent-sessions`) on the owner's agent-observability
 Grafana stack, dashboard "Agent Session Archive & Index" (uid `agent-session-archive`), "Agent efficiency" section, looked up by that window; roots
 do not count them. Write the report to `<report>.tmp` in the same directory and rename it into place. The Claude Stop hook and the watchdog
 count a report only when its header names this loop and it was written after the launch; a stale or
