@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-10-01 10:11'
+updated_date: '2026-10-01 12:07'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `f744350`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `1546914`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -2275,8 +2275,7 @@ When preparing the next loop, look up the previous report's run window in the "A
 (§10): a poll-reaction share over 35% of root calls or a zero-active-lane share over 30% of the window
 is a finding the next goal addresses. Poll-reaction share counts only root calls reacting to a
 timed-out or unchanged wait or status result; calls woken by an event (a completion, a message) are
-excluded. A route marked (trial) in an appendix is kept only after loop preparation compares its park
-and false-pass rates against the previous route in the "Agent efficiency" section of the "Agent Session Archive & Index" dashboard and in loop reports.
+excluded.
 Cached input is included in input totals; do not double-count it or invent monetary savings.
 For this comparison, agent count and root token share are not productivity measures. Change one
 mechanism at a time when isolating causality. An owner-authorized bundle is evaluated as a bundle and
@@ -2311,7 +2310,7 @@ and cannot adopt the entire goal or replace the root.
 | RETRIEVAL | `gpt-6-luna` | `medium`; deterministic lookup, inventory and extraction |
 | MAPPING, straightforward code maps and structured summaries | `gpt-6-luna` | `medium` |
 | MAPPING, substantial synthesis across sources | `gpt-6-luna` | `high`; return unresolved consequential interpretations to the root |
-| GATE (trial) | `gpt-6-luna` | `high`; `max` where a wrong classification is consequential. Execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to 6.1 Sol/medium (below) |
+| GATE | `gpt-6-luna` | `high`; `max` where a wrong classification is consequential. Execute the named gate, classify failures with evidence and report; never repair source. One classification fallback to 6.1 Sol/medium (below) |
 | Poller (§3): custom agents `poller` and `poller-high` | `gpt-6-luna` | `medium` (`poller`); `high` (`poller-high`) where classifying the terminal failure needs judgement |
 | EXECUTION, fully specified implementation | `gpt-6-luna` | `high`; custom agent `lane-worker`; leaf worker with directly checkable acceptance (attempt 1) |
 | EXECUTION retry or fixer (attempt 2) | `gpt-6.1-sol` | `medium`; custom agent `lane-worker-retry`; a fresh retry of the packet, or a fixer given the prior candidate, the failure evidence and the accepted correction |
