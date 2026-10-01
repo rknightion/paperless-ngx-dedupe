@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-09-30 18:52'
+updated_date: '2026-10-01 10:11'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `18059ca`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `f744350`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -99,7 +99,7 @@ Selected topology: solo | single auxiliary | campaign | campaign + security
 Topology rationale: [the independent bottleneck or risk that justifies this shape]
 Report destination: file at [exact codex/report path], first line `# Loop: <repo> loop<N> · Goal: <goal sha256>`
 Run-end report: tracker reconciliation first; the report is the final action, unprompted, written atomically (§10)
-Codex reconcile: ~/repos/agent-docs/bin/codex-reconcile <abs repo>, once, after the file report; a non-zero exit or unreachable peer is noted in the reply, never retried or debugged
+Codex reconcile: ~/repos/agent-docs/bin/codex-reconcile <abs repo>, once, after the file report; a replaced conflict, non-zero exit or unreachable peer is noted in the reply, never retried or debugged
 Completion ping: ~/repos/agent-docs/bin/wave-notify <exact report path>, once, straight after the codex reconcile
 ```
 
@@ -454,12 +454,14 @@ codex/report-<date>-loop<N>.md    the run-end report the agent writes (§10)
 `codex/` is machine-local and never committed, and nothing mirrors it in the background. Cross-Mac
 reconciliation (MBP16 and gfmbp) happens only through `~/repos/agent-docs/bin/codex-reconcile <abs repo>`,
 run at two points: loop preparation, before reading any predecessor report, and run end, after the
-report is written and before the completion ping (§10). It is two-way and additive: it copies files
-present on one side only, never deletes and never overwrites. It skips `codex/scratch/`, regenerable
+report is written and before the completion ping (§10). It is two-way: it copies files present on one
+side only and never deletes. It skips `codex/scratch/`, regenerable
 build output (`__pycache__/` and any directory named `*derived*`) and any directory holding a `.git`
-entry, because a worktree copied between machines points at the wrong repository and is corrupt. A path present on both Macs with different content is listed as a conflict,
-left unchanged on both sides, and the tool exits non-zero: surface it to the operator, never resolve
-it silently. An unreachable peer prints one line and exits 0; assume the local Mac is the only active
+entry, because a worktree copied between machines points at the wrong repository and is corrupt. Only one loop runs at a time, so the Mac that ran the loop is authoritative: a path present
+on both Macs with different content is replaced by the copy from the Mac holding the newest
+`state-*.md` or `report-*.md` (on a tie, the Mac running the tool), and the losing copy is first moved
+to `codex/scratch/reconcile-superseded/<UTC>/` on its own Mac. The tool lists what it replaced and
+exits 0; never pass `--no-overwrite` or `--authority` in a run. An unreachable peer prints one line and exits 0; assume the local Mac is the only active
 machine and proceed. Reconciliation never blocks preparation or the run end.
 
 Where a repository runs more than one campaign, put the campaign slug in all three names and keep
@@ -1166,7 +1168,7 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 - Topology rationale: [the independent bottleneck or risk that justifies this shape]
 - Report destination: file at [exact codex/report path], first line `# Loop: <repo> loop<N> · Goal: <goal sha256>`
 - Run-end report: tracker reconciliation first; the report is the final action, unprompted, written atomically
-- Codex reconcile: `~/repos/agent-docs/bin/codex-reconcile <abs repo>`, once, after the file report; a non-zero exit or unreachable peer is noted in the reply, never retried or debugged
+- Codex reconcile: `~/repos/agent-docs/bin/codex-reconcile <abs repo>`, once, after the file report; a replaced conflict, non-zero exit or unreachable peer is noted in the reply, never retried or debugged
 - Completion ping: `~/repos/agent-docs/bin/wave-notify <exact report path>`, once, straight after the codex reconcile
 
 ## 1. Outcome and success criteria
@@ -2072,8 +2074,9 @@ back:
    - terminal (only when explicitly requested): emit the covering note after tracker reconciliation. Do not create an unsolicited
      report file or leave durable findings only in the message.
 3. File report only: run `~/repos/agent-docs/bin/codex-reconcile <abs repo>` exactly once, so the goal,
-   state and report reach the other Mac. A non-zero exit (a conflict) or an unreachable peer does not
-   reopen the run: do not retry, resolve or debug it; state the outcome line in the reply.
+   state and report reach the other Mac. This Mac ran the loop, so its copy replaces any differing copy
+   on the other (the tool archives the replaced one). A non-zero exit or an unreachable peer does not
+   reopen the run: do not retry or debug it; state the outcome line in the reply.
 4. File report only: run `~/repos/agent-docs/bin/wave-notify <exact report path>` exactly once. It
    pushes a phone notification that this run has finished and its report is ready. Run it after the
    report file is complete and at no other point in the run: it never refuses, so running it early
@@ -2989,13 +2992,12 @@ Where this appendix is silent, the body applies unchanged.
 
 ### What differs from Appendix A in kind
 
-pi (`earendil-works/pi`, pinned) has no native subagents, sandbox, approval prompts or MCP. The
+pi (`earendil-works/pi`, pinned) has no native subagents, sandbox or approval prompts. Its built-in MCP, codemode and tool-search extensions are switched off in a `loop-pi` home. The
 loop capabilities come from a pinned `pi-subagents` extension and three `loop-pi` extensions. The
 routes and models are Appendix A's; the mechanics are not.
 
 1. **Waiting is by push.** A child's async completion starts a new root turn by itself, and so do a
-   `watch_start` watcher exiting and a `wake_at` timer firing. There is no wait tool: pi-subagents'
-   `bg_wait` is disabled. The root never blocks to wait for lanes. Codex's `wait_agent`, its
+   `watch_start` watcher exiting and a `wake_at` timer firing. There is no wait tool: pi-subagents' `bg_wait` is disabled and left out of the root's tool list. The root never blocks to wait for lanes. Codex's `wait_agent`, its
    19-minute floor and the `poller` agents have no equivalent and are not used.
 2. **Delegation is fixed per agent file, not per brief.** An agent without the `subagent` tool
    cannot delegate whatever its brief says. Luna agents have none.
@@ -3030,8 +3032,7 @@ Spawn by agent name. Agent files pin model, thinking level, tools, run deadline 
 Pass no model, thinking or run-deadline (`timeoutMs`, `maxRuntimeMs`) override to them; the guard
 blocks model and deadline overrides. A shortened deadline leaves a lane only minutes of work after
 the checkpoint steer 10 minutes before it. The `subagent` tool is present from the root's first
-turn. Never enable a tool mid-run: codex-lb never acknowledges a request whose tool list grew
-mid-conversation, and the root stalls on retries.
+turn. Never enable a tool mid-run. codex-lb never acknowledges a request that carries a mid-conversation tool addition (`additional_tools`); the home's model overrides make pi resend the whole tool list instead, which works but misses the prompt cache.
 
 | Role | Agent | Model / thinking | Run deadline | Delegates |
 |---|---|---|---|---|
@@ -3139,8 +3140,7 @@ pi-subagents' built-in tool guidance tells a root to put parallel work in "exact
 - only a single-agent launch gets the checkpoint steer before its run deadline;
 - the harness design leaves workflows unused (`rob/agents` `research/pi-harness/plan.md`).
 
-The home's custom tool description and `AGENTS.md` both say so, and the guard blocks any root
-`subagent` launch that carries `workflowScript` or `workflowScriptPath` (`rob/agents` HRN-0112).
+The home's custom tool description and `AGENTS.md` both say so, and the guard blocks any root `subagent` launch that carries `workflow` (`true`, a script path or a named workflow) or the older `workflowScript` / `workflowScriptPath` (`rob/agents` HRN-0112).
 Launch each lane as its own `{agent, task}` call. A root that still reads the two instructions as
 conflicting treats this appendix and the home instruction as the operator's authorisation, and
 dispatches. It does not park the run.
@@ -3237,8 +3237,7 @@ requires a clean checkout.
 
 ### Target-repository preflight
 
-pi-subagents children load a target repository's `.pi/` settings, system prompt and extensions
-regardless of project trust, and repository agent files outrank the home's. `loop-pi` started
+Repository agent files (`.pi/agents`, `.agents/*.md`) outrank the home's whatever the project trust. Since pi-subagents 0.74.0 children follow the root's project trust, which is `never` here, so a repository's `.pi/` settings, system prompt and extensions are no longer loaded; the preflight still refuses them. `loop-pi` started
 inside a git repository preflights that repository and refuses to start if it fails (exit 78);
 `loop-pi --plain` starts an ordinary session with no run setup. Before spawning into any other
 repository the root runs `loop-pi-preflight <repo>` itself; it inherits `PI_CODING_AGENT_DIR` from
@@ -3302,7 +3301,7 @@ rest of the session. Treat that as a harness fault: park the run.
 ### Closeout sweep
 
 Before the report, the root:
-1. stops remaining async runs through `subagent`;
+1. stops remaining async runs through `subagent`. A stop that returns an error because the run is shutting down is retried once after the run has exited; a run that still cannot be stopped is listed in the report;
 2. stops `watch_start` watchers (`watch_stop`) and cancels timers (`wake_cancel`);
 3. runs the remote-change audit.
 
@@ -3314,13 +3313,12 @@ The report lists all of these. Nothing started by the run outlives it.
 
 - **Root async questions: unavailable.** Loops follow the no-answer path.
 - **Run-end ping:** `wave-notify`, as elsewhere.
-- **Web and documentation lookups:** the `firecrawl` CLI and `gh`. There is no MCP in a `loop-pi`
-  home.
+- **Web and documentation lookups:** the `firecrawl` CLI and `gh`. There is no MCP in a `loop-pi` home: pi's built-in MCP extension is switched off.
 - **agent-history:** the `agent-history` CLI.
 - **Skills:** pi loads `SKILL.md` directories natively when a goal lists them. None ship by
   default.
 - **Retries:** the home retries provider failures for about an hour. A stalled stream becomes a
-  retried error after the 120-second idle timeout. The longest silent stream gap measured was
+  retried error after the 300-second idle timeout. The longest silent stream gap measured was
   10.2 s (`gpt-6-sol` high) and 9.4 s (Luna/max, in a 333-second answer). codex-lb fails a request whose
   upstream does not acknowledge it after about 120 seconds (`upstream_request_timeout`), and that
   failure is retried too.
