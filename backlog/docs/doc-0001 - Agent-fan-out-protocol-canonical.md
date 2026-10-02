@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-10-02 11:26'
+updated_date: '2026-10-02 17:45'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `3fd8b4e`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `2e668bd`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -452,7 +452,8 @@ codex/report-<date>-loop<N>.md    the run-end report the agent writes (§10)
 `<date>` is the UTC date of preparation; the loop number is the sequence.
 
 `codex/` is machine-local and never committed, and nothing mirrors it in the background. Cross-Mac
-reconciliation (MBP16 and gfmbp) happens only through `~/repos/agent-docs/bin/codex-reconcile <abs repo>`,
+reconciliation (between the two designated Macs) happens only through
+`<agent-docs-checkout>/bin/codex-reconcile <abs repo>`,
 run at two points: loop preparation, before reading any predecessor report, and run end, after the
 report is written and before the completion ping (§10). It is two-way: it copies files present on one
 side only and never deletes. It skips `codex/scratch/`, regenerable
@@ -2032,7 +2033,8 @@ report. Keep the existing line 1 and all six report sections above unchanged. Ne
 front matter or use structured data as a substitute for the covering report. Legacy reports and
 readers that ignore Data remain valid; enabling delivery is a separate per-repository decision.
 
-The authority is `m7kni/loopwatch`'s `schema/README.md` and `schema/loop-report.schema.json`, pinned
+The authority is the loop receiver's schema repository (`<owner>/<repo>`), specifically its
+`schema/README.md` and `schema/loop-report.schema.json`, pinned
 by the goal or its accepted producer revision. The canonical validator is `loop-report check
 <complete-report>`; validate the temporary candidate before its final rename, never add a tool call
 between report delivery and the required reconcile/ping. `bin/conformance --report <candidate>
@@ -2040,8 +2042,8 @@ between report delivery and the required reconcile/ping. `bin/conformance --repo
 PASS, FAIL or SKIP locally. Its report-only exit 0 is not a pass; unavailable tooling is unverified.
 Do not copy a subset of the schema into another validator or depend on wave-notify to validate it:
 wave-notify posts the original bytes and keeps Pushover on receiver failure. The first delivery pilot
-is an explicit top-level `wave-notify receiver: https://loopwatch.m7kni.com` line in loopwatch's
-`LOOP.md`; a code example is not opt-in. Other repositories opt in only under their own goal authority.
+is an explicit top-level `wave-notify receiver: <receiver-url>` line in the receiver repository's
+`LOOP.md`, using the receiver URL configured in the receiver repository; a code example is not opt-in. Other repositories opt in only under their own goal authority.
 
 Required Data fields are `schema_version`, `repo`, `loop`, `goal_sha256`, `context`, `outcome`,
 `headline`, `run_window`, `lanes`, `pending`, `questions` and `tokens`. Version is the exact string
@@ -2064,7 +2066,7 @@ Minimal shape (illustrative, not a claimed run or usage observation):
 ```json
 {
   "schema_version": "1",
-  "repo": "m7kni/loopwatch",
+  "repo": "<owner>/<repo>",
   "loop": "loop1",
   "goal_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
   "context": "personal",
@@ -2176,7 +2178,7 @@ loop are both fine. The message carries the questions and pending counts, and in
 sanitised Outcome line; in Work context it carries no path, hostname or headline. A successful read
 writes a `<report>.notified` receipt keyed by the report's content hash, so a repeat call sends nothing
 and a rewritten report pings again; a degraded send writes no receipt. Credentials live in
-`~/repos/chat-personal/credentials/pushover.env`. A child lane, reviewer or gate runner never runs
+`<private-credential-tree>/pushover.env`. A child lane, reviewer or gate runner never runs
 it; only the root does, at closeout.
 
 **Two content rules that only exist because reports have got them wrong.** Neither is obvious from
@@ -2622,8 +2624,9 @@ still running, run it again from `let r = {session_id: <id>};`. Lanes, Luna incl
 CI this way. Collaboration tools are not callable inside a cell, so a root with lanes in flight hands a
 process wait to a poller: the custom agents `poller` (gpt-6-luna medium) and `poller-high` (gpt-6-luna
 high) carry this cell in their instructions. Spawn them with `agent_type` and `fork_turns="none"` and
-pass no model or effort. Their source is `plugins/agent-workflows/codex-agents/` in `rob/agent-skills`;
-Codex plugins cannot ship agents, so `rob/agents` `sync-wave-skills` (run by `codex-update-all`)
+pass no model or effort. Their source is `plugins/agent-workflows/codex-agents/` in the operator's
+skills-source repository (`<owner>/<repo>`); Codex plugins cannot ship agents, so the operator's
+agents repository (`<owner>/<repo>`) provides `sync-wave-skills` (run by `codex-update-all`), which
 installs them into each Codex home's `agents/` from the installed plugin version. Change them there,
 never in a home.
 
@@ -2822,7 +2825,7 @@ root it is an evaluation candidate, not the standard route.
 
 ### Role → route
 
-The `agent-workflows` plugin (marketplace `rob-agent-skills`, installed in every Claude home) ships
+The `agent-workflows` plugin (the configured skills marketplace, installed in every Claude home) ships
 pinned subagent definitions. A pinned definition carries both model and effort, which is the only way
 to give a plain `Agent` dispatch an effort different from the root's.
 
@@ -2963,7 +2966,8 @@ written for the watchdog. A new launch re-arms it for the new report.
 minutes and finds loop roots by their launch message. It sends a Pushover alert only when a loop is
 dead (its latest turn ended without a report or marker, and no newer turn has started for 15 minutes:
 `stalled`) or the hook gives up (`hook-exhausted`, `hook-exception`). Only the Mac whose native home
-owns the alert's context sends a dead-loop alert: MBP16 for Personal, GFMBP for Work. A hook failure
+owns the alert's context sends a dead-loop alert: the designated Personal host for Personal, and
+the designated Work host for Work. A hook failure
 is recorded only on the Mac that ran the hook, which sends it. Each stalled turn
 (`turn-stalled`), an open turn silent for more than 20 minutes (`silent`), an overrun `WAITING:`
 deadline, short waits, a watchdog gap and the fleet alerts go to Grafana only, as OTLP logs from
@@ -3037,11 +3041,12 @@ same DESIGN+INTEGRATION-versus-EXECUTION question §1 already asks about the roo
 
 ## Appendix C - pi profile (provisional)
 
-**Provisional.** This profile describes the `loop-pi` harness built under `rob/agents` HRN-0107
-(plan: HRN-0106, `research/pi-harness/plan.md`). The build proved the routes, spawning, waits by
+**Provisional.** This profile describes the `loop-pi` harness built in the operator's agents
+repository (`<owner>/<repo>`), following its harness build and planning tasks
+(plan: `research/pi-harness/plan.md` in that repository). The build proved the routes, spawning, waits by
 push, the guard and transcript sync on live models and a scripted provider. It becomes complete
 after the first live loop is evaluated. It is already the default harness for OpenAI-model loops:
-a goal uses `loop-pi` (Personal) or `loop-pi-work` (Work) unless the operator names Codex (Appendix A)
+a goal uses `loop-pi` (Personal) or the configured Work launcher unless the operator names Codex (Appendix A)
 or Claude Code (Appendix B). Until the evaluation, a line marked **measurement owed** is not
 established.
 
@@ -3069,9 +3074,10 @@ routes and models are Appendix A's; the mechanics are not.
 ### Root and worker routes
 
 **Operator reference, not generated launch content:** Rob starts the root with `loop-pi`, which
-runs `gpt-6.1-sol` at `medium`. `loop-pi-work` is the same harness in the Work context: home
-`~/.loop-pi-work`, its own codex-lb key, transcripts in `pi-work`. Everything else in this appendix
-applies to both; `~/.loop-pi-<context>` below means the launcher's own home. As in Appendices A and B, goals carry no root model declaration and
+runs `gpt-6.1-sol` at `medium`. The configured Work launcher is the same harness in the Work context:
+its own `~/.loop-pi-<context>` home and codex-lb key, transcripts in its context-specific stream.
+Everything else in this appendix
+applies to both; `~/.loop-pi-<context>` below means the configured pi home for that launcher. As in Appendices A and B, goals carry no root model declaration and
 no self-route check.
 
 **Models: `gpt-6.1-sol`, `gpt-6-luna` and `gpt-6-astra` only.** Every `loop-pi` session runs one
@@ -3134,7 +3140,7 @@ pi has no per-agent service tier. The tier is set per model per home (`samplingP
 ### Burn mode (temporary, expires 2026-10-13)
 
 Burn mode is an operator-chosen, per-goal mode for Personal `loop-pi` loops only. It does not exist
-for `loop-pi-work`, Codex (Appendix A) or Claude Code (Appendix B). Each variant is its own pi home
+for the Work launcher, Codex (Appendix A) or Claude Code (Appendix B). Each variant is its own pi home
 and launcher with the same agent names as the standard home, so lane briefs stay portable:
 
 | Mode | Home | Launcher |
@@ -3195,9 +3201,9 @@ top-level `subagent` call, a workflow included, admits at most 64 children acros
 pi-subagents' built-in tool guidance tells a root to put parallel work in "exactly one top-level
 `subagent` workflow call" with every child inside it. `loop-pi` overrides that line, for two reasons:
 - only a single-agent launch gets the checkpoint steer before its run deadline;
-- the harness design leaves workflows unused (`rob/agents` `research/pi-harness/plan.md`).
+- the harness design leaves workflows unused (`research/pi-harness/plan.md` in the operator's agents repository).
 
-The home's custom tool description and `AGENTS.md` both say so, and the guard blocks any root `subagent` launch that carries `workflow` (`true`, a script path or a named workflow) or the older `workflowScript` / `workflowScriptPath` (`rob/agents` HRN-0112).
+The home's custom tool description and `AGENTS.md` both say so, and the guard blocks any root `subagent` launch that carries `workflow` (`true`, a script path or a named workflow) or the older `workflowScript` / `workflowScriptPath` (the agents repository's dispatch-guard task).
 Launch each lane as its own `{agent, task}` call. A root that still reads the two instructions as
 conflicting treats this appendix and the home instruction as the operator's authorisation, and
 dispatches. It does not park the run.
