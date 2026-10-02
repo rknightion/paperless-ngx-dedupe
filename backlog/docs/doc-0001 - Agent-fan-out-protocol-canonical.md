@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-10-02 19:44'
+updated_date: '2026-10-02 22:34'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `647665b`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `de55441`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -101,7 +101,13 @@ Report destination: file at [exact codex/report path], first line `# Loop: <repo
 Run-end report: tracker reconciliation first; the report is the final action, unprompted, written atomically (§10)
 Codex reconcile: ~/repos/agent-docs/bin/codex-reconcile <abs repo>, once, after the file report; a replaced conflict, non-zero exit or unreachable peer is noted in the reply, never retried or debugged
 Completion ping: ~/repos/agent-docs/bin/wave-notify <exact report path>, once, straight after the codex reconcile
+Start ping: ~/repos/agent-docs/bin/wave-notify --start --repo <owner/repo> --loop loop<N> --goal <absolute goal path>
 ```
+
+Include `Start ping:` only for a receiver-enabled repository (§10), with every argument filled.
+On a fresh launch, the root runs it once straight after creating its current-state record and before
+its first dispatch, as its own bare bash call: no pipe, redirection, heredoc, `;`, `&&` or wrapper.
+A failure is noted in state, never retried or debugged. A repository without opt-in gets no line.
 
 The report line belongs in the contract rather than only in §6's report section, because the contract
 is what an agent reads first and preserves in its active recovery state. §10 explains why stating it once, as a
@@ -1171,6 +1177,7 @@ It supersedes [older goal] where applicable; consult a superseded file only for 
 - Run-end report: tracker reconciliation first; the report is the final action, unprompted, written atomically
 - Codex reconcile: `~/repos/agent-docs/bin/codex-reconcile <abs repo>`, once, after the file report; a replaced conflict, non-zero exit or unreachable peer is noted in the reply, never retried or debugged
 - Completion ping: `~/repos/agent-docs/bin/wave-notify <exact report path>`, once, straight after the codex reconcile
+- Start ping: `~/repos/agent-docs/bin/wave-notify --start --repo <owner/repo> --loop loop<N> --goal <absolute goal path>` [receiver-enabled only; fill every argument; once after state creation, before first dispatch, as a bare bash call; note failure in state, never retry or debug]
 
 ## 1. Outcome and success criteria
 
@@ -2030,6 +2037,18 @@ in a terminal message. A required file report must be self-contained even when t
 A repository is receiver-enabled when its `LOOP.md` carries an explicit top-level
 `wave-notify receiver: <receiver-url>` line, using the receiver URL configured in the receiver
 repository; a code example is not opt-in. Adding or removing that line is the owner's decision.
+Every receiver-enabled goal carries a filled `Start ping:` run-contract line:
+`~/repos/agent-docs/bin/wave-notify --start --repo <owner/repo> --loop loop<N> --goal <absolute goal path>`.
+The root runs it once, straight after creating its state record and before its first dispatch, as
+its own bare bash call (no pipe, redirection, heredoc, `;`, `&&` or wrapper). Note a failure in state
+and never retry or debug it. A repository without the receiver line gets no `Start ping:` line.
+The command posts `/v1/live/start` with schema version `"1"`, the goal file's byte SHA256, repo,
+loop and the current UTC launch timestamp. Repo and loop match the report Data values. It uses the
+same ingest credentials, ten-second timeout and no-redirect opener as report delivery, never sends
+Pushover, exits 0 and prints one accepted, skipped or failed line without identity or error bodies.
+A `<goal file>.started` receipt makes a repeat call a no-op. Start delivery is additive: completion
+report delivery and its independent receipts remain unchanged.
+
 Every goal prepared for a receiver-enabled repository admits the v1 producer contract below and
 names the absolute validator command; a root whose goal omits it still appends and validates Data
 when the line is present at closeout. Append one
@@ -2220,6 +2239,7 @@ the format alone:
 - [ ] Each implementation lane owns its gate, CI and CodeRabbit review to one terminal result and states its landing mode; every root-owned wait has one owner and a completion wake or a poller with exact identity and deadline (§3); no duplicate watchers or root turns for unchanged state; every watcher starts by the harness launch rule and has a liveness witness (§3).
 - [ ] The run contract states the admission floor, and below-floor time with ready work is recorded as an observation (§3).
 - [ ] Recovery loads the current-state record and missing/changed sections; it does not restart onboarding or create overlapping copies of retained instructions.
+- [ ] Receiver-enabled goals and launches carry the same filled `Start ping:` line, run once as a bare bash call after state creation and before first dispatch; failures are noted in state, never retried or debugged. Non-enabled repositories have no line.
 - [ ] The saved launch prompt, goal opening, recovery section, amendments and state instructions agree on same-session recovery. Remove stale "reread the whole goal after every compaction" instructions before launch; an explicit launch instruction can override the intended targeted recovery. Preserve the initial binding-goal read for a fresh/manual launch and the `/new` exclusion.
 - [ ] **No acceptance criterion or definition of done was inherited from a different repository's convention** than the one the work is scoped to.
 - [ ] Stop rules park a lane and descend; only the genuinely irreversible stops the run.
