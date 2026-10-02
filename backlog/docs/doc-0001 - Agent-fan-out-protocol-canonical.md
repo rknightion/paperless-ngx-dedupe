@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-10-02 17:45'
+updated_date: '2026-10-02 19:44'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `2e668bd`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `647665b`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1319,7 +1319,7 @@ State the section order and say the report is what the human reads *instead of* 
 - receiver-enabled file reports: append exactly one `## Data` JSON block under the frozen v1
   producer contract (§10), retaining line 1 and every existing report heading. Validate the
   complete candidate with `loop-report check` before the final temp-file rename; unknown usage
-  is null, never zero. A goal that has not admitted this producer contract does not fabricate it.
+  is null, never zero. A repository that is not receiver-enabled (§10) does not fabricate it.
 ```
 
 ---
@@ -2027,7 +2027,12 @@ in a terminal message. A required file report must be self-contained even when t
 
 ### Receiver Data (additive v1)
 
-A goal that enables Loopwatch receiver delivery also freezes its v1 producer contract. Append one
+A repository is receiver-enabled when its `LOOP.md` carries an explicit top-level
+`wave-notify receiver: <receiver-url>` line, using the receiver URL configured in the receiver
+repository; a code example is not opt-in. Adding or removing that line is the owner's decision.
+Every goal prepared for a receiver-enabled repository admits the v1 producer contract below and
+names the absolute validator command; a root whose goal omits it still appends and validates Data
+when the line is present at closeout. Append one
 literal top-level `## Data` heading containing exactly one `json` fence to the ordinary Markdown
 report. Keep the existing line 1 and all six report sections above unchanged. Never prepend YAML
 front matter or use structured data as a substitute for the covering report. Legacy reports and
@@ -2041,9 +2046,10 @@ between report delivery and the required reconcile/ping. `bin/conformance --repo
 --report-checker <absolute-loop-report-executable>` delegates to that same validator and reports
 PASS, FAIL or SKIP locally. Its report-only exit 0 is not a pass; unavailable tooling is unverified.
 Do not copy a subset of the schema into another validator or depend on wave-notify to validate it:
-wave-notify posts the original bytes and keeps Pushover on receiver failure. The first delivery pilot
-is an explicit top-level `wave-notify receiver: <receiver-url>` line in the receiver repository's
-`LOOP.md`, using the receiver URL configured in the receiver repository; a code example is not opt-in. Other repositories opt in only under their own goal authority.
+wave-notify posts the original bytes and keeps Pushover on receiver failure. A report without a
+valid Data block is refused by the receiver and reaches the owner through Pushover only. Where the
+validator cannot run, the root still writes the block, records the validation as unverified in the
+report and never delays the report for it.
 
 Required Data fields are `schema_version`, `repo`, `loop`, `goal_sha256`, `context`, `outcome`,
 `headline`, `run_window`, `lanes`, `pending`, `questions` and `tokens`. Version is the exact string
