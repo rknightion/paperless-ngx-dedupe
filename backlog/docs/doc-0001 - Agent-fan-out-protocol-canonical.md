@@ -3,10 +3,10 @@ id: doc-0001
 title: Agent fan-out protocol (canonical)
 type: specification
 created_date: '2026-08-14 16:17'
-updated_date: '2026-10-01 12:07'
+updated_date: '2026-10-02 11:26'
 ---
 > **Generated file - do not edit this copy.** Rendered from `sources/fan-out-protocol.md` in
-> `m7kni/agent-docs` at commit `1546914`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
+> `m7kni/agent-docs` at commit `3fd8b4e`. This copy is authoritative for `paperless-ngx-dedupe`, so an agent
 > with only this checkout has the whole document.
 >
 > **To change this document, edit the source in `agent-docs`, commit and push it, then run
@@ -1315,6 +1315,10 @@ State the section order and say the report is what the human reads *instead of* 
   work versus external wait versus blocked time with coverage/overlap limits (§10). Reuse lane evidence.
 - run window and admission floor: start and end UTC and every below-floor interval the root
   observed, at the top of `## Tokens and wakeups` (§10).
+- receiver-enabled file reports: append exactly one `## Data` JSON block under the frozen v1
+  producer contract (§10), retaining line 1 and every existing report heading. Validate the
+  complete candidate with `loop-report check` before the final temp-file rename; unknown usage
+  is null, never zero. A goal that has not admitted this producer contract does not fabricate it.
 ```
 
 ---
@@ -2019,6 +2023,60 @@ before writing the report. Terminal-only reporting requires an explicit request;
 the presence of a tracker or choose it again at closeout. Both destinations cover cross-cutting findings,
 verification, deviations, cuts and the questions section. Nothing durable may live only
 in a terminal message. A required file report must be self-contained even when task state holds detail.
+
+### Receiver Data (additive v1)
+
+A goal that enables Loopwatch receiver delivery also freezes its v1 producer contract. Append one
+literal top-level `## Data` heading containing exactly one `json` fence to the ordinary Markdown
+report. Keep the existing line 1 and all six report sections above unchanged. Never prepend YAML
+front matter or use structured data as a substitute for the covering report. Legacy reports and
+readers that ignore Data remain valid; enabling delivery is a separate per-repository decision.
+
+The authority is `m7kni/loopwatch`'s `schema/README.md` and `schema/loop-report.schema.json`, pinned
+by the goal or its accepted producer revision. The canonical validator is `loop-report check
+<complete-report>`; validate the temporary candidate before its final rename, never add a tool call
+between report delivery and the required reconcile/ping. `bin/conformance --report <candidate>
+--report-checker <absolute-loop-report-executable>` delegates to that same validator and reports
+PASS, FAIL or SKIP locally. Its report-only exit 0 is not a pass; unavailable tooling is unverified.
+Do not copy a subset of the schema into another validator or depend on wave-notify to validate it:
+wave-notify posts the original bytes and keeps Pushover on receiver failure. The first delivery pilot
+is an explicit top-level `wave-notify receiver: https://loopwatch.m7kni.com` line in loopwatch's
+`LOOP.md`; a code example is not opt-in. Other repositories opt in only under their own goal authority.
+
+Required Data fields are `schema_version`, `repo`, `loop`, `goal_sha256`, `context`, `outcome`,
+`headline`, `run_window`, `lanes`, `pending`, `questions` and `tokens`. Version is the exact string
+`"1"`. Repo is the owner/repository identity, loop is `loop<N>`, and goal hash/loop/repository basename
+must agree with line 1. Context is personal or work; outcome is complete, partial or blocked. Run
+window has start/end Gregorian RFC3339 timestamps, at most six fractional digits, with end not before
+start. Stable lane IDs carry task, route, status (accepted/parked/failed/running) and summary; pending
+items carry id/text, questions carry id/question/recommendation/alternatives. IDs remain stable for
+corrections of the same logical item. Optional links follow the schema's absolute HTTP(S) profile.
+
+Token input/output and cost_usd are exact canonical decimal strings when observed, otherwise JSON
+null. Never infer zero or a bill from absent coverage; describe the observation window, scope and
+missing sessions in the Markdown evidence. No extra wire fields, duplicate keys, NUL, invalid
+Unicode or duplicate IDs are allowed. Original UTF-8 bytes define deduplication and corrected bytes
+add a revision; reposting identical bytes does not send a second receiver notification. The report's
+identity is owner/repo, loop and goal hash, not its path or a surrogate session number.
+
+Minimal shape (illustrative, not a claimed run or usage observation):
+
+```json
+{
+  "schema_version": "1",
+  "repo": "m7kni/loopwatch",
+  "loop": "loop1",
+  "goal_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "context": "personal",
+  "outcome": "partial",
+  "headline": "Illustrative report; no execution or usage claimed.",
+  "run_window": {"start": "2026-10-02T00:00:00Z", "end": "2026-10-02T00:01:00Z"},
+  "lanes": [],
+  "pending": [],
+  "questions": [],
+  "tokens": {"input": null, "output": null, "cost_usd": null}
+}
+```
 
 Derive aggregate tracker and run counts from a complete structured source at a named snapshot.
 Record the query or source identity and distinguish delivery tasks from board-wide totals. A display
