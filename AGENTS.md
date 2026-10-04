@@ -85,22 +85,6 @@ findings are fine. Sweep before committing:
 grep -rniE "rob-knight|@gmail|[0-9]{1,3}(\.[0-9]{1,3}){3}|/Users/" backlog/ && echo "PII FOUND"
 ```
 
-- `--notes`, `--plan` and `--final-summary` replace the whole section silently and exit 0, so
-  another session's writes vanish. Use `--append-notes`, `--append-plan`, `--append-final-summary`.
-- `--dep`, `--assignee`, `--label`, `--acceptance-criteria`, `--ref` and `--modified-file` have set
-  semantics: a second use discards the first. Pass the complete list in one call, or use the
-  `--add-label` / `--ac` / `--add-ref` forms that append.
-- Section boundaries in tracker markdown are HTML-comment markers. Break a marker line and the
-  section is dropped silently at exit 0 with no repair command (`backlog doctor` only fixes
-  duplicate task ids). Changing a value inside a section is recoverable; changing a marker is not.
-  The file-editing tools are guarded, a `sed` is not.
-- `backlog/config.yml` is the one file to hand-edit: list-valued keys cannot be set through
-  `backlog config set`.
-- Finalize in one call so an interrupted session cannot leave finished work looking unfinished:
-  `backlog task edit pnd-0001 --check-ac 1 --check-ac 2 -s Done`.
-- Never let two agents edit the same task. The concurrent-write race is fixed for the edit funnel
-  only, not for reorder, draft saves, the TUI edit path, `doc update` or decision updates.
-
 <!-- BACKLOG.MD GUIDELINES START -->
 <!-- backlog.md-instructions-version: 1.50.1 -->
 <CRITICAL_INSTRUCTION>
