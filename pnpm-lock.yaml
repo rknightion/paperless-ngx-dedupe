@@ -268,7 +268,7 @@ importers:
         version: 1.0.21
       nanoid:
         specifier: ^6.0.0
-        version: 6.0.1
+        version: 6.0.2
       openai:
         specifier: ^6.0.0 || ^7.0.0
         version: 7.28.0(undici@8.11.2)(zod@4.6.5)
@@ -371,7 +371,7 @@ importers:
         version: 1.0.1(svelte@5.57.1(@typescript-eslint/types@8.71.1))
       nanoid:
         specifier: ^6.0.0
-        version: 6.0.1
+        version: 6.0.2
       openai:
         specifier: ^7.0.0
         version: 7.28.0(undici@8.11.2)(zod@4.6.5)
@@ -2983,8 +2983,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@6.0.1:
-    resolution: {integrity: sha512-3wVS3i51pE2pi1k5FFL/95BGfVS0kSsvDVuGXHOtxox/TywUmtgq+3qiTOTbs9J7KfHaXPiN171k/A6dBnaXFw==}
+  nanoid@6.0.2:
+    resolution: {integrity: sha512-hIvVOb9Qr1p/9CNNLOe0OlWvgx/ziTsVwKN/GDSsuArN2K0wDiafP3s0SWmsm7o2BdnyS8Z9Z64NFBUbn6ziBg==}
     engines: {node: ^22 || ^24 || >=26}
     hasBin: true
 
@@ -5968,7 +5968,7 @@ snapshots:
 
   nanoid@3.3.19: {}
 
-  nanoid@6.0.1: {}
+  nanoid@6.0.2: {}
 
   natural-compare@1.4.0: {}
 
