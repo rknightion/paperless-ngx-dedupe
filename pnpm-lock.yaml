@@ -171,7 +171,7 @@ importers:
     dependencies:
       openai:
         specifier: ^7.0.0
-        version: 7.30.1(undici@8.11.2)(zod@4.6.5)
+        version: 7.31.0(undici@8.11.2)(zod@4.6.5)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -271,7 +271,7 @@ importers:
         version: 6.0.2
       openai:
         specifier: ^6.0.0 || ^7.0.0
-        version: 7.30.1(undici@8.11.2)(zod@4.6.5)
+        version: 7.31.0(undici@8.11.2)(zod@4.6.5)
       pino:
         specifier: ^10.0.0
         version: 10.4.0
@@ -374,7 +374,7 @@ importers:
         version: 6.0.2
       openai:
         specifier: ^7.0.0
-        version: 7.30.1(undici@8.11.2)(zod@4.6.5)
+        version: 7.31.0(undici@8.11.2)(zod@4.6.5)
       pino:
         specifier: ^10.0.0
         version: 10.4.0
@@ -3080,8 +3080,8 @@ packages:
     resolution: {integrity: sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==}
     engines: {node: '>=14.0.0'}
 
-  openai@7.30.1:
-    resolution: {integrity: sha512-YgiPjBgXdItqTsgAR138bu9aHxBb3/L7qiiP8ucU8e9msRfF8cjRtp8y5qYW7E3Oe9O8UWejQZERf37dtdvoTg==}
+  openai@7.31.0:
+    resolution: {integrity: sha512-ZGAzauuYb0DdB53qVbIR+X8rdmNtWgiElrrMthbZCVreLcIsQJBwzAIWUbpB2FkQu2Cj6OJ9zJR1EKMUYn4/SQ==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
@@ -6132,7 +6132,7 @@ snapshots:
 
   on-exit-leak-free@2.1.2: {}
 
-  openai@7.30.1(undici@8.11.2)(zod@4.6.5):
+  openai@7.31.0(undici@8.11.2)(zod@4.6.5):
     optionalDependencies:
       undici: 8.11.2
       zod: 4.6.5
