@@ -171,7 +171,7 @@ importers:
     dependencies:
       openai:
         specifier: ^7.0.0
-        version: 7.32.0(undici@8.11.2)(zod@4.6.6)
+        version: 7.32.0(undici@8.11.2)(zod@4.6.7)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -271,7 +271,7 @@ importers:
         version: 6.0.2
       openai:
         specifier: ^6.0.0 || ^7.0.0
-        version: 7.32.0(undici@8.11.2)(zod@4.6.6)
+        version: 7.32.0(undici@8.11.2)(zod@4.6.7)
       pino:
         specifier: ^10.0.0
         version: 10.4.0
@@ -280,7 +280,7 @@ importers:
         version: 2.9.1
       zod:
         specifier: ^4.0.0
-        version: 4.6.6
+        version: 4.6.7
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^9.0.0
@@ -374,7 +374,7 @@ importers:
         version: 6.0.2
       openai:
         specifier: ^7.0.0
-        version: 7.32.0(undici@8.11.2)(zod@4.6.6)
+        version: 7.32.0(undici@8.11.2)(zod@4.6.7)
       pino:
         specifier: ^10.0.0
         version: 10.4.0
@@ -383,7 +383,7 @@ importers:
         version: 2.9.1
       zod:
         specifier: ^4.0.0
-        version: 4.6.6
+        version: 4.6.7
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.12.1
@@ -3713,8 +3713,8 @@ packages:
   zimmerframe@1.1.5:
     resolution: {integrity: sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA==}
 
-  zod@4.6.6:
-    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   zrender@6.1.0:
     resolution: {integrity: sha512-oEGMDB6pOP2S6OwRR4PdVv610zrjnA3Bh+JnSG12fYJlBKjtNAoEb5fSUoCOOINlH96I2fU38/A2UpRKs67xYQ==}
@@ -6146,10 +6146,10 @@ snapshots:
 
   on-exit-leak-free@2.1.2: {}
 
-  openai@7.32.0(undici@8.11.2)(zod@4.6.6):
+  openai@7.32.0(undici@8.11.2)(zod@4.6.7):
     optionalDependencies:
       undici: 8.11.2
-      zod: 4.6.6
+      zod: 4.6.7
 
   optionator@0.9.4:
     dependencies:
@@ -6661,7 +6661,7 @@ snapshots:
 
   zimmerframe@1.1.5: {}
 
-  zod@4.6.6: {}
+  zod@4.6.7: {}
 
   zrender@6.1.0:
     dependencies:
