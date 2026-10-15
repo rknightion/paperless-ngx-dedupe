@@ -67,9 +67,9 @@ migrations run before the hash check.
 
 ## Task tracking
 
-Open work lives in the Backlog.md tracker under `backlog/`, task prefix `pnd-`. Read the
-**Agent fan-out protocol (canonical)** doc before designing a wave, and the **Wave operating model**
-doc for this project's own rules.
+Open work lives in the Backlog.md tracker under `backlog/`, task prefix `pnd-`.
+
+Loops: the protocol lives in `~/repos/agent-docs/sources/loop/` (this board's "Loop protocol pointer" doc points there); this repository's loop facts are in `LOOP.md`.
 
 ### Tracker rules
 
