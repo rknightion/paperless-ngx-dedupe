@@ -1,4 +1,5 @@
 # Loop: paperless-ngx-dedupe
+
 tier: guarded
 gate: just check
 ci-required: ci-success
