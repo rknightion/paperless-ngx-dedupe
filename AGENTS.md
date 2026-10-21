@@ -7,6 +7,10 @@ finds duplicates with MinHash/LSH, and serves a web UI plus REST API for resolvi
 
 pnpm workspace, Node >=24.0.0 (declared in `engines`). Do not build or test on older Node.
 
+Both Docker stages pin a Node release with eMudhra distrust (24.22.1 or newer on the 24 line)
+and install the distribution ca-certificates package. Verify the built runtime package and both
+compromised-chain probes; the Node bundled trust store and operating-system store are separate.
+
 - `packages/core` owns all business logic and must stay importable without SvelteKit or browser
   APIs. No web-framework imports here.
 - `packages/web` is the SvelteKit 2 app (Svelte 5 runes) serving the UI and `/api/v1/*`. It calls

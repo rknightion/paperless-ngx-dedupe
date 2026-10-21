@@ -1,9 +1,10 @@
 ---
 id: PND-0008
 title: Update Node and container trust for eMudhra remediation
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-21T23:42:00Z'
+updated_date: '2026-10-21T23:47:00Z'
 labels: []
 dependencies: []
 references:
@@ -32,3 +33,15 @@ The release branch still uses Node 24.22.0 in both dependency and runtime images
 - [ ] #2 just build
 - [ ] #3 just test-e2e (only if packages/web behaviour changed)
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Replace both Node image pins with the verified patched image digest; validate the existing gate and built runtime trust before publication.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Both verified Node 24.22.1 image stages install ca-certificates 20250419+deb13u1. Full just check and Docker build pass. Actual built runtime Node and OpenSSL clients reject both incident chains. Await exact-head CI and released image proof.
+<!-- SECTION:NOTES:END -->

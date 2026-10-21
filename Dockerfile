@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:24.22.0-trixie-slim AS deps
+FROM node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS deps
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN corepack enable
 ENV CI=true
 
 # better-sqlite3 v13 is built from source during installation.
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json ./packages/core/
@@ -31,11 +31,11 @@ RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
 RUN node -e "import('/app/deployed/node_modules/@paperless-dedupe/core/dist/scheduler/occurrences.js')"
 
 # Stage 3: Production runtime
-FROM node:24.22.0-trixie-slim AS production
+FROM node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS production
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends tini gosu && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tini gosu ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy production deps from pnpm deploy (flat node_modules, no symlinks)
 COPY --from=build /app/deployed/node_modules ./node_modules
