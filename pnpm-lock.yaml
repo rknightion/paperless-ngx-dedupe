@@ -396,7 +396,7 @@ importers:
         version: 5.3.0
       '@grafana/faro-rollup-plugin':
         specifier: ^0.13.0
-        version: 0.13.1
+        version: 0.13.2
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.64.1
@@ -973,14 +973,14 @@ packages:
   '@fontsource/geist-sans@5.3.0':
     resolution: {integrity: sha512-AmG7cE1AvE4NHROPaOl1sN+a02cB5xy6pA/ZV76HXqWTCsJTV2SCBc9DTFHfJqnVOODm7HhXIYtUIb75NP5QXQ==}
 
-  '@grafana/faro-bundlers-shared@0.13.1':
-    resolution: {integrity: sha512-kTB8GjiUe1oJf2gJltgsA8kf1rf3rpbF4xHQ5354inq7VQxbcP9Y9P0sTv6o3ODEhiZYbrU/MyZeTIfRq8/Qig==}
+  '@grafana/faro-bundlers-shared@0.13.2':
+    resolution: {integrity: sha512-7nH8RdAT1dqiurnshd+JKHVRdkCViTL2dsRm6RWkpPFia0qXoXvUkeDsf8PvwiMSdG/XZyaSjUtwamhSF2XpSw==}
 
   '@grafana/faro-core@2.12.1':
     resolution: {integrity: sha512-Pg0vjgsR1BxdmLzzX9r8YcZ8rI4aXLlDGtreppZev++BbnH2utKBwCI16Vx+IzfQqHKRT+7WGc63HOue8/9J6Q==}
 
-  '@grafana/faro-rollup-plugin@0.13.1':
-    resolution: {integrity: sha512-wSJmKPG2ssD7oqjq/UX2+1/DozuAa+YLwMTyO5gMjtcqdAU2gV1iMZqBUmbxiDCrsWYsfTc3MmHplSn/JtQFag==}
+  '@grafana/faro-rollup-plugin@0.13.2':
+    resolution: {integrity: sha512-szo/nqdeg7W+faKvOUTI9OOZJHxgzyCe4alBSCOwJ2kqnnszxXR4t4FewhNNrHBgzyZKQVV6FJrFgcAv4WwCmg==}
 
   '@grafana/faro-web-sdk@2.12.1':
     resolution: {integrity: sha512-JnpZy/ztfkP3UZ3AW0DzUxVgMRTBvYz+m0oZuVi+KRpGTYz0GGF0umi0S0pAemnaUbQBo6umGdCm5CL6n8BAWQ==}
@@ -4032,7 +4032,7 @@ snapshots:
 
   '@fontsource/geist-sans@5.3.0': {}
 
-  '@grafana/faro-bundlers-shared@0.13.1':
+  '@grafana/faro-bundlers-shared@0.13.2':
     dependencies:
       ansis: 4.4.0
       tar: 7.5.22
@@ -4043,9 +4043,9 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/otlp-transformer': 0.222.0(@opentelemetry/api@1.9.1)
 
-  '@grafana/faro-rollup-plugin@0.13.1':
+  '@grafana/faro-rollup-plugin@0.13.2':
     dependencies:
-      '@grafana/faro-bundlers-shared': 0.13.1
+      '@grafana/faro-bundlers-shared': 0.13.2
       magic-string: 1.4.3
 
   '@grafana/faro-web-sdk@2.12.1':
