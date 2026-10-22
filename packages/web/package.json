@@ -27,7 +27,7 @@
     "@opentelemetry/sdk-node": "^0.300.0",
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@paperless-dedupe/core": "workspace:*",
-    "@pyroscope/nodejs": "^0.6.0",
+    "@pyroscope/nodejs": "^0.7.0",
     "better-sqlite3": "^13.0.0",
     "diff-match-patch": "^1.0.5",
     "drizzle-kit": "^0.31.0",
