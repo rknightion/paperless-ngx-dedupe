@@ -343,8 +343,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@pyroscope/nodejs':
-        specifier: ^0.6.0
-        version: 0.6.5
+        specifier: ^0.7.0
+        version: 0.7.0
       better-sqlite3:
         specifier: ^13.0.0
         version: 13.0.3
@@ -1676,9 +1676,9 @@ packages:
   '@protobufjs/utf8@1.1.2':
     resolution: {integrity: sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==}
 
-  '@pyroscope/nodejs@0.6.5':
-    resolution: {integrity: sha512-ESR8yKzo+cCUfXw550gOun+vBVFHSMWZp+pC/IfevSUIEmZvQXeow1Wx+evz4BS530yDom6B/wByfYDDE9a26w==}
-    engines: {node: '>=20.20.2'}
+  '@pyroscope/nodejs@0.7.0':
+    resolution: {integrity: sha512-4vK8IXnSYcD20tR5zaLm3ZPkR2RssO8F8bjo3C8qDC6GROByJuNxnklzjSlGx9E0ckvtr/9Hb7Ouv4eBa1w6fw==}
+    engines: {node: '>=22.23.4'}
     peerDependencies:
       express: ^4.0.0 || ^5.0.0
       fastify: ^5.8.5
@@ -4969,7 +4969,7 @@ snapshots:
 
   '@protobufjs/utf8@1.1.2': {}
 
-  '@pyroscope/nodejs@0.6.5':
+  '@pyroscope/nodejs@0.7.0':
     dependencies:
       '@datadog/pprof': 5.14.4
       debug: 4.4.3
