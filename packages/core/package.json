@@ -31,7 +31,7 @@
     "@opentelemetry/sdk-node": "^0.300.0",
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "better-sqlite3": "^13.0.0",
-    "croner": "^10.0.1",
+    "croner": "^11.0.0",
     "drizzle-kit": "^0.31.0",
     "drizzle-orm": "^0.45.0",
     "fastest-levenshtein": "^1.0.16",
