@@ -16,7 +16,7 @@ name: auto-rc
 # `workflows:` matches the workflow's `name:` field, NOT its filename. If that
 # name changes this silently stops firing and RCs stop being cut, with no error.
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] only push events from this repository pass the job gate below
     workflows: [CI]
     types: [completed]
     branches: [main]
