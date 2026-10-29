@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:24.22.1-trixie-slim@sha256:89c5244bc22a9bc3287d89ebc7e49b9cb5bb84cd40e6175ac3421d5a9f68b95a AS deps
+FROM node:24.22.2-trixie-slim@sha256:54f84b4cf8432b21aaffd5d3ce8d41e12cea0d10d33c09d2f3c9879d49d6b446 AS deps
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
 RUN node -e "import('/app/deployed/node_modules/@paperless-dedupe/core/dist/scheduler/occurrences.js')"
 
 # Stage 3: Production runtime
-FROM node:24.22.1-trixie-slim@sha256:89c5244bc22a9bc3287d89ebc7e49b9cb5bb84cd40e6175ac3421d5a9f68b95a AS production
+FROM node:24.22.2-trixie-slim@sha256:54f84b4cf8432b21aaffd5d3ce8d41e12cea0d10d33c09d2f3c9879d49d6b446 AS production
 
 WORKDIR /app
 
