@@ -11,3 +11,6 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   protobufjs: false
+minimumReleaseAgeExclude:
+  # Renovate security update: @sveltejs/kit@3.0.0
+  - "@sveltejs/kit@3.0.0"
