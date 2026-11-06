@@ -48,7 +48,7 @@
     "@fontsource/geist-sans": "^5.2.5",
     "@grafana/faro-rollup-plugin": "^0.13.0",
     "@playwright/test": "^1.61.1",
-    "@sveltejs/adapter-node": "^5.0.0",
+    "@sveltejs/adapter-node": "^6.0.0",
     "@sveltejs/kit": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@tailwindcss/vite": "^4.0.0",
