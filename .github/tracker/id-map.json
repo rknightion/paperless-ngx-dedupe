@@ -1,0 +1,42 @@
+{
+ "held": {},
+ "issues": {
+  "PND-0001": {
+   "number": 719,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/719"
+  },
+  "PND-0002": {
+   "number": 724,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/724"
+  },
+  "PND-0003": {
+   "number": 725,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/725"
+  },
+  "PND-0004": {
+   "number": 720,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/720"
+  },
+  "PND-0005": {
+   "number": 726,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/726"
+  },
+  "PND-0006": {
+   "number": 721,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/721"
+  },
+  "PND-0007": {
+   "number": 722,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/722"
+  },
+  "PND-0008": {
+   "number": 723,
+   "url": "https://github.com/rknightion/paperless-ngx-dedupe/issues/723"
+  }
+ },
+ "prefix": "PND",
+ "repo": "rknightion/paperless-ngx-dedupe",
+ "schema": 1,
+ "source_sha": "d8d5cb584ec3fee4529b703460d9acd91668a92f",
+ "synthetic": []
+}
