@@ -1,0 +1,51 @@
+# Default privacy sweep patterns: credential shapes and generic personal-data forms.
+#
+# The sweep reports any added line that matches a line of this file. It also reads the
+# repository's own .github/privacy/patterns.txt (extra lines, never written by the vend sync) and any
+# --patterns FILE. Email addresses and IPv4 addresses have their own built-in rules.
+#
+# Format: one regular expression per line, matched case-insensitively. A line starting with # and an
+# empty line are comments. Only syntax that Rust regex (ripgrep) and Python re read the same way is
+# accepted, and the sweep refuses the file (exit 2) otherwise: literal letters, digits and
+# @ _ : = % ~ ! & , / -, an escaped dot (\.), a bracket set of plain characters or ranges, and one
+# + * ? or {n,m} after an atom. No wildcard dot, alternation, anchors, groups or class shorthands;
+# add a line instead of an alternation. A bracketed letter (the [x] form) matches what the plain
+# letter would but keeps the pattern from matching this file's own text. Write the shape, not the
+# instance.
+#
+# Fail closed: a missing file, or one holding no patterns, or a line that does not compile, stops the
+# sweep with exit 2.
+
+# Secrets and tokens.
+gh[pousr]_[A-Za-z0-9]{36}
+github_pa[t]_[A-Za-z0-9_]{22,}
+gl[p]at-[A-Za-z0-9_-]{20}
+AKI[A][0-9A-Z]{16}
+ASI[A][0-9A-Z]{16}
+AIz[a][0-9A-Za-z_-]{35}
+xox[abposr]-[A-Za-z0-9-]{10,}
+hooks\.slack\.com/service[s]/
+sk_liv[e]_[0-9A-Za-z]{16,}
+rk_liv[e]_[0-9A-Za-z]{16,}
+sk-an[t]-[A-Za-z0-9_-]{20,}
+sk-pro[j]-[A-Za-z0-9_-]{20,}
+np[m]_[A-Za-z0-9]{36}
+py[p]i-AgEIcHlwaS5vcmc[A-Za-z0-9_-]{30,}
+tske[y]-[A-Za-z0-9-]{10,}
+glc_ey[J][A-Za-z0-9_-]{10,}
+ey[J][A-Za-z0-9_-]{10,}\.ey[J][A-Za-z0-9_-]{10,}
+-----BEGI[N]
+://[A-Za-z0-9._-]+:[A-Za-z0-9._-]+@
+
+# Personal data: consumer mailbox providers and private network names.
+@gma[i]l
+@googlemai[l]\.
+@outloo[k]\.
+@hotmai[l]\.
+@liv[e]\.com
+@yaho[o]\.
+@iclou[d]\.com
+@m[e]\.com
+@proto[n]\.me
+@protonmai[l]\.
+\.ts\.ne[t]

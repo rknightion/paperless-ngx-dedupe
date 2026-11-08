@@ -1,0 +1,588 @@
+#!/usr/bin/env python3
+"""Privacy sweep: report identifiers, addresses and credentials that a change would publish.
+
+    sweep                               the lines HEAD adds over the default base (see below)
+    sweep --staged                      the lines the staged diff adds
+    sweep --base REF [--head REF]       the lines REF...HEAD (or REF...--head) adds, from the merge base
+    sweep --files PATH...               whole files; a directory is walked, .git is skipped
+    sweep --self-test                   prove every rule against built-in samples
+
+Rules, applied to every added line (or every line of a swept file), and in a diff sweep to the
+path of every added, copied or renamed-to file:
+
+  pattern    each line of the default patterns file (identifier-patterns.txt next to this script),
+             of the repository's .github/privacy/patterns.txt when present, and of every --patterns
+             FILE. One case-insensitive regular expression per line in the portable subset Python re
+             and ripgrep read alike (see PORTABLE below); # starts a comment line.
+  email      an email address, except at example.com, example.org, example.net and their
+             subdomains, any host under .example, GitHub noreply addresses, and image asset names
+             such as icon@2x.png.
+  address    a dotted-quad IPv4 address on the public internet. Always allowed: 0.0.0.0/8,
+             127.0.0.0/8, the RFC 5737 documentation ranges, multicast and reserved space
+             (224.0.0.0 and up), and 192.0.0.0/24 and 198.18.0.0/15. Allowed unless
+             --strict-addresses: RFC 1918 (10/8, 172.16/12, 192.168/16), link-local 169.254/16
+             and CGNAT 100.64/10.
+             Version heuristic: a dotted quad is read as a version, not an address, when it is
+             part of a longer dotted number (1.2.3.4.5), directly follows a letter or digit
+             (v1.2.3.4; an underscore is a boundary, so ip_ before an address is checked), directly
+             follows a version
+             operator (==, >=, <=, ~=, !=, ^, ~), or follows the word version, ver, release or
+             build with an optional : or = and quote.
+
+--allow FILE (default .github/privacy/allow.txt in the repository, when present) lists literal
+strings, one per line (# in column 1 starts a comment line). A finding is suppressed when its matched
+text lies inside one occurrence of one allowed string on the same line, with ASCII letters compared
+case-insensitively and every other character exactly; two entries never combine to cover a finding.
+A line holding a control or separator character, or a # after leading whitespace, refuses (exit 2).
+--no-repo-files ignores the repository's .github/privacy/ files; CI passes it with the base
+commit's copies so a pull request cannot loosen its own sweep.
+
+Default base: upstream/HEAD when an upstream remote exists; else the remote gh recorded as the
+base repository (remote.<name>.gh-resolved = base); else origin/HEAD when gh reports that origin is
+not a fork; otherwise it refuses with exit 2 and names the fix. The chosen base is printed on stderr.
+
+A finding prints finding: path:line:column: rule, never the matched text, because the output lands
+in CI logs. A finding in a file name prints finding: path:0:0: rule (file name); that prints the
+path, matched text included, because the path is already public in the diff and the file list of the
+change. The fixed prefix means no output line starts with the path, so a file named like a workflow
+command (::error::...) cannot issue one; control characters in a path are escaped.
+
+Content starting with a UTF-16 or UTF-32 byte order mark is decoded and swept whole, and its raw
+bytes are swept too, line by line in both NUL views below, because UTF-8 bytes behind a byte order
+mark can decode without error into unrelated text; a finding both see on a line is reported once.
+Other content
+in which NUL bytes make up a fifth or more of the bytes (binary, or UTF-16 without a byte order
+mark) is swept twice, once with its NUL bytes removed (so UTF-16 text matches) and once with each
+NUL read as a line break (so a NUL still separates the bytes either side of it), and a finding both
+views see is reported once. In a diff sweep, a file any of whose added lines holds a NUL byte is
+judged by its whole blob at the head (the index for --staged): when the blob needs decoding as
+above, the whole file is swept with file line numbers; otherwise each added line holding a NUL
+byte is swept in both views.
+
+Exit 0 clean, 1 findings, 2 cannot sweep (the reason is printed; nothing counts as clean).
+Python 3.12 or newer, standard library only.
+"""
+import argparse
+import codecs
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+HERE = Path(__file__).resolve().parent
+DEFAULT_PATTERNS = HERE / "identifier-patterns.txt"
+REPO_PATTERNS = Path(".github/privacy/patterns.txt")
+REPO_ALLOW = Path(".github/privacy/allow.txt")
+# Every finding line starts with this, so no path (a file named "::error::x") can begin a line and be
+# read as a GitHub workflow command.
+FINDING = "finding: "
+HINT = "Write the shape, not the instance; a documentation address (RFC 5737) or an example.com mailbox is allowed."
+
+# The pattern subset Python re and Rust regex (ripgrep) read the same way, kept identical to the
+# tracker's textsafe module so one per-repository patterns file can feed both: literal letters,
+# digits and @ _ : = % ~ ! & , / -, an escaped dot, a bracket set of plain characters or ranges, and
+# one + * ? or {n,m} after an atom. No wildcard dot, alternation, anchors, groups or shorthand.
+_PLAIN = r"[A-Za-z0-9@_:=%~!&,/-]"
+_SET_CHAR = r"[A-Za-z0-9@_.]"
+PORTABLE = re.compile(
+    r"(?:(?:" + _PLAIN + r"|\\\.|\[(?:" + _SET_CHAR + "-" + _SET_CHAR + "|" + _SET_CHAR + r")+-?\])"
+    r"(?:[+*?]|\{[0-9]+(?:,[0-9]*)?\})?)+"
+)
+
+EMAIL = re.compile(r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}(?![A-Za-z0-9-])")
+_DOC_DOMAINS = ("example.com", "example.org", "example.net")
+_ASSET_HOST = re.compile(r"[0-9]+(?:\.[0-9]+)?x\.[a-z]+")
+
+QUAD = re.compile(r"(?<![A-Za-z0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![A-Za-z0-9])")
+_NET = ipaddress.IPv4Network
+ALWAYS_ALLOWED = [_NET(n) for n in ("0.0.0.0/8", "127.0.0.0/8", "192.0.0.0/24", "192.0.2.0/24", "198.18.0.0/15",
+                                    "198.51.100.0/24", "203.0.113.0/24", "224.0.0.0/3")]
+PRIVATE = [_NET(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16", "100.64.0.0/10")]
+_VERSION_OPERATOR = re.compile(r"(?:[=<>~!]=|[\^~])\s*$")
+_VERSION_WORD = re.compile(r"(?i)\b(?:version|ver|release|build)\s*[:=]?\s*[\"']?$")
+
+
+class CannotSweep(Exception):
+    """The sweep cannot vouch for anything; main reports it and exits 2."""
+
+
+_BOMS = ((codecs.BOM_UTF32_LE, "utf-32"), (codecs.BOM_UTF32_BE, "utf-32"),
+         (codecs.BOM_UTF16_LE, "utf-16"), (codecs.BOM_UTF16_BE, "utf-16"))
+
+
+def printable(path):
+    """A path with control characters escaped, so a crafted file name cannot start a new log line."""
+    out = []
+    for c in path:
+        o = ord(c)
+        out.append(c if c.isprintable() and c != "\\" else f"\\x{o:02x}" if o < 256 else f"\\u{o:04x}")
+    return "".join(out)
+
+
+def nul_heavy(data):
+    return data.count(0) * 5 >= len(data) > 0
+
+
+def needs_whole_decode(data):
+    return nul_heavy(data) or any(data.startswith(bom) for bom, _ in _BOMS)
+
+
+def nul_views(raw):
+    """The two texts a line holding NUL bytes is swept as: NULs removed, and NULs read as line breaks."""
+    return (raw.replace(b"\0", b"").decode("utf-8", "replace"), raw.replace(b"\0", b"\n").decode("utf-8", "replace"))
+
+
+def line_views(data, label):
+    """Return the lines of file bytes for sweeping, each a tuple of the texts that line is swept as."""
+    for bom, codec in _BOMS:
+        if data.startswith(bom):
+            try:
+                text = data.decode(codec)
+            except UnicodeDecodeError:
+                raise CannotSweep(f"{label} starts with a {codec} byte order mark but does not decode as {codec}") from None
+            # A byte order mark proves nothing: UTF-8 bytes behind one can decode cleanly into unrelated
+            # text. Line i is also swept as raw line i in both NUL views; a finding seen twice is reported once.
+            decoded, raw = text.split("\n"), data.split(b"\n")
+            return [(tuple(decoded[i:i + 1]) + (nul_views(raw[i]) if i < len(raw) else ()))
+                    for i in range(max(len(decoded), len(raw)))]
+    if nul_heavy(data):
+        # Binary, or UTF-16 without a byte order mark: see the module docstring for the two views.
+        return [nul_views(raw) for raw in data.split(b"\n")]
+    return [(line,) for line in data.decode("utf-8", "replace").split("\n")]
+
+
+# Rules ---------------------------------------------------------------------------------------------
+
+def load_patterns(path, required):
+    """Return [(rule name, compiled pattern)]; a required file must hold at least one pattern."""
+    path = Path(path)
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as unreadable:
+        raise CannotSweep(f"the patterns file {path} cannot be read ({type(unreadable).__name__})") from None
+    rules = []
+    for number, line in enumerate(lines, 1):
+        if not line.strip() or line.startswith("#"):
+            continue
+        if not PORTABLE.fullmatch(line):
+            raise CannotSweep(f"line {number} of {path} is outside the portable pattern syntax")
+        try:
+            rules.append((f"pattern:{path.name}:{number}", re.compile(line, re.I)))
+        except re.error as broken:
+            raise CannotSweep(f"line {number} of {path} does not compile ({broken.msg})") from None
+    if required and not rules:
+        raise CannotSweep(f"the patterns file {path} holds no patterns")
+    return rules
+
+
+def load_allow(path):
+    """Return the literal strings of an allow file; a line that could hide more than it shows refuses.
+
+    Lines end at a newline only (a carriage return before it is dropped). str.splitlines() would also
+    break at \\v, \\f, \\x1c-\\x1e, \\x85, U+2028 and U+2029, letting one visible line carry a second,
+    unseen entry, so a line holding any character that is not printable, tab included, refuses with exit
+    2, as does a comment marker after leading whitespace, which is neither a clear comment nor a clear entry.
+    """
+    try:
+        lines = Path(path).read_text(encoding="utf-8").split("\n")
+    except (OSError, UnicodeDecodeError) as unreadable:
+        raise CannotSweep(f"the allow file {path} cannot be read ({type(unreadable).__name__})") from None
+    entries = []
+    for number, line in enumerate(lines, 1):
+        line = line.removesuffix("\r")
+        if not line.strip() or line.startswith("#"):
+            continue
+        if not line.isprintable():
+            raise CannotSweep(f"line {number} of the allow file {path} holds a control or separator character")
+        if line.lstrip().startswith("#"):
+            raise CannotSweep(f"line {number} of the allow file {path} is an indented comment; start it in column 1")
+        entries.append(line.strip())
+    return entries
+
+
+def email_allowed(address):
+    domain = address.rsplit("@", 1)[1].lower()
+    if domain in _DOC_DOMAINS or domain.endswith(tuple("." + d for d in _DOC_DOMAINS)):
+        return True
+    if domain == "example" or domain.endswith(".example"):
+        return True
+    if domain == "users.noreply.github.com" or address.lower() == "noreply@github.com":
+        return True
+    return bool(_ASSET_HOST.fullmatch(domain))
+
+
+def versionish(text, start, end):
+    """True when the dotted quad at text[start:end] reads as a version number (see the module docstring)."""
+    if start >= 2 and text[start - 1] == "." and text[start - 2].isdigit():
+        return True
+    if end + 1 < len(text) and text[end] == "." and text[end + 1].isdigit():
+        return True
+    prefix = text[max(0, start - 24):start].rsplit("\n", 1)[-1]  # a NUL read as a line break ends the context
+    return bool(_VERSION_OPERATOR.search(prefix) or _VERSION_WORD.search(prefix))
+
+
+def address_reported(quad, strict):
+    try:
+        ip = ipaddress.IPv4Address(quad)
+    except ValueError:
+        return False  # an octet over 255 or a leading zero: not an address
+    if any(ip in net for net in ALWAYS_ALLOWED):
+        return False
+    if any(ip in net for net in PRIVATE):
+        return strict
+    return True
+
+
+def findings(text, rules, allow=(), strict=False):
+    """Return sorted (column, rule) for one line of text."""
+    return [(column, rule) for column, rule, _ in matches(text, rules, allow, strict)]
+
+
+def matches(text, rules, allow=(), strict=False):
+    """Return sorted (column, rule, matched text) for one line of text."""
+    raw = [(m.start(), m.end(), name) for name, pattern in rules for m in pattern.finditer(text)]
+    raw += [(m.start(), m.end(), "email") for m in EMAIL.finditer(text) if not email_allowed(m.group(0))]
+    raw += [(m.start(), m.end(), "address") for m in QUAD.finditer(text)
+            if address_reported(m.group(0), strict) and not versionish(text, m.start(), m.end())]
+    if allow and raw:
+        # Fail closed: a finding is suppressed only when it lies inside one occurrence of one allowed
+        # string. Spans are never merged, so entries that overlap or touch cannot jointly cover a finding.
+        # Case folds for ASCII letters only: Unicode folding reads U+017F as s and U+212A as k, so an
+        # allowed string would match text that holds a different identifier. Matching runs on the
+        # original text, never a lowercased copy whose spans can drift.
+        spans = [(m.start(), m.start() + len(literal)) for literal in allow
+                 for m in re.finditer("(?=" + re.escape(literal) + ")", text, re.IGNORECASE | re.ASCII)]
+        raw = [hit for hit in raw if not any(s <= hit[0] and hit[1] <= e for s, e in spans)]
+    return sorted((start + 1, name, text[start:end]) for start, end, name in raw)
+
+
+# Git -----------------------------------------------------------------------------------------------
+
+def git(*args, check=True):
+    try:
+        done = subprocess.run(["git", *args], capture_output=True, stdin=subprocess.DEVNULL, timeout=300)
+    except (OSError, subprocess.TimeoutExpired) as failed:
+        raise CannotSweep(f"git could not run ({type(failed).__name__})") from None
+    if check and done.returncode != 0:
+        reason = done.stderr.decode("utf-8", "replace").strip().splitlines()
+        raise CannotSweep(f"git {args[0]} failed: {reason[0] if reason else 'exit ' + str(done.returncode)}")
+    return done
+
+
+def toplevel():
+    done = git("rev-parse", "--show-toplevel", check=False)
+    return Path(done.stdout.decode().strip()) if done.returncode == 0 else None
+
+
+def commit(ref):
+    done = git("rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}", check=False)
+    if done.returncode != 0:
+        raise CannotSweep(f"{ref} does not name a commit here; fetch it first (for example git fetch upstream)")
+    return done.stdout.decode().strip()
+
+
+def _remotes():
+    return git("remote").stdout.decode().split()
+
+
+def _remote_head(remote):
+    done = git("rev-parse", "--verify", "--quiet", f"refs/remotes/{remote}/HEAD", check=False)
+    if done.returncode != 0:
+        raise CannotSweep(f"{remote}/HEAD is not set; run git fetch {remote} && git remote set-head {remote} --auto, or pass --base REF")
+    return f"{remote}/HEAD"
+
+
+_GITHUB_URL = re.compile(r"(?:https://(?:[^@/]+@)?github\.com/|(?:ssh://)?git@github\.com[:/])([A-Za-z0-9-]+/[A-Za-z0-9._-]+?)(?:\.git)?/?$")
+
+
+def _origin_is_fork():
+    """Return True or False from gh, or None when it cannot tell."""
+    url = git("remote", "get-url", "origin", check=False).stdout.decode().strip()
+    match = _GITHUB_URL.match(url)
+    gh = os.environ.get("PRIVACY_SWEEP_GH") or shutil.which("gh")
+    if not match or not gh:
+        return None
+    try:
+        done = subprocess.run([gh, "repo", "view", match.group(1), "--json", "isFork"], capture_output=True,
+                              stdin=subprocess.DEVNULL, timeout=30)
+        if done.returncode != 0:
+            return None
+        verdict = json.loads(done.stdout).get("isFork")
+    except (OSError, subprocess.TimeoutExpired, ValueError, AttributeError):
+        return None
+    return verdict if isinstance(verdict, bool) else None
+
+
+def default_base():
+    """Pick the base for a branch sweep, or refuse; never guess origin on a fork."""
+    remotes = _remotes()
+    if "upstream" in remotes:
+        base, why = _remote_head("upstream"), "the upstream remote's default branch"
+    else:
+        resolved = [r for r in remotes if git("config", "--get", f"remote.{r}.gh-resolved", check=False).stdout.decode().strip() == "base"]
+        if len(resolved) == 1:
+            base, why = _remote_head(resolved[0]), f"the remote gh records as the base repository ({resolved[0]})"
+        elif "origin" in remotes:
+            fork = _origin_is_fork()
+            if fork is False:
+                base, why = _remote_head("origin"), "origin's default branch (gh reports origin is not a fork)"
+            elif fork:
+                raise CannotSweep("origin is a fork, so its default branch is not the base; add the parent: "
+                                  "git remote add upstream <parent URL> && git fetch upstream && git remote set-head upstream --auto")
+            else:
+                raise CannotSweep("cannot tell whether origin is a fork (no upstream remote, and gh could not say); "
+                                  "add an upstream remote for the canonical repository or pass --base REF")
+        else:
+            raise CannotSweep("no upstream or origin remote; pass --base REF")
+    print(f"privacy sweep: base {printable(base)} ({printable(why)})", file=sys.stderr)
+    return base
+
+
+def _diff_path(raw):
+    raw = raw.rstrip(b"\t")  # git ends the name with a tab when it holds a space
+    if raw == b"/dev/null":
+        return None
+    if raw.startswith(b'"') and raw.endswith(b'"'):
+        raw = codecs.escape_decode(raw[1:-1])[0]
+    return raw[2:].decode("utf-8", "replace") if raw.startswith(b"b/") else raw.decode("utf-8", "replace")
+
+
+_HUNK = re.compile(rb"@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+
+def added_names(diff_args):
+    """Return the paths of the files the diff adds, copies or renames to (their names become public)."""
+    out = git("diff", "--name-only", "-z", "--no-relative", "--diff-filter=ACR", *diff_args).stdout
+    return [name.decode("utf-8", "replace") for name in out.split(b"\0") if name]
+
+
+def added_lines(diff_args, blob_prefix):
+    """Yield (path, line number, texts) for every line the diff adds; texts are the views it is swept as.
+
+    --text makes git print the lines of a file it would call binary (a NUL byte, or a -diff or binary
+    attribute the change itself can set) instead of a "Binary files differ" line. Added lines are
+    decoded as UTF-8. When any added line of a file holds a NUL byte or starts with a byte order mark,
+    the decision is made on the file's whole blob at blob_prefix + path, never on the added bytes
+    alone: an edit to a UTF-16 file can add rows that are mostly NUL-free. A blob with a byte order
+    mark or NUL-heavy content is swept whole through line_views, which raises CannotSweep for content
+    it cannot read as text; otherwise each added line holding a NUL is swept in both NUL views.
+    """
+    per_path = {}
+    for path, number, raw in _added_raw(diff_args):
+        per_path.setdefault(path, []).append((number, raw))
+    for path, rows in per_path.items():
+        if any(b"\0" in raw for _, raw in rows) or needs_whole_decode(b"\n".join(raw for _, raw in rows)):
+            blob = git("cat-file", "blob", blob_prefix + path).stdout
+            if needs_whole_decode(blob):
+                for number, views in enumerate(line_views(blob, path), 1):
+                    yield path, number, views
+                continue
+        for number, raw in rows:
+            yield path, number, nul_views(raw) if b"\0" in raw else (raw.decode("utf-8", "replace"),)
+
+
+def _added_raw(diff_args):
+    patch = git("-c", "core.quotePath=false", "diff", "--text", "--no-color", "--no-ext-diff", "--no-textconv",
+                "--unified=0", "--no-relative", "--src-prefix=a/", "--dst-prefix=b/", *diff_args).stdout
+    path, number, old_left, new_left = None, 0, 0, 0
+    for raw in patch.split(b"\n"):
+        if old_left > 0 or new_left > 0:
+            tag = raw[:1]
+            if tag == b"+":
+                if path is not None:
+                    yield path, number, raw[1:]
+                number, new_left = number + 1, new_left - 1
+            elif tag == b"-":
+                old_left -= 1
+            elif tag == b" ":
+                number, old_left, new_left = number + 1, old_left - 1, new_left - 1
+            continue
+        if raw.startswith(b"diff --git "):
+            path = None
+        elif raw.startswith(b"+++ "):
+            path = _diff_path(raw[4:])
+        elif raw.startswith(b"@@ "):
+            hunk = _HUNK.match(raw)
+            if not hunk:
+                raise CannotSweep("git diff printed a hunk header this sweep cannot read")
+            old_left = int(hunk.group(1) or 1)
+            number, new_left = int(hunk.group(2)), int(hunk.group(3) or 1)
+
+
+def file_lines(paths):
+    """Yield (path, line number, text) for every line of every named file, read as bytes."""
+    for named in paths:
+        root = Path(named)
+        if root.is_dir():
+            files = sorted(p for p in root.rglob("*") if p.is_file() and ".git" not in p.relative_to(root).parts)
+        elif root.is_file():
+            files = [root]
+        else:
+            raise CannotSweep(f"{named} is not a file or directory")
+        for file in files:
+            try:
+                data = file.read_bytes()
+            except OSError as unreadable:
+                raise CannotSweep(f"{file} cannot be read ({type(unreadable).__name__})") from None
+            for number, views in enumerate(line_views(data, str(file)), 1):
+                yield str(file), number, views
+
+
+# Driver --------------------------------------------------------------------------------------------
+
+def run(lines, rules, allow, strict, names=()):
+    count, swept, files = 0, 0, set()
+    for name in names:
+        files.add(name)
+        for _, rule in findings(name, rules, allow, strict):
+            count += 1
+            print(f"{FINDING}{printable(name)}:0:0: {rule} (file name)")
+    for path, number, views in lines:
+        swept += 1
+        files.add(path)
+        earlier = []  # (rule, matched text) reported from an earlier view of this line
+        for text in views:
+            this_view = []
+            for column, rule, matched in matches(text, rules, allow, strict):
+                key = (rule, matched.lower())
+                if key in earlier:
+                    earlier.remove(key)  # the same finding seen again through another view
+                    continue
+                this_view.append(key)
+                count += 1
+                print(f"{FINDING}{printable(path)}:{number}:{column}: {rule}")
+            earlier += this_view
+    if count:
+        print(f"privacy sweep: {count} finding(s) in {swept} line(s) from {len(files)} file(s). {HINT}", file=sys.stderr)
+        return 1
+    print(f"privacy sweep: clean, {swept} line(s) from {len(files)} file(s) against {len(rules)} pattern(s), "
+          "the email rule and the address rule", file=sys.stderr)
+    return 0
+
+
+def sample(pattern):
+    """Build a string the portable pattern matches, so the self-test proves each line without spelling it here."""
+    out = []
+    for atom, quantifier, low in re.findall(r"(\\\.|\[[^\]]*\]|[^\[\\+*?{])([+*?]|\{(\d+)(?:,\d*)?\})?", pattern):
+        char = "." if atom == "\\." else atom[1] if atom.startswith("[") else atom
+        out.append(char * (int(low) if low and int(low) > 0 else 1))
+    return "".join(out)
+
+
+def self_test(patterns_path):
+    problems = []
+    rules = load_patterns(patterns_path, required=True)
+    for name, pattern in rules:
+        hits = [hit for hit in findings("x " + sample(pattern.pattern) + " x", [(name, pattern)]) if hit[1] == name]
+        if hits != [(3, name)]:
+            problems.append(f"{name} does not report a sample it should match")
+    at, dot = "@", "."
+    public = dot.join(["8", "8", "4", "4"])
+    lan, cgnat = dot.join(["192", "168", "1", "20"]), dot.join(["100", "101", "102", "103"])
+    cases = [
+        ("mail " + "someone" + at + "corp-mail" + dot + "io", [(6, "email")], False),
+        ("doc " + "a" + at + "example" + dot + "com and b" + at + "mail" + dot + "example", [], False),
+        ("bot " + "1+x" + at + "users" + dot + "noreply" + dot + "github" + dot + "com", [], False),
+        ("asset icon" + at + "2x" + dot + "png", [], False),
+        ("dns " + public, [(5, "address")], False),
+        ("lan " + lan + " " + cgnat, [], False),
+        ("lan " + lan, [(5, "address")], True),
+        ("docs " + dot.join(["192", "0", "2", "7"]) + " " + dot.join(["203", "0", "113", "9"]) + " 127.0.0.1 0.0.0.0", [], True),
+        ("pin pkg==" + public + " v" + public + " version: " + public + " " + public + ".1", [], False),
+        ("bad 999.1.1.1", [], False),
+        ("ip_" + public, [(4, "address")], False),
+    ]
+    for text, want, strict in cases:
+        got = findings(text, [], (), strict)
+        if got != want:
+            problems.append(f"built-in case {cases.index((text, want, strict)) + 1} reported {got}, expected {want}")
+    if findings("dns " + public, [], [public]) != []:
+        problems.append("an allowed literal is still reported")
+    with tempfile.TemporaryDirectory() as scratch:
+        synthetic = Path(scratch) / "patterns.txt"
+        synthetic.write_text("# comment\n\nexample-identifie[r]\n", encoding="utf-8")
+        if findings("an EXAMPLE-identifier", load_patterns(synthetic, True)) != [(4, "pattern:patterns.txt:3")]:
+            problems.append("a synthetic pattern is not reported case-insensitively by its line")
+        for label, text in (("a missing", None), ("an empty", "# only a comment\n"), ("an unportable", "a(b\n")):
+            if text is None:
+                synthetic.unlink()
+            else:
+                synthetic.write_text(text, encoding="utf-8")
+            try:
+                load_patterns(synthetic, True)
+                problems.append(f"{label} patterns file was accepted")
+            except CannotSweep:
+                pass
+    for problem in problems:
+        print(f"privacy sweep self-test: FAIL: {problem}")
+    if problems:
+        return 1
+    print(f"privacy sweep self-test: ok ({len(rules)} default pattern(s) each hit; email, address, allow and patterns-file rules hold)")
+    return 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="sweep", description=__doc__.splitlines()[0])
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--staged", action="store_true", help="sweep the lines the staged diff adds")
+    mode.add_argument("--base", help="sweep the lines BASE...HEAD adds (from the merge base)")
+    mode.add_argument("--files", nargs="+", metavar="PATH", help="sweep whole files; directories are walked")
+    mode.add_argument("--self-test", action="store_true", help="prove the rules against built-in samples")
+    parser.add_argument("--head", default=None, help="the head commit for a branch sweep (default HEAD)")
+    parser.add_argument("--patterns", action="append", default=[], metavar="FILE", help="an extra patterns file (repeatable)")
+    parser.add_argument("--allow", metavar="FILE", help="literal strings that are never findings")
+    parser.add_argument("--strict-addresses", action="store_true", help="also report RFC 1918, link-local and CGNAT addresses")
+    parser.add_argument("--no-repo-files", action="store_true", help="ignore the repository's .github/privacy/ files")
+    args = parser.parse_args(argv)
+    if args.head is not None and (args.staged or args.files or args.self_test):
+        parser.error("--head goes with a branch sweep only")
+    try:
+        if sys.version_info < (3, 12):
+            raise CannotSweep("Python 3.12 or newer is required")
+        if args.self_test:
+            return self_test(DEFAULT_PATTERNS)
+        top = toplevel()
+        rules = load_patterns(DEFAULT_PATTERNS, required=True)
+        pattern_files = [Path(p) for p in args.patterns]
+        allow_file = Path(args.allow) if args.allow else None
+        if top is not None and not args.no_repo_files:
+            if (top / REPO_PATTERNS).is_file():
+                pattern_files.insert(0, top / REPO_PATTERNS)
+            if allow_file is None and (top / REPO_ALLOW).is_file():
+                allow_file = top / REPO_ALLOW
+        seen = {DEFAULT_PATTERNS.resolve()}
+        for extra in pattern_files:
+            if extra.resolve() not in seen:
+                seen.add(extra.resolve())
+                rules += load_patterns(extra, required=False)
+        allow = load_allow(allow_file) if allow_file else []
+        names = []
+        if args.files:
+            lines = list(file_lines(args.files))
+        elif top is None:
+            raise CannotSweep("not inside a git repository; use --files PATH")
+        elif args.staged:
+            lines = list(added_lines(["--cached"], ":"))
+            names = added_names(["--cached"])
+        else:
+            base = args.base if args.base is not None else default_base()
+            head = commit(args.head or "HEAD")
+            diff = [f"{commit(base)}...{head}"]
+            lines = list(added_lines(diff, head + ":"))
+            names = added_names(diff)
+        return run(lines, rules, allow, args.strict_addresses, names)
+    except CannotSweep as reason:
+        print(f"privacy sweep: cannot sweep: {printable(str(reason))}; nothing was swept", file=sys.stderr)
+        return 2
+    except Exception as crash:  # a crash must not exit 1 and read as findings, or 0 and read as clean
+        print(f"privacy sweep: cannot sweep: it failed with {type(crash).__name__}; nothing was swept", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
