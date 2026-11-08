@@ -31,21 +31,41 @@ or coding agent working in this repository. `CONTRIBUTING.md` has the longer ver
 ### Skills
 
 The skills live in `.agents/skills/` (Claude Code reads them through `.claude/skills/`). A
-repository may carry only some of them. Read each skill below, where present in `.agents/skills/`,
-before the moment it names:
+repository may carry only some of them. The general ones come from upstream unchanged; the rules in
+this file and in the `repo-conventions` skill override any other skill where they differ.
 
-- `verification-before-completion` before you say a change works or is done.
+- Published names are contracts: package APIs, CLI flags, config keys, environment variables, Home
+  Assistant ids, metric and label names. Renaming one needs a migration.
+- Write no `specs/`, `decisions.md`, ledger, roadmap or checklist files. Ledgers and reports go in
+  the pull request description.
+- A skill that sends you to `review` or `code-review` means `pre-pr-review` here.
+  `find-overengineering` is deliberately not vended: these projects have users.
+- Review findings, from people, bots or agents: check each one against the code before acting. Fix
+  it with proof on the same pull request, or reply on its thread with the evidence. Never weaken,
+  skip or delete a test, or silence a check, to satisfy a finding. A disputed blocking finding stays
+  open for a maintainer.
+- Before you say a change works: run the check on the current tree after your last edit, read its
+  exit code, and see any new check fail first. A timeout, cancellation, skipped job or missing
+  required check is not a pass. Say what you ran and what you could not run.
+- Another agent's report that work is done is a claim, not evidence: read the diff and rerun the
+  check. A check that also fails on the base is not yours: report both runs. Only a maintainer
+  claims live evidence from a deployed environment.
+
+Read each skill below, where present in `.agents/skills/`, before the moment it names, together
+with `repo-conventions`:
+
 - `commit-and-pr` before you commit, open a pull request or write its title and body.
-- `receiving-code-review` before you act on review comments or review bot findings.
+- `pre-pr-review` before you open or update a pull request, or when asked to review one.
 - `diagnosing-bugs` before you change code to fix a bug or a failing test.
 - `write-tests` before you add or change tests.
-- `pre-pr-review` before you open or update a pull request, or when asked to review one.
-- `github-actions-security-review` before you change a workflow or an action.
-- `refactor-clean` before a refactor, a rename or a dead code cleanup.
 - `audit-tests` before you judge whether a test suite proves what it claims.
+- `refactor-clean` before a refactor, a rename or a dead code cleanup.
+- `find-state-machines` when one lifecycle is spread across flags, callbacks or async work.
 - `write-docs` before you write or restructure documentation.
 - `audit-performance` before you change code for speed or memory, or diagnose a slow path.
-- `audit-decisions` before you pick between designs, libraries or approaches.
+- `audit-decisions` before you hand back work that made design choices on its own.
+- `github-actions-security-review` before you change a workflow or an action.
+- `eli5` when asked to explain a change in plain language.
 
 Repository facts are in the rest of this file. A maintainer's agent loop also reads `LOOP.md`,
 which overrides this block for loop work; nothing here depends on it.

@@ -1,6 +1,6 @@
 ---
 name: pre-pr-review
-description: Review a diff before it becomes a pull request, or review someone else's pull request, against a short explicit list of what blocks a merge, a cap on findings, and a list of what never to report because CI already enforces it. Also judges a pull request's acceptance evidence table. Use before opening or updating a pull request, before handing back a candidate, and when asked to review, audit or check a change. Not for applying review feedback (use receiving-code-review) and not for proving work is done (use verification-before-completion).
+description: Review a diff before it becomes a pull request, or review someone else's pull request, against a short explicit list of what blocks a merge, a cap on findings, and a list of what never to report because CI already enforces it. Also judges a pull request's acceptance evidence table. Use before opening or updating a pull request, before handing back a candidate, and when asked to review, audit or check a change. Not for applying review feedback or proving work is done: the repository's AGENTS.md covers both.
 license: Apache-2.0 AND MIT
 ---
 
@@ -13,8 +13,8 @@ for the review lenses. `LICENSE` carries both texts.
 
 Changes from the source: the upstream project's design-document and command-surface rules are
 replaced by blockers that fit any repository; the lenses drop the framework-specific rules; the
-do-not-report list names `just check`; added the acceptance evidence review and the compatibility
-rule.
+do-not-report list names `just check`; added the acceptance evidence review, the compatibility
+rule and the closeout order of the source's separate `review` skill.
 
 Inside the owner's agent loop, the repository's `LOOP.md` overrides this skill where they differ.
 
@@ -30,6 +30,9 @@ Inside the owner's agent loop, the repository's `LOOP.md` overrides this skill w
 3. Check the blocking list below, then the repository's `AGENTS.md` for decisions in the areas the
    diff touches.
 4. Stop. Write the report. Never pad it.
+
+In a closeout of your own change, run `refactor-clean` first and `write-docs` after this review; a
+later fix that reopens an earlier pass returns to it.
 
 Review changes to authentication, secrets, permissions, data deletion, migrations, release and
 deploy surfaces whatever their size. For a change under `.github/workflows/` or `.github/actions/`,
