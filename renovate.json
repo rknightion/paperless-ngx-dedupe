@@ -1,5 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "prFooter": "Task: none, dependency update",
   "packageRules": [
     {
       "description": "Match pnpm 11's 24-hour package-age policy so npm update PRs do not enter CI before frozen installs can accept them.",

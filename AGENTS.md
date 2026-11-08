@@ -69,46 +69,20 @@ migrations run before the hash check.
 - `packages/core/src/jobs/worker-paths.ts` - worker module resolution, load-bearing in Docker
 - `.env.example` - full environment reference including the OpenTelemetry settings
 
-## Task tracking
+## Tracking work
 
-Open work lives in the Backlog.md tracker under `backlog/`, task prefix `pnd-`.
+Work is tracked in this repository's GitHub issues; they are the only queue. Do not add a checklist
+file such as `ROADMAP.md` beside them.
 
-Loops: the protocol lives in `~/repos/agent-docs/sources/loop/` (this board's "Loop protocol pointer" doc points there); this repository's loop facts are in `LOOP.md`.
-
-### Tracker rules
-
-Kept outside the tool-managed markers below so an upstream instructions update cannot drop them.
-
-**`backlog/` ships in a public repository.** No real account identifiers or personal data in tasks,
-docs or decisions: no email addresses, handles, tenant or account ids, host or device names,
-addresses, or document contents from a real Paperless instance. Write the shape, not the instance
-(`<host>/api/documents/<id>`, "the second correspondent"). Aggregate counts, timings and structural
-findings are fine. Sweep before committing:
-
-```bash
-grep -rniE "rob-knight|@gmail|[0-9]{1,3}(\.[0-9]{1,3}){3}|/Users/" backlog/ && echo "PII FOUND"
-```
-
-<!-- BACKLOG.MD GUIDELINES START -->
-<!-- backlog.md-instructions-version: 1.50.1 -->
-<CRITICAL_INSTRUCTION>
-
-## Backlog.md Workflow
-
-This project uses Backlog.md for task and project management.
-
-**For every user request in this project, run `backlog instructions overview` before answering or taking action.**
-
-Use the overview to decide whether to search, read, create, or update Backlog tasks.
-
-Before task lifecycle actions, read the matching detailed guide:
-- `backlog instructions task-creation` before creating or splitting tasks
-- `backlog instructions task-execution` before planning, changing status or assignee, adding a plan or implementation notes, or implementing task work
-- `backlog instructions task-finalization` before checking acceptance criteria, writing final summaries, or moving tasks to terminal statuses
-
-Use `backlog <command> --help` before running unfamiliar commands. Help shows options, fields, and examples.
-
-Do not edit Backlog task, draft, document, decision, or milestone markdown files directly. Use the `backlog` CLI so metadata, relationships, and history stay consistent.
-
-</CRITICAL_INSTRUCTION>
-<!-- BACKLOG.MD GUIDELINES END -->
+- A pull request body says how it relates to an issue, on a line of its own: `Closes #N` with the
+  `Acceptance evidence` table from `.github/pull_request_template.md` (one row for each acceptance
+  criterion of that issue), `Refs #N` when it only relates to one, or `Task: none, <reason>`.
+- A pull request that changes `.github/workflows/` or `.github/actions/` carries no closing keyword:
+  write `Task: none, <reason>`, with `Refs #N` beside it if you like.
+- Contributors never need the project board or the tracker tooling; a maintainer handles both.
+- Issues and pull requests are public, so they carry no real identifiers: no email addresses,
+  handles, tenant or account ids, host or device names, addresses, or document contents from a real
+  Paperless instance. Write the shape, not the instance (`<host>/api/documents/<id>`, "the second
+  correspondent"). Aggregate counts, timings and structural findings are fine.
+- Older commits, docs and tests cite legacy board ids such as `PND-0001`. `just issue <ID>` prints
+  the issue each one became; `.github/tracker/id-map.json` is the map.

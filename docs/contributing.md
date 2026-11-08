@@ -5,6 +5,8 @@ description: Contribute to Paperless NGX Dedupe by reporting defects, proposing 
 
 # Contributing
 
+The repository's own working rules for contributors and coding agents are in [CONTRIBUTING.md](https://github.com/rknightion/paperless-ngx-dedupe/blob/main/CONTRIBUTING.md).
+
 Thank you for considering contributing to Paperless NGX Dedupe! This guide covers the process for reporting bugs, suggesting features, and submitting code changes.
 
 ## Ways to Contribute

@@ -29,3 +29,9 @@ AGENTS.md
 # support.js and the bundle are minified builds, and Screen10States.dc.html is not parseable
 # HTML. Same reasoning as CHANGELOG.md, backlog and archive above.
 design
+
+# Contributor kit vended from rknightion/.github (skills, record file): synced byte for byte, so
+# formatting it here is churn that the next sync would undo.
+.agents
+.vended.json
+CONTRIBUTING.md
