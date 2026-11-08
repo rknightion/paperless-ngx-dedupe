@@ -375,11 +375,21 @@ jobs:
   # Single required status check (the branch ruleset requires only this). if: always() + an explicit
   # failure check so a failed/cancelled leg fails the gate; main-only publish jobs aren't depended on,
   # so a PR (where they're skipped) still passes. Renovate automerge waits for this to go green.
+  # zizmor fails a pull request on any finding (enforce); push runs upload SARIF instead.
+  zizmor:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    uses: rknightion/.github/.github/workflows/zizmor.yml@e5b9f15bc8ccafdbad75e623bbd0dbb27127f049 # v1.28.0
+    with:
+      enforce: true
+
   ci-success:
     name: ci-success
     runs-on: ubuntu-26.04
     if: always()
-    needs: [quality, unit-tests, e2e-tests, docker-build-verify, ac-evidence, privacy-sweep, backlog-freeze]
+    needs: [quality, unit-tests, e2e-tests, docker-build-verify, ac-evidence, privacy-sweep, backlog-freeze, zizmor]
     steps:
       - name: Fail if any required job did not pass
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
