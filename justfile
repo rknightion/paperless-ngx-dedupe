@@ -76,3 +76,18 @@ docker-validate:
 [group('dev')]
 docker-dev:
     docker compose -f compose.dev.yml --profile dev up dev --build
+
+# GitHub issues and the rknightion Project; maintainers only (needs the tracker tools and credentials)
+[group('tracker')]
+[positional-arguments]
+tracker *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export TRACKER_REPO=rknightion/paperless-ngx-dedupe TRACKER_PROJECT_OWNER=rknightion TRACKER_PROJECT=7
+    export TRACKER_ISSUE_IDENTITY=app TRACKER_PROJECT_IDENTITY=user
+    exec tracker-with-token "$@"
+
+# print the issue a legacy board id (PND-0001) became
+[group('tracker')]
+issue id:
+    TRACKER_REPO=rknightion/paperless-ngx-dedupe tracker legacy {{ quote(id) }}

@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # `edited` re-runs CI when the pull request body changes, so the acceptance evidence check reads
+    # the new table. The pull request checks run on every one of these types, never skipped by `if:`.
+    types: [opened, edited, reopened, synchronize, ready_for_review]
   workflow_call:
 
 permissions:
@@ -302,6 +305,64 @@ jobs:
           path: packages/web/build/**/*.map
           retention-days: 90
 
+  # A pull request that closes an issue shows evidence for each of its acceptance criteria. Checks
+  # only pull requests with a closing keyword (enforce-all-prs: false), because this repository takes
+  # outside and bot pull requests. The reusable fails on any event but pull_request, so it runs on
+  # pull requests only. Check run: `ac-evidence / Acceptance evidence`.
+  ac-evidence:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    uses: rknightion/.github/.github/workflows/ac-evidence.yml@8f00b7fb896191e598f12ed565395697c539add1 # v1.26.9
+
+  # The lines a pull request adds carry no identifier, email address, public address or credential
+  # shape. Pull requests only, like ac-evidence. Check run: `privacy-sweep / Privacy sweep`.
+  privacy-sweep:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    uses: rknightion/.github/.github/workflows/privacy-sweep.yml@8f00b7fb896191e598f12ed565395697c539add1 # v1.26.9
+
+  # The Backlog.md board is retired: issues are the queue. A pull request may delete files under
+  # backlog/ or move them out, never add or change one there. Reads the file list from the API, so
+  # no pull request code is checked out.
+  backlog-freeze:
+    name: backlog/ is frozen
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Refuse additions and changes under backlog/
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$CHANGED_FILES" =~ ^[0-9]+$ ]]; then
+            echo "::error title=backlog freeze::the pull request number or file count is malformed"
+            exit 1
+          fi
+          # The pull request files API lists at most 3000 files; refuse rather than check part of a change.
+          if (( CHANGED_FILES > 3000 )); then
+            echo "::error title=backlog freeze::${CHANGED_FILES} changed files is more than the API lists; split the pull request"
+            exit 1
+          fi
+          offending="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files?per_page=100" \
+            --jq '.[] | select(.status != "removed") | select(.filename | startswith("backlog/")) | "\(.status) \(.filename | @json)"')"
+          if [[ -n "$offending" ]]; then
+            echo "::error title=backlog freeze::this pull request adds or changes files under backlog/; the board is retired, so file the work as an issue"
+            printf '  %s\n' "$offending"
+            exit 1
+          fi
+          echo "No file under backlog/ is added or changed."
+
   # Single required status check (the branch ruleset requires only this). if: always() + an explicit
   # failure check so a failed/cancelled leg fails the gate; main-only publish jobs aren't depended on,
   # so a PR (where they're skipped) still passes. Renovate automerge waits for this to go green.
@@ -309,12 +370,29 @@ jobs:
     name: ci-success
     runs-on: ubuntu-26.04
     if: always()
-    needs: [quality, unit-tests, e2e-tests, docker-build-verify]
+    needs: [quality, unit-tests, e2e-tests, docker-build-verify, ac-evidence, privacy-sweep, backlog-freeze]
     steps:
       - name: Fail if any required job did not pass
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          RESULTS: ${{ join(needs.*.result, ', ') }}
         run: |
-          echo "A required job failed or was cancelled: ${{ join(needs.*.result, ', ') }}"
+          echo "A required job failed or was cancelled: ${RESULTS}"
           exit 1
+      # A skipped job reports success, so on a pull request the pull request checks must have
+      # actually run and passed.
+      - name: Fail if a pull request check did not run
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          AC_EVIDENCE: ${{ needs.ac-evidence.result }}
+          PRIVACY_SWEEP: ${{ needs.privacy-sweep.result }}
+          BACKLOG_FREEZE: ${{ needs.backlog-freeze.result }}
+        run: |
+          if [[ "$AC_EVIDENCE" != "success" || "$PRIVACY_SWEEP" != "success" || "$BACKLOG_FREEZE" != "success" ]]; then
+            echo "ac-evidence: ${AC_EVIDENCE}, privacy-sweep: ${PRIVACY_SWEEP}, backlog-freeze: ${BACKLOG_FREEZE}; all must pass on a pull request"
+            exit 1
+          fi
       - name: All required jobs passed
-        run: echo "ci-success — ${{ join(needs.*.result, ', ') }}"
+        env:
+          RESULTS: ${{ join(needs.*.result, ', ') }}
+        run: echo "All required jobs passed (${RESULTS})"

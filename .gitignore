@@ -30,7 +30,9 @@ blob-report/
 data/e2e-test.db*
 docker-data/
 
-.claude/
+# .claude/skills/ is tracked: it holds the links to the contributor skills in .agents/skills/.
+.claude/*
+!.claude/skills/
 
 .env2
 
