@@ -11,7 +11,7 @@ Source: https://github.com/mattpocock/skills/tree/main/skills/engineering/diagno
 Changes from the source: the glossary and ADR pointers are replaced by the repository's `AGENTS.md`
 and docs; the redaction rule covers personal data and real identifiers as well as secrets; added
 where the loop may run; the human-in-the-loop script template is replaced by asking for one named
-step; added the red-first restore procedure without `git stash`.
+step; the red-first restore procedure lives in `repo-conventions`.
 
 Inside the owner's agent loop, the repository's `LOOP.md` overrides this skill where they differ.
 
@@ -131,13 +131,7 @@ With a correct seam: turn the minimal repro into a failing test, watch it fail f
 apply the fix, watch it pass, then re-run the Phase 1 loop against the original scenario. `write-tests`
 covers what the test should assert.
 
-To show the test fails without the fix: copy the changed production files aside with their modes
-(`cp -p`, never the test). Restore tracked ones with
-`git restore --source=<base> --worktree -- <production paths>`, and move any new untracked production
-file out of the tree (restore cannot remove a file the base never had). Run (red), copy every file back
-with `cp -p`, run (green), and confirm `git status` and `git diff --cached` match what they were before.
-Do not use `git stash`; every worktree of the clone shares it.
-Do not use `git checkout <base> -- <paths>`; it rewrites the index.
+To show the test fails without the fix, use the red-first restore in `repo-conventions`.
 
 ## Phase 6: Clean up
 
@@ -151,4 +145,4 @@ Required before declaring done:
 - [ ] The hypothesis that proved correct is in the commit body and the pull request, so the next
       person to debug this area learns from it.
 
-Then run `verification-before-completion` before saying it is fixed.
+Then prove it as the repository's `AGENTS.md` says before saying it is fixed.

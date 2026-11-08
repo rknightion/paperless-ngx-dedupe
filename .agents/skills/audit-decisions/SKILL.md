@@ -1,132 +1,167 @@
 ---
 name: audit-decisions
-description: Audit the decisions an implementing agent made, not its diff. A pure audit that traces the work into a decisions ledger, changes no code and never blocks an unsupervised run. Working code still embeds architecture nobody chose; surface it because future work inherits it. Use when asked to review the decisions an AI made on the owner's behalf, before landing AI-implemented work, when integrating work another agent did, or when a fix works but might be a point fix.
-license: MIT
+description: Audit the decisions an implementing agent made, not its diff — a pure audit that traces the session's history into a decisions ledger, changes no code, and never blocks an unsupervised run. Working code still embeds architecture the user never chose; surface it because future work inherits it. Use when the user wants to review the decisions the AI made on their behalf, before merging or committing AI-implemented work, when integrating a delegated subagent's pass, or when a fix "works" but might be a point fix.
 ---
 
 # Audit Decisions
 
-Source: https://github.com/dzhng/skills/blob/main/skills/engineering/audit-decisions/SKILL.md (MIT).
+Given a good decision, an agent implements it faithfully; wherever the task is
+underspecified, it makes the decision itself — silently, and the diff won't
+flag it. Reviewing thousands of changed lines doesn't scale, and it inspects
+the execution, which was probably fine. The audit that scales is of the
+**decisions**: surface every one the implementer made on its own, judge
+that list, and record the verdicts.
 
-Changes from the source: the ledger lives in the pull request description instead of a `specs/` file; the plain-language register of the source's separate eli5 skill is inlined; added the line between small in-scope calls and owner calls, the external-contract categories, and the privacy rule for a public ledger.
+This is about architecture more than bugs. An implementation can work
+perfectly and still rest on decisions the user never made — a data shape, a
+storage location, a dependency, an API contract, a tradeoff of memory for
+speed — and every one of them is load-bearing for future work. The user needs
+to know them not because they're wrong, but because they now own them.
 
-Given a good decision, an agent implements it faithfully; wherever the task is underspecified, it
-makes the decision itself, silently, and the diff will not flag it. Reviewing thousands of changed
-lines does not scale, and it inspects the execution, which was probably fine. The audit that scales
-is of the **decisions**: surface every one the implementer made on its own, judge that list and
-record the verdicts.
-
-This is about architecture more than bugs. An implementation can work perfectly and still rest on
-decisions nobody made: a data shape, a storage location, a dependency, an API contract, a tradeoff
-of memory for speed. Each is load-bearing for future work, and the owner needs to know them not
-because they are wrong but because they now own them.
-
-This is purely an audit. It changes no code. Trace back through every step the work took, and every
-step each contributing agent took (reconstruct from its report, its diff, its commits and its
-evidence), and surface every decision made on the owner's behalf that was not in the issue, the
-task description or the repository's documented decisions. The ledger replaces reading the code as
-the review surface. Acting on the verdicts belongs to the caller.
+This is purely an audit — it is not about modifying code, and it can
+be called at any time. The job is to **trace back**: walk every step this
+session has taken, and every step each subagent took (a live implementer
+traces its own; otherwise reconstruct from its reports, transcripts, and
+diffs), and surface every single decision that was made on the user's behalf
+that was not in the original spec or prompt. The ledger of those decisions
+replaces reading the code as the user's review surface — that is the whole
+point. Acting on the verdicts (redoing an unsound decision, applying a
+provisional call) belongs to the caller: the implementing workflow mid-run,
+or the user after reading the report.
 
 Two ways in, same audit:
 
-- **Called by an agent or automation that coordinates implementers** (per pass or per batch):
-  audit that pass, append its entries to the ledger and return.
-- **Called directly by a person**: audit the whole body of work in front of you (a branch, a set of
-  landed changes, a named change) and present the report at once. Recommend; change nothing.
-
-Inside the owner's agent loop, the repository's `LOOP.md` overrides this skill where they differ.
-
-## Where the ledger lives
-
-- **The pull request that lands the work.** Put the ledger in the PR description under a
-  "Decisions" heading. If you cannot write to the PR yourself, hand the ledger back as text so
-  whoever opens it can place it there. Do not create a `decisions.md`, a `specs/` directory or a
-  checklist file.
-- A `needs-user` entry the owner decides becomes a decision record wherever the repository's
-  AGENTS.md says decisions live; other docs cite that record rather than restating it.
-- The ledger is public in a public repository. No personal data, credentials or real identifiers
-  in it: write the shape, not the instance. Run the repository's privacy sweep over it, if it has
-  one.
+- **Called by a workflow** (per pass or per slice): audit that pass, append
+  its entries to the ledger, and return; the workflow presents the
+  accumulated ledger when it hands back.
+- **Called directly by the user**: audit the whole body of work in front of
+  you (session, branch, or named change) and present the report immediately.
+  Recommend; change nothing.
 
 ## Workflow
 
-1. **Elicit and trace back.** Ask the implementer: "Which decisions did you make that you are not
-   confident of? List all." Treat the answer as a starting point; agents under-report. Trace the
-   history yourself and collect every decision in the work that is not in the task. Sweep the
-   categories, not only the suspect fixes: data shapes and formats, storage and naming, schema and
-   migration shape, API contracts and their error behaviour, external names users depend on (CLI
-   flags, config keys, Home Assistant entity and unique ids, metric names), dependencies added,
-   concurrency and performance tradeoffs, defaults and poll intervals, scope interpretations, and
-   patterns future code will imitate. Decisions the task explicitly delegated are discretion, not
-   audit items.
-2. **Triage each decision on evidence.** Forced by the task, or invented? Invented ones get the
-   scrutiny: is this the general solution, or a fix shaped to the one failing case? Verdict per
-   decision: **sound**, **unsound** or **needs-user**, with a **confidence** that the owner would
-   have made the same call. Small design and wording calls inside the agreed scope are the
-   implementer's to make: judge them sound or unsound. Reserve needs-user for taste, product
-   direction, external cost, a change to a published contract, and anything outward-facing or
-   irreversible. Every needs-user entry carries a reversible provisional call, so an unattended
-   run proceeds without waiting. The audit never stalls a run.
-3. **State the corrected decision, do not sketch a patch.** For an unsound decision, name the
-   property that must hold in general, not an edit layered on top. A patch on a bad decision
-   preserves the decision.
-4. **Bank every decision in the ledger** and promote load-bearing sound ones into the PR or issue
-   so later work inherits them as givens.
-5. **Present the ledger grouped by verdict, ranked by confidence**, least confident first inside
-   each group. When it is long, open with the two or three least-confident decisions overall.
-   needs-user means decide, unsound means redo, sound means acknowledge: sound is not skippable.
-   Only trivial discretion (internal naming, cosmetic calls) compresses to a one-line count.
+1. **Elicit and trace back.** When an implementer reports done, ask: *"While
+   working on this, which decisions did you make that you're not confident
+   of? List all."* — but treat the self-report as a starting point, not the
+   boundary: agents under-report. Trace the history yourself — the session's
+   steps, subagent reports, diffs, commits — and collect every decision that
+   is in the work but not in the original spec or prompt. Sweep the
+   architectural categories, not just the suspect fixes: data shapes and
+   formats, storage and naming schemes, API contracts and their error
+   behavior, dependencies added, concurrency/perf tradeoffs, scope
+   interpretations, patterns future code will imitate. Auditing your own
+   session, trace your own steps the same way. Decisions the plan explicitly
+   delegated to the implementer are discretion, not audit items.
+2. **Triage each decision on evidence.** Forced by the plan, or invented?
+   Invented ones get the scrutiny: is this the general solution, or a fix
+   shaped to the one failing case? Verdict per decision: **sound**,
+   **unsound**, or **needs-user** — and alongside the verdict, a
+   **confidence**: how sure the audit is that the user would have made this
+   same call. Confidence is what ranks the report. Reserve needs-user for
+   genuinely user-only calls (taste, product direction, external cost); every
+   needs-user entry records a recommended provisional call that is
+   reversible, so an unsupervised caller can proceed without waiting. The
+   audit never stalls a run: each entry is a judgment handed over for action
+   or review, not a question that halts.
+3. **State the corrected decision, don't sketch a patch.** For each unsound
+   decision, the entry names the corrected one the work should be redone from
+   — the property that must hold in general — not an edit to layer on top. A
+   patch on top of a bad decision preserves the decision; the redo itself is
+   the caller's, after the ledger is reviewed.
+4. **Bank every decision in the ledger** (below), and promote load-bearing
+   sound ones into the plan's handoff so later passes inherit them as givens
+   instead of re-deciding.
+5. **Present the ledger: grouped by verdict, ranked by confidence.** The
+   audit's deliverable is the ledger, handed to whoever acts next — the
+   calling workflow mid-run, the user at run's end. Each verdict group maps
+   to an action — needs-user (decide, with the provisional calls), unsound
+   (redo, with the corrected decisions), sound (acknowledge: the
+   architecture the user now owns) — and within each group decisions are
+   ranked by confidence, least confident first. When the ledger is long,
+   open the report with the two or three least-confident decisions overall,
+   whatever their group: the "review these first" line. Sound is not
+   skippable. Only trivial discretion (internal naming, cosmetic calls)
+   compresses to a one-line count.
 
-## Write every entry in plain language
+   **Write every entry ELI5 — by default, not on request.** The reader
+   didn't live the session: write each entry in the
+   [eli5](../eli5/SKILL.md) register — a concrete scenario walked end to
+   end (the triggering event, what the work does today, what the unbuilt
+   alternative would do), every term of art defined at first use, and
+   pseudocode at the level of the decision when it is about control flow,
+   ordering, or timing. "A gated ask is dropped, not deferred" is a
+   headline, not an entry. A compressed entry that makes the user ask
+   "explain this one" has failed; the ledger must stand alone without the
+   diff, the spec, or the transcript.
 
-The reader did not live the session: they have read none of the code, the diff or the messages.
-Write each entry so it stands alone:
+## The Decisions Ledger
 
-- Walk one concrete scenario end to end: the triggering event, what the work does today, what the
-  unbuilt alternative would do. Do not describe properties in the abstract.
-- Define every term of art at first use, and never lean on a label the work invented.
-- Use pseudocode at the level of the decision when it is about control flow, ordering or timing.
-  The tell that you needed it: the prose says "only when", "before", "unless" or "as soon as" and
-  the reader still cannot say what happens on the second call.
-- "A gated request is dropped, not deferred" is a headline, not an entry. If the reader must ask
-  "explain this one", the entry failed.
+A dedicated file that outlives every pass: `decisions.md` beside the plan
+(`specs/<feature>/decisions.md` when a spec owns the work). One entry per
+audited decision:
 
-## Ledger entry format
-
-- **When**: the commit or pass it landed in.
-- **The decision**: a one-line headline, then the walked scenario.
-- **The gap**: what the task left unspecified that forced it.
-- **The reach**: what future work it constrains or enables.
-- **Verdict**: sound, unsound or needs-user, with a one-line why. Unsound names the corrected
-  decision to redo from. Needs-user names the provisional call and how to reverse it.
-- **Confidence**: low, medium or high, that the owner would have made the same call.
+- **When** — pass or commit it landed in.
+- **The decision** — a one-line headline, then the ELI5 scenario: the
+  triggering event, what the work does today, what the unbuilt alternative
+  would do, with terms of art defined in place.
+- **The gap** — what the plan left unspecified that forced it.
+- **The reach** — what future work this decision constrains or enables; why
+  the user needs to know it exists.
+- **Verdict** — sound / unsound / needs-user, with a one-line why. For
+  unsound: the corrected decision to redo from. For needs-user: the
+  recommended provisional call and how to reverse it.
+- **Confidence** — how sure the audit is that the user would have made the
+  same call (low / medium / high). Ranks the report, ascending.
 
 Rules of the ledger:
 
-- Banked is settled: a decision already in the ledger or promoted into the PR or issue is a given,
-  never re-listed or re-decided.
-- Entries clustering around one area mean the plan is foggy there: send that part back to the
-  issue for a clearer scope rather than triaging the same class of decision forever.
-- **The scenario survives every rewrite.** When entries are consolidated or copied, each keeps its
-  walked scenario and defines any invented label where it is used. A consolidation that shrinks
-  entries to headlines has failed even if every fact survives.
+- Banked is settled: a decision already in the ledger (or promoted into the
+  plan) is a given for later passes — never re-listed, never re-decided.
+- The ledger is a plan-quality signal. Entries clustering around one slice or
+  area mean the plan is foggy there — reslice or send that part back through
+  the spec rather than triaging the same class of decision forever.
+- **ELI5 survives every rewrite.** The entry format above — headline plus the
+  walked scenario with terms defined in place — is the *storage* format, not
+  presentation polish. When entries are consolidated, merged, re-audited at
+  close, or copied into a final ledger, each surviving entry keeps (or
+  regains) its full scenario. The known failure mode is exactly this
+  compression: a closeout rewrite that shrinks banked entries to their
+  headlines produces a ledger the reader must interrogate — "The checkpoint
+  loads rows in mailbox order and rejects the list when a later reference
+  has an earlier createdAt" reads as settled, but only the walked version
+  (two sessions, per-session sequence numbers that can't be compared, the
+  shared insert-timestamp clock) lets a reader actually judge the decision. A
+  consolidation that drops scenarios has failed even if every fact survives —
+  and so has one that keeps the scenario but leans on labels the build
+  invented ("the retry envelope", "the evidence seam") without defining them
+  where they're used.
 
 ## Rules
 
-- **"It works" is not a verdict on the decision.** The recurring smell is the coincidental fix: a
-  resized buffer, bumped timeout or special case whose magnitude happens to cover the failing
-  input. Ask what property *guarantees* the fix in general; if the answer is "this case passes",
-  the decision is unsound even though the tests are green.
-- Declared success is the point of maximum risk. Never skip the audit because the result looks
-  clean. An empty list on nontrivial work is a red flag: what did the task leave unspecified?
-- The audit changes no code, tests or build state, so the ledger and the tree agree on what the
-  caller is deciding about. Evidence-gathering is fair game (read anything, run the existing
-  tests, write transient probes), and every probe is removed before you finish.
+- **"It works" is not a verdict on the decision.** The recurring smell is the
+  coincidental fix: a resized buffer, bumped timeout, or special case whose
+  magnitude happens to cover the failing input while the underlying cause
+  stays dormant. Ask what property *guarantees* the fix in general; if the
+  answer is "this case passes," the decision is unsound even though the code
+  is green.
+- Declared success is the point of maximum risk — the implementer's confidence
+  is highest exactly when its unexamined decisions are about to be merged.
+  Never skip the audit because the result looks clean.
+- An empty list on nontrivial work is a red flag, not a pass. Probe: what did
+  the task leave unspecified? Something filled those gaps.
+- The audit changes no code, tests, or build state. Finding an unsound
+  decision is the deliverable, not a license to fix it — record the corrected
+  decision and leave the tree exactly as audited, so the ledger and the tree
+  agree on what the caller is deciding about. Evidence-gathering is fair game:
+  read anything, run the existing tests, write transient probes — but remove
+  every probe before handback.
 
 ## Done
 
-Every invented decision has a ledger entry with a verdict; every unsound entry names the corrected
-decision; every needs-user entry carries a reversible provisional call; the ledger is presented
-grouped by verdict, least confident first, and each entry reads without follow-up questions, with
-the tree untouched. A report that shows the diff instead of the decisions, or a fix applied during
-the audit, is not done.
+The audit is done when every invented decision in the pass has a ledger entry
+with a verdict, every unsound entry names the corrected decision to redo
+from, every needs-user entry carries a reversible provisional call, and the
+ledger has been presented — grouped by verdict, least-confident-first within
+each group, every entry readable ELI5 without follow-up questions — to
+whoever acts next, with the tree untouched. A handback that shows the diff
+instead of the decisions, or a "fix" applied during the audit, is not done.

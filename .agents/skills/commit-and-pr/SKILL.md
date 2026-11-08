@@ -122,7 +122,7 @@ with a stand-in instead. Run the repository's privacy sweep, if it has one
 
 ## Before you open it
 
-Run `verification-before-completion` on the final tree and `pre-pr-review` on the diff. Write the
-body to a file and pass it with `gh pr create --body-file <file>`. After that the review is the
-pull request's: its required checks and any review bots it runs, handled as `receiving-code-review`
-says.
+Prove the final tree as the repository's `AGENTS.md` says and run `pre-pr-review` on the diff.
+Write the body to a file and pass it with `gh pr create --body-file <file>`. After that the review is
+the pull request's: its required checks and any review bots it runs, handled as the `AGENTS.md`
+review findings rule says.
