@@ -4,11 +4,27 @@ tier: guarded
 gate: just check
 ci-required: ci-success
 grafana-stack: none
+tracker: github
+landing: pr
 
-Public repository: `backlog/` is committed, so no account identifier, host or device name, address or
-document content from a real Paperless instance in any task or doc. Run `just` with stdin from
-`/dev/null`. The gate list in `backlog/config.yml` `definition_of_done` is authoritative;
-`pnpm test:e2e` is in it when `packages/web` behaviour changed.
+Issues are public: no account identifier, host or device name, address or document content from a
+real Paperless instance in any issue, pull request or doc. Run `just` with stdin from `/dev/null`.
+
+The gate list for a pull request is `just check`, `just build`, and `just test-e2e` when
+`packages/web` behaviour changed.
+
+The tracker working model is `~/repos/agent-docs/docs/github-tracker.md` (maintainers only).
+
+## Queue
+
+- The queue is `just tracker queue`: open issues at Project Status Ready on the rknightion Project.
+- A charter selects work by labels (`type:task`, `type:bug`, `type:feature`, `needs-owner`,
+  `needs-triage`) and Project fields (Status, Priority, Effort, Lane). Never queue a `needs-owner` or
+  `needs-triage` issue.
+- Only the root writes issues and the Project, through `just tracker`. A lane returns the status and
+  the AC ticks it wants.
+- A queue row names the issue as `#N`. A legacy board id (`PND-0001`) resolves with `just issue <ID>`;
+  `.github/tracker/id-map.json` is the map.
 
 ## Credentials
 
