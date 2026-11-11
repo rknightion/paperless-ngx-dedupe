@@ -1,6 +1,6 @@
 ---
 name: commit-and-pr
-description: Write commit messages, pull request titles and pull request bodies that release-please can version and the acceptance evidence check accepts. Use when committing, drafting or fixing a commit message, choosing a pull request's squash title, or writing or refreshing a pull request description. Covers commit types from release-please-config.json, breaking changes, closing forms, the acceptance evidence table, the Task line, staging by pathspec and what never goes in commit or pull request text.
+description: Write commit messages, pull request titles and pull request bodies that release-please can version and the acceptance evidence check accepts. Use when committing, drafting or fixing a commit message, choosing a pull request's squash title, or writing or refreshing a pull request description. Covers commit types, breaking changes, closing forms, the acceptance evidence table, the Task line, staging by pathspec and what never goes in commit or pull request text.
 license: Apache-2.0
 ---
 
@@ -10,7 +10,7 @@ Sources: https://github.com/getsentry/skills/blob/main/skills/commit/SKILL.md an
 https://github.com/getsentry/skills/blob/main/skills/pr-writer/SKILL.md
 
 Changes from the source: the fixed type list is replaced by the types in the repository's
-`release-please-config.json`, the subject is lower case, the pull request title is the squash commit
+`release-please-config.json` when it has one, and by a default set when it has none, the subject is lower case, the pull request title is the squash commit
 subject, and added the closing forms, the acceptance evidence table, the `Task:` line, pathspec
 staging and fork rules.
 
@@ -22,9 +22,11 @@ repository's `AGENTS.md`'s call.
 
 ## Commit type
 
-Read `changelog-sections` in `release-please-config.json` at the repository root and use only the
-types it lists. A type it marks `hidden` is valid but stays out of the changelog. A type it does not
-list (`ref`, `meta`, `license` and the like) never reaches the changelog: do not invent one.
+If the repository has a `release-please-config.json` at its root, read `changelog-sections` in it
+and use only the types it lists. A type it marks `hidden` is valid but stays out of the changelog. A
+type it does not list (`ref`, `meta`, `license` and the like) never reaches the changelog: do not
+invent one. If the repository has none, use `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`,
+`build` or `perf`.
 
 Pick the narrowest accurate type for the dominant change: `feat` for new capability (minor bump),
 `fix` for a defect (patch), `refactor` for no behaviour change. Add a scope for the area when it
@@ -34,8 +36,8 @@ helps (`api`, `chart`, `docs`, `ci`).
 deliberate break of something users depend on (a flag, an API field, a config key, a chart value),
 and say in the body what breaks and how to migrate.
 
-release-please owns `CHANGELOG.md`, `.release-please-manifest.json` and every file the config lists
-under `extra-files`. Never hand-edit them.
+Where the repository uses release-please, it owns `CHANGELOG.md`, `.release-please-manifest.json`
+and every file the config lists under `extra-files`. Never hand-edit them.
 
 ## Message
 

@@ -7,7 +7,7 @@
     ".agents/skills/audit-tests/LICENSE": "653bb41fb060605c0e01fd72e6e6be72bffef192e0ab6ae8b0cd4abf9ba8d040",
     ".agents/skills/audit-tests/SKILL.md": "25cf914e1acfcf4b7c5199bc5e38dfe50400c6b7af987fd47142e21d070916b2",
     ".agents/skills/commit-and-pr/LICENSE": "96e78a9ce85795b117c8929887bdb78f88bf23f7b85a31f0872cde4dff7e92cd",
-    ".agents/skills/commit-and-pr/SKILL.md": "6ac032d506b47bb348c618591bc75fc44180f08263f68dc5d550859db52135e8",
+    ".agents/skills/commit-and-pr/SKILL.md": "9773feb5d86a9e102a70a4df782d9f33e554b2af8cc62151c17a7fe8e01da677",
     ".agents/skills/diagnosing-bugs/LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
     ".agents/skills/diagnosing-bugs/SKILL.md": "8bd81480133b2fc498604ac45a4e99eaacec709c629aa2bda13b86601fc7b7c9",
     ".agents/skills/eli5/LICENSE": "653bb41fb060605c0e01fd72e6e6be72bffef192e0ab6ae8b0cd4abf9ba8d040",
@@ -19,7 +19,7 @@
     ".agents/skills/pre-pr-review/LICENSE": "82b68f22c1e09282c25183b2dbf5d0a9366cd5a699bedeebff1a6a1fc2d8c6ba",
     ".agents/skills/pre-pr-review/SKILL.md": "b598cc8ccf16e74bf1e8f50a4d28abf1020a0ca08909959b2851a0d34081c3c4",
     ".agents/skills/refactor-clean/LICENSE": "653bb41fb060605c0e01fd72e6e6be72bffef192e0ab6ae8b0cd4abf9ba8d040",
-    ".agents/skills/refactor-clean/SKILL.md": "03e70a60e2d83d0c84ce92e8d199935bc8e0aef2bf57ef263aa0da7599c1fd41",
+    ".agents/skills/refactor-clean/SKILL.md": "d4c554c0f4a1d0af9c6f6558b8fba26ff52bfa0dc22ffeaa7630a826a66bfd52",
     ".agents/skills/repo-conventions/LICENSE": "93fe4303403cdc2eb4d4aadd96be4208ef217537a454a220648afbb21fe89bc8",
     ".agents/skills/repo-conventions/SKILL.md": "4fcb0dcd26de74187a90b520705e3a742372d72355d0e41e1a27b5854fea1145",
     ".agents/skills/write-docs/LICENSE": "653bb41fb060605c0e01fd72e6e6be72bffef192e0ab6ae8b0cd4abf9ba8d040",
@@ -28,11 +28,11 @@
     ".agents/skills/write-tests/SKILL.md": "56a08e2276b2aa64e666ad184f768b53d89668b25da21c3d38ec01dd5779955e",
     ".github/privacy/identifier-patterns.txt": "85cadcfb81ec1dae95543723e6d6eed80fcbd0a4eed4ce2f9ec32acecd42971f",
     ".github/privacy/sweep": "914d03f4a0d5fa50458532e1b6beb381dda30a965b21694a14f68c8226ec2c3b",
-    "AGENTS.md": "0b3b40b44c8274adba5afafc679e63138e7d391dc6683e56c9f94cd90349d434",
-    "CONTRIBUTING.md": "c8fae5464a1bb41309e156d72724f9f5c9a5d960797cb825db62b9a50a163487"
+    "AGENTS.md": "5eb5e75e0552b06b05de329e31fb85132d0090f04d78364e35ece196837dd942",
+    "CONTRIBUTING.md": "a0c45771d721e146cedc891433761ea73bb5dad09dd5d51dd99e3ccb3cda0fc3"
   },
   "ref": "main",
   "schema": 1,
-  "sha": "d677491c39e6bcfcfb8e9b798369b59971b33187",
+  "sha": "da0e056c29e0fbae1dff837ffaa922fe998ce92b",
   "source": "rknightion/.github"
 }

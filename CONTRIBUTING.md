@@ -46,9 +46,10 @@ an issue, pull request, test or doc.
 
 ## The pull request
 
-- The title is a Conventional Commit subject: `fix: ...`, `feat: ...`, `docs: ...`. Use a type
-  listed in `release-please-config.json`; the squash merge uses the title as the commit subject and
-  release notes are built from it. Mark a breaking change with `!`, as in `feat!: ...`.
+- The title is a Conventional Commit subject: `fix: ...`, `feat: ...`, `docs: ...`. Use one of
+  the types `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build` or `perf`, or another
+  type the repository's release configuration lists; the squash merge uses the title as the commit
+  subject and release notes are built from it. Mark a breaking change with `!`, as in `feat!: ...`.
 - Fill in the pull request template: what changed, why, what you verified and what you did not.
 - Tick "Allow edits by maintainers" when you open a pull request from a fork, so a maintainer can
   push a small fix to your branch.
