@@ -13,8 +13,9 @@ or coding agent working in this repository. `CONTRIBUTING.md` has the longer ver
   request.
 - Run `just setup` once, then `just check` with stdin from `/dev/null` before you push. Say in the
   pull request what you ran and what you could not run.
-- The pull request title is a Conventional Commit subject (`fix: ...`, `feat: ...`), using a type
-  from `release-please-config.json`. Mark a breaking change with `!` (`feat!: ...`).
+- The pull request title is a Conventional Commit subject (`fix: ...`, `feat: ...`), using one of
+  the types `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build` or `perf`, or another
+  type the repository's release configuration lists. Mark a breaking change with `!` (`feat!: ...`).
 - A contributor's pull request body says `Refs #N` for the issue it works on, with how the change
   was verified, or `Task: none, <reason>` on a line of its own when there is no issue. It carries no
   closing keyword: a maintainer adds the acceptance evidence and closes the issue.
