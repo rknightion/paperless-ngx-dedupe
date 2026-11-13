@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { document, documentContent } from '../schema/sqlite/documents.js';
+import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { createLogger } from '../logger.js';
 import { normalizeText } from './normalize.js';
@@ -134,8 +134,10 @@ export async function syncDocuments(
 
       // Incremental sync cutoff: stop when oldest doc in batch is older than lastSyncAt
       if (!isFullSync && lastSyncAt && page.results.length > 0) {
+        // Compare instants: Paperless renders `modified` in its own zone offset, and
+        // lastSyncAt is UTC, so the strings do not order correctly. Unparsable: keep paging.
         const oldestInBatch = page.results[page.results.length - 1];
-        if (oldestInBatch.modified < lastSyncAt) {
+        if (Date.parse(oldestInBatch.modified) < Date.parse(lastSyncAt)) {
           shouldStop = true;
         }
       }
@@ -335,10 +337,16 @@ function updateDocument(
 
     // Upsert document content
     const existingContent = tx
-      .select({ id: documentContent.id })
+      .select({ id: documentContent.id, contentHash: documentContent.contentHash })
       .from(documentContent)
       .where(eq(documentContent.documentId, localDocId))
       .get();
+
+    // The signature was computed from the old text; analysis reuses any stored signature,
+    // so drop it when the text changed and let the next run regenerate it.
+    if (existingContent?.contentHash !== normalized.contentHash) {
+      tx.delete(documentSignature).where(eq(documentSignature.documentId, localDocId)).run();
+    }
 
     if (existingContent) {
       tx.update(documentContent)

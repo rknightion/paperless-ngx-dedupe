@@ -39,6 +39,10 @@ describe('textToShingles', () => {
     expect(textToShingles(twentyWords, 3, 25)).toBeNull();
   });
 
+  it('returns null when the text is shorter than one n-gram', () => {
+    expect(textToShingles('alpha beta', 3, 1)).toBeNull();
+  });
+
   it('returns a Set of numbers for sufficient words', () => {
     const result = textToShingles(twentyWords);
     expect(result).toBeInstanceOf(Set);

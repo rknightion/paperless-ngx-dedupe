@@ -7,6 +7,7 @@ import { buildGroupWhere } from '../queries/duplicates.js';
 import { parseTagsJson } from '../queries/helpers.js';
 import type { DuplicateGroupFilters } from '../queries/types.js';
 import type { DuplicateExportRow } from './types.js';
+import { escapeDocumentCsvCell } from './documents.js';
 
 export function getDuplicateGroupsForExport(
   db: AppDatabase,
@@ -99,25 +100,28 @@ export function formatDuplicatesCsv(rows: DuplicateExportRow[]): string {
   lines.push(CSV_HEADERS.join(','));
 
   for (const row of rows) {
+    // Text that originates in Paperless is neutralized against spreadsheet formula
+    // evaluation; ids, scores and dates are app-generated and stay verbatim.
+    const plain = (value: unknown) => escapeCsvField(formatField(value));
     const fields = [
-      row.groupId,
-      row.confidenceScore,
-      row.jaccardSimilarity,
-      row.fuzzyTextRatio,
-      row.discriminativeScore,
-      row.groupStatus,
-      row.isPrimary,
-      row.paperlessId,
-      row.title,
-      row.correspondent,
-      row.documentType,
-      row.tags,
-      row.createdDate,
-      row.wordCount,
-      row.groupCreatedAt,
+      plain(row.groupId),
+      plain(row.confidenceScore),
+      plain(row.jaccardSimilarity),
+      plain(row.fuzzyTextRatio),
+      plain(row.discriminativeScore),
+      plain(row.groupStatus),
+      plain(row.isPrimary),
+      plain(row.paperlessId),
+      escapeDocumentCsvCell(row.title),
+      escapeDocumentCsvCell(row.correspondent),
+      escapeDocumentCsvCell(row.documentType),
+      escapeDocumentCsvCell(row.tags),
+      plain(row.createdDate),
+      plain(row.wordCount),
+      plain(row.groupCreatedAt),
     ];
 
-    lines.push(fields.map((f) => escapeCsvField(formatField(f))).join(','));
+    lines.push(fields.join(','));
   }
 
   return BOM + lines.join('\r\n') + '\r\n';

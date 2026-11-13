@@ -162,6 +162,31 @@ describe('formatDuplicatesCsv', () => {
     expect(csv).toContain('"Invoice, with comma"');
   });
 
+  it('neutralizes text cells a spreadsheet would evaluate as a formula', () => {
+    const row: DuplicateExportRow = {
+      groupId: 'grp-1',
+      confidenceScore: 0.5,
+      jaccardSimilarity: null,
+      fuzzyTextRatio: null,
+      discriminativeScore: null,
+      groupStatus: 'pending',
+      isPrimary: false,
+      paperlessId: 1,
+      title: '=HYPERLINK("https://example.com")',
+      correspondent: '@sender',
+      documentType: '+type',
+      tags: ['-tag'],
+      createdDate: null,
+      wordCount: null,
+      groupCreatedAt: '2024-01-01T00:00:00Z',
+    };
+
+    const dataLine = formatDuplicatesCsv([row]).split('\r\n')[1];
+    expect(dataLine).toBe(
+      `grp-1,0.5,,,,pending,false,1,"'=HYPERLINK(""https://example.com"")",'@sender,'+type,'-tag,,,2024-01-01T00:00:00Z`,
+    );
+  });
+
   it('doubles internal quotes', () => {
     const row: DuplicateExportRow = {
       groupId: 'grp-1',
