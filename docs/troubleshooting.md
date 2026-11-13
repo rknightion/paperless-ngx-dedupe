@@ -304,10 +304,11 @@ curl http://localhost:3000/api/v1/documents/stats
 
 ### Enable debug logging
 
-Set `LOG_LEVEL=debug` in your `.env` file and restart:
+Set `LOG_LEVEL=debug` in your `.env` file and recreate the container. `docker compose restart` keeps the
+environment the container was created with, so an edited `.env` only takes effect on `up`:
 
 ```bash
-docker compose restart
+docker compose up -d
 ```
 
 Debug logs include detailed information about API calls, sync progress, and analysis stages.
