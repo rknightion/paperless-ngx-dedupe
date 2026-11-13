@@ -3,7 +3,7 @@ import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
 import { syncDocuments } from '../sync-documents.js';
-import { document, documentContent } from '../../schema/sqlite/documents.js';
+import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { syncState } from '../../schema/sqlite/app.js';
 import { eq } from 'drizzle-orm';
 import type { PaperlessDocument } from '../../paperless/types.js';
@@ -209,6 +209,28 @@ describe('syncDocuments', () => {
       { paperlessId: 3, insertedGeneration: 'generation-1', changedGeneration: 'generation-2' },
       { paperlessId: 5, insertedGeneration: 'generation-2', changedGeneration: 'generation-2' },
     ]);
+  });
+
+  it('keeps paging an incremental sync when Paperless reports times in a negative UTC offset', async () => {
+    await syncDocuments({ db, client: createSimpleClient([makePaperlessDoc(1)]) });
+    db.update(syncState)
+      .set({ lastSyncAt: '2024-06-02T16:00:00.000Z' })
+      .where(eq(syncState.id, 'singleton'))
+      .run();
+
+    // Six documents modified 17:00Z to 17:50Z, newest first, rendered in UTC-04:00.
+    const changed = [50, 40, 30, 20, 10, 0].map((minute, index) =>
+      makePaperlessDoc(10 + index, {
+        modified: `2024-06-02T13:${String(minute).padStart(2, '0')}:00.000000-04:00`,
+      }),
+    );
+    const result = await syncDocuments({
+      db,
+      client: createMockClient({ docs: changed, pageSize: 2 }),
+    });
+
+    expect(result.syncType).toBe('incremental');
+    expect(result.inserted).toBe(6);
   });
 
   it('should store document content with normalization', async () => {

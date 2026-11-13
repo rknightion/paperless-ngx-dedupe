@@ -134,8 +134,10 @@ export async function syncDocuments(
 
       // Incremental sync cutoff: stop when oldest doc in batch is older than lastSyncAt
       if (!isFullSync && lastSyncAt && page.results.length > 0) {
+        // Compare instants: Paperless renders `modified` in its own zone offset, and
+        // lastSyncAt is UTC, so the strings do not order correctly. Unparsable: keep paging.
         const oldestInBatch = page.results[page.results.length - 1];
-        if (oldestInBatch.modified < lastSyncAt) {
+        if (Date.parse(oldestInBatch.modified) < Date.parse(lastSyncAt)) {
           shouldStop = true;
         }
       }
