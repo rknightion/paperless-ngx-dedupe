@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { document, documentContent } from '../schema/sqlite/documents.js';
+import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { createLogger } from '../logger.js';
 import { normalizeText } from './normalize.js';
@@ -337,10 +337,16 @@ function updateDocument(
 
     // Upsert document content
     const existingContent = tx
-      .select({ id: documentContent.id })
+      .select({ id: documentContent.id, contentHash: documentContent.contentHash })
       .from(documentContent)
       .where(eq(documentContent.documentId, localDocId))
       .get();
+
+    // The signature was computed from the old text; analysis reuses any stored signature,
+    // so drop it when the text changed and let the next run regenerate it.
+    if (existingContent?.contentHash !== normalized.contentHash) {
+      tx.delete(documentSignature).where(eq(documentSignature.documentId, localDocId)).run();
+    }
 
     if (existingContent) {
       tx.update(documentContent)

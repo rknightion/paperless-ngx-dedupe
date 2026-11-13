@@ -211,6 +211,49 @@ describe('syncDocuments', () => {
     ]);
   });
 
+  it('drops the stored signature when content changes and keeps it for a metadata-only change', async () => {
+    await syncDocuments(
+      { db, client: createSimpleClient([makePaperlessDoc(1), makePaperlessDoc(2)]) },
+      { forceFullSync: true },
+    );
+    const localIds = new Map(
+      db
+        .select({ id: document.id, paperlessId: document.paperlessId })
+        .from(document)
+        .all()
+        .map((row) => [row.paperlessId, row.id]),
+    );
+    for (const documentId of localIds.values()) {
+      db.insert(documentSignature)
+        .values({
+          documentId,
+          minhashSignature: Buffer.alloc(8),
+          algorithmVersion: 'test',
+          numPermutations: 2,
+          createdAt: '2024-06-01T00:00:00Z',
+        })
+        .run();
+    }
+
+    await syncDocuments(
+      {
+        db,
+        client: createSimpleClient([
+          makePaperlessDoc(1, { content: 'OCR text was redone for document 1' }),
+          makePaperlessDoc(2, { title: 'Metadata changed' }),
+        ]),
+      },
+      { forceFullSync: true },
+    );
+
+    const withSignature = db
+      .select({ documentId: documentSignature.documentId })
+      .from(documentSignature)
+      .all()
+      .map((row) => row.documentId);
+    expect(withSignature).toEqual([localIds.get(2)]);
+  });
+
   it('keeps paging an incremental sync when Paperless reports times in a negative UTC offset', async () => {
     await syncDocuments({ db, client: createSimpleClient([makePaperlessDoc(1)]) });
     db.update(syncState)
