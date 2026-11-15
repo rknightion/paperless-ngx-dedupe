@@ -21,7 +21,7 @@ import {
 } from '../manager.js';
 import { JobType, JobStatus } from '../../types/enums.js';
 import { job as jobTable } from '../../schema/sqlite/jobs.js';
-import { dispatchIntent } from '../../schema/sqlite/automation.js';
+import { dispatchIntent, operationLease } from '../../schema/sqlite/automation.js';
 import { reviewedMutationPlan } from '../../schema/sqlite/review.js';
 import { eq, sql } from 'drizzle-orm';
 
@@ -651,6 +651,48 @@ describe('Job Manager', () => {
   });
 
   describe('recoverStaleJobs', () => {
+    it.each(['missing', 'completed', 'failed', 'cancelled'] as const)(
+      'removes orphaned non-expiring leases at startup recovery for a %s owner',
+      (status) => {
+        let ownerId = 'duplicate-mutation-interrupted';
+        if (status !== 'missing') {
+          ownerId = createJob(db, JobType.SYNC);
+          db.update(jobTable).set({ status }).where(eq(jobTable.id, ownerId)).run();
+          db.delete(operationLease).run();
+        }
+        db.insert(operationLease)
+          .values({ operation: 'duplicate_delete', ownerId, acquiredAt: new Date().toISOString() })
+          .run();
+        expect(recoverStaleJobs(db)).toBe(0);
+        expect(() => createJob(db, JobType.SYNC)).not.toThrow();
+        expect(
+          db.select().from(operationLease).where(eq(operationLease.ownerId, ownerId)).all(),
+        ).toEqual([]);
+      },
+    );
+
+    it.each(['pending', 'running', 'paused'] as const)('preserves a %s job lease', (status) => {
+      const id = createJob(db, JobType.SYNC);
+      db.update(jobTable).set({ status }).where(eq(jobTable.id, id)).run();
+      const before = db.select().from(operationLease).all();
+      expect(recoverStaleJobs(db)).toBe(status === 'pending' ? 0 : 1);
+      expect(db.select().from(operationLease).all()).toEqual(before);
+    });
+
+    it('preserves an unexpired backup lease when no jobs are stale', () => {
+      db.insert(operationLease)
+        .values({
+          operation: 'backup',
+          ownerId: 'backup-holder',
+          acquiredAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        })
+        .run();
+      const before = db.select().from(operationLease).all();
+      expect(recoverStaleJobs(db)).toBe(0);
+      expect(db.select().from(operationLease).all()).toEqual(before);
+    });
+
     it('should requeue running jobs while preserving their restart audit', () => {
       const id = createJob(db, JobType.SYNC);
       db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, id)).run();

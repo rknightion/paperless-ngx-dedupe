@@ -19,6 +19,9 @@ import {
 } from '../scheduler/coordinator.js';
 import type { OperationKind } from '../scheduler/store.js';
 import { document } from '../schema/sqlite/documents.js';
+import { createLogger } from '../logger.js';
+
+const logger = createLogger('job-manager');
 
 export class JobAlreadyRunningError extends Error {
   constructor(type: string) {
@@ -575,6 +578,15 @@ export function retryDeadLetterJob(db: AppDatabase, id: string): boolean {
 
 export function recoverStaleJobs(db: AppDatabase): number {
   const sqlite = sqliteFor(db);
+  const removed = sqlite
+    .prepare(
+      `DELETE FROM operation_lease
+    WHERE expires_at IS NULL AND owner_id NOT IN (
+      SELECT id FROM job WHERE status IN ('pending', 'running', 'paused')
+    )`,
+    )
+    .run().changes;
+  if (removed > 0) logger.warn({ removed }, 'Removed orphaned operation leases at startup');
   const stale = sqlite
     .prepare(
       `SELECT j.id, j.type, j.status AS job_status
