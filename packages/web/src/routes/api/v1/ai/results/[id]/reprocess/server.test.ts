@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => {
   }
   return {
     PolicyError,
-    createAiProvider: vi.fn(),
+    createInteractiveAiProvider: vi.fn(),
     markAiResultFailed: vi.fn(),
     reprocessSingleResult: vi.fn(),
   };
@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@paperless-dedupe/core', () => ({
   CustomFieldPolicyError: mocks.PolicyError,
-  createAiProvider: mocks.createAiProvider,
+  createInteractiveAiProvider: mocks.createInteractiveAiProvider,
   getAiConfig: vi.fn(() => ({
     model: 'gpt-5.4-mini',
     maxRetries: 1,
@@ -44,7 +44,7 @@ import { POST } from './+server';
 describe('AI result reprocess policy errors', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.createAiProvider.mockResolvedValue({ provider: 'openai', extract: vi.fn() });
+    mocks.createInteractiveAiProvider.mockResolvedValue({ provider: 'openai', extract: vi.fn() });
   });
 
   it('returns a typed safe conflict without marking the document failed', async () => {

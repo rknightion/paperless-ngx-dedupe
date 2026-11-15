@@ -43,7 +43,7 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `extractCustomFields` | `false` | boolean | Recommend values for existing Paperless custom fields |
 | `flexProcessing` | `true` | boolean | Use OpenAI Flex Processing for ~50% lower costs |
 | `reasoningEffort` | `low` | `none`, `low`, `medium`, `high` | Reasoning effort level |
-| `maxRetries` | `10` | 0--20 | Batch runs cap SDK retries at 2 and also re-queue rate-limited and unavailable-provider requests for up to 3 passes. Single-result reprocess uses the configured value. |
+| `maxRetries` | `10` | 0--20 | Batch runs cap SDK retries at 2 and also re-queue rate-limited and unavailable-provider requests for up to 3 passes. Single-result reprocess caps the configured retry count at 2. |
 | `confidenceThresholdGlobal` | `0` | 0--1 | Minimum confidence for all fields (floor) |
 | `confidenceThresholdTitle` | `0` | 0--1 | Per-field override for title |
 | `confidenceThresholdCorrespondent` | `0` | 0--1 | Per-field override for correspondent |
@@ -101,6 +101,8 @@ Processing runs as a background job with real-time progress via SSE:
 4. **Rate delay** -- A configurable pause between API calls prevents rate-limit errors.
 
 Documents without text content are skipped automatically. When re-processing, existing results are overwritten.
+
+Single-result reprocess uses the standard tier with a 60-second client timeout and at most two retries, trading the Flex discount for lower interactive latency.
 
 ## Reviewing Results
 
