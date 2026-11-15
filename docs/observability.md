@@ -113,6 +113,8 @@ Background jobs run in worker threads and are not profiled or labelled.
 
 ## Semantic Conventions
 
+Per-statement `db.query` log records are emitted only at `LOG_LEVEL=debug` or `trace`.
+
 This app follows OpenTelemetry semantic conventions:
 
 - **Database:** Stable conventions (`db.system.name`, `db.operation.name`, `db.query.text`). Set `OTEL_SEMCONV_STABILITY_OPT_IN=database`.

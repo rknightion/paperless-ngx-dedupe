@@ -14,7 +14,11 @@ const LOGGER_NAME = 'paperless-ngx-dedupe.db';
 export class OtelDrizzleLogger implements DrizzleLogger {
   private readonly otelLogger = logs.getLogger(LOGGER_NAME);
 
+  constructor(private readonly enabled: boolean) {}
+
   logQuery(query: string, _params: unknown[]): void {
+    if (!this.enabled) return;
+
     // Skip if no active span — avoids emitting orphaned log records
     const activeSpan = trace.getActiveSpan();
     if (!activeSpan || !activeSpan.isRecording()) return;

@@ -62,8 +62,10 @@ const schema = {
   aiResultRevisionRelations,
 };
 
-// Shared logger instance — only adds span events when an active OTEL span exists
-const otelLogger = new OtelDrizzleLogger();
+// Shared query logger: statement detail is opt-in through diagnostic log levels.
+const otelLogger = new OtelDrizzleLogger(
+  ['debug', 'trace'].includes((process.env.LOG_LEVEL ?? '').toLowerCase()),
+);
 
 function createDrizzle(sqlite: Database.Database) {
   return drizzle(sqlite, { schema, logger: otelLogger });
