@@ -1,5 +1,6 @@
 import type {
   AiProviderInterface,
+  AiProviderUsage,
   AiExtractionRequest,
   AiExtractionResult,
   AiExtractionResponse,
@@ -171,21 +172,40 @@ export class OpenAiProvider implements AiProviderInterface {
       throw error;
     }
 
+    const usage: AiProviderUsage = {
+      promptTokens: response.usage?.input_tokens ?? 0,
+      completionTokens: response.usage?.output_tokens ?? 0,
+      cachedTokens: response.usage?.input_tokens_details?.cached_tokens,
+      serviceTier: response.service_tier,
+    };
+
     // Check for refusal
     if (response.refusal) {
-      throw new AiExtractionError('refusal', response.refusal, response.id);
+      throw new AiExtractionError('refusal', response.refusal, response.id, undefined, usage);
     }
 
     // Check for incomplete response
     if (response.status === 'incomplete') {
       const reason = response.incomplete_details?.reason ?? 'unknown';
       const failureType = reason === 'max_output_tokens' ? 'max_tokens' : 'timeout';
-      throw new AiExtractionError(failureType, `Incomplete response: ${reason}`, response.id);
+      throw new AiExtractionError(
+        failureType,
+        `Incomplete response: ${reason}`,
+        response.id,
+        undefined,
+        usage,
+      );
     }
 
     // Use SDK-parsed output
     if (!response.output_parsed) {
-      throw new AiExtractionError('schema_mismatch', 'No parsed output in response', response.id);
+      throw new AiExtractionError(
+        'schema_mismatch',
+        'No parsed output in response',
+        response.id,
+        undefined,
+        usage,
+      );
     }
 
     try {
@@ -194,11 +214,7 @@ export class OpenAiProvider implements AiProviderInterface {
       ) as AiExtractionResponse;
       return {
         response: parsed,
-        usage: {
-          promptTokens: response.usage?.input_tokens ?? 0,
-          completionTokens: response.usage?.output_tokens ?? 0,
-          cachedTokens: response.usage?.input_tokens_details?.cached_tokens,
-        },
+        usage,
         rateLimit,
       };
     } catch (error) {
@@ -206,6 +222,8 @@ export class OpenAiProvider implements AiProviderInterface {
         'schema_mismatch',
         `Schema validation failed: ${(error as Error).message}`,
         response.id,
+        undefined,
+        usage,
       );
     }
   }

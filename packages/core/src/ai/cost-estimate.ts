@@ -4,7 +4,7 @@ import { document, documentContent } from '../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { buildPromptParts } from './prompt.js';
 import { OPENAI_MODELS } from './types.js';
-import { getAllModelPricing } from './costs.js';
+import { getAllModelPricing, FLEX_COST_FACTOR } from './costs.js';
 import type { ModelPricing } from './costs.js';
 import type { AiConfig } from './types.js';
 
@@ -94,7 +94,7 @@ function computeModelEstimate(
   }
 
   // Flex processing uses Batch API rates (~50% of standard pricing)
-  const flexDiscount = flexProcessing ? 0.5 : 1;
+  const flexDiscount = flexProcessing ? FLEX_COST_FACTOR : 1;
   bestCost *= flexDiscount;
   const adjustedWorstCost = worstCost * flexDiscount;
 

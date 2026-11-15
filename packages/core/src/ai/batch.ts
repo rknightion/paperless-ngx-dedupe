@@ -454,6 +454,10 @@ export async function processBatch(
                   pricing,
                   extraction.usage.promptTokens,
                   extraction.usage.completionTokens,
+                  {
+                    cachedTokens: extraction.usage.cachedTokens,
+                    flex: extraction.usage.serviceTier === 'flex',
+                  },
                 )
               : null;
 
@@ -583,6 +587,15 @@ export async function processBatch(
 
             const now = new Date().toISOString();
             const failureType = isAiError ? error.failureType : null;
+            const usage = isAiError ? error.usage : undefined;
+            const pricing = usage ? getModelPricing(db, config.model) : null;
+            const estimatedCostUsd =
+              usage && pricing
+                ? estimateResultCost(pricing, usage.promptTokens, usage.completionTokens, {
+                    cachedTokens: usage.cachedTokens,
+                    flex: usage.serviceTier === 'flex',
+                  })
+                : null;
             // Store error result
             writeAiResultWithHistory(db, {
               documentId: doc.id,
@@ -606,16 +619,18 @@ export async function processBatch(
               evidence: null,
               failureType,
               rawResponseJson: null,
-              promptTokens: null,
-              completionTokens: null,
+              promptTokens: usage?.promptTokens ?? null,
+              completionTokens: usage?.completionTokens ?? null,
               errorMessage: errorMsg,
               processingTimeMs: null,
-              estimatedCostUsd: null,
+              estimatedCostUsd,
               syncGenerationId,
               createdAt: now,
             });
 
             result.failed++;
+            result.totalPromptTokens += usage?.promptTokens ?? 0;
+            result.totalCompletionTokens += usage?.completionTokens ?? 0;
             aiDocumentsTotal().add(1, { outcome: 'failed', 'gen_ai.system': provider.provider });
 
             // Circuit breaker: track consecutive same errors (skip rate limits)

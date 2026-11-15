@@ -6,6 +6,9 @@ import { appConfig } from '../../schema/sqlite/app.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
 import { DEFAULT_AI_CONFIG, OPENAI_MODELS } from '../types.js';
+import { reprocessSingleResult } from '../reprocess.js';
+import { AiExtractionError } from '../providers/types.js';
+import { type PaperlessClient } from '../../paperless/client.js';
 import { estimateProcessingCost } from '../cost-estimate.js';
 import {
   fetchAndCachePricing,
@@ -298,3 +301,105 @@ it.fails('limits cost totals and groupings to the requested window', () => {
     .soft(stats.costByModel)
     .toEqual([{ model: models[0], costUsd: 1.25, promptTokens: 100, completionTokens: 20 }]);
 });
+
+it.each([
+  [undefined, 0.00625],
+  [{ flex: false }, 0.00625],
+  [{ flex: true }, 0.003125],
+  [{ cachedTokens: 2000 }, 0.00325],
+  [{ cachedTokens: 2000, flex: true }, 0.001625],
+  [{ cachedTokens: 4000 }, 0.00175],
+  [{ cachedTokens: 0 }, 0.00625],
+])('prices cached tokens and the served tier with options %j', (options, expected) => {
+  const price = {
+    inputPerToken: 0.000002,
+    outputPerToken: 0.000005,
+    cacheReadPerToken: 0.0000005,
+    cacheCreationPerToken: null,
+  };
+  expect(estimateResultCost(price, 3000, 50, options)).toBeCloseTo(expected, 12);
+});
+
+it('prices cached tokens at the input rate when there is no cache-read price', () => {
+  const price = {
+    inputPerToken: 0.000002,
+    outputPerToken: 0.000005,
+    cacheReadPerToken: null,
+    cacheCreationPerToken: null,
+  };
+  expect(estimateResultCost(price, 3000, 50, { cachedTokens: 2000, flex: true })).toBeCloseTo(
+    0.003125,
+    12,
+  );
+});
+
+it.each(['success', 'failure'] as const)(
+  'records served-tier cost and usage for a single reprocess %s',
+  async (outcome) => {
+    await cachePrices();
+    const id = result({ appliedStatus: 'pending_review' });
+    handle.db
+      .insert(documentContent)
+      .values({ documentId: id, fullText: 'Synthetic document content', contentHash: 'synthetic' })
+      .run();
+    const usage = {
+      promptTokens: 3000,
+      completionTokens: 50,
+      cachedTokens: 2000,
+      serviceTier: 'flex',
+    };
+    const error = new AiExtractionError(
+      'schema_mismatch',
+      'Synthetic schema failure',
+      undefined,
+      undefined,
+      usage,
+    );
+    const extract =
+      outcome === 'failure'
+        ? vi.fn().mockRejectedValue(error)
+        : vi.fn().mockResolvedValue({
+            response: {
+              title: 'Synthetic title',
+              correspondent: null,
+              documentType: null,
+              tags: [],
+              customFields: [],
+              confidence: { title: 0.9, correspondent: 0, documentType: 0, tags: 0 },
+              evidence: 'Synthetic evidence',
+            },
+            usage,
+          });
+    const operation = reprocessSingleResult(handle.db, id, {
+      provider: { provider: 'openai', extract },
+      client: {} as PaperlessClient,
+      config: {
+        ...DEFAULT_AI_CONFIG,
+        model: models[0],
+        flexProcessing: false,
+        includeCorrespondents: false,
+        includeDocumentTypes: false,
+        includeTags: false,
+        extractCustomFields: false,
+      },
+    });
+    if (outcome === 'failure') await expect(operation).rejects.toBe(error);
+    else await expect(operation).resolves.toEqual({ resultId: id });
+    const row = handle.db
+      .select()
+      .from(aiProcessingResult)
+      .where(eq(aiProcessingResult.id, id))
+      .get()!;
+    const price = expectedPrice(models[0]);
+    expect(row).toMatchObject({
+      appliedStatus: outcome === 'failure' ? 'failed' : 'pending_review',
+      promptTokens: 3000,
+      completionTokens: 50,
+    });
+    expect(row.estimatedCostUsd).toBeCloseTo(
+      (1000 * price.inputPerToken + 2000 * price.cacheReadPerToken + 50 * price.outputPerToken) *
+        0.5,
+      12,
+    );
+  },
+);
