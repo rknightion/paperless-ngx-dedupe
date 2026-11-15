@@ -1,6 +1,9 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
   document,
+  deleteDocumentLocally,
+  incrementUsageStats,
+  removeDocumentFromAllGroups,
   duplicateMember,
   OperationConflictError,
   withDuplicateMutationLeaseAsync,
@@ -28,7 +31,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
   }
 
   const duplicateMemberMatch = locals.db
-    .select({ id: duplicateMember.id })
+    .select({ id: duplicateMember.id, localId: document.id })
     .from(duplicateMember)
     .innerJoin(document, eq(duplicateMember.documentId, document.id))
     .where(eq(document.paperlessId, paperlessId))
@@ -53,11 +56,16 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
         signal: AbortSignal.timeout(15000),
       });
 
-      if (!upstream.ok) {
+      const alreadyMissing = upstream.status === 404;
+      if (!upstream.ok && !alreadyMissing) {
         return apiError(ErrorCode.BAD_GATEWAY, `Paperless returned ${upstream.status}`);
       }
 
-      return apiSuccess({ deleted: true });
+      removeDocumentFromAllGroups(locals.db, duplicateMemberMatch.localId);
+      deleteDocumentLocally(locals.db, duplicateMemberMatch.localId);
+      if (!alreadyMissing) incrementUsageStats(locals.db, { documentsDeleted: 1 });
+
+      return apiSuccess({ deleted: true, alreadyMissing });
     });
   } catch (error) {
     if (error instanceof OperationConflictError) {
