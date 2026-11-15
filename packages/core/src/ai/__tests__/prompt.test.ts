@@ -26,6 +26,14 @@ describe('buildPromptParts', () => {
     expect(systemPrompt).toContain('finance, shopping');
   });
 
+  it('inserts reference names containing "$" replacement patterns literally', () => {
+    const { systemPrompt } = buildPromptParts({
+      ...baseOptions,
+      existingTags: ["cost$'s", 'a$$b', 'x$&y'],
+    });
+    expect(systemPrompt).toContain("Tags: a$$b, cost$'s, x$&y");
+  });
+
   it('uses "(none provided)" when include flag is false', () => {
     const { systemPrompt } = buildPromptParts({
       ...baseOptions,

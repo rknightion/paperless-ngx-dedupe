@@ -67,11 +67,12 @@ export function buildPromptParts(options: BuildPromptOptions): PromptParts {
     ? `Tag Alias Map:\n<alias_map>\n${tagAliasMap}\n</alias_map>`
     : 'No tag alias mappings are configured.';
 
+  // Replacer functions keep "$" sequences in names literal ($&, $', $$ are patterns otherwise).
   const baseSystemPrompt = promptTemplate
-    .replace('{{existing_correspondents}}', correspondentList)
-    .replace('{{existing_document_types}}', documentTypeList)
-    .replace('{{existing_tags}}', tagList)
-    .replace('{{tag_aliases}}', tagAliasBlock)
+    .replace('{{existing_correspondents}}', () => correspondentList)
+    .replace('{{existing_document_types}}', () => documentTypeList)
+    .replace('{{existing_tags}}', () => tagList)
+    .replace('{{tag_aliases}}', () => tagAliasBlock)
     .trim();
 
   const customFieldPrompt =

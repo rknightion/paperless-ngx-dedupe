@@ -189,7 +189,7 @@ When applying results in bulk, you choose which results to target:
 
 ### Preflight Validation
 
-Before applying results in bulk, you can run a preflight check (`POST /api/v1/ai/preflight`) to preview the impact. The preflight report shows:
+Before applying results in bulk, you can run a preflight check (`POST /api/v1/ai/results/preflight`) to preview the impact. The preflight report shows:
 
 - How many fields would change per category (title, correspondent, document type, tags, custom fields)
 - Which new entities would be created
@@ -221,7 +221,7 @@ Per-result cost estimates are computed automatically using pricing data fetched 
 - Cost over time (daily aggregation)
 - Token usage by provider and model
 
-Use `POST /api/v1/ai/costs/estimate` to estimate the cost of a batch before running it. The estimate uses historical average token counts when available, falling back to conservative defaults.
+Use `GET /api/v1/ai/costs/estimate` to estimate the cost of a batch before running it. The estimate uses historical average token counts when available, falling back to conservative defaults.
 
 ## Feedback
 
@@ -231,7 +231,7 @@ User actions on AI results are recorded as feedback for auditing and analysis:
 - **Partial applied** -- some fields applied, some excluded
 - **Corrected** -- user edited the AI's suggestion before applying
 
-The feedback summary (`GET /api/v1/ai/feedback`) shows aggregate statistics including the most frequently rejected fields and common correction patterns. This data can help tune your prompt template and confidence thresholds.
+The feedback summary (`GET /api/v1/ai/feedback/summary`) shows aggregate statistics including the most frequently rejected fields and common correction patterns. This data can help tune your prompt template and confidence thresholds.
 
 ## Provider Implementation Details
 

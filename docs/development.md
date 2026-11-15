@@ -10,7 +10,7 @@ This guide covers setting up a local development environment, running tests, and
 ## Prerequisites
 
 - **Node.js** 24 or later
-- **pnpm** 10 or later (repo uses `packageManager: pnpm@10.33.0`)
+- **pnpm**, the version pinned by `packageManager` in the root `package.json` (Corepack installs it)
 - **Git**
 
 ## Setup
@@ -114,7 +114,7 @@ pnpm --filter @paperless-dedupe/core test
 - `packages/core/src/jobs/__tests__/` -- Job management tests
 - `packages/core/src/ai/__tests__/` -- AI extraction and processing tests
 - `packages/core/src/export/__tests__/` -- Export and config backup tests
-- `packages/web/src/e2e/` -- Playwright E2E tests (separate from `pnpm test`)
+- `packages/web/e2e/` -- Playwright E2E tests (separate from `pnpm test`)
 
 ## Code Conventions
 

@@ -20,8 +20,13 @@ export function textToShingles(text: string, ngramSize = 3, minWords = 20): Set<
     return null;
   }
 
-  const shingles = new Set<number>();
   const limit = words.length - ngramSize + 1;
+  // Too short for one n-gram: an empty set would give every such document the same signature.
+  if (limit <= 0) {
+    return null;
+  }
+
+  const shingles = new Set<number>();
   for (let i = 0; i < limit; i++) {
     const ngram = words.slice(i, i + ngramSize).join(' ');
     shingles.add(fnv1a32(ngram));
