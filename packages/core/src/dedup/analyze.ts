@@ -55,6 +55,7 @@ export async function runAnalysis(
       signaturesReused: 0,
       candidatePairsFound: 0,
       candidatePairsScored: 0,
+      candidatePairsSkippedConnected: 0,
       groupsCreated: 0,
       groupsUpdated: 0,
       groupsRemoved: 0,
@@ -395,6 +396,7 @@ export async function runAnalysis(
           id: row.id,
           title: row.title,
           normalizedText: '',
+          sortedTokens: '',
         });
       }
     }
@@ -416,12 +418,15 @@ export async function runAnalysis(
           const data = docDataMap.get(row.documentId);
           if (data && row.normalizedText) {
             data.normalizedText = sampleText(row.normalizedText, config.fuzzySampleSize);
+            data.sortedTokens = data.normalizedText.split(/\s+/).filter(Boolean).sort().join(' ');
           }
         }
       }
     }
 
-    // Score each pair
+    // Strongest pairs connect components first; redundant edges need no fuzzy scoring.
+    filteredPairs.sort((left, right) => right.jaccard - left.jaccard);
+    const uf = new UnionFind<string>();
     const scoredPairs: ScoredPair[] = [];
 
     for (let i = 0; i < filteredPairs.length; i++) {
@@ -431,16 +436,21 @@ export async function runAnalysis(
 
       if (!doc1 || !doc2) continue;
 
-      const similarity = computeSimilarityScore(doc1, doc2, pair.jaccard, weights, {
-        fuzzySampleSize: config.fuzzySampleSize,
-      });
-
-      if (similarity.overall >= config.similarityThreshold) {
-        scoredPairs.push({
-          docId1: pair.docId1,
-          docId2: pair.docId2,
-          similarity,
+      if (uf.find(pair.docId1) === uf.find(pair.docId2)) {
+        result.candidatePairsSkippedConnected++;
+      } else {
+        const similarity = computeSimilarityScore(doc1, doc2, pair.jaccard, weights, {
+          fuzzySampleSize: config.fuzzySampleSize,
         });
+
+        if (similarity.overall >= config.similarityThreshold) {
+          scoredPairs.push({
+            docId1: pair.docId1,
+            docId2: pair.docId2,
+            similarity,
+          });
+          uf.union(pair.docId1, pair.docId2);
+        }
       }
 
       if (i % PROGRESS_BATCH_SIZE === 0) {
@@ -460,12 +470,6 @@ export async function runAnalysis(
 
     // Stage 7: Form groups via union-find
     await onProgress?.(0.8, 'Forming duplicate groups...');
-
-    const uf = new UnionFind<string>();
-
-    for (const pair of scoredPairs) {
-      uf.union(pair.docId1, pair.docId2);
-    }
 
     // Group scored pairs by their union-find root
     const groupedPairs = new Map<string, ScoredPair[]>();

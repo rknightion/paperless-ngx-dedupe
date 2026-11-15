@@ -21,6 +21,8 @@ export interface DocumentScoringData {
   id: string;
   title: string;
   normalizedText: string;
+  /** Sorted tokens of the text sampled at the scoring options' fuzzySampleSize. */
+  sortedTokens?: string;
 }
 
 export interface DedupConfig {
@@ -91,6 +93,7 @@ export interface AnalysisResult {
   signaturesReused: number;
   candidatePairsFound: number;
   candidatePairsScored: number;
+  candidatePairsSkippedConnected: number;
   groupsCreated: number;
   groupsUpdated: number;
   groupsRemoved: number;

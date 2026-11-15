@@ -60,6 +60,46 @@ function generateText(basePhrase: string, repetitions: number): string {
 }
 
 describe('runAnalysis pipeline', () => {
+  it('connects a 60-document template cluster while skipping redundant scoring', async () => {
+    const ids = Array.from({ length: 60 }, (_, i) =>
+      seedDocument(
+        db,
+        i + 1,
+        `Synthetic template ${i}`,
+        generateText('synthetic invoice services payment terms monthly statement', 30) +
+          ` variant${i}`,
+      ),
+    );
+    const result = await runAnalysis(db, { force: true });
+    const signatures = db
+      .select()
+      .from(documentSignature)
+      .all()
+      .map((row) => {
+        const bytes = row.minhashSignature!;
+        return new Uint32Array(
+          bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        );
+      });
+    let passingFilter = 0;
+    for (let i = 0; i < signatures.length; i++) {
+      for (let j = i + 1; j < signatures.length; j++) {
+        if (MinHash.jaccardFromArrays(signatures[i], signatures[j]) >= 0.75 * 0.8) passingFilter++;
+      }
+    }
+    expect(passingFilter).toBe(1770);
+    expect(result.candidatePairsScored + result.candidatePairsSkippedConnected).toBe(passingFilter);
+    expect(result.candidatePairsSkippedConnected).toBeGreaterThan(1000);
+    const groups = db.select().from(duplicateGroup).all();
+    expect(groups).toHaveLength(1);
+    const members = db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, groups[0].id))
+      .all();
+    expect(members.map((member) => member.documentId).sort()).toEqual(ids.sort());
+  });
+
   it('counts all template candidates without retaining below-filter pair keys', async () => {
     setDedupConfig(db, {
       numPermutations: 64,
