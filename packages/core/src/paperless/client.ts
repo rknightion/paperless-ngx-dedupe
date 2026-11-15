@@ -242,6 +242,25 @@ export class PaperlessClient {
     }
   }
 
+  /** List document IDs without transferring OCR text. */
+  async *getDocumentIds(options?: {
+    pageSize?: number;
+  }): AsyncGenerator<{ ids: number[]; totalCount: number }> {
+    const pageSize = options?.pageSize ?? 1000;
+    const schema = paginatedResponseSchema(z.object({ id: z.number() }));
+    let page = 1;
+    let hasNext = true;
+    while (hasNext) {
+      const response = await this.fetchWithRetry(
+        this.buildUrl(`/api/documents/?page=${page}&page_size=${pageSize}&ordering=id&fields=id`),
+      );
+      const parsed = schema.parse(await response.json());
+      yield { ids: parsed.results.map((doc) => doc.id), totalCount: parsed.count };
+      hasNext = parsed.next !== null;
+      page++;
+    }
+  }
+
   async *getDocuments(options?: {
     ordering?: string;
     pageSize?: number;

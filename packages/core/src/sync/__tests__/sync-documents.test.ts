@@ -5,6 +5,7 @@ import type { AppDatabase } from '../../db/client.js';
 import { syncDocuments } from '../sync-documents.js';
 import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { syncState } from '../../schema/sqlite/app.js';
+import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { eq } from 'drizzle-orm';
 import type { PaperlessDocument } from '../../paperless/types.js';
 import type { PaperlessClient } from '../../paperless/client.js';
@@ -38,6 +39,9 @@ function createMockClient(options: MockClientOptions): PaperlessClient {
   const effectivePageSize = pageSize ?? docs.length;
 
   return {
+    async *getDocumentIds() {
+      yield { ids: docs.map((doc) => doc.id), totalCount: docs.length };
+    },
     async *getDocuments() {
       for (let i = 0; i < docs.length; i += effectivePageSize) {
         yield {
@@ -112,6 +116,69 @@ describe('syncDocuments', () => {
     const handle = createDatabaseWithHandle(':memory:');
     db = handle.db;
     await migrateDatabase(handle.sqlite);
+  });
+
+  it('removes local documents missing from Paperless during an incremental sync', async () => {
+    await syncDocuments({
+      db,
+      client: createSimpleClient([makePaperlessDoc(1), makePaperlessDoc(2)]),
+    });
+    const localDocs = db.select().from(document).all();
+    const now = new Date().toISOString();
+    db.insert(duplicateGroup)
+      .values({
+        id: 'reconcile-group',
+        confidenceScore: 1,
+        algorithmVersion: 'test',
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    db.insert(duplicateMember)
+      .values(
+        localDocs.map((doc) => ({
+          groupId: 'reconcile-group',
+          documentId: doc.id,
+        })),
+      )
+      .run();
+    const result = await syncDocuments({ db, client: createSimpleClient([makePaperlessDoc(1)]) });
+    expect(result).toMatchObject({ syncType: 'incremental', reconciled: 1 });
+    expect(db.select({ id: document.paperlessId }).from(document).all()).toEqual([{ id: 1 }]);
+    expect(
+      db.select({ documentId: duplicateMember.documentId }).from(duplicateMember).all(),
+    ).toEqual([{ documentId: localDocs.find((doc) => doc.paperlessId === 1)!.id }]);
+    expect(db.select().from(duplicateGroup).get()?.status).toBe('false_positive');
+  });
+
+  it.each(['failed', 'truncated', 'empty_iterator'] as const)(
+    'preserves local documents when the ID listing is %s',
+    async (mode) => {
+      await syncDocuments({
+        db,
+        client: createSimpleClient([makePaperlessDoc(1), makePaperlessDoc(2)]),
+      });
+      const before = db.select().from(document).all();
+      db.update(syncState).set({ lastSyncAt: '2024-06-01T00:00:00Z' }).run();
+      const client = createSimpleClient([]);
+      client.getDocumentIds = async function* () {
+        if (mode === 'failed') throw new Error('Synthetic listing failure');
+        if (mode === 'truncated') yield { ids: [1], totalCount: 2 };
+      };
+      const result = await syncDocuments({ db, client });
+      expect(result).toMatchObject({ syncType: 'incremental', reconciled: 0 });
+      expect(db.select().from(document).all()).toEqual(before);
+      expect(Date.parse(db.select().from(syncState).get()!.lastSyncAt!)).toBeGreaterThan(
+        Date.parse('2024-06-01T00:00:00Z'),
+      );
+    },
+  );
+
+  it('reconciles a complete empty ID listing', async () => {
+    await syncDocuments({ db, client: createSimpleClient([makePaperlessDoc(1)]) });
+    const result = await syncDocuments({ db, client: createSimpleClient([]) });
+    expect(result).toMatchObject({ syncType: 'incremental', reconciled: 1 });
+    expect(db.select().from(document).all()).toEqual([]);
   });
 
   it('should insert all documents on full sync', async () => {
