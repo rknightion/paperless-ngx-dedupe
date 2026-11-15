@@ -7,6 +7,7 @@ import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
 import { aiResultRevision } from '../../schema/sqlite/ai-result-revisions.js';
 import type { AiProviderInterface, AiExtractionResult } from '../providers/types.js';
+import { TpmThrottle } from '../tpm-throttle.js';
 import { AiExtractionError } from '../providers/types.js';
 import type { PaperlessClient } from '../../paperless/client.js';
 import { DEFAULT_AI_CONFIG } from '../types.js';
@@ -1306,6 +1307,102 @@ describe('rate limit retry queue', () => {
     db.insert(document).values(docs).run();
     db.insert(documentContent).values(contents).run();
   }
+
+  it('retries provider unavailability without writing a failed result', async () => {
+    seedManyDocs(db, 1);
+    const backoff = vi.spyOn(TpmThrottle.prototype, 'recordRateLimit').mockImplementation(() => {});
+    try {
+      const normalProvider = createMockProvider();
+      const extract = vi.fn(async (...args: Parameters<AiProviderInterface['extract']>) => {
+        expect(db.select().from(aiProcessingResult).all()).toEqual([]);
+        if (extract.mock.calls.length === 1)
+          throw new AiExtractionError('provider_unavailable', 'upstream 503');
+        return normalProvider.extract(...args);
+      });
+      const onProgress = vi.fn();
+      const result = await processBatch(db, {
+        provider: createMockProvider({ extractFn: extract }),
+        client: createMockClient(),
+        config: { ...config, batchSize: 1 },
+        onProgress,
+      });
+      expect(result).toMatchObject({ processed: 1, succeeded: 1, failed: 0, rateLimitRetries: 1 });
+      expect(extract).toHaveBeenCalledTimes(2);
+      expect(backoff).toHaveBeenCalledWith(5000);
+      expect(
+        onProgress.mock.calls.some(([, message]) =>
+          message.includes('Provider unavailable, retrying'),
+        ),
+      ).toBe(true);
+      expect(db.select().from(aiProcessingResult).all()).toEqual([
+        expect.objectContaining({ appliedStatus: 'pending_review', failureType: null }),
+      ]);
+      expect(db.select().from(aiResultRevision).all()).toEqual([]);
+    } finally {
+      backoff.mockRestore();
+    }
+  });
+
+  it('leaves exhausted unavailable documents unprocessed without tripping the circuit breaker', async () => {
+    seedManyDocs(db, 4);
+    const backoff = vi.spyOn(TpmThrottle.prototype, 'recordRateLimit').mockImplementation(() => {});
+    try {
+      const extract = vi
+        .fn()
+        .mockRejectedValue(new AiExtractionError('provider_unavailable', 'upstream 503'));
+      const options = {
+        provider: createMockProvider({ extractFn: extract }),
+        client: createMockClient(),
+        config: { ...config, batchSize: 1 },
+      };
+      const result = await processBatch(db, options);
+      expect(result).toMatchObject({ processed: 4, failed: 4, succeeded: 0, rateLimitRetries: 16 });
+      expect(extract).toHaveBeenCalledTimes(16);
+      expect(db.select().from(aiProcessingResult).all()).toEqual([]);
+      expect(db.select().from(aiResultRevision).all()).toEqual([]);
+      const next = await processBatch(db, { ...options, provider: createMockProvider() });
+      expect(next).toMatchObject({ processed: 4, succeeded: 4, failed: 0 });
+    } finally {
+      backoff.mockRestore();
+    }
+  });
+
+  it.each(['rate_limit', 'provider_unavailable'] as const)(
+    'uses the last failure type %s when retry passes run out',
+    async (lastFailure) => {
+      seedManyDocs(db, 1);
+      const backoff = vi
+        .spyOn(TpmThrottle.prototype, 'recordRateLimit')
+        .mockImplementation(() => {});
+      try {
+        const extract = vi.fn(async () => {
+          throw new AiExtractionError(
+            extract.mock.calls.length === 4
+              ? lastFailure
+              : lastFailure === 'rate_limit'
+                ? 'provider_unavailable'
+                : 'rate_limit',
+            'Transient request failure',
+          );
+        });
+        const result = await processBatch(db, {
+          provider: createMockProvider({ extractFn: extract }),
+          client: createMockClient(),
+          config: { ...config, batchSize: 1 },
+        });
+        expect(result).toMatchObject({ failed: 1, processed: 1 });
+        expect(extract).toHaveBeenCalledTimes(4);
+        const rows = db.select().from(aiProcessingResult).all();
+        expect(rows).toEqual(
+          lastFailure === 'rate_limit'
+            ? [expect.objectContaining({ appliedStatus: 'failed', failureType: 'rate_limit' })]
+            : [],
+        );
+      } finally {
+        backoff.mockRestore();
+      }
+    },
+  );
 
   it('reloads document text on a rate-limit retry', async () => {
     seedManyDocs(db, 1);

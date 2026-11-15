@@ -3,7 +3,11 @@ import { document, documentContent } from '../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { type PaperlessClient } from '../paperless/client.js';
 import type { AppDatabase } from '../db/client.js';
-import { type AiProviderInterface, AiExtractionError } from './providers/types.js';
+import {
+  type AiProviderInterface,
+  type AiFailureType,
+  AiExtractionError,
+} from './providers/types.js';
 import { processDocument } from './extract.js';
 import { createLogger } from '../logger.js';
 import { withSpan } from '../telemetry/spans.js';
@@ -381,6 +385,7 @@ export async function processBatch(
         let fatalError: unknown;
         const throttle = new TpmThrottle();
         const retryQueue: typeof processableDocs = [];
+        const lastRetryFailure = new Map<string, AiFailureType>();
         const MAX_RETRY_PASSES = 3;
         let requestSequence = 0;
 
@@ -540,23 +545,29 @@ export async function processBatch(
               ? `[${error.failureType}] ${error.message}`
               : (error as Error).message;
 
-            // Rate limit errors: queue for retry instead of recording as failure
+            // Transient request errors: queue for retry instead of recording as failure
             const isRateLimit = isAiError && error.failureType === 'rate_limit';
-            if (isRateLimit) {
+            const isUnavailable = isAiError && error.failureType === 'provider_unavailable';
+            if (isRateLimit || isUnavailable) {
               retryQueue.push(doc);
+              lastRetryFailure.set(doc.id, error.failureType);
               result.rateLimitRetries++;
-              const retryAfterMs = error.retryAfterMs ?? 5000;
+              const retryAfterMs = isUnavailable ? 5000 : (error.retryAfterMs ?? 5000);
               throttle.recordRateLimit(retryAfterMs);
               result.rateLimitPauses++;
               logger.warn(
                 { documentId: doc.id, retryAfterMs },
-                'Document rate-limited — queued for retry',
+                isUnavailable
+                  ? 'Provider unavailable, queued for retry'
+                  : 'Document rate-limited — queued for retry',
               );
               // Call onProgress so the cancellation check in the worker can fire
               const status = throttle.getStatus();
               await onProgress?.(
                 result.processed / totalDocs,
-                `Paused for rate limit — resuming in ${Math.ceil(status.pauseRemainingMs / 1000)}s (${result.processed} of ${totalDocs} processed)`,
+                isUnavailable
+                  ? 'Provider unavailable, retrying'
+                  : `Paused for rate limit — resuming in ${Math.ceil(status.pauseRemainingMs / 1000)}s (${result.processed} of ${totalDocs} processed)`,
               );
               return;
             }
@@ -676,7 +687,7 @@ export async function processBatch(
         await Promise.allSettled(pending);
         if (fatalError !== undefined) throw fatalError;
 
-        // Retry rate-limited documents (up to MAX_RETRY_PASSES)
+        // Retry transient request failures (up to MAX_RETRY_PASSES)
         for (
           let pass = 0;
           pass < MAX_RETRY_PASSES && retryQueue.length > 0 && fatalError === undefined;
@@ -686,11 +697,11 @@ export async function processBatch(
 
           logger.info(
             { retryPass: pass + 1, count: retryDocs.length },
-            'Retrying rate-limited documents',
+            'Retrying documents after transient failures',
           );
           await onProgress?.(
             result.processed / totalDocs,
-            `Retry pass ${pass + 1}: re-processing ${retryDocs.length} rate-limited documents`,
+            `Retry pass ${pass + 1}: re-processing ${retryDocs.length} documents after transient failures`,
           );
 
           // Wait for any active throttle pause to expire
@@ -728,6 +739,16 @@ export async function processBatch(
 
         // Record permanent failures for docs that exhausted all retry passes
         for (const doc of retryQueue) {
+          if (lastRetryFailure.get(doc.id) === 'provider_unavailable') {
+            logger.warn(
+              { documentId: doc.id },
+              'Provider unavailable after all retry passes; leaving document unprocessed',
+            );
+            result.failed++;
+            result.processed++;
+            aiDocumentsTotal().add(1, { outcome: 'failed', 'gen_ai.system': provider.provider });
+            continue;
+          }
           const now = new Date().toISOString();
           writeAiResultWithHistory(db, {
             documentId: doc.id,

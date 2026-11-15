@@ -59,6 +59,7 @@ export type AiFailureType =
   | 'schema_mismatch'
   | 'timeout'
   | 'max_tokens'
+  | 'provider_unavailable'
   | 'rate_limit'
   | 'quota_exceeded'
   | 'no_content'
