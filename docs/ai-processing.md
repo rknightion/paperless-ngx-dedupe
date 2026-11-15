@@ -43,7 +43,7 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `extractCustomFields` | `false` | boolean | Recommend values for existing Paperless custom fields |
 | `flexProcessing` | `true` | boolean | Use OpenAI Flex Processing for ~50% lower costs |
 | `reasoningEffort` | `low` | `none`, `low`, `medium`, `high` | Reasoning effort level |
-| `maxRetries` | `10` | 0--20 | Retry count on transient API failures |
+| `maxRetries` | `10` | 0--20 | Batch runs cap SDK retries at 2 and also re-queue rate-limited and unavailable-provider requests for up to 3 passes. Single-result reprocess uses the configured value. |
 | `confidenceThresholdGlobal` | `0` | 0--1 | Minimum confidence for all fields (floor) |
 | `confidenceThresholdTitle` | `0` | 0--1 | Per-field override for title |
 | `confidenceThresholdCorrespondent` | `0` | 0--1 | Per-field override for correspondent |

@@ -157,6 +157,17 @@ export class OpenAiProvider implements AiProviderInterface {
           retryAfterMs,
         );
       }
+      const { APIConnectionError } = await import('openai');
+      if (error && typeof error === 'object') {
+        const status = 'status' in error ? error.status : undefined;
+        if (
+          (typeof status === 'number' && (status === 408 || status === 409 || status >= 500)) ||
+          error instanceof APIConnectionError
+        ) {
+          const sdkError = error as { message: string; requestID?: string };
+          throw new AiExtractionError('provider_unavailable', sdkError.message, sdkError.requestID);
+        }
+      }
       throw error;
     }
 
