@@ -27,9 +27,23 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid JSON body');
   }
 
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    return apiError(ErrorCode.VALIDATION_FAILED, 'Configuration must be an object');
+  }
+  const bodyObject: Record<string, unknown> = { ...body };
+
+  // Backward compatibility: convert old SDK field name
+  if ('confidenceWeightDiscriminative' in bodyObject) {
+    if (!('discriminativePenaltyStrength' in bodyObject)) {
+      const d = Number(bodyObject.confidenceWeightDiscriminative) || 0;
+      bodyObject.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 70));
+    }
+    delete bodyObject.confidenceWeightDiscriminative;
+  }
+
   // Validate partial config
   const partialSchema = dedupConfigBaseSchema.partial();
-  const parseResult = partialSchema.safeParse(body);
+  const parseResult = partialSchema.safeParse(bodyObject);
 
   if (!parseResult.success) {
     return apiError(
@@ -39,15 +53,9 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     );
   }
 
-  // Backward compatibility: convert old SDK field name
-  if (typeof body === 'object' && body !== null && 'confidenceWeightDiscriminative' in body) {
-    const b = body as Record<string, unknown>;
-    if (!('discriminativePenaltyStrength' in b)) {
-      const d = Number(b.confidenceWeightDiscriminative) || 0;
-      b.discriminativePenaltyStrength = Math.min(100, Math.round((d / 15) * 70));
-    }
-    delete b.confidenceWeightDiscriminative;
-  }
+  const sent = Object.fromEntries(
+    Object.entries(parseResult.data).filter(([key]) => key in bodyObject),
+  );
 
   // Check if weight keys are being changed
   const weightKeys = [
@@ -55,11 +63,11 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     'confidenceWeightFuzzy',
     'discriminativePenaltyStrength',
   ] as const;
-  const weightsChanged = weightKeys.some((k) => k in parseResult.data);
+  const weightsChanged = weightKeys.some((k) => k in sent);
 
   let config;
   try {
-    config = setDedupConfig(locals.db, parseResult.data);
+    config = setDedupConfig(locals.db, sent);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update configuration';
     return apiError(ErrorCode.VALIDATION_FAILED, message);

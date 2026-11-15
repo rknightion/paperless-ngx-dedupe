@@ -136,6 +136,60 @@ test.describe('Config API', () => {
     expect(typeof data.autoAnalyze).toBe('boolean');
   });
 
+  test('PUT /api/v1/config/dedup with one key leaves other settings unchanged', async ({
+    request,
+  }) => {
+    const path = '/api/v1/config/dedup';
+    const original = (await (await request.get(path)).json()).data;
+    try {
+      expect((await request.put(path, { data: { ...original, minWords: 50 } })).status()).toBe(200);
+      const response = await request.put(path, { data: { similarityThreshold: 0.8 } });
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.data.minWords).toBe(50);
+      expect(body.meta?.recalculatedGroups).toBeUndefined();
+      expect((await (await request.get(path)).json()).data).toEqual({
+        ...original,
+        minWords: 50,
+        similarityThreshold: 0.8,
+      });
+      expect((await (await request.put(path, { data: {} })).json()).data).toEqual(body.data);
+    } finally {
+      expect((await request.put(path, { data: original })).status()).toBe(200);
+    }
+  });
+
+  test('dedup config converts the legacy weight before validation and storage', async ({
+    request,
+  }) => {
+    const path = '/api/v1/config/dedup';
+    const original = (await (await request.get(path)).json()).data;
+    try {
+      const response = await request.put(path, { data: { confidenceWeightDiscriminative: 3 } });
+      expect(response.status()).toBe(200);
+      expect((await response.json()).data.discriminativePenaltyStrength).toBe(14);
+      expect((await (await request.get(path)).json()).data.discriminativePenaltyStrength).toBe(14);
+      const invalid = await request.put(path, { data: { confidenceWeightJaccard: 1 } });
+      expect(invalid.status()).toBe(400);
+      expect((await invalid.json()).error.code).toBe('VALIDATION_FAILED');
+    } finally {
+      expect((await request.put(path, { data: original })).status()).toBe(200);
+    }
+  });
+
+  test('partial config routes reject non-object JSON bodies', async ({ request }) => {
+    for (const path of ['/api/v1/config/dedup', '/api/v1/ai/config']) {
+      for (const value of [null, [], 'synthetic', 1]) {
+        const response = await request.put(path, {
+          headers: { 'Content-Type': 'application/json' },
+          data: JSON.stringify(value),
+        });
+        expect(response.status()).toBe(400);
+        expect((await response.json()).error.code).toBe('VALIDATION_FAILED');
+      }
+    }
+  });
+
   test('PUT /api/v1/config/dedup updates dedup config', async ({ request }) => {
     const response = await request.put('/api/v1/config/dedup', {
       headers: { 'Content-Type': 'application/json' },

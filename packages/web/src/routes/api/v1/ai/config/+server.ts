@@ -28,15 +28,21 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   } catch {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid JSON body');
   }
-  const result = aiConfigSchema.partial().safeParse(body);
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    return apiError(ErrorCode.VALIDATION_FAILED, 'Configuration must be an object');
+  }
+  const bodyObject: Record<string, unknown> = { ...body };
+  const result = aiConfigSchema.partial().safeParse(bodyObject);
 
   if (!result.success) {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid AI configuration', result.error.issues);
   }
 
+  const sent = Object.fromEntries(Object.entries(result.data).filter(([key]) => key in bodyObject));
+
   // Validate tag alias YAML if provided
-  if (typeof result.data.tagAliasMap === 'string') {
-    const aliasValidation = validateTagAliasYaml(result.data.tagAliasMap);
+  if (typeof sent.tagAliasMap === 'string') {
+    const aliasValidation = validateTagAliasYaml(sent.tagAliasMap);
     if (!aliasValidation.valid) {
       return apiError(
         ErrorCode.VALIDATION_FAILED,
@@ -46,7 +52,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   }
 
   try {
-    const updated = setAiConfig(locals.db, result.data);
+    const updated = setAiConfig(locals.db, sent);
     return apiSuccess(updated);
   } catch (error) {
     if (error instanceof CustomFieldPolicyError) {
