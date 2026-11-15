@@ -6,7 +6,7 @@
  *   overall = base × (1 - strength × (1 - D))
  */
 
-import { tokenSortRatio, sampleText } from './fuzzy.js';
+import { tokenSortRatio, tokenSortRatioSorted, sampleText } from './fuzzy.js';
 import { computeDiscriminativeScore } from './discriminative.js';
 import type {
   DocumentScoringData,
@@ -32,10 +32,13 @@ export function computeSimilarityScore(
   }
 
   const maxChars = options?.fuzzySampleSize ?? 5000;
-  const fuzzyScore = tokenSortRatio(
-    sampleText(doc1.normalizedText, maxChars),
-    sampleText(doc2.normalizedText, maxChars),
-  );
+  const fuzzyScore =
+    doc1.sortedTokens !== undefined && doc2.sortedTokens !== undefined
+      ? tokenSortRatioSorted(doc1.sortedTokens, doc2.sortedTokens)
+      : tokenSortRatio(
+          sampleText(doc1.normalizedText, maxChars),
+          sampleText(doc2.normalizedText, maxChars),
+        );
 
   // Always compute discriminative score for UI visibility
   const discriminativeScore = computeDiscriminativeScore(doc1.normalizedText, doc2.normalizedText);

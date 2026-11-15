@@ -20,6 +20,10 @@ export function tokenSortRatio(text1: string, text2: string): number {
     .sort()
     .join(' ');
 
+  return tokenSortRatioSorted(sorted1, sorted2);
+}
+
+export function tokenSortRatioSorted(sorted1: string, sorted2: string): number {
   if (sorted1.length === 0 && sorted2.length === 0) {
     return 1.0;
   }

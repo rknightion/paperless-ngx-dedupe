@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tokenSortRatio, sampleText } from '../fuzzy.js';
+import { tokenSortRatio, tokenSortRatioSorted, sampleText } from '../fuzzy.js';
 
 describe('tokenSortRatio', () => {
   it('returns 1.0 for identical strings', () => {
@@ -50,5 +50,20 @@ describe('sampleText', () => {
   it('respects custom maxChars', () => {
     const text = 'a'.repeat(200);
     expect(sampleText(text, 50).length).toBe(50);
+  });
+});
+
+describe('tokenSortRatioSorted', () => {
+  it.each([
+    ['', ''],
+    ['words', ''],
+    ['', 'words'],
+    ['  hello   world  ', 'world hello'],
+    ['the quick brown fox', 'the slow brown dog'],
+    ['café café résumé', 'résumé café'],
+    ['hello\nworld\tfoo', 'foo world hello'],
+  ])('matches unsorted scoring for %j and %j', (left, right) => {
+    const sort = (text: string) => text.split(/\s+/).filter(Boolean).sort().join(' ');
+    expect(tokenSortRatioSorted(sort(left), sort(right))).toBe(tokenSortRatio(left, right));
   });
 });

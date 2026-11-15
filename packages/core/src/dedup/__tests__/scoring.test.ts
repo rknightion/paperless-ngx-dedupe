@@ -168,3 +168,21 @@ describe('computeSimilarityScore', () => {
     });
   });
 });
+
+it('preserves similarity scores when the sampled token strings are precomputed', () => {
+  const left = { id: 'left', title: 'Left', normalizedText: 'gamma alpha beta trailing text' };
+  const right = { id: 'right', title: 'Right', normalizedText: 'alpha delta beta other text' };
+  const options = { fuzzySampleSize: 17 };
+  const weights = { jaccard: 60, fuzzy: 40, discriminativePenaltyStrength: 70 };
+  const sorted = (text: string) =>
+    text.slice(0, options.fuzzySampleSize).split(/\s+/).filter(Boolean).sort().join(' ');
+  expect(
+    computeSimilarityScore(
+      { ...left, sortedTokens: sorted(left.normalizedText) },
+      { ...right, sortedTokens: sorted(right.normalizedText) },
+      0.8,
+      weights,
+      options,
+    ),
+  ).toEqual(computeSimilarityScore(left, right, 0.8, weights, options));
+});
