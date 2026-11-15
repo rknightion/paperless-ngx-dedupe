@@ -41,6 +41,7 @@ const COLLECTOR_FACTORIES: Record<CollectorId, () => Collector> = {
 
 export class PaperlessMetricsCoordinator {
   private collectors: Collector[] = [];
+  private collecting = false;
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
   private errorsCounter!: Counter;
   private readonly logger: Logger;
@@ -100,20 +101,32 @@ export class PaperlessMetricsCoordinator {
   }
 
   private async collectAll(): Promise<void> {
-    let statistics: ReturnType<PaperlessClient['getStatistics']> | undefined;
-    const ctx: CollectorContext = {
-      ...this.ctx,
-      getStatistics: () => (statistics ??= this.ctx.client.getStatistics()),
-    };
+    if (this.collecting) {
+      this.logger.warn(
+        { intervalMs: this.collectionIntervalMs },
+        'Paperless metrics collection still running, skipping this tick',
+      );
+      return;
+    }
+    this.collecting = true;
+    try {
+      let statistics: ReturnType<PaperlessClient['getStatistics']> | undefined;
+      const ctx: CollectorContext = {
+        ...this.ctx,
+        getStatistics: () => (statistics ??= this.ctx.client.getStatistics()),
+      };
 
-    await Promise.allSettled(
-      this.collectors.map((c) =>
-        c.collect(ctx).catch((err: unknown) => {
-          this.logger.warn({ collector: c.id, err }, 'Paperless metrics collector failed');
-          this.errorsCounter.add(1, { collector: c.id });
-        }),
-      ),
-    );
+      await Promise.allSettled(
+        this.collectors.map((c) =>
+          c.collect(ctx).catch((err: unknown) => {
+            this.logger.warn({ collector: c.id, err }, 'Paperless metrics collector failed');
+            this.errorsCounter.add(1, { collector: c.id });
+          }),
+        ),
+      );
+    } finally {
+      this.collecting = false;
+    }
   }
 
   private resolveCollectorIds(): CollectorId[] {

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { PaperlessClient } from '../../../paperless/client.js';
 import { PaperlessMetricsCoordinator } from '../coordinator.js';
+import { createLogger } from '../../../logger.js';
+import { metrics } from '@opentelemetry/api';
 import { COLLECTOR_IDS } from '../types.js';
 
 // Mock @opentelemetry/api
@@ -79,6 +81,53 @@ describe('PaperlessMetricsCoordinator', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+
+  it.each(['resolve', 'reject'] as const)(
+    'skips overlapping ticks and resumes after a collector %s',
+    async (outcome) => {
+      vi.clearAllMocks();
+      const client = createMockClient();
+      let resolve!: (count: number) => void;
+      let reject!: (error: Error) => void;
+      vi.mocked(client.getGroupCount).mockReturnValueOnce(
+        new Promise<number>((yes, no) => {
+          resolve = yes;
+          reject = no;
+        }),
+      );
+      const coordinator = new PaperlessMetricsCoordinator({
+        client,
+        enabledCollectors: ['group'],
+        collectionIntervalMs: 1000,
+      });
+      coordinator.start();
+      const logger = vi.mocked(createLogger).mock.results[0].value;
+      const meter = metrics.getMeter('paperless-metrics');
+      const counter = vi.mocked(meter.createCounter).mock.results[0].value;
+      try {
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(client.getGroupCount).toHaveBeenCalledTimes(1);
+        expect(logger.warn).toHaveBeenCalledTimes(3);
+        expect(logger.warn).toHaveBeenCalledWith(
+          { intervalMs: 1000 },
+          'Paperless metrics collection still running, skipping this tick',
+        );
+        expect(counter.add).not.toHaveBeenCalled();
+        expect(meter.createCounter).toHaveBeenCalledTimes(1);
+        if (outcome === 'resolve') resolve(2);
+        else reject(new Error('synthetic collector failure'));
+        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(client.getGroupCount).toHaveBeenCalledTimes(2);
+        expect(counter.add).toHaveBeenCalledTimes(outcome === 'reject' ? 1 : 0);
+        if (outcome === 'reject')
+          expect(counter.add).toHaveBeenCalledWith(1, { collector: 'group' });
+      } finally {
+        resolve(2);
+        coordinator.shutdown();
+      }
+    },
+  );
 
   it('starts with all collectors by default', () => {
     const client = createMockClient();
