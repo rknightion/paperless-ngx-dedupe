@@ -1,8 +1,41 @@
-import { test, expect } from '../fixtures/test-app';
+import Database from 'better-sqlite3';
+import { test, expect, DB_PATH } from '../fixtures/test-app';
 import type { SeedResult } from '../fixtures/seed-data';
 
 test.describe('Batch API', () => {
   let seed: SeedResult;
+
+  test('status route rejects deleted without changing groups or members', async ({ request }) => {
+    const sqlite = new Database(DB_PATH);
+    try {
+      const before = sqlite.prepare('SELECT * FROM duplicate_group ORDER BY id').all();
+      const members = sqlite
+        .prepare('SELECT * FROM duplicate_member ORDER BY group_id, document_id')
+        .all();
+      const response = await request.post('/api/v1/batch/status', {
+        data: { groupIds: seed.groupIds, status: 'deleted' },
+      });
+      expect(response.status()).toBe(400);
+      expect((await response.json()).error.code).toBe('VALIDATION_FAILED');
+      expect(sqlite.prepare('SELECT * FROM duplicate_group ORDER BY id').all()).toEqual(before);
+      expect(
+        sqlite.prepare('SELECT * FROM duplicate_member ORDER BY group_id, document_id').all(),
+      ).toEqual(members);
+    } finally {
+      sqlite.close();
+    }
+  });
+  test('status route accepts all editable statuses', async ({ request }) => {
+    for (const status of ['false_positive', 'ignored', 'pending']) {
+      const response = await request.post('/api/v1/batch/status', {
+        data: { groupIds: [seed.groupIds[0]], status },
+      });
+      expect(response.status()).toBe(200);
+      expect(
+        (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+      ).toBe(status);
+    }
+  });
 
   test.beforeEach(async ({ seedDB }) => {
     seed = seedDB();
