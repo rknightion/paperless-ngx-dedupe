@@ -1,4 +1,5 @@
 import { applySecurityHeaders } from '$lib/server/security-headers';
+import { apiError, ErrorCode } from '$lib/server/api';
 import { sequence } from '@sveltejs/kit/hooks';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '@paperless-dedupe/core';
@@ -7,6 +8,35 @@ import { getServerRuntime } from './runtime.server';
 
 const handleSecurityHeaders: Handle = async ({ event, resolve }) =>
   applySecurityHeaders(await resolve(event));
+
+const handleCsrf: Handle = async ({ event, resolve }) => {
+  if (!event.url.pathname.startsWith('/api/')) return resolve(event);
+
+  const { request } = event;
+  const configuredOrigin = process.env.ORIGIN;
+  if (configuredOrigin && request.headers.get('host') !== new URL(configuredOrigin).host) {
+    return apiError(ErrorCode.VALIDATION_FAILED, { retryable: false }, 403);
+  }
+  if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return resolve(event);
+
+  const origin = request.headers.get('origin');
+  const runtime = await getServerRuntime();
+  const hasBody =
+    request.body !== null ||
+    Number(request.headers.get('content-length')) > 0 ||
+    request.headers.has('transfer-encoding');
+  if (
+    request.headers.get('sec-fetch-site') === 'cross-site' ||
+    (origin !== null &&
+      origin !== event.url.origin &&
+      origin !== runtime.config.CORS_ALLOW_ORIGIN) ||
+    (hasBody && !request.headers.get('content-type')?.toLowerCase().includes('application/json'))
+  ) {
+    return apiError(ErrorCode.VALIDATION_FAILED, { retryable: false }, 403);
+  }
+
+  return resolve(event);
+};
 
 const handleCors: Handle = async ({ event, resolve }) => {
   // Only apply CORS to API routes
@@ -91,4 +121,4 @@ const handleRequest: Handle = async ({ event, resolve }) => {
   return response;
 };
 
-export const handle = sequence(handleSecurityHeaders, handleCors, handleRequest);
+export const handle = sequence(handleSecurityHeaders, handleCsrf, handleCors, handleRequest);
