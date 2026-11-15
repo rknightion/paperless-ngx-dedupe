@@ -59,7 +59,8 @@
 <div class="border-soft mt-4 rounded-lg border px-4 py-4">
   <h3 class="text-ink text-base font-semibold">Paperless-NGX Recycle Bin</h3>
   <p class="text-muted mt-1 text-sm">
-    Deleted documents have been moved to the Paperless-NGX recycle bin.
+    Deleted documents are in the Paperless-NGX recycle bin. You can restore them from Paperless-NGX
+    until the bin is emptied.
   </p>
 
   {#if isLoading}
@@ -68,6 +69,10 @@
     <p class="text-ink mt-3 text-sm">
       <span class="font-semibold">{trashCount}</span>
       document{trashCount === 1 ? '' : 's'} currently in the recycle bin.
+    </p>
+    <p class="text-muted mt-1 text-sm">
+      Emptying the bin is permanent and removes every document in it, not only the ones deleted
+      here.
     </p>
 
     {#if emptyResult?.success}
@@ -110,7 +115,7 @@
 <ConfirmDialog
   open={showEmptyConfirm}
   title="Empty Recycle Bin"
-  message="This will permanently delete all documents in the Paperless-NGX recycle bin. This action cannot be undone."
+  message="This permanently deletes all {trashCount} documents in the Paperless-NGX recycle bin, including any that were not deleted by this app. After this, the delete can no longer be undone."
   confirmLabel="Empty Recycle Bin"
   variant="ember"
   onconfirm={emptyTrash}
