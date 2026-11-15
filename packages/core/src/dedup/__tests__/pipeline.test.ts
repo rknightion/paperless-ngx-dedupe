@@ -158,6 +158,91 @@ describe('runAnalysis pipeline', () => {
     expect(groups).toHaveLength(0);
   });
 
+  it('keeps every member of a chained group when one member changes', async () => {
+    const text = (offset: number) =>
+      Array.from({ length: 400 }, (_, i) => `word${(i + offset).toString(36)}`).join(' ');
+    const ids = [0, 40, 80].map((offset, i) =>
+      seedDocument(db, i + 1, `Document ${i + 1}`, text(offset)),
+    );
+    await runAnalysis(db);
+    const members = () =>
+      db
+        .select()
+        .from(duplicateGroup)
+        .all()
+        .map((group) =>
+          db
+            .select()
+            .from(duplicateMember)
+            .where(eq(duplicateMember.groupId, group.id))
+            .all()
+            .map((member) => member.documentId)
+            .sort(),
+        )
+        .sort();
+    expect(members()).toEqual([[...ids].sort()]);
+    db.update(document).set({ processingStatus: 'pending' }).where(eq(document.id, ids[2])).run();
+    await runAnalysis(db);
+    expect(members()).toEqual([[...ids].sort()]);
+    const incremental = members();
+    await runAnalysis(db, { force: true });
+    expect(members()).toEqual(incremental);
+  });
+
+  it('merges a new document into an existing group instead of creating an overlapping one', async () => {
+    const text = (offset: number) =>
+      Array.from({ length: 400 }, (_, i) => `word${(i + offset).toString(36)}`).join(' ');
+    const ids = [0, 40].map((offset, i) =>
+      seedDocument(db, i + 1, `Document ${i + 1}`, text(offset)),
+    );
+    await runAnalysis(db);
+    ids.push(seedDocument(db, 3, 'Document 3', text(80)));
+    const members = () =>
+      db
+        .select()
+        .from(duplicateGroup)
+        .all()
+        .map((group) =>
+          db
+            .select()
+            .from(duplicateMember)
+            .where(eq(duplicateMember.groupId, group.id))
+            .all()
+            .map((member) => member.documentId)
+            .sort(),
+        )
+        .sort();
+    await runAnalysis(db);
+    expect(members()).toEqual([[...ids].sort()]);
+    const incremental = members();
+    await runAnalysis(db, { force: true });
+    expect(members()).toEqual(incremental);
+  });
+
+  it.each(['false_positive', 'ignored'] as const)(
+    'preserves a %s group during incremental analysis',
+    async (status) => {
+      const text = generateText('synthetic repeated document content for analysis', 20);
+      const ids = [1, 2].map((id) => seedDocument(db, id, `Document ${id}`, text));
+      await runAnalysis(db);
+      const group = db.select().from(duplicateGroup).get()!;
+      db.update(duplicateGroup).set({ status }).where(eq(duplicateGroup.id, group.id)).run();
+      const before = db
+        .select()
+        .from(duplicateMember)
+        .where(eq(duplicateMember.groupId, group.id))
+        .all();
+      db.update(document).set({ processingStatus: 'pending' }).where(eq(document.id, ids[0])).run();
+      await runAnalysis(db);
+      expect(
+        db.select().from(duplicateGroup).where(eq(duplicateGroup.id, group.id)).get()?.status,
+      ).toBe(status);
+      expect(
+        db.select().from(duplicateMember).where(eq(duplicateMember.groupId, group.id)).all(),
+      ).toEqual(before);
+    },
+  );
+
   it('should reuse existing signatures in incremental mode', async () => {
     const text1 = generateText('the quick brown fox jumps over the lazy dog near the river', 10);
     const text2 = generateText('the quick brown fox jumps over the lazy dog near the river', 10);
