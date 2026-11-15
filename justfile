@@ -90,4 +90,4 @@ tracker *args:
 # print the issue a legacy board id (PND-0001) became
 [group('tracker')]
 issue id:
-    TRACKER_REPO=rknightion/paperless-ngx-dedupe tracker legacy {{ quote(id) }}
+    @python3 -c 'import json,sys; m=json.load(open(".github/tracker/id-map.json")); e=m.get("issues",{}).get(sys.argv[1]) or m.get("held",{}).get(sys.argv[1]); print(e["url"] if isinstance(e,dict) and "url" in e else e) if e else sys.exit("unknown legacy id: "+sys.argv[1])' {{ quote(id) }}
