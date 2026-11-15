@@ -1,9 +1,12 @@
 import { eq, like } from 'drizzle-orm';
+import { createLogger } from '../logger.js';
 import { appConfig } from '../schema/sqlite/app.js';
 import { duplicateGroup } from '../schema/sqlite/duplicates.js';
 import type { AppDatabase } from '../db/client.js';
 import { dedupConfigSchema, DEDUP_CONFIG_PREFIX } from './types.js';
 import type { DedupConfig } from './types.js';
+
+const logger = createLogger('dedup-config');
 
 function parseConfigValue(key: string, value: string): unknown {
   const shortKey = key.replace(DEDUP_CONFIG_PREFIX, '');
@@ -63,6 +66,18 @@ export function getDedupConfig(db: AppDatabase): DedupConfig {
     'confidenceWeightJaccard' in raw
   ) {
     raw.discriminativePenaltyStrength = 70;
+  }
+
+  if (
+    typeof raw.numBands === 'number' &&
+    typeof raw.numPermutations === 'number' &&
+    raw.numBands > raw.numPermutations
+  ) {
+    logger.warn(
+      { numBands: raw.numBands, numPermutations: raw.numPermutations },
+      'Clamping stored numBands to numPermutations',
+    );
+    raw.numBands = raw.numPermutations;
   }
 
   return dedupConfigSchema.parse(raw) as DedupConfig;
