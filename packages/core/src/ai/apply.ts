@@ -606,29 +606,32 @@ export async function applyAiResult(
   );
 }
 
-export function rejectAiResult(db: AppDatabase, resultId: string): void {
-  markAiResultRejected(db, resultId);
-  recordFeedback(db, resultId, {
-    action: 'rejected',
-    timestamp: new Date().toISOString(),
-  });
-  aiApplyTotal().add(1, { status: 'rejected' });
-  logger.info({ resultId }, 'Rejected AI result');
+export function rejectAiResult(
+  db: AppDatabase,
+  resultId: string,
+): 'rejected' | 'not_found' | 'not_rejectable' {
+  return rejectAiResultWithReason(db, resultId);
 }
 
-export function rejectAiResultWithReason(db: AppDatabase, resultId: string, reason?: string): void {
-  markAiResultRejected(db, resultId);
-  recordFeedback(db, resultId, {
-    action: 'rejected',
-    reason,
-    timestamp: new Date().toISOString(),
-  });
+export function rejectAiResultWithReason(
+  db: AppDatabase,
+  resultId: string,
+  reason?: string,
+): 'rejected' | 'not_found' | 'not_rejectable' {
+  const row = db.select().from(aiProcessingResult).where(eq(aiProcessingResult.id, resultId)).get();
+  if (!row) return 'not_found';
+  if (row.appliedStatus !== 'pending_review' && row.appliedStatus !== 'failed')
+    return 'not_rejectable';
+  if (markAiResultRejected(db, resultId) === 0) return 'not_rejectable';
+  recordFeedback(db, resultId, { action: 'rejected', reason, timestamp: new Date().toISOString() });
   aiApplyTotal().add(1, { status: 'rejected' });
-  logger.info({ resultId, reason }, 'Rejected AI result with reason');
+  logger.info({ resultId, reason }, 'Rejected AI result');
+  return 'rejected';
 }
 
-export function batchRejectAiResults(db: AppDatabase, ids: string[]): void {
-  batchMarkRejected(db, ids);
-  aiApplyTotal().add(ids.length, { status: 'rejected' });
-  logger.info({ count: ids.length }, 'Batch rejected AI results');
+export function batchRejectAiResults(db: AppDatabase, ids: string[]): number {
+  const changed = batchMarkRejected(db, ids);
+  aiApplyTotal().add(changed, { status: 'rejected' });
+  logger.info({ count: changed }, 'Batch rejected AI results');
+  return changed;
 }

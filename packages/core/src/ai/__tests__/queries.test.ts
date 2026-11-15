@@ -1048,11 +1048,11 @@ describe('batchMarkRejected', () => {
     resultIds = seedDocumentsAndResults(db);
   });
 
-  it('updates all provided IDs to rejected', () => {
-    batchMarkRejected(db, [resultIds[0], resultIds[1]]);
-    const r1 = getAiResult(db, resultIds[0]);
-    const r2 = getAiResult(db, resultIds[1]);
-    expect(r1!.appliedStatus).toBe('rejected');
-    expect(r2!.appliedStatus).toBe('rejected');
+  it('rejects pending results while preserving every column of applied results', () => {
+    const before = getAiResult(db, resultIds[1]);
+    expect(before!.appliedStatus).toBe('applied');
+    expect(batchMarkRejected(db, [resultIds[0], resultIds[1]])).toBe(1);
+    expect(getAiResult(db, resultIds[0])!.appliedStatus).toBe('rejected');
+    expect(getAiResult(db, resultIds[1])).toEqual(before);
   });
 });

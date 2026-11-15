@@ -1,4 +1,4 @@
-import { eq, sql, desc, asc, and, isNull, isNotNull, like } from 'drizzle-orm';
+import { eq, sql, desc, asc, and, inArray, isNull, isNotNull, like } from 'drizzle-orm';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { document } from '../schema/sqlite/documents.js';
@@ -1099,14 +1099,17 @@ export function finalizeStartedAiApply(db: AppDatabase, id: string, appliedField
     .run();
 }
 
-export function markAiResultRejected(db: AppDatabase, id: string): void {
-  db.update(aiProcessingResult)
-    .set({
-      appliedStatus: 'rejected',
-      appliedAt: new Date().toISOString(),
-    })
-    .where(eq(aiProcessingResult.id, id))
-    .run();
+export function markAiResultRejected(db: AppDatabase, id: string): number {
+  return db
+    .update(aiProcessingResult)
+    .set({ appliedStatus: 'rejected', appliedAt: new Date().toISOString() })
+    .where(
+      and(
+        eq(aiProcessingResult.id, id),
+        inArray(aiProcessingResult.appliedStatus, ['pending_review', 'failed']),
+      ),
+    )
+    .run().changes;
 }
 
 export function markAiResultFailed(
@@ -1248,16 +1251,23 @@ export function getDocumentIdsByAiFilter(db: AppDatabase, filters: AiResultFilte
   return rows.map((r) => r.documentId);
 }
 
-export function batchMarkRejected(db: AppDatabase, ids: string[]): void {
+export function batchMarkRejected(db: AppDatabase, ids: string[]): number {
   const now = new Date().toISOString();
-
-  db.transaction((tx) => {
+  return db.transaction((tx) => {
+    let changed = 0;
     for (const id of ids) {
-      tx.update(aiProcessingResult)
+      changed += tx
+        .update(aiProcessingResult)
         .set({ appliedStatus: 'rejected', appliedAt: now })
-        .where(eq(aiProcessingResult.id, id))
-        .run();
+        .where(
+          and(
+            eq(aiProcessingResult.id, id),
+            inArray(aiProcessingResult.appliedStatus, ['pending_review', 'failed']),
+          ),
+        )
+        .run().changes;
     }
+    return changed;
   });
 }
 

@@ -1,4 +1,4 @@
-import { apiSuccess } from '$lib/server/api';
+import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import { rejectAiResult, rejectAiResultWithReason } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
@@ -15,10 +15,11 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     }
   }
 
-  if (reason) {
-    rejectAiResultWithReason(locals.db, params.id, reason);
-  } else {
-    rejectAiResult(locals.db, params.id);
+  const outcome = reason
+    ? rejectAiResultWithReason(locals.db, params.id, reason)
+    : rejectAiResult(locals.db, params.id);
+  if (outcome === 'not_rejectable') {
+    return apiError(ErrorCode.CONFLICT, 'AI result is not awaiting review');
   }
 
   return apiSuccess({ rejected: true });

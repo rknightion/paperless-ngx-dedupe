@@ -2196,6 +2196,64 @@ describe('rejectAiResult', () => {
     resultId = seedDocumentAndResult(db);
   });
 
+  it.each(['applied', 'partial', 'rejected', 'reverted', 'skipped'] as const)(
+    'leaves every column unchanged when rejecting %s',
+    (status) => {
+      db.update(aiProcessingResult)
+        .set({ appliedStatus: status, preApplyTitle: 'Original', appliedFieldsJson: '["title"]' })
+        .where(eq(aiProcessingResult.id, resultId))
+        .run();
+      const before = db
+        .select()
+        .from(aiProcessingResult)
+        .where(eq(aiProcessingResult.id, resultId))
+        .get();
+      expect(rejectAiResult(db, resultId)).toBe('not_rejectable');
+      expect(
+        db.select().from(aiProcessingResult).where(eq(aiProcessingResult.id, resultId)).get(),
+      ).toEqual(before);
+    },
+  );
+
+  it('counts only a pending row in a mixed rejection batch', () => {
+    db.update(aiProcessingResult)
+      .set({ appliedStatus: 'applied', preApplyTitle: 'Original', appliedFieldsJson: '["title"]' })
+      .where(eq(aiProcessingResult.id, resultId))
+      .run();
+    db.insert(document)
+      .values({
+        id: 'pending-doc',
+        paperlessId: 2,
+        title: 'Pending',
+        processingStatus: 'completed',
+        syncedAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    db.insert(aiProcessingResult)
+      .values({
+        id: 'pending-result',
+        documentId: 'pending-doc',
+        paperlessId: 2,
+        provider: 'openai',
+        model: 'test-model',
+        appliedStatus: 'pending_review',
+        createdAt: '2024-01-01T00:00:00Z',
+      })
+      .run();
+    const before = db
+      .select()
+      .from(aiProcessingResult)
+      .where(eq(aiProcessingResult.id, resultId))
+      .get();
+    expect(
+      batchRejectAiResults(db, [resultId, 'pending-result', 'pending-result', 'missing']),
+    ).toBe(1);
+    expect(getAiResult(db, 'pending-result')?.appliedStatus).toBe('rejected');
+    expect(
+      db.select().from(aiProcessingResult).where(eq(aiProcessingResult.id, resultId)).get(),
+    ).toEqual(before);
+  });
+
   it('marks result as rejected in DB', () => {
     rejectAiResult(db, resultId);
     const result = getAiResult(db, resultId);
