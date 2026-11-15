@@ -1,7 +1,7 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import {
   reprocessSingleResult,
-  createAiProvider,
+  createInteractiveAiProvider,
   getAiConfig,
   PaperlessClient,
   toPaperlessConfig,
@@ -23,11 +23,10 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
   const client = new PaperlessClient(paperlessConfig);
 
   try {
-    const provider = await createAiProvider(
+    const provider = await createInteractiveAiProvider(
       locals.config.AI_OPENAI_API_KEY,
       aiConfig.model,
       aiConfig.maxRetries,
-      aiConfig.flexProcessing,
     );
 
     const result = await reprocessSingleResult(locals.db, params.id, {

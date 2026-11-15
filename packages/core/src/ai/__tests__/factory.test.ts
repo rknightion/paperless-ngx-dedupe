@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createAiProvider } from '../providers/factory.js';
+import { createAiProvider, createInteractiveAiProvider } from '../providers/factory.js';
 
 // Mock the actual provider module to avoid requiring real SDK installation
 vi.mock('../providers/openai.js', () => ({
@@ -37,5 +37,23 @@ describe('createAiProvider', () => {
     const { OpenAiProvider } = await import('../providers/openai.js');
     await createAiProvider('sk-test-key', 'gpt-5.4-mini', 3);
     expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 3, true);
+  });
+});
+
+describe('createInteractiveAiProvider', () => {
+  it.each([
+    [10, 2],
+    [1, 1],
+    [0, 0],
+  ])('caps configured retries %s at %s and disables Flex', async (configured, expected) => {
+    const { OpenAiProvider } = await import('../providers/openai.js');
+    const provider = await createInteractiveAiProvider('test-api-key', 'test-model', configured);
+    expect(provider.provider).toBe('openai');
+    expect(OpenAiProvider.create).toHaveBeenLastCalledWith(
+      'test-api-key',
+      'test-model',
+      expected,
+      false,
+    );
   });
 });

@@ -448,7 +448,7 @@ export type {
   RateLimitInfo,
 } from './ai/providers/types.js';
 export { AiExtractionError, aiExtractionResponseSchema } from './ai/providers/types.js';
-export { createAiProvider } from './ai/providers/factory.js';
+export { createAiProvider, createInteractiveAiProvider } from './ai/providers/factory.js';
 export { buildPromptParts, truncateContent } from './ai/prompt.js';
 export type { PromptParts, BuildPromptOptions } from './ai/prompt.js';
 export { processDocument } from './ai/extract.js';
