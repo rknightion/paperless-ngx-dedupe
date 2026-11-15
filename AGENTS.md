@@ -90,7 +90,7 @@ compromised-chain probes; the Node bundled trust store and operating-system stor
 
 ## Task interface
 
-`just check` (fmt-check, lint, typecheck, core unit tests) is the gate, and it is exactly what CI's
+`just check` (fmt-check, lint, typecheck, core and web unit tests) is the gate, and it is exactly what CI's
 `quality` and `unit-tests` jobs run.
 
 - E2E is deliberately outside `check`. CI runs it as a separate `e2e-tests` job, `just build` then
