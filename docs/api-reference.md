@@ -428,7 +428,30 @@ Query params:
 
 ## AI Processing
 
-All AI endpoints return `400 BAD_REQUEST` when `AI_ENABLED` is `false`.
+Starting AI model processing, applying or reverting suggestions, and changing AI configuration
+require `AI_ENABLED=true`; these endpoints return `400 BAD_REQUEST` when it is false.
+The read-only endpoints `GET /api/v1/ai/stats`, `/api/v1/ai/feedback/summary`, `/api/v1/ai/costs`,
+`/api/v1/ai/costs/estimate`, `/api/v1/ai/models`, `/api/v1/ai/results`, `/api/v1/ai/results/:id`,
+and `/api/v1/ai/custom-fields/recommendations` answer regardless of that switch. Reading AI config,
+result groups, custom-field policy or detailed cost estimates still requires it. Feedback and
+single/batch rejection also work without it; reject-all requires it and the bulk switch below.
+
+### Reviewed apply and revert flow
+
+1. Send `POST /api/v1/ai/results/preflight` with `scope`, a non-empty `selection`, and optionally
+   `allowClearing` and `createMissingEntities`. It returns `data.token`, `expiresAt`, `resultIds`,
+   `selection` and `preflight`. The token expires 15 minutes after preview creation.
+2. Review that summary, then send the returned `data.token` as `planToken` to the single apply,
+   batch-apply or apply-all endpoint. The response is `202` with `data.jobId`.
+3. Read progress and outcome through `GET /api/v1/jobs/:id` or `GET /api/v1/jobs/:id/progress`.
+   A queued job is not proof that the mutation succeeded. The worker claims the single-use plan
+   and checks the reviewed state before writing.
+4. To revert, first send `POST /api/v1/ai/results/:id/revert/preview` with `selection`, review it,
+   then send its `data.token` as `planToken` to `POST /api/v1/ai/results/:id/revert`.
+
+Send JSON bodies with `Content-Type: application/json`. The result IDs and selected fields are
+frozen in the preview; execution requests carry only `planToken`. Create a fresh preview if a plan
+expires or the reviewed state changes.
 
 ### GET /api/v1/ai/config
 
@@ -446,7 +469,7 @@ Returns the current AI configuration object.
     "includeDocumentTypes": false,
     "includeTags": false,
     "reasoningEffort": "low",
-    "maxRetries": 3
+    "maxRetries": 10
   }
 }
 ```
@@ -513,7 +536,7 @@ Lists AI processing results.
 
 Query params:
 
-- `status`: `pending`, `applied`, `rejected`, `partial`
+- `status`: `pending_review`, `applied`, `rejected`, `partial`, `failed`, `skipped`
 - `search`: title substring match
 - `failed`: `true` to show only failed results
 - `minConfidence`, `maxConfidence`: filter by confidence range (`0..1`)
@@ -532,7 +555,7 @@ Query params:
       "suggestedTags": ["shopping", "2024"],
       "confidence": { "correspondent": 0.95, "documentType": 0.90, "tags": 0.80 },
       "currentCorrespondent": null,
-      "appliedStatus": "pending"
+      "appliedStatus": "pending_review"
     }
   ],
   "meta": { "total": 42, "limit": 20, "offset": 0 }
@@ -545,25 +568,24 @@ Returns full details for a single result, including token counts and processing 
 
 ### POST /api/v1/ai/results/:id/apply
 
-Applies AI suggestions to the document in Paperless-NGX.
+Starts a background apply job using a reviewed plan. First preview a
+`selected_result_ids` scope containing this result and copy the returned `data.token` to `planToken`.
 
-Optional JSON body:
-
-```json
-{
-  "fields": ["correspondent", "tags"],
-  "allowClearing": false,
-  "createMissingEntities": true
-}
-```
-
-- `fields`: if omitted, all three fields (`correspondent`, `documentType`, `tags`) are applied. Partial field lists result in `partial` status.
-- `allowClearing`: when `true`, allows setting fields to `null`. Default `false`.
-- `createMissingEntities`: when `true`, missing correspondents, document types, and tags are created automatically in Paperless-NGX. Default `true`.
+Required JSON body:
 
 ```json
-{ "data": { "applied": true } }
+{ "planToken": "opaque-reviewed-plan-token" }
 ```
+
+Response (202):
+
+```json
+{ "data": { "jobId": "job-id" } }
+```
+
+A missing token or a token shorter than 16 characters returns `400 BAD_REQUEST`. A conflicting job
+returns `409 JOB_ALREADY_RUNNING`; a runtime that is not accepting work returns `503 SERVICE_UNAVAILABLE`.
+Poll the job for plan validation and the mutation outcome.
 
 ### POST /api/v1/ai/results/:id/reject
 
@@ -583,33 +605,24 @@ Optional JSON body:
 
 ### POST /api/v1/ai/results/batch-apply
 
-Applies multiple results as a background job.
+Starts a background apply job for the result IDs frozen in a preflight plan. Choose the scope and
+fields when requesting the preview, then submit its `data.token` as `planToken` here.
+
+Required JSON body:
 
 ```json
-{
-  "resultIds": ["id-1", "id-2"],
-  "fields": ["correspondent", "documentType", "tags"],
-  "allowClearing": false,
-  "createMissingEntities": true
-}
-```
-
-Alternatively, use a `scope` object instead of `resultIds`:
-
-```json
-{
-  "scope": { "type": "current_filter", "filters": { "status": "pending" } },
-  "fields": ["correspondent", "documentType", "tags"]
-}
+{ "planToken": "opaque-reviewed-plan-token" }
 ```
 
 Response (202):
 
 ```json
-{ "data": { "jobId": "..." } }
+{ "data": { "jobId": "job-id" } }
 ```
 
-Returns `409 JOB_ALREADY_RUNNING` if an apply job is already active.
+A missing token or a token shorter than 16 characters returns `400 BAD_REQUEST`. A conflicting job
+returns `409 JOB_ALREADY_RUNNING`; a runtime that is not accepting work returns `503 SERVICE_UNAVAILABLE`.
+Poll the job for plan validation and the mutation outcome.
 
 ### POST /api/v1/ai/results/batch-reject
 
@@ -629,6 +642,8 @@ Response:
 
 Rejects all pending AI results in one call. No request body required.
 
+Requires `AI_BULK_ALL_ENABLED=true` (default `false`); otherwise returns `401 UNAUTHORIZED` when AI is enabled.
+
 ```json
 { "data": { "rejected": 15 } }
 ```
@@ -637,69 +652,112 @@ Returns `0` if there are no pending results.
 
 ### POST /api/v1/ai/results/apply-all
 
-Applies all pending AI results as a background job.
+Starts a background apply job from a reviewed plan. To review all pending results, create the
+preview with `scope: { "type": "all_pending" }`, then submit its `data.token` as `planToken`.
 
-Optional JSON body:
+Requires `AI_BULK_ALL_ENABLED=true` (default `false`); otherwise returns `401 UNAUTHORIZED` when AI is enabled.
+
+Required JSON body:
 
 ```json
-{
-  "scope": { "type": "all_pending" },
-  "fields": ["correspondent", "documentType", "tags"],
-  "allowClearing": false,
-  "createMissingEntities": true
-}
+{ "planToken": "opaque-reviewed-plan-token" }
 ```
-
-- `scope`: defaults to `{ "type": "all_pending" }`. Can also use `{ "type": "current_filter", "filters": {...} }`.
-- `fields`: defaults to all three fields if omitted.
 
 Response (202):
 
 ```json
-{ "data": { "jobId": "..." } }
+{ "data": { "jobId": "job-id" } }
 ```
 
-Returns `409 JOB_ALREADY_RUNNING` if an apply job is already active.
+A missing token or a token shorter than 16 characters returns `400 BAD_REQUEST`. A conflicting job
+returns `409 JOB_ALREADY_RUNNING`; a runtime that is not accepting work returns `503 SERVICE_UNAVAILABLE`.
+Poll the job for plan validation and the mutation outcome.
 
 ### POST /api/v1/ai/results/preflight
 
-Pre-validates what would happen if results were applied, without making changes.
+Creates a reviewed apply plan without changing Paperless documents. A local plan stores the
+selected result versions and live document state for execution-time checks.
 
 Request:
 
 ```json
 {
-  "scope": { "type": "all_pending" },
-  "fields": ["correspondent", "documentType", "tags"],
+  "scope": {
+    "type": "selected_result_ids",
+    "resultIds": [
+      "result-id"
+    ]
+  },
+  "selection": {
+    "title": false,
+    "correspondent": false,
+    "documentType": false,
+    "tags": true,
+    "processedTag": false,
+    "customFieldIds": []
+  },
   "allowClearing": false,
   "createMissingEntities": true
 }
 ```
 
-- `scope` is required.
-- `fields`: defaults to all three.
+- `scope` is required: `selected_result_ids` with `resultIds`, `all_pending`, or `current_filter` with `filters`.
+- `selection` requires all five booleans and `customFieldIds`. At least one boolean must be true or
+  the custom-field ID array must be nonempty. IDs must be positive integers; duplicates are removed.
+- `allowClearing`: default `false`.
 - `createMissingEntities`: default `true`.
 
-The response's `data.preflight` summary includes the following counts. Tag removals use the tags
-captured when the result was processed, preserve configured protected tags, and count each document
-once in `documentsLosingTags`:
+Response (200), with an illustrative expiry 15 minutes after creation:
 
 ```json
 {
-  "totalDocuments": 1,
-  "fieldsChanged": { "title": 0, "correspondent": 0, "documentType": 0, "tags": 1, "customFields": 0 },
-  "newEntitiesCreated": { "correspondents": [], "documentTypes": [], "tags": [] },
-  "lowConfidenceCount": 0,
-  "noOpCount": 0,
-  "destructiveClearCount": 0,
-  "tagsRemoved": 5,
-  "documentsLosingTags": 1,
-  "confidenceDistribution": { "high": 1, "medium": 0, "low": 0 }
+  "data": {
+    "token": "opaque-reviewed-plan-token",
+    "expiresAt": "2030-01-01T12:15:00.000Z",
+    "resultIds": [
+      "result-id"
+    ],
+    "selection": {
+      "title": false,
+      "correspondent": false,
+      "documentType": false,
+      "tags": true,
+      "processedTag": false,
+      "customFieldIds": []
+    },
+    "preflight": {
+      "totalDocuments": 1,
+      "fieldsChanged": {
+        "title": 0,
+        "correspondent": 0,
+        "documentType": 0,
+        "tags": 1,
+        "customFields": 0
+      },
+      "newEntitiesCreated": {
+        "correspondents": [],
+        "documentTypes": [],
+        "tags": []
+      },
+      "lowConfidenceCount": 0,
+      "noOpCount": 0,
+      "destructiveClearCount": 0,
+      "tagsRemoved": 5,
+      "documentsLosingTags": 1,
+      "confidenceDistribution": {
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      }
+    }
+  }
 }
 ```
 
-With `allowClearing: true`, an empty effective suggestion that removes existing unprotected tags
-also increments `destructiveClearCount`.
+The response field is `token`; copy it to `planToken` in the execution request. Tag-removal counts
+use the tags captured when processing completed. Configured protected tags are preserved, and each
+document is counted once in `documentsLosingTags`. With `allowClearing: true`, an empty effective
+suggestion that removes unprotected tags also increments `destructiveClearCount`.
 
 ### GET /api/v1/ai/results/groups
 
@@ -715,20 +773,97 @@ Optional filter query params:
 
 Returns grouped result counts and summaries.
 
-### POST /api/v1/ai/results/:id/revert
+### POST /api/v1/ai/results/:id/revert/preview
 
-Reverts a previously applied AI result, restoring the original field values in Paperless-NGX using the pre-apply snapshot.
+Creates a reviewed revert plan for an applied or partially applied result with an eligible audit
+snapshot. Select only fields that were applied. It does not change Paperless documents.
 
-No request body required.
+Request:
 
 ```json
-{ "data": { "reverted": true } }
+{
+  "selection": {
+    "title": true,
+    "correspondent": false,
+    "documentType": false,
+    "tags": false,
+    "processedTag": false,
+    "customFieldIds": []
+  }
+}
 ```
 
-Error conditions:
+Response (200):
 
-- `404 NOT_FOUND` if the result does not exist
-- `400 BAD_REQUEST` if the result was not applied or has no pre-apply snapshot
+```json
+{
+  "data": {
+    "token": "opaque-reviewed-revert-token",
+    "expiresAt": "2030-01-01T12:15:00.000Z",
+    "resultIds": [
+      "result-id"
+    ],
+    "selection": {
+      "title": true,
+      "correspondent": false,
+      "documentType": false,
+      "tags": false,
+      "processedTag": false,
+      "customFieldIds": []
+    },
+    "preflight": {
+      "totalDocuments": 1,
+      "fieldsChanged": {
+        "title": 1,
+        "correspondent": 0,
+        "documentType": 0,
+        "tags": 0,
+        "customFields": 0
+      },
+      "newEntitiesCreated": {
+        "correspondents": [],
+        "documentTypes": [],
+        "tags": []
+      },
+      "lowConfidenceCount": 0,
+      "noOpCount": 0,
+      "destructiveClearCount": 0,
+      "tagsRemoved": 0,
+      "documentsLosingTags": 0,
+      "confidenceDistribution": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    }
+  }
+}
+```
+
+The token expires after 15 minutes and is submitted as `planToken` to the revert endpoint.
+An invalid or empty selection returns `400 BAD_REQUEST`. A result that cannot be previewed for
+revert, including a missing result or unavailable snapshot, returns `409 CONFLICT`.
+
+### POST /api/v1/ai/results/:id/revert
+
+Starts a background revert job that restores the selected pre-apply values. First request
+`POST /api/v1/ai/results/:id/revert/preview`, then copy its `data.token` into `planToken`.
+
+Required JSON body:
+
+```json
+{ "planToken": "opaque-reviewed-plan-token" }
+```
+
+Response (202):
+
+```json
+{ "data": { "jobId": "job-id" } }
+```
+
+A missing token or a token shorter than 16 characters returns `400 BAD_REQUEST`. A conflicting job
+returns `409 JOB_ALREADY_RUNNING`; a runtime that is not accepting work returns `503 SERVICE_UNAVAILABLE`.
+Poll the job for plan validation and the mutation outcome.
 
 ### POST /api/v1/ai/results/:id/feedback
 
