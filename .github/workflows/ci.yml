@@ -18,28 +18,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  install:
-    runs-on: ubuntu-26.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
   quality:
     permissions:
       contents: read
-    needs: install
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -55,7 +36,6 @@ jobs:
         continue-on-error: true
 
   unit-tests:
-    needs: install
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
@@ -115,7 +95,6 @@ jobs:
           fail-on-error: 'false'
 
   e2e-tests:
-    needs: install
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
@@ -303,7 +282,6 @@ jobs:
         run: docker rm -f ci-test 2>/dev/null || true
 
   source-maps:
-    needs: install
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
@@ -383,9 +361,9 @@ jobs:
           fi
           echo "No file under backlog/ is added or changed."
 
-  # Single required status check (the branch ruleset requires only this). if: always() + an explicit
-  # failure check so a failed/cancelled leg fails the gate; main-only publish jobs aren't depended on,
-  # so a PR (where they're skipped) still passes. Renovate automerge waits for this to go green.
+  # Single required status check: every always-on job must report success; skipped fails the gate.
+  # Pull request-only jobs must also report success on pull requests. Main-only publish jobs are
+  # not dependencies. Renovate automerge waits for this check to go green.
   # zizmor fails a pull request on any finding (enforce); push runs upload SARIF instead.
   zizmor:
     permissions:
@@ -403,12 +381,20 @@ jobs:
     needs: [quality, unit-tests, e2e-tests, docker-build-verify, ac-evidence, privacy-sweep, backlog-freeze, zizmor]
     steps:
       - name: Fail if any required job did not pass
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
         env:
-          RESULTS: ${{ join(needs.*.result, ', ') }}
+          QUALITY: ${{ needs.quality.result }}
+          UNIT_TESTS: ${{ needs.unit-tests.result }}
+          E2E_TESTS: ${{ needs.e2e-tests.result }}
+          DOCKER_BUILD_VERIFY: ${{ needs.docker-build-verify.result }}
+          ZIZMOR: ${{ needs.zizmor.result }}
         run: |
-          echo "A required job failed or was cancelled: ${RESULTS}"
-          exit 1
+          for pair in "quality=$QUALITY" "unit-tests=$UNIT_TESTS" "e2e-tests=$E2E_TESTS" \
+                      "docker-build-verify=$DOCKER_BUILD_VERIFY" "zizmor=$ZIZMOR"; do
+            if [[ "${pair#*=}" != "success" ]]; then
+              echo "Required job did not succeed: ${pair}"
+              exit 1
+            fi
+          done
       # A skipped job reports success, so on a pull request the pull request checks must have
       # actually run and passed.
       - name: Fail if a pull request check did not run
