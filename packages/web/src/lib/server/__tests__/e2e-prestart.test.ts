@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const dataDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../data');
 
 import {
   cleanupE2eDatabase,
@@ -11,9 +14,9 @@ import playwrightConfig from '../../../../playwright.config.js';
 describe('E2E prestart cleanup', () => {
   it('targets only the fixed E2E database and its SQLite sidecars', () => {
     expect(E2E_DATABASE_PATHS).toEqual([
-      resolve('packages/web/data/e2e-test.db'),
-      resolve('packages/web/data/e2e-test.db-wal'),
-      resolve('packages/web/data/e2e-test.db-shm'),
+      resolve(dataDir, 'e2e-test.db'),
+      resolve(dataDir, 'e2e-test.db-wal'),
+      resolve(dataDir, 'e2e-test.db-shm'),
     ]);
 
     const remove = vi.fn();

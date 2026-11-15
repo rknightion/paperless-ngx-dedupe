@@ -10,7 +10,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test": "vitest run"
   },
   "dependencies": {
     "@grafana/faro-web-sdk": "^2.3.1",
@@ -58,6 +59,7 @@
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^6.0.0",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vitest": "^5.0.0"
   }
 }
