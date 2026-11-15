@@ -160,7 +160,7 @@ export const aiConfigSchema = z
     tagAliasesEnabled: z.boolean().default(false),
     tagAliasMap: z.string().default(DEFAULT_TAG_ALIAS_MAP),
 
-    // Concurrency for applying results to Paperless-NGX
+    // Accepted for backward compatibility. Not read by any code; apply runs sequentially.
     applyConcurrency: z.number().int().min(1).max(50).default(5),
   })
   .strict();

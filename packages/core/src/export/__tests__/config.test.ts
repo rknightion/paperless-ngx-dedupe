@@ -202,6 +202,12 @@ describe('previewConfigImport', () => {
 });
 
 describe('importConfig', () => {
+  it('retains deprecated applyConcurrency in imported and exported backups', () => {
+    importConfig(db, backup({ 'ai.applyConcurrency': 3 }));
+    expect(getConfig(db)['ai.applyConcurrency']).toBe('3');
+    expect(exportConfig(db).appConfig['ai.applyConcurrency']).toBe('3');
+  });
+
   it('imports a fully validated batch and dedup settings', () => {
     seedCustomFieldPolicy();
     const result = importConfig(
