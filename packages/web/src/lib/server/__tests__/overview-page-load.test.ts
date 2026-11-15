@@ -1,7 +1,9 @@
+import { type AutomationSettings } from '@paperless-dedupe/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const core = vi.hoisted(() => ({
   getAiStats: vi.fn(),
+  getAutomationSettings: vi.fn(),
   getDashboard: vi.fn(),
   getDuplicateStats: vi.fn(),
   listJobs: vi.fn(),
@@ -31,6 +33,32 @@ describe('overview page loader', () => {
         pendingAiResults: 0,
       },
     });
+    core.getAutomationSettings.mockReturnValue({
+      schedules: {
+        sync: {
+          task: 'sync',
+          enabled: false,
+          cadence: { kind: 'manual' },
+          timezone: 'UTC',
+          nextRunAt: null,
+        },
+        analysis: {
+          task: 'analysis',
+          enabled: false,
+          cadence: { kind: 'manual' },
+          timezone: 'UTC',
+          nextRunAt: null,
+        },
+        ai_processing: {
+          task: 'ai_processing',
+          enabled: false,
+          cadence: { kind: 'manual' },
+          timezone: 'UTC',
+          nextRunAt: null,
+        },
+      },
+      ai: { monthlyBudgetUsd: 0, maxDocumentsPerRun: 25, reviewOnly: true },
+    } satisfies AutomationSettings);
     core.getDuplicateStats.mockReturnValue({});
     core.listJobs.mockReturnValue([]);
     core.toPaperlessConfig.mockReturnValue({ url: 'http://paperless.test', token: 'test-token' });

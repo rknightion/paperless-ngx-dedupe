@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@paperless-dedupe/core', () => ({
+  CustomFieldPolicyError: class CustomFieldPolicyError extends Error {},
   getConfig: mocks.getConfig,
   redactSensitiveConfig: mocks.redactSensitiveConfig,
   setConfig: mocks.setConfig,
