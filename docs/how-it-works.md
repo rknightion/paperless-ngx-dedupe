@@ -38,8 +38,8 @@ For each document, the sync process:
 
 - Stores metadata (title, correspondent, document type, tags, dates)
 - Extracts the full OCR text content
-- Normalizes the text: lowercases, strips punctuation, collapses whitespace
-- Computes a fingerprint (hash of the normalized text) so future syncs can skip unchanged documents
+- Normalizes the text: lowercases, collapses whitespace and trims
+- Computes a fingerprint (a change-detection hash of content and metadata) so future syncs can skip unchanged documents
 
 After the first full sync, incremental syncs only fetch documents that have changed.
 

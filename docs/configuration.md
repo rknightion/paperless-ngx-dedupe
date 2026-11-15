@@ -86,6 +86,13 @@ See `.env.example` for the full list.
 | `PYROSCOPE_BASIC_AUTH_USER` | For Grafana Cloud | - | Grafana Cloud instance ID |
 | `PYROSCOPE_BASIC_AUTH_PASSWORD` | For Grafana Cloud | - | Grafana Cloud API key |
 
+### Frontend Observability
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `FARO_ENABLED` | No | `false` | Enable Grafana Faro Web SDK instrumentation |
+| `FARO_COLLECTOR_URL` | When Faro enabled | - | Faro collector URL; obtain it from Grafana Cloud under Observability, Frontend, Create new |
+
 ### Prometheus Scrape Endpoint (Optional)
 
 | Variable | Required | Default | Notes |
@@ -112,7 +119,7 @@ dashboard compatibility. Exporter collectors that this application does not prov
 individual task and log metrics, are not exposed.
 
 !!! note "Separately opt-in"
-    This is opt-in independently of `OTEL_ENABLED` / `OTEL_PROMETHEUS_ENABLED` because collectors poll the Paperless-NGX API every export interval (~60s), adding load to your Paperless instance. Enable only the collectors you need if this is a concern.
+    This is opt-in independently of `OTEL_ENABLED` / `OTEL_PROMETHEUS_ENABLED` because collectors poll the Paperless-NGX API, adding load to your Paperless instance. Enable only the collectors you need if this is a concern.
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
@@ -163,7 +170,7 @@ All collectors are enabled by default. To enable only specific collectors:
 PAPERLESS_METRICS_COLLECTORS=status,statistics,document
 ```
 
-Metrics are collected on the same interval as OTEL metric exports (controlled by `OTEL_METRIC_EXPORT_INTERVAL`, default 60s).
+Paperless metrics are polled every 60 seconds. The interval is fixed and is independent of `OTEL_METRIC_EXPORT_INTERVAL`.
 
 Credit: metric definitions and collector design inspired by [prometheus-paperless-exporter](https://github.com/hansmi/prometheus-paperless-exporter) by hansmi.
 

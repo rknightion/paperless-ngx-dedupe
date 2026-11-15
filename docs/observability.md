@@ -120,5 +120,5 @@ Per-statement `db.query` log records are emitted only at `LOG_LEVEL=debug` or `t
 This app follows OpenTelemetry semantic conventions:
 
 - **Database:** Stable conventions (`db.system.name`, `db.operation.name`, `db.query.text`). Set `OTEL_SEMCONV_STABILITY_OPT_IN=database`.
-- **GenAI:** Experimental conventions (`gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`).
+- **GenAI:** Experimental conventions (`gen_ai.system`, `gen_ai.request.model`, `gen_ai.request.batch_size`, `gen_ai.request.target_rpm`, `gen_ai.token.type`).
 - **App-specific:** Prefixed with `app.*` (`app.job.id`, `app.ai.total_documents`, `app.batch.*`).
