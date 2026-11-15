@@ -3,7 +3,7 @@
   "prFooter": "Task: none, dependency update",
   "packageRules": [
     {
-      "description": "Match pnpm 11's 24-hour package-age policy so npm update PRs do not enter CI before frozen installs can accept them.",
+      "description": "Match the workspace's 24-hour minimumReleaseAge so npm update PRs do not enter CI before frozen installs can accept them.",
       "matchDatasources": ["npm"],
       "minimumReleaseAge": "24 hours",
       "internalChecksFilter": "strict"
