@@ -72,7 +72,7 @@ if (otelEnabled || prometheusEnabled) {
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || DEFAULT_OTEL_SERVICE_NAME,
-      [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.0.0',
+      [ATTR_SERVICE_VERSION]: process.env.APP_VERSION || process.env.npm_package_version || '0.0.0',
       'service.namespace': process.env.OTEL_SERVICE_NAMESPACE || 'paperless-dedupe',
       'deployment.environment':
         process.env.OTEL_DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || 'development',

@@ -76,6 +76,10 @@ RUN chmod +x /docker-entrypoint.sh
 LABEL org.opencontainers.image.source="https://github.com/rknightion/paperless-ngx-dedupe"
 LABEL org.opencontainers.image.description="Document deduplication companion for Paperless-NGX"
 
+ARG VERSION=dev
+ENV APP_VERSION=${VERSION}
+LABEL org.opencontainers.image.version="${VERSION}"
+
 ENV NODE_ENV=production
 
 EXPOSE 3000

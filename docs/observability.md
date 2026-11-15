@@ -39,6 +39,8 @@ Frontend and backend traces are automatically correlated when both `OTEL_ENABLED
 
 Both services share the same `service.namespace` (`paperless-dedupe` by default), which groups them as one logical application in Grafana Cloud Application Observability.
 
+The server and worker `service.version` resource attribute uses the image version from `APP_VERSION`: the release tag, release candidate tag, or commit for edge builds. Local images without a version build argument report `dev`. Outside Docker, the fallback is `npm_package_version`, then `0.0.0`. Diagnostics retain the application version and add a separate build identity; unrecognized custom labels are redacted.
+
 ## Grafana Alloy (Optional)
 
 For production deployments with multiple instances, a Grafana Alloy collector provides retry buffering, metadata enrichment, and exemplar relay. The app can send directly to Grafana Cloud for simpler setups.

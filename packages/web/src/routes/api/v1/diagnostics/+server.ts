@@ -9,6 +9,7 @@ export const GET: RequestHandler = async ({ locals }) => {
   const bundle = collectDiagnostics(locals.sqlite, {
     versions: {
       application: packageMetadata.version,
+      build: process.env.APP_VERSION ?? null,
       node: process.versions.node,
     },
     featureFlags: {

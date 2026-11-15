@@ -15,6 +15,7 @@ const RECENT_OUTCOME_LIMIT = 25;
 export interface DiagnosticsInput {
   versions: {
     application: unknown;
+    build?: string | null;
     node: unknown;
   };
   featureFlags: {
@@ -33,6 +34,7 @@ export interface DiagnosticsBundle {
   formatVersion: 1;
   versions: {
     application: string;
+    build?: string | null;
     node: string;
   };
   counts: {
@@ -161,10 +163,20 @@ export function collectDiagnostics(
     )
     .get() as { count: number };
 
+  const build = input.versions.build;
+
   return {
     formatVersion: 1,
     versions: {
       application: redactDiagnosticVersion(input.versions.application),
+      ...(build === undefined
+        ? {}
+        : {
+            build:
+              build === null || build === 'dev' || /^[0-9a-f]{7,40}$/.test(build)
+                ? build
+                : redactDiagnosticVersion(build),
+          }),
       node: redactDiagnosticVersion(input.versions.node),
     },
     counts: {

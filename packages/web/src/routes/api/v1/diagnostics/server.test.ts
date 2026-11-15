@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import packageMetadata from '../../../../../../../package.json';
 
 const mocks = vi.hoisted(() => ({
@@ -20,59 +20,66 @@ describe('diagnostics support bundle API', () => {
     mocks.serializeDiagnostics.mockReturnValue('{"formatVersion":1}\n');
   });
 
-  it('downloads a deterministic no-store JSON attachment without passing secrets to the collector', async () => {
-    const response = await GET({
-      locals: {
-        sqlite: { privatePath: '/srv/private/paperless.db' },
-        config: {
-          PAPERLESS_URL: 'http://paperless.internal:8000',
-          PAPERLESS_API_TOKEN: 'paperless-token-secret',
-          PAPERLESS_PASSWORD: 'paperless-password-secret',
-          AI_OPENAI_API_KEY: 'openai-key-secret',
-          AI_ENABLED: true,
-          PAPERLESS_METRICS_ENABLED: true,
-          FARO_ENABLED: false,
-          PYROSCOPE_ENABLED: true,
-        },
-      },
-    } as never);
+  afterEach(() => vi.unstubAllEnvs());
 
-    expect(mocks.collectDiagnostics).toHaveBeenCalledOnce();
-    expect(mocks.collectDiagnostics).toHaveBeenCalledWith(
-      { privatePath: '/srv/private/paperless.db' },
-      {
-        versions: {
-          application: packageMetadata.version,
-          node: expect.stringMatching(/^\d+\.\d+\.\d+/),
+  it.each([undefined, '1.2.3-rc.2'])(
+    'downloads a deterministic no-store JSON attachment with build %j without passing secrets to the collector',
+    async (build) => {
+      vi.stubEnv('APP_VERSION', build);
+      const response = await GET({
+        locals: {
+          sqlite: { privatePath: '/srv/private/paperless.db' },
+          config: {
+            PAPERLESS_URL: 'http://paperless.internal:8000',
+            PAPERLESS_API_TOKEN: 'paperless-token-secret',
+            PAPERLESS_PASSWORD: 'paperless-password-secret',
+            AI_OPENAI_API_KEY: 'openai-key-secret',
+            AI_ENABLED: true,
+            PAPERLESS_METRICS_ENABLED: true,
+            FARO_ENABLED: false,
+            PYROSCOPE_ENABLED: true,
+          },
         },
-        featureFlags: {
-          aiProcessing: true,
-          paperlessMetrics: true,
-          frontendTelemetry: false,
-          continuousProfiling: true,
-        },
-        readiness: {
-          paperless: 'configured',
-          ai: 'configured',
-        },
-      },
-    );
-    const collectorInput = JSON.stringify(mocks.collectDiagnostics.mock.calls[0]?.[1]);
-    expect(collectorInput).not.toContain('paperless.internal');
-    expect(collectorInput).not.toContain('paperless-token-secret');
-    expect(collectorInput).not.toContain('paperless-password-secret');
-    expect(collectorInput).not.toContain('openai-key-secret');
+      } as never);
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('application/json; charset=utf-8');
-    expect(response.headers.get('content-disposition')).toBe(
-      'attachment; filename="paperless-ngx-dedupe-diagnostics.json"',
-    );
-    expect(response.headers.get('cache-control')).toBe('private, no-store, max-age=0');
-    expect(response.headers.get('pragma')).toBe('no-cache');
-    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
-    await expect(response.text()).resolves.toBe('{"formatVersion":1}\n');
-  });
+      expect(mocks.collectDiagnostics).toHaveBeenCalledOnce();
+      expect(mocks.collectDiagnostics).toHaveBeenCalledWith(
+        { privatePath: '/srv/private/paperless.db' },
+        {
+          versions: {
+            application: packageMetadata.version,
+            build: build ?? null,
+            node: expect.stringMatching(/^\d+\.\d+\.\d+/),
+          },
+          featureFlags: {
+            aiProcessing: true,
+            paperlessMetrics: true,
+            frontendTelemetry: false,
+            continuousProfiling: true,
+          },
+          readiness: {
+            paperless: 'configured',
+            ai: 'configured',
+          },
+        },
+      );
+      const collectorInput = JSON.stringify(mocks.collectDiagnostics.mock.calls[0]?.[1]);
+      expect(collectorInput).not.toContain('paperless.internal');
+      expect(collectorInput).not.toContain('paperless-token-secret');
+      expect(collectorInput).not.toContain('paperless-password-secret');
+      expect(collectorInput).not.toContain('openai-key-secret');
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('application/json; charset=utf-8');
+      expect(response.headers.get('content-disposition')).toBe(
+        'attachment; filename="paperless-ngx-dedupe-diagnostics.json"',
+      );
+      expect(response.headers.get('cache-control')).toBe('private, no-store, max-age=0');
+      expect(response.headers.get('pragma')).toBe('no-cache');
+      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+      await expect(response.text()).resolves.toBe('{"formatVersion":1}\n');
+    },
+  );
 
   it('reports disabled AI readiness without exposing why it is disabled', async () => {
     await GET({

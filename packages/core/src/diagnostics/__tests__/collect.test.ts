@@ -19,6 +19,45 @@ const FORBIDDEN_FIXTURES = [
 ] as const;
 
 describe('diagnostics support bundle', () => {
+  it.each([
+    ['1.2.3-rc.2', '1.2.3-rc.2'],
+    ['v1.2.3', 'v1.2.3'],
+    ['abcdef1', 'abcdef1'],
+    ['dev', 'dev'],
+    ['1.2.3-token-secret', 'unknown'],
+    ['https://example.test/private', 'unknown'],
+    [null, null],
+    [undefined, undefined],
+  ])(
+    'serializes safe build identity %j separately from the application version',
+    async (build, expected) => {
+      const { sqlite } = createDatabaseWithHandle(':memory:');
+      try {
+        await migrateDatabase(sqlite);
+        const bundle = collectDiagnostics(sqlite, {
+          versions: {
+            application: '1.2.2',
+            node: '24.22.3',
+            ...(build === undefined ? {} : { build }),
+          },
+          featureFlags: {
+            aiProcessing: false,
+            paperlessMetrics: false,
+            frontendTelemetry: false,
+            continuousProfiling: false,
+          },
+          readiness: { paperless: 'configured', ai: 'disabled' },
+        });
+        const serialized = JSON.parse(serializeDiagnostics(bundle));
+        expect(serialized.versions.application).toBe('1.2.2');
+        if (expected === undefined) expect(serialized.versions).not.toHaveProperty('build');
+        else expect(serialized.versions.build).toBe(expected);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
   it('returns only allowlisted aggregate fields and omits every private fixture byte-for-byte', async () => {
     const { sqlite } = createDatabaseWithHandle(':memory:');
     await migrateDatabase(sqlite);

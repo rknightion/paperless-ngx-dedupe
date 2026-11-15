@@ -60,6 +60,8 @@ The API key is required when `AI_ENABLED=true`. Runtime settings (model, prompt,
 
 ### Observability (Optional)
 
+`APP_VERSION` is set by the image build and reported as `service.version`; it is not meant to be overridden.
+
 OpenTelemetry is off unless `OTEL_ENABLED=true`. Common vars:
 
 - `OTEL_ENABLED`
