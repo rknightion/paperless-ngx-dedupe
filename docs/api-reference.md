@@ -680,7 +680,26 @@ Request:
 - `fields`: defaults to all three.
 - `createMissingEntities`: default `true`.
 
-Returns a summary of entities that would be created, documents that would be modified, and any conflicts.
+The response's `data.preflight` summary includes the following counts. Tag removals use the tags
+captured when the result was processed, preserve configured protected tags, and count each document
+once in `documentsLosingTags`:
+
+```json
+{
+  "totalDocuments": 1,
+  "fieldsChanged": { "title": 0, "correspondent": 0, "documentType": 0, "tags": 1, "customFields": 0 },
+  "newEntitiesCreated": { "correspondents": [], "documentTypes": [], "tags": [] },
+  "lowConfidenceCount": 0,
+  "noOpCount": 0,
+  "destructiveClearCount": 0,
+  "tagsRemoved": 5,
+  "documentsLosingTags": 1,
+  "confidenceDistribution": { "high": 1, "medium": 0, "low": 0 }
+}
+```
+
+With `allowClearing: true`, an empty effective suggestion that removes existing unprotected tags
+also increments `destructiveClearCount`.
 
 ### GET /api/v1/ai/results/groups
 

@@ -39,6 +39,8 @@ export interface ApplyPreflightResult {
   lowConfidenceCount: number;
   noOpCount: number;
   destructiveClearCount: number;
+  tagsRemoved: number;
+  documentsLosingTags: number;
   confidenceDistribution: {
     high: number;
     medium: number;
@@ -635,6 +637,8 @@ export async function computeApplyPreflight(
       lowConfidenceCount: 0,
       noOpCount: 0,
       destructiveClearCount: 0,
+      tagsRemoved: 0,
+      documentsLosingTags: 0,
       confidenceDistribution: { high: 0, medium: 0, low: 0 },
     };
   }
@@ -670,6 +674,8 @@ export async function computeApplyPreflight(
     lowConfidenceCount: 0,
     noOpCount: 0,
     destructiveClearCount: 0,
+    tagsRemoved: 0,
+    documentsLosingTags: 0,
     confidenceDistribution: { high: 0, medium: 0, low: 0 },
   };
 
@@ -677,6 +683,11 @@ export async function computeApplyPreflight(
   const newDocTypes = new Set<string>();
   const newTags = new Set<string>();
   const aiConfig = getAiConfig(db);
+  const protectedSet = new Set(
+    aiConfig.protectedTagsEnabled
+      ? aiConfig.protectedTagNames.map((name) => name.toLowerCase())
+      : [],
+  );
 
   for (const row of allResults) {
     const sugTitle = normalizeSuggestedLabel(row.suggestedTitle);
@@ -775,19 +786,30 @@ export async function computeApplyPreflight(
     if (options.fields.includes('tags')) {
       const currentTags: string[] = row.currentTagsJson ? JSON.parse(row.currentTagsJson) : [];
       const currentTagSet = new Set(currentTags.map((t) => t.toLowerCase()));
-      const sugTagSet = new Set(sugTags.map((t) => t.toLowerCase()));
+      const effectiveSuggested = sugTags.filter((tag) => !protectedSet.has(tag.toLowerCase()));
+      const suggestedSet = new Set(effectiveSuggested.map((tag) => tag.toLowerCase()));
+      const keepsProtectedTag = currentTags.some((tag) => protectedSet.has(tag.toLowerCase()));
+      const willWrite = effectiveSuggested.length > 0 || options.allowClearing || keepsProtectedTag;
 
-      const tagsChanged =
-        sugTags.length !== currentTags.length ||
-        sugTags.some((t) => !currentTagSet.has(t.toLowerCase())) ||
-        currentTags.some((t) => !sugTagSet.has(t.toLowerCase()));
-
-      if (tagsChanged && sugTags.length > 0) {
-        result.fieldsChanged.tags++;
-        isNoOp = false;
+      if (willWrite) {
+        const removed = currentTags.filter(
+          (tag) => !suggestedSet.has(tag.toLowerCase()) && !protectedSet.has(tag.toLowerCase()),
+        );
+        result.tagsRemoved += removed.length;
+        if (removed.length > 0) result.documentsLosingTags++;
+        if (
+          removed.length > 0 ||
+          effectiveSuggested.some((tag) => !currentTagSet.has(tag.toLowerCase()))
+        ) {
+          result.fieldsChanged.tags++;
+          isNoOp = false;
+        }
+        if (options.allowClearing && effectiveSuggested.length === 0 && removed.length > 0) {
+          hasDestructiveClear = true;
+        }
       }
 
-      for (const tag of sugTags) {
+      for (const tag of effectiveSuggested) {
         if (!existingTagNames.has(tag.toLowerCase())) {
           newTags.add(tag);
         }

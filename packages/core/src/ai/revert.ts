@@ -287,6 +287,8 @@ export async function createAiRevertPlan(
       lowConfidenceCount: 0,
       noOpCount: 0,
       destructiveClearCount: 0,
+      tagsRemoved: 0,
+      documentsLosingTags: 0,
       confidenceDistribution: { high: 0, medium: 0, low: 0 },
     },
   };

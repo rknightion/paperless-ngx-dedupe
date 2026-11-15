@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import type { AppDatabase } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
@@ -51,6 +52,138 @@ describe('computeApplyPreflight', () => {
       })
       .returning()
       .get().id;
+  });
+
+  async function tagPreview(current: string[], suggested: string[], allowClearing = false) {
+    db.update(aiProcessingResult)
+      .set({
+        currentTagsJson: JSON.stringify(current),
+        suggestedTagsJson: JSON.stringify(suggested),
+      })
+      .where(eq(aiProcessingResult.id, resultId))
+      .run();
+    return computeApplyPreflight(
+      db,
+      createMockClient(),
+      { type: 'selected_result_ids', resultIds: [resultId] },
+      {
+        fields: ['tags'],
+        allowClearing,
+        createMissingEntities: true,
+      },
+    );
+  }
+
+  it('counts five removals when three of eight current tags are retained', async () => {
+    const preview = await tagPreview(
+      ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'],
+      ['one', 'TWO', 'Three'],
+    );
+    expect(preview).toMatchObject({
+      tagsRemoved: 5,
+      documentsLosingTags: 1,
+      fieldsChanged: { tags: 1 },
+      noOpCount: 0,
+      destructiveClearCount: 0,
+    });
+  });
+
+  it('counts clearing tags as a destructive change', async () => {
+    const preview = await tagPreview(['One', 'Two'], [], true);
+    expect(preview).toMatchObject({
+      tagsRemoved: 2,
+      documentsLosingTags: 1,
+      fieldsChanged: { tags: 1 },
+      noOpCount: 0,
+      destructiveClearCount: 1,
+    });
+  });
+
+  it('preserves protected current tags and excludes protected suggestions from new tags', async () => {
+    setAiConfig(db, { protectedTagsEnabled: true, protectedTagNames: ['Keep', 'Never create'] });
+    const preview = await tagPreview(['KEEP', 'Remove'], ['keep', 'NEVER CREATE', 'New']);
+    expect(preview).toMatchObject({
+      tagsRemoved: 1,
+      documentsLosingTags: 1,
+      fieldsChanged: { tags: 1 },
+      newEntitiesCreated: { tags: ['New'] },
+    });
+  });
+
+  it('counts removals when keeping a protected tag makes apply write tags', async () => {
+    setAiConfig(db, { protectedTagsEnabled: true, protectedTagNames: ['Keep'] });
+    const preview = await tagPreview(['KEEP', 'Remove'], []);
+    expect(preview).toMatchObject({
+      tagsRemoved: 1,
+      documentsLosingTags: 1,
+      fieldsChanged: { tags: 1 },
+      noOpCount: 0,
+      destructiveClearCount: 0,
+    });
+  });
+
+  it('counts clearing unprotected tags while preserving protected ones', async () => {
+    setAiConfig(db, { protectedTagsEnabled: true, protectedTagNames: ['Keep'] });
+    const preview = await tagPreview(['KEEP', 'Remove'], ['keep'], true);
+    expect(preview).toMatchObject({
+      tagsRemoved: 1,
+      documentsLosingTags: 1,
+      fieldsChanged: { tags: 1 },
+      noOpCount: 0,
+      destructiveClearCount: 1,
+    });
+  });
+
+  it.each([
+    [['Existing'], [], false],
+    [['KEEP'], ['keep'], false],
+    [['Existing'], ['Protected absent'], false],
+    [[], [], true],
+  ] as const)(
+    'keeps no-op accounting when tags stay unchanged: %j',
+    async (current, suggested, allowClearing) => {
+      setAiConfig(db, {
+        protectedTagsEnabled: true,
+        protectedTagNames: ['Keep', 'Protected absent'],
+      });
+      const preview = await tagPreview([...current], [...suggested], allowClearing);
+      expect(preview).toMatchObject({
+        tagsRemoved: 0,
+        documentsLosingTags: 0,
+        fieldsChanged: { tags: 0 },
+        noOpCount: 1,
+        destructiveClearCount: 0,
+        newEntitiesCreated: { tags: [] },
+      });
+    },
+  );
+
+  it('does not count removals when tags are not selected', async () => {
+    db.update(aiProcessingResult)
+      .set({ currentTagsJson: '["Existing"]', suggestedTagsJson: '[]' })
+      .run();
+    const preview = await computeApplyPreflight(
+      db,
+      createMockClient(),
+      { type: 'selected_result_ids', resultIds: [resultId] },
+      { fields: ['title'], allowClearing: true, createMissingEntities: true },
+    );
+    expect(preview).toMatchObject({
+      tagsRemoved: 0,
+      documentsLosingTags: 0,
+      fieldsChanged: { tags: 0 },
+      destructiveClearCount: 0,
+    });
+  });
+
+  it('returns numeric zero counts for an empty selection', async () => {
+    const preview = await computeApplyPreflight(
+      db,
+      createMockClient(),
+      { type: 'selected_result_ids', resultIds: [] },
+      { fields: ['tags'], allowClearing: true, createMissingEntities: true },
+    );
+    expect(preview).toMatchObject({ totalDocuments: 0, tagsRemoved: 0, documentsLosingTags: 0 });
   });
 
   it('uses configured thresholds to flag suggestions for human review without auto-apply eligibility', async () => {
