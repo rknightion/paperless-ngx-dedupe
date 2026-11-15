@@ -19,6 +19,7 @@ interface MockDocument {
 }
 
 interface MockState {
+  failDeletes: boolean;
   documents: MockDocument[];
   correspondents: Array<{ id: number; name: string }>;
   documentTypes: Array<{ id: number; name: string }>;
@@ -45,6 +46,7 @@ function createDefaultState(): MockState {
   }
 
   return {
+    failDeletes: false,
     documents,
     correspondents: [
       { id: 1, name: 'Alice Corp' },
@@ -125,6 +127,11 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return jsonResponse(res, { ok: true });
   }
 
+  if (path === '/__control__/fail-deletes' && req.method === 'POST') {
+    state.failDeletes = true;
+    return jsonResponse(res, { ok: true });
+  }
+
   // HEAD request for health check (readiness probe)
   if (req.method === 'HEAD') {
     res.writeHead(200);
@@ -200,6 +207,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
   // DELETE /api/documents/:id/
   if (docMatch && req.method === 'DELETE') {
+    if (state.failDeletes) return jsonResponse(res, { detail: 'Synthetic failure' }, 500);
     const id = parseInt(docMatch[1], 10);
     const index = state.documents.findIndex((document) => document.id === id);
     if (index === -1) {
