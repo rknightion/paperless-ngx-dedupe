@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MinHash } from '../minhash.js';
 
 function makeShingleSet(start: number, count: number): Set<number> {
@@ -9,7 +9,56 @@ function makeShingleSet(start: number, count: number): Set<number> {
   return set;
 }
 
+function seededRandom(seed: number) {
+  let state = seed | 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
+  };
+}
+
+function referenceSignature(permutations: number, shingles: Set<number>): Uint32Array {
+  const rng = seededRandom(42);
+  const signature = new Uint32Array(permutations).fill(0xffffffff);
+  for (let i = 0; i < permutations; i++) {
+    const a = BigInt(Math.floor(rng() * 0xffffffff)) || 1n;
+    const b = BigInt(Math.floor(rng() * 0xffffffff));
+    for (const x of shingles) {
+      const hash = Number(((a * BigInt(x) + b) % ((1n << 61n) - 1n)) % 0xffffffffn);
+      signature[i] = Math.min(signature[i], hash);
+    }
+  }
+  return signature;
+}
+
 describe('MinHash', () => {
+  it.each([16, 128, 256, 1024])('matches the BigInt reference with %i permutations', (count) => {
+    const rng = seededRandom(73);
+    const shingles = new Set([0, 1, 0xffffffff]);
+    for (let i = 0; i < 5000; i++) shingles.add(Math.floor(rng() * 0x100000000));
+    const hash = new MinHash(count);
+    hash.update(shingles);
+    expect(hash.signature).toEqual(referenceSignature(count, shingles));
+    for (const edge of [0, 1, 0xffffffff]) {
+      const single = new MinHash(count);
+      single.update(new Set([edge]));
+      expect(single.signature).toEqual(referenceSignature(count, new Set([edge])));
+    }
+  });
+
+  it('performs no BigInt conversion during update', () => {
+    const hash = new MinHash(256);
+    const spy = vi.spyOn(globalThis, 'BigInt');
+    try {
+      hash.update(makeShingleSet(0, 100));
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('produces deterministic signatures for the same input', () => {
     const shingles = makeShingleSet(0, 100);
     const mh1 = new MinHash(128);
