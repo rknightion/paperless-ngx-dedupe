@@ -15,7 +15,7 @@ import { getServerRuntime } from '../../../../../runtime.server';
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
-const groupIdsSchema = z.array(z.string().min(1)).min(1).max(50000);
+const groupIdsSchema = z.array(z.string().min(1)).min(1).max(20000);
 
 const reviewedPlanBodySchema = z.object({
   planToken: z.string().min(32).max(256),

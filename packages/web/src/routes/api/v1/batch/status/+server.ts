@@ -12,7 +12,7 @@ import type { RequestHandler } from './$types';
 const allowedStatuses = GROUP_STATUS_VALUES.filter((status) => status !== 'deleted');
 
 const bodySchema = z.object({
-  groupIds: z.array(z.string().min(1)).min(1).max(50000),
+  groupIds: z.array(z.string().min(1)).min(1).max(20000),
   status: z.string().refine((s) => allowedStatuses.some((status) => status === s), {
     error: `Invalid status. Must be one of: ${allowedStatuses.join(', ')}`,
   }),
