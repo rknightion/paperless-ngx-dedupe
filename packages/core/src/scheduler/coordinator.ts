@@ -326,6 +326,27 @@ function enqueueCompletedDependencies(sqlite: Database.Database, now: Date): Dis
         if (!(error instanceof OperationConflictError)) throw error;
       }
     }
+    // Generations progress through running, ready, no_change, partial_failed, failed or consumed.
+    // Consumption persists after the dependent jobs and their intents are cleared from history.
+    sqlite.exec('BEGIN IMMEDIATE');
+    try {
+      sqlite
+        .prepare(
+          `UPDATE sync_change_generation SET status = 'consumed'
+        WHERE id = ? AND status = 'ready' AND NOT EXISTS (
+          SELECT 1 FROM automation_schedule s
+          WHERE s.enabled = 1 AND s.task IN ('analysis', 'ai_processing')
+          AND NOT EXISTS (
+            SELECT 1 FROM dispatch_intent i WHERE i.parent_job_id = ? AND i.task = s.task
+          )
+        )`,
+        )
+        .run(parent.id, parent.sync_job_id);
+      sqlite.exec('COMMIT');
+    } catch (error) {
+      sqlite.exec('ROLLBACK');
+      throw error;
+    }
   }
   return intents;
 }
