@@ -198,6 +198,35 @@ test.describe('AI API', () => {
     expect(body.data.provider).toBe('openai');
   });
 
+  test('PUT /api/v1/ai/config with one key leaves other settings unchanged', async ({
+    request,
+  }) => {
+    const path = '/api/v1/ai/config';
+    const original = (await (await request.get(path)).json()).data;
+    const preserved = {
+      ...original,
+      batchSize: 7,
+      promptTemplate: 'Synthetic retained prompt',
+      tagAliasMap: 'invoice: [bill]',
+    };
+    try {
+      expect((await request.put(path, { data: preserved })).status()).toBe(200);
+      const response = await request.put(path, { data: { rateDelayMs: 5 } });
+      expect(response.status()).toBe(200);
+      expect((await response.json()).data).toEqual({ ...preserved, rateDelayMs: 5 });
+      expect((await (await request.get(path)).json()).data).toEqual({
+        ...preserved,
+        rateDelayMs: 5,
+      });
+      expect((await (await request.put(path, { data: {} })).json()).data).toEqual({
+        ...preserved,
+        rateDelayMs: 5,
+      });
+    } finally {
+      expect((await request.put(path, { data: original })).status()).toBe(200);
+    }
+  });
+
   test('PUT /api/v1/ai/config updates config when AI is enabled', async ({ request }) => {
     const response = await request.put('/api/v1/ai/config', {
       headers: { 'Content-Type': 'application/json' },
