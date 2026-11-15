@@ -7,6 +7,8 @@ import { OPENAI_MODELS } from './types.js';
 
 const logger = createLogger('ai-costs');
 
+export const FLEX_COST_FACTOR = 0.5;
+
 const LITELLM_PRICING_URL =
   'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json';
 const PRICING_CACHE_KEY = 'ai.modelPricingCache';
@@ -275,8 +277,14 @@ export function estimateResultCost(
   pricing: ModelPricing,
   promptTokens: number,
   completionTokens: number,
+  options?: { cachedTokens?: number; flex?: boolean },
 ): number {
-  return promptTokens * pricing.inputPerToken + completionTokens * pricing.outputPerToken;
+  const cached = Math.min(options?.cachedTokens ?? 0, promptTokens);
+  const inputCost =
+    (promptTokens - cached) * pricing.inputPerToken +
+    cached * (pricing.cacheReadPerToken ?? pricing.inputPerToken);
+  const total = inputCost + completionTokens * pricing.outputPerToken;
+  return total * (options?.flex ? FLEX_COST_FACTOR : 1);
 }
 
 /**
@@ -314,7 +322,7 @@ export function estimateBatchCost(
   const avgCompletion = avgRow && avgRow.avgCompletion > 0 ? avgRow.avgCompletion : 200;
 
   // Flex processing uses Batch API rates (~50% of standard pricing)
-  const flexDiscount = flexProcessing ? 0.5 : 1;
+  const flexDiscount = flexProcessing ? FLEX_COST_FACTOR : 1;
   const inputCost = avgPrompt * documentCount * pricing.inputPerToken * flexDiscount;
   const outputCost = avgCompletion * documentCount * pricing.outputPerToken * flexDiscount;
 

@@ -35,6 +35,7 @@ export interface AiProviderUsage {
   promptTokens: number;
   completionTokens: number;
   cachedTokens?: number;
+  serviceTier?: string;
 }
 
 export interface RateLimitInfo {
@@ -71,6 +72,7 @@ export class AiExtractionError extends Error {
     message: string,
     public readonly requestId?: string,
     public readonly retryAfterMs?: number,
+    public readonly usage?: AiProviderUsage,
   ) {
     super(message);
     this.name = 'AiExtractionError';

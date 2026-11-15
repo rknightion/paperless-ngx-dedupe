@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
+import { appConfig } from '../../schema/sqlite/app.js';
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
 import { aiResultRevision } from '../../schema/sqlite/ai-result-revisions.js';
@@ -128,6 +129,92 @@ describe('processBatch', () => {
     sqlite = handle.sqlite;
     await migrateDatabase(handle.sqlite);
   });
+
+  function seedCostFixture() {
+    seedDocs(db);
+    db.insert(appConfig)
+      .values({
+        key: 'ai.modelPricingCache',
+        value: JSON.stringify({
+          [config.model]: {
+            inputPerToken: 0.000002,
+            outputPerToken: 0.000005,
+            cacheReadPerToken: 0.0000005,
+            cacheCreationPerToken: null,
+          },
+        }),
+        updatedAt: '2026-01-01T00:00:00Z',
+      })
+      .run();
+  }
+
+  it.each([
+    ['flex', false, 0.001625],
+    ['default', true, 0.00325],
+    [undefined, true, 0.00325],
+  ] as const)(
+    'records served tier %s independently of configured Flex %s',
+    async (serviceTier, flexProcessing, expectedCost) => {
+      seedCostFixture();
+      const normal = createMockProvider();
+      const extractFn = vi.fn(async (...args: Parameters<AiProviderInterface['extract']>) => ({
+        ...(await normal.extract(...args)),
+        usage: { promptTokens: 3000, completionTokens: 50, cachedTokens: 2000, serviceTier },
+      }));
+      const result = await processBatch(db, {
+        provider: createMockProvider({ extractFn }),
+        client: createMockClient(),
+        config: { ...config, flexProcessing },
+      });
+      expect(result).toMatchObject({
+        succeeded: 2,
+        totalPromptTokens: 6000,
+        totalCompletionTokens: 100,
+      });
+      const rows = db
+        .select()
+        .from(aiProcessingResult)
+        .all()
+        .filter((row) => row.appliedStatus === 'pending_review');
+      expect(rows).toHaveLength(2);
+      for (const row of rows) expect(row.estimatedCostUsd).toBeCloseTo(expectedCost, 12);
+    },
+  );
+
+  it.each(['refusal', 'max_tokens', 'timeout', 'schema_mismatch'] as const)(
+    'stores billed usage and includes it in batch totals after %s',
+    async (failureType) => {
+      seedCostFixture();
+      const error = new AiExtractionError(
+        failureType,
+        'Synthetic response failure',
+        undefined,
+        undefined,
+        { promptTokens: 3000, completionTokens: 50, cachedTokens: 2000, serviceTier: 'flex' },
+      );
+      const result = await processBatch(db, {
+        provider: createMockProvider({ extractFn: vi.fn().mockRejectedValue(error) }),
+        client: createMockClient(),
+        config,
+      });
+      expect(result).toMatchObject({
+        failed: 2,
+        succeeded: 0,
+        totalPromptTokens: 6000,
+        totalCompletionTokens: 100,
+      });
+      const rows = db
+        .select()
+        .from(aiProcessingResult)
+        .all()
+        .filter((row) => row.appliedStatus === 'failed');
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row).toMatchObject({ failureType, promptTokens: 3000, completionTokens: 50 });
+        expect(row.estimatedCostUsd).toBeCloseTo(0.001625, 12);
+      }
+    },
+  );
 
   it.each([
     'full_reprocess',

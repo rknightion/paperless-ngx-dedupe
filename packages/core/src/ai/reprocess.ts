@@ -132,6 +132,8 @@ export async function reprocessSingleResult(
       ? `[${error.failureType}] ${error.message}`
       : (error as Error).message;
     const failureType = isAiError ? error.failureType : null;
+    const usage = isAiError ? error.usage : undefined;
+    const pricing = usage ? getModelPricing(db, config.model) : null;
 
     replaceAiResultWithRevision(db, row.documentId, {
       provider: provider.provider,
@@ -140,6 +142,18 @@ export async function reprocessSingleResult(
       appliedAt: null,
       failureType,
       errorMessage: errorMsg,
+      ...(usage
+        ? {
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+            estimatedCostUsd: pricing
+              ? estimateResultCost(pricing, usage.promptTokens, usage.completionTokens, {
+                  cachedTokens: usage.cachedTokens,
+                  flex: usage.serviceTier === 'flex',
+                })
+              : null,
+          }
+        : {}),
       createdAt: new Date().toISOString(),
     });
     logger.error({ resultId, error: errorMsg }, 'Reprocess extraction failed');
@@ -160,7 +174,15 @@ export async function reprocessSingleResult(
   // 7. Compute cost
   const pricing = getModelPricing(db, config.model);
   const estimatedCostUsd = pricing
-    ? estimateResultCost(pricing, extraction.usage.promptTokens, extraction.usage.completionTokens)
+    ? estimateResultCost(
+        pricing,
+        extraction.usage.promptTokens,
+        extraction.usage.completionTokens,
+        {
+          cachedTokens: extraction.usage.cachedTokens,
+          flex: extraction.usage.serviceTier === 'flex',
+        },
+      )
     : null;
 
   // 8. Update existing result row
