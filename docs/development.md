@@ -48,7 +48,7 @@ paperless-ngx-dedupe/
 │   │       ├── queries/    # Database queries (Drizzle ORM)
 │   │       ├── schema/     # Database schema definitions
 │   │       ├── paperless/  # Paperless-NGX API client
-│   │       ├── ai/         # AI metadata extraction and auto-apply
+│   │       ├── ai/         # AI metadata extraction
 │   │       ├── export/     # CSV and JSON export
 │   │       ├── telemetry/  # OpenTelemetry tracing and metrics
 │   │       └── config.ts   # Zod-validated environment config
@@ -128,9 +128,8 @@ pnpm --filter @paperless-dedupe/core test
 ## Database
 
 - **Engine**: SQLite via `better-sqlite3`
-- **ORM**: Drizzle ORM with schema defined in `packages/core/src/schema/`
+- **ORM**: Drizzle ORM; `packages/core/src/schema/sqlite/` defines the schema, with one file per area, and is the source of truth for the tables.
 - **Migrations**: Auto-detected via SHA-256 hashing of DDL statements. Run on startup when `AUTO_MIGRATE=true` (the default).
-- **Tables**: `document`, `documentContent`, `documentSignature`, `duplicateGroup`, `duplicateMember`, `job`, `appConfig`, `syncState`, `aiProcessingResult`
 
 ## Docker Development
 
@@ -147,10 +146,6 @@ just dev-jobs
 pnpm docker:validate
 ```
 
-The **Dockerfile** uses a 3-stage build:
-
-1. **deps** -- Install pnpm dependencies
-2. **build** -- Build core + web, deploy with flat node_modules
-3. **production** -- Minimal `node:24-slim` runtime with tini init, pre-compiled core (for worker threads), and OTEL preload script
+The `Dockerfile` is the source of truth for the build stages. The runtime stage uses the same digest-pinned Node image as the build stage, with tini init, compiled core code for worker threads, and the OTEL preload script.
 
 The container runs as a non-root user using `PUID`/`PGID` (defaults: `1000:1000`). Data is persisted at `/app/data` (mounted from `./docker-data` by default). The healthcheck hits `/api/v1/health` on port 3000.

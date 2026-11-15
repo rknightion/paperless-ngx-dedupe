@@ -40,7 +40,7 @@ Framework-agnostic TypeScript library containing all business logic. No web fram
 - `queries/` -- Database queries via Drizzle ORM (documents, duplicates, dashboard, config)
 - `schema/` -- Drizzle ORM table definitions and relations
 - `paperless/` -- Paperless-NGX REST API client with Zod schema validation
-- `ai/` -- AI-powered metadata extraction (OpenAI), auto-apply, cost tracking, feedback
+- `ai/`: AI-powered metadata extraction (OpenAI), cost tracking, feedback
 - `export/` -- CSV and JSON export utilities
 - `telemetry/` -- OpenTelemetry tracing and metrics instrumentation
 - `config.ts` -- Zod-validated environment configuration
@@ -150,7 +150,7 @@ flowchart LR
 
 ## Database Schema
 
-The SQLite database contains 9 tables:
+The schema is defined in `packages/core/src/schema/sqlite/`, with one file per area; that directory is the source of truth. The diagram below shows the core tables.
 
 ```mermaid
 erDiagram
@@ -272,12 +272,7 @@ Background jobs run in Node.js `worker_threads` to avoid blocking the main event
 - **Job Manager** (`packages/core/src/jobs/manager.ts`): Creates job records in SQLite, spawns worker threads, monitors completion
 - **Worker Launcher** (`packages/core/src/jobs/worker-launcher.ts`): Generic worker spawning and crash handling
 - **Worker Paths** (`packages/core/src/jobs/worker-paths.ts`): Resolves worker module paths across dev, built, and Docker environments
-- **Workers** (`packages/core/src/jobs/workers/`): Specialized workers:
-    - `sync-worker` -- Document sync from Paperless-NGX
-    - `analysis-worker` -- MinHash/LSH dedup analysis
-    - `batch-worker` -- Batch delete operations
-    - `ai-processing-worker` -- AI metadata extraction
-    - `ai-apply-worker` -- Apply AI suggestions to Paperless-NGX
+- **Workers** (`packages/core/src/jobs/workers/`): Run background tasks off the main event loop; this directory is the source of truth for available workers.
 
 **Constraints:**
 

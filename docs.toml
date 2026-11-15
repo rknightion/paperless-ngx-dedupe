@@ -45,6 +45,7 @@ Security = "security.md"
 [[site.nav]]
 Reference = [
     { "API Reference" = "api-reference.md" },
+    { Observability = "observability.md" },
     { "Paperless-NGX 3 Compatibility" = "paperless-3-compatibility.md" },
 ]
 
