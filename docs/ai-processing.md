@@ -53,7 +53,6 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `protectedTagNames` | `["email"]` | string array | Tags protected from AI-driven changes |
 | `tagAliasesEnabled` | `false` | boolean | Normalize suggested tags through the alias map |
 | `tagAliasMap` | built-in | YAML string | Canonical tag-to-alias mappings |
-| `applyConcurrency` | `5` | 1--50 | Concurrent Paperless requests for a reviewed apply job |
 
 AI processing can be scheduled under **Settings > Automation**. Scheduled processing is an
 explicit opt-in and is disabled by default. It creates results for review; it never applies AI

@@ -10,6 +10,19 @@ import { DEFAULT_AI_CONFIG } from '../../ai/types.js';
 import { DEFAULT_DEDUP_CONFIG } from '../../dedup/types.js';
 
 describe('typed configuration registry', () => {
+  it('marks ignored apply concurrency deprecated while retaining its stored values', () => {
+    expect(getConfigMetadata().find((entry) => entry.key === 'ai.applyConcurrency')).toMatchObject({
+      deprecated: true,
+      default: 5,
+      readOnly: false,
+    });
+    for (const value of [1, 5, 50]) {
+      expect(coerceConfigBatch({ 'ai.applyConcurrency': value })).toEqual({
+        'ai.applyConcurrency': String(value),
+      });
+    }
+  });
+
   it('is deterministic and describes every mutable database key', () => {
     const keys = CONFIG_REGISTRY.map((entry) => entry.key);
 

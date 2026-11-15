@@ -94,6 +94,7 @@ const entries: InternalRegistryEntry[] = [
     DEFAULT_AI_CONFIG.applyConcurrency,
     'ai',
     integer(1, 50),
+    { deprecated: true },
   ),
   databaseEntry('ai.batchSize', 'integer', DEFAULT_AI_CONFIG.batchSize, 'ai', integer(1, 500)),
   databaseEntry(
