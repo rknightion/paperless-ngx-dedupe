@@ -1,8 +1,12 @@
+import { applySecurityHeaders } from '$lib/server/security-headers';
 import { sequence } from '@sveltejs/kit/hooks';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '@paperless-dedupe/core';
 import type { Handle } from '@sveltejs/kit';
 import { getServerRuntime } from './runtime.server';
+
+const handleSecurityHeaders: Handle = async ({ event, resolve }) =>
+  applySecurityHeaders(await resolve(event));
 
 const handleCors: Handle = async ({ event, resolve }) => {
   // Only apply CORS to API routes
@@ -87,4 +91,4 @@ const handleRequest: Handle = async ({ event, resolve }) => {
   return response;
 };
 
-export const handle = sequence(handleCors, handleRequest);
+export const handle = sequence(handleSecurityHeaders, handleCors, handleRequest);
