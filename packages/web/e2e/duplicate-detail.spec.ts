@@ -109,11 +109,17 @@ test.describe('Duplicate Detail Page', () => {
 
   test('visual comparison uses browser-authorized thumbnail and PDF proxy URLs', async ({
     page,
+    request,
   }) => {
-    const mediaResponses: Array<{ url: string; status: number }> = [];
+    expect((await request.post('http://localhost:18923/__control__/reset')).ok()).toBe(true);
+    const mediaResponses: Array<{ url: string; status: number; cacheControl: string }> = [];
     page.on('response', (response) => {
       if (/\/api\/v1\/paperless\/documents\/\d+\/(thumb|preview)/.test(response.url())) {
-        mediaResponses.push({ url: response.url(), status: response.status() });
+        mediaResponses.push({
+          url: response.url(),
+          status: response.status(),
+          cacheControl: response.headers()['cache-control'],
+        });
       }
     });
 
@@ -127,7 +133,16 @@ test.describe('Duplicate Detail Page', () => {
     for (const response of thumbnailResponses) {
       expect(response.url).toMatch(/\/thumb\?access=\d+\.[\w-]+$/);
       expect(response.url).not.toContain('test-token-e2e');
-      expect(response.status).not.toBe(401);
+      expect(response.status).toBe(200);
+      expect(response.cacheControl).toBe('private, max-age=3600');
+    }
+
+    const images = page.locator('img[src*="/thumb?access="]');
+    await expect(images).toHaveCount(2);
+    for (const image of await images.all()) {
+      await expect
+        .poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
     }
 
     await page.getByRole('button', { name: 'View PDF' }).first().click();
@@ -138,7 +153,20 @@ test.describe('Duplicate Detail Page', () => {
     const previewResponse = mediaResponses.find(({ url }) => url.includes('/preview'));
     expect(previewResponse?.url).toMatch(/\/preview\?access=\d+\.[\w-]+$/);
     expect(previewResponse?.url).not.toContain('test-token-e2e');
-    expect(previewResponse?.status).not.toBe(401);
+    expect(previewResponse?.status).toBe(200);
+    expect(previewResponse?.cacheControl).toBe('private, max-age=3600');
+    const preview = await request.get(previewResponse!.url);
+    expect(preview.status()).toBe(200);
+    expect(preview.headers()['content-type']).toBe('application/pdf');
+    expect((await preview.body()).subarray(0, 8).toString()).toBe('%PDF-1.4');
+
+    const tampered = new URL(previewResponse!.url);
+    const [expiresAt, signature] = tampered.searchParams.get('access')!.split('.');
+    const replacement = signature[0] === 'A' ? 'B' : 'A';
+    tampered.searchParams.set('access', `${expiresAt}.${replacement}${signature.slice(1)}`);
+    const rejected = await request.get(tampered.toString());
+    expect(rejected.status()).toBe(401);
+    expect((await rejected.json()).error.code).toBe('UNAUTHORIZED');
   });
 
   test('confidence breakdown section renders', async ({ page }) => {

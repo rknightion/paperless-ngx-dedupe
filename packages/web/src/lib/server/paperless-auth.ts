@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { apiError, ErrorCode } from '$lib/server/api';
 
 type PaperlessMediaAssetKind = 'thumb' | 'preview';
@@ -10,7 +10,8 @@ interface PaperlessMediaAuthorization {
 }
 
 const MEDIA_ACCESS_TTL_MS = 60 * 60 * 1000;
-const fallbackMediaSigningKey = randomBytes(32);
+// A restart invalidates outstanding media URLs; reloading the page issues fresh links.
+const mediaSigningKey = randomBytes(32);
 
 function getPaperlessAuthorization(config: App.Locals['config']): string | null {
   if (config.PAPERLESS_API_TOKEN) {
@@ -27,24 +28,18 @@ function getPaperlessAuthorization(config: App.Locals['config']): string | null 
   return null;
 }
 
-function getMediaSigningKey(config: App.Locals['config']): string | Buffer {
-  return getPaperlessAuthorization(config) ?? fallbackMediaSigningKey;
-}
-
 function signMediaAccess(
-  config: App.Locals['config'],
   paperlessId: number,
   assetKind: PaperlessMediaAssetKind,
   expiresAt: number,
 ): string {
-  return createHmac('sha256', getMediaSigningKey(config))
+  return createHmac('sha256', mediaSigningKey)
     .update(`${paperlessId}:${assetKind}:${expiresAt}`)
     .digest('base64url');
 }
 
 function hasValidMediaAccess(
   request: Request,
-  config: App.Locals['config'],
   authorization: PaperlessMediaAuthorization,
 ): boolean {
   const access = new URL(request.url).searchParams.get('access');
@@ -70,7 +65,6 @@ function hasValidMediaAccess(
   }
 
   const expectedSignature = signMediaAccess(
-    config,
     authorization.paperlessId,
     authorization.assetKind,
     expiresAt,
@@ -92,13 +86,12 @@ export function buildPaperlessAuthHeaders(config: App.Locals['config']): Record<
 }
 
 export function createPaperlessMediaUrl(
-  config: App.Locals['config'],
   paperlessId: number,
   assetKind: PaperlessMediaAssetKind,
   now = Date.now(),
 ): string {
   const expiresAt = now + MEDIA_ACCESS_TTL_MS;
-  const signature = signMediaAccess(config, paperlessId, assetKind, expiresAt);
+  const signature = signMediaAccess(paperlessId, assetKind, expiresAt);
   return `/api/v1/paperless/documents/${paperlessId}/${assetKind}?access=${expiresAt}.${signature}`;
 }
 
@@ -110,11 +103,18 @@ export function requirePaperlessAuthorization(
   const expected = getPaperlessAuthorization(config);
   const provided = request.headers.get('authorization');
 
-  if (expected && provided?.trim() === expected) {
+  if (
+    expected &&
+    provided !== null &&
+    timingSafeEqual(
+      createHash('sha256').update(provided.trim()).digest(),
+      createHash('sha256').update(expected).digest(),
+    )
+  ) {
     return null;
   }
 
-  if (mediaAuthorization && hasValidMediaAccess(request, config, mediaAuthorization)) {
+  if (mediaAuthorization && hasValidMediaAccess(request, mediaAuthorization)) {
     return null;
   }
 

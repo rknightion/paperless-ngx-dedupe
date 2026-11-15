@@ -14,8 +14,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     group.members.map((member) => [
       member.documentId,
       {
-        thumbnailUrl: createPaperlessMediaUrl(locals.config, member.paperlessId, 'thumb'),
-        previewUrl: createPaperlessMediaUrl(locals.config, member.paperlessId, 'preview'),
+        thumbnailUrl: createPaperlessMediaUrl(member.paperlessId, 'thumb'),
+        previewUrl: createPaperlessMediaUrl(member.paperlessId, 'preview'),
       },
     ]),
   );

@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createPaperlessMediaUrl } from '$lib/server/paperless-auth';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GET } from './+server';
 
@@ -8,14 +8,6 @@ const config = {
   PAPERLESS_USERNAME: '',
   PAPERLESS_PASSWORD: '',
 } as App.Locals['config'];
-
-function accessFor(paperlessId: number, assetKind: 'thumb' | 'preview'): string {
-  const expiresAt = Date.now() + 60_000;
-  const signature = createHmac('sha256', 'Token paperless-secret')
-    .update(`${paperlessId}:${assetKind}:${expiresAt}`)
-    .digest('base64url');
-  return `${expiresAt}.${signature}`;
-}
 
 describe('Paperless thumbnail proxy', () => {
   afterEach(() => {
@@ -31,12 +23,12 @@ describe('Paperless thumbnail proxy', () => {
         }),
       ),
     );
-    const access = accessFor(42, 'thumb');
+    const url = createPaperlessMediaUrl(42, 'thumb');
 
     const response = await GET({
       params: { paperlessId: '42' },
       locals: { config },
-      request: new Request(`http://localhost/thumb?access=${access}`),
+      request: new Request(new URL(url, 'http://localhost')),
     } as never);
 
     expect(response.status).toBe(200);
@@ -47,12 +39,12 @@ describe('Paperless thumbnail proxy', () => {
   it('does not accept a preview capability for the thumbnail endpoint', async () => {
     const upstreamFetch = vi.fn();
     vi.stubGlobal('fetch', upstreamFetch);
-    const access = accessFor(42, 'preview');
+    const url = createPaperlessMediaUrl(42, 'preview');
 
     const response = await GET({
       params: { paperlessId: '42' },
       locals: { config },
-      request: new Request(`http://localhost/thumb?access=${access}`),
+      request: new Request(new URL(url, 'http://localhost')),
     } as never);
 
     expect(response.status).toBe(401);
