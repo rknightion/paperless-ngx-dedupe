@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { getHeapStatistics } from 'node:v8';
+import { randomFillSync } from 'node:crypto';
 import { LSHIndex } from '../lsh.js';
+import { fnv1a32 } from '../shingles.js';
 import { MinHash } from '../minhash.js';
 
 function makeShingleSet(start: number, count: number): Set<number> {
@@ -11,6 +14,70 @@ function makeShingleSet(start: number, count: number): Set<number> {
 }
 
 describe('LSHIndex', () => {
+  it('indexes 20,000 unrelated signatures within 80 MB of heap', () => {
+    const signatures = Array.from({ length: 20_000 }, () => randomFillSync(new Uint32Array(256)));
+    const lsh = new LSHIndex(256, 32);
+    const before = getHeapStatistics().used_heap_size;
+    for (const [index, signature] of signatures.entries())
+      lsh.insert(`document-${index}`, signature);
+    const growth = getHeapStatistics().used_heap_size - before;
+    expect(growth).toBeLessThan(80 * 1024 * 1024);
+    expect(lsh.getCandidates(signatures[0])).toContain('document-0');
+  }, 60_000);
+
+  it('matches the original band hash candidate sets across boundary values', () => {
+    const signatures = Array.from({ length: 100 }, () => randomFillSync(new Uint32Array(256)));
+    signatures.push(
+      new Uint32Array(256),
+      new Uint32Array(256).fill(0xffffffff),
+      new Uint32Array([9, 10, 99, 100]),
+    );
+    signatures.push(signatures[0].slice());
+    signatures[1].set(signatures[0].subarray(0, 8));
+    const bands = Array.from({ length: 32 }, () => new Map<number, Set<string>>());
+    const lsh = new LSHIndex(256, 32);
+    for (const [index, signature] of signatures.entries()) {
+      const id = `doc-${index}`;
+      lsh.insert(id, signature);
+      for (let band = 0; band < 32; band++) {
+        const key = fnv1a32(
+          Array.from({ length: 8 }, (_, i) => String(signature[band * 8 + i])).join('|'),
+        );
+        const bucket = bands[band].get(key) ?? new Set<string>();
+        bucket.add(id);
+        bands[band].set(key, bucket);
+      }
+    }
+    for (const signature of signatures) {
+      const expected = new Set<string>();
+      for (let band = 0; band < 32; band++) {
+        const key = fnv1a32(
+          Array.from({ length: 8 }, (_, i) => String(signature[band * 8 + i])).join('|'),
+        );
+        for (const id of bands[band].get(key) ?? []) expected.add(id);
+      }
+      expect(lsh.getCandidates(signature)).toEqual(expected);
+    }
+  });
+
+  it('keeps candidate sets for zero, one and all shared bands and repeated IDs', () => {
+    const lsh = new LSHIndex(8, 4);
+    const all = new Uint32Array([1, 2, 3, 4, 5, 6, 7, 8]);
+    const one = new Uint32Array([1, 2, 30, 40, 50, 60, 70, 80]);
+    const none = new Uint32Array([11, 12, 13, 14, 15, 16, 17, 18]);
+    lsh.insert('first', all);
+    lsh.insert('same', all);
+    lsh.insert('one', one);
+    lsh.insert('none', none);
+    lsh.insert('first', all);
+    expect(lsh.getCandidates(all)).toEqual(new Set(['first', 'same', 'one']));
+    expect(lsh.getCandidates(one)).toEqual(new Set(['first', 'same', 'one']));
+    expect(lsh.getCandidates(none)).toEqual(new Set(['none']));
+    lsh.clear();
+    lsh.insert('after-clear', all);
+    expect(lsh.getCandidates(all)).toEqual(new Set(['after-clear']));
+  });
+
   it('returns identical signatures as candidates', () => {
     const lsh = new LSHIndex(128, 16);
     const shingles = makeShingleSet(0, 100);
