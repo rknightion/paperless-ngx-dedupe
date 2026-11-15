@@ -78,11 +78,11 @@ dev-jobs:
     trap 'kill -- -"$watcher_pid" 2>/dev/null || true; wait "$watcher_pid" 2>/dev/null || true' EXIT
     pnpm dev
 
-# build the local image and run it via compose with a health check
+# build the local image, then verify it starts and can launch a worker
 [group('build')]
 docker-validate:
     docker build -t paperless-ngx-dedupe:local .
-    docker compose -f compose.dev.yml up --force-recreate --abort-on-container-exit
+    bash scripts/verify-image-workers.sh paperless-ngx-dedupe:local
 
 # docker compose dev profile with live rebuild (full workflow incl. background jobs)
 [group('dev')]

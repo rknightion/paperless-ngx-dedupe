@@ -88,7 +88,7 @@ graph TD
 | `pnpm format` | Prettier check |
 | `pnpm format:fix` | Prettier auto-fix |
 | `pnpm docker:dev` | Build and run in Docker via compose.dev.yml |
-| `pnpm docker:validate` | Full Docker build + compose integration test |
+| `pnpm docker:validate` | Build image, check worker files, and run a local worker smoke check |
 
 ## Testing
 
@@ -144,9 +144,11 @@ just docker-dev
 # The same workflow on the host
 just dev-jobs
 
-# Full integration validation (build + run)
+# Build and validate image health and worker launch
 pnpm docker:validate
 ```
+
+`just docker-validate` and `pnpm docker:validate` build the image, check all worker scripts, and run a sync job against an unreachable local address, then remove the test container and exit with a pass or fail status. They need Docker, curl and jq, but no `.env` file or Paperless instance.
 
 The `Dockerfile` is the source of truth for the build stages. The runtime stage uses the same digest-pinned Node image as the build stage, with tini init, compiled core code for worker threads, and the OTEL preload script.
 
