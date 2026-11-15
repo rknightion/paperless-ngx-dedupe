@@ -211,6 +211,8 @@ This deletes all synced data, duplicate groups, and configuration. You will need
 PORT=3001
 ```
 
+The provided Compose files keep the container listening on port 3000.
+
 Or map to a different host port directly:
 
 ```yaml

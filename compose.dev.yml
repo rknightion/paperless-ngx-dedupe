@@ -8,6 +8,8 @@ services:
     env_file:
       - .env
     environment:
+      # Fixed: the container always listens on 3000. PORT in .env only changes the host port above.
+      PORT: 3000
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
     healthcheck:
