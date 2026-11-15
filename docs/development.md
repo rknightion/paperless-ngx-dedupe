@@ -81,7 +81,7 @@ graph TD
 | `pnpm dev` | Start SvelteKit dev server at http://localhost:5173 |
 | `pnpm build` | Build all packages in order: core, web |
 | `pnpm check` | TypeScript type-check all packages |
-| `pnpm test` | Run Vitest unit tests (core) |
+| `pnpm test` | Run Vitest unit tests (core then web) |
 | `pnpm test:e2e` | Run Playwright E2E tests (requires `pnpm build` first) |
 | `pnpm lint` | ESLint check |
 | `pnpm lint:fix` | ESLint auto-fix |
@@ -93,6 +93,8 @@ graph TD
 ## Testing
 
 Tests use **Vitest** and are co-located with source files as `*.test.ts` or in `__tests__/` directories.
+`just check` covers formatting, lint, typechecking, and core and web unit tests.
+`just test` runs core then web; a filter that matches only core files is also supported.
 
 ```bash
 # Run all tests once

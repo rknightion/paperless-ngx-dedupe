@@ -50,6 +50,9 @@ jobs:
         run: |
           pnpm --filter @paperless-dedupe/core exec vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
 
+      - name: Run web unit tests
+        run: pnpm --filter @paperless-dedupe/web exec vitest run --reporter=default --reporter=junit --outputFile.junit=./test-results/junit.xml
+
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -57,6 +60,7 @@ jobs:
           name: unit-test-results
           path: |
             packages/core/test-results/junit.xml
+            packages/web/test-results/junit.xml
           retention-days: 7
 
       - name: Upload coverage reports

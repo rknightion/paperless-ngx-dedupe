@@ -34,11 +34,12 @@ typecheck:
     pnpm --filter @paperless-dedupe/core check
     pnpm --filter @paperless-dedupe/web check
 
-# run core unit tests (vitest); pass filter="pattern" to narrow
+# run unit tests for both packages (vitest); pass filter="pattern" to narrow
 [group('check')]
 [no-exit-message]
 test filter="":
     pnpm --filter @paperless-dedupe/core exec vitest run {{ filter }}
+    pnpm --filter @paperless-dedupe/web exec vitest run --passWithNoTests {{ filter }}
 
 # run web e2e tests (playwright, needs built packages)
 [group('check')]
