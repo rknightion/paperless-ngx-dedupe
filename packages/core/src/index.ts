@@ -142,6 +142,7 @@ export type {
 export { parseConfig } from './config.js';
 
 // Maintenance
+export { pruneExpiredReviewState } from './maintenance/prune.js';
 export { getMaintenanceReport } from './maintenance/report.js';
 export type { MaintenanceReport } from './maintenance/report.js';
 
