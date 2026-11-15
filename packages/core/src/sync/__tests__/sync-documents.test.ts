@@ -118,6 +118,32 @@ describe('syncDocuments', () => {
     await migrateDatabase(handle.sqlite);
   });
 
+  it('counts local documents after full, incremental and purge syncs', async () => {
+    const initial = [1, 2, 3].map((id) => makePaperlessDoc(id));
+    const full = await syncDocuments({ db, client: createSimpleClient(initial) });
+    expect(full.syncType).toBe('full');
+    const total = () =>
+      db.select().from(syncState).where(eq(syncState.id, 'singleton')).get()!.totalDocuments;
+    expect(total()).toBe(3);
+
+    db.update(syncState).set({ lastSyncAt: '2024-06-01T00:00:00Z' }).run();
+    const added = [4, 5].map((id) => makePaperlessDoc(id, { modified: '2024-07-01T00:00:00Z' }));
+    const incrementalClient = createSimpleClient(added);
+    incrementalClient.getDocumentIds = async function* () {
+      yield { ids: [1, 2, 3, 4, 5], totalCount: 5 };
+    };
+    const incremental = await syncDocuments({ db, client: incrementalClient });
+    expect(incremental).toMatchObject({ syncType: 'incremental', inserted: 2, reconciled: 0 });
+    expect(total()).toBe(5);
+
+    await syncDocuments(
+      { db, client: createSimpleClient([makePaperlessDoc(9)]) },
+      { purgeBeforeSync: true },
+    );
+    expect(total()).toBe(1);
+    expect(db.select({ id: document.paperlessId }).from(document).all()).toEqual([{ id: 9 }]);
+  });
+
   it('removes local documents missing from Paperless during an incremental sync', async () => {
     await syncDocuments({
       db,

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { createLogger } from '../logger.js';
@@ -168,7 +168,7 @@ export async function syncDocuments(
 
     // 7. Update sync state
     const now = new Date().toISOString();
-    const totalDocsCount = db.select().from(document).all().length;
+    const totalDocsCount = db.select({ value: count() }).from(document).get()?.value ?? 0;
 
     db.insert(syncState)
       .values({
