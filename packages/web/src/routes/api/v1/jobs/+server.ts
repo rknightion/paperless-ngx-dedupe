@@ -85,6 +85,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     }
   }
 
+  const active = url.searchParams.get('active');
+  if (active !== null && active !== 'true') {
+    return apiError(ErrorCode.VALIDATION_FAILED, {
+      validationIssues: [{ path: ['active'], message: 'active must be true when present' }],
+      retryable: false,
+    });
+  }
+
   const limitParam = url.searchParams.get('limit');
   const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
@@ -93,6 +101,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   }
 
   const jobs = listJobs(locals.db, {
+    ...(active === 'true' ? { active: true } : {}),
     type,
     status,
     limit,

@@ -264,11 +264,11 @@ async function connect(jobId: string, token: Token): Promise<void> {
 }
 
 async function discover(): Promise<void> {
-  if (!browser) return;
+  if (!browser || document.visibilityState === 'hidden') return;
   const session = sessionGeneration;
   try {
     const jobs = await requestJson<JobSnapshot[]>(
-      '/api/v1/jobs?limit=200',
+      '/api/v1/jobs?active=true',
       undefined,
       'job activity',
     );
@@ -279,6 +279,10 @@ async function discover(): Promise<void> {
   } catch {
     // Keep the last safe state; the next scheduled discovery retries.
   }
+}
+
+function onVisibilityChange(): void {
+  if (document.visibilityState === 'visible') void discover();
 }
 
 export const activity = {
@@ -296,6 +300,7 @@ export const activity = {
       await discover();
       if (startingSession !== session || sessionGeneration !== session || discoveryTimer) return;
       discoveryTimer = setInterval(() => void discover(), DISCOVERY_INTERVAL_MS);
+      document.addEventListener('visibilitychange', onVisibilityChange);
     } finally {
       if (startingSession === session) startingSession = undefined;
     }
@@ -329,6 +334,7 @@ export const activity = {
     startingSession = undefined;
     if (discoveryTimer) clearInterval(discoveryTimer);
     discoveryTimer = undefined;
+    if (browser) document.removeEventListener('visibilitychange', onVisibilityChange);
     for (const jobId of [...connections.keys()]) cleanupJob(jobId);
     for (const jobId of [...retries.keys()]) clearRetry(jobId);
     for (const jobId of [...degradedTimers.keys()]) clearDegradedTimer(jobId);
