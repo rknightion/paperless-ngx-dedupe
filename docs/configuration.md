@@ -84,8 +84,6 @@ See `.env.example` for the full list.
 | `PYROSCOPE_BASIC_AUTH_USER` | For Grafana Cloud | - | Grafana Cloud instance ID |
 | `PYROSCOPE_BASIC_AUTH_PASSWORD` | For Grafana Cloud | - | Grafana Cloud API key |
 
-Profiles are labeled by operation (`sync`, `analysis`, `ai_batch`, `worker`) for flame graph filtering.
-
 ### Prometheus Scrape Endpoint (Optional)
 
 | Variable | Required | Default | Notes |

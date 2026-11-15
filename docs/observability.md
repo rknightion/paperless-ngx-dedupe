@@ -108,16 +108,8 @@ prometheus.remote_write "default" {
 
 ## Pyroscope Flame Graphs
 
-When Pyroscope is enabled, profiles are labeled by operation type:
-
-| Label | Code Path |
-| --- | --- |
-| `operation=sync` | Document sync from Paperless-NGX |
-| `operation=analysis` | Deduplication analysis pipeline |
-| `operation=ai_batch` | AI batch document processing |
-| `operation=worker` | Generic worker thread execution |
-
-Filter flame graphs in Grafana Pyroscope by these labels to isolate CPU/memory hotspots per operation.
+Profiles cover the main server thread: HTTP handling, page loads and scheduling.
+Background jobs run in worker threads and are not profiled or labelled.
 
 ## Semantic Conventions
 
