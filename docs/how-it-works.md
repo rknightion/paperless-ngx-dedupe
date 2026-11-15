@@ -165,7 +165,7 @@ Groups are presented in the web UI for review, sorted by confidence.
 
 ### Understanding the relationship between bands and permutations
 
-`numPermutations` must be evenly divisible by `numBands`. The number of rows per band is `numPermutations / numBands`. More rows per band means a higher effective LSH threshold (fewer candidates, higher precision). More bands means a lower effective threshold (more candidates, higher recall).
+`numBands` must not exceed `numPermutations`. An even division uses every signature position; uneven division is also allowed. The number of rows per band is `floor(numPermutations / numBands)`. More rows per band means a higher effective LSH threshold (fewer candidates, higher precision). More bands means a lower effective threshold (more candidates, higher recall).
 
 | Permutations | Bands | Rows/Band | Effect |
 | ------------ | ----- | --------- | ------ |

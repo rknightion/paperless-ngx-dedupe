@@ -10,6 +10,9 @@ export class LSHIndex {
   private ids: string[] = [];
 
   constructor(numPermutations = 192, numBands = 20) {
+    if (numBands > numPermutations) {
+      throw new RangeError('numBands must not exceed numPermutations');
+    }
     this.numPermutations = numPermutations;
     this.numBands = numBands;
     this.rowsPerBand = Math.floor(numPermutations / numBands);

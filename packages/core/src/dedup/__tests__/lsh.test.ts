@@ -14,6 +14,18 @@ function makeShingleSet(start: number, count: number): Set<number> {
 }
 
 describe('LSHIndex', () => {
+  it('LSHIndex refuses more bands than permutations', () => {
+    expect(() => new LSHIndex(16, 32)).toThrow(RangeError);
+    expect(() => new LSHIndex(16, 32)).toThrow('numBands must not exceed numPermutations');
+  });
+
+  it('allows uneven band sizes without losing identical candidates', () => {
+    const index = new LSHIndex(256, 100);
+    const signature = new Uint32Array(256).fill(7);
+    index.insert('synthetic-document', signature);
+    expect(index.getCandidates(signature)).toEqual(new Set(['synthetic-document']));
+  });
+
   it('indexes 20,000 unrelated signatures within 80 MB of heap', () => {
     const signatures = Array.from({ length: 20_000 }, () => randomFillSync(new Uint32Array(256)));
     const lsh = new LSHIndex(256, 32);

@@ -158,7 +158,7 @@ Change these in **Settings** or via `PUT /api/v1/config/dedup`.
 | Setting | Default | Range | Notes |
 | --- | --- | --- | --- |
 | `numPermutations` | `256` | 16-1024 | MinHash signature length |
-| `numBands` | `32` | 1-100 | LSH bands; should divide `numPermutations` evenly |
+| `numBands` | `32` | 1-100 | LSH bands; must not exceed `numPermutations`; even division uses every signature position |
 | `ngramSize` | `3` | 1-10 | Word shingle size |
 | `minWords` | `20` | 1-1000 | Skip very short docs below this |
 | `similarityThreshold` | `0.75` | 0-1 | Minimum overall similarity to keep a pair |

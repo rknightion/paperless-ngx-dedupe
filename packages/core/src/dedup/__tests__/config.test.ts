@@ -16,6 +16,31 @@ beforeEach(async () => {
 });
 
 describe('getDedupConfig', () => {
+  it('clamps a stored numBands that exceeds numPermutations', () => {
+    const updatedAt = new Date().toISOString();
+    db.insert(appConfig)
+      .values([
+        { key: 'dedup.numPermutations', value: '16', updatedAt },
+        { key: 'dedup.numBands', value: '32', updatedAt },
+      ])
+      .run();
+    expect(getDedupConfig(db)).toMatchObject({ numPermutations: 16, numBands: 16 });
+  });
+
+  it('preserves an uneven stored pair and permits saving it again', () => {
+    const updatedAt = new Date().toISOString();
+    db.insert(appConfig)
+      .values([
+        { key: 'dedup.numPermutations', value: '256', updatedAt },
+        { key: 'dedup.numBands', value: '100', updatedAt },
+      ])
+      .run();
+    const config = getDedupConfig(db);
+    expect(config).toMatchObject({ numPermutations: 256, numBands: 100 });
+    expect(setDedupConfig(db, config)).toEqual(config);
+    expect(getDedupConfig(db)).toEqual(config);
+  });
+
   it('should return defaults when no config rows exist', () => {
     const config = getDedupConfig(db);
     expect(config).toEqual(DEFAULT_DEDUP_CONFIG);
@@ -92,6 +117,14 @@ describe('getDedupConfig', () => {
 });
 
 describe('setDedupConfig', () => {
+  it('rejects numBands greater than numPermutations', () => {
+    const before = db.select().from(appConfig).all();
+    expect(() => setDedupConfig(db, { numPermutations: 16, numBands: 32 })).toThrow(
+      'numBands must not exceed numPermutations',
+    );
+    expect(db.select().from(appConfig).all()).toEqual(before);
+  });
+
   it('should write all keys with dedup. prefix', () => {
     const config = setDedupConfig(db, { numPermutations: 256 });
     expect(config.numPermutations).toBe(256);

@@ -50,10 +50,14 @@ export const dedupConfigBaseSchema = z.object({
   autoAnalyze: z.boolean().default(true),
 });
 
-export const dedupConfigSchema = dedupConfigBaseSchema.refine(
-  (data) => data.confidenceWeightJaccard + data.confidenceWeightFuzzy === 100,
-  { message: 'Confidence weights must sum to 100' },
-);
+export const dedupConfigSchema = dedupConfigBaseSchema
+  .refine((data) => data.confidenceWeightJaccard + data.confidenceWeightFuzzy === 100, {
+    message: 'Confidence weights must sum to 100',
+  })
+  .refine((data) => data.numBands <= data.numPermutations, {
+    message: 'numBands must not exceed numPermutations',
+    path: ['numBands'],
+  });
 
 export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
   numPermutations: 256,
