@@ -1,6 +1,10 @@
 services:
   app:
     image: paperless-ngx-dedupe:local
+    security_opt: ['no-new-privileges:true']
+    # The entrypoint needs these to fix data ownership and drop privileges.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
     ports:
       - '${PORT:-3000}:3000'
     volumes:

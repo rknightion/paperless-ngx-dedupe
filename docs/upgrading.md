@@ -23,6 +23,10 @@ docker compose up -d
 docker compose ps
 ```
 
+New copies of `compose.yml` bind the published port to loopback. Existing copies keep their current
+binding until you replace them; remove `127.0.0.1:` from the new port mapping only when publishing
+behind an authenticating proxy.
+
 The container starts as the configured `PUID` and `PGID` (both default to `1000`) and upgrades the
 local schema before serving traffic. Do not run multiple application containers against the same
 SQLite file.

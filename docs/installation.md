@@ -30,6 +30,9 @@ cp .env.example .env
 docker compose up -d
 ```
 
+The supplied compose file binds to loopback by default; to publish on other interfaces, remove
+`127.0.0.1:` from its port mapping and put the app behind an authenticating proxy.
+
 Open `http://localhost:3000`.
 
 !!! warning "No built-in login"
