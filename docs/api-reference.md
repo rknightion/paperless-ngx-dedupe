@@ -129,7 +129,7 @@ Returns `404` with a text message when the feature is not enabled.
 
 Content-Type: `text/plain; version=0.0.4; charset=utf-8`
 
-See [Configuration > Prometheus Scrape Endpoint](configuration.md#prometheus-scrape-endpoint-optional) for setup details.
+Only server-thread metrics are exposed; worker sync, analysis and AI processing metrics require `OTEL_ENABLED=true` with OTLP and are absent from this endpoint even when both pipelines are enabled. See [Configuration > Prometheus Scrape Endpoint](configuration.md#prometheus-scrape-endpoint-optional) for the metric families and setup details.
 
 ## Dashboard
 

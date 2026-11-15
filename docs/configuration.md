@@ -90,9 +90,15 @@ See `.env.example` for the full list.
 | --- | --- | --- | --- |
 | `OTEL_PROMETHEUS_ENABLED` | No | `false` | Expose a Prometheus scrape endpoint at `/api/v1/metrics` |
 
-When enabled, all application metrics (sync, analysis, jobs, AI, observable gauges) are available in Prometheus exposition format at `GET /api/v1/metrics`. This can be used **standalone** (without `OTEL_ENABLED`) or **alongside** full OTEL for both push and pull metrics.
+When enabled, `GET /api/v1/metrics` exposes metrics recorded by the server thread:
 
-When both are active, the Prometheus endpoint exposes the same metrics as the OTLP pipeline.
+- Application gauges for documents, unresolved duplicates, active jobs and pending AI results.
+- Job lifecycle events handled by the server, such as cancellation and worker launch failures.
+- Paperless requests made by the server and optional Paperless system collectors.
+- AI result rejection handled by the server.
+- HTTP instrumentation metrics when `OTEL_ENABLED=true` also enables auto-instrumentation.
+
+The endpoint can be used standalone without `OTEL_ENABLED`. Sync, analysis and AI processing counters and histograms are recorded in worker threads and require `OTEL_ENABLED=true` with an OTLP metrics exporter. Worker job lifecycle events, Paperless requests and AI apply or revert operations also use that worker pipeline. These worker metrics never reach the scrape endpoint, even when both pipelines are enabled.
 
 ### Paperless-NGX System Metrics (Optional)
 
