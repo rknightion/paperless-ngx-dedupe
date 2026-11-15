@@ -41,6 +41,12 @@ test filter="":
     pnpm --filter @paperless-dedupe/core exec vitest run {{ filter }}
     pnpm --filter @paperless-dedupe/web exec vitest run --passWithNoTests {{ filter }}
 
+# run core unit tests with coverage; fails below the thresholds CI enforces
+[group('check')]
+[no-exit-message]
+coverage:
+    pnpm --filter @paperless-dedupe/core exec vitest run --coverage
+
 # run web e2e tests (playwright, needs built packages)
 [group('check')]
 [no-exit-message]
@@ -52,7 +58,7 @@ test-e2e:
 audit:
     pnpm audit --audit-level=high
 
-# the full local gate — exactly what CI's quality + unit-tests jobs enforce
+# the local gate: what CI's quality and unit-tests jobs run, except the coverage thresholds (see `just coverage`)
 [group('check')]
 check: fmt-check lint typecheck test
 

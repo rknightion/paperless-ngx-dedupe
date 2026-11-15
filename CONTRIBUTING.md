@@ -16,7 +16,8 @@ paperless-ngx-dedupe is a pnpm workspace (`packages/core` and `packages/web`) on
 wrap the `pnpm` scripts.
 
 `just check` (format check, lint, typecheck and the core and web unit tests) is the gate and is what the
-`quality` and `unit-tests` jobs of pull request CI run. It needs no Paperless-NGX instance. The
+`quality` and `unit-tests` jobs of pull request CI run. CI also enforces coverage thresholds on the
+core unit tests; `just coverage` checks them locally. It needs no Paperless-NGX instance. The
 end-to-end suite is outside it: for a change to `packages/web`, run `just build` and then
 `just test-e2e` (Playwright, slow), or leave it to the `e2e-tests` job of pull request CI.
 
