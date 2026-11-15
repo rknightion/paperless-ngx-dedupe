@@ -29,14 +29,29 @@ Errors return:
 ```json
 {
   "error": {
-    "code": "ERROR_CODE",
-    "message": "Human-readable message",
-    "details": []
+    "code": "VALIDATION_FAILED",
+    "message": "Validation failed",
+    "operation": "api_request",
+    "retryable": false,
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "correlationId": "example-request",
+    "validationIssues": [{ "path": ["limit"], "message": "Validation failed" }]
   }
 }
 ```
 
-`details` is optional (usually validation details).
+- `code` is one of the error codes below.
+- `message` is fixed text for the code, not a request-specific explanation.
+- `operation` is a short machine name, defaulting to `api_request` when the route sets none.
+- `retryable` is a boolean, defaulting to true for HTTP 408, 429 and 5xx responses.
+- `occurredAt` is an ISO 8601 UTC timestamp.
+- `correlationId` is optional.
+- `validationIssues` is an optional array of `{ path, message }` on validation failures;
+  each `path` is an array of strings and each `message` is a sanitized string.
+
+The fixed messages and validation issue contract are defined in
+`packages/core/src/contracts/api.ts`. The legacy `apiError(code, 'text')` form discards
+its message string; new code should use the context form described in `AGENTS.md`.
 
 ### Endpoints That Do Not Use the Envelope
 
@@ -59,6 +74,7 @@ Errors return:
 | `JOB_ALREADY_RUNNING` | 409 | Same-type job already running/pending |
 | `BAD_GATEWAY` | 502 | Upstream Paperless request failed |
 | `NOT_READY` | 503 | Readiness checks failed |
+| `SERVICE_UNAVAILABLE` | 503 | The server is shutting down or its runtime is not accepting work; retry |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |
 
 ### Pagination

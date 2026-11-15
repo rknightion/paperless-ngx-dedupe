@@ -111,10 +111,14 @@ compromised-chain probes; the Node bundled trust store and operating-system stor
 
 ## API contract
 
-Every `/api/v1/*` route returns JSON through the `apiSuccess(data, meta?, status)` and
-`apiError(code, message, details?)` helpers in `packages/web/src/lib/server/api.ts`. Success is
-`{ data, meta? }`, failure is `{ error: { code, message, details? } }`, and codes come from the
-`ErrorCode` map in that same file.
+Every `/api/v1/*` route returns JSON through `apiSuccess(data, meta?, status)` and
+`apiError(code, { operation, retryable, correlationId, validationIssues }, status?)` in
+`packages/web/src/lib/server/api.ts`. The legacy `apiError(code, message, details?)` form is
+also accepted. Success is `{ data, meta? }`; failure is
+`{ error: { code, message, operation, retryable, occurredAt, correlationId?, validationIssues? } }`.
+Error codes come from the `ErrorCode` map in that file. The message is fixed per code: the
+legacy message string is discarded, so new code uses the context form. Legacy details are
+sanitized into validation issues, not returned as a details field.
 
 ## Database schema changes take two steps
 
