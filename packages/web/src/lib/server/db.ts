@@ -2,6 +2,7 @@ import {
   createDatabaseWithHandle,
   migrateDatabase,
   recoverStaleJobs,
+  pruneExpiredReviewState,
   createLogger,
 } from '@paperless-dedupe/core';
 import type { AppDatabase } from '@paperless-dedupe/core';
@@ -26,6 +27,16 @@ export async function getDatabase(
     if (recovered > 0) {
       const logger = createLogger('startup');
       logger.info({ recovered }, `Recovered ${recovered} stale job(s) from previous run`);
+    }
+
+    const logger = createLogger('startup');
+    try {
+      const pruned = pruneExpiredReviewState(sqlite);
+      if (pruned.plansDeleted > 0 || pruned.reservationsDeleted > 0) {
+        logger.info(pruned, 'Pruned expired review state');
+      }
+    } catch (error) {
+      logger.warn({ error }, 'Failed to prune expired review state');
     }
 
     cachedDb = db;
