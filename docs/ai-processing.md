@@ -146,6 +146,16 @@ By default, applying a result will not clear existing Paperless-NGX metadata whe
 
 Applied or partially applied results can be reverted to restore the document's pre-apply state in Paperless-NGX. Revert uses the audit snapshot recorded at apply time to restore the original title, correspondent, document type, tags, and custom fields. Results applied before audit tracking was introduced cannot be reverted.
 
+Revert via the UI, or preview with `POST /api/v1/ai/results/:id/revert/preview` and submit the
+returned `data.token` as `planToken` to `POST /api/v1/ai/results/:id/revert`. The response contains a
+background job ID. See the [reviewed API flow](api-reference.md#reviewed-apply-and-revert-flow).
+
+### Bulk apply and reject
+
+`AI_BULK_ALL_ENABLED=true` enables the apply-all and reject-all API endpoints; the default is
+`false`. Apply-all still requires a reviewed plan token. Batch operations for explicitly selected
+results do not require this switch.
+
 ## Discovering Custom Fields
 
 The **AI Processing > Custom Fields** page analyses OCR already stored in the local database. It
@@ -161,8 +171,6 @@ The discovery scan:
 
 Use the recommendations as a reviewed schema-design aid. Create the fields you want in Paperless,
 sync the app, then enable `extractCustomFields` to recommend per-document values for them.
-
-Revert via the UI or `POST /api/v1/ai/results/:id/revert`.
 
 ### Processing Scopes
 

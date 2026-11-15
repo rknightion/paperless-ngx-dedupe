@@ -54,6 +54,7 @@ deployment environment or secret manager when moving an installation.
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `AI_ENABLED` | No | `false` | Enable AI-powered document classification |
+| `AI_BULK_ALL_ENABLED` | No | `false` | Allow the apply-all and reject-all API endpoints |
 | `AI_OPENAI_API_KEY` | When AI enabled | - | OpenAI API key |
 
 The API key is required when `AI_ENABLED=true`. Runtime settings (model, prompt, etc.) are configured in the Settings page or via API. See [AI Processing](ai-processing.md) for full details.
