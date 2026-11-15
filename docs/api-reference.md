@@ -1106,7 +1106,7 @@ Updates status for many groups.
 }
 ```
 
-`groupIds` must contain `1..50000` nonempty string ids. `status` is `pending`, `ignored` or `false_positive`.
+`groupIds` must contain `1..20000` nonempty string ids. `status` is `pending`, `ignored` or `false_positive`.
 
 Response:
 
@@ -1134,7 +1134,7 @@ Alternatively, submit a reviewed preview token:
 Rules:
 
 - `confirm` must be `true`.
-- Legacy `groupIds` contains 1 to 50000 nonempty strings; all groups must currently be `pending`.
+- Legacy `groupIds` contains 1 to 20000 nonempty strings; all groups must currently be `pending`.
 - `planToken` is a string of 32 to 256 characters from the preview endpoint below.
 - The worker deletes non-primary documents in Paperless-NGX and cleans up local records.
 

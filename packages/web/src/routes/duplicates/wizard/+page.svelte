@@ -346,24 +346,30 @@
         return;
       }
     } else {
+      let processed = 0;
       try {
-        const res = await fetch('/api/v1/batch/status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ groupIds: allGroupIds, status: selectedAction }),
-        });
-        if (res.ok) {
+        for (let start = 0; start < allGroupIds.length; start += 10_000) {
+          const groupIds = allGroupIds.slice(start, start + 10_000);
+          const res = await fetch('/api/v1/batch/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupIds, status: selectedAction }),
+          });
+          if (!res.ok) throw new Error('Request failed');
           const json = await res.json();
-          executionResult = {
-            success: true,
-            processed: json.data?.updated ?? allGroupIds.length,
-            errors: [],
-          };
-        } else {
-          executionResult = { success: false, processed: 0, errors: ['Request failed'] };
+          processed += json.data?.updated ?? groupIds.length;
+          executionProgress = (start + groupIds.length) / allGroupIds.length;
+          executionMessage = `${processed} groups processed...`;
         }
+        executionResult = { success: true, processed, errors: [] };
       } catch {
-        executionResult = { success: false, processed: 0, errors: ['Request failed'] };
+        executionResult = {
+          success: false,
+          processed,
+          errors: [
+            `${processed} groups processed before the request failed. No further groups were submitted.`,
+          ],
+        };
       }
     }
 

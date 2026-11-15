@@ -48,6 +48,9 @@ deployment environment or secret manager when moving an installation.
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `ORIGIN` | Usually no | - | Set when running behind reverse proxies or non-localhost hostnames to satisfy origin checks |
+| `BODY_SIZE_LIMIT` | No | `512K` | Node adapter request body limit (524,288 bytes). Vite preview does not apply this adapter limit. |
+
+The Node adapter limits request bodies independently of API validation. Large batch status selections in the wizard are sent in groups of 10,000.
 
 ### AI Processing (Optional)
 
