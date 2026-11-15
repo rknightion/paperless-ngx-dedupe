@@ -31,6 +31,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    command: sh -c "pnpm --filter @paperless-dedupe/core exec tsc --watch --preserveWatchOutput & exec pnpm exec vite dev --host 0.0.0.0"
+    working_dir: /app/packages/web
     ports:
       - '${PORT:-5173}:5173'
     volumes:
