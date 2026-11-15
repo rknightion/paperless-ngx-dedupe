@@ -57,6 +57,9 @@ its message string; new code should use the context form described in `AGENTS.md
 
 - `GET /api/v1/jobs/:jobId/progress` (SSE stream)
 - `GET /api/v1/export/duplicates.csv` (raw CSV download)
+- `GET /api/v1/export/documents.csv` (raw CSV download)
+- `GET /api/v1/maintenance/backup` (raw SQLite download)
+- `GET /api/v1/diagnostics` (raw JSON download)
 - `GET /api/v1/export/config.json` (raw JSON download)
 - `GET /api/v1/paperless/documents/:paperlessId/preview` (proxied binary stream)
 - `GET /api/v1/paperless/documents/:paperlessId/thumb` (proxied binary stream)
@@ -146,7 +149,7 @@ Starts sync job.
 Optional JSON body:
 
 ```json
-{ "force": true }
+{ "force": true, "purge": false }
 ```
 
 Response (202):
@@ -154,6 +157,11 @@ Response (202):
 ```json
 { "data": { "jobId": "..." } }
 ```
+
+`force` and `purge` act only when literally `true`; both default to false. `purge: true`
+clears local synced data before a full sync. It does not delete documents in Paperless-NGX.
+Returns `409 JOB_ALREADY_RUNNING` for a conflicting job or `503 SERVICE_UNAVAILABLE`
+when the runtime is not accepting work.
 
 ### GET /api/v1/sync/status
 
@@ -187,9 +195,23 @@ List jobs.
 
 Query params:
 
-- `type`: `sync | analysis | batch_operation`
-- `status`: `pending | running | completed | failed | cancelled`
-- `limit`: `1..200`
+- `type`: `sync | analysis | batch_operation | ai_processing | ai_apply | ai_revert | custom_field_discovery`
+- `status`: `pending | running | paused | completed | failed | cancelled`
+- `limit`: `1..200` in the legacy list mode, which returns a job array in `data`.
+
+Supplying `pageSize` or `cursor` selects cursor history mode. `pageSize` is an integer
+from 1 to 100, default 25; `cursor` is the opaque `meta.nextCursor` from the previous
+response. This mode validates `type` and `status` against the values above. Its `data`
+is an array of history items; `meta` contains `nextCursor` (null at the end), `pageSize`,
+`filters: { type, status }` (null for absent filters), and job-history `counts: { clearable: number }`.
+Invalid pagination, cursor or cursor-mode filters return `400 VALIDATION_FAILED`.
+
+### DELETE /api/v1/jobs
+
+Clears local completed, failed and cancelled job history, retaining failed jobs with a
+terminal reason or dead-letter dispatch intent. Pending, running and paused jobs remain.
+Associated dispatch intents for cleared jobs are deleted. Paperless-NGX is not mutated.
+No body or query parameters are required. Returns `data: { deleted: number }`.
 
 ### GET /api/v1/jobs/:jobId
 
@@ -203,6 +225,7 @@ Job object fields:
   "type": "sync",
   "status": "running",
   "progress": 0.42,
+  "phaseProgress": 0.7,
   "progressMessage": "...",
   "startedAt": "...",
   "completedAt": null,
@@ -228,10 +251,15 @@ Event data shape:
 ```json
 {
   "progress": 0.42,
+  "phaseProgress": 0.7,
   "message": "...",
   "status": "running"
 }
 ```
+
+The `complete` event also contains `errorMessage` and the fields spread from the parsed
+job `resultJson`. A job already in a terminal state emits `complete` immediately.
+Missing jobs return `404 NOT_FOUND`; stream events do not use the JSON envelope.
 
 ### POST /api/v1/jobs/:jobId/cancel
 
@@ -241,28 +269,43 @@ Cancels a pending/running job.
 { "data": { "jobId": "...", "status": "cancelled" } }
 ```
 
+### POST /api/v1/jobs/:jobId/pause
+
+Pauses a running job at its next cooperative checkpoint. No body or query parameters
+are required. Returns `data: { jobId: string, status: "paused" }`.
+Returns `404 NOT_FOUND` for a missing job or `409 CONFLICT` when it cannot be paused.
+
+### POST /api/v1/jobs/:jobId/resume
+
+Resumes a paused job. No body or query parameters are required.
+Returns `data: { jobId: string, status: "running" }`.
+Returns `404 NOT_FOUND` for a missing job or `409 CONFLICT` when it cannot be resumed.
+
 ## Configuration
 
 ### GET /api/v1/config
 
 Returns mutable app config key/value map from DB. Environment-owned Paperless connection settings
-and credential keys are omitted.
+and credential keys are omitted. `meta.registry` describes the configuration keys, types and ownership.
 
 ### PUT /api/v1/config
 
 Accepts either:
 
 ```json
-{ "key": "some.key", "value": "some-value" }
+{ "key": "dedup.similarityThreshold", "value": 0.8 }
 ```
 
 or:
 
 ```json
-{ "settings": { "some.key": "value", "another.key": "value" } }
+{ "settings": { "dedup.similarityThreshold": 0.8 } }
 ```
 
-Returns the safe mutable config map. Credential and environment-owned connection keys are ignored.
+Returns the safe mutable config map with `meta.registry`. Read-only keys, including credentials
+and environment-owned connection settings, and unknown keys are rejected with
+`400 VALIDATION_FAILED`. Bodies are strict single-key or batch objects; duplicate JSON keys
+and invalid values are also rejected.
 
 ### POST /api/v1/config/test-connection
 
@@ -335,6 +378,32 @@ Query params:
 - `processingStatus` (`pending | completed`)
 - `search` (title match)
 - `noAiResult` (`true` to filter documents without an AI result)
+
+#### Library cursor mode
+
+Add `library=true` to use the library query instead of the legacy list. Other values of
+`library`, repeated query parameters, unknown parameters and invalid filters return
+`400 VALIDATION_FAILED`. The library accepts:
+
+| Parameter | Type and limits |
+| --- | --- |
+| `text`, `correspondent`, `documentType`, `tag` | Optional trimmed strings, 1 to 200 characters |
+| `missingOcr`, `missingCorrespondent`, `missingDocumentType`, `missingTags` | Optional `true`, `false`, `1` or `0` |
+| `correspondentSet`, `documentTypeSet`, `tagSet` | Optional canonical JSON array string, 1 to 2100 characters, with 1 to 10 sorted unique strings of 1 to 200 characters; no surrounding whitespace or control characters |
+| `customFieldId` | Optional positive integer |
+| `customFieldValue` | Optional canonical JSON string, 1 to 2000 characters, encoding a string, finite number, boolean, number array or null; requires `customFieldId` |
+| `duplicate` | `any` (default), `involved` or `not-involved` |
+| `aiStatus` | `unprocessed`, `pending_review`, `applied`, `partial`, `reverted`, `rejected`, `failed` or `skipped` |
+| `freshness` | Optional `fresh` or `stale` |
+| `cursor` | Optional opaque cursor from the previous response, 1 to 1000 characters |
+| `limit` | `25`, `50` (default) or `100` |
+
+For each correspondent, document type or tag family, the single-value, set and missing
+filters are mutually exclusive. `data` is an array of document summaries (`id`, `paperlessId`,
+`title`, `correspondent`, `documentType`, `tags`, `createdDate`, `addedDate`, `processingStatus`)
+plus `hasOcr`, `duplicateGroupCount`, `duplicateGroupId`, `duplicateGroupStatus`, `aiStatus`,
+`aiFailureType` and `aiFreshness`. `meta` contains `nextCursor`, normalized `query`, and
+`counts: { total, missingOcr, duplicateInvolved, aiUnprocessed, aiStale }`.
 
 ### GET /api/v1/documents/:id
 
@@ -411,6 +480,21 @@ Request:
 ```json
 { "documentId": "..." }
 ```
+
+### DELETE /api/v1/duplicates/:id/members/:memberId
+
+Removes a non-primary member from a local duplicate group; it does not delete the document
+or mutate Paperless-NGX. No body or query parameters are required.
+Returns `data: { removed: true }`. Returns `404 NOT_FOUND` for a missing member,
+`409 CONFLICT` for a primary member or a conflicting operation lease.
+
+### POST /api/v1/duplicates/cleanup-document
+
+Removes a document's memberships from all local duplicate groups, updates affected groups
+and promotes a remaining primary where needed. Paperless-NGX is not mutated.
+Requires JSON `{ "documentId": "local-document-id" }`, with a nonempty string ID.
+Returns `data: { groupsAffected: number, groupsAutoResolved: number }`.
+Invalid input returns `400 BAD_REQUEST`; a conflicting operation lease returns `409 CONFLICT`.
 
 ### GET /api/v1/duplicates/stats
 
@@ -490,11 +574,7 @@ Returns the full updated config.
 
 ### GET /api/v1/ai/models
 
-Returns available models for a provider.
-
-Query params:
-
-- `provider`: `openai` (required)
+Returns the available OpenAI models. No query parameters are required or consumed.
 
 ```json
 {
@@ -529,6 +609,20 @@ Response (202):
 ```
 
 Returns `409 JOB_ALREADY_RUNNING` if a processing job is already active.
+
+The optional `scope` object takes precedence over legacy `reprocess` and `documentIds`:
+
+| `scope.type` | Additional fields |
+| --- | --- |
+| `new_only` | None; default without a scope or legacy selection |
+| `failed_only` | None |
+| `full_reprocess` | None |
+| `selected_document_ids` | `documentIds`: 1 to 50000 nonempty strings |
+| `current_filter` | `filters`: object passed to document selection |
+
+An empty resolved selection returns `200` with `data: { jobId: null, nothingToDo: true }`.
+Invalid scope/body input returns `400 VALIDATION_FAILED`; disabled AI returns
+`400 BAD_REQUEST`; a runtime not accepting work returns `503 SERVICE_UNAVAILABLE`.
 
 ### GET /api/v1/ai/results
 
@@ -565,6 +659,21 @@ Query params:
 ### GET /api/v1/ai/results/:id
 
 Returns full details for a single result, including token counts and processing time.
+
+### POST /api/v1/ai/results/:id/reprocess
+
+Reprocesses one result synchronously on the standard tier and replaces the local suggestion;
+it does not apply metadata to Paperless-NGX. No body is required. Optional `mode=inbox`
+selects the inbox error context. Returns `data: { reprocessed: true, resultId: string }`.
+Disabled AI or a missing provider key returns `400 BAD_REQUEST`; a missing result returns
+`404 NOT_FOUND`. An applied or partially applied result, or invalid custom-field policy,
+returns `409 CONFLICT`. Revert protected results before reprocessing.
+
+### POST /api/v1/ai/results/clear
+
+Deletes all local AI result rows, including their dependent records, without changing
+Paperless-NGX metadata. No body or query parameters are required.
+Returns `data: { deleted: number }`; disabled AI returns `400 BAD_REQUEST`.
 
 ### POST /api/v1/ai/results/:id/apply
 
@@ -913,6 +1022,55 @@ Required query param:
 
 Returns `404 NOT_FOUND` if no pricing data is available for the configured model.
 
+### GET /api/v1/ai/costs/estimate-detailed
+
+Estimates processing costs across supported models for the current unprocessed documents.
+No query parameters are required. `data` contains `documentCount`, `currentModel`, `allModels`
+and `tokenBreakdown: { systemPromptTokens, totalUserPromptTokens, avgCompletionTokens }`.
+Each model estimate has `modelId`, `modelName`, `provider`, `hasCachePricing`, and `bestCase`
+and `worstCase`, each with `totalCostUsd` and `perDocumentCostUsd`.
+Disabled AI returns `400 BAD_REQUEST`; unavailable pricing returns `404 NOT_FOUND`.
+
+### GET /api/v1/ai/custom-fields/policy
+
+Reads the local extraction policy and available Paperless custom fields. No query parameters
+are required. Returns `data: { policy: PolicyEntry[], availableFields: CustomField[] }`.
+A policy entry has `fieldId`, `fieldName`, `dataType` and nullable `guidance`; available fields
+have `id`, `name`, `dataType`, `documentCount` and
+`extraData: { selectOptions: [{ id, label }], defaultCurrency? }`. They are sorted by ID,
+excluding `documentlink`.
+Disabled AI returns `400 BAD_REQUEST`; upstream connection/API errors return `502 BAD_GATEWAY`.
+
+### PUT /api/v1/ai/custom-fields/policy
+
+Replaces the local extraction policy without creating or changing Paperless custom fields.
+Requires strict JSON `{ "fields": [{ "fieldId": 1, "guidance": "Extract the reference" }] }`.
+`fields` has at most 50 entries; `fieldId` is a positive integer and optional `guidance` is
+null or a string of at most 500 characters. Each entry is strict; an empty array clears the policy.
+Returns `data: { policy: PolicyEntry[] }` with the shape above. Invalid JSON, duplicate keys,
+unknown properties or policy validation failures return `400 VALIDATION_FAILED`.
+Disabled AI returns `400 BAD_REQUEST`; upstream errors return `502 BAD_GATEWAY`.
+
+### GET /api/v1/ai/custom-fields/recommendations
+
+Reads the latest local custom-field discovery run. No query parameters are required.
+Returns `data: { run: null }` before any run, otherwise `run` contains `key`, `status`
+(`running`, `completed` or `failed`), `createdAt`, nullable `completedAt`, nullable `result`
+and nullable `error: { code, retryable: true }`. The aggregate result contains `runKey`,
+`algorithmVersion`, `status`, `phase`, `documentsScanned`, `documentsWithOcr`,
+`sourceFingerprint`, `stale`, `truncatedLabelSpace`, `candidates` and `diagnostics`.
+Candidate entries describe names, recommended types/guidance, counts, coverage, confidence,
+value profiles and risks; the complete nested shape is `CustomFieldDiscoveryRunV2` in
+`packages/core/src/ai/custom-field-discovery-v2.ts`. No special validation errors are returned.
+
+### POST /api/v1/ai/custom-fields/recommendations
+
+Queues local custom-field discovery without creating fields in Paperless-NGX.
+No body or query parameters are required. Returns `202` with
+`data: { jobId: string, existingFieldsUnavailable: boolean }`; the boolean is true if fetching
+existing Paperless field names failed. Returns `409 JOB_ALREADY_RUNNING` for a conflicting job
+or `503 SERVICE_UNAVAILABLE` when the runtime is not accepting work.
+
 ### GET /api/v1/ai/stats
 
 Returns aggregate AI processing statistics.
@@ -944,7 +1102,7 @@ Updates status for many groups.
 }
 ```
 
-`groupIds` must contain `1..1000` ids.
+`groupIds` must contain `1..50000` nonempty string ids. `status` is `pending`, `ignored` or `false_positive`.
 
 Response:
 
@@ -963,16 +1121,39 @@ Starts destructive batch delete in Paperless (background job).
 }
 ```
 
+Alternatively, submit a reviewed preview token:
+
+```json
+{ "planToken": "opaque-reviewed-deletion-plan-token", "confirm": true }
+```
+
 Rules:
 
-- `confirm` must be `true`
-- all groups must currently be `pending`
+- `confirm` must be `true`.
+- Legacy `groupIds` contains 1 to 50000 nonempty strings; all groups must currently be `pending`.
+- `planToken` is a string of 32 to 256 characters from the preview endpoint below.
+- The worker deletes non-primary documents in Paperless-NGX and cleans up local records.
+
+Invalid input or preview validation returns `400 VALIDATION_FAILED`. Conflicting work returns
+`409 JOB_ALREADY_RUNNING`; an invalid or unavailable plan returns `409 CONFLICT`.
+A runtime not accepting work returns `503 SERVICE_UNAVAILABLE`.
 
 Response (202):
 
 ```json
 { "data": { "jobId": "..." } }
 ```
+
+### POST /api/v1/batch/delete-non-primary/preview
+
+Creates a local reviewed deletion plan; no Paperless-NGX documents are deleted at this stage.
+Requires JSON `{ "groupIds": ["group-id"] }`, with 1 to 50000 nonempty strings.
+Returns `data: { planToken, expiresAt, groupCount, documentCount, groups }`.
+`planToken` is the opaque token for execution, `expiresAt` is an ISO timestamp, and counts
+are numbers. Each group contains `groupId`, `updatedAt`, `primaryDocumentId`,
+`primaryPaperlessId` and `nonPrimaryDocuments: [{ documentId, paperlessId }]`.
+The plan expires after 15 minutes. Invalid JSON, IDs or group state return
+`400 VALIDATION_FAILED`; a runtime not accepting work returns `503 SERVICE_UNAVAILABLE`.
 
 ### POST /api/v1/batch/purge-deleted
 
@@ -986,26 +1167,64 @@ Returns the count of purged groups.
 
 Downloads CSV. Supports same filter params as `GET /api/v1/duplicates`.
 
+### GET /api/v1/export/documents.csv
+
+Downloads matching library documents as raw CSV without OCR text. Accepts the library-mode
+filters, cursor and limit described under `GET /api/v1/documents`, but not the `library`
+selector. The stream follows every page from the cursor; `limit` does not cap the total export.
+Columns are `paperless_id`, `title`, `correspondent`, `document_type`, `tags`, `created_date`,
+`added_date`, `processing_status`, `has_ocr`, `duplicate_group_count`, `ai_status` and
+`ai_freshness`. Repeated, unknown or invalid query parameters return `400 VALIDATION_FAILED`.
+Successful downloads have private, non-storing cache headers and no `data` envelope.
+
 ### GET /api/v1/export/config.json
 
 Downloads config backup JSON.
 
 ### POST /api/v1/import/config
 
-Imports config backup JSON.
-
-Response:
+Previews or applies a configuration backup from the config export endpoint.
+Use a strict JSON wrapper:
 
 ```json
 {
-  "data": {
-    "appConfigKeys": 5,
-    "dedupConfigUpdated": true
+  "mode": "preview",
+  "backup": {
+    "version": "1.0",
+    "exportedAt": "2030-01-01T00:00:00.000Z",
+    "appConfig": {},
+    "dedupConfig": {}
   }
 }
 ```
 
+Use an exported backup for real restores. Backup `version` must be a string beginning `1.`;
+`exportedAt` is a string, `appConfig` is a key/value object and `dedupConfig` follows the
+deduplication configuration schema. Preview returns `data`
+with normalized `appConfig`, `deprecatedKeys`, `droppedKeys`, and
+`scheduledAiOptIn: { requested, requiresConfirmation }` without applying it.
+For application, use `mode: "apply"` and optional boolean `confirmScheduledAiOptIn`
+(default false). Apply returns `data` with `appConfigKeys`, `dedupConfigUpdated`,
+`deprecatedKeys`, `droppedKeys`, and `scheduledAiOptIn: { requested, applied, reason }`.
+The reason is `not_requested`, `confirmation_required`, `schedule_not_configured` or `confirmed`.
+Deprecated entries identify `ai.autoProcess`, action `scheduled_ai_opt_in` and
+`requiresConfirmation: true`.
+
+Raw backup bodies remain supported and apply with scheduled-AI confirmation false.
+Malformed or duplicate-key JSON, invalid wrappers, backup shapes or configuration values
+return `400 VALIDATION_FAILED`. Paperless-NGX is not mutated.
+
 ## Paperless Proxy Endpoints
+
+### DELETE /api/v1/paperless/documents/:paperlessId
+
+Deletes the document in Paperless-NGX, then removes its local document data and duplicate
+memberships. The numeric path ID must be positive and the document must belong to a local
+duplicate group. No body or query parameters are required.
+Returns `data: { deleted: true, alreadyMissing: boolean }`; upstream 404 is accepted and sets
+`alreadyMissing` true. Invalid IDs return `400 BAD_REQUEST`; a document not found in a local
+group returns `404 NOT_FOUND`; a conflicting operation lease returns `409 CONFLICT`.
+Other upstream failures return `502 BAD_GATEWAY`.
 
 ### GET /api/v1/paperless/documents/:paperlessId/preview
 
@@ -1036,3 +1255,71 @@ Response:
 ```json
 { "data": { "emptied": true } }
 ```
+
+## Automation
+
+### GET /api/v1/automation
+
+Reads local automation settings. No query parameters are required.
+`data` contains `schedules`, keyed by `sync`, `analysis` and `ai_processing`, and
+`ai: { monthlyBudgetUsd, maxDocumentsPerRun, reviewOnly: true }`. Each schedule has
+`task`, `enabled`, `cadence`, `timezone` and nullable ISO `nextRunAt`.
+No special validation errors are returned.
+
+### PUT /api/v1/automation
+
+Updates one local schedule and optionally its AI budget settings. The strict JSON body requires:
+
+| Field | Type and limits |
+| --- | --- |
+| `task` | `sync`, `analysis` or `ai_processing` |
+| `enabled` | Boolean; cannot be true with manual cadence |
+| `timezone` | Nonempty valid IANA timezone string |
+| `cadence` | Strict object with `kind`: `manual`, `interval`, `daily` or `weekly` |
+| `ai` | Optional strict object, allowed only for `ai_processing` |
+
+Interval cadence also requires `hours`: 2, 4, 6 or 12. Daily and weekly cadence require
+integer `hour` (0 to 23) and `minute` (0 to 59); weekly also requires integer `weekday`
+(0 to 6). `ai` requires finite `monthlyBudgetUsd` (0 to 1000000) and integer
+`maxDocumentsPerRun` (1 to 10000). Enabling scheduled AI requires a positive budget.
+Returns the same settings shape as GET. Invalid JSON or settings return `400 VALIDATION_FAILED`.
+
+### POST /api/v1/automation/run
+
+Queues one manual automation task using the durable dispatcher. Requires strict JSON
+`{ "task": "sync" }`, where task is `sync`, `analysis` or `ai_processing`.
+Returns `202` with `data: { jobId: string }`. Invalid input returns `400 VALIDATION_FAILED`;
+disabled AI for an AI task returns `400 BAD_REQUEST`. Conflicting work returns
+`409 JOB_ALREADY_RUNNING`; a runtime not accepting work returns `503 SERVICE_UNAVAILABLE`.
+
+## Data Quality
+
+### GET /api/v1/data-quality
+
+Returns local library quality counts and links, with no query parameters.
+`data` is `{ totalDocuments: number, insights: [{ kind, count, label, url }] }`.
+Insight kinds are `missing-correspondent`, `missing-document-type`, `missing-tags`, `ocr-gap`,
+`overused-tag`, `near-duplicate-correspondent`, `near-duplicate-document-type` and
+`custom-field-opportunity`. Responses are private and not cached; there are no special
+validation errors.
+
+## Maintenance and Diagnostics
+
+### GET /api/v1/maintenance/backup
+
+Downloads a consistent local SQLite backup without mutating Paperless-NGX.
+No body or query parameters are required. The response is raw `application/vnd.sqlite3`,
+with `Content-Length` and an attachment filename beginning `paperless-ngx-dedupe-backup-`.
+It uses private, non-storing cache headers and has no `data` envelope.
+Conflicting operations or another backup return `409 CONFLICT`; a runtime not accepting
+work returns `503 SERVICE_UNAVAILABLE`.
+
+### GET /api/v1/diagnostics
+
+Downloads redacted aggregate diagnostics as raw JSON with no query parameters or `data` envelope.
+The attachment is `paperless-ngx-dedupe-diagnostics.json` with private, non-storing cache headers.
+The object contains `formatVersion: 1`, `versions: { application, build?, node }`, aggregate
+`counts`, `featureFlags`, categorical `readiness: { database, paperless, ai }`,
+`database: { sqliteUserVersion, sizeBytes }`, and `recentOutcomes: [{ category, outcome, count }]`.
+The exact count and feature-flag keys are defined by `DiagnosticsBundle` in
+`packages/core/src/diagnostics/collect.ts`. No special validation errors are returned.
