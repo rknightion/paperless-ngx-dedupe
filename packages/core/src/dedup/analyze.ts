@@ -307,7 +307,10 @@ export async function runAnalysis(
       ? [...allDocIds]
       : processedDocIds.filter((id) => docsToProcessIds.has(id));
 
-    const candidatePairs = new Map<string, { docId1: string; docId2: string; jaccard: number }>();
+    let candidatePairCount = 0;
+    const filteredPairs: { docId1: string; docId2: string; jaccard: number }[] = [];
+    const jaccardPreFilter = config.similarityThreshold * 0.8;
+    const searchedDocIds = new Set<string>();
 
     const scope = new Set(searchDocIds);
     const queue = [...searchDocIds];
@@ -328,22 +331,22 @@ export async function runAnalysis(
       expandPendingGroups(docId);
       const sig = signatureMap.get(docId);
       if (!sig) continue;
+      searchedDocIds.add(docId);
 
       const candidates = lshIndex.getCandidates(sig);
       candidates.delete(docId); // Remove self
 
       for (const candidateId of candidates) {
-        // Canonical ordering
-        const [id1, id2] = docId < candidateId ? [docId, candidateId] : [candidateId, docId];
-        const pairKey = `${id1}|${id2}`;
-
-        if (!candidatePairs.has(pairKey)) {
-          const candidateSig = signatureMap.get(candidateId);
-          if (!candidateSig) continue;
-          const jaccard = MinHash.jaccardFromArrays(sig, candidateSig);
-          candidatePairs.set(pairKey, { docId1: id1, docId2: id2, jaccard });
-        }
-        if (candidatePairs.get(pairKey)!.jaccard >= config.similarityThreshold * 0.8) {
+        // The queue can grow as pending groups are discovered. A previously searched
+        // document has already handled this unordered pair, regardless of ID order.
+        if (searchedDocIds.has(candidateId)) continue;
+        const candidateSig = signatureMap.get(candidateId);
+        if (!candidateSig) continue;
+        candidatePairCount++;
+        const jaccard = MinHash.jaccardFromArrays(sig, candidateSig);
+        if (jaccard >= jaccardPreFilter) {
+          const [id1, id2] = docId < candidateId ? [docId, candidateId] : [candidateId, docId];
+          filteredPairs.push({ docId1: id1, docId2: id2, jaccard });
           expandPendingGroups(candidateId);
         }
       }
@@ -351,9 +354,9 @@ export async function runAnalysis(
 
     searchDocIds = [...scope];
 
-    result.candidatePairsFound = candidatePairs.size;
-    logger.info({ candidatePairs: candidatePairs.size }, 'Candidate pairs found');
-    await onProgress?.(0.55, `Found ${candidatePairs.size} candidate pairs`);
+    result.candidatePairsFound = candidatePairCount;
+    logger.info({ candidatePairs: candidatePairCount }, 'Candidate pairs found');
+    await onProgress?.(0.55, `Found ${candidatePairCount} candidate pairs`);
 
     // Stage 6: Score candidates
     const scoringStart = Date.now();
@@ -364,10 +367,6 @@ export async function runAnalysis(
       fuzzy: config.confidenceWeightFuzzy,
       discriminativePenaltyStrength: config.discriminativePenaltyStrength,
     };
-
-    // Pre-filter candidates by jaccard threshold
-    const jaccardPreFilter = config.similarityThreshold * 0.8;
-    const filteredPairs = [...candidatePairs.values()].filter((p) => p.jaccard >= jaccardPreFilter);
 
     // Collect all document IDs needed for scoring
     const scoringDocIds = new Set<string>();
