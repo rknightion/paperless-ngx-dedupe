@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
@@ -19,6 +19,28 @@ import {
   reserveAiBudget,
 } from '../budget.js';
 import { buildOpenAiRequestParams } from '../providers/openai.js';
+import { AiExtractionError } from '../providers/types.js';
+import { type AiRequestBudget } from '../extract.js';
+import { type TaskFunction } from '../../jobs/worker-entry.js';
+import { type processBatch } from '../batch.js';
+import { type PaperlessClient } from '../../paperless/client.js';
+import { DEFAULT_AI_CONFIG } from '../types.js';
+import { document, documentContent } from '../../schema/sqlite/documents.js';
+import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
+
+const workerMocks = vi.hoisted(() => ({
+  runWorkerTask: vi.fn(),
+  processBatch: vi.fn(),
+  createAiProvider: vi.fn().mockResolvedValue({ provider: 'openai' }),
+}));
+vi.mock('../../jobs/worker-entry.js', () => ({ runWorkerTask: workerMocks.runWorkerTask }));
+vi.mock('../providers/factory.js', () => ({ createAiProvider: workerMocks.createAiProvider }));
+vi.mock('../batch.js', () => ({ processBatch: workerMocks.processBatch }));
+vi.mock('../../index.js', () => ({
+  PaperlessClient: class PaperlessClient {},
+  parseConfig: () => ({ AI_OPENAI_API_KEY: 'synthetic-test-key' }),
+  toPaperlessConfig: () => ({}),
+}));
 
 const PRICING = {
   inputPerToken: 0.000_001,
@@ -79,6 +101,27 @@ describe('scheduled AI budget reservations', () => {
       }),
     ).toThrow(AiBudgetExceededError);
   }
+
+  it('counts zero-usage reconciliation as zero monthly spend', () => {
+    const reservation = reserveInvariantFixture('zero-usage');
+    expect(
+      reconcileAiBudgetReservation(sqlite, reservation.id, {
+        promptTokens: 0,
+        completionTokens: 0,
+      }),
+    ).toBe(true);
+    expect(readReservation(reservation.id)).toMatchObject({
+      status: 'reconciled',
+      actualCostUsd: 0,
+    });
+    expect(
+      sqlite
+        .prepare(
+          "SELECT SUM(CASE WHEN status = 'reserved' THEN reserved_cost_usd ELSE actual_cost_usd END) AS spent FROM ai_budget_reservation WHERE schedule_id = ? AND billing_month = ?",
+        )
+        .get('ai-schedule', reservation.billingMonth),
+    ).toEqual({ spent: 0 });
+  });
 
   it('reserves the exact prompt plus configured maximum output upper bound', () => {
     const reservation = reserveAiBudget(sqlite, {
@@ -464,5 +507,228 @@ describe('scheduled AI budget reservations', () => {
         )
         .get(),
     ).toEqual({ status: 'abandoned', charged: 1 });
+  });
+});
+
+describe('scheduled worker failure settlement policy', () => {
+  let task: TaskFunction;
+  let handle: ReturnType<typeof createDatabaseWithHandle>;
+  let requestBudget: AiRequestBudget;
+
+  beforeAll(async () => {
+    await import('../../jobs/workers/ai-processing-worker.js');
+    task = workerMocks.runWorkerTask.mock.calls[0][0] as TaskFunction;
+  });
+
+  beforeEach(async () => {
+    handle = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(handle.sqlite);
+    const now = new Date().toISOString();
+    handle.sqlite
+      .prepare(
+        "UPDATE automation_schedule SET enabled = 1, cadence_json = ?, next_due_at = ?, updated_at = ? WHERE task = 'ai_processing'",
+      )
+      .run(JSON.stringify({ kind: 'daily', hour: 3, minute: 0 }), now, now);
+    handle.sqlite
+      .prepare("UPDATE app_config SET value = '5' WHERE key = 'automation.aiMonthlyBudgetUsd'")
+      .run();
+    handle.sqlite
+      .prepare(
+        'INSERT INTO app_config (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      )
+      .run('ai.modelPricingCache', JSON.stringify({ [DEFAULT_AI_CONFIG.model]: PRICING }), now);
+    handle.sqlite
+      .prepare(
+        "INSERT INTO job (id, type, status, created_at) VALUES ('settlement-job', 'ai_processing', 'running', ?)",
+      )
+      .run(now);
+    handle.sqlite
+      .prepare(
+        "INSERT INTO dispatch_intent (id, task, operation, job_id, trigger_kind, schedule_id, due_at, status, attempt_count, dispatch_key, created_at, updated_at) VALUES ('settlement-intent', 'ai_processing', 'ai_processing', 'settlement-job', 'schedule', 'automation-ai_processing', ?, 'dispatched', 0, 'settlement-key', ?, ?)",
+      )
+      .run(now, now, now);
+    workerMocks.processBatch.mockImplementation(async (_db, options) => {
+      requestBudget = options.requestBudget;
+      return {};
+    });
+    await task(
+      {
+        db: handle.db,
+        sqlite: handle.sqlite,
+        jobId: 'settlement-job',
+        taskData: {},
+        executionToken: 'settlement-owner',
+      },
+      vi.fn(),
+    );
+  });
+
+  afterEach(() => {
+    handle.sqlite.close();
+  });
+
+  const failures: Array<{ name: string; error: unknown; actualCost: number | null }> = [
+    ...(['rate_limit', 'quota_exceeded'] as const).map((failureType) => ({
+      name: failureType,
+      error: new AiExtractionError(failureType, 'Synthetic rejection'),
+      actualCost: 0,
+    })),
+    ...[400, 401, 403, 404, 422].map((status) => ({
+      name: `HTTP ${status}`,
+      error: { status },
+      actualCost: 0,
+    })),
+    {
+      name: 'timeout',
+      error: new AiExtractionError('timeout', 'Synthetic timeout'),
+      actualCost: null,
+    },
+    {
+      name: 'connection error',
+      error: new TypeError('Synthetic connection failure'),
+      actualCost: null,
+    },
+    { name: 'HTTP 500', error: { status: 500 }, actualCost: null },
+    { name: 'HTTP 503', error: { status: 503 }, actualCost: null },
+    {
+      name: 'provider unavailable',
+      error: new AiExtractionError('provider_unavailable', 'Synthetic unavailable'),
+      actualCost: null,
+    },
+    { name: 'unknown error', error: new Error('Synthetic unknown failure'), actualCost: null },
+    { name: 'string status', error: { status: '400' }, actualCost: null },
+    {
+      name: 'billed failure',
+      error: new AiExtractionError(
+        'schema_mismatch',
+        'Synthetic invalid response',
+        undefined,
+        undefined,
+        { promptTokens: 10, completionTokens: 4 },
+      ),
+      actualCost: 10 * PRICING.inputPerToken + 4 * PRICING.outputPerToken,
+    },
+    {
+      name: 'usage takes precedence',
+      error: new AiExtractionError(
+        'rate_limit',
+        'Synthetic billed response',
+        undefined,
+        undefined,
+        { promptTokens: 10, completionTokens: 4 },
+      ),
+      actualCost: 10 * PRICING.inputPerToken + 4 * PRICING.outputPerToken,
+    },
+  ];
+
+  it.each(failures)(
+    'accounts for $name without releasing unknown spend',
+    async ({ error, actualCost }) => {
+      const reservation = reserveAiBudget(handle.sqlite, {
+        dispatchIntentId: 'settlement-intent',
+        scheduleId: 'automation-ai_processing',
+        requestKey: 'settlement-request',
+        ownerToken: 'settlement-owner',
+        model: DEFAULT_AI_CONFIG.model,
+        pricing: PRICING,
+        promptTokens: 100,
+        maxOutputTokens: 50,
+        monthlyBudgetUsd: 5,
+      });
+      await requestBudget.settleFailure(reservation, error);
+      const row = handle.sqlite
+        .prepare(
+          'SELECT status, actual_cost_usd AS actualCostUsd FROM ai_budget_reservation WHERE id = ?',
+        )
+        .get(reservation.id);
+      expect(row).toEqual({
+        status: actualCost === null ? 'reserved' : 'reconciled',
+        actualCostUsd: actualCost,
+      });
+      const spend = handle.sqlite
+        .prepare(
+          "SELECT SUM(CASE WHEN status = 'reserved' THEN reserved_cost_usd ELSE actual_cost_usd END) AS spent FROM ai_budget_reservation WHERE schedule_id = ? AND billing_month = ?",
+        )
+        .get('automation-ai_processing', reservation.billingMonth) as { spent: number };
+      expect(spend.spent).toBeCloseTo(actualCost ?? reservation.reservedCostUsd, 12);
+    },
+  );
+
+  it('stores a paid batch result even when reported usage exceeds the reservation', async () => {
+    const { processBatch: runBatch } = await vi.importActual<{ processBatch: typeof processBatch }>(
+      '../batch.js',
+    );
+    handle.db
+      .insert(document)
+      .values({
+        id: 'paid-document',
+        paperlessId: 1,
+        title: 'Synthetic input',
+        processingStatus: 'completed',
+        syncedAt: new Date().toISOString(),
+      })
+      .run();
+    handle.db
+      .insert(documentContent)
+      .values({
+        documentId: 'paid-document',
+        fullText: 'Synthetic document content',
+        contentHash: 'synthetic-hash',
+      })
+      .run();
+    const reservation = reserveAiBudget(handle.sqlite, {
+      dispatchIntentId: 'settlement-intent',
+      scheduleId: 'automation-ai_processing',
+      requestKey: 'paid-request',
+      ownerToken: 'settlement-owner',
+      model: DEFAULT_AI_CONFIG.model,
+      pricing: PRICING,
+      promptTokens: 100,
+      maxOutputTokens: 50,
+      monthlyBudgetUsd: 5,
+    });
+    const result = await runBatch(handle.db, {
+      provider: {
+        provider: 'openai',
+        extract: vi.fn().mockResolvedValue({
+          response: {
+            title: 'Paid synthetic result',
+            correspondent: null,
+            documentType: null,
+            tags: [],
+            confidence: { title: 1, correspondent: 0, documentType: 0, tags: 0 },
+            evidence: '',
+          },
+          usage: { promptTokens: 201, completionTokens: 0 },
+        }),
+      },
+      client: {
+        getCorrespondents: vi.fn().mockResolvedValue([]),
+        getDocumentTypes: vi.fn().mockResolvedValue([]),
+        getTags: vi.fn().mockResolvedValue([]),
+        getCustomFields: vi.fn().mockResolvedValue([]),
+      } as unknown as PaperlessClient,
+      config: { ...DEFAULT_AI_CONFIG, rateDelayMs: 0, maxOutputTokens: 50 },
+      requestBudget: {
+        reserve: vi.fn().mockResolvedValue(reservation),
+        reconcile: async (held, usage) => {
+          reconcileAiBudgetReservation(handle.sqlite, held.id, usage);
+        },
+        settleFailure: vi.fn(),
+      },
+    });
+    expect(result).toMatchObject({ succeeded: 1, failed: 0 });
+    expect(handle.db.select().from(aiProcessingResult).get()).toMatchObject({
+      suggestedTitle: 'Paid synthetic result',
+      promptTokens: 201,
+      completionTokens: 0,
+      appliedStatus: 'pending_review',
+    });
+    const held = handle.sqlite
+      .prepare(
+        'SELECT reserved_cost_usd AS reservedCostUsd FROM ai_budget_reservation WHERE id = ?',
+      )
+      .get(reservation.id) as { reservedCostUsd: number };
+    expect(held.reservedCostUsd).toBeCloseTo(201 * PRICING.inputPerToken, 12);
   });
 });

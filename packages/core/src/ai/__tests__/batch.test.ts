@@ -565,6 +565,7 @@ describe('processBatch', () => {
     const requestBudget = {
       reserve: vi.fn(),
       reconcile: vi.fn(),
+      settleFailure: vi.fn(),
     };
 
     await expect(
@@ -1007,6 +1008,7 @@ describe('processBatch', () => {
           throw new ErrorType();
         }),
         reconcile: vi.fn(async () => undefined),
+        settleFailure: vi.fn(async () => undefined),
       };
 
       await expect(
@@ -1548,6 +1550,7 @@ describe('rate limit retry queue', () => {
         return { id: `reservation-${requestKeys.length}` };
       }),
       reconcile: vi.fn(async () => undefined),
+      settleFailure: vi.fn(async () => undefined),
     };
     const extractFn = vi.fn().mockImplementation(async () => {
       callCount++;
