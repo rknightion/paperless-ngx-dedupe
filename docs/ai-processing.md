@@ -175,7 +175,9 @@ When starting a batch, you choose which documents to process:
 | `failed_only` | Re-process only documents whose previous run failed |
 | `selected_document_ids` | Process a specific set of document IDs |
 | `current_filter` | Process documents matching the current filter criteria |
-| `full_reprocess` | Re-process every document, overwriting existing results |
+| `full_reprocess` | Re-process eligible documents, overwriting their existing results |
+
+Applied and partially applied results are skipped until reverted; revert them before requesting fresh suggestions.
 
 ### Apply Scopes
 

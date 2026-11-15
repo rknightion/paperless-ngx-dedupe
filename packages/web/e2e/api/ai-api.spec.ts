@@ -346,29 +346,39 @@ test.describe('AI API', () => {
     }
   });
 
-  test('a reprocess error before extraction preserves the result row', async ({ request }) => {
-    const sqlite = new Database(DB_PATH);
-    try {
-      sqlite
-        .prepare(
-          `INSERT INTO ai_processing_result
+  for (const [status, expectedStatus] of [
+    ['applied', 409],
+    ['reverted', 500],
+  ] as const) {
+    test(`a reprocess error before extraction preserves the ${status} result row`, async ({
+      request,
+    }) => {
+      const sqlite = new Database(DB_PATH);
+      try {
+        sqlite
+          .prepare(
+            `INSERT INTO ai_processing_result
         (id, document_id, paperless_id, provider, model, applied_status, failure_type, created_at)
-        VALUES ('guard-reprocess', ?, 1, 'openai', 'e2e-model', 'applied', 'timeout', ?)`,
-        )
-        .run(seed.documentIds[0], new Date().toISOString());
-      sqlite.prepare('DELETE FROM document_content WHERE document_id = ?').run(seed.documentIds[0]);
-      const before = sqlite
-        .prepare('SELECT * FROM ai_processing_result WHERE id = ?')
-        .get('guard-reprocess');
-      const response = await request.post('/api/v1/ai/results/guard-reprocess/reprocess');
-      expect(response.status()).toBe(500);
-      expect(
-        sqlite.prepare('SELECT * FROM ai_processing_result WHERE id = ?').get('guard-reprocess'),
-      ).toEqual(before);
-    } finally {
-      sqlite.close();
-    }
-  });
+        VALUES ('guard-reprocess', ?, 1, 'openai', 'e2e-model', ?, 'timeout', ?)`,
+          )
+          .run(seed.documentIds[0], status, new Date().toISOString());
+        sqlite
+          .prepare('DELETE FROM document_content WHERE document_id = ?')
+          .run(seed.documentIds[0]);
+        const before = sqlite
+          .prepare('SELECT * FROM ai_processing_result WHERE id = ?')
+          .get('guard-reprocess');
+        const response = await request.post('/api/v1/ai/results/guard-reprocess/reprocess');
+        expect(response.status()).toBe(expectedStatus);
+        if (status === 'applied') expect((await response.json()).error.code).toBe('CONFLICT');
+        expect(
+          sqlite.prepare('SELECT * FROM ai_processing_result WHERE id = ?').get('guard-reprocess'),
+        ).toEqual(before);
+      } finally {
+        sqlite.close();
+      }
+    });
+  }
 
   // ── Single result reject (no AI_ENABLED check) ──────────────────────
 

@@ -52,45 +52,83 @@ describe('single AI result reprocessing revisions', () => {
 
   const client = {} as PaperlessClient;
 
-  it('snapshots the prior result transactionally before a successful replacement', async () => {
-    const provider: AiProviderInterface = {
-      provider: 'openai',
-      extract: vi.fn().mockResolvedValue({
-        response: {
-          title: 'New suggestion',
-          correspondent: null,
-          documentType: null,
-          tags: [],
-          confidence: { title: 0.9, correspondent: 0, documentType: 0, tags: 0 },
-          evidence: 'New evidence',
-        },
-        usage: { promptTokens: 50, completionTokens: 10 },
-      }),
-    };
+  it.each(['applied', 'partial'])(
+    'rejects %s before network requests and preserves its snapshot',
+    async (appliedStatus) => {
+      db.update(aiProcessingResult)
+        .set({ appliedStatus, preApplyTitle: 'Original', appliedTitle: 'AI title' })
+        .run();
+      const before = db.select().from(aiProcessingResult).get();
+      const calls = {
+        getCorrespondents: vi.fn().mockResolvedValue([]),
+        getDocumentTypes: vi.fn().mockResolvedValue([]),
+        getTags: vi.fn().mockResolvedValue([]),
+        getCustomFields: vi.fn().mockResolvedValue([]),
+      };
+      const provider: AiProviderInterface = { provider: 'openai', extract: vi.fn() };
+      await expect(
+        reprocessSingleResult(db, 'result-1', {
+          provider,
+          client: calls as unknown as PaperlessClient,
+          config: {
+            ...DEFAULT_AI_CONFIG,
+            includeCorrespondents: true,
+            includeDocumentTypes: true,
+            includeTags: true,
+            extractCustomFields: true,
+          },
+        }),
+      ).rejects.toMatchObject({ name: 'AiResultNotReprocessableError' });
+      for (const call of Object.values(calls)) expect(call).not.toHaveBeenCalled();
+      expect(provider.extract).not.toHaveBeenCalled();
+      expect(db.select().from(aiProcessingResult).get()).toEqual(before);
+      expect(db.select().from(aiResultRevision).all()).toEqual([]);
+    },
+  );
 
-    await reprocessSingleResult(db, 'result-1', {
-      provider,
-      client,
-      config: DEFAULT_AI_CONFIG,
-    });
+  it.each(['pending_review', 'reverted'])(
+    'snapshots a %s result transactionally before a successful replacement',
+    async (appliedStatus) => {
+      db.update(aiProcessingResult).set({ appliedStatus }).run();
+      const provider: AiProviderInterface = {
+        provider: 'openai',
+        extract: vi.fn().mockResolvedValue({
+          response: {
+            title: 'New suggestion',
+            correspondent: null,
+            documentType: null,
+            tags: [],
+            confidence: { title: 0.9, correspondent: 0, documentType: 0, tags: 0 },
+            evidence: 'New evidence',
+          },
+          usage: { promptTokens: 50, completionTokens: 10 },
+        }),
+      };
 
-    expect(db.select().from(aiResultRevision).all()).toEqual([
-      expect.objectContaining({
-        resultId: 'result-1',
-        revision: 1,
-        model: 'old-model',
-        suggestedTitle: 'Old suggestion',
-        evidence: 'Old evidence',
+      await reprocessSingleResult(db, 'result-1', {
+        provider,
+        client,
+        config: DEFAULT_AI_CONFIG,
+      });
+
+      expect(db.select().from(aiResultRevision).all()).toEqual([
+        expect.objectContaining({
+          resultId: 'result-1',
+          revision: 1,
+          model: 'old-model',
+          suggestedTitle: 'Old suggestion',
+          evidence: 'Old evidence',
+          appliedStatus,
+        }),
+      ]);
+      expect(db.select().from(aiProcessingResult).get()).toMatchObject({
+        id: 'result-1',
+        model: 'gpt-5.4-mini',
+        suggestedTitle: 'New suggestion',
         appliedStatus: 'pending_review',
-      }),
-    ]);
-    expect(db.select().from(aiProcessingResult).get()).toMatchObject({
-      id: 'result-1',
-      model: 'gpt-5.4-mini',
-      suggestedTitle: 'New suggestion',
-      appliedStatus: 'pending_review',
-    });
-  });
+      });
+    },
+  );
 
   it('fails stale custom-field policy validation before reprocessing with OpenAI', async () => {
     replaceCustomFieldPolicy(

@@ -16,6 +16,14 @@ import { resolveCustomFieldPolicy } from './custom-field-policy.js';
 
 const logger = createLogger('ai-reprocess');
 
+/** Applied results must be reverted before their suggestions can be replaced. */
+export class AiResultNotReprocessableError extends Error {
+  constructor() {
+    super('Revert this result before reprocessing it');
+    this.name = 'AiResultNotReprocessableError';
+  }
+}
+
 export interface ReprocessSingleResultOptions {
   provider: AiProviderInterface;
   client: PaperlessClient;
@@ -40,12 +48,17 @@ export async function reprocessSingleResult(
       id: aiProcessingResult.id,
       documentId: aiProcessingResult.documentId,
       paperlessId: aiProcessingResult.paperlessId,
+      appliedStatus: aiProcessingResult.appliedStatus,
     })
     .from(aiProcessingResult)
     .where(eq(aiProcessingResult.id, resultId))
     .get();
 
   if (!row) throw new Error(`AI result not found: ${resultId}`);
+
+  if (row.appliedStatus === 'applied' || row.appliedStatus === 'partial') {
+    throw new AiResultNotReprocessableError();
+  }
 
   // 2. Load document metadata
   const doc = db

@@ -206,6 +206,8 @@
         addToast('success', 'Extraction retried successfully');
         closeDetail();
         invalidateAll();
+      } else if (res.status === 409) {
+        addToast('error', 'Revert this result before reprocessing it');
       } else {
         const json = await res.json();
         addToast('error', json.error?.message ?? 'Retry extraction failed');
