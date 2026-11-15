@@ -10,6 +10,8 @@ import { migrateDatabase } from '../../db/migrate.js';
 import { document } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { operationLease } from '../../schema/sqlite/automation.js';
+import { job } from '../../schema/sqlite/jobs.js';
+import { cancelJob } from '../manager.js';
 import {
   claimDuplicateDeletionPlan,
   createDuplicateDeletionPlan,
@@ -24,7 +26,8 @@ const mocks = vi.hoisted(() => ({
   runWorkerTask: vi.fn(),
 }));
 
-vi.mock('../worker-entry.js', () => ({
+vi.mock(import('../worker-entry.js'), async (importOriginal) => ({
+  ...(await importOriginal()),
   runWorkerTask: mocks.runWorkerTask,
 }));
 
@@ -108,6 +111,80 @@ describe('reviewed duplicate deletion worker', () => {
       })
       .run();
   });
+
+  it.each(['between groups', 'within a group'] as const)(
+    'does not issue another remote deletion after cancellation %s',
+    async (boundary) => {
+      handle.db
+        .insert(job)
+        .values({
+          id: 'job-1',
+          type: 'batch_operation',
+          status: 'running',
+          createdAt: '2026-07-24T11:00:00.000Z',
+        })
+        .run();
+      if (boundary === 'within a group') {
+        handle.db
+          .insert(document)
+          .values({
+            id: 'doc-5',
+            paperlessId: 203,
+            title: 'Synthetic third document',
+            syncedAt: '2026-07-24T09:00:00.000Z',
+          })
+          .run();
+        handle.db
+          .insert(duplicateMember)
+          .values({
+            id: 'second-duplicate',
+            groupId: 'stable-group',
+            documentId: 'doc-5',
+            isPrimary: false,
+          })
+          .run();
+      }
+      const preview = createDuplicateDeletionPlan(
+        handle.db,
+        boundary === 'between groups' ? ['changed-group', 'stable-group'] : ['stable-group'],
+        { now: new Date('2026-07-24T11:00:00.000Z') },
+      );
+      let cancelled = false;
+      let deletionsAfterCancel = 0;
+      const client = {
+        deleteDocument: vi.fn(async () => {
+          if (cancelled) deletionsAfterCancel++;
+        }),
+      };
+      const outcome = await executeReviewedDuplicateDeletion(
+        {
+          db: handle.db,
+          sqlite: handle.sqlite,
+          jobId: 'job-1',
+          taskData: { planToken: preview.token },
+        },
+        vi.fn(),
+        client,
+        new Date('2026-07-24T11:01:00.000Z'),
+        {
+          afterRemoteDelete: () => {
+            if (!cancelled) cancelled = cancelJob(handle.db, 'job-1');
+          },
+        },
+      ).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      expect(cancelled).toBe(true);
+      expect(deletionsAfterCancel).toBe(0);
+      expect(client.deleteDocument).toHaveBeenCalledOnce();
+      expect(outcome).toMatchObject({ name: 'CancellationError' });
+      const untouchedId = boundary === 'between groups' ? 'doc-4' : 'doc-5';
+      expect(
+        handle.db.select().from(document).where(eq(document.id, untouchedId)).get(),
+      ).toBeDefined();
+    },
+  );
 
   it('conflicts a changed group without deletion while unaffected groups continue', async () => {
     const preview = createDuplicateDeletionPlan(handle.db, ['changed-group', 'stable-group'], {

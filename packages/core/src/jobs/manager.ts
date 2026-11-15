@@ -700,35 +700,41 @@ export function resumeJob(db: AppDatabase, id: string): boolean {
 }
 
 export function cancelJob(db: AppDatabase, id: string): boolean {
-  const existing = db.select({ status: job.status }).from(job).where(eq(job.id, id)).get();
+  const cancelled = db.transaction(
+    (tx) => {
+      const existing = tx
+        .select({ status: job.status, type: job.type })
+        .from(job)
+        .where(eq(job.id, id))
+        .get();
+      if (!existing || ['completed', 'failed', 'cancelled'].includes(existing.status!)) return null;
 
-  if (!existing) {
-    return false;
-  }
-
-  const terminalStates: string[] = ['completed', 'failed', 'cancelled'];
-  if (terminalStates.includes(existing.status!)) {
-    return false;
-  }
-
-  const jobRow = db.select({ type: job.type }).from(job).where(eq(job.id, id)).get();
-  const now = new Date().toISOString();
-  db.transaction((tx) => {
-    tx.update(job)
-      .set({
-        status: 'cancelled',
-        completedAt: now,
-        executionToken: null,
-      })
-      .where(eq(job.id, id))
-      .run();
-    tx.update(dispatchIntent)
-      .set({ status: 'cancelled', updatedAt: now })
-      .where(eq(dispatchIntent.jobId, id))
-      .run();
-    tx.delete(operationLease).where(eq(operationLease.ownerId, id)).run();
-  });
-  if (jobRow?.type) jobsTotal().add(1, { type: jobRow.type, outcome: 'cancelled' });
-
+      const now = new Date().toISOString();
+      tx.update(job)
+        .set({ status: 'cancelled', completedAt: now, executionToken: null })
+        .where(eq(job.id, id))
+        .run();
+      tx.update(dispatchIntent)
+        .set({ status: 'cancelled', updatedAt: now })
+        .where(eq(dispatchIntent.jobId, id))
+        .run();
+      // A claimed worker can still be unwinding; only an unclaimed job releases immediately.
+      if (existing.status === 'pending') {
+        tx.delete(operationLease).where(eq(operationLease.ownerId, id)).run();
+      }
+      return existing;
+    },
+    { behavior: 'immediate' },
+  );
+  if (!cancelled) return false;
+  if (cancelled.type) jobsTotal().add(1, { type: cancelled.type, outcome: 'cancelled' });
   return true;
+}
+
+/** Release a cancelled worker's lease only after its task function has stopped. */
+export function releaseCancelledJobLease(db: AppDatabase, jobId: string): void {
+  const current = db.select({ status: job.status }).from(job).where(eq(job.id, jobId)).get();
+  if (current?.status === 'cancelled') {
+    db.delete(operationLease).where(eq(operationLease.ownerId, jobId)).run();
+  }
 }

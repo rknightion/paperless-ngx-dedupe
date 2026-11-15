@@ -2,7 +2,13 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { context } from '@opentelemetry/api';
 import type Database from 'better-sqlite3';
 import { createDatabaseWithHandle } from '../db/client.js';
-import { updateJobProgress, completeJob, failJob, getJob } from './manager.js';
+import {
+  updateJobProgress,
+  completeJob,
+  failJob,
+  getJob,
+  releaseCancelledJobLease,
+} from './manager.js';
 import { createLogger } from '../logger.js';
 import {
   initWorkerTelemetry,
@@ -189,11 +195,12 @@ export async function runWorkerTaskWithData(
     failJob(db, jobId, errorMessage, executionToken);
     logger.error({ jobId, error: errorMessage }, 'Worker task failed');
   } finally {
+    releaseCancelledJobLease(db, jobId);
     await shutdownWorkerTelemetry();
   }
 }
 
-class CancellationError extends Error {
+export class CancellationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'CancellationError';
