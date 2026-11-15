@@ -185,6 +185,84 @@ describe('processBatch', () => {
     });
   });
 
+  it.each(['unprocessed', 'selected', 'reprocess', 'generation'] as const)(
+    'loads current text just before sending each document in %s scope',
+    async (scope) => {
+      seedDocs(db);
+      db.insert(documentContent)
+        .values({ documentId: 'doc-3', fullText: 'Original third text', contentHash: 'hash3' })
+        .run();
+      db.update(document).set({ lastChangedBySyncGenerationId: 'generation' }).run();
+      const normalProvider = createMockProvider();
+      const extract = vi.fn(async (...args: Parameters<AiProviderInterface['extract']>) => {
+        if (extract.mock.calls.length === 1) {
+          db.update(documentContent)
+            .set({ fullText: 'Fresh third document marker' })
+            .where(eq(documentContent.documentId, 'doc-3'))
+            .run();
+        }
+        return normalProvider.extract(...args);
+      });
+      const selection =
+        scope === 'selected'
+          ? { documentIds: ['doc-1', 'doc-2', 'doc-3'] }
+          : scope === 'reprocess'
+            ? { reprocess: true }
+            : scope === 'generation'
+              ? { syncGenerationId: 'generation' }
+              : {};
+      const result = await processBatch(db, {
+        provider: createMockProvider({ extractFn: extract }),
+        client: createMockClient(),
+        config: { ...config, batchSize: 1 },
+        ...selection,
+      });
+      expect(result).toMatchObject({ processed: 3, succeeded: 3, failed: 0, skipped: 0 });
+      expect(extract).toHaveBeenCalledTimes(3);
+      expect(extract.mock.calls[2][0].userPrompt).toContain('Fresh third document marker');
+      expect(extract.mock.calls[2][0].userPrompt).not.toContain('Original third text');
+    },
+  );
+
+  it.each(['deleted', 'empty'] as const)(
+    'skips content that becomes %s after selection without failing the batch',
+    async (change) => {
+      seedDocs(db);
+      const normalProvider = createMockProvider();
+      const extract = vi.fn(async (...args: Parameters<AiProviderInterface['extract']>) => {
+        if (change === 'deleted') {
+          db.delete(documentContent).where(eq(documentContent.documentId, 'doc-2')).run();
+        } else {
+          db.update(documentContent)
+            .set({ fullText: '' })
+            .where(eq(documentContent.documentId, 'doc-2'))
+            .run();
+        }
+        return normalProvider.extract(...args);
+      });
+      const result = await processBatch(db, {
+        provider: createMockProvider({ extractFn: extract }),
+        client: createMockClient(),
+        config: { ...config, batchSize: 1 },
+      });
+      expect(result).toMatchObject({
+        totalDocuments: 3,
+        processed: 3,
+        succeeded: 1,
+        failed: 0,
+        skipped: 2,
+      });
+      expect(extract).toHaveBeenCalledTimes(1);
+      const skipped = db
+        .select()
+        .from(aiProcessingResult)
+        .where(eq(aiProcessingResult.appliedStatus, 'skipped'))
+        .all();
+      expect(skipped.map((row) => row.documentId).sort()).toEqual(['doc-2', 'doc-3']);
+      expect(skipped.every((row) => row.failureType === 'no_content')).toBe(true);
+    },
+  );
+
   it('stops an unsaturated batch when progress reports cancellation', async () => {
     for (let i = 1; i <= 20; i++) {
       db.insert(document)
@@ -1228,6 +1306,26 @@ describe('rate limit retry queue', () => {
     db.insert(document).values(docs).run();
     db.insert(documentContent).values(contents).run();
   }
+
+  it('reloads document text on a rate-limit retry', async () => {
+    seedManyDocs(db, 1);
+    const normalProvider = createMockProvider();
+    const extract = vi.fn(async (...args: Parameters<AiProviderInterface['extract']>) => {
+      if (extract.mock.calls.length === 1) {
+        db.update(documentContent).set({ fullText: 'Fresh retry marker' }).run();
+        throw new AiExtractionError('rate_limit', 'Retry synthetic request', undefined, 1);
+      }
+      return normalProvider.extract(...args);
+    });
+    const result = await processBatch(db, {
+      provider: createMockProvider({ extractFn: extract }),
+      client: createMockClient(),
+      config: { ...config, batchSize: 1 },
+    });
+    expect(result).toMatchObject({ processed: 1, succeeded: 1, failed: 0, rateLimitRetries: 1 });
+    expect(extract).toHaveBeenCalledTimes(2);
+    expect(extract.mock.calls[1][0].userPrompt).toContain('Fresh retry marker');
+  });
 
   it('stops retry launches after cancellation without recording queued documents as failed', async () => {
     seedManyDocs(db, 3);
