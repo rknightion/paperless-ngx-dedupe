@@ -21,7 +21,7 @@ Paperless NGX Dedupe uses:
 | `PAPERLESS_USERNAME` | No | - | Use with `PAPERLESS_PASSWORD` when not using token |
 | `PAPERLESS_PASSWORD` | No | - | Use with `PAPERLESS_USERNAME` |
 | `DATABASE_URL` | No | `./data/paperless-ngx-dedupe.db` | SQLite file path |
-| `PORT` | No | `3000` | Web/API listen port |
+| `PORT` | No | `3000` | Host port under Compose, where the container listens on 3000; listen port for the built server outside Docker |
 | `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` |
 | `CORS_ALLOW_ORIGIN` | No | empty | Empty = same-origin only; `*` = allow all |
 | `AUTO_MIGRATE` | No | `true` | Auto-run DB schema migration on startup |
