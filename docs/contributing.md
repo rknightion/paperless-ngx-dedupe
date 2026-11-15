@@ -59,11 +59,12 @@ type(scope): description
 | `feat` | New feature |
 | `fix` | Bug fix |
 | `docs` | Documentation changes |
-| `style` | Formatting, no code change |
 | `refactor` | Code restructuring |
 | `perf` | Performance improvement |
 | `test` | Adding or updating tests |
-| `chore` | Build, CI, or tooling changes |
+| `chore` | Maintenance and tooling changes |
+| `ci` | Continuous integration changes |
+| `build` | Build system and dependency changes |
 
 **Scopes:** `core`, `web`, `db`, `dedup`, `sync`, `jobs`, `api`, `docs`, `ui`, `settings`, `export`, `ai`, `dashboard`, `schema`, `types`
 
