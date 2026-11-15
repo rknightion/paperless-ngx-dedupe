@@ -143,19 +143,27 @@ export async function syncDocuments(
       }
     }
 
-    // 6. Reconcile orphaned documents (full sync only)
+    // 6. Reconcile only against a complete remote inventory.
     if (isFullSync) {
-      for (const [paperlessId, localDoc] of localDocs) {
-        if (!seenPaperlessIds.has(paperlessId)) {
-          logger.info(
-            { paperlessId, localDocId: localDoc.id },
-            'Removing orphaned document no longer in Paperless',
-          );
-          removeDocumentFromAllGroups(db, localDoc.id);
-          deleteDocumentLocally(db, localDoc.id);
-          result.reconciled++;
+      reconcileOrphans(db, localDocs, seenPaperlessIds, result);
+    } else {
+      let remoteIds: Set<number> | undefined;
+      try {
+        const collectedIds = new Set<number>();
+        let expectedCount: number | undefined;
+        for await (const page of client.getDocumentIds()) {
+          expectedCount ??= page.totalCount;
+          for (const id of page.ids) collectedIds.add(id);
         }
+        if (expectedCount !== undefined && collectedIds.size >= expectedCount) {
+          remoteIds = collectedIds;
+        } else {
+          logger.warn('Incomplete document ID listing; skipping deletion reconciliation');
+        }
+      } catch {
+        logger.warn('Document ID listing failed; skipping deletion reconciliation');
       }
+      if (remoteIds) reconcileOrphans(db, localDocs, remoteIds, result);
     }
 
     // 7. Update sync state
@@ -216,6 +224,26 @@ async function fetchReferenceMaps(client: PaperlessClient): Promise<ReferenceMap
     correspondents: new Map(correspondents.map((c) => [c.id, c.name])),
     documentTypes: new Map(documentTypes.map((d) => [d.id, d.name])),
   };
+}
+
+function reconcileOrphans(
+  db: AppDatabase,
+  localDocs: ReturnType<typeof loadLocalDocuments>,
+  remoteIds: Set<number>,
+  result: SyncResult,
+): void {
+  const logger = createLogger('sync');
+  for (const [paperlessId, localDoc] of localDocs) {
+    if (!remoteIds.has(paperlessId)) {
+      logger.info(
+        { paperlessId, localDocId: localDoc.id },
+        'Removing orphaned document no longer in Paperless',
+      );
+      removeDocumentFromAllGroups(db, localDoc.id);
+      deleteDocumentLocally(db, localDoc.id);
+      result.reconciled++;
+    }
+  }
 }
 
 function loadLocalDocuments(

@@ -412,6 +412,27 @@ describe('PaperlessClient', () => {
       vi.spyOn(PaperlessClient.prototype as any, 'sleep').mockResolvedValue(undefined);
     });
 
+    it('requests only IDs and follows pages until next is null', async () => {
+      const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
+      mockFetch
+        .mockResolvedValueOnce(
+          mockResponse(
+            makePaginatedResponse([{ id: 1 }], 'http://localhost:8000/api/documents/?page=2', 2),
+          ),
+        )
+        .mockResolvedValueOnce(mockResponse(makePaginatedResponse([{ id: 2 }], null, 2)));
+      const pages = [];
+      for await (const page of client.getDocumentIds()) pages.push(page);
+      expect(pages).toEqual([
+        { ids: [1], totalCount: 2 },
+        { ids: [2], totalCount: 2 },
+      ]);
+      expect(mockFetch.mock.calls.map(([url]) => new URL(url).search)).toEqual([
+        '?page=1&page_size=1000&ordering=id&fields=id',
+        '?page=2&page_size=1000&ordering=id&fields=id',
+      ]);
+    });
+
     it('should yield arrays per page and handle multiple pages', async () => {
       const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'tok' });
 
