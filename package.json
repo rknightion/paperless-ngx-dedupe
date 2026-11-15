@@ -18,7 +18,7 @@
     "format:fix": "prettier --write .",
     "test": "pnpm --filter @paperless-dedupe/core test && pnpm --filter @paperless-dedupe/web test",
     "test:e2e": "pnpm --filter @paperless-dedupe/web test:e2e",
-    "docker:validate": "docker build -t paperless-ngx-dedupe:local . && docker compose -f compose.dev.yml up --force-recreate --abort-on-container-exit",
+    "docker:validate": "docker build -t paperless-ngx-dedupe:local . && bash scripts/verify-image-workers.sh paperless-ngx-dedupe:local",
     "docker:dev": "docker compose -f compose.dev.yml --profile dev up dev --build"
   },
   "devDependencies": {
