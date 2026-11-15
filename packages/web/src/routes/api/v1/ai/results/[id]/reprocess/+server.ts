@@ -3,7 +3,6 @@ import {
   reprocessSingleResult,
   createAiProvider,
   getAiConfig,
-  markAiResultFailed,
   PaperlessClient,
   toPaperlessConfig,
   CustomFieldPolicyError,
@@ -56,11 +55,6 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
       );
     }
     const errMsg = (error as Error).message;
-    try {
-      markAiResultFailed(locals.db, params.id, errMsg);
-    } catch {
-      // DB update failed — original error already logged
-    }
     if (url.searchParams.get('mode') === 'inbox') {
       return apiError(
         errMsg.includes('not found') ? ErrorCode.NOT_FOUND : ErrorCode.INTERNAL_ERROR,

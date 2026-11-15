@@ -10,6 +10,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     return apiError(ErrorCode.BAD_REQUEST, 'No result IDs provided');
   }
 
-  batchRejectAiResults(locals.db, resultIds);
-  return apiSuccess({ rejected: resultIds.length });
+  const rejected = batchRejectAiResults(locals.db, resultIds);
+  return apiSuccess({ rejected });
 };

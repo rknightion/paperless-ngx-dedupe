@@ -19,6 +19,6 @@ export const POST: RequestHandler = async ({ locals }) => {
     return apiSuccess({ rejected: 0 });
   }
 
-  batchRejectAiResults(locals.db, resultIds);
-  return apiSuccess({ rejected: resultIds.length });
+  const rejected = batchRejectAiResults(locals.db, resultIds);
+  return apiSuccess({ rejected });
 };

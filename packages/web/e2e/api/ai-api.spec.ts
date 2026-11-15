@@ -186,6 +186,70 @@ test.describe('AI API', () => {
     expect(result.data.appliedStatus).toBe('partial');
   });
 
+  test('reject guards preserve applied results and report only changed rows', async ({
+    request,
+  }) => {
+    const sqlite = new Database(DB_PATH);
+    try {
+      const insert = sqlite.prepare(`INSERT INTO ai_processing_result
+        (id, document_id, paperless_id, provider, model, applied_status, created_at)
+        VALUES (?, ?, ?, 'openai', 'e2e-model', ?, ?)`);
+      for (const [index, status] of ['applied', 'pending_review', 'failed'].entries()) {
+        insert.run(
+          `guard-${status}`,
+          seed.documentIds[index],
+          index + 1,
+          status,
+          new Date().toISOString(),
+        );
+      }
+      const before = sqlite
+        .prepare('SELECT * FROM ai_processing_result WHERE id = ?')
+        .get('guard-applied');
+      const applied = await request.post('/api/v1/ai/results/guard-applied/reject');
+      expect(applied.status()).toBe(409);
+      expect((await applied.json()).error.code).toBe('CONFLICT');
+      const pending = await request.post('/api/v1/ai/results/guard-pending_review/reject');
+      expect(pending.status()).toBe(200);
+      const batch = await request.post('/api/v1/ai/results/batch-reject', {
+        data: {
+          resultIds: ['guard-applied', 'guard-pending_review', 'guard-failed', 'guard-failed'],
+        },
+      });
+      expect(batch.status()).toBe(200);
+      expect((await batch.json()).data.rejected).toBe(1);
+      expect(
+        sqlite.prepare('SELECT * FROM ai_processing_result WHERE id = ?').get('guard-applied'),
+      ).toEqual(before);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test('a reprocess error before extraction preserves the result row', async ({ request }) => {
+    const sqlite = new Database(DB_PATH);
+    try {
+      sqlite
+        .prepare(
+          `INSERT INTO ai_processing_result
+        (id, document_id, paperless_id, provider, model, applied_status, failure_type, created_at)
+        VALUES ('guard-reprocess', ?, 1, 'openai', 'e2e-model', 'applied', 'timeout', ?)`,
+        )
+        .run(seed.documentIds[0], new Date().toISOString());
+      sqlite.prepare('DELETE FROM document_content WHERE document_id = ?').run(seed.documentIds[0]);
+      const before = sqlite
+        .prepare('SELECT * FROM ai_processing_result WHERE id = ?')
+        .get('guard-reprocess');
+      const response = await request.post('/api/v1/ai/results/guard-reprocess/reprocess');
+      expect(response.status()).toBe(500);
+      expect(
+        sqlite.prepare('SELECT * FROM ai_processing_result WHERE id = ?').get('guard-reprocess'),
+      ).toEqual(before);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   // ── Single result reject (no AI_ENABLED check) ──────────────────────
 
   test('POST /api/v1/ai/results/:id/reject returns success even for non-existent', async ({
