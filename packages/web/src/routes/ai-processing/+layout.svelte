@@ -203,7 +203,11 @@
         body: JSON.stringify({ scope }),
       });
       const json = await res.json();
-      if (res.ok && json.data?.jobId) {
+      if (res.ok && json.data?.nothingToDo) {
+        isProcessing = false;
+        jobMessage = '';
+        addToast('info', 'Nothing to process');
+      } else if (res.ok && json.data?.jobId) {
         jobId = json.data.jobId;
         addToast('success', label);
       } else {

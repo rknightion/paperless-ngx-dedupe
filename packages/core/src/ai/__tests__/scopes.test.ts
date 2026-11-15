@@ -119,6 +119,12 @@ describe('resolveProcessScope', () => {
     seedData(db);
   });
 
+  it('throws for an unknown process scope', () => {
+    expect(() => resolveProcessScope(db, { type: 'unknown' } as never)).toThrow(
+      'Unknown process scope',
+    );
+  });
+
   it('resolves new_only scope', () => {
     const result = resolveProcessScope(db, { type: 'new_only' });
     expect(result).toEqual({ reprocess: false });

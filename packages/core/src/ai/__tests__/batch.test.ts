@@ -555,6 +555,20 @@ describe('processBatch', () => {
     expect(db.select().from(aiResultRevision).all()).toHaveLength(3);
   });
 
+  it('an explicit empty documentIds list processes nothing', async () => {
+    seedDocs(db);
+    const provider = createMockProvider();
+    const result = await processBatch(db, {
+      provider,
+      client: createMockClient(),
+      config,
+      documentIds: [],
+    });
+    expect(provider.extract).not.toHaveBeenCalled();
+    expect(result.totalDocuments).toBe(0);
+    expect(db.select().from(aiProcessingResult).all()).toEqual([]);
+  });
+
   it('processes only specified documentIds', async () => {
     seedDocs(db);
     const provider = createMockProvider();

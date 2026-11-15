@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getToasts, dismissToast } from './AiReviewStore.svelte';
   import { fly } from 'svelte/transition';
-  import { CircleCheck, CircleX, TriangleAlert } from 'lucide-svelte';
+  import { CircleCheck, CircleX, TriangleAlert, Info } from 'lucide-svelte';
 </script>
 
 {#if getToasts().length > 0}
@@ -14,15 +14,19 @@
           ? 'bg-success-light border-success/20 text-success'
           : toast.type === 'error'
             ? 'bg-ember-light border-ember/20 text-ember'
-            : 'bg-warn-light border-warn/20 text-warn'}"
+            : toast.type === 'warning'
+              ? 'bg-warn-light border-warn/20 text-warn'
+              : 'bg-surface border-soft text-ink'}"
       >
         <!-- Icon -->
         {#if toast.type === 'success'}
           <CircleCheck class="mt-0.5 h-5 w-5 shrink-0" />
         {:else if toast.type === 'error'}
           <CircleX class="mt-0.5 h-5 w-5 shrink-0" />
-        {:else}
+        {:else if toast.type === 'warning'}
           <TriangleAlert class="mt-0.5 h-5 w-5 shrink-0" />
+        {:else}
+          <Info class="mt-0.5 h-5 w-5 shrink-0" />
         {/if}
 
         <div class="min-w-0 flex-1">

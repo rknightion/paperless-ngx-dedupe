@@ -170,28 +170,31 @@ export async function processBatch(
             .orderBy(document.id)
             .limit(maxDocuments ?? 25)
             .all();
-        } else if (documentIds && documentIds.length > 0) {
-          docs = db
-            .select({
-              id: document.id,
-              paperlessId: document.paperlessId,
-              title: document.title,
-              correspondent: document.correspondent,
-              documentType: document.documentType,
-              tagsJson: document.tagsJson,
-              customFieldsJson: document.customFieldsJson,
-              fullText: documentContent.fullText,
-            })
-            .from(document)
-            .leftJoin(documentContent, eq(document.id, documentContent.documentId))
-            .where(
-              sql`${document.id} IN (
+        } else if (documentIds !== undefined) {
+          docs =
+            documentIds.length === 0
+              ? []
+              : db
+                  .select({
+                    id: document.id,
+                    paperlessId: document.paperlessId,
+                    title: document.title,
+                    correspondent: document.correspondent,
+                    documentType: document.documentType,
+                    tagsJson: document.tagsJson,
+                    customFieldsJson: document.customFieldsJson,
+                    fullText: documentContent.fullText,
+                  })
+                  .from(document)
+                  .leftJoin(documentContent, eq(document.id, documentContent.documentId))
+                  .where(
+                    sql`${document.id} IN (
                 SELECT value FROM json_each(${JSON.stringify(documentIds)})
               )`,
-            )
-            .orderBy(document.id)
-            .limit(maxDocuments ?? -1)
-            .all();
+                  )
+                  .orderBy(document.id)
+                  .limit(maxDocuments ?? -1)
+                  .all();
         } else if (reprocess) {
           docs = db
             .select({

@@ -6,7 +6,7 @@ export type { AiResultSummary, AiResultDetail };
 
 export interface Toast {
   id: string;
-  type: 'success' | 'error' | 'warning';
+  type: 'success' | 'error' | 'warning' | 'info';
   message: string;
   detail?: string;
 }

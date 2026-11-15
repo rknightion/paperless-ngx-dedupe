@@ -59,6 +59,8 @@ export function resolveProcessScope(
       return { reprocess: false, documentIds: getDocumentIdsByAiFilter(db, scope.filters) };
     case 'full_reprocess':
       return { reprocess: true };
+    default:
+      throw new Error('Unknown process scope');
   }
 }
 
