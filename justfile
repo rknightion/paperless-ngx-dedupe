@@ -61,9 +61,20 @@ build:
     pnpm --filter @paperless-dedupe/core build
     pnpm --filter @paperless-dedupe/web build
 
-# start the SvelteKit dev server (http://localhost:5173) — background jobs need docker-dev instead
+# start the SvelteKit dev server; use dev-jobs to keep background workers compiled
 [group('dev')]
 run:
+    pnpm dev
+
+# run the dev server and keep compiled background workers current
+[group('dev')]
+dev-jobs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -m
+    pnpm --filter @paperless-dedupe/core exec tsc --watch --preserveWatchOutput &
+    watcher_pid=$!
+    trap 'kill -- -"$watcher_pid" 2>/dev/null || true; wait "$watcher_pid" 2>/dev/null || true' EXIT
     pnpm dev
 
 # build the local image and run it via compose with a health check

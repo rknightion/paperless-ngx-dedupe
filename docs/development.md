@@ -32,8 +32,8 @@ pnpm dev
 # Opens at http://localhost:5173
 ```
 
-!!! warning "Worker Thread Limitation"
-    Background jobs (sync, analysis, batch delete, AI processing, and AI apply) use `worker_threads` that run as raw Node.js processes outside Vite. These do **not** work with `pnpm dev` because Node.js cannot execute the TypeScript source files directly. Use `pnpm docker:dev` to test the full workflow including background jobs.
+!!! note "Compiled background workers"
+    Background jobs load compiled core JavaScript outside Vite, so they need a current core build. `just docker-dev` and `just dev-jobs` keep core compiled while the development server runs. Plain `just run` (`pnpm dev`) uses any existing build and does not keep it current.
 
 ## Project Structure
 
@@ -134,11 +134,14 @@ pnpm --filter @paperless-dedupe/core test
 
 ## Docker Development
 
-For testing the full workflow including background jobs:
+Workers need current compiled core output. Docker development runs a core compiler watcher alongside Vite:
 
 ```bash
-# Quick dev mode
-pnpm docker:dev
+# Dev server with a core compiler watcher
+just docker-dev
+
+# The same workflow on the host
+just dev-jobs
 
 # Full integration validation (build + run)
 pnpm docker:validate
