@@ -4,8 +4,12 @@
 set -Eeuo pipefail
 
 readonly NODE_MAJOR=24
-readonly PNPM_VERSION=11.18.0
-readonly BACKLOG_VERSION=1.50.1
+PNPM_VERSION=$(sed -n 's/.*"packageManager": "pnpm@\([^" ]*\)".*/\1/p' "$(dirname "$0")/../package.json" 2>/dev/null) || PNPM_VERSION=''
+if [[ -z ${PNPM_VERSION} ]]; then
+  printf 'Could not read pnpm version from packageManager in package.json.\n' >&2
+  exit 1
+fi
+readonly PNPM_VERSION
 
 log() {
   printf '\n==> %s\n' "$*"
@@ -73,10 +77,9 @@ cd "${repo_root}"
 
 install_node
 
-log "Installing pnpm ${PNPM_VERSION} and Backlog.md ${BACKLOG_VERSION}"
+log "Installing pnpm ${PNPM_VERSION}"
 as_root env PATH="${PATH}" npm install --global \
-  "pnpm@${PNPM_VERSION}" \
-  "backlog.md@${BACKLOG_VERSION}"
+  "pnpm@${PNPM_VERSION}"
 hash -r
 
 log 'Installing repository dependencies from the frozen lockfile'
@@ -98,7 +101,6 @@ done
 log 'Verifying the cloud task toolchain'
 node --version
 pnpm --version
-backlog --version
 pnpm --filter @paperless-dedupe/web exec playwright --version
 
 log 'Cloud environment setup complete'
