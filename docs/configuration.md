@@ -139,13 +139,31 @@ global counts; without it, Paperless returns counts limited to objects visible t
 | `user` | 1 | User count |
 | `remote_version` | 1 | Update availability check (causes Paperless-NGX to make an outbound network call) |
 
+These counts describe the current series from each collector after a successful collection; other application metrics are additional.
+
+| Collector | Series | Notes |
+| --- | --- | --- |
+| `status` | 12 | Fixed system status and storage gauges |
+| `statistics` | 7 + 1 per MIME type | Fixed totals plus the file type breakdown |
+| `document` | 1 | Total document count |
+| `tag` | 3 per tag | Info, document count and inbox flag; changing name or slug creates a new info series |
+| `correspondent` | 3 per correspondent | Info, document count and last correspondence; changing name or slug creates a new info series |
+| `document_type` | 2 per document type | Info and document count; changing name or slug creates a new info series |
+| `storage_path` | 2 per storage path | Info and document count; changing name or slug creates a new info series |
+| `group` | 1 | Total group count |
+| `user` | 1 | Total user count |
+| `remote_version` | 1 | Update availability; a changed version label creates a new series |
+
+Estimate the total by multiplying each per-entity count by the number of entities and adding the fixed counts and MIME types: 3,000 correspondents and 500 tags alone produce 10,500 series, and historical series from renamed entities can add to backend retention totals.
+When the metrics backend bills per series, use `PAPERLESS_METRICS_COLLECTORS` to leave out per-entity collectors and limit series count.
+
 All collectors are enabled by default. To enable only specific collectors:
 
 ```bash
 PAPERLESS_METRICS_COLLECTORS=status,statistics,document
 ```
 
-Metrics are collected on the same interval as OTEL metric exports (controlled by `OTEL_METRIC_EXPORT_INTERVAL`, default 60s). Instances with many tags, correspondents, or document types will produce proportionally more time series from the labeled collectors (`tag`, `correspondent`, `document_type`, `storage_path`). Disable these if cardinality is a concern.
+Metrics are collected on the same interval as OTEL metric exports (controlled by `OTEL_METRIC_EXPORT_INTERVAL`, default 60s).
 
 Credit: metric definitions and collector design inspired by [prometheus-paperless-exporter](https://github.com/hansmi/prometheus-paperless-exporter) by hansmi.
 
