@@ -221,7 +221,6 @@ export {
 } from './paperless/schemas.js';
 
 export { PaperlessClient } from './paperless/client.js';
-export { assertSafeTargetUrl, UnsafeUrlError } from './paperless/url-guard.js';
 export {
   PaperlessApiError,
   PaperlessAuthError,
