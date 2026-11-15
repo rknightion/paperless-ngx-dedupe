@@ -58,6 +58,11 @@ test-e2e:
 audit:
     pnpm audit --audit-level=high
 
+# production-dependency scan that gates: fails only on a critical advisory
+[group('check')]
+audit-prod:
+    pnpm audit --prod --audit-level=critical
+
 # the local gate: what CI's quality and unit-tests jobs run, except the coverage thresholds (see `just coverage`)
 [group('check')]
 check: fmt-check lint typecheck test

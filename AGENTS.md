@@ -97,6 +97,7 @@ in `packages/core/src/coverage-thresholds.ts`; run `just coverage` to check them
 - E2E is deliberately outside `check`. CI runs it as a separate `e2e-tests` job, `just build` then
   `just test-e2e`, because Playwright needs both packages built first.
 - `just audit` is advisory: CI runs it `continue-on-error`, so a finding does not block.
+- `just audit-prod` gates: CI fails on a critical advisory in a production dependency.
 - CI's unit-tests job adds coverage and JUnit reporter arguments for artifact upload. Those belong
   in the workflow, not in `just test`.
 - No recipe is marked `[confirm]`. Never bypass one added later with `--yes` or `JUST_YES=1`.
