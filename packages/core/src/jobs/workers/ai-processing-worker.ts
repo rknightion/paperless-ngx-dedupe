@@ -1,6 +1,7 @@
 import { runWorkerTask } from '../worker-entry.js';
 import { PaperlessClient, toPaperlessConfig, parseConfig } from '../../index.js';
 import { getAiConfig } from '../../ai/config.js';
+import { AiExtractionError } from '../../ai/providers/types.js';
 import { createAiProvider } from '../../ai/providers/factory.js';
 import { processBatch } from '../../ai/batch.js';
 import {
@@ -75,6 +76,26 @@ runWorkerTask(async (ctx, onProgress) => {
           maxOutputTokens: request.extractionRequest.maxOutputTokens ?? aiConfig.maxOutputTokens,
           monthlyBudgetUsd: settings.ai.monthlyBudgetUsd,
         });
+      },
+      async settleFailure(reservation, error) {
+        if (error instanceof AiExtractionError && error.usage) {
+          reconcileAiBudgetReservation(ctx.sqlite, reservation.id, error.usage);
+          return;
+        }
+        const rejectedWithoutUsage =
+          (error instanceof AiExtractionError &&
+            (error.failureType === 'rate_limit' || error.failureType === 'quota_exceeded')) ||
+          (typeof error === 'object' &&
+            error !== null &&
+            'status' in error &&
+            typeof error.status === 'number' &&
+            [400, 401, 403, 404, 422].includes(error.status));
+        if (rejectedWithoutUsage) {
+          reconcileAiBudgetReservation(ctx.sqlite, reservation.id, {
+            promptTokens: 0,
+            completionTokens: 0,
+          });
+        }
       },
       async reconcile(reservation, usage) {
         reconcileAiBudgetReservation(ctx.sqlite, reservation.id, usage);

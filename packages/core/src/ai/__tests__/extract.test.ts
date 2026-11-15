@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { processDocument } from '../extract.js';
 import type { AiProviderInterface, AiExtractionResult } from '../providers/types.js';
 import { AiExtractionError } from '../providers/types.js';
+import { AiBudgetInvariantError } from '../budget.js';
 
 function createMockProvider(
   overrides?: Partial<{
@@ -153,6 +154,7 @@ describe('processDocument', () => {
         });
         return { id: 'reservation-1' };
       }),
+      settleFailure: vi.fn(),
       reconcile: vi.fn(async (reservation, usage) => {
         order.push('reconcile');
         expect(reservation).toEqual({ id: 'reservation-1' });
@@ -179,6 +181,7 @@ describe('processDocument', () => {
     const requestBudget = {
       reserve: vi.fn(),
       reconcile: vi.fn(),
+      settleFailure: vi.fn(),
     };
 
     await expect(
@@ -202,5 +205,95 @@ describe('processDocument', () => {
 
     expect(requestBudget.reserve).not.toHaveBeenCalled();
     expect(provider.extract).not.toHaveBeenCalled();
+  });
+});
+
+describe('scheduled request settlement', () => {
+  function budget() {
+    return {
+      reserve: vi.fn().mockResolvedValue({ id: 'reserved-request' }),
+      reconcile: vi.fn().mockResolvedValue(undefined),
+      settleFailure: vi.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  it.each(['rate_limit', 'quota_exceeded'] as const)(
+    'settles %s once and preserves the provider error',
+    async (failureType) => {
+      const error = new AiExtractionError(failureType, 'Synthetic rejection');
+      const requestBudget = budget();
+      await expect(
+        processDocument({
+          ...baseOptions,
+          provider: createMockProvider({ extractError: error }),
+          requestBudget,
+          budgetRequestKey: 'request',
+        }),
+      ).rejects.toBe(error);
+      expect(requestBudget.settleFailure).toHaveBeenCalledExactlyOnceWith(
+        { id: 'reserved-request' },
+        error,
+      );
+      expect(requestBudget.reconcile).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves the provider error even when failure settlement also throws', async () => {
+    const error = new AiExtractionError('rate_limit', 'Synthetic rejection');
+    const requestBudget = budget();
+    requestBudget.settleFailure.mockRejectedValue(new Error('Synthetic settlement failure'));
+    await expect(
+      processDocument({
+        ...baseOptions,
+        provider: createMockProvider({ extractError: error }),
+        requestBudget,
+        budgetRequestKey: 'request',
+      }),
+    ).rejects.toBe(error);
+    expect(requestBudget.settleFailure).toHaveBeenCalledExactlyOnceWith(
+      { id: 'reserved-request' },
+      error,
+    );
+  });
+
+  it('retains a paid extraction when reconciliation reports a budget invariant error', async () => {
+    const provider = createMockProvider();
+    const requestBudget = budget();
+    requestBudget.reconcile.mockRejectedValue(new AiBudgetInvariantError());
+    const result = await processDocument({
+      ...baseOptions,
+      provider,
+      requestBudget,
+      budgetRequestKey: 'request',
+    });
+    expect(result).toBe(await vi.mocked(provider.extract).mock.results[0].value);
+    expect(requestBudget.settleFailure).not.toHaveBeenCalled();
+  });
+
+  it('still propagates other reconciliation failures', async () => {
+    const error = new Error('Synthetic database failure');
+    const requestBudget = budget();
+    requestBudget.reconcile.mockRejectedValue(error);
+    await expect(
+      processDocument({
+        ...baseOptions,
+        provider: createMockProvider(),
+        requestBudget,
+        budgetRequestKey: 'request',
+      }),
+    ).rejects.toBe(error);
+    expect(requestBudget.settleFailure).not.toHaveBeenCalled();
+  });
+
+  it('does not settle when reservation itself fails', async () => {
+    const error = new Error('Synthetic reservation failure');
+    const requestBudget = budget();
+    requestBudget.reserve.mockRejectedValue(error);
+    const provider = createMockProvider();
+    await expect(
+      processDocument({ ...baseOptions, provider, requestBudget, budgetRequestKey: 'request' }),
+    ).rejects.toBe(error);
+    expect(provider.extract).not.toHaveBeenCalled();
+    expect(requestBudget.settleFailure).not.toHaveBeenCalled();
   });
 });

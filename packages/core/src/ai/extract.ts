@@ -3,6 +3,7 @@ import type {
   AiExtractionRequest,
   AiExtractionResult,
 } from './providers/types.js';
+import { AiBudgetInvariantError } from './budget.js';
 import { buildPromptParts, truncateContent } from './prompt.js';
 import { createLogger } from '../logger.js';
 import type { PaperlessCustomField } from '../paperless/types.js';
@@ -32,6 +33,7 @@ export interface ProcessDocumentOptions {
 }
 
 export interface AiRequestBudget {
+  settleFailure(reservation: { id: string }, error: unknown): Promise<void>;
   reserve(request: {
     requestKey: string;
     extractionRequest: AiExtractionRequest;
@@ -79,9 +81,26 @@ export async function processDocument(
             extractionRequest,
           })
         : undefined;
-    const result = await options.provider.extract(extractionRequest);
+    let result: AiExtractionResult;
+    try {
+      result = await options.provider.extract(extractionRequest);
+    } catch (error) {
+      if (reservation && options.requestBudget) {
+        try {
+          await options.requestBudget.settleFailure(reservation, error);
+        } catch (settlementError) {
+          logger.error({ err: settlementError }, 'Failed to settle AI request reservation');
+        }
+      }
+      throw error;
+    }
     if (reservation && options.requestBudget) {
-      await options.requestBudget.reconcile(reservation, result.usage);
+      try {
+        await options.requestBudget.reconcile(reservation, result.usage);
+      } catch (error) {
+        if (!(error instanceof AiBudgetInvariantError)) throw error;
+        logger.error({ err: error }, 'AI usage exceeded the reserved budget bound');
+      }
     }
     const durationMs = Math.round(performance.now() - startMs);
     logger.info(
