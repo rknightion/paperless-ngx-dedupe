@@ -44,7 +44,10 @@ export const documentContent = sqliteTable(
     wordCount: integer('word_count').default(0),
     contentHash: text('content_hash'),
   },
-  (table) => [uniqueIndex('document_content_document_id_unique').on(table.documentId)],
+  (table) => [
+    uniqueIndex('document_content_document_id_unique').on(table.documentId),
+    index('document_content_document_word_count_idx').on(table.documentId, table.wordCount),
+  ],
 );
 
 export const documentSignature = sqliteTable(

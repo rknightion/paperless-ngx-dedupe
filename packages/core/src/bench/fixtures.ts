@@ -261,13 +261,14 @@ function seedSyntheticBenchmark(sqlite: Database.Database, documentCount: number
     for (let index = 1; index <= documentCount; index += 1) {
       if (index % 5 === 0) continue;
       const suffix = padded(index);
-      const text = `synthetic benchmark text ${index % 100} category ${index % 17}`;
+      const sentence = `synthetic benchmark text ${index % 100} category ${index % 17}`;
+      const text = `${sentence} `.repeat(Math.ceil(6000 / (sentence.length + 1))).trim();
       insertContent.run(
         `synthetic-content-${suffix}`,
         `synthetic-document-${suffix}`,
         text,
         text,
-        80 + (index % 9_000),
+        text.split(/\s+/).length,
         `synthetic-content-hash-${suffix}`,
       );
     }

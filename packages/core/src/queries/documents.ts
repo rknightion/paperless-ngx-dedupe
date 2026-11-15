@@ -82,12 +82,13 @@ function buildDocumentLibraryWhere(query: DocumentLibraryQuery): {
     const pattern = `%${escapeLike(query.text.toLowerCase())}%`;
     parameters.push(pattern, pattern, pattern, pattern);
   }
+  // SQLite otherwise prefers the unique document ID index and reads the large text row.
   if (query.missingOcr !== undefined) {
     const hasOcr = `EXISTS (
       SELECT 1
-      FROM document_content ocr_content
+      FROM document_content ocr_content INDEXED BY document_content_document_word_count_idx
       WHERE ocr_content.document_id = d.id
-        AND length(trim(coalesce(ocr_content.full_text, ''))) > 0
+        AND coalesce(ocr_content.word_count, 0) > 0
     )`;
     clauses.push(query.missingOcr ? `NOT ${hasOcr}` : hasOcr);
   }
@@ -266,9 +267,9 @@ export function listDocumentLibrary(
       `SELECT
         count(*) AS total,
         coalesce(sum(CASE WHEN NOT EXISTS (
-          SELECT 1 FROM document_content count_content
+          SELECT 1 FROM document_content count_content INDEXED BY document_content_document_word_count_idx
           WHERE count_content.document_id = d.id
-            AND length(trim(coalesce(count_content.full_text, ''))) > 0
+            AND coalesce(count_content.word_count, 0) > 0
         ) THEN 1 ELSE 0 END), 0) AS missingOcr,
         coalesce(sum(CASE WHEN EXISTS (
           SELECT 1 FROM duplicate_member count_duplicate
@@ -338,9 +339,9 @@ export function listDocumentLibraryRows(
         nullif(${documentLibraryAddedDateKeySql}, '') AS addedDate,
         d.processing_status AS processingStatus,
         EXISTS (
-          SELECT 1 FROM document_content item_content
+          SELECT 1 FROM document_content item_content INDEXED BY document_content_document_word_count_idx
           WHERE item_content.document_id = d.id
-            AND length(trim(coalesce(item_content.full_text, ''))) > 0
+            AND coalesce(item_content.word_count, 0) > 0
         ) AS hasOcr,
         (
           SELECT count(*) FROM duplicate_member item_duplicate

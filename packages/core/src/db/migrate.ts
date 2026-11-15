@@ -143,6 +143,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   ensureJobHistoryCompatibility(sqlite);
   ensureDocumentLibraryAddedDateIndex(sqlite);
   ensureCustomFieldPolicyCompatibility(sqlite);
+  repairCompatibilityIndexes(sqlite, DOCUMENT_CONTENT_INDEX_DEFINITIONS);
 
   // Read stored snapshot to enable incremental migration (ALTER TABLE ADD COLUMN)
   const storedSnapshotRow = sqlite
@@ -2110,3 +2111,18 @@ function migrateDeletedGroupArchives(sqlite: Database.Database): void {
     }
   })();
 }
+
+const DOCUMENT_CONTENT_INDEX_DEFINITIONS: readonly CompatibilityIndexDefinition[] = [
+  {
+    table: 'document_content',
+    name: 'document_content_document_word_count_idx',
+    unique: 0,
+    partial: 0,
+    columns: [
+      { name: 'document_id', desc: 0, coll: 'BINARY' },
+      { name: 'word_count', desc: 0, coll: 'BINARY' },
+    ],
+    createSql: `CREATE INDEX document_content_document_word_count_idx
+      ON document_content(document_id, word_count)`,
+  },
+];

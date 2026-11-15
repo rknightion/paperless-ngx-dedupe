@@ -18,6 +18,19 @@ describe('synthetic benchmark fixtures', () => {
     for (const fixture of fixtures.splice(0)) fixture.dispose();
   });
 
+  it('stores realistic overflow-page text and a matching word count', async () => {
+    const fixture = await createSyntheticBenchmarkFixture({ documentCount: 20 });
+    fixtures.push(fixture);
+    const rows = fixture.sqlite
+      .prepare('SELECT full_text, word_count FROM document_content')
+      .all() as { full_text: string; word_count: number }[];
+    expect(rows).toHaveLength(16);
+    for (const row of rows) {
+      expect(row.full_text.length).toBeGreaterThanOrEqual(5000);
+      expect(row.word_count).toBe(row.full_text.trim().split(/\s+/).length);
+    }
+  });
+
   it('creates a deterministic relational workload outside repository data', async () => {
     const first = await createSyntheticBenchmarkFixture({ documentCount: 120 });
     const second = await createSyntheticBenchmarkFixture({ documentCount: 120 });
