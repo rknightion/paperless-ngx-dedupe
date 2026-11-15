@@ -342,6 +342,7 @@ export async function processBatch(
         let lastErrorMsg = '';
         let circuitBroken = false;
         let circuitBreakerError: Error | undefined;
+        let fatalError: unknown;
         const throttle = new TpmThrottle();
         const retryQueue: typeof processableDocs = [];
         const MAX_RETRY_PASSES = 3;
@@ -594,7 +595,7 @@ export async function processBatch(
         const pending = new Set<Promise<void>>();
 
         for (let i = 0; i < processableDocs.length; i++) {
-          if (circuitBroken) break;
+          if (circuitBroken || fatalError !== undefined) break;
 
           // Wait for a concurrency slot
           if (pending.size >= maxConcurrency) {
@@ -602,14 +603,17 @@ export async function processBatch(
           }
 
           // Check again after awaiting — circuit breaker may have tripped
-          if (circuitBroken) break;
+          if (circuitBroken || fatalError !== undefined) break;
 
           const doc = processableDocs[i];
           const promise = processOne(doc);
           pending.add(promise);
           void promise.then(
             () => pending.delete(promise),
-            () => pending.delete(promise),
+            (error: unknown) => {
+              pending.delete(promise);
+              if (!(error instanceof AiBudgetPolicyError)) fatalError ??= error;
+            },
           );
 
           // Rate-limit: pause before launching the next request (throttle-aware)
@@ -621,9 +625,14 @@ export async function processBatch(
 
         // Drain remaining in-flight requests
         await Promise.allSettled(pending);
+        if (fatalError !== undefined) throw fatalError;
 
         // Retry rate-limited documents (up to MAX_RETRY_PASSES)
-        for (let pass = 0; pass < MAX_RETRY_PASSES && retryQueue.length > 0; pass++) {
+        for (
+          let pass = 0;
+          pass < MAX_RETRY_PASSES && retryQueue.length > 0 && fatalError === undefined;
+          pass++
+        ) {
           const retryDocs = retryQueue.splice(0);
 
           logger.info(
@@ -640,27 +649,33 @@ export async function processBatch(
           if (pauseDelay > 0) await sleep(pauseDelay);
 
           for (let i = 0; i < retryDocs.length; i++) {
-            if (circuitBroken) break;
+            if (circuitBroken || fatalError !== undefined) break;
 
             if (pending.size >= maxConcurrency) {
               await Promise.race(pending);
             }
-            if (circuitBroken) break;
+            if (circuitBroken || fatalError !== undefined) break;
 
             const delay = Math.max(throttle.getDelay(), intervalMs);
             if (delay > 0) await sleep(delay);
+            if (circuitBroken || fatalError !== undefined) break;
 
             const doc = retryDocs[i];
             const promise = processOne(doc);
             pending.add(promise);
             void promise.then(
               () => pending.delete(promise),
-              () => pending.delete(promise),
+              (error: unknown) => {
+                pending.delete(promise);
+                if (!(error instanceof AiBudgetPolicyError)) fatalError ??= error;
+              },
             );
           }
 
           await Promise.allSettled(pending);
         }
+
+        if (fatalError !== undefined) throw fatalError;
 
         // Record permanent failures for docs that exhausted all retry passes
         for (const doc of retryQueue) {
