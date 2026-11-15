@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { runWorkerTask } from '../worker-entry.js';
+import { CancellationError, runWorkerTask } from '../worker-entry.js';
+import { getJob } from '../manager.js';
 import type { ProgressCallback, WorkerContext } from '../worker-entry.js';
 import { PaperlessClient } from '../../paperless/client.js';
 import { PaperlessApiError, PaperlessConnectionError } from '../../paperless/errors.js';
@@ -205,6 +206,9 @@ export async function executeReviewedDuplicateDeletion(
         )
       ) {
         continue;
+      }
+      if (getJob(ctx.db, ctx.jobId)?.status === 'cancelled') {
+        throw new CancellationError('Job was cancelled');
       }
       let remoteOutcome: 'deleted' | 'already_missing';
       try {

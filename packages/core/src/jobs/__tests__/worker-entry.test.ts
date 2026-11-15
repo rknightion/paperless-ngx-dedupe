@@ -22,7 +22,13 @@ import {
   releaseWorkerClaimForRetry,
   runWorkerTaskWithData,
 } from '../worker-entry.js';
-import { consumeDispatchIntents, getDispatchIntent } from '../../scheduler/coordinator.js';
+import {
+  acquireOperation,
+  releaseOperation,
+  OperationConflictError,
+  consumeDispatchIntents,
+  getDispatchIntent,
+} from '../../scheduler/coordinator.js';
 
 describe('worker entry durable execution claim', () => {
   const temporaryDirectories: string[] = [];
@@ -284,6 +290,67 @@ describe('worker entry durable execution claim', () => {
       vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
     });
     afterEach(() => vi.useRealTimers());
+
+    it('immediately releases a pending cancellation lease without launching a worker', async () => {
+      const { db, sqlite } = await database();
+      try {
+        const jobId = createJob(db, JobType.SYNC);
+        expect(cancelJob(db, jobId)).toBe(true);
+        expect(() =>
+          acquireOperation(sqlite, 'analysis', 'pending-cancel-successor'),
+        ).not.toThrow();
+        releaseOperation(sqlite, 'pending-cancel-successor');
+        completeJob(db, jobId, { late: true }, 'never-claimed');
+        failJob(db, jobId, 'late failure', 'never-claimed');
+        expect(getJob(db, jobId)).toMatchObject({ status: 'cancelled', resultJson: null });
+      } finally {
+        sqlite.close();
+      }
+    });
+
+    it.each(['running', 'paused'] as const)(
+      'retains the lease while a cancelled %s task still executes',
+      async (status) => {
+        const { db, sqlite, databasePath } = await database();
+        try {
+          const jobId = createJob(db, JobType.SYNC);
+          let sideEffects = 0;
+          const conflictsAcquired: boolean[] = [];
+          let cancelled = false;
+          await runWorkerTaskWithData(
+            async (_context, onProgress) => {
+              for (let index = 0; index < 3; index++) {
+                await onProgress(index / 3);
+                sideEffects++;
+                if (index === 0) {
+                  if (status === 'paused') pauseJob(db, jobId);
+                  cancelled = cancelJob(db, jobId);
+                }
+                try {
+                  acquireOperation(sqlite, 'analysis', 'conflicting-owner');
+                  conflictsAcquired.push(true);
+                  releaseOperation(sqlite, 'conflicting-owner');
+                } catch (error) {
+                  if (!(error instanceof OperationConflictError)) throw error;
+                  conflictsAcquired.push(false);
+                }
+              }
+              return { ignoredAfterCancel: true };
+            },
+            { jobId, dbPath: databasePath, executionToken: 'cancel-window-owner' },
+          );
+          expect(cancelled).toBe(true);
+          // The existing two-second cooperative throttle still allows these local iterations.
+          expect(sideEffects).toBe(3);
+          expect(conflictsAcquired).toEqual([false, false, false]);
+          expect(getJob(db, jobId)).toMatchObject({ status: 'cancelled', resultJson: null });
+          expect(() => acquireOperation(sqlite, 'analysis', 'after-task-owner')).not.toThrow();
+          releaseOperation(sqlite, 'after-task-owner');
+        } finally {
+          sqlite.close();
+        }
+      },
+    );
 
     it('cancels during progress without storing a result', async () => {
       const { db, sqlite, databasePath } = await database();
