@@ -5,8 +5,11 @@ import {
   PaperlessClient,
   PaperlessMetricsCoordinator,
   parseConfig,
+  registerObservableGauges,
   toPaperlessConfig,
 } from '@paperless-dedupe/core';
+
+import { getGaugeStats } from '@paperless-dedupe/core/telemetry/gauge-stats';
 
 import { getDatabase } from '$lib/server/db';
 import { createJobDispatcher } from '$lib/server/job-dispatcher';
@@ -24,6 +27,20 @@ import {
 } from '$lib/server/runtime-lifecycle';
 
 const SCHEDULER_INTERVAL_MS = 5_000;
+
+function startAppGauges(runtime: ServerRuntime): void {
+  if (process.env.OTEL_ENABLED !== 'true' && process.env.OTEL_PROMETHEUS_ENABLED !== 'true') return;
+  let stats: ReturnType<typeof getGaugeStats> | undefined;
+  let collectedAt = 0;
+  registerObservableGauges(() => {
+    const now = Date.now();
+    if (!stats || now - collectedAt >= 15_000) {
+      stats = getGaugeStats(runtime.db);
+      collectedAt = now;
+    }
+    return stats;
+  });
+}
 
 function startMetrics(runtime: ServerRuntime): PaperlessMetricsCoordinator | undefined {
   const telemetryActive =
@@ -70,6 +87,7 @@ export function initializeServerRuntime(): Promise<ServerRuntime> {
 
     runtimeState.scheduler = startScheduler(runtime, SCHEDULER_INTERVAL_MS);
     runtimeState.metrics = startMetrics(runtime);
+    startAppGauges(runtime);
     registerRuntimeShutdownHandlers(runtimeState, runtime);
     logger.info('Server runtime initialized');
     return runtime;
