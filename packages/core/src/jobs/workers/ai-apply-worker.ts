@@ -29,6 +29,8 @@ runWorkerTask(async (ctx, onProgress) => {
   await onProgress(0, `Applying 0 of ${plan.resultIds.length}`);
   const result = await executeClaimedAiApplyPlan(ctx.db, client, plan, ctx.jobId, {
     processedTagName: aiConfig.processedTagName,
+    protectedTagsEnabled: aiConfig.protectedTagsEnabled,
+    protectedTagNames: aiConfig.protectedTagNames,
   });
   await onProgress(
     1,

@@ -506,6 +506,67 @@ describe('reviewed AI apply plans', () => {
     expect(JSON.stringify(claimed)).not.toContain('opaque-review-token');
   });
 
+  it('keeps live protected tags and excludes protected suggestions in a reviewed plan', async () => {
+    const client = createMockClient();
+    const live = await client.getDocument(1);
+    vi.mocked(client.getDocument).mockResolvedValue({ ...live, tags: [2] });
+    const preview = await createAiApplyPlan(
+      db,
+      client,
+      { type: 'selected_result_ids', resultIds: [resultId] },
+      {
+        title: false,
+        correspondent: false,
+        documentType: false,
+        tags: true,
+        processedTag: true,
+        customFieldIds: [],
+      },
+    );
+    const outcome = await executeClaimedAiApplyPlan(
+      db,
+      client,
+      claimAiMutationPlan(db, preview.token, 'ai_apply', 'protected-tags-job'),
+      'protected-tags-job',
+      { protectedTagsEnabled: true, protectedTagNames: ['SHOPPING', 'FINANCE', 'new-tag'] },
+    );
+
+    expect(outcome).toMatchObject({ applied: 1, conflicts: 0, failed: 0 });
+    expect(client.updateDocument).toHaveBeenCalledWith(1, { tags: [2, 99] });
+    expect(client.createTag).toHaveBeenCalledExactlyOnceWith('ai-processed');
+  });
+
+  it('uses the suggested tags unchanged when protection is disabled', async () => {
+    const client = createMockClient();
+    const live = await client.getDocument(1);
+    vi.mocked(client.getDocument).mockResolvedValue({ ...live, tags: [2] });
+    const preview = await createAiApplyPlan(
+      db,
+      client,
+      { type: 'selected_result_ids', resultIds: [resultId] },
+      {
+        title: false,
+        correspondent: false,
+        documentType: false,
+        tags: true,
+        processedTag: true,
+        customFieldIds: [],
+      },
+    );
+    const outcome = await executeClaimedAiApplyPlan(
+      db,
+      client,
+      claimAiMutationPlan(db, preview.token, 'ai_apply', 'protected-tags-job'),
+      'protected-tags-job',
+      { protectedTagsEnabled: false, protectedTagNames: ['SHOPPING', 'FINANCE', 'new-tag'] },
+    );
+
+    expect(outcome).toMatchObject({ applied: 1, conflicts: 0, failed: 0 });
+    expect(client.updateDocument).toHaveBeenCalledWith(1, { tags: [1, 99] });
+    expect(client.createTag).toHaveBeenCalledWith('new-tag');
+    expect(client.createTag).toHaveBeenCalledWith('ai-processed');
+  });
+
   it('creates and executes a newly reviewed plan after an apply conflict', async () => {
     db.update(aiProcessingResult)
       .set({ appliedStatus: 'failed', failureType: 'review_conflict' })

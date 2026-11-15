@@ -477,6 +477,8 @@ export async function executeClaimedAiApplyPlan(
   jobId: string,
   options: {
     processedTagName?: string;
+    protectedTagsEnabled?: boolean;
+    protectedTagNames?: string[];
     afterIntentPersisted?: (resultId: string) => void;
     afterRemoteMutation?: (resultId: string) => void;
   } = {},
@@ -568,6 +570,8 @@ export async function executeClaimedAiApplyPlan(
         createMissingEntities: plan.createMissingEntities,
         addProcessedTag: plan.selection.processedTag,
         processedTagName: options.processedTagName ?? 'ai-processed',
+        protectedTagsEnabled: options.protectedTagsEnabled,
+        protectedTagNames: options.protectedTagNames,
         customFieldIds: plan.selection.customFieldIds,
         liveDocument: live,
         auditFields,
