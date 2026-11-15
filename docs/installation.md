@@ -32,6 +32,11 @@ docker compose up -d
 
 Open `http://localhost:3000`.
 
+!!! warning "No built-in login"
+    The application has no built-in login, so anyone who can reach its port can use it with the
+    server's Paperless-NGX credential. Keep it on a trusted network or behind an authenticating
+    proxy; see the [access model](security.md#access-model) before exposing the port.
+
 ### Important URL Note
 
 If Paperless-NGX also runs in Docker, do not use `localhost` for `PAPERLESS_URL` unless both services are in the same container. Use a reachable container/service hostname (for example `http://paperless-ngx:8000`) on a shared Docker network.
