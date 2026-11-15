@@ -90,8 +90,9 @@ compromised-chain probes; the Node bundled trust store and operating-system stor
 
 ## Task interface
 
-`just check` (fmt-check, lint, typecheck, core and web unit tests) is the gate, and it is exactly what CI's
-`quality` and `unit-tests` jobs run.
+`just check` (fmt-check, lint, typecheck, core and web unit tests) is the gate. CI's `quality` and
+`unit-tests` jobs run the same recipes, and `unit-tests` additionally enforces the coverage thresholds
+in `packages/core/src/coverage-thresholds.ts`; run `just coverage` to check them locally.
 
 - E2E is deliberately outside `check`. CI runs it as a separate `e2e-tests` job, `just build` then
   `just test-e2e`, because Playwright needs both packages built first.

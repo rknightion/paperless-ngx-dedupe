@@ -82,6 +82,7 @@ graph TD
 | `pnpm build` | Build all packages in order: core, web |
 | `pnpm check` | TypeScript type-check all packages |
 | `pnpm test` | Run Vitest unit tests (core then web) |
+| `just coverage` | Run core unit tests with the coverage thresholds enforced by CI |
 | `pnpm test:e2e` | Run Playwright E2E tests (requires `pnpm build` first) |
 | `pnpm lint` | ESLint check |
 | `pnpm lint:fix` | ESLint auto-fix |
