@@ -198,6 +198,10 @@ Query params:
 - `type`: `sync | analysis | batch_operation | ai_processing | ai_apply | ai_revert | custom_field_discovery`
 - `status`: `pending | running | paused | completed | failed | cancelled`
 - `limit`: `1..200` in the legacy list mode, which returns a job array in `data`.
+- `active`: `true` returns only pending, running and paused jobs in the legacy list mode.
+  Any other present value returns `400 VALIDATION_FAILED`. It combines with `type` and
+  `status` by AND; a terminal status with `active=true` returns an empty array.
+  Cursor history mode is unchanged.
 
 Supplying `pageSize` or `cursor` selects cursor history mode. `pageSize` is an integer
 from 1 to 100, default 25; `cursor` is the opaque `meta.nextCursor` from the previous

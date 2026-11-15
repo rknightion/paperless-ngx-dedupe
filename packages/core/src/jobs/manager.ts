@@ -31,6 +31,7 @@ export class JobAlreadyRunningError extends Error {
 }
 
 export interface JobFilters {
+  active?: boolean;
   type?: JobType;
   status?: JobStatus;
   limit?: number;
@@ -188,6 +189,9 @@ export function listJobs(db: AppDatabase, filters?: JobFilters): LegacyJob[] {
   }
   if (filters?.status) {
     conditions.push(eq(job.status, filters.status));
+  }
+  if (filters?.active) {
+    conditions.push(inArray(job.status, ['pending', 'running', 'paused']));
   }
 
   const limit = filters?.limit ?? 50;

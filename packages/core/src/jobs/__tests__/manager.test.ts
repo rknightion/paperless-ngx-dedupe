@@ -132,6 +132,52 @@ describe('Job Manager', () => {
   });
 
   describe('listJobs', () => {
+    it('returns only the running job instead of its three completed predecessors', () => {
+      const ids = Array.from({ length: 4 }, (_, index) => {
+        const id = createJob(db, JobType.SYNC);
+        if (index < 3) completeJob(db, id);
+        return id;
+      });
+      db.update(jobTable).set({ status: 'running' }).where(eq(jobTable.id, ids[3])).run();
+      expect(listJobs(db, { active: true }).map(({ id }) => id)).toEqual([ids[3]]);
+      expect(
+        listJobs(db)
+          .map(({ id }) => id)
+          .sort(),
+      ).toEqual(ids.sort());
+    });
+
+    it('combines active lifecycle states with type and status filters', () => {
+      const statuses = ['pending', 'running', 'paused', 'completed', 'failed', 'cancelled'];
+      const types = [JobType.SYNC, JobType.ANALYSIS, JobType.BATCH_OPERATION];
+      db.insert(jobTable)
+        .values(
+          statuses.map((status, index) => ({
+            id: `filter-job-${index}`,
+            type: types[index % types.length],
+            status,
+            createdAt: `2030-01-01T00:00:0${index}.000Z`,
+          })),
+        )
+        .run();
+      expect(listJobs(db, { active: true }).map(({ status }) => status)).toEqual([
+        'paused',
+        'running',
+        'pending',
+      ]);
+      expect(listJobs(db, { active: true, type: JobType.ANALYSIS }).map(({ id }) => id)).toEqual([
+        'filter-job-1',
+      ]);
+      expect(listJobs(db, { active: true, status: JobStatus.PAUSED }).map(({ id }) => id)).toEqual([
+        'filter-job-2',
+      ]);
+      expect(listJobs(db, { active: true, status: JobStatus.COMPLETED })).toEqual([]);
+      expect(listJobs(db, { active: false })).toEqual(listJobs(db));
+      expect(listJobs(db, { status: JobStatus.COMPLETED }).map(({ id }) => id)).toEqual([
+        'filter-job-3',
+      ]);
+    });
+
     it('should return empty list when no jobs', () => {
       const jobs = listJobs(db);
       expect(jobs).toEqual([]);
