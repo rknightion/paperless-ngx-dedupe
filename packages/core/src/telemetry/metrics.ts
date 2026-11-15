@@ -6,6 +6,15 @@ function getMeter() {
   return metrics.getMeter(METER_NAME);
 }
 
+let _notificationsTotal: Counter | undefined;
+/** Count terminal delivery outcomes using bounded event and outcome labels. */
+export function notificationsTotal(): Counter {
+  return (_notificationsTotal ??= getMeter().createCounter(
+    'paperless_ngx_dedupe.notifications_total',
+    { description: 'Notification delivery outcomes', unit: '{notification}' },
+  ));
+}
+
 // --- Counters (lazy singletons) ---
 
 let _syncDocumentsTotal: Counter | undefined;

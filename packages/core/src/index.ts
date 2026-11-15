@@ -597,3 +597,6 @@ export {
 } from './ai/budget.js';
 export type { AiBudgetReservationView } from './ai/budget.js';
 export { clearAiResultHistory, replaceAiResultWithRevision } from './ai/history.js';
+export { sendNotification } from './notifications/send.js';
+export type { NotificationConfig, NotificationDelivery } from './notifications/send.js';
+export type { NotificationEvent } from './notifications/format.js';

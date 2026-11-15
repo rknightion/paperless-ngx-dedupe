@@ -1327,3 +1327,21 @@ The object contains `formatVersion: 1`, `versions: { application, build?, node }
 `database: { sqliteUserVersion, sizeBytes }`, and `recentOutcomes: [{ category, outcome, count }]`.
 The exact count and feature-flag keys are defined by `DiagnosticsBundle` in
 `packages/core/src/diagnostics/collect.ts`. No special validation errors are returned.
+
+## Notifications
+
+### POST /api/v1/notifications/test
+
+Sends a synthetic, zero-count `duplicates.new` event to the environment-owned notification destination.
+No body is required. Request bodies cannot override the destination or authorization header.
+The JSON format uses `test` for both `jobId` and `jobType`; no job is created.
+
+Returns HTTP 200 with `{ "data": { "delivered": true, "status": 204 } }` when delivery succeeds.
+`status` is the destination's HTTP response code, or `null` when no response was received.
+With `NOTIFY_URL` unset, the result is `{ "data": { "delivered": false, "status": null } }`
+and no outbound request is made. Delivery failures also return `delivered: false`.
+Neither the destination URL nor the authorization value is returned.
+
+Delivery uses at most three attempts with a ten-second timeout each. Retry delays start at
+one and four seconds, include bounded jitter, and honor `Retry-After` up to ten seconds.
+The total retry and timeout budget is at most fifty seconds.
