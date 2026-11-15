@@ -18,10 +18,12 @@ const HASH_KEY = 'dedup.lastAnalysisConfigHash';
  * duplicate groups may be incomplete or inaccurate and a full rebuild is needed.
  *
  * NOT included (handled separately):
- * - confidenceWeightJaccard/Fuzzy, discriminativePenaltyStrength — recalculated live
  * - autoAnalyze — behavioral flag, doesn't affect quality
  */
 const ANALYSIS_AFFECTING_FIELDS = [
+  'confidenceWeightFuzzy',
+  'confidenceWeightJaccard',
+  'discriminativePenaltyStrength',
   'fuzzySampleSize',
   'minWords',
   'ngramSize',

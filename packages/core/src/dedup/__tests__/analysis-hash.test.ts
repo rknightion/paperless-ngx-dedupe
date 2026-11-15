@@ -44,15 +44,14 @@ describe('computeAnalysisConfigHash', () => {
     expect(hash1).not.toBe(hash2);
   });
 
-  it('should produce same hash when only weights change (not analysis-affecting)', () => {
-    const hash1 = computeAnalysisConfigHash(DEFAULT_DEDUP_CONFIG);
-    const hash2 = computeAnalysisConfigHash({
-      ...DEFAULT_DEDUP_CONFIG,
-      confidenceWeightJaccard: 55,
-      confidenceWeightFuzzy: 45,
-      discriminativePenaltyStrength: 80,
-    });
-    expect(hash1).toBe(hash2);
+  it.each([
+    { confidenceWeightJaccard: 55 },
+    { confidenceWeightFuzzy: 45 },
+    { discriminativePenaltyStrength: 80 },
+  ])('should change the hash when a membership weight changes: %j', (change) => {
+    expect(computeAnalysisConfigHash({ ...DEFAULT_DEDUP_CONFIG, ...change })).not.toBe(
+      computeAnalysisConfigHash(DEFAULT_DEDUP_CONFIG),
+    );
   });
 
   it('should produce same hash when autoAnalyze changes (not analysis-affecting)', () => {
@@ -107,19 +106,14 @@ describe('checkAnalysisStaleness', () => {
     expect(result.reason).toBe('config_changed');
   });
 
-  it('should return not stale when only weights change (not analysis-affecting)', () => {
+  it.each([
+    { discriminativePenaltyStrength: 80 },
+    { confidenceWeightJaccard: 55, confidenceWeightFuzzy: 45 },
+  ])('should return stale when only weights change: %j', (change) => {
     const hash = computeAnalysisConfigHash(DEFAULT_DEDUP_CONFIG);
     saveAnalysisConfigHash(db, hash);
-
-    // Change only weights — not analysis-affecting
-    setDedupConfig(db, {
-      confidenceWeightJaccard: 55,
-      confidenceWeightFuzzy: 45,
-      discriminativePenaltyStrength: 80,
-    });
-
-    const result = checkAnalysisStaleness(db);
-    expect(result.isStale).toBe(false);
+    setDedupConfig(db, change);
+    expect(checkAnalysisStaleness(db)).toMatchObject({ isStale: true, reason: 'config_changed' });
   });
 
   it('should return stale when no hash exists but analysis has run before (upgrade path)', () => {
