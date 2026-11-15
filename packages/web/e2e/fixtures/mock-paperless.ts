@@ -1,7 +1,13 @@
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
 
 const PORT = 18923;
 const EXPECTED_TOKEN = 'test-token-e2e';
+const PREVIEW_PDF = readFileSync(new URL('./preview.pdf', import.meta.url));
+const THUMBNAIL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=',
+  'base64',
+);
 
 interface MockDocument {
   id: number;
@@ -154,6 +160,17 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
   // Auth check for all other routes
   if (!checkAuth(req)) {
     return jsonResponse(res, { detail: 'Authentication credentials were not provided.' }, 401);
+  }
+
+  const mediaMatch = path.match(/^\/api\/documents\/(\d+)\/(preview|thumb)\/$/);
+  if (mediaMatch && req.method === 'GET') {
+    if (!state.documents.some((document) => document.id === Number(mediaMatch[1]))) {
+      return jsonResponse(res, { detail: 'Not found.' }, 404);
+    }
+    const isPreview = mediaMatch[2] === 'preview';
+    res.writeHead(200, { 'Content-Type': isPreview ? 'application/pdf' : 'image/png' });
+    res.end(isPreview ? PREVIEW_PDF : THUMBNAIL_PNG);
+    return;
   }
 
   // GET /api/statistics/

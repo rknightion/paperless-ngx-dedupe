@@ -42,7 +42,7 @@ export const GET: RequestHandler = async ({ params, locals, request }) => {
         ...(contentType === 'application/octet-stream'
           ? { 'Content-Disposition': 'attachment' }
           : {}),
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'private, max-age=3600',
       },
     });
   } catch {

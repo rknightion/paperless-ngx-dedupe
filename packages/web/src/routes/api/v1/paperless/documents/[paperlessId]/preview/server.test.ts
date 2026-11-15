@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createPaperlessMediaUrl } from '$lib/server/paperless-auth';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GET } from './+server';
 
@@ -8,14 +8,6 @@ const config = {
   PAPERLESS_USERNAME: '',
   PAPERLESS_PASSWORD: '',
 } as App.Locals['config'];
-
-function previewAccessFor(paperlessId: number): string {
-  const expiresAt = Date.now() + 60_000;
-  const signature = createHmac('sha256', 'Token paperless-secret')
-    .update(`${paperlessId}:preview:${expiresAt}`)
-    .digest('base64url');
-  return `${expiresAt}.${signature}`;
-}
 
 describe('Paperless preview proxy', () => {
   afterEach(() => {
@@ -31,12 +23,12 @@ describe('Paperless preview proxy', () => {
         }),
       ),
     );
-    const access = previewAccessFor(42);
+    const url = createPaperlessMediaUrl(42, 'preview');
 
     const response = await GET({
       params: { paperlessId: '42' },
       locals: { config },
-      request: new Request(`http://localhost/preview?access=${access}`),
+      request: new Request(new URL(url, 'http://localhost')),
     } as never);
 
     expect(response.status).toBe(200);
