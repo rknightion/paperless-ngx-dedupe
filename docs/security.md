@@ -94,11 +94,15 @@ require, the AI path above.
 
 ## Network exposure
 
-- `CORS_ALLOW_ORIGIN` defaults to empty (same-origin only). Setting it to `*` allows
-  cross-origin requests to the API — only do this if you understand the exposure. See
-  [Configuration — Core Runtime](configuration.md#core-runtime).
-- SvelteKit's CSRF protection requires `ORIGIN` to match the URL users access the app at,
-  particularly behind a reverse proxy. See [Troubleshooting — ORIGIN environment
+- `CORS_ALLOW_ORIGIN` defaults to empty (same-origin only). Setting it to `*` permits
+  cross-origin reads; state-changing requests require the same origin or an explicitly
+  configured origin, and requests marked cross-site are rejected. See
+  [Configuration core runtime](configuration.md#core-runtime).
+- SvelteKit checks form submissions. Shared API validation also checks state-changing requests
+  and requires `Content-Type: application/json` when they have a body. Automation may omit
+  `Origin` and `Sec-Fetch-Site` headers.
+- Set `ORIGIN` to the URL users access, particularly behind a reverse proxy. When configured,
+  API requests must use its host and port. See [Troubleshooting ORIGIN environment
   variable](troubleshooting.md#origin-environment-variable).
 - If your Paperless-NGX instance uses a self-signed certificate, setting
   `NODE_TLS_REJECT_UNAUTHORIZED=0` to bypass the resulting Node.js TLS error is explicitly
