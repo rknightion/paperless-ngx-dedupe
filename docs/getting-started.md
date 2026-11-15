@@ -41,7 +41,7 @@ Once sync completes, click **Analyze** to run the deduplication pipeline. This:
 - Scores candidates using Jaccard and fuzzy text similarity with a discriminative penalty
 - Groups duplicates using union-find clustering
 
-If the **autoAnalyze** option is enabled (the default), analysis runs automatically after each sync.
+Start analysis from the dashboard, or enable the Analysis schedule in Settings > Automation to run it automatically after each sync.
 
 ### 5. Review Duplicates
 

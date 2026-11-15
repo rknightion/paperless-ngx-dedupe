@@ -126,11 +126,49 @@ test.describe('Settings Page', () => {
     await expect(page.locator('#ngram-size')).toBeVisible();
     await expect(page.locator('#min-words')).toBeVisible();
     await expect(page.locator('#fuzzy-sample')).toBeVisible();
-    await expect(page.getByText('Auto-analyze after sync')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Auto-analyze after sync' })).toHaveCount(0);
+    await expect(
+      page.getByText('To run analysis after each sync, enable the Analysis schedule under'),
+    ).toBeVisible();
 
     // Click hide advanced
     await page.getByRole('button', { name: 'Hide Advanced Settings' }).click();
     await expect(page.locator('#num-perms')).not.toBeVisible();
+  });
+
+  test('deprecated autoAnalyze round trips while the settings form still saves', async ({
+    page,
+    request,
+  }) => {
+    const original = (await (await request.get('/api/v1/config/dedup')).json()).data;
+    try {
+      const update = await request.put('/api/v1/config/dedup', {
+        data: { ...original, autoAnalyze: false },
+      });
+      expect(update.ok()).toBe(true);
+      expect((await (await request.get('/api/v1/config/dedup')).json()).data.autoAnalyze).toBe(
+        false,
+      );
+      await page.goto('/settings');
+      await page.getByRole('tab', { name: 'Deduplication' }).click();
+      const saved = page.waitForResponse(
+        (r) => r.url().endsWith('/api/v1/config/dedup') && r.request().method() === 'PUT',
+      );
+      await page.getByRole('button', { name: 'Save Configuration' }).click();
+      expect((await saved).ok()).toBe(true);
+      expect((await (await request.get('/api/v1/config/dedup')).json()).data.autoAnalyze).toBe(
+        false,
+      );
+      await page.locator('#dedup').getByRole('button', { name: 'Show Advanced Settings' }).click();
+      await expect(page.getByRole('checkbox', { name: 'Auto-analyze after sync' })).toHaveCount(0);
+      await page.locator('#dedup').getByRole('link', { name: 'Automation', exact: true }).click();
+      await expect(page.getByRole('tab', { name: 'Automation', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+    } finally {
+      await request.put('/api/v1/config/dedup', { data: original });
+    }
   });
 
   test('system information section renders', async ({ page }) => {

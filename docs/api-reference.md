@@ -318,6 +318,8 @@ Legacy field name `confidenceWeightDiscriminative` is accepted and automatically
 }
 ```
 
+`autoAnalyze` is deprecated and ignored; use the Analysis schedule in Settings > Automation.
+
 ## Documents
 
 ### GET /api/v1/documents
