@@ -1,4 +1,4 @@
-import { eq, and, or, desc, lt, sql } from 'drizzle-orm';
+import { eq, and, or, desc, lt, sql, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type Database from 'better-sqlite3';
 
@@ -366,7 +366,11 @@ export function completeJob(
       .from(job)
       .where(
         executionToken
-          ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+          ? and(
+              eq(job.id, id),
+              inArray(job.status, ['running', 'paused']),
+              eq(job.executionToken, executionToken),
+            )
           : eq(job.id, id),
       )
       .get();
@@ -383,7 +387,11 @@ export function completeJob(
       })
       .where(
         executionToken
-          ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+          ? and(
+              eq(job.id, id),
+              inArray(job.status, ['running', 'paused']),
+              eq(job.executionToken, executionToken),
+            )
           : eq(job.id, id),
       )
       .run();
@@ -443,7 +451,11 @@ export function failJob(db: AppDatabase, id: string, error: string, executionTok
     .from(job)
     .where(
       executionToken
-        ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+        ? and(
+            eq(job.id, id),
+            inArray(job.status, ['running', 'paused']),
+            eq(job.executionToken, executionToken),
+          )
         : eq(job.id, id),
     )
     .get();
@@ -474,7 +486,11 @@ export function failJob(db: AppDatabase, id: string, error: string, executionTok
         })
         .where(
           executionToken
-            ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+            ? and(
+                eq(job.id, id),
+                inArray(job.status, ['running', 'paused']),
+                eq(job.executionToken, executionToken),
+              )
             : eq(job.id, id),
         )
         .run();
@@ -508,7 +524,11 @@ export function failJob(db: AppDatabase, id: string, error: string, executionTok
       })
       .where(
         executionToken
-          ? and(eq(job.id, id), eq(job.status, 'running'), eq(job.executionToken, executionToken))
+          ? and(
+              eq(job.id, id),
+              inArray(job.status, ['running', 'paused']),
+              eq(job.executionToken, executionToken),
+            )
           : eq(job.id, id),
       )
       .run();

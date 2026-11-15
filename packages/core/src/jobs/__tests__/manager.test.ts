@@ -13,12 +13,15 @@ import {
   completeJob,
   failJob,
   cancelJob,
+  pauseJob,
+  resumeJob,
   recoverStaleJobs,
   clearJobHistory,
   retryDeadLetterJob,
   JobAlreadyRunningError,
   type JobHistoryQuery,
 } from '../manager.js';
+import { claimWorkerJob } from '../worker-entry.js';
 import { JobType, JobStatus } from '../../types/enums.js';
 import { job as jobTable } from '../../schema/sqlite/jobs.js';
 import { dispatchIntent, operationLease } from '../../schema/sqlite/automation.js';
@@ -589,6 +592,101 @@ describe('Job Manager', () => {
       expect(getJob(db, id)!.progress).toBe(1);
       updateJobProgress(db, id, -0.5);
       expect(getJob(db, id)!.progress).toBe(0);
+    });
+  });
+
+  describe('worker outcomes after pause', () => {
+    function claimedJob(): { id: string; token: string } {
+      const id = createJob(db, JobType.ANALYSIS);
+      const token = 'synthetic-worker-token';
+      const sqlite = (db as unknown as { $client: Database.Database }).$client;
+      expect(claimWorkerJob(sqlite, id, token)).toBe(true);
+      updateJobProgress(db, id, 0.75, 'Last progress check', undefined, token);
+      expect(pauseJob(db, id)).toBe(true);
+      return { id, token };
+    }
+
+    it('completes a job that was paused after its last progress check', () => {
+      const { id, token } = claimedJob();
+      expect(() => createJob(db, JobType.SYNC)).toThrow(JobAlreadyRunningError);
+      completeJob(db, id, { count: 42 }, token);
+      expect(getJob(db, id)).toMatchObject({
+        status: 'completed',
+        progress: 1,
+        executionToken: null,
+        resultJson: '{"count":42}',
+        completedAt: expect.any(String),
+      });
+      expect(db.select().from(operationLease).where(eq(operationLease.ownerId, id)).all()).toEqual(
+        [],
+      );
+      expect(createJob(db, JobType.SYNC)).toEqual(expect.any(String));
+    });
+
+    it.each([
+      ['invalid configuration', 'failed', 0, 'dead_letter', 'automated_retry_not_allowed'],
+      ['Paperless network timeout', 'pending', 1, 'pending', null],
+    ] as const)(
+      'records a paused worker failure: %s',
+      (error, status, attempt, intentStatus, reason) => {
+        const { id, token } = claimedJob();
+        failJob(db, id, error, token);
+        const row = getJob(db, id)!;
+        expect(row).toMatchObject({
+          status,
+          attempt,
+          errorMessage: error,
+          executionToken: null,
+          terminalReason: reason,
+        });
+        expect(
+          db.select().from(dispatchIntent).where(eq(dispatchIntent.jobId, id)).get(),
+        ).toMatchObject({ status: intentStatus });
+        const leases = db.select().from(operationLease).where(eq(operationLease.ownerId, id)).all();
+        if (status === 'pending') {
+          expect(row.completedAt).toBeNull();
+          expect(row.nextAttemptAt).toEqual(expect.any(String));
+          expect(leases).toHaveLength(1);
+        } else {
+          expect(row.completedAt).toEqual(expect.any(String));
+          expect(leases).toEqual([]);
+          expect(createJob(db, JobType.SYNC)).toEqual(expect.any(String));
+        }
+      },
+    );
+
+    it.each(['cancelled', 'wrong token'] as const)('ignores late outcomes with %s', (condition) => {
+      const { id, token } = claimedJob();
+      if (condition === 'cancelled') expect(cancelJob(db, id)).toBe(true);
+      const outcomeToken = condition === 'wrong token' ? 'different-worker-token' : token;
+      const before = getJob(db, id);
+      const leases = db.select().from(operationLease).all();
+      const intents = db.select().from(dispatchIntent).all();
+      completeJob(db, id, { count: 42 }, outcomeToken);
+      failJob(db, id, 'Paperless network timeout', outcomeToken);
+      failJob(db, id, 'invalid configuration', outcomeToken);
+      expect(getJob(db, id)).toEqual(before);
+      expect(db.select().from(operationLease).all()).toEqual(leases);
+      expect(db.select().from(dispatchIntent).all()).toEqual(intents);
+    });
+
+    it('still pauses progress until the same worker resumes', () => {
+      const { id, token } = claimedJob();
+      updateJobProgress(db, id, 0.9, 'Paused progress', undefined, token);
+      expect(getJob(db, id)).toMatchObject({
+        status: 'paused',
+        progress: 0.75,
+        executionToken: token,
+      });
+      expect(resumeJob(db, id)).toBe(true);
+      updateJobProgress(db, id, 0.9, 'Resumed progress', undefined, token);
+      expect(getJob(db, id)).toMatchObject({
+        status: 'running',
+        progress: 0.9,
+        executionToken: token,
+      });
+      completeJob(db, id, { count: 42 }, token);
+      expect(getJob(db, id)!.status).toBe('completed');
     });
   });
 
