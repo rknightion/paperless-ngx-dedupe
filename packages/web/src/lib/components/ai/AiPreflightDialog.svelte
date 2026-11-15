@@ -38,6 +38,7 @@
       (totalNewEntities > 0 ||
         preflight.lowConfidenceCount > 0 ||
         preflight.destructiveClearCount > 0 ||
+        preflight.tagsRemoved > 0 ||
         preflight.noOpCount > 0),
   );
 
@@ -228,6 +229,16 @@
                     : 's'} will be cleared
                 </li>
               {/if}
+              {#if preflight.tagsRemoved > 0}
+                <li>
+                  Removes {preflight.tagsRemoved} existing tag{preflight.tagsRemoved === 1
+                    ? ''
+                    : 's'}
+                  from {preflight.documentsLosingTags} document{preflight.documentsLosingTags === 1
+                    ? ''
+                    : 's'}
+                </li>
+              {/if}
               {#if preflight.noOpCount > 0}
                 <li>
                   {preflight.noOpCount} result{preflight.noOpCount === 1 ? '' : 's'}
@@ -251,7 +262,7 @@
         </button>
         <button
           onclick={onconfirm}
-          class="rounded-lg px-4 py-2 text-sm font-medium text-white {hasWarnings
+          class="text-on-accent rounded-lg px-4 py-2 text-sm font-medium {hasWarnings
             ? 'bg-ember hover:opacity-90'
             : 'bg-accent hover:bg-accent-hover'}"
         >
