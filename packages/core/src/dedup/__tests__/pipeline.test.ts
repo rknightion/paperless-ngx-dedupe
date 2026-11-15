@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
@@ -6,6 +6,9 @@ import { document, documentContent, documentSignature } from '../../schema/sqlit
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { eq } from 'drizzle-orm';
 import { runAnalysis } from '../analyze.js';
+import { setDedupConfig } from '../config.js';
+import { LSHIndex } from '../lsh.js';
+import { MinHash } from '../minhash.js';
 
 let db: AppDatabase;
 
@@ -57,6 +60,112 @@ function generateText(basePhrase: string, repetitions: number): string {
 }
 
 describe('runAnalysis pipeline', () => {
+  it('counts all template candidates without retaining below-filter pair keys', async () => {
+    setDedupConfig(db, {
+      numPermutations: 64,
+      numBands: 64,
+      similarityThreshold: 0.8,
+      confidenceWeightJaccard: 100,
+      confidenceWeightFuzzy: 0,
+      discriminativePenaltyStrength: 0,
+    });
+    for (let i = 0; i < 400; i++) {
+      const changed = i < 300 ? 16 : 120;
+      const text = Array.from({ length: 400 }, (_, word) =>
+        word < changed ? `variant${i}word${word}` : `templateword${word}`,
+      ).join(' ');
+      seedDocument(db, i + 1, `Template ${i}`, text);
+    }
+    let searching = false;
+    let retainedPairKeys = 0;
+    const originalSet = Map.prototype.set;
+    const spy = vi.spyOn(Map.prototype, 'set').mockImplementation(function (
+      this: Map<unknown, unknown>,
+      key,
+      value,
+    ) {
+      if (searching && typeof key === 'string' && /^[A-Za-z0-9_-]+\|[A-Za-z0-9_-]+$/.test(key))
+        retainedPairKeys++;
+      return originalSet.call(this, key, value);
+    });
+    let result;
+    try {
+      result = await runAnalysis(db, {
+        force: true,
+        onProgress: async (_progress, message) => {
+          if (message === 'Finding candidate pairs...') searching = true;
+          if (message === 'Scoring candidate pairs...') searching = false;
+        },
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    const index = new LSHIndex(64, 64);
+    const signatures = new Map<string, Uint32Array>();
+    for (const row of db.select().from(documentSignature).all()) {
+      const bytes = row.minhashSignature!;
+      const signature = new Uint32Array(
+        bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      );
+      signatures.set(row.documentId, signature);
+      index.insert(row.documentId, signature);
+    }
+    let count = 0;
+    let passingFilter = 0;
+    for (const [id, signature] of signatures) {
+      for (const candidate of index.getCandidates(signature)) {
+        if (candidate <= id) continue;
+        count++;
+        if (MinHash.jaccardFromArrays(signature, signatures.get(candidate)!) >= 0.8 * 0.8)
+          passingFilter++;
+      }
+    }
+    expect(passingFilter).toBeGreaterThan(0);
+    expect(passingFilter).toBeLessThan(count);
+    expect(result.candidatePairsFound).toBe(count);
+    expect(retainedPairKeys).toBe(0);
+  }, 30_000);
+
+  it('preserves candidate counts and group scores when incremental closure expands backwards', async () => {
+    const text = (offset: number) =>
+      Array.from({ length: 400 }, (_, i) => `word${(i + offset).toString(36)}`).join(' ');
+    const ids = [0, 40, 80].map((offset, i) =>
+      seedDocument(db, i + 1, `Document ${i + 1}`, text(offset)),
+    );
+    const forced = await runAnalysis(db, { force: true });
+    const snapshot = () =>
+      db
+        .select()
+        .from(duplicateGroup)
+        .all()
+        .map((group) => ({
+          members: db
+            .select()
+            .from(duplicateMember)
+            .where(eq(duplicateMember.groupId, group.id))
+            .all()
+            .map((member) => member.documentId)
+            .sort(),
+          confidenceScore: group.confidenceScore,
+          jaccardSimilarity: group.jaccardSimilarity,
+          fuzzyTextRatio: group.fuzzyTextRatio,
+          status: group.status,
+        }));
+    const expected = snapshot();
+    expect(expected).toHaveLength(1);
+    expect(expected[0].members).toEqual([...ids].sort());
+    db.update(document)
+      .set({ processingStatus: 'pending' })
+      .where(eq(document.id, [...ids].sort().at(-1)!))
+      .run();
+    const incremental = await runAnalysis(db);
+    expect(incremental.candidatePairsFound).toBe(forced.candidatePairsFound);
+    expect(incremental.candidatePairsScored).toBe(forced.candidatePairsScored);
+    expect(snapshot()).toEqual(expected);
+    await runAnalysis(db, { force: true });
+    expect(snapshot()).toEqual(expected);
+  });
+
   it('should return zeroed result for empty database', async () => {
     const result = await runAnalysis(db);
 
