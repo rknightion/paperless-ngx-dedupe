@@ -10,6 +10,10 @@ const configSchema = z
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
     CORS_ALLOW_ORIGIN: z.string().default(''),
+    ORIGIN: z.string().optional(),
+    NOTIFY_URL: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
+    NOTIFY_FORMAT: z.enum(['json', 'ntfy', 'apprise']).default('json'),
+    NOTIFY_AUTH_HEADER: z.string().optional(),
     AUTO_MIGRATE: z
       .string()
       .default('true')
