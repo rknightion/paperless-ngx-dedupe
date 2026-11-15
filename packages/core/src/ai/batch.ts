@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { document, documentContent } from '../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { type PaperlessClient } from '../paperless/client.js';
@@ -275,6 +275,35 @@ export async function processBatch(
 
         await onProgress?.(0, `Starting AI processing of ${totalDocs} documents...`);
 
+        const appliedDocumentIds = new Set<string>();
+        for (let offset = 0; offset < docs.length; offset += 400) {
+          const selectedIds = docs.slice(offset, offset + 400).map((doc) => doc.id);
+          const applied = db
+            .select({ documentId: aiProcessingResult.documentId })
+            .from(aiProcessingResult)
+            .where(
+              and(
+                inArray(aiProcessingResult.documentId, selectedIds),
+                inArray(aiProcessingResult.appliedStatus, ['applied', 'partial']),
+              ),
+            )
+            .all();
+          for (const row of applied) appliedDocumentIds.add(row.documentId);
+        }
+        if (appliedDocumentIds.size > 0) {
+          docs = docs.filter((doc) => !appliedDocumentIds.has(doc.id));
+          result.skipped += appliedDocumentIds.size;
+          result.processed += appliedDocumentIds.size;
+          logger.info(
+            { count: appliedDocumentIds.size },
+            'Skipped applied AI results until reverted',
+          );
+          await onProgress?.(
+            result.processed / totalDocs,
+            `Skipped ${appliedDocumentIds.size} applied results`,
+          );
+        }
+
         // Pre-partition: handle skipped docs (no content) upfront
         const processableDocs: typeof docs = [];
         const now = new Date().toISOString();
@@ -325,10 +354,11 @@ export async function processBatch(
           }
         }
 
-        if (result.skipped > 0) {
+        const noContentCount = result.skipped - appliedDocumentIds.size;
+        if (noContentCount > 0) {
           await onProgress?.(
             result.processed / totalDocs,
-            `Skipped ${result.skipped} documents with no content`,
+            `Skipped ${noContentCount} documents with no content`,
           );
         }
 

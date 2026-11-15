@@ -38,6 +38,9 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
 
     return apiSuccess({ reprocessed: true, resultId: result.resultId });
   } catch (error) {
+    if (error instanceof Error && error.name === 'AiResultNotReprocessableError') {
+      return apiError(ErrorCode.CONFLICT, { operation: 'ai_reprocess', retryable: false });
+    }
     if (error instanceof CustomFieldPolicyError) {
       return apiError(
         ErrorCode.CONFLICT,

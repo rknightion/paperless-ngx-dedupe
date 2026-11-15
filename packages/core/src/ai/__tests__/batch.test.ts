@@ -12,6 +12,7 @@ import type { PaperlessClient } from '../../paperless/client.js';
 import { DEFAULT_AI_CONFIG } from '../types.js';
 import type { AiConfig } from '../types.js';
 import { AiBudgetExceededError, UnknownAiModelPricingError } from '../budget.js';
+import { resolveProcessScope, type ProcessScope } from '../scopes.js';
 import { replaceCustomFieldPolicy } from '../custom-field-policy.js';
 
 vi.mock('../../telemetry/spans.js', () => ({
@@ -125,6 +126,63 @@ describe('processBatch', () => {
     db = handle.db;
     sqlite = handle.sqlite;
     await migrateDatabase(handle.sqlite);
+  });
+
+  it.each([
+    'full_reprocess',
+    'selected_document_ids',
+    'current_filter',
+    'failed_only',
+    'sync_generation',
+  ] as const)('preserves applied snapshots in %s without provider requests', async (scopeType) => {
+    seedDocs(db);
+    const ids = ['doc-1', 'doc-2', 'doc-3'];
+    db.update(document).set({ lastChangedBySyncGenerationId: 'changed-generation' }).run();
+    for (const [index, id] of ids.entries()) {
+      db.insert(aiProcessingResult)
+        .values({
+          id: `protected-${index}`,
+          documentId: id,
+          paperlessId: index + 1,
+          provider: 'openai',
+          model: 'synthetic',
+          appliedStatus: index === 1 ? 'partial' : 'applied',
+          preApplyTitle: 'Original title',
+          appliedTitle: 'AI title',
+          appliedFieldsJson: '["title"]',
+          createdAt: '2026-01-01T00:00:00Z',
+        })
+        .run();
+    }
+    const before = db.select().from(aiProcessingResult).all();
+    const provider = createMockProvider();
+    const scope: ProcessScope =
+      scopeType === 'selected_document_ids'
+        ? { type: scopeType, documentIds: ids }
+        : scopeType === 'current_filter'
+          ? { type: scopeType, filters: {} }
+          : { type: scopeType === 'sync_generation' ? 'full_reprocess' : scopeType };
+    const selection =
+      scopeType === 'sync_generation'
+        ? { syncGenerationId: 'changed-generation' }
+        : resolveProcessScope(db, scope);
+    const result = await processBatch(db, {
+      provider,
+      client: createMockClient(),
+      config,
+      ...selection,
+    });
+    expect(db.select().from(aiProcessingResult).all()).toEqual(before);
+    expect(db.select().from(aiResultRevision).all()).toEqual([]);
+    expect(provider.extract).not.toHaveBeenCalled();
+    const selected = scopeType === 'failed_only' ? 0 : 3;
+    expect(result).toMatchObject({
+      totalDocuments: selected,
+      processed: selected,
+      skipped: selected,
+      succeeded: 0,
+      failed: 0,
+    });
   });
 
   it('stops an unsaturated batch when progress reports cancellation', async () => {
@@ -488,7 +546,7 @@ describe('processBatch', () => {
     expect(result.skipped).toBe(1);
   });
 
-  it('processes all docs with reprocess=true', async () => {
+  it('processes eligible docs and preserves applied results with reprocess=true', async () => {
     seedDocs(db);
     const provider = createMockProvider();
     const client = createMockClient();
@@ -508,10 +566,14 @@ describe('processBatch', () => {
 
     const result = await processBatch(db, { provider, client, config, reprocess: true });
 
-    // With reprocess, doc-1 should be included again
+    // Applied doc-1 and content-free doc-3 are skipped; doc-2 gets fresh suggestions.
     expect(result.totalDocuments).toBe(3);
-    expect(result.succeeded).toBe(2);
-    expect(result.skipped).toBe(1);
+    expect(result.succeeded).toBe(1);
+    expect(result.skipped).toBe(2);
+    expect(provider.extract).toHaveBeenCalledTimes(1);
+    expect(
+      db.select().from(aiProcessingResult).where(eq(aiProcessingResult.documentId, 'doc-1')).get(),
+    ).toMatchObject({ appliedStatus: 'applied', suggestedCorrespondent: 'Amazon' });
   });
 
   it('snapshots prior results for success, failure, and skipped replacements', async () => {
