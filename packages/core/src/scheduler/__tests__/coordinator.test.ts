@@ -796,6 +796,71 @@ describe('schedule coordinator durable claims', () => {
     ).toEqual({ nextDueAt: '2026-07-23T14:00:00.000Z' });
   });
 
+  it('does not re-create a completed dependency after job history is cleared', () => {
+    const now = new Date('2026-07-23T12:00:00.000Z');
+    seedDueSyncAndAnalysis(now);
+    const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    tagDurablyChangedDocument(syncIntent.jobId!, now);
+    completeJob(db, syncIntent.jobId!, { inserted: 1, updated: 0 });
+    const [analysis] = enqueueDueSchedules(sqlite, new Date(now.getTime() + 1000));
+    expect(analysis.task).toBe('analysis');
+    completeJob(db, analysis.jobId!);
+    expect(clearJobHistory(db)).toBe(1);
+    expect(enqueueDueSchedules(sqlite, new Date(now.getTime() + 2000))).toEqual([]);
+    expect(
+      sqlite
+        .prepare('SELECT status FROM sync_change_generation WHERE sync_job_id = ?')
+        .get(syncIntent.jobId),
+    ).toEqual({ status: 'consumed' });
+  });
+
+  it('consumes only after both enabled dependencies are claimed despite conflicts', () => {
+    const now = new Date('2026-07-23T12:00:00.000Z');
+    seedDueSyncAndAnalysis(now);
+    sqlite
+      .prepare(
+        `INSERT INTO automation_schedule
+      (id, task, enabled, cadence_json, timezone, next_due_at, created_at, updated_at)
+      VALUES ('ai-schedule', 'ai_processing', 1, ?, 'UTC', ?, ?, ?)`,
+      )
+      .run(
+        JSON.stringify({ kind: 'daily', hour: 12, minute: 0 }),
+        '2026-07-24T12:00:00.000Z',
+        now.toISOString(),
+        now.toISOString(),
+      );
+    const [syncIntent] = enqueueDueSchedules(sqlite, now);
+    tagDurablyChangedDocument(syncIntent.jobId!, now);
+    completeJob(db, syncIntent.jobId!, { inserted: 1, updated: 0 });
+    const generation = sqlite
+      .prepare('SELECT id FROM sync_change_generation WHERE sync_job_id = ?')
+      .get(syncIntent.jobId) as { id: string };
+    const status = () =>
+      sqlite.prepare('SELECT status FROM sync_change_generation WHERE id = ?').get(generation.id);
+    const blocker = createJob(db, JobType.ANALYSIS);
+    expect(enqueueDueSchedules(sqlite, new Date(now.getTime() + 1000))).toEqual([]);
+    expect(status()).toEqual({ status: 'ready' });
+    completeJob(db, blocker);
+    const first = enqueueDueSchedules(sqlite, new Date(now.getTime() + 2000));
+    expect(first).toHaveLength(1);
+    expect(status()).toEqual({ status: 'ready' });
+    completeJob(db, first[0].jobId!);
+    const second = enqueueDueSchedules(sqlite, new Date(now.getTime() + 3000));
+    expect(second).toHaveLength(1);
+    const children = [...first, ...second];
+    expect(children.map((child) => child.task).sort()).toEqual(['ai_processing', 'analysis']);
+    for (const child of children) {
+      expect(child.parentJobId).toBe(syncIntent.jobId);
+      expect(getDispatchIntent(sqlite, child.id).taskData).toEqual({
+        syncGenerationId: generation.id,
+      });
+    }
+    expect(status()).toEqual({ status: 'consumed' });
+    completeJob(db, second[0].jobId!);
+    clearJobHistory(db);
+    expect(enqueueDueSchedules(sqlite, new Date(now.getTime() + 4000))).toEqual([]);
+  });
+
   it('keeps a changed-sync dependency fact after job history cleanup and a scheduler restart', () => {
     const now = new Date('2026-07-23T12:00:00.000Z');
     const insertSchedule = sqlite.prepare(
