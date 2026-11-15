@@ -152,7 +152,7 @@ export async function processBatch(
               documentType: document.documentType,
               tagsJson: document.tagsJson,
               customFieldsJson: document.customFieldsJson,
-              fullText: documentContent.fullText,
+              hasContent: sql<number>`COALESCE(length(${documentContent.fullText}), 0) > 0`,
             })
             .from(document)
             .leftJoin(documentContent, eq(document.id, documentContent.documentId))
@@ -183,7 +183,7 @@ export async function processBatch(
                     documentType: document.documentType,
                     tagsJson: document.tagsJson,
                     customFieldsJson: document.customFieldsJson,
-                    fullText: documentContent.fullText,
+                    hasContent: sql<number>`COALESCE(length(${documentContent.fullText}), 0) > 0`,
                   })
                   .from(document)
                   .leftJoin(documentContent, eq(document.id, documentContent.documentId))
@@ -205,7 +205,7 @@ export async function processBatch(
               documentType: document.documentType,
               tagsJson: document.tagsJson,
               customFieldsJson: document.customFieldsJson,
-              fullText: documentContent.fullText,
+              hasContent: sql<number>`COALESCE(length(${documentContent.fullText}), 0) > 0`,
             })
             .from(document)
             .leftJoin(documentContent, eq(document.id, documentContent.documentId))
@@ -222,7 +222,7 @@ export async function processBatch(
               documentType: document.documentType,
               tagsJson: document.tagsJson,
               customFieldsJson: document.customFieldsJson,
-              fullText: documentContent.fullText,
+              hasContent: sql<number>`COALESCE(length(${documentContent.fullText}), 0) > 0`,
             })
             .from(document)
             .leftJoin(documentContent, eq(document.id, documentContent.documentId))
@@ -304,51 +304,54 @@ export async function processBatch(
           );
         }
 
+        const skipNoContent = (doc: (typeof docs)[number]): void => {
+          result.skipped++;
+          result.processed++;
+
+          // Write a skipped record so the doc leaves the unprocessed queue
+          writeAiResultWithHistory(db, {
+            documentId: doc.id,
+            paperlessId: doc.paperlessId,
+            provider: provider.provider,
+            model: config.model,
+            suggestedTitle: null,
+            suggestedCorrespondent: null,
+            suggestedDocumentType: null,
+            suggestedTagsJson: null,
+            suggestedCustomFieldsJson: null,
+            confidenceJson: null,
+            currentTitle: doc.title,
+            currentCorrespondent: doc.correspondent,
+            currentDocumentType: doc.documentType,
+            currentTagsJson: doc.tagsJson,
+            currentCustomFieldsJson: doc.customFieldsJson,
+            appliedStatus: 'skipped',
+            appliedAt: null,
+            appliedFieldsJson: null,
+            evidence: null,
+            failureType: 'no_content',
+            rawResponseJson: null,
+            promptTokens: null,
+            completionTokens: null,
+            errorMessage: 'Document has no OCR text content available for AI processing',
+            processingTimeMs: null,
+            estimatedCostUsd: null,
+            syncGenerationId,
+            createdAt: new Date().toISOString(),
+          });
+
+          aiDocumentsTotal().add(1, { outcome: 'skipped', 'gen_ai.system': provider.provider });
+          logger.warn(
+            { documentId: doc.id, title: doc.title },
+            'Skipping document with no content',
+          );
+        };
+
         // Pre-partition: handle skipped docs (no content) upfront
         const processableDocs: typeof docs = [];
-        const now = new Date().toISOString();
         for (const doc of docs) {
-          if (!doc.fullText) {
-            result.skipped++;
-            result.processed++;
-
-            // Write a skipped record so the doc leaves the unprocessed queue
-            writeAiResultWithHistory(db, {
-              documentId: doc.id,
-              paperlessId: doc.paperlessId,
-              provider: provider.provider,
-              model: config.model,
-              suggestedTitle: null,
-              suggestedCorrespondent: null,
-              suggestedDocumentType: null,
-              suggestedTagsJson: null,
-              suggestedCustomFieldsJson: null,
-              confidenceJson: null,
-              currentTitle: doc.title,
-              currentCorrespondent: doc.correspondent,
-              currentDocumentType: doc.documentType,
-              currentTagsJson: doc.tagsJson,
-              currentCustomFieldsJson: doc.customFieldsJson,
-              appliedStatus: 'skipped',
-              appliedAt: null,
-              appliedFieldsJson: null,
-              evidence: null,
-              failureType: 'no_content',
-              rawResponseJson: null,
-              promptTokens: null,
-              completionTokens: null,
-              errorMessage: 'Document has no OCR text content available for AI processing',
-              processingTimeMs: null,
-              estimatedCostUsd: null,
-              syncGenerationId,
-              createdAt: now,
-            });
-
-            aiDocumentsTotal().add(1, { outcome: 'skipped', 'gen_ai.system': provider.provider });
-            logger.warn(
-              { documentId: doc.id, title: doc.title },
-              'Skipping document with no content',
-            );
+          if (!doc.hasContent) {
+            skipNoContent(doc);
           } else {
             processableDocs.push(doc);
           }
@@ -384,11 +387,24 @@ export async function processBatch(
         // Process a single document: API call, DB upsert, telemetry
         async function processOne(doc: (typeof processableDocs)[0]): Promise<void> {
           const docStartMs = performance.now();
+          const row = db
+            .select({ fullText: documentContent.fullText })
+            .from(documentContent)
+            .where(eq(documentContent.documentId, doc.id))
+            .get();
+          if (!row?.fullText) {
+            skipNoContent(doc);
+            await onProgress?.(
+              result.processed / totalDocs,
+              `Skipped document with no content (${result.processed} of ${totalDocs} processed)`,
+            );
+            return;
+          }
           try {
             const extraction = await processDocument({
               provider,
               documentTitle: doc.title,
-              documentContent: doc.fullText!,
+              documentContent: row.fullText,
               existingCorrespondents: correspondentNames,
               existingDocumentTypes: documentTypeNames,
               existingTags: tagNames,
