@@ -287,6 +287,16 @@ jobs:
             sleep 1
           done
 
+      - name: Scan built image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: paperless-dedupe:ci-test
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: false
+          cache: false
+
       - name: Cleanup
         if: always()
         run: docker rm -f ci-test 2>/dev/null || true
