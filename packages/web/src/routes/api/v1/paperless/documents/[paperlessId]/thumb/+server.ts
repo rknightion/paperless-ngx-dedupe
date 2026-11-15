@@ -1,3 +1,4 @@
+import { safeProxyContentType } from '$lib/server/security-headers';
 import { apiError, ErrorCode } from '$lib/server/api';
 import {
   buildPaperlessAuthHeaders,
@@ -32,9 +33,15 @@ export const GET: RequestHandler = async ({ params, locals, request }) => {
       return apiError(ErrorCode.BAD_GATEWAY, `Paperless returned ${upstream.status}`);
     }
 
+    const contentType = safeProxyContentType(upstream.headers.get('Content-Type'), 'thumb');
     return new Response(upstream.body, {
       headers: {
-        'Content-Type': upstream.headers.get('Content-Type') ?? 'image/webp',
+        'Content-Type': contentType,
+        'Content-Security-Policy': "sandbox; frame-ancestors 'self'",
+        'X-Content-Type-Options': 'nosniff',
+        ...(contentType === 'application/octet-stream'
+          ? { 'Content-Disposition': 'attachment' }
+          : {}),
         'Cache-Control': 'public, max-age=3600',
       },
     });
