@@ -2,7 +2,6 @@
  * MinHash implementation for approximate Jaccard similarity estimation.
  */
 
-const MERSENNE_PRIME = (1n << 61n) - 1n;
 const MAX_HASH = 0xffffffff;
 const HASH_SEED = 42;
 
@@ -19,31 +18,57 @@ function mulberry32(seed: number): () => number {
 export class MinHash {
   readonly numPermutations: number;
   signature: Uint32Array;
-  private coeffA: BigInt64Array;
-  private coeffB: BigInt64Array;
+  private coeffA: Uint32Array;
+  private coeffB: Uint32Array;
 
   constructor(numPermutations = 192) {
     this.numPermutations = numPermutations;
     this.signature = new Uint32Array(numPermutations).fill(MAX_HASH);
-    this.coeffA = new BigInt64Array(numPermutations);
-    this.coeffB = new BigInt64Array(numPermutations);
+    this.coeffA = new Uint32Array(numPermutations);
+    this.coeffB = new Uint32Array(numPermutations);
 
     const rng = mulberry32(HASH_SEED);
     for (let i = 0; i < numPermutations; i++) {
-      let a = BigInt(Math.floor(rng() * MAX_HASH));
-      if (a === 0n) a = 1n;
+      let a = Math.floor(rng() * MAX_HASH);
+      if (a === 0) a = 1;
       this.coeffA[i] = a;
-      this.coeffB[i] = BigInt(Math.floor(rng() * MAX_HASH));
+      this.coeffB[i] = Math.floor(rng() * MAX_HASH);
     }
   }
 
   update(shingles: Set<number>): void {
     for (const x of shingles) {
-      const bx = BigInt(x);
+      const xLow = x & 0xffff;
+      const xHigh = x >>> 16;
       for (let i = 0; i < this.numPermutations; i++) {
-        const h = Number(
-          ((this.coeffA[i] * bx + this.coeffB[i]) % MERSENNE_PRIME) % BigInt(MAX_HASH),
-        );
+        const aLow = this.coeffA[i] & 0xffff;
+        const aHigh = this.coeffA[i] >>> 16;
+        const low = aLow * xLow;
+        const middle = aHigh * xLow + aLow * xHigh;
+        let pLow = low + (middle % 65536) * 65536;
+        let pHigh = aHigh * xHigh + Math.floor(middle / 65536) + Math.floor(pLow / 4294967296);
+        pLow = pLow >>> 0;
+        pLow += this.coeffB[i];
+        if (pLow >= 4294967296) {
+          pLow -= 4294967296;
+          pHigh++;
+        }
+        // Fold the high three bits modulo 2^61 - 1, retaining exact 32-bit halves.
+        let rHigh = pHigh % 536870912;
+        let rLow = pLow + Math.floor(pHigh / 536870912);
+        if (rLow >= 4294967296) {
+          rLow -= 4294967296;
+          rHigh++;
+        }
+        if (rHigh === 536870911 && rLow === MAX_HASH) {
+          rHigh = 0;
+          rLow = 0;
+        } else if (rHigh > 536870911) {
+          rHigh -= 536870912;
+          rLow++;
+        }
+        // 2^32 is congruent to 1 modulo 2^32 - 1.
+        const h = (rHigh + rLow) % MAX_HASH;
         if (h < this.signature[i]) {
           this.signature[i] = h;
         }
@@ -92,8 +117,8 @@ export class MinHash {
     (mh as { signature: Uint32Array }).signature = new Uint32Array(arrayBuffer);
     (mh as { numPermutations: number }).numPermutations = numPerm;
     // Deserialized instances don't need coefficients (they are read-only signatures)
-    (mh as unknown as { coeffA: BigInt64Array }).coeffA = new BigInt64Array(0);
-    (mh as unknown as { coeffB: BigInt64Array }).coeffB = new BigInt64Array(0);
+    (mh as unknown as { coeffA: Uint32Array }).coeffA = new Uint32Array(0);
+    (mh as unknown as { coeffB: Uint32Array }).coeffB = new Uint32Array(0);
     return mh;
   }
 }
