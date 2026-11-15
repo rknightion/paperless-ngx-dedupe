@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -7,6 +7,10 @@ import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import {
   completeJob,
+  cancelJob,
+  pauseJob,
+  resumeJob,
+  getJob,
   createJob,
   failJob,
   recoverStaleJobs,
@@ -272,6 +276,133 @@ describe('worker entry durable execution claim', () => {
     expect(executions).toBe(1);
     expect(restarted.sqlite.prepare('SELECT status FROM job WHERE id = ?').get(jobId)).toEqual({
       status: 'completed',
+    });
+  });
+  describe('worker entry cancel, pause and failure', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('cancels during progress without storing a result', async () => {
+      const { db, sqlite, databasePath } = await database();
+      try {
+        const jobId = createJob(db, JobType.SYNC);
+        let cancellation: unknown;
+        await expect(
+          runWorkerTaskWithData(
+            async (_context, onProgress) => {
+              await onProgress(0.1);
+              expect(cancelJob(db, jobId)).toBe(true);
+              await vi.advanceTimersByTimeAsync(2000);
+              try {
+                await onProgress(0.2);
+              } catch (error) {
+                cancellation = error;
+                throw error;
+              }
+              return { unexpected: true };
+            },
+            { jobId, dbPath: databasePath, executionToken: 'cancel-owner' },
+          ),
+        ).resolves.toBeUndefined();
+        expect(cancellation).toMatchObject({
+          name: 'CancellationError',
+          message: 'Job was cancelled',
+        });
+        expect(getJob(db, jobId)).toMatchObject({ status: 'cancelled', resultJson: null });
+      } finally {
+        sqlite.close();
+      }
+    });
+
+    it('blocks progress while paused and completes after resume', async () => {
+      const { db, sqlite, databasePath } = await database();
+      try {
+        const jobId = createJob(db, JobType.SYNC);
+        await runWorkerTaskWithData(
+          async (_context, onProgress) => {
+            await onProgress(0.1);
+            expect(pauseJob(db, jobId)).toBe(true);
+            await vi.advanceTimersByTimeAsync(2000);
+            let settled = false;
+            const pending = onProgress(0.2).then(() => {
+              settled = true;
+            });
+            await Promise.resolve();
+            expect(settled).toBe(false);
+            expect(resumeJob(db, jobId)).toBe(true);
+            await vi.advanceTimersByTimeAsync(1000);
+            await pending;
+            expect(settled).toBe(true);
+            return { resumed: true };
+          },
+          { jobId, dbPath: databasePath, executionToken: 'resume-owner' },
+        );
+        expect(getJob(db, jobId)).toMatchObject({
+          status: 'completed',
+          resultJson: JSON.stringify({ resumed: true }),
+        });
+      } finally {
+        sqlite.close();
+      }
+    });
+
+    it('cancels a paused task on the next pause poll', async () => {
+      const { db, sqlite, databasePath } = await database();
+      try {
+        const jobId = createJob(db, JobType.SYNC);
+        let cancellation: unknown;
+        await runWorkerTaskWithData(
+          async (_context, onProgress) => {
+            expect(pauseJob(db, jobId)).toBe(true);
+            await vi.advanceTimersByTimeAsync(2000);
+            const pending = onProgress(0.2);
+            const outcome = pending.then(
+              () => undefined,
+              (error: unknown) => error,
+            );
+            expect(cancelJob(db, jobId)).toBe(true);
+            await vi.advanceTimersByTimeAsync(1000);
+            cancellation = await outcome;
+            if (cancellation) throw cancellation;
+            return { unexpected: true };
+          },
+          { jobId, dbPath: databasePath, executionToken: 'paused-cancel-owner' },
+        );
+        expect(cancellation).toMatchObject({
+          name: 'CancellationError',
+          message: 'Job was cancelled while paused',
+        });
+        expect(getJob(db, jobId)).toMatchObject({ status: 'cancelled', resultJson: null });
+      } finally {
+        sqlite.close();
+      }
+    });
+
+    it('records a throwing task as failed', async () => {
+      const { db, sqlite, databasePath } = await database();
+      try {
+        const jobId = createJob(db, JobType.SYNC);
+        await runWorkerTaskWithData(
+          async () => {
+            throw new Error('boom');
+          },
+          {
+            jobId,
+            dbPath: databasePath,
+            executionToken: 'failure-owner',
+          },
+        );
+        expect(getJob(db, jobId)).toMatchObject({
+          status: 'failed',
+          errorMessage: 'boom',
+          resultJson: null,
+        });
+      } finally {
+        sqlite.close();
+      }
     });
   });
 });
