@@ -1,5 +1,7 @@
 # GitHub Issues archive
 
+Update 2026-11: the Backlog.md board was itself retired on 2026-11-08. Work is tracked in GitHub issues again; `.github/tracker/id-map.json` maps each legacy `PND-` id to its issue. The issues described in this dump were deleted and are still not on GitHub.
+
 `issues-dump.json` is the complete record of this repo's GitHub issue tracker as it stood on
 **2026-08-14**, captured immediately before the project moved to the in-repo
 [Backlog.md](https://backlog.md) tracker under `backlog/` and the migrated issues were deleted.
