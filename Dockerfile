@@ -1,5 +1,11 @@
+# Rebuild the installed esbuild versions with a patched Go standard library.
+FROM golang:1.27.4-trixie@sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9 AS esbuild
+ENV CGO_ENABLED=0
+RUN GOBIN=/out/0.18.20 go install github.com/evanw/esbuild/cmd/esbuild@v0.18.20 && \
+    GOBIN=/out/0.25.12 go install github.com/evanw/esbuild/cmd/esbuild@v0.25.12
+
 # Stage 1: Install dependencies
-FROM node:24.22.2-trixie-slim@sha256:54f84b4cf8432b21aaffd5d3ce8d41e12cea0d10d33c09d2f3c9879d49d6b446 AS deps
+FROM node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS deps
 
 WORKDIR /app
 
@@ -8,7 +14,7 @@ RUN corepack enable
 ENV CI=true
 
 # better-sqlite3 v13 is built from source during installation.
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates zlib1g && rm -rf /var/lib/apt/lists/*
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json ./packages/core/
@@ -26,16 +32,29 @@ RUN pnpm --filter @paperless-dedupe/core build && pnpm --filter @paperless-dedup
 # Create the standalone production dependency tree
 RUN pnpm --filter @paperless-dedupe/web deploy --legacy --prod /app/deployed
 
+COPY --from=esbuild /out /tmp/esbuild
+ARG TARGETARCH
+RUN set -eu; case "$TARGETARCH" in amd64) platform=x64 ;; arm64) platform=arm64 ;; *) exit 1 ;; esac && \
+    for version in 0.18.20 0.25.12; do \
+      install -m 755 "/tmp/esbuild/$version/esbuild" \
+        "/app/deployed/node_modules/.pnpm/@esbuild+linux-$platform@$version/node_modules/@esbuild/linux-$platform/bin/esbuild"; \
+      install -m 755 "/tmp/esbuild/$version/esbuild" \
+        "/app/deployed/node_modules/.pnpm/esbuild@$version/node_modules/esbuild/bin/esbuild"; \
+      node -e "require('/app/deployed/node_modules/.pnpm/esbuild@$version/node_modules/esbuild').transformSync('const value = 1')"; \
+    done && rm -rf /tmp/esbuild
+
 # Exercise the compiled core package from its deployed dependency ancestry.
 # Raw worker threads use this same package boundary in the production image.
 RUN node -e "import('/app/deployed/node_modules/@paperless-dedupe/core/dist/scheduler/occurrences.js')"
 
 # Stage 3: Production runtime
-FROM node:24.22.2-trixie-slim@sha256:54f84b4cf8432b21aaffd5d3ce8d41e12cea0d10d33c09d2f3c9879d49d6b446 AS production
+FROM node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS production
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends tini gosu ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tini gosu ca-certificates zlib1g && rm -rf /var/lib/apt/lists/*
+
+RUN npm install --global npm@12.2.2 && npm cache clean --force
 
 # Copy production deps from pnpm deploy (flat node_modules, no symlinks)
 COPY --from=build /app/deployed/node_modules ./node_modules

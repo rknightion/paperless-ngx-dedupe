@@ -1,0 +1,36 @@
+# Reviewed image findings with no Debian fix as of 2026-11-15.
+# Re-evaluate by 2026-12-15; expiry restores the HIGH/CRITICAL gate automatically.
+vulnerabilities:
+  - id: CVE-2025-69720
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed ncurses package. The application is a noninteractive Node server and does not process terminal data through ncurses.
+  - id: CVE-2026-119373
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed sqlite3 package. Application SQLite uses the bundled better-sqlite3 engine, not this system library.
+  - id: CVE-2026-119374
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed sqlite3 package. Application SQLite uses the bundled better-sqlite3 engine, not this system library.
+  - id: CVE-2026-119379
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed sqlite3 package. Application SQLite uses the bundled better-sqlite3 engine, not this system library.
+  - id: CVE-2026-16742
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed systemd package. The image does not run systemd-homed or import home records.
+  - id: CVE-2026-54369
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed acl package. The application does not apply filesystem ACLs through libacl.
+  - id: CVE-2026-76642
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed util-linux package. The application does not run external mount helpers or mount hooks.
+  - id: CVE-2026-78408
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed util-linux package. The application does not run nsenter or migrate processes between cgroups.
+  - id: CVE-2026-78409
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed util-linux package. The application does not perform subdirectory mounts.
+  - id: CVE-2026-78410
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed util-linux package. The application does not perform restricted bind mounts.
+  - id: CVE-2026-9538
+    expired_at: 2026-12-15
+    statement: Debian 13 has no fixed perl package. The application does not invoke Perl Archive::Tar or unpack uploaded archives with it.
