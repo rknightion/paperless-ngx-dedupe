@@ -268,16 +268,64 @@ export async function runAnalysis(
     logger.info({ indexedSignatures: signatureMap.size }, 'LSH index built');
     await onProgress?.(0.5, `LSH index built with ${signatureMap.size} signatures`);
 
+    // Load existing groups to match by member set
+    const existingGroups = db.select().from(duplicateGroup).all();
+
+    const existingGroupMembers = new Map<
+      string,
+      { groupId: string; memberIds: Set<string>; status: string }
+    >();
+    for (const group of existingGroups) {
+      const members = db
+        .select({ documentId: duplicateMember.documentId })
+        .from(duplicateMember)
+        .where(eq(duplicateMember.groupId, group.id))
+        .all();
+      const memberIds = new Set(members.map((m) => m.documentId));
+      const memberKey = [...memberIds].sort().join('|');
+      existingGroupMembers.set(memberKey, {
+        groupId: group.id,
+        memberIds,
+        status: group.status,
+      });
+    }
+
+    const pendingGroupsByDoc = new Map<string, Set<string>[]>();
+    for (const group of existingGroupMembers.values()) {
+      if (group.status !== 'pending') continue;
+      for (const id of group.memberIds) {
+        const groups = pendingGroupsByDoc.get(id) ?? [];
+        groups.push(group.memberIds);
+        pendingGroupsByDoc.set(id, groups);
+      }
+    }
+
     // Stage 5: Find candidate pairs
     await onProgress?.(0.5, 'Finding candidate pairs...');
 
-    const searchDocIds = force
+    let searchDocIds = force
       ? [...allDocIds]
       : processedDocIds.filter((id) => docsToProcessIds.has(id));
 
     const candidatePairs = new Map<string, { docId1: string; docId2: string; jaccard: number }>();
 
-    for (const docId of searchDocIds) {
+    const scope = new Set(searchDocIds);
+    const queue = [...searchDocIds];
+    const expandPendingGroups = (docId: string) => {
+      if (force) return;
+      for (const members of pendingGroupsByDoc.get(docId) ?? []) {
+        for (const memberId of members) {
+          if (!scope.has(memberId)) {
+            scope.add(memberId);
+            queue.push(memberId);
+          }
+        }
+      }
+    };
+
+    for (let i = 0; i < queue.length; i++) {
+      const docId = queue[i];
+      expandPendingGroups(docId);
       const sig = signatureMap.get(docId);
       if (!sig) continue;
 
@@ -295,8 +343,13 @@ export async function runAnalysis(
           const jaccard = MinHash.jaccardFromArrays(sig, candidateSig);
           candidatePairs.set(pairKey, { docId1: id1, docId2: id2, jaccard });
         }
+        if (candidatePairs.get(pairKey)!.jaccard >= config.similarityThreshold * 0.8) {
+          expandPendingGroups(candidateId);
+        }
       }
     }
+
+    searchDocIds = [...scope];
 
     result.candidatePairsFound = candidatePairs.size;
     logger.info({ candidatePairs: candidatePairs.size }, 'Candidate pairs found');
@@ -446,28 +499,6 @@ export async function runAnalysis(
     const paperlessIdMap = new Map<string, number>();
     for (const doc of allDocs) {
       paperlessIdMap.set(doc.id, doc.paperlessId);
-    }
-
-    // Load existing groups to match by member set
-    const existingGroups = db.select().from(duplicateGroup).all();
-
-    const existingGroupMembers = new Map<
-      string,
-      { groupId: string; memberIds: Set<string>; status: string }
-    >();
-    for (const group of existingGroups) {
-      const members = db
-        .select({ documentId: duplicateMember.documentId })
-        .from(duplicateMember)
-        .where(eq(duplicateMember.groupId, group.id))
-        .all();
-      const memberIds = new Set(members.map((m) => m.documentId));
-      const memberKey = [...memberIds].sort().join('|');
-      existingGroupMembers.set(memberKey, {
-        groupId: group.id,
-        memberIds,
-        status: group.status,
-      });
     }
 
     // Build groupId -> memberIds lookup for deletion scope check
