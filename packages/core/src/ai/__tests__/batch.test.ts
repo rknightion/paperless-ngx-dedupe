@@ -127,6 +127,48 @@ describe('processBatch', () => {
     await migrateDatabase(handle.sqlite);
   });
 
+  it('stops an unsaturated batch when progress reports cancellation', async () => {
+    for (let i = 1; i <= 20; i++) {
+      db.insert(document)
+        .values({
+          id: `cancel-${i}`,
+          paperlessId: i,
+          title: `Document ${i}`,
+          processingStatus: 'completed',
+          syncedAt: '2024-01-01T00:00:00Z',
+        })
+        .run();
+      db.insert(documentContent)
+        .values({
+          documentId: `cancel-${i}`,
+          fullText: 'Synthetic invoice',
+          contentHash: `hash-${i}`,
+        })
+        .run();
+    }
+    const normalProvider = createMockProvider();
+    const extract = vi.fn(async (...args: Parameters<AiProviderInterface['extract']>) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return normalProvider.extract(...args);
+    });
+    const cancelled = new Error('Job was cancelled');
+    await expect(
+      processBatch(db, {
+        provider: createMockProvider({ extractFn: extract }),
+        client: createMockClient(),
+        config: { ...config, batchSize: 100, rateDelayMs: 20 },
+        onProgress: async (progress) => {
+          if (progress > 0) throw cancelled;
+        },
+      }),
+    ).rejects.toBe(cancelled);
+    expect(extract).toHaveBeenCalledTimes(1);
+    const rows = db.select().from(aiProcessingResult).all();
+    expect(rows.map((row) => ({ id: row.documentId, status: row.appliedStatus }))).toEqual([
+      { id: 'cancel-1', status: 'pending_review' },
+    ]);
+  });
+
   it('processes all documents and inserts results into DB', async () => {
     seedDocs(db);
     const provider = createMockProvider();
@@ -1110,6 +1152,32 @@ describe('rate limit retry queue', () => {
     db.insert(document).values(docs).run();
     db.insert(documentContent).values(contents).run();
   }
+
+  it('stops retry launches after cancellation without recording queued documents as failed', async () => {
+    seedManyDocs(db, 3);
+    const normalProvider = createMockProvider();
+    let calls = 0;
+    const extractFn = vi.fn(async (...args: Parameters<AiProviderInterface['extract']>) => {
+      if (++calls <= 3) throw new AiExtractionError('rate_limit', 'Rate limited', undefined, 10);
+      return normalProvider.extract(...args);
+    });
+    const cancelled = new Error('Job was cancelled');
+    await expect(
+      processBatch(db, {
+        provider: createMockProvider({ extractFn }),
+        client: createMockClient(),
+        config: { ...config, batchSize: 100, rateDelayMs: 20 },
+        onProgress: async (progress) => {
+          if (progress > 0) throw cancelled;
+        },
+      }),
+    ).rejects.toBe(cancelled);
+    expect(extractFn).toHaveBeenCalledTimes(4);
+    const rows = db.select().from(aiProcessingResult).all();
+    expect(rows.map((row) => ({ id: row.documentId, status: row.appliedStatus }))).toEqual([
+      { id: 'doc-1', status: 'pending_review' },
+    ]);
+  });
 
   it('retries rate-limited documents instead of marking them as failed', async () => {
     seedManyDocs(db, 3);
