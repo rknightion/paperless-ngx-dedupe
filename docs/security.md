@@ -12,6 +12,19 @@ what its Paperless-NGX credential needs, and where secrets live.
     Paperless NGX Dedupe is not production-ready. Do not point it at a Paperless-NGX instance
     you care about without a backup — see [Getting Started](getting-started.md).
 
+## Access model
+
+The application has no built-in authentication or user accounts. Anyone who can reach its port
+can use the UI and the API with the Paperless-NGX credential the server holds.
+
+Run it on a trusted network or behind an authenticating reverse proxy or forward-auth layer.
+Do not expose it directly to the internet. To keep it local to the host, publish the port on
+loopback only in Compose:
+
+```yaml
+ports: ['127.0.0.1:3000:3000']
+```
+
 ## Paperless-NGX credentials
 
 Authenticate with `PAPERLESS_API_TOKEN` (preferred) or `PAPERLESS_USERNAME` +
@@ -75,7 +88,7 @@ require, the AI path above.
 - Existing legacy credential rows in `app_config` are removed during startup migration. See
   [Configuration — Core Runtime](configuration.md#core-runtime).
 - The database backup downloaded from **Settings > Database backup** does not contain Paperless
-  connection credentials, but it does contain synced document metadata, duplicate decisions, and
+  connection credentials, but it does contain the full text and metadata of every synced document, duplicate decisions, and
   AI review state. Store and delete downloaded copies with the same access controls as the live
   database. See [Database Backup and Restore](database-backup-and-restore.md).
 

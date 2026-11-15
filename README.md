@@ -48,6 +48,8 @@ docker compose up -d
 
 **3. Open [http://localhost:3000](http://localhost:3000)** and go to **Settings > Test Connection** to verify connectivity.
 
+The app has no login of its own, so keep it on a trusted network or behind an authenticating proxy; see the [security access model](https://m7kni.io/paperless-ngx-dedupe/security/#access-model).
+
 **4. Sync and analyze.** From the dashboard, click **Sync** to pull your documents, then **Analyze** to detect duplicates. Both run as background jobs with real-time progress.
 
 **5. Review duplicates** at `/duplicates` -- compare documents side-by-side and resolve them.
