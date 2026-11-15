@@ -310,6 +310,16 @@ export class PaperlessClient {
     return paperlessDocumentSchema.parse(json);
   }
 
+  async getDocumentMetadata(id: number): Promise<PaperlessDocument> {
+    const fields =
+      'id,title,tags,correspondent,document_type,created,modified,added,original_file_name,archived_file_name,archive_serial_number,custom_fields';
+    const response = await this.fetchWithRetry(
+      this.buildUrl(`/api/documents/${id}/?fields=${fields}`),
+    );
+    const json = await response.json();
+    return paperlessDocumentSchema.parse(json);
+  }
+
   async getDocumentContent(id: number): Promise<string> {
     const doc = await this.getDocument(id);
     return doc.content;

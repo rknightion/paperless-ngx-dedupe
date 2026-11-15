@@ -22,6 +22,8 @@ import { aiFieldSelectionSchema, type AiFieldSelection } from './types.js';
 import { MutationPlanError, REVIEWED_MUTATION_PLAN_TTL_MS } from '../review/mutation-plans.js';
 import { PaperlessApiError, PaperlessConnectionError } from '../paperless/errors.js';
 
+const PLAN_FETCH_CONCURRENCY = 4;
+
 export interface ApplyPreflightResult {
   totalDocuments: number;
   fieldsChanged: {
@@ -241,6 +243,11 @@ export async function createAiApplyPlan(
     }
   }
   if (rows.size !== resultIds.length) throw new Error('One or more AI results no longer exist');
+  for (const resultId of resultIds) {
+    if (!isReviewableAiResult(rows.get(resultId)!)) {
+      throw new Error(`AI result is not pending review: ${resultId}`);
+    }
+  }
 
   const processedTagId = selection.processedTag
     ? ((await client.getTags()).find(
@@ -248,21 +255,25 @@ export async function createAiApplyPlan(
           tag.name.toLowerCase() === (options.processedTagName ?? 'ai-processed').toLowerCase(),
       )?.id ?? null)
     : null;
-  const frozenResults: FrozenAiResult[] = [];
-  for (const resultId of resultIds) {
-    const row = rows.get(resultId)!;
-    if (!isReviewableAiResult(row)) {
-      throw new Error(`AI result is not pending review: ${resultId}`);
-    }
-    const live = await client.getDocument(row.paperlessId);
-    frozenResults.push({
-      resultId,
-      resultVersion: selectedSuggestionVersion(row, selection),
-      documentId: row.documentId,
-      paperlessId: row.paperlessId,
-      reviewedState: selectedState(live, selection, processedTagId),
-    });
-  }
+  const frozenResults = new Array<FrozenAiResult>(resultIds.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(PLAN_FETCH_CONCURRENCY, resultIds.length) }, async () => {
+      while (cursor < resultIds.length) {
+        const index = cursor++;
+        const resultId = resultIds[index];
+        const row = rows.get(resultId)!;
+        const live = await client.getDocumentMetadata(row.paperlessId);
+        frozenResults[index] = {
+          resultId,
+          resultVersion: selectedSuggestionVersion(row, selection),
+          documentId: row.documentId,
+          paperlessId: row.paperlessId,
+          reviewedState: selectedState(live, selection, processedTagId),
+        };
+      }
+    }),
+  );
 
   const allowClearing = options.allowClearing ?? false;
   const createMissingEntities = options.createMissingEntities ?? true;
@@ -517,7 +528,7 @@ export async function executeClaimedAiApplyPlan(
         storedAppliedFields.length > 0
       ) {
         const actualSelection = appliedSelection(plan.selection, storedAppliedFields);
-        const live = await client.getDocument(row.paperlessId);
+        const live = await client.getDocumentMetadata(row.paperlessId);
         const intended = intendedAppliedState(row, plan.selection, processedTagId);
         const current = selectedState(live, actualSelection, processedTagId);
         if (!intended || differingReviewedFields(current, intended).length > 0) {
@@ -549,7 +560,7 @@ export async function executeClaimedAiApplyPlan(
         });
         continue;
       }
-      const live = await client.getDocument(frozen.paperlessId);
+      const live = await client.getDocumentMetadata(frozen.paperlessId);
       const liveState = selectedState(live, plan.selection, processedTagId);
       const conflictFields = differingReviewedFields(liveState, frozen.reviewedState);
       if (conflictFields.length > 0) {

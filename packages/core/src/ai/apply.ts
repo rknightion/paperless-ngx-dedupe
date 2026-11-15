@@ -194,7 +194,7 @@ export async function applyAiResult(
           : [];
       } else {
         try {
-          currentDoc = options.liveDocument ?? (await client.getDocument(row.paperlessId));
+          currentDoc = options.liveDocument ?? (await client.getDocumentMetadata(row.paperlessId));
         } catch (err) {
           if (err instanceof PaperlessApiError && err.statusCode === 404) {
             const msg = `Document no longer exists in Paperless (paperlessId=${row.paperlessId})`;
@@ -342,7 +342,7 @@ export async function applyAiResult(
       }
 
       const finalLiveDocument = options.auditFields
-        ? await client.getDocument(row.paperlessId)
+        ? await client.getDocumentMetadata(row.paperlessId)
         : currentDoc;
       if (options.auditFields) {
         if (!finalLiveDocument) {
