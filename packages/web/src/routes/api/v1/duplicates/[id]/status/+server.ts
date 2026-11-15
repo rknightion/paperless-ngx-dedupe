@@ -6,8 +6,11 @@ import {
   StatusTransitionError,
   withDuplicateMutationLease,
 } from '@paperless-dedupe/core';
-import type { GroupStatus } from '@paperless-dedupe/core';
+import { z } from 'zod';
 import type { RequestHandler } from './$types';
+
+const allowedStatuses = GROUP_STATUS_VALUES.filter((status) => status !== 'deleted');
+const bodySchema = z.object({ status: z.enum(allowedStatuses) });
 
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
   let body: unknown;
@@ -17,18 +20,15 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
     return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid JSON body');
   }
 
-  const { status } = body as { status?: string };
-
-  if (!status || !GROUP_STATUS_VALUES.includes(status as GroupStatus)) {
-    return apiError(
-      ErrorCode.VALIDATION_FAILED,
-      `Invalid status. Must be one of: ${GROUP_STATUS_VALUES.join(', ')}`,
-    );
+  const result = bodySchema.safeParse(body);
+  if (!result.success) {
+    return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid request body', result.error.issues);
   }
+  const { status } = result.data;
 
   try {
     const updated = withDuplicateMutationLease(locals.db, () =>
-      setGroupStatus(locals.db, params.id, status as GroupStatus),
+      setGroupStatus(locals.db, params.id, status),
     );
 
     if (!updated) {
