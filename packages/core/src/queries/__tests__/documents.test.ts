@@ -232,6 +232,29 @@ describe('listDocumentLibrary', () => {
     expect(JSON.stringify(result)).not.toContain('Quarterly electricity usage');
   });
 
+  it.each(['', null, '   ', '\n\t'])(
+    'preserves OCR counts and flags for empty content %j',
+    (fullText) => {
+      db.update(documentContent)
+        .set({ fullText, wordCount: 0 })
+        .where(eq(documentContent.documentId, 'doc-2'))
+        .run();
+      const result = listDocumentLibrary(db, { limit: 25 });
+      expect(result.counts.missingOcr).toBe(2);
+      expect(result.items.map(({ id, hasOcr }) => ({ id, hasOcr }))).toEqual([
+        { id: 'doc-3', hasOcr: false },
+        { id: 'doc-2', hasOcr: false },
+        { id: 'doc-1', hasOcr: true },
+      ]);
+      expect(
+        listDocumentLibrary(db, { missingOcr: true, limit: 25 }).items.map(({ id }) => id),
+      ).toEqual(['doc-3', 'doc-2']);
+      expect(
+        listDocumentLibrary(db, { missingOcr: false, limit: 25 }).items.map(({ id }) => id),
+      ).toEqual(['doc-1']);
+    },
+  );
+
   it('filters documents with missing or empty OCR', () => {
     expect(
       listDocumentLibrary(db, { missingOcr: true, limit: 25 }).items.map((item) => item.id),

@@ -404,15 +404,15 @@ export function getDataQualityInsights(db: AppDatabase): DataQualityInsights {
              ELSE 1 END
          ), 0) AS missingTags,
          coalesce(sum(NOT EXISTS (
-           SELECT 1 FROM document_content content
+           SELECT 1 FROM document_content content INDEXED BY document_content_document_word_count_idx
            WHERE content.document_id = d.id
-             AND length(trim(coalesce(content.full_text, ''))) > 0
+             AND coalesce(content.word_count, 0) > 0
          )), 0) AS missingOcr,
          coalesce(sum(
            CASE WHEN NOT EXISTS (
-             SELECT 1 FROM document_content opportunity_content
+             SELECT 1 FROM document_content opportunity_content INDEXED BY document_content_document_word_count_idx
              WHERE opportunity_content.document_id = d.id
-               AND length(trim(coalesce(opportunity_content.full_text, ''))) > 0
+               AND coalesce(opportunity_content.word_count, 0) > 0
            )
            THEN 0
            WHEN json_valid(d.custom_fields_json)

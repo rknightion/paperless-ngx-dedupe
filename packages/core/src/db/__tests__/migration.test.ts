@@ -1142,3 +1142,27 @@ describe('database migration fixtures', () => {
     ).toThrow(/CHECK constraint failed/);
   });
 });
+
+it('adds the covering OCR word-count index to a released database only once', async () => {
+  const { sqlite } = createDatabaseWithHandle(':memory:');
+  try {
+    sqlite.exec(v015Fixture);
+    const indexName = 'document_content_document_word_count_idx';
+    const indexRow = () =>
+      sqlite.prepare('SELECT sql FROM sqlite_master WHERE name = ?').get(indexName);
+    expect(indexRow()).toBeUndefined();
+    await migrateDatabase(sqlite);
+    expect(indexRow()).toEqual({ sql: expect.stringContaining(indexName) });
+    const schema = tableSignature(sqlite, 'document_content');
+    const schemaVersion = sqlite.pragma('schema_version', { simple: true });
+    await migrateDatabase(sqlite);
+    expect(tableSignature(sqlite, 'document_content')).toEqual(schema);
+    expect(sqlite.pragma('schema_version', { simple: true })).toBe(schemaVersion);
+    const plan = sqlite
+      .prepare('EXPLAIN QUERY PLAN SELECT avg(word_count) FROM document_content')
+      .all();
+    expect(JSON.stringify(plan)).toContain(`USING COVERING INDEX ${indexName}`);
+  } finally {
+    sqlite.close();
+  }
+});

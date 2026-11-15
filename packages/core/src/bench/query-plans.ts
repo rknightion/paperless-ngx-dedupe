@@ -29,7 +29,13 @@ export interface BenchmarkQueryPlanReceipt {
 type ExecutedReadStatement = { sql: string; parameters: unknown[] };
 
 const REQUIRED_INDEXES: Record<string, readonly string[]> = {
-  'library-default': ['document_library_added_date_paperless_idx'],
+  overview: ['document_content_document_word_count_idx'],
+  'library-default': [
+    'document_library_added_date_paperless_idx',
+    'document_content_document_word_count_idx',
+  ],
+  'library-missing-ocr': ['document_content_document_word_count_idx'],
+  'library-tag': ['document_content_document_word_count_idx'],
   'duplicate-inbox': ['idx_dg_inbox_order'],
   'job-history': ['job_history_type_status_order_idx'],
 };

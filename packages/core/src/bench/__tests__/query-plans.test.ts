@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createSyntheticBenchmarkFixture, type SyntheticBenchmarkFixture } from '../fixtures.js';
 import { assertBenchmarkQueryPlanContracts, collectBenchmarkQueryPlans } from '../query-plans.js';
+import { getDocumentStats, listDocumentLibrary } from '../../queries/documents.js';
 import { BENCHMARK_SCENARIOS } from '../library.bench.js';
 
 describe('benchmark query-plan receipts', () => {
@@ -50,6 +51,24 @@ describe('benchmark query-plan receipts', () => {
       hasTemporarySort: true,
       temporarySortJustification: expect.stringContaining('computed confidence'),
     });
+  });
+
+  it('answers average word count and missing OCR from a covering index without reading text', () => {
+    const prepare = vi.spyOn(fixture.sqlite, 'prepare');
+    getDocumentStats(fixture.db);
+    listDocumentLibrary(fixture.db, { duplicate: 'any', limit: 25 });
+    const reads = prepare.mock.calls
+      .map(([sql]) => sql)
+      .filter((sql) => /avg\([^)]*word_count|AS missingOcr/i.test(sql));
+    prepare.mockRestore();
+    expect(reads).toHaveLength(2);
+    for (const sql of reads) {
+      expect(sql).not.toContain('full_text');
+      const plan = fixture.sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all();
+      expect(JSON.stringify(plan)).toContain(
+        'USING COVERING INDEX document_content_document_word_count_idx',
+      );
+    }
   });
 
   it('reports actionable contract failures', () => {
