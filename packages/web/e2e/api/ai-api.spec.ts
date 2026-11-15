@@ -15,6 +15,126 @@ test.describe('AI API', () => {
     clearDB();
   });
 
+  test('invalid process scopes and JSON create no job', async ({ request }) => {
+    const sqlite = new Database(DB_PATH);
+    try {
+      const before = sqlite.prepare('SELECT * FROM job').all();
+      for (const data of [
+        { scope: { type: 'unknown' } },
+        { scope: { type: 'selected_result_ids', resultIds: ['result-1'] } },
+        { scope: { type: 'selected_document_ids', documentIds: [] } },
+        { scope: { type: 'selected_document_ids', documentIds: [''] } },
+        { scope: { type: 'current_filter', filters: [] } },
+        '{invalid json',
+      ]) {
+        const response = await request.post('/api/v1/ai/process', {
+          headers: { 'Content-Type': 'application/json' },
+          data,
+        });
+        expect(response.status()).toBe(400);
+        expect((await response.json()).error.code).toBe('VALIDATION_FAILED');
+        expect(sqlite.prepare('SELECT * FROM job').all()).toEqual(before);
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test('empty process scopes create no job', async ({ request }) => {
+    const sqlite = new Database(DB_PATH);
+    try {
+      const before = sqlite.prepare('SELECT * FROM job').all();
+      for (const data of [
+        { scope: { type: 'failed_only' } },
+        { scope: { type: 'current_filter', filters: { search: 'no-synthetic-match' } } },
+        { documentIds: [] },
+      ]) {
+        const response = await request.post('/api/v1/ai/process', { data });
+        expect(response.status()).toBe(200);
+        expect((await response.json()).data).toEqual({ jobId: null, nothingToDo: true });
+        expect(sqlite.prepare('SELECT * FROM job').all()).toEqual(before);
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test('queue Retry selects the row document and handles nothing to process', async ({ page }) => {
+    const sqlite = new Database(DB_PATH);
+    try {
+      sqlite
+        .prepare(
+          `INSERT INTO ai_processing_result
+        (id, document_id, paperless_id, provider, model, applied_status, created_at)
+        VALUES ('retry-result', ?, 1, 'openai', 'e2e-model', 'failed', ?)`,
+        )
+        .run(seed.documentIds[0], new Date().toISOString());
+    } finally {
+      sqlite.close();
+    }
+    let posted: unknown;
+    await page.route('**/api/v1/ai/process', async (route) => {
+      posted = route.request().postDataJSON();
+      await route.fulfill({ json: { data: { jobId: null, nothingToDo: true } } });
+    });
+    await page.goto('/ai-processing/queue');
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await expect
+      .poll(() => posted)
+      .toEqual({
+        scope: { type: 'selected_document_ids', documentIds: [seed.documentIds[0]] },
+      });
+    await expect(page.getByText('Nothing to process', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeEnabled();
+    for (const theme of ['Light', 'Dark']) {
+      await page.getByRole('radio', { name: theme, exact: true }).click();
+      for (const locator of [
+        page.getByRole('button', { name: 'Retry', exact: true }),
+        page.getByText('Nothing to process', { exact: true }),
+      ]) {
+        const contrast = await locator.evaluate(async (element) => {
+          const ancestors: Element[] = [];
+          for (let node: Element | null = element; node; node = node.parentElement)
+            ancestors.push(node);
+          await Promise.all(
+            ancestors.flatMap((node) =>
+              node.getAnimations().map((animation) => animation.finished),
+            ),
+          );
+          const canvas = document.createElement('canvas');
+          canvas.width = canvas.height = 1;
+          const context = canvas.getContext('2d')!;
+          context.fillStyle = '#fff';
+          context.fillRect(0, 0, 1, 1);
+          for (const node of ancestors.reverse()) {
+            const style = getComputedStyle(node);
+            if (style.backgroundImage !== 'none')
+              throw new Error('Contrast probe requires solid surfaces');
+            context.fillStyle = style.backgroundColor;
+            context.fillRect(0, 0, 1, 1);
+          }
+          const background = [...context.getImageData(0, 0, 1, 1).data];
+          context.fillStyle = getComputedStyle(element).color;
+          context.fillRect(0, 0, 1, 1);
+          const foreground = [...context.getImageData(0, 0, 1, 1).data];
+          const luminance = (color: number[]) =>
+            color
+              .slice(0, 3)
+              .map((value) => {
+                const channel = value / 255;
+                return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+              })
+              .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+          const a = luminance(foreground);
+          const b = luminance(background);
+          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        });
+        console.log(`${theme} ${await locator.textContent()}: contrast ${contrast.toFixed(2)}`);
+        expect(contrast).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   // ── Stats (no AI_ENABLED check) ─────────────────────────────────────
 
   test('GET /api/v1/ai/stats returns stats', async ({ request }) => {

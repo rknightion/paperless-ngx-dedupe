@@ -1,14 +1,26 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import {
-  JobType,
-  OperationConflictError,
-  getFailedDocumentIds,
-  getDocumentIdsByAiFilter,
-} from '@paperless-dedupe/core';
-import type { ProcessScope } from '@paperless-dedupe/core';
+import { JobType, OperationConflictError, resolveProcessScope } from '@paperless-dedupe/core';
+import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { getServerRuntime } from '../../../../../runtime.server';
 import { RuntimeUnavailableError } from '$lib/server/scheduler';
+
+const processBodySchema = z.object({
+  scope: z
+    .discriminatedUnion('type', [
+      z.object({ type: z.literal('new_only') }),
+      z.object({ type: z.literal('failed_only') }),
+      z.object({ type: z.literal('full_reprocess') }),
+      z.object({
+        type: z.literal('selected_document_ids'),
+        documentIds: z.array(z.string().min(1)).min(1).max(50_000),
+      }),
+      z.object({ type: z.literal('current_filter'), filters: z.object({}).passthrough() }),
+    ])
+    .optional(),
+  reprocess: z.boolean().optional(),
+  documentIds: z.array(z.string()).optional(),
+});
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.config.AI_ENABLED) {
@@ -21,24 +33,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const contentType = request.headers.get('content-type');
   if (contentType?.includes('application/json')) {
     try {
-      const body = await request.json();
-
-      // New structured scope takes precedence
-      if (body?.scope) {
-        const scope = body.scope as ProcessScope;
-        const resolved = resolveScope(scope, locals.db);
+      const parsed = processBodySchema.safeParse(await request.json());
+      if (!parsed.success) return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid process scope');
+      const body = parsed.data;
+      if (body.scope) {
+        const resolved = resolveProcessScope(locals.db, body.scope);
         reprocess = resolved.reprocess;
         documentIds = resolved.documentIds;
       } else {
-        // Legacy params
-        reprocess = body?.reprocess === true;
-        if (Array.isArray(body?.documentIds)) {
-          documentIds = body.documentIds;
-        }
+        reprocess = body.reprocess ?? false;
+        documentIds = body.documentIds;
       }
     } catch {
-      // Ignore parse errors
+      return apiError(ErrorCode.VALIDATION_FAILED, 'Invalid process request');
     }
+  }
+  if (documentIds !== undefined && documentIds.length === 0) {
+    return apiSuccess({ jobId: null, nothingToDo: true });
   }
 
   const runtime = await getServerRuntime();
@@ -63,21 +74,3 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     throw error;
   }
 };
-
-function resolveScope(
-  scope: ProcessScope,
-  db: Parameters<typeof getFailedDocumentIds>[0],
-): { reprocess: boolean; documentIds?: string[] } {
-  switch (scope.type) {
-    case 'new_only':
-      return { reprocess: false };
-    case 'failed_only':
-      return { reprocess: false, documentIds: getFailedDocumentIds(db) };
-    case 'selected_document_ids':
-      return { reprocess: false, documentIds: scope.documentIds };
-    case 'current_filter':
-      return { reprocess: false, documentIds: getDocumentIdsByAiFilter(db, scope.filters) };
-    case 'full_reprocess':
-      return { reprocess: true };
-  }
-}

@@ -102,9 +102,9 @@
     layoutCtx.startProcessingWithScope({ type: 'failed_only' }, 'Retrying failed documents');
   }
 
-  function handleRetryOne(resultId: string) {
+  function handleRetryOne(documentId: string) {
     layoutCtx.startProcessingWithScope(
-      { type: 'selected_result_ids', resultIds: [resultId] },
+      { type: 'selected_document_ids', documentIds: [documentId] },
       'Retrying failed document',
     );
   }
@@ -488,7 +488,7 @@
               </button>
             {:else}
               <button
-                onclick={() => handleRetryOne(result.id)}
+                onclick={() => handleRetryOne(result.documentId)}
                 disabled={layoutCtx.isProcessing}
                 class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
               >
