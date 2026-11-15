@@ -93,6 +93,45 @@ afterEach(() => {
 });
 
 describe('PaperlessClient', () => {
+  it('fetches document metadata without OCR and preserves full-content reads', async () => {
+    const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'test-token' });
+    const metadata = makeSnakeCaseDocument({
+      id: 7,
+      custom_fields: [{ field: 3, value: 'synthetic' }],
+    });
+    delete (metadata as Partial<typeof metadata>).content;
+    mockFetch.mockResolvedValueOnce(mockResponse(metadata));
+    const result = await client.getDocumentMetadata(7);
+    const url = new URL(mockFetch.mock.calls[0][0] as string);
+    expect(url.pathname).toBe('/api/documents/7/');
+    expect(url.searchParams.get('fields')?.split(',')).toEqual([
+      'id',
+      'title',
+      'tags',
+      'correspondent',
+      'document_type',
+      'created',
+      'modified',
+      'added',
+      'original_file_name',
+      'archived_file_name',
+      'archive_serial_number',
+      'custom_fields',
+    ]);
+    expect(url.search).not.toContain('content');
+    expect(result).toMatchObject({
+      id: 7,
+      content: '',
+      customFields: [{ field: 3, value: 'synthetic' }],
+    });
+
+    mockFetch.mockResolvedValueOnce(
+      mockResponse(makeSnakeCaseDocument({ id: 7, content: 'Synthetic full text' })),
+    );
+    expect(await client.getDocumentContent(7)).toBe('Synthetic full text');
+    expect(new URL(mockFetch.mock.calls[1][0] as string).search).toBe('');
+  });
+
   // ─── Auth header generation ──────────────────────────────────────────
 
   describe('auth header generation', () => {

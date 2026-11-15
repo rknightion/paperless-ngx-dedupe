@@ -91,7 +91,7 @@ function createMockClient() {
         Promise.resolve({ id: 99, name, slug: name.toLowerCase(), color: '#000' }),
       ),
     updateDocument: vi.fn().mockResolvedValue(undefined),
-    getDocument: vi.fn().mockResolvedValue({
+    getDocumentMetadata: vi.fn().mockResolvedValue({
       id: 1,
       title: 'Invoice A',
       content: '',
@@ -448,6 +448,111 @@ describe('reviewed AI apply plans', () => {
       .run();
   });
 
+  function seedAdditionalResults(count: number) {
+    const ids = [resultId];
+    for (let i = 2; i <= count; i++) {
+      db.insert(document)
+        .values({
+          id: `plan-doc-${i}`,
+          paperlessId: i,
+          title: `Document ${i}`,
+          processingStatus: 'completed',
+          syncedAt: '2024-01-01T00:00:00Z',
+        })
+        .run();
+      const row = db
+        .insert(aiProcessingResult)
+        .values({
+          documentId: `plan-doc-${i}`,
+          paperlessId: i,
+          provider: 'openai',
+          model: 'test-model',
+          suggestedTitle: `Suggested ${i}`,
+          appliedStatus: 'pending_review',
+          createdAt: '2024-01-01T00:00:00Z',
+        })
+        .returning()
+        .get();
+      ids.push(row.id);
+    }
+    return ids;
+  }
+
+  const titleSelection = {
+    title: true,
+    correspondent: false,
+    documentType: false,
+    tags: false,
+    processedTag: false,
+    customFieldIds: [],
+  };
+
+  it('fetches twelve plan documents concurrently with a four-request bound and stable order', async () => {
+    const resultIds = seedAdditionalResults(12).reverse();
+    const client = createMockClient();
+    const template = await client.getDocumentMetadata(1);
+    let active = 0;
+    let peak = 0;
+    const finished: number[] = [];
+    const fetch = vi.fn(async (id: number) => {
+      active++;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, id * 2));
+      active--;
+      finished.push(id);
+      return { ...template, id, title: `Live ${id}` };
+    });
+    client.getDocumentMetadata = fetch;
+    const preview = await createAiApplyPlan(
+      db,
+      client,
+      { type: 'selected_result_ids', resultIds },
+      titleSelection,
+    );
+    const plan = claimAiMutationPlan(db, preview.token, 'ai_apply', 'metadata-plan-job');
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(fetch).toHaveBeenCalledTimes(12);
+    expect(plan.resultIds).toEqual(resultIds);
+    expect(plan.results.map((row) => row.resultId)).toEqual(resultIds);
+    expect(plan.results.map((row) => row.paperlessId)).toEqual(
+      Array.from({ length: 12 }, (_, i) => 12 - i),
+    );
+    expect(plan.results.map((row) => row.reviewedState.title)).toEqual(
+      Array.from({ length: 12 }, (_, i) => `Live ${12 - i}`),
+    );
+    expect(finished).not.toEqual(plan.results.map((row) => row.paperlessId));
+  });
+
+  it('validates every result before fetching any plan document', async () => {
+    const resultIds = seedAdditionalResults(2);
+    db.update(aiProcessingResult)
+      .set({ appliedStatus: 'rejected' })
+      .where(eq(aiProcessingResult.id, resultIds[1]))
+      .run();
+    const client = createMockClient();
+    await expect(
+      createAiApplyPlan(db, client, { type: 'selected_result_ids', resultIds }, titleSelection),
+    ).rejects.toThrow('AI result is not pending review');
+    expect(client.getDocumentMetadata).not.toHaveBeenCalled();
+    expect(db.select().from(reviewedMutationPlan).all()).toEqual([]);
+  });
+
+  it('propagates metadata fetch failures without storing a partial plan', async () => {
+    const client = createMockClient();
+    const error = new Error('Synthetic metadata failure');
+    vi.mocked(client.getDocumentMetadata).mockRejectedValue(error);
+    await expect(
+      createAiApplyPlan(
+        db,
+        client,
+        { type: 'selected_result_ids', resultIds: [resultId] },
+        titleSelection,
+      ),
+    ).rejects.toBe(error);
+    expect(db.select().from(reviewedMutationPlan).all()).toEqual([]);
+  });
+
   it('rejects an empty field selection before creating a plan', async () => {
     await expect(
       createAiApplyPlan(
@@ -508,8 +613,8 @@ describe('reviewed AI apply plans', () => {
 
   it('keeps live protected tags and excludes protected suggestions in a reviewed plan', async () => {
     const client = createMockClient();
-    const live = await client.getDocument(1);
-    vi.mocked(client.getDocument).mockResolvedValue({ ...live, tags: [2] });
+    const live = await client.getDocumentMetadata(1);
+    vi.mocked(client.getDocumentMetadata).mockResolvedValue({ ...live, tags: [2] });
     const preview = await createAiApplyPlan(
       db,
       client,
@@ -538,8 +643,8 @@ describe('reviewed AI apply plans', () => {
 
   it('uses the suggested tags unchanged when protection is disabled', async () => {
     const client = createMockClient();
-    const live = await client.getDocument(1);
-    vi.mocked(client.getDocument).mockResolvedValue({ ...live, tags: [2] });
+    const live = await client.getDocumentMetadata(1);
+    vi.mocked(client.getDocumentMetadata).mockResolvedValue({ ...live, tags: [2] });
     const preview = await createAiApplyPlan(
       db,
       client,
@@ -622,8 +727,8 @@ describe('reviewed AI apply plans', () => {
       .returning()
       .get();
     const client = createMockClient();
-    vi.mocked(client.getDocument).mockImplementation(async (id) => ({
-      ...(await createMockClient().getDocument(id)),
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async (id) => ({
+      ...(await createMockClient().getDocumentMetadata(id)),
       id,
       title: id === 2 ? 'Second' : 'Invoice A',
     }));
@@ -787,10 +892,10 @@ describe('reviewed AI apply plans', () => {
   it('ignores unrelated tag edits for processed-tag apply and preserves them on revert', async () => {
     const client = createMockClient();
     let live = {
-      ...(await client.getDocument(1)),
+      ...(await client.getDocumentMetadata(1)),
       tags: [1],
     };
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = { ...live, tags: update.tags ?? live.tags };
     });
@@ -895,8 +1000,8 @@ describe('reviewed AI apply plans', () => {
       tag(3, 'ai-processed'),
       tag(4, 'unrelated'),
     ]);
-    let live = { ...(await client.getDocument(1)), tags: [2] };
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    let live = { ...(await client.getDocumentMetadata(1)), tags: [2] };
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = { ...live, tags: update.tags ?? live.tags };
     });
@@ -955,8 +1060,8 @@ describe('reviewed AI apply plans', () => {
       tag(2, 'shopping'),
       tag(3, 'ai-processed'),
     ]);
-    let live = { ...(await client.getDocument(1)), tags: [2, 3] };
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    let live = { ...(await client.getDocumentMetadata(1)), tags: [2, 3] };
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = { ...live, tags: update.tags ?? live.tags };
     });
@@ -1003,9 +1108,9 @@ describe('reviewed AI apply plans', () => {
       .set({ suggestedCorrespondent: 'New correspondent' })
       .where(eq(aiProcessingResult.id, resultId))
       .run();
-    const original = await client.getDocument(1);
+    const original = await client.getDocumentMetadata(1);
     let reads = 0;
-    vi.mocked(client.getDocument).mockImplementation(async () => {
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => {
       reads++;
       return reads < 3
         ? original
@@ -1103,12 +1208,12 @@ describe('reviewed AI apply plans', () => {
       .get();
     const client = createMockClient();
     let firstDocumentReads = 0;
-    vi.mocked(client.getDocument).mockImplementation(async (paperlessId) => {
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async (paperlessId) => {
       if (paperlessId === 1 && firstDocumentReads++ > 0) {
         throw new PaperlessApiError('document not found', 404);
       }
       return {
-        ...(await createMockClient().getDocument(paperlessId)),
+        ...(await createMockClient().getDocumentMetadata(paperlessId)),
         id: paperlessId,
         title: paperlessId === 2 ? 'Second invoice' : 'Invoice A',
       };
@@ -1160,8 +1265,8 @@ describe('reviewed AI apply plans', () => {
       },
       { tokenFactory: () => 'conflict-token' },
     );
-    vi.mocked(client.getDocument).mockResolvedValueOnce({
-      ...(await client.getDocument(1)),
+    vi.mocked(client.getDocumentMetadata).mockResolvedValueOnce({
+      ...(await client.getDocumentMetadata(1)),
       title: 'Edited after review',
     });
 
@@ -1203,12 +1308,12 @@ describe('reviewed AI apply plans', () => {
       .returning()
       .get();
     const client = createMockClient();
-    const firstLive = await client.getDocument(1);
+    const firstLive = await client.getDocumentMetadata(1);
     const live = new Map([
       [1, firstLive],
       [2, { ...firstLive, id: 2, title: 'Second original' }],
     ]);
-    vi.mocked(client.getDocument).mockImplementation(async (id) => live.get(id)!);
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async (id) => live.get(id)!);
     const preview = await createAiApplyPlan(
       db,
       client,
@@ -1482,8 +1587,8 @@ describe('reviewed AI apply plans', () => {
       claimAiMutationPlan(db, applyPreview.token, 'ai_apply', 'apply-job'),
       'apply-job',
     );
-    vi.mocked(client.getDocument).mockResolvedValue({
-      ...(await client.getDocument(1)),
+    vi.mocked(client.getDocumentMetadata).mockResolvedValue({
+      ...(await client.getDocumentMetadata(1)),
       title: 'Reviewed title',
       customFields: [
         { field: 7, value: 'paid-id' },
@@ -1525,8 +1630,8 @@ describe('reviewed AI apply plans', () => {
 
   it('reconciles apply after Paperless success without repeating the remote mutation', async () => {
     const client = createMockClient();
-    let live = await client.getDocument(1);
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    let live = await client.getDocumentMetadata(1);
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = {
         ...live,
@@ -1566,8 +1671,8 @@ describe('reviewed AI apply plans', () => {
 
   it('reconciles revert after Paperless success without repeating the remote mutation', async () => {
     const client = createMockClient();
-    let live = await client.getDocument(1);
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    let live = await client.getDocumentMetadata(1);
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = {
         ...live,
@@ -1628,15 +1733,15 @@ describe('reviewed AI apply plans', () => {
 
   it('reconciles a selective custom-field revert after remote success and preserves other applied fields', async () => {
     const client = createMockClient();
-    let live: Awaited<ReturnType<PaperlessClient['getDocument']>> = {
-      ...(await client.getDocument(1)),
+    let live: Awaited<ReturnType<PaperlessClient['getDocumentMetadata']>> = {
+      ...(await client.getDocumentMetadata(1)),
       customFields: [
         { field: 7, value: 'open-id' },
         { field: 99, value: 'preserve me' },
         { field: 8, value: '2025-01-01' },
       ],
     };
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = {
         ...live,
@@ -1731,8 +1836,8 @@ describe('reviewed AI apply plans', () => {
       claimAiMutationPlan(db, applyPreview.token, 'ai_apply', 'revert-transient-apply'),
       'revert-transient-apply',
     );
-    vi.mocked(client.getDocument).mockResolvedValue({
-      ...(await createMockClient().getDocument(1)),
+    vi.mocked(client.getDocumentMetadata).mockResolvedValue({
+      ...(await createMockClient().getDocumentMetadata(1)),
       title: 'Reviewed title',
     });
     const revertPreview = await createAiRevertPlan(db, client, [resultId], selection);
@@ -1760,8 +1865,8 @@ describe('reviewed AI apply plans', () => {
 
   it('repairs the local cache when replaying after apply status commit', async () => {
     const client = createMockClient();
-    let live = await client.getDocument(1);
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    let live = await client.getDocumentMetadata(1);
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = {
         ...live,
@@ -1808,8 +1913,8 @@ describe('reviewed AI apply plans', () => {
 
   it('repairs the local cache when replaying after revert status commit', async () => {
     const client = createMockClient();
-    let live = await client.getDocument(1);
-    vi.mocked(client.getDocument).mockImplementation(async () => live);
+    let live = await client.getDocumentMetadata(1);
+    vi.mocked(client.getDocumentMetadata).mockImplementation(async () => live);
     vi.mocked(client.updateDocument).mockImplementation(async (_id, update) => {
       live = {
         ...live,
@@ -2090,7 +2195,7 @@ describe('applyAiResult - protected tags', () => {
           Promise.resolve({ id: 99, name, slug: name.toLowerCase(), color: '#000' }),
         ),
       updateDocument: vi.fn().mockResolvedValue(undefined),
-      getDocument: vi.fn().mockResolvedValue({
+      getDocumentMetadata: vi.fn().mockResolvedValue({
         id: 1,
         title: 'Protected Tag Test',
         content: '',

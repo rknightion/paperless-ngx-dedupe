@@ -234,7 +234,7 @@ export async function createAiRevertPlan(
     ) {
       throw new Error(`AI revert selection includes a field that was not applied: ${resultId}`);
     }
-    const live = await client.getDocument(row.paperlessId);
+    const live = await client.getDocumentMetadata(row.paperlessId);
     const liveState = selectedLiveState(live, selection, tagAudit(row));
     if (JSON.stringify(liveState) !== JSON.stringify(appliedState(row, selection))) {
       throw new Error(`AI revert preview conflicts with live Paperless state: ${resultId}`);
@@ -387,7 +387,7 @@ export async function executeClaimedAiRevertPlan(
         (row.appliedStatus === 'reverted' ||
           (row.appliedStatus === 'partial' && !selectedFieldsRemain))
       ) {
-        const live = await client.getDocument(row.paperlessId);
+        const live = await client.getDocumentMetadata(row.paperlessId);
         const current = selectedLiveState(live, plan.selection, tagAudit(row));
         const before = preApplyState(row, plan.selection);
         if (JSON.stringify(current) !== JSON.stringify(before)) {
@@ -417,7 +417,7 @@ export async function executeClaimedAiRevertPlan(
         });
         continue;
       }
-      const live = await client.getDocument(row.paperlessId);
+      const live = await client.getDocumentMetadata(row.paperlessId);
       const auditedTags = tagAudit(row);
       const liveState = selectedLiveState(live, plan.selection, auditedTags);
       const conflicts = Object.keys(frozen.reviewedState).filter(
