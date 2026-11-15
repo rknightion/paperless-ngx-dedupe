@@ -69,6 +69,7 @@
   let ngramSize = $state(initialDedup.ngramSize);
   let minWords = $state(initialDedup.minWords);
   let fuzzySampleSize = $state(initialDedup.fuzzySampleSize);
+  // Deprecated and ignored; preserve the stored key for config compatibility.
   let autoAnalyze = $state(initialDedup.autoAnalyze);
   let showAdvanced = $state(false);
   let isSavingDedup = $state(false);
@@ -488,7 +489,7 @@
     {/if}
   </div>
 
-  <div class:hidden={activeSettingsSection !== 'automation'}>
+  <div id="automation" class:hidden={activeSettingsSection !== 'automation'}>
     <AutomationSettings settings={data.automation} />
   </div>
 
@@ -730,16 +731,14 @@
               class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
-          <div class="flex items-end">
-            <label class="text-muted flex items-center gap-2 text-sm">
-              <input type="checkbox" bind:checked={autoAnalyze} class="rounded" />
-              Auto-analyze after sync
-              <InfoIcon
-                text="When enabled, duplicate analysis runs automatically after each document sync completes. Disable to run analysis manually from the Dashboard."
-                position="top"
-              />
-            </label>
-          </div>
+          <p class="text-muted text-sm">
+            To run analysis after each sync, enable the Analysis schedule under
+            <a
+              href="#automation"
+              class="text-accent hover:text-accent-hover underline"
+              onclick={() => (activeSettingsSection = 'automation')}>Automation</a
+            >.
+          </p>
         </div>
       {/if}
     </div>

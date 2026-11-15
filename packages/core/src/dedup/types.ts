@@ -33,6 +33,7 @@ export interface DedupConfig {
   confidenceWeightFuzzy: number;
   discriminativePenaltyStrength: number;
   fuzzySampleSize: number;
+  /** @deprecated Ignored; retained so stored configs and config backups keep validating. */
   autoAnalyze: boolean;
 }
 

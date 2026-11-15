@@ -155,7 +155,7 @@ Change these in **Settings** or via `PUT /api/v1/config/dedup`.
 | `minWords` | `20` | 1-1000 | Skip very short docs below this |
 | `similarityThreshold` | `0.75` | 0-1 | Minimum overall similarity to keep a pair |
 | `fuzzySampleSize` | `10000` | 100-100000 | Character sample size for fuzzy compare |
-| `autoAnalyze` | `true` | boolean | Auto-run analysis after sync |
+| `autoAnalyze` | `true` | boolean | Deprecated, has no effect. Use the Analysis schedule in Settings > Automation. |
 
 ### Confidence Weights
 
