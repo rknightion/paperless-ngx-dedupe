@@ -1,3 +1,5 @@
+import { selectPrimary } from '../dedup/primary.js';
+import { type PrimaryStrategy } from '../dedup/types.js';
 import { type PaperlessFileMetadata } from '../paperless/types.js';
 import { and, count, desc, asc, eq, gte, lt, lte, or, sql, inArray, ne } from 'drizzle-orm';
 
@@ -1289,4 +1291,125 @@ export function listPairDecisionsWithDocuments(
     nextCursor,
     total: db.select({ value: count() }).from(duplicatePairDecision).get()!.value,
   };
+}
+
+export class PrimarySelectionConflictError extends Error {
+  constructor() {
+    super('The number of changing keepers no longer matches the preview');
+  }
+}
+
+type PrimarySelectionOptions = {
+  strategy: PrimaryStrategy;
+  minConfidence?: number;
+  includeManual?: boolean;
+};
+
+function planPrimarySelection(db: AppDatabase, options: PrimarySelectionOptions) {
+  const rows = db
+    .select({
+      groupId: duplicateGroup.id,
+      updatedAt: duplicateGroup.updatedAt,
+      id: document.id,
+      paperlessId: document.paperlessId,
+      title: document.title,
+      addedDate: document.addedDate,
+      correspondent: document.correspondent,
+      documentType: document.documentType,
+      tagsJson: document.tagsJson,
+      customFieldsJson: document.customFieldsJson,
+      wordCount: documentContent.wordCount,
+      isPrimary: duplicateMember.isPrimary,
+    })
+    .from(duplicateGroup)
+    .innerJoin(duplicateMember, eq(duplicateMember.groupId, duplicateGroup.id))
+    .innerJoin(document, eq(document.id, duplicateMember.documentId))
+    .leftJoin(documentContent, eq(documentContent.documentId, document.id))
+    .where(
+      and(
+        eq(duplicateGroup.status, 'pending'),
+        gte(duplicateGroup.confidenceScore, options.minConfidence ?? 0),
+        options.includeManual ? undefined : eq(duplicateGroup.primarySource, 'auto'),
+      ),
+    )
+    .orderBy(asc(duplicateGroup.id), asc(document.paperlessId))
+    .all();
+  const groups = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const members = groups.get(row.groupId) ?? [];
+    members.push(row);
+    groups.set(row.groupId, members);
+  }
+  const changes = [];
+  let groupsEvaluated = 0;
+  for (const [groupId, members] of groups) {
+    const current = members.find((member) => member.isPrimary);
+    if (!current) continue;
+    groupsEvaluated++;
+    const selection = selectPrimary(members, options.strategy);
+    if (selection.documentId === current.id) continue;
+    const proposed = members.find((member) => member.id === selection.documentId)!;
+    changes.push({
+      groupId,
+      documentId: proposed.id,
+      updatedAt: current.updatedAt,
+      current: { paperlessId: current.paperlessId, title: current.title },
+      proposed: { paperlessId: proposed.paperlessId, title: proposed.title },
+      reason: selection.reason,
+    });
+  }
+  return { groupsEvaluated, changes };
+}
+
+/** Preview local pending keepers without changing group or member state. */
+export function previewPrimarySelection(db: AppDatabase, options: PrimarySelectionOptions) {
+  return db.transaction(() => {
+    const { groupsEvaluated, changes } = planPrimarySelection(db, options);
+    return {
+      groupsEvaluated,
+      groupsChanging: changes.length,
+      sample: changes
+        .slice(0, 50)
+        .map(({ groupId, current, proposed, reason }) => ({ groupId, current, proposed, reason })),
+    };
+  });
+}
+
+/** Recompute and apply a local keeper rule atomically; count drift requires a new preview.
+ * An explicitly included manual group retains its protection for subsequent default applies. */
+export function applyPrimarySelection(
+  db: AppDatabase,
+  options: PrimarySelectionOptions & { expectedChanging: number },
+) {
+  return db.transaction(
+    (tx) => {
+      const { changes } = planPrimarySelection(db, options);
+      if (changes.length !== options.expectedChanging) throw new PrimarySelectionConflictError();
+      for (const change of changes) {
+        tx.update(duplicateMember)
+          .set({ isPrimary: false })
+          .where(eq(duplicateMember.groupId, change.groupId))
+          .run();
+        tx.update(duplicateMember)
+          .set({ isPrimary: true })
+          .where(
+            and(
+              eq(duplicateMember.groupId, change.groupId),
+              eq(duplicateMember.documentId, change.documentId),
+            ),
+          )
+          .run();
+        const previous = Date.parse(change.updatedAt);
+        const updatedAt = new Date(
+          Math.max(Date.now(), Number.isFinite(previous) ? previous + 1 : 0),
+        ).toISOString();
+        tx.update(duplicateGroup)
+          .set({ updatedAt })
+          .where(eq(duplicateGroup.id, change.groupId))
+          .run();
+      }
+      return { updated: changes.length };
+    },
+    { behavior: 'immediate' },
+  );
 }

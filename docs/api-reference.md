@@ -1606,3 +1606,29 @@ Neither the destination URL nor the authorization value is returned.
 Delivery uses at most three attempts with a ten-second timeout each. Retry delays start at
 one and four seconds, include bounded jitter, and honor `Retry-After` up to ten seconds.
 The total retry and timeout budget is at most fifty seconds.
+
+### POST /api/v1/duplicates/primary/preview
+
+Preview keeper changes in local pending groups. Body: `{ "strategy": "newest_added",
+"minConfidence": 0.9, "includeManual": false }`. `strategy` is required and accepts
+`lowest_id`, `oldest_added`, `newest_added`, `most_text` or `most_metadata`.
+`minConfidence` is optional, from 0 to 1; `includeManual` defaults to false.
+
+Returns `{ "data": { "groupsEvaluated": 12, "groupsChanging": 3, "sample": [] } }`.
+The sample contains at most 50 changing groups, each with `groupId`, `current` and
+`proposed` objects (`paperlessId`, `title`), plus `reason`. This reads local metadata
+without altering groups or contacting Paperless. Both keeper routes hold the duplicate
+mutation lease; a conflicting operation returns 409 `CONFLICT`.
+
+### POST /api/v1/duplicates/primary/apply
+
+Use the same body as preview and add `expectedChanging` equal to the preview count.
+The server recomputes the choices in one transaction and returns 409 `CONFLICT` if the
+live count differs. Preview again before retrying. This is a count check, not a frozen
+selection token: review the normal deletion preview before deleting any document.
+
+Success is `{ "data": { "updated": 3 } }`. Only pending groups meeting the confidence
+filter are eligible. Manual choices are excluded unless `includeManual` is true; an
+overridden manual group retains that protection for later requests. Changed groups
+receive a newer update timestamp, invalidating earlier deletion plans. No document is
+deleted or modified in Paperless. Invalid bodies return 400 `VALIDATION_FAILED`.
