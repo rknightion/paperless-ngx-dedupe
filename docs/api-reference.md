@@ -69,6 +69,7 @@ its message string; new code should use the context form described in `AGENTS.md
 - `GET /api/v1/maintenance/backup` (raw SQLite download)
 - `GET /api/v1/diagnostics` (raw JSON download)
 - `GET /api/v1/export/config.json` (raw JSON download)
+- `GET /api/v1/export/decisions.json` (raw JSON download)
 - `GET /api/v1/paperless/documents/:paperlessId/preview` (proxied binary stream)
 - `GET /api/v1/paperless/documents/:paperlessId/thumb` (proxied binary stream)
 - `GET /api/v1/metrics` (Prometheus text exposition format)
@@ -1392,6 +1393,30 @@ Successful downloads have private, non-storing cache headers and no `data` envel
 ### GET /api/v1/export/config.json
 
 Downloads config backup JSON.
+
+### GET /api/v1/export/decisions.json
+
+Downloads review decisions as a JSON attachment with private, non-storing cache headers.
+Like config backup downloads, the file has no `data` envelope:
+
+```json
+{
+  "version": 1,
+  "exportedAt": "2030-01-01T00:00:00.000Z",
+  "groups": [
+    { "paperlessIds": [1, 2], "status": "false_positive", "decidedAt": "2030-01-01T00:00:00.000Z" }
+  ],
+  "pairDecisions": [[1, 2]]
+}
+```
+
+Only `false_positive` and `ignored` groups are exported. Pending and deleted groups are
+excluded. Group members and pairs use stable Paperless IDs, including pair decisions whose
+documents are no longer local. The file contains no document text or titles, AI results,
+settings, or local document/group IDs. `decidedAt` uses the group's stored update time;
+after a later group update this may differ from the original review time. Keep the file
+with the Paperless library it describes, since IDs identify documents within that library.
+The export does not change review state.
 
 ### POST /api/v1/import/config
 
