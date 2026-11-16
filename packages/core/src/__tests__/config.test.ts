@@ -102,3 +102,29 @@ it('keeps access credentials environment-owned and sensitive', () => {
     readOnly: true,
   });
 });
+
+it('accepts keyless AI only with an absolute HTTP or HTTPS base URL', () => {
+  for (const baseURL of ['http://localhost:11434/v1', 'https://example.test/v1']) {
+    expect(
+      parseConfig({ ...baseEnv, AI_ENABLED: 'true', AI_OPENAI_BASE_URL: baseURL }),
+    ).toMatchObject({ AI_ENABLED: true, AI_OPENAI_BASE_URL: baseURL });
+  }
+  expect(() => parseConfig({ ...baseEnv, AI_ENABLED: 'true' })).toThrow(/AI_OPENAI_API_KEY/);
+  expect(parseConfig(baseEnv)).not.toHaveProperty('AI_OPENAI_BASE_URL');
+  for (const baseURL of ['/v1', 'example.test/v1', 'ftp://example.test', 'invalid', '']) {
+    expect(() => parseConfig({ ...baseEnv, AI_OPENAI_BASE_URL: baseURL })).toThrow(
+      /AI_OPENAI_BASE_URL must be an absolute http or https URL/,
+    );
+  }
+});
+
+it('describes the AI base URL as an environment-owned non-sensitive setting', () => {
+  expect(getConfigMetadata().find((entry) => entry.key === 'AI_OPENAI_BASE_URL')).toMatchObject({
+    source: 'environment',
+    sensitive: false,
+    readOnly: true,
+  });
+  expect(() => coerceConfigBatch({ AI_OPENAI_BASE_URL: 'http://localhost:11434/v1' })).toThrow(
+    /read-only/,
+  );
+});

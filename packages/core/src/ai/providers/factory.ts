@@ -1,26 +1,25 @@
 import type { AiProviderInterface } from './types.js';
-import { OpenAiProvider } from './openai.js';
+import { OpenAiProvider, type OpenAiProviderOptions } from './openai.js';
 
+/** Create an AI provider with the configured endpoint and request policy. */
 export async function createAiProvider(
-  apiKey: string,
+  apiKey: string | undefined,
   model: string,
-  maxRetries = 3,
-  flexProcessing = true,
+  options: OpenAiProviderOptions = {},
 ): Promise<AiProviderInterface> {
-  return OpenAiProvider.create(apiKey, model, maxRetries, flexProcessing);
+  return OpenAiProvider.create(apiKey, model, options);
 }
 
 export const INTERACTIVE_MAX_RETRIES = 2;
 
 export async function createInteractiveAiProvider(
-  apiKey: string,
+  apiKey: string | undefined,
   model: string,
-  configuredMaxRetries: number,
+  options: OpenAiProviderOptions = {},
 ): Promise<AiProviderInterface> {
-  return OpenAiProvider.create(
-    apiKey,
-    model,
-    Math.min(configuredMaxRetries, INTERACTIVE_MAX_RETRIES),
-    false,
-  );
+  return OpenAiProvider.create(apiKey, model, {
+    ...options,
+    maxRetries: Math.min(options.maxRetries ?? 3, INTERACTIVE_MAX_RETRIES),
+    flexProcessing: false,
+  });
 }

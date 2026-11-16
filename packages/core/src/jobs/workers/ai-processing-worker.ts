@@ -31,7 +31,7 @@ runWorkerTask(async (ctx, onProgress) => {
 
   const apiKey = config.AI_OPENAI_API_KEY;
 
-  if (!apiKey) {
+  if (!apiKey && !config.AI_OPENAI_BASE_URL) {
     throw new Error('No OpenAI API key configured (AI_OPENAI_API_KEY)');
   }
 
@@ -106,12 +106,11 @@ runWorkerTask(async (ctx, onProgress) => {
   // Scheduled calls must surface every provider attempt to the application-level
   // reservation/retry loop. Manual work retains the configured SDK retry cap.
   const batchMaxRetries = scheduled ? 0 : Math.min(aiConfig.maxRetries, 2);
-  const provider = await createAiProvider(
-    apiKey,
-    aiConfig.model,
-    batchMaxRetries,
-    aiConfig.flexProcessing,
-  );
+  const provider = await createAiProvider(apiKey, aiConfig.model, {
+    maxRetries: batchMaxRetries,
+    flexProcessing: aiConfig.flexProcessing,
+    baseURL: config.AI_OPENAI_BASE_URL,
+  });
 
   const result = await processBatch(ctx.db, {
     provider,

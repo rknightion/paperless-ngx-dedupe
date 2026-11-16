@@ -9,14 +9,31 @@ Paperless NGX Dedupe can use large language models to classify your documents an
 
 ## Setup
 
-AI processing is disabled by default. Enable it with two environment variables:
+AI processing is disabled by default. Configure its environment before starting the app:
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `AI_ENABLED` | No | `false` | Master switch for all AI features |
-| `AI_OPENAI_API_KEY` | When AI enabled | - | OpenAI API key |
+| `AI_OPENAI_API_KEY` | Without a base URL | - | API key for the configured AI server |
+| `AI_OPENAI_BASE_URL` | No | - | Absolute http or https base URL for an OpenAI-compatible server |
 
-The API key is required when `AI_ENABLED=true`.
+The API key is required when `AI_ENABLED=true` unless `AI_OPENAI_BASE_URL` is set.
+
+### Use a local or self-hosted model
+
+Set `AI_OPENAI_BASE_URL` to the server's API base, such as `http://localhost:11434/v1`,
+and set `ai.model` in Settings to the model name that server accepts. For a container,
+use a URL reachable from that container. Supply `AI_OPENAI_API_KEY` if the server requires
+credentials; otherwise the client sends a placeholder key.
+
+Document text and enabled reference metadata go to this configured server instead of OpenAI.
+Support is best effort: the server must support the Responses API and JSON-schema structured
+outputs. Model names are entered manually, and extraction quality depends on the model.
+Failures remain isolated to each document. Scheduled processing still requires a known model price.
+
+A custom base URL always disables Flex Processing and uses the standard 60-second per-attempt
+timeout. Interactive requests keep their existing retry cap. Leaving the variable unset keeps
+the default OpenAI endpoint, authentication requirement and request behavior.
 
 ## Configuration
 
@@ -254,7 +271,7 @@ Key details:
 - Structured output via `zodTextFormat`
 - Handles refusal detection and incomplete response detection
 - Reports cached token counts when available
-- When `flexProcessing` is enabled, requests are submitted to OpenAI's Flex Processing tier for ~50% lower costs (with relaxed latency SLA)
+- When `flexProcessing` is enabled and no custom base URL is set, requests are submitted to OpenAI's Flex Processing tier for ~50% lower costs (with relaxed latency SLA)
 
 ## Prompt Customization
 

@@ -96,12 +96,13 @@ Synced document text and metadata are stored locally in the application's own SQ
 and are not sent anywhere by sync or analysis — MinHash/LSH scoring runs entirely inside the
 container.
 
-**The one path that sends document content outside the deployment is AI processing, and it is
-off by default.** Enabling it (`AI_ENABLED=true` plus `AI_OPENAI_API_KEY`) sends each processed
-document's text — truncated to `maxContentLength` (8,000 characters by default) — to OpenAI for
-metadata extraction. If `includeCorrespondents`, `includeDocumentTypes`, or `includeTags` are
-also enabled, the existing names for those fields are sent as reference data alongside the
-document text. See [AI Processing](ai-processing.md).
+**AI processing sends document content to the configured AI server and is off by default.**
+With `AI_ENABLED=true`, the default destination is OpenAI and `AI_OPENAI_API_KEY` is required.
+Setting `AI_OPENAI_BASE_URL` instead sends the text to that local or self-hosted compatible server;
+its API key is optional. Each document's text is truncated to `maxContentLength` (8,000 characters
+by default). If `includeCorrespondents`, `includeDocumentTypes`, or `includeTags` are enabled,
+the existing names for those fields accompany the text as reference data. Choose the destination
+before enabling processing. See [AI Processing](ai-processing.md#use-a-local-or-self-hosted-model).
 
 AI results are stored as `pending_review` and are never applied to Paperless-NGX automatically —
 scheduled AI processing creates suggestions for review only. See [AI Processing — Status

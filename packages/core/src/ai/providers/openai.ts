@@ -89,31 +89,45 @@ export async function buildOpenAiRequestParams(
   return params;
 }
 
+export interface OpenAiProviderOptions {
+  maxRetries?: number;
+  flexProcessing?: boolean;
+  baseURL?: string;
+}
+
 export class OpenAiProvider implements AiProviderInterface {
   readonly provider = 'openai' as const;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private client: any;
   private model: string;
   private flexProcessing: boolean;
+  private customBaseURL: boolean;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private constructor(client: any, model: string, flexProcessing: boolean) {
+  private constructor(client: any, model: string, flexProcessing: boolean, customBaseURL: boolean) {
     this.client = client;
     this.model = model;
     this.flexProcessing = flexProcessing;
+    this.customBaseURL = customBaseURL;
   }
 
   static async create(
-    apiKey: string,
+    apiKey: string | undefined,
     model: string,
-    maxRetries = 3,
-    flexProcessing = true,
+    options: OpenAiProviderOptions = {},
   ): Promise<OpenAiProvider> {
+    const { maxRetries = 3, flexProcessing: requestedFlex = true, baseURL } = options;
+    const flexProcessing = !baseURL && requestedFlex;
     try {
       const { default: OpenAI } = await import('openai');
       const timeout = flexProcessing ? 900_000 : 60_000;
-      const client = new OpenAI({ apiKey, maxRetries, timeout });
-      return new OpenAiProvider(client, model, flexProcessing);
+      const client = new OpenAI({
+        apiKey: apiKey || (baseURL ? 'not-required' : undefined),
+        maxRetries,
+        timeout,
+        ...(baseURL ? { baseURL } : {}),
+      });
+      return new OpenAiProvider(client, model, flexProcessing, Boolean(baseURL));
     } catch {
       throw new Error('OpenAI SDK not installed. Install it with: pnpm add openai');
     }
@@ -121,6 +135,7 @@ export class OpenAiProvider implements AiProviderInterface {
 
   async extract(request: AiExtractionRequest): Promise<AiExtractionResult> {
     const params = await buildOpenAiRequestParams(request, this.model, this.flexProcessing);
+    if (this.customBaseURL) delete params.service_tier;
 
     let response;
     let rateLimit: RateLimitInfo | undefined;
