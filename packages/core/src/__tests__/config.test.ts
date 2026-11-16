@@ -9,6 +9,41 @@ const baseEnv = {
   PAPERLESS_API_TOKEN: 'test-token',
 };
 
+it('accepts proxy access only with a valid trusted CIDR list and header name', () => {
+  expect(
+    parseConfig({
+      ...baseEnv,
+      APP_AUTH_MODE: 'proxy',
+      APP_AUTH_TRUSTED_PROXIES: '192.0.2.0/24, 2001:db8::/32',
+    }),
+  ).toMatchObject({
+    APP_AUTH_MODE: 'proxy',
+    APP_AUTH_PROXY_HEADER: 'Remote-User',
+    APP_AUTH_TRUSTED_PROXIES: '192.0.2.0/24, 2001:db8::/32',
+  });
+  for (const cidrs of [
+    undefined,
+    '',
+    '192.0.2.1',
+    '192.0.2.0/33',
+    '2001:db8::/129',
+    'invalid/24',
+    '192.0.2.0/24,',
+  ]) {
+    expect(() =>
+      parseConfig({ ...baseEnv, APP_AUTH_MODE: 'proxy', APP_AUTH_TRUSTED_PROXIES: cidrs }),
+    ).toThrow('APP_AUTH_MODE=proxy requires valid APP_AUTH_TRUSTED_PROXIES CIDRs');
+  }
+  expect(() =>
+    parseConfig({
+      ...baseEnv,
+      APP_AUTH_MODE: 'proxy',
+      APP_AUTH_TRUSTED_PROXIES: '192.0.2.0/24',
+      APP_AUTH_PROXY_HEADER: 'invalid header',
+    }),
+  ).toThrow('APP_AUTH_PROXY_HEADER must be a valid HTTP header name');
+});
+
 describe('parseConfig', () => {
   it('keeps AI classification configuration independent', () => {
     const config = parseConfig({

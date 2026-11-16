@@ -39,7 +39,8 @@ Open `http://localhost:3000`.
     The default mode permits anyone who can reach the port to use the application. Keep it on a
     trusted network or behind an authenticating proxy, or set `APP_AUTH_MODE=basic` with
     `APP_AUTH_USERNAME` and `APP_AUTH_PASSWORD` before starting. Use HTTPS outside a trusted local
-    link. See the [access model](security.md#access-model) and
+    link. To use proxy-provided identity, configure `APP_AUTH_MODE=proxy` with trusted proxy CIDRs.
+    See the [access model](security.md#access-model) and
     [configuration](configuration.md#access-protection).
 
 ### Important URL Note

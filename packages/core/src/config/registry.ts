@@ -309,6 +309,8 @@ const entries: InternalRegistryEntry[] = [
   environmentEntry('APP_AUTH_USERNAME', 'string', 'advanced', true),
   environmentEntry('APP_AUTH_PASSWORD', 'string', 'advanced', true),
   environmentEntry('APP_API_TOKEN', 'string', 'advanced', true),
+  environmentEntry('APP_AUTH_PROXY_HEADER', 'string', 'advanced', false, 'Remote-User'),
+  environmentEntry('APP_AUTH_TRUSTED_PROXIES', 'string', 'advanced', false),
   environmentEntry('AUTO_MIGRATE', 'boolean', 'advanced', false, true),
   environmentEntry('CORS_ALLOW_ORIGIN', 'string', 'advanced', false, ''),
   environmentEntry('DATABASE_URL', 'string', 'data', true),

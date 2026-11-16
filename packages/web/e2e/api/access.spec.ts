@@ -42,6 +42,9 @@ async function withProtectedApp(
       APP_AUTH_USERNAME: undefined,
       APP_AUTH_PASSWORD: undefined,
       APP_API_TOKEN: undefined,
+      APP_AUTH_PROXY_HEADER: undefined,
+      APP_AUTH_TRUSTED_PROXIES: undefined,
+      ADDRESS_HEADER: undefined,
       SHUTDOWN_TIMEOUT: '1',
       ...variables,
     },
@@ -146,4 +149,67 @@ test('keeps the default mode open and logs one startup notice', async ({ request
     }
     expect(output().match(/Application access protection is disabled/g)).toHaveLength(1);
   });
+});
+
+test('accepts identity only from a trusted proxy while preserving API tokens and public probes', async ({
+  request,
+}) => {
+  await withProtectedApp(
+    {
+      APP_AUTH_MODE: 'proxy',
+      APP_AUTH_TRUSTED_PROXIES: '127.0.0.1/32',
+      APP_AUTH_PROXY_HEADER: 'X-Authenticated-User',
+      APP_API_TOKEN: 'synthetic-access-token',
+    },
+    async (url) => {
+      const identity = { 'X-Authenticated-User': 'synthetic-user' };
+      expect((await request.get(url, { headers: identity })).status()).toBe(200);
+      expect((await request.get(`${url}/api/v1/config`, { headers: identity })).status()).toBe(200);
+      expect((await request.get(url)).status()).toBe(401);
+      expect((await request.get(`${url}/api/v1/metrics`)).status()).toBe(401);
+      expect(
+        (
+          await request.get(`${url}/api/v1/config`, {
+            headers: { Authorization: 'Bearer synthetic-access-token' },
+          })
+        ).status(),
+      ).toBe(200);
+      expect(
+        (
+          await request.get(`${url}/api/v1/config`, {
+            headers: { ...identity, Authorization: 'Bearer incorrect' },
+          })
+        ).status(),
+      ).toBe(401);
+      for (const route of ['/api/v1/health', '/api/v1/ready']) {
+        expect((await request.get(`${url}${route}`)).status()).toBe(200);
+      }
+      expect((await request.fetch(`${url}/api/v1/config`, { method: 'OPTIONS' })).status()).toBe(
+        204,
+      );
+    },
+  );
+});
+
+test('does not trust a forwarded peer address to accept a proxy identity', async ({ request }) => {
+  await withProtectedApp(
+    {
+      APP_AUTH_MODE: 'proxy',
+      APP_AUTH_TRUSTED_PROXIES: '192.0.2.0/24',
+      APP_API_TOKEN: 'synthetic-access-token',
+      ADDRESS_HEADER: 'x-forwarded-for',
+    },
+    async (url) => {
+      const headers = { 'Remote-User': 'synthetic-user', 'X-Forwarded-For': '192.0.2.1' };
+      expect((await request.get(`${url}/api/v1/config`, { headers })).status()).toBe(401);
+      expect((await request.get(url, { headers })).status()).toBe(401);
+      expect(
+        (
+          await request.get(`${url}/api/v1/config`, {
+            headers: { ...headers, Authorization: 'Bearer synthetic-access-token' },
+          })
+        ).status(),
+      ).toBe(200);
+    },
+  );
 });
