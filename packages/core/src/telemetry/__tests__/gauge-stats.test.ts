@@ -46,5 +46,10 @@ it('counts documents, pending groups, running jobs and pending AI results', asyn
     unresolvedDuplicatesCount: 1,
     activeJobsCount: 1,
     aiPendingCount: 1,
+    pendingHighConfidenceCount: 1,
+    pendingAmbiguousCount: 0,
+    deadLetterJobsCount: 0,
+    lastSyncSuccessTimestamp: undefined,
+    lastAnalysisSuccessTimestamp: undefined,
   });
 });
