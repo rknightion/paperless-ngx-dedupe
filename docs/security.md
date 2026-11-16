@@ -16,7 +16,8 @@ what its Paperless-NGX credential needs, and where secrets live.
 
 Access protection is off by default (`APP_AUTH_MODE=none`). Anyone who can reach the port can
 use the UI and API with the Paperless-NGX credential the server holds. The server logs this
-trust model once at startup.
+trust model once at startup. Settings also shows a "Not protected" notice while this mode is active;
+configuring only an API token does not remove it.
 
 Set `APP_AUTH_MODE=basic` with `APP_AUTH_USERNAME` and `APP_AUTH_PASSWORD` to require one shared
 credential. The browser handles the password prompt; there are no user accounts, sessions or roles.

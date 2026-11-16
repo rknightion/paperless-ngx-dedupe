@@ -16,6 +16,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const aiConfig = locals.config.AI_ENABLED ? getAiConfig(locals.db) : null;
 
   return {
+    accessProtectionEnabled: locals.config.APP_AUTH_MODE !== 'none',
     dedupConfig,
     connection: {
       url: locals.config.PAPERLESS_URL,

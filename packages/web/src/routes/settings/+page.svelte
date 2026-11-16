@@ -419,6 +419,27 @@
     <p class="text-muted mt-1">Configure Paperless-NGX connection and deduplication parameters.</p>
   </header>
 
+  {#if !data.accessProtectionEnabled}
+    <aside
+      role="note"
+      aria-label="Access protection"
+      class="border-soft bg-surface rounded-xl border p-4"
+    >
+      <h2 class="text-ink text-sm font-semibold">Not protected</h2>
+      <p class="text-muted mt-1 text-sm">
+        Application access protection is off. Anyone who can reach this app can view and change
+        documents. Keep it on a trusted network or behind an authenticating proxy, or enable access
+        protection.
+      </p>
+      <a
+        class="text-accent mt-2 inline-block text-sm underline"
+        href="https://github.com/rknightion/paperless-ngx-dedupe/blob/main/docs/security.md#access-model"
+        target="_blank"
+        rel="noopener noreferrer">Learn about access protection</a
+      >
+    </aside>
+  {/if}
+
   <!-- Sticky Mini-Nav. Translucent + blurred is deliberate and one of only two
        places the system allows it: a surface that scrolls under content. -->
   <div class="bg-canvas/80 sticky top-0 z-10 -mx-4 px-4 py-2 backdrop-blur-sm sm:-mx-6 md:-mx-8">

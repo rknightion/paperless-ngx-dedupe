@@ -213,3 +213,27 @@ test('does not trust a forwarded peer address to accept a proxy identity', async
     },
   );
 });
+
+test('shows the Settings access notice only when protection is disabled', async ({ browser }) => {
+  for (const mode of ['none', 'basic', 'proxy']) {
+    await withProtectedApp(
+      { ...basicEnvironment, APP_AUTH_MODE: mode, APP_AUTH_TRUSTED_PROXIES: '127.0.0.1/32' },
+      async (url) => {
+        const context = await browser.newContext({
+          httpCredentials: { username: 'operator', password: 'synthetic-access-password' },
+          extraHTTPHeaders: { 'Remote-User': 'synthetic-user' },
+        });
+        try {
+          const page = await context.newPage();
+          await page.goto(`${url}/settings`);
+          await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+          const notice = page.getByRole('note', { name: 'Access protection', exact: true });
+          if (mode === 'none') await expect(notice).toBeVisible();
+          else await expect(notice).toHaveCount(0);
+        } finally {
+          await context.close();
+        }
+      },
+    );
+  }
+});
