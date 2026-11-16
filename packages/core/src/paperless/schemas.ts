@@ -30,6 +30,8 @@ export const paperlessDocumentSchema = z
     original_file_name: z.string().nullable().default(null),
     archived_file_name: z.string().nullable().default(null),
     archive_serial_number: z.number().nullable().default(null),
+    page_count: z.number().nullable().default(null),
+    mime_type: z.string().nullable().default(null),
     custom_fields: z.array(paperlessCustomFieldInstanceSchema).default([]),
   })
   .transform((raw) => ({
@@ -45,6 +47,8 @@ export const paperlessDocumentSchema = z
     originalFileName: raw.original_file_name,
     archivedFileName: raw.archived_file_name,
     archiveSerialNumber: raw.archive_serial_number,
+    pageCount: raw.page_count,
+    mimeType: raw.mime_type,
     customFields: raw.custom_fields,
   }));
 

@@ -390,6 +390,10 @@ export interface DuplicateGroupMember {
   isPrimary: boolean;
   paperlessId: number;
   title: string;
+  originalFileName: string | null;
+  archiveSerialNumber: number | null;
+  pageCount: number | null;
+  mimeType: string | null;
   correspondent: string | null;
   documentType: string | null;
   tags: string[];

@@ -627,6 +627,41 @@ describe('getDuplicateGroup', () => {
     expect(getDuplicateGroup(db, 'nonexistent')).toBeNull();
   });
 
+  it('includes stored file facts in full and light duplicate group details', () => {
+    insertTestData(db);
+    db.update(document)
+      .set({
+        originalFileName: 'synthetic-scan.pdf',
+        archiveSerialNumber: 42,
+        pageCount: 7,
+        mimeType: 'application/pdf',
+      })
+      .run();
+    for (const detail of [getDuplicateGroup(db, 'grp-1'), getDuplicateGroupLight(db, 'grp-1')]) {
+      expect(
+        detail!.members.map(({ originalFileName, archiveSerialNumber, pageCount, mimeType }) => ({
+          originalFileName,
+          archiveSerialNumber,
+          pageCount,
+          mimeType,
+        })),
+      ).toEqual([
+        {
+          originalFileName: 'synthetic-scan.pdf',
+          archiveSerialNumber: 42,
+          pageCount: 7,
+          mimeType: 'application/pdf',
+        },
+        {
+          originalFileName: 'synthetic-scan.pdf',
+          archiveSerialNumber: 42,
+          pageCount: 7,
+          mimeType: 'application/pdf',
+        },
+      ]);
+    }
+  });
+
   it('returns full group with members including content', () => {
     insertTestData(db);
     const result = getDuplicateGroup(db, 'grp-1');

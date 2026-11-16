@@ -128,6 +128,9 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: add archive columns for deleted duplicate groups
   migrateArchiveColumns(sqlite);
 
+  // Pre-DDL migration: retain file facts without re-queuing existing documents.
+  migrateDocumentFileFacts(sqlite);
+
   // Pre-DDL migration: backfill appliedAt for failed AI results
   migrateFailedResultAppliedAt(sqlite);
 
@@ -2126,3 +2129,18 @@ const DOCUMENT_CONTENT_INDEX_DEFINITIONS: readonly CompatibilityIndexDefinition[
       ON document_content(document_id, word_count)`,
   },
 ];
+
+/** Add nullable list metadata to existing documents before generated DDL runs. */
+function migrateDocumentFileFacts(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'document', 'id')) return;
+  for (const [column, type] of [
+    ['original_file_name', 'TEXT'],
+    ['archive_serial_number', 'INTEGER'],
+    ['page_count', 'INTEGER'],
+    ['mime_type', 'TEXT'],
+  ]) {
+    if (!tableHasColumn(sqlite, 'document', column)) {
+      sqlite.exec(`ALTER TABLE document ADD COLUMN ${column} ${type}`);
+    }
+  }
+}

@@ -54,6 +54,30 @@
       isDifferent: differs(primary.createdDate, secondary.createdDate),
     },
     {
+      label: 'Original File Name',
+      primaryValue: primary.originalFileName ?? '-',
+      secondaryValue: secondary.originalFileName ?? '-',
+      isDifferent: differs(primary.originalFileName, secondary.originalFileName),
+    },
+    {
+      label: 'Archive Serial Number',
+      primaryValue: primary.archiveSerialNumber?.toLocaleString() ?? '-',
+      secondaryValue: secondary.archiveSerialNumber?.toLocaleString() ?? '-',
+      isDifferent: differs(primary.archiveSerialNumber, secondary.archiveSerialNumber),
+    },
+    {
+      label: 'Page Count',
+      primaryValue: primary.pageCount?.toLocaleString() ?? '-',
+      secondaryValue: secondary.pageCount?.toLocaleString() ?? '-',
+      isDifferent: differs(primary.pageCount, secondary.pageCount),
+    },
+    {
+      label: 'MIME Type',
+      primaryValue: primary.mimeType ?? '-',
+      secondaryValue: secondary.mimeType ?? '-',
+      isDifferent: differs(primary.mimeType, secondary.mimeType),
+    },
+    {
       label: 'Word Count',
       primaryValue: primary.content?.wordCount?.toLocaleString() ?? '-',
       secondaryValue: secondary.content?.wordCount?.toLocaleString() ?? '-',
@@ -86,7 +110,9 @@
       {#each fields as field (field.label)}
         <div class="border-soft flex justify-between border-b py-1.5 text-sm last:border-0">
           <dt class="text-muted">{field.label}</dt>
-          <dd class="text-ink font-medium">{field.primaryValue}</dd>
+          <dd class="text-ink max-w-[60%] min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+            {field.primaryValue}
+          </dd>
         </div>
       {/each}
     </dl>
@@ -120,8 +146,10 @@
             ? 'bg-warn-light border-warn -mx-2 rounded-md border-l-2 px-2'
             : ''}"
         >
-          <dt class="text-muted">{field.label}</dt>
-          <dd class="text-ink font-medium">{field.secondaryValue}</dd>
+          <dt class={field.isDifferent ? 'text-ink' : 'text-muted'}>{field.label}</dt>
+          <dd class="text-ink max-w-[60%] min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+            {field.secondaryValue}
+          </dd>
         </div>
       {/each}
     </dl>
