@@ -605,3 +605,11 @@ export { sendNotification } from './notifications/send.js';
 export type { NotificationConfig, NotificationDelivery } from './notifications/send.js';
 export type { NotificationEvent } from './notifications/format.js';
 export { getNotificationSettings } from './notifications/settings.js';
+
+export {
+  findSimilarDocuments,
+  similarDocumentInputSchema,
+  SimilarDocumentNotFoundError,
+  SimilarDocumentValidationError,
+} from './dedup/lookup.js';
+export type { SimilarDocumentMatch } from './dedup/lookup.js';
