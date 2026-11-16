@@ -226,6 +226,7 @@ export {
   PaperlessApiError,
   PaperlessAuthError,
   PaperlessConnectionError,
+  PaperlessReadOnlyError,
 } from './paperless/errors.js';
 
 // Jobs

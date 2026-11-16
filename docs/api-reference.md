@@ -11,6 +11,14 @@ Base path: `/api/v1`
 
 ## Conventions
 
+### Read-only mode
+
+With `PAPERLESS_READ_ONLY=true`, operations that change Paperless return HTTP 403 with error code
+`READ_ONLY` and `retryable: false` before enqueuing work. This includes batch deletion, AI apply
+(single, batch and all), revert, recycle-bin changes and single-document deletion.
+`GET /api/v1/config` includes `meta.readOnly: true` in this mode; the field is omitted otherwise.
+Local review statuses and settings remain writable. See [read-only use](security.md#read-only-use).
+
 ### Standard Envelope
 
 Most endpoints return:

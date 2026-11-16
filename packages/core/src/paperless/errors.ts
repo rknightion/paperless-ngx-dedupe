@@ -29,3 +29,11 @@ export class PaperlessConnectionError extends Error {
     this.name = 'PaperlessConnectionError';
   }
 }
+
+/** Refuses upstream mutations when the client is configured for read-only use. */
+export class PaperlessReadOnlyError extends Error {
+  constructor() {
+    super('Paperless mutations are disabled in read-only mode');
+    this.name = 'PaperlessReadOnlyError';
+  }
+}

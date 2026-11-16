@@ -360,6 +360,7 @@ const entries: InternalRegistryEntry[] = [
   environmentEntry('OTEL_TRACES_SAMPLER', 'string', 'observability', false),
   environmentEntry('OTEL_TRACES_SAMPLER_ARG', 'string', 'observability', false),
   environmentEntry('PAPERLESS_API_TOKEN', 'string', 'paperless', true),
+  environmentEntry('PAPERLESS_READ_ONLY', 'boolean', 'paperless', false, false),
   environmentEntry('PAPERLESS_METRICS_COLLECTORS', 'string', 'observability', false),
   environmentEntry('PAPERLESS_METRICS_ENABLED', 'boolean', 'observability', false, false),
   environmentEntry('PAPERLESS_PASSWORD', 'string', 'paperless', true),

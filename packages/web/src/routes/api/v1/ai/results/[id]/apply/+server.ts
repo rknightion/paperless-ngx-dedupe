@@ -5,6 +5,10 @@ import { RuntimeUnavailableError } from '$lib/server/scheduler';
 import { getServerRuntime } from '../../../../../../../runtime.server';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+  if (locals.config.PAPERLESS_READ_ONLY) {
+    return apiError(ErrorCode.READ_ONLY, { operation: 'ai_apply', retryable: false });
+  }
+
   const runtime = await getServerRuntime();
   try {
     runtime.acceptingGate.assertAccepting();

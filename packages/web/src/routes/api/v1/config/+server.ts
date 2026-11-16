@@ -26,7 +26,10 @@ const batchConfigSchema = z
 
 export const GET: RequestHandler = async ({ locals }) => {
   const config = getConfig(locals.db);
-  return apiSuccess(redactSensitiveConfig(config), { registry: getConfigMetadata() });
+  return apiSuccess(redactSensitiveConfig(config), {
+    registry: getConfigMetadata(),
+    ...(locals.config.PAPERLESS_READ_ONLY ? { readOnly: true } : {}),
+  });
 };
 
 export const PUT: RequestHandler = async ({ request, locals }) => {

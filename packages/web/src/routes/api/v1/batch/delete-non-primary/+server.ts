@@ -30,6 +30,10 @@ const legacyBodySchema = z.object({
 const bodySchema = z.union([reviewedPlanBodySchema, legacyBodySchema]);
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+  if (locals.config.PAPERLESS_READ_ONLY) {
+    return apiError(ErrorCode.READ_ONLY, { operation: 'delete_duplicates', retryable: false });
+  }
+
   const runtime = await getServerRuntime();
   try {
     runtime.acceptingGate.assertAccepting();

@@ -2,6 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { apiError, ErrorCode } from './api.js';
 
 describe('apiError', () => {
+  it('returns a non-retryable read-only refusal with a clear safe message', async () => {
+    const response = apiError(ErrorCode.READ_ONLY, {
+      operation: 'update_paperless',
+      retryable: false,
+    });
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'READ_ONLY',
+        message: 'Paperless mutations are disabled in read-only mode',
+        operation: 'update_paperless',
+        retryable: false,
+      },
+    });
+  });
+
   it('returns a typed retryable unavailable envelope during shutdown', async () => {
     const response = apiError(
       ErrorCode.SERVICE_UNAVAILABLE,

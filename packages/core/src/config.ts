@@ -22,6 +22,10 @@ const configSchema = z
     DATABASE_URL: z.string().default('./data/paperless-ngx-dedupe.db'),
     PAPERLESS_URL: z.url({ error: 'PAPERLESS_URL must be a valid URL' }),
     PAPERLESS_API_TOKEN: z.string().optional(),
+    PAPERLESS_READ_ONLY: z
+      .string()
+      .default('false')
+      .transform((value) => value === 'true'),
     PAPERLESS_USERNAME: z.string().optional(),
     PAPERLESS_PASSWORD: z.string().optional(),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),

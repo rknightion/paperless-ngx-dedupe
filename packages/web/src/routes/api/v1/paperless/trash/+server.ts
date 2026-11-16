@@ -42,6 +42,10 @@ const bodySchema = z.object({
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+  if (locals.config.PAPERLESS_READ_ONLY) {
+    return apiError(ErrorCode.READ_ONLY, { operation: 'update_trash', retryable: false });
+  }
+
   const body = await request.json().catch(() => null);
   const result = bodySchema.safeParse(body);
   if (!result.success) {

@@ -306,6 +306,7 @@ export const paperlessConfigSchema = z
     password: z.string().optional(),
     timeout: z.number().optional(),
     maxRetries: z.number().optional(),
+    readOnly: z.boolean().optional(),
   })
   .refine((data) => data.token || (data.username && data.password), {
     error: 'Either token or both username and password must be provided',
@@ -318,6 +319,7 @@ export function toPaperlessConfig(appConfig: AppConfig): PaperlessConfig {
     token: appConfig.PAPERLESS_API_TOKEN,
     username: appConfig.PAPERLESS_USERNAME,
     password: appConfig.PAPERLESS_PASSWORD,
+    ...(appConfig.PAPERLESS_READ_ONLY ? { readOnly: true } : {}),
   };
 }
 

@@ -1,4 +1,5 @@
 export interface PaperlessConfig {
+  readOnly?: boolean;
   url: string;
   token?: string;
   username?: string;

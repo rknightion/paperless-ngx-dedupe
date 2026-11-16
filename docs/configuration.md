@@ -17,6 +17,7 @@ Paperless NGX Dedupe uses:
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `PAPERLESS_URL` | Yes | - | Full Paperless-NGX URL (for example `http://paperless:8000`) |
+| `PAPERLESS_READ_ONLY` | No | `false` | Block Paperless mutations; local review state and settings stay writable. Environment-owned. |
 | `PAPERLESS_API_TOKEN` | Yes* | - | Preferred auth method |
 | `PAPERLESS_USERNAME` | No | - | Use with `PAPERLESS_PASSWORD` when not using token |
 | `PAPERLESS_PASSWORD` | No | - | Use with `PAPERLESS_USERNAME` |
