@@ -52,6 +52,7 @@ beforeEach(async () => {
 afterEach(() => {
   handle.sqlite.close();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 async function cachePrices() {
   vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify(rates), { status: 200 }));
@@ -282,9 +283,7 @@ it('estimates unprocessed documents locally with a stub tokenizer and real prici
   );
   expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
 });
-// The requested window currently filters only the trend, not totals or groupings.
-// Keep the documented expectation visible until the production behavior is corrected.
-it.fails('limits cost totals and groupings to the requested window', () => {
+it('limits cost totals and groupings to the requested window', () => {
   result({ estimatedCostUsd: 1.25, promptTokens: 100, completionTokens: 20 });
   result({
     estimatedCostUsd: 2.5,
@@ -300,6 +299,38 @@ it.fails('limits cost totals and groupings to the requested window', () => {
   expect
     .soft(stats.costByModel)
     .toEqual([{ model: models[0], costUsd: 1.25, promptTokens: 100, completionTokens: 20 }]);
+});
+
+it('uses one exact rolling cutoff for ISO and SQLite timestamps', () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2030-01-15T12:00:00.000Z'));
+  result({ estimatedCostUsd: 9, createdAt: '2030-01-08T11:59:59.999Z' });
+  result({
+    estimatedCostUsd: 1.25,
+    promptTokens: 100,
+    completionTokens: 20,
+    createdAt: '2030-01-08T12:00:00.000Z',
+  });
+  result({
+    estimatedCostUsd: 2.5,
+    promptTokens: 200,
+    completionTokens: 40,
+    createdAt: '2030-01-08 12:00:00',
+  });
+  const stats = getCostStats(handle.db, 7);
+  expect(stats).toEqual({
+    totalCostUsd: 3.75,
+    costByProvider: [{ provider: 'openai', costUsd: 3.75, tokenCount: 360 }],
+    costByModel: [{ model: models[0], costUsd: 3.75, promptTokens: 300, completionTokens: 60 }],
+    costOverTime: [{ date: '2030-01-08', costUsd: 3.75, documentCount: 2 }],
+  });
+  expect(getCostStats(handle.db).totalCostUsd).toBe(12.75);
+  expect(getCostStats(handle.db, 1)).toEqual({
+    totalCostUsd: 0,
+    costByProvider: [],
+    costByModel: [],
+    costOverTime: [],
+  });
 });
 
 it.each([
