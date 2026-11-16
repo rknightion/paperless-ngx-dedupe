@@ -19,6 +19,7 @@
   } from 'lucide-svelte';
   import { parse as parseYaml } from 'yaml';
   import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
+  import RememberedDecisions from '$lib/components/settings/RememberedDecisions.svelte';
   import WebhookSyncSettings from '$lib/components/settings/WebhookSyncSettings.svelte';
   import DatabaseBackupSettings from '$lib/components/settings/DatabaseBackupSettings.svelte';
   import DiagnosticsSettings from '$lib/components/settings/DiagnosticsSettings.svelte';
@@ -819,6 +820,10 @@
       </div>
     {/if}
   </div>
+
+  {#if activeSettingsSection === 'dedup'}
+    <RememberedDecisions />
+  {/if}
 
   <!-- AI Processing Settings -->
   {#if data.aiEnabled}

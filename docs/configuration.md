@@ -359,3 +359,12 @@ for scheduled requests and tokenizer limits.
 - [Installation](installation.md)
 - [How It Works](how-it-works.md)
 - [API Reference](api-reference.md)
+
+### Remembered duplicate decisions
+
+Settings > Deduplication lists remembered not-a-duplicate pairs, including pairs whose
+Paperless IDs are no longer in the local library. Remove a decision to let the next analysis
+reconsider that pair. This does not change documents in Paperless or undo the group's review
+status. A running duplicate mutation must finish before removal can proceed. Refresh reloads
+the first page if another reviewer has changed the list. Analysis results show the number of
+pairs skipped because of remembered decisions.
