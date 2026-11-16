@@ -34,6 +34,7 @@ export interface DocumentScoringData {
 }
 
 export interface DedupConfig {
+  excludedTagNames: string[];
   primaryStrategy: PrimaryStrategy;
   numPermutations: number;
   numBands: number;
@@ -49,6 +50,7 @@ export interface DedupConfig {
 }
 
 export const dedupConfigBaseSchema = z.object({
+  excludedTagNames: z.array(z.string().min(1)).default([]),
   primaryStrategy: z.enum(PRIMARY_STRATEGIES).default('lowest_id'),
   numPermutations: z.number().int().min(16).max(1024).default(256),
   numBands: z.number().int().min(1).max(100).default(32),
@@ -72,6 +74,7 @@ export const dedupConfigSchema = dedupConfigBaseSchema
   });
 
 export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
+  excludedTagNames: [],
   primaryStrategy: 'lowest_id',
   numPermutations: 256,
   numBands: 32,
@@ -95,6 +98,7 @@ export interface AnalysisResult {
   documentsAnalyzed: number;
   documentsSkipped: number;
   skipReasons?: {
+    excludedByTag: number;
     noContent: number;
     tooShort: number;
     shinglesFailed: number;

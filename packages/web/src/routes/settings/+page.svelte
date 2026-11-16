@@ -70,6 +70,7 @@
   let ngramSize = $state(initialDedup.ngramSize);
   let minWords = $state(initialDedup.minWords);
   let fuzzySampleSize = $state(initialDedup.fuzzySampleSize);
+  let excludedTagNamesInput = $state(initialDedup.excludedTagNames.join('\n'));
   // Deprecated and ignored; preserve the stored key for config compatibility.
   let autoAnalyze = $state(initialDedup.autoAnalyze);
   let showAdvanced = $state(false);
@@ -229,6 +230,10 @@
           ngramSize,
           minWords,
           fuzzySampleSize,
+          excludedTagNames: excludedTagNamesInput
+            .split(/\r?\n/)
+            .map((name) => name.trim())
+            .filter(Boolean),
           autoAnalyze,
         }),
       });
@@ -522,6 +527,22 @@
       <SlidersHorizontal class="text-accent h-5 w-5" />
       Deduplication Parameters
     </h2>
+
+    <div class="mt-4">
+      <label for="excluded-tag-names" class="text-ink block text-sm font-medium"
+        >Exclude documents with tags</label
+      >
+      <textarea
+        id="excluded-tag-names"
+        bind:value={excludedTagNamesInput}
+        rows="3"
+        class="border-soft bg-canvas text-ink mt-2 w-full rounded-lg border px-3 py-2 text-sm"
+        aria-describedby="excluded-tag-help"></textarea>
+      <p id="excluded-tag-help" class="text-muted mt-1 text-xs">
+        One tag name per line. Matching ignores case. These documents stay in Paperless and are
+        skipped by analysis.
+      </p>
+    </div>
 
     <!-- Similarity Threshold -->
     <div class="mt-4">

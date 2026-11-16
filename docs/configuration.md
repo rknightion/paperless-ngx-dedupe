@@ -251,6 +251,18 @@ Credit: metric definitions and collector design inspired by [prometheus-paperles
 
 ## Deduplication Settings
 
+`dedup.excludedTagNames` is a string array, empty by default. A document carrying any
+listed tag is excluded from matching, with case-insensitive name comparison. Settings,
+Deduplication accepts one tag per line; blank lines and surrounding input whitespace are
+ignored. Commas remain part of a tag name. Exclusions do not modify or delete documents in
+Paperless, and reviewed groups keep their status. Pending groups containing excluded
+documents are reconsidered when analysis runs, including cached signatures.
+
+Changing the effective exclusion list makes analysis stale; run a full rebuild to apply it
+throughout the library. The empty default retains existing analysis hashes. Reordering,
+repeating or changing only the case of names does not require a new rebuild. Analysis
+results include `skipReasons.excludedByTag` in the skipped-document count.
+
 `dedup.primaryStrategy` controls the keeper for newly created groups. The default
 `lowest_id` preserves the lowest Paperless ID. Other choices are `oldest_added`,
 `newest_added`, `most_text` (word count), and `most_metadata` (non-empty categories:

@@ -100,7 +100,8 @@
       const total = (result.totalDocuments ?? 0) as number;
       const isFullRebuild = (result.isFullRebuild ?? false) as boolean;
       const reasons = result.skipReasons as
-        { noContent: number; tooShort: number; shinglesFailed: number } | undefined;
+        | { noContent: number; tooShort: number; shinglesFailed: number; excludedByTag?: number }
+        | undefined;
 
       let prefix = '';
       if (isFullRebuild) {
@@ -176,6 +177,11 @@
               ><span class="cursor-help border-b border-dotted border-current"
                 >{analysisParts.skipped.toLocaleString()} skipped</span
               >{#snippet content()}<p class="font-semibold">Skip reasons</p>
+                {#if analysisParts.skipReasons?.excludedByTag && analysisParts.skipReasons.excludedByTag > 0}<p
+                    class="mt-1"
+                  >
+                    Excluded by tag: {analysisParts.skipReasons.excludedByTag.toLocaleString()}
+                  </p>{/if}
                 {#if analysisParts.skipReasons?.noContent && analysisParts.skipReasons.noContent > 0}<p
                     class="mt-1"
                   >

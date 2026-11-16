@@ -10,6 +10,7 @@ const logger = createLogger('dedup-config');
 
 function parseConfigValue(key: string, value: string): unknown {
   const shortKey = key.replace(DEDUP_CONFIG_PREFIX, '');
+  if (shortKey === 'excludedTagNames') return JSON.parse(value);
   if (shortKey === 'autoAnalyze') {
     return value === 'true';
   }
@@ -92,17 +93,18 @@ export function setDedupConfig(db: AppDatabase, config: Partial<DedupConfig>): D
 
   db.transaction((tx) => {
     for (const [key, value] of Object.entries(validated)) {
+      const serialized = Array.isArray(value) ? JSON.stringify(value) : String(value);
       const prefixedKey = `${DEDUP_CONFIG_PREFIX}${key}`;
       tx.insert(appConfig)
         .values({
           key: prefixedKey,
-          value: String(value),
+          value: serialized,
           updatedAt: now,
         })
         .onConflictDoUpdate({
           target: appConfig.key,
           set: {
-            value: String(value),
+            value: serialized,
             updatedAt: now,
           },
         })
