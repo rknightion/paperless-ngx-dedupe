@@ -240,3 +240,31 @@ describe('typed configuration registry', () => {
     ).not.toHaveProperty('default');
   });
 });
+
+it('validates webhook sync preferences with disabled and sixty-second defaults', () => {
+  expect(getConfigMetadata()).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        key: 'automation.webhookSyncEnabled',
+        default: false,
+        source: 'database',
+      }),
+      expect.objectContaining({
+        key: 'automation.webhookQuietSeconds',
+        default: 60,
+        source: 'database',
+      }),
+    ]),
+  );
+  for (const seconds of [10, 60, 3600])
+    expect(coerceConfigBatch({ 'automation.webhookQuietSeconds': seconds })).toEqual({
+      'automation.webhookQuietSeconds': String(seconds),
+    });
+  for (const seconds of [9, 3601, 10.5])
+    expect(() => coerceConfigBatch({ 'automation.webhookQuietSeconds': seconds })).toThrow(
+      ConfigValidationError,
+    );
+  expect(coerceConfigBatch({ 'automation.webhookSyncEnabled': true })).toEqual({
+    'automation.webhookSyncEnabled': 'true',
+  });
+});

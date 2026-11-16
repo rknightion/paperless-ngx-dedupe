@@ -1,6 +1,7 @@
 import {
   consumeDispatchIntents,
   enqueueDueSchedules,
+  enqueueRequestedSync,
   enqueueManualOperation,
   type AppConfig,
   type AppDatabase,
@@ -90,6 +91,7 @@ export function createRuntime(options: CreateRuntimeOptions): ServerRuntime {
         acceptingGate.assertAccepting();
         const now = new Date();
         enqueueDueSchedules(runtime.sqlite, now);
+        enqueueRequestedSync(runtime.sqlite, now);
         acceptingGate.assertAccepting();
         await consumeDispatchIntents(runtime.dispatcher, now);
       }),

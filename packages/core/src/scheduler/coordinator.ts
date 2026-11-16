@@ -351,6 +351,48 @@ function enqueueCompletedDependencies(sqlite: Database.Database, now: Date): Dis
   return intents;
 }
 
+/** Read validated webhook preferences; malformed legacy values use the disabled/default policy. */
+export function getWebhookSyncSettings(sqlite: Database.Database): {
+  enabled: boolean;
+  quietSeconds: number;
+} {
+  const rows = sqlite
+    .prepare(
+      "SELECT key,value FROM app_config WHERE key IN ('automation.webhookSyncEnabled','automation.webhookQuietSeconds')",
+    )
+    .all() as { key: string; value: string }[];
+  const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  const quiet = Number(values['automation.webhookQuietSeconds']);
+  return {
+    enabled: values['automation.webhookSyncEnabled'] === 'true',
+    quietSeconds: Number.isInteger(quiet) && quiet >= 10 && quiet <= 3600 ? quiet : 60,
+  };
+}
+
+/** Enqueue one quiet webhook request, retaining newer requests and requests blocked by a lease. */
+export function enqueueRequestedSync(sqlite: Database.Database, now: Date): DispatchIntent | null {
+  const settings = getWebhookSyncSettings(sqlite);
+  if (!settings.enabled) return null;
+  const request = sqlite
+    .prepare("SELECT value FROM app_config WHERE key = 'hooks.syncRequestedAt'")
+    .get() as { value: string } | undefined;
+  if (!request) return null;
+  const requestedAt = Date.parse(request.value);
+  if (!Number.isFinite(requestedAt) || now.getTime() < requestedAt + settings.quietSeconds * 1000)
+    return null;
+  let intent: DispatchIntent;
+  try {
+    intent = enqueueManualOperation(sqlite, 'sync', { kind: 'manual' });
+  } catch (error) {
+    if (error instanceof OperationConflictError) return null;
+    throw error;
+  }
+  sqlite
+    .prepare("DELETE FROM app_config WHERE key = 'hooks.syncRequestedAt' AND value = ?")
+    .run(request.value);
+  return intent;
+}
+
 /** Claims at most one due occurrence per schedule using a single immediate transaction. */
 export function enqueueDueSchedules(sqlite: Database.Database, now: Date): DispatchIntent[] {
   const nowIso = now.toISOString();

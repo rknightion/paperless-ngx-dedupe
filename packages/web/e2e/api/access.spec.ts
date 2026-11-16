@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/test-app';
+import Database from 'better-sqlite3';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -8,7 +9,7 @@ import path from 'node:path';
 
 async function withProtectedApp(
   variables: Record<string, string | undefined>,
-  check: (url: string, output: () => string) => Promise<void>,
+  check: (url: string, output: () => string, dbPath: string) => Promise<void>,
 ) {
   const port = await new Promise<number>((resolve, reject) => {
     const listener = createServer();
@@ -72,7 +73,7 @@ async function withProtectedApp(
         { timeout: 15000 },
       )
       .toBe(true);
-    await check(`http://127.0.0.1:${port}`, () => output);
+    await check(`http://127.0.0.1:${port}`, () => output, path.join(directory, 'test.db'));
   } finally {
     if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) {
       const exited = once(child, 'exit');
@@ -236,4 +237,98 @@ test('shows the Settings access notice only when protection is disabled', async 
       },
     );
   }
+});
+
+test('webhook sync stays disabled by default and accepts authenticated bursts without reading payloads', async ({
+  request,
+}) => {
+  await withProtectedApp(
+    { APP_API_TOKEN: 'synthetic-webhook-token' },
+    async (url, _output, dbPath) => {
+      await request.get(`${url}/api/v1/health`);
+      const db = new Database(dbPath);
+      const headers = {
+        Authorization: 'Bearer synthetic-webhook-token',
+        'Content-Type': 'application/json',
+      };
+      const endpoint = `${url}/api/v1/hooks/paperless`;
+      try {
+        const before = db.prepare('SELECT * FROM app_config ORDER BY key').all();
+        const disabled = await request.post(endpoint, { headers, data: { ignored: true } });
+        expect.soft(disabled.status()).toBe(404);
+        expect.soft((await disabled.json()).error.code).toBe('NOT_FOUND');
+        expect(db.prepare('SELECT * FROM app_config ORDER BY key').all()).toEqual(before);
+        const configured = await request.put(`${url}/api/v1/config`, {
+          data: {
+            settings: {
+              'automation.webhookSyncEnabled': true,
+              'automation.webhookQuietSeconds': 60,
+            },
+          },
+        });
+        expect(configured.status()).toBe(200);
+        for (const authorization of [
+          undefined,
+          'Bearer incorrect',
+          `Basic ${Buffer.from('operator:synthetic-password').toString('base64')}`,
+        ]) {
+          const response = await request.post(endpoint, {
+            headers: authorization ? { Authorization: authorization } : {},
+            data: {},
+          });
+          expect.soft(response.status()).toBe(401);
+        }
+        expect(
+          db.prepare("SELECT * FROM app_config WHERE key='hooks.syncRequestedAt'").get(),
+        ).toBeUndefined();
+        const initialJobs = db.prepare('SELECT id FROM job ORDER BY id').all();
+        for (let i = 0; i < 30; i++) {
+          const response = await request.post(endpoint, {
+            headers,
+            data: i % 2 ? 'ignored malformed JSON' : { arbitrary: i },
+          });
+          expect(response.status()).toBe(202);
+          const value = db
+            .prepare("SELECT value FROM app_config WHERE key='hooks.syncRequestedAt'")
+            .get() as { value: string };
+          expect((await response.json()).data).toEqual({
+            accepted: true,
+            syncNotBefore: new Date(Date.parse(value.value) + 60000).toISOString(),
+          });
+        }
+        expect(db.prepare('SELECT id FROM job ORDER BY id').all()).toEqual(initialJobs);
+      } finally {
+        db.close();
+      }
+    },
+  );
+});
+
+test('enabled webhook requires an API token even with access mode none', async ({ request }) => {
+  await withProtectedApp({}, async (url, _output, dbPath) => {
+    await request.get(`${url}/api/v1/health`);
+    expect(
+      (
+        await request.put(`${url}/api/v1/config`, {
+          data: { key: 'automation.webhookSyncEnabled', value: true },
+        })
+      ).status(),
+    ).toBe(200);
+    const db = new Database(dbPath);
+    try {
+      for (const authorization of [undefined, 'Bearer synthetic-unconfigured-token']) {
+        const response = await request.post(`${url}/api/v1/hooks/paperless`, {
+          data: {},
+          headers: authorization ? { Authorization: authorization } : {},
+        });
+        expect(response.status()).toBe(401);
+        expect((await response.json()).error.code).toBe('UNAUTHORIZED');
+      }
+      expect(
+        db.prepare("SELECT * FROM app_config WHERE key='hooks.syncRequestedAt'").get(),
+      ).toBeUndefined();
+    } finally {
+      db.close();
+    }
+  });
 });

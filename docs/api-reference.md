@@ -171,6 +171,34 @@ clears local synced data before a full sync. It does not delete documents in Pap
 Returns `409 JOB_ALREADY_RUNNING` for a conflicting job or `503 SERVICE_UNAVAILABLE`
 when the runtime is not accepting work.
 
+### POST /api/v1/hooks/paperless
+
+Request a debounced sync from a Paperless workflow. The endpoint is disabled by default:
+`automation.webhookSyncEnabled=false` returns `404 NOT_FOUND` without storing a request.
+Enable it through the configuration API. It requires a configured `APP_API_TOKEN` and a matching
+`Authorization: Bearer <token>` header, including when access mode is `none`; missing or invalid
+credentials return `401 UNAUTHORIZED`.
+
+The body is ignored. When sending a body, use `Content-Type: application/json` as required by the
+API's origin protection. Each accepted request restarts the quiet period set by
+`automation.webhookQuietSeconds` (integer 10 to 3600, default 60).
+
+Returns HTTP 202 with:
+
+```json
+{
+  "data": {
+    "accepted": true,
+    "syncNotBefore": "2026-01-01T00:01:00.000Z"
+  }
+}
+```
+
+`syncNotBefore` is the earliest eligible time, not a completion promise. The scheduler enqueues
+one sync after the quiet period when the operation lease is available. A newer request remains
+pending for a later sync; existing automation settings determine subsequent analysis. The direct
+`POST /api/v1/sync` endpoint is unchanged.
+
 ### GET /api/v1/sync/status
 
 Returns last sync metadata plus active sync job status.

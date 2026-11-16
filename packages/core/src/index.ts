@@ -178,6 +178,8 @@ export {
   assertOperationLeaseOwnership,
   consumeDispatchIntents,
   enqueueDueSchedules,
+  enqueueRequestedSync,
+  getWebhookSyncSettings,
   enqueueManualOperation,
   getDispatchIntent,
   OperationConflictError,
