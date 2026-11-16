@@ -97,6 +97,7 @@
       const result = JSON.parse(resultJson);
       const analyzed = (result.documentsAnalyzed ?? 0) as number;
       const skipped = (result.documentsSkipped ?? 0) as number;
+      const pairsSuppressed = (result.pairsSuppressed ?? 0) as number;
       const total = (result.totalDocuments ?? 0) as number;
       const isFullRebuild = (result.isFullRebuild ?? false) as boolean;
       const reasons = result.skipReasons as
@@ -120,6 +121,7 @@
 
       if (!prefix && groupParts.length === 0 && skipped === 0) {
         return {
+          pairsSuppressed,
           text: 'No duplicates found',
           skipped: 0,
           totalSuffix: '',
@@ -129,6 +131,7 @@
       }
 
       return {
+        pairsSuppressed,
         text: prefix,
         skipped,
         totalSuffix,
@@ -200,6 +203,11 @@
             >{:else}{analysisParts.skipped.toLocaleString()} skipped{/if}{/if}{analysisParts.totalSuffix}{#if analysisParts.groupsSuffix},
           {analysisParts.groupsSuffix}{/if}
       </p>
+      {#if analysisParts.pairsSuppressed > 0}
+        <p class="text-muted mt-1 text-xs">
+          {analysisParts.pairsSuppressed.toLocaleString()} pairs skipped: previously marked not duplicates
+        </p>
+      {/if}
     {:else if resultSummary}
       <p class="text-muted mt-1 text-xs">{resultSummary}</p>
     {/if}
