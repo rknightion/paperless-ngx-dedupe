@@ -942,7 +942,7 @@ export function setPrimaryDocument(db: AppDatabase, groupId: string, documentId:
       .run();
 
     tx.update(duplicateGroup)
-      .set({ updatedAt: new Date().toISOString() })
+      .set({ updatedAt: new Date().toISOString(), primarySource: 'manual' })
       .where(eq(duplicateGroup.id, groupId))
       .run();
   });

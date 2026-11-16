@@ -28,6 +28,7 @@ describe('duplicate inbox page cursor integration', () => {
         discriminative_score REAL,
         algorithm_version TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
+        primary_source TEXT NOT NULL DEFAULT 'auto',
         archived_member_count INTEGER,
         archived_primary_title TEXT,
         deleted_at TEXT,

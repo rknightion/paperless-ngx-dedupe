@@ -136,6 +136,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
   // Pre-DDL migration: retain file facts without re-queuing existing documents.
   migrateDocumentFileFacts(sqlite);
   migrateDocumentFileSizes(sqlite);
+  migratePrimarySource(sqlite);
 
   // Pre-DDL migration: backfill appliedAt for failed AI results
   migrateFailedResultAppliedAt(sqlite);
@@ -2158,5 +2159,15 @@ function migrateDocumentFileSizes(sqlite: Database.Database): void {
     if (!tableHasColumn(sqlite, 'document', column)) {
       sqlite.exec(`ALTER TABLE document ADD COLUMN ${column} INTEGER`);
     }
+  }
+}
+
+/** Preserve keeper provenance without changing existing primary members. */
+function migratePrimarySource(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'duplicate_group', 'id')) return;
+  if (!tableHasColumn(sqlite, 'duplicate_group', 'primary_source')) {
+    sqlite.exec(
+      "ALTER TABLE duplicate_group ADD COLUMN primary_source TEXT NOT NULL DEFAULT 'auto'",
+    );
   }
 }
