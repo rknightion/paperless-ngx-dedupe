@@ -1,6 +1,6 @@
 import { DEFAULT_AI_CONFIG } from '../ai/types.js';
 import { validateTagAliasYaml } from '../ai/tag-alias-validation.js';
-import { DEFAULT_DEDUP_CONFIG } from '../dedup/types.js';
+import { DEFAULT_DEDUP_CONFIG, PRIMARY_STRATEGIES } from '../dedup/types.js';
 import { DEFAULT_NOTIFICATION_SETTINGS } from '../notifications/settings.js';
 import { DEFAULT_OTEL_SERVICE_NAME } from '../telemetry/constants.js';
 
@@ -253,6 +253,13 @@ const entries: InternalRegistryEntry[] = [
     'boolean',
     DEFAULT_NOTIFICATION_SETTINGS.scheduledRunsOnly,
     'automation',
+  ),
+  databaseEntry(
+    'dedup.primaryStrategy',
+    'string',
+    DEFAULT_DEDUP_CONFIG.primaryStrategy,
+    'deduplication',
+    oneOf(PRIMARY_STRATEGIES),
   ),
   databaseEntry('dedup.autoAnalyze', 'boolean', DEFAULT_DEDUP_CONFIG.autoAnalyze, 'deduplication'),
   databaseEntry(

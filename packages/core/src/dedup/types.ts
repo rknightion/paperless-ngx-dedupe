@@ -3,6 +3,14 @@ import type { ProgressCallback } from '../jobs/worker-entry.js';
 
 export const ALGORITHM_VERSION = '1.2.0';
 export const DEDUP_CONFIG_PREFIX = 'dedup.';
+export const PRIMARY_STRATEGIES = [
+  'lowest_id',
+  'oldest_added',
+  'newest_added',
+  'most_text',
+  'most_metadata',
+] as const;
+export type PrimaryStrategy = (typeof PRIMARY_STRATEGIES)[number];
 
 export interface SimilarityWeights {
   jaccard: number;
@@ -26,6 +34,7 @@ export interface DocumentScoringData {
 }
 
 export interface DedupConfig {
+  primaryStrategy: PrimaryStrategy;
   numPermutations: number;
   numBands: number;
   ngramSize: number;
@@ -40,6 +49,7 @@ export interface DedupConfig {
 }
 
 export const dedupConfigBaseSchema = z.object({
+  primaryStrategy: z.enum(PRIMARY_STRATEGIES).default('lowest_id'),
   numPermutations: z.number().int().min(16).max(1024).default(256),
   numBands: z.number().int().min(1).max(100).default(32),
   ngramSize: z.number().int().min(1).max(10).default(3),
@@ -62,6 +72,7 @@ export const dedupConfigSchema = dedupConfigBaseSchema
   });
 
 export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
+  primaryStrategy: 'lowest_id',
   numPermutations: 256,
   numBands: 32,
   ngramSize: 3,

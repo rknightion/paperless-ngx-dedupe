@@ -2,6 +2,7 @@
  * Analysis pipeline orchestrator — 10-stage deduplication engine.
  */
 
+import { selectPrimary, type PrimaryMember } from './primary.js';
 import { loadSuppressedPairSet, pairDecisionKey } from './pair-decisions.js';
 import { eq, inArray, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -592,17 +593,40 @@ export async function runAnalysis(
             })
             .run();
 
-          // Primary = lowest paperlessId
-          const sortedByPaperlessId = memberArray.sort((a, b) => {
-            return (paperlessIdMap.get(a) ?? Infinity) - (paperlessIdMap.get(b) ?? Infinity);
-          });
+          const primaryMembers: PrimaryMember[] = [];
+          if (config.primaryStrategy === 'lowest_id') {
+            for (const id of memberArray)
+              primaryMembers.push({ id, paperlessId: paperlessIdMap.get(id)! });
+          } else {
+            // Load only keeper facts for new groups, with bounded SQLite parameter counts.
+            for (let offset = 0; offset < memberArray.length; offset += 500) {
+              primaryMembers.push(
+                ...tx
+                  .select({
+                    id: document.id,
+                    paperlessId: document.paperlessId,
+                    addedDate: document.addedDate,
+                    correspondent: document.correspondent,
+                    documentType: document.documentType,
+                    tagsJson: document.tagsJson,
+                    customFieldsJson: document.customFieldsJson,
+                    wordCount: documentContent.wordCount,
+                  })
+                  .from(document)
+                  .leftJoin(documentContent, eq(documentContent.documentId, document.id))
+                  .where(inArray(document.id, memberArray.slice(offset, offset + 500)))
+                  .all(),
+              );
+            }
+          }
+          const { documentId: primaryId } = selectPrimary(primaryMembers, config.primaryStrategy);
 
-          for (let i = 0; i < sortedByPaperlessId.length; i++) {
+          for (const documentId of memberArray) {
             tx.insert(duplicateMember)
               .values({
                 groupId,
-                documentId: sortedByPaperlessId[i],
-                isPrimary: i === 0,
+                documentId,
+                isPrimary: documentId === primaryId,
               })
               .run();
           }
