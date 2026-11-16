@@ -343,15 +343,20 @@ export function estimateBatchCost(
 }
 
 /**
- * Aggregate cost statistics across all AI processing results.
+ * Aggregate stored AI costs, optionally limiting every total and grouping to the last N days.
  */
 export function getCostStats(db: AppDatabase, days?: number): AiCostStats {
+  const dateCondition = days
+    ? sql`julianday(${aiProcessingResult.createdAt}) >= julianday(${new Date().toISOString()}, ${`-${days} days`})`
+    : undefined;
+
   // Total cost
   const totalRow = db
     .select({
       totalCost: sql<number>`coalesce(sum(${aiProcessingResult.estimatedCostUsd}), 0)`,
     })
     .from(aiProcessingResult)
+    .where(dateCondition)
     .get();
 
   const totalCostUsd = totalRow?.totalCost ?? 0;
@@ -364,6 +369,7 @@ export function getCostStats(db: AppDatabase, days?: number): AiCostStats {
       tokenCount: sql<number>`coalesce(sum(${aiProcessingResult.promptTokens}), 0) + coalesce(sum(${aiProcessingResult.completionTokens}), 0)`,
     })
     .from(aiProcessingResult)
+    .where(dateCondition)
     .groupBy(aiProcessingResult.provider)
     .all();
 
@@ -382,6 +388,7 @@ export function getCostStats(db: AppDatabase, days?: number): AiCostStats {
       completionTokens: sql<number>`coalesce(sum(${aiProcessingResult.completionTokens}), 0)`,
     })
     .from(aiProcessingResult)
+    .where(dateCondition)
     .groupBy(aiProcessingResult.model)
     .all();
 
@@ -393,10 +400,6 @@ export function getCostStats(db: AppDatabase, days?: number): AiCostStats {
   }));
 
   // Cost over time
-  const dateCondition = days
-    ? sql`${aiProcessingResult.createdAt} >= datetime('now', ${`-${days} days`})`
-    : undefined;
-
   const dateRows = db
     .select({
       date: sql<string>`date(${aiProcessingResult.createdAt})`,
