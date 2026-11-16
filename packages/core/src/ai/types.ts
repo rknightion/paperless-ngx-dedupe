@@ -137,6 +137,8 @@ export const aiConfigSchema = z
     maxRetries: z.number().int().min(0).max(20).default(10),
     maxOutputTokens: z.number().int().min(1).max(100000).default(1000),
     flexProcessing: z.boolean().default(true),
+    customInputPricePerMTok: z.number().finite().nonnegative().default(0),
+    customOutputPricePerMTok: z.number().finite().nonnegative().default(0),
 
     // Per-field extraction enable/disable (prompt always extracts all; disabled fields are ignored in review/apply)
     extractTitle: z.boolean().default(true),

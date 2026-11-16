@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
     maxRetries: 10,
     model: 'gpt-5.4-mini',
     flexProcessing: true,
+    customInputPricePerMTok: 0,
+    customOutputPricePerMTok: 0,
   },
 }));
 

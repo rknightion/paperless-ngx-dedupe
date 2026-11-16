@@ -321,6 +321,17 @@ curl -X PUT http://localhost:3000/api/v1/config/dedup \
   -d '{"discriminativePenaltyStrength":75}'
 ```
 
+### Custom AI model prices
+
+`ai.customInputPricePerMTok` and `ai.customOutputPricePerMTok` are database settings
+for USD per million input and output tokens. Both default to 0 and accept finite,
+non-negative numbers. An exact cached model price wins; otherwise these settings
+supply the rate. A pair of zero rates is accepted only when `AI_OPENAI_BASE_URL`
+is configured. Set the fields without the `ai.` prefix through
+`PUT /api/v1/ai/config`. See [AI cost tracking](ai-processing.md#cost-tracking)
+for scheduled requests and tokenizer limits.
+
+
 ## Related
 
 - [Installation](installation.md)

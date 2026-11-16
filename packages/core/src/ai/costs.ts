@@ -4,6 +4,7 @@ import { appConfig } from '../schema/sqlite/app.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { createLogger } from '../logger.js';
 import { OPENAI_MODELS } from './types.js';
+import { getAiConfig } from './config.js';
 
 const logger = createLogger('ai-costs');
 
@@ -206,25 +207,16 @@ export async function refreshPricingIfStale(db: AppDatabase): Promise<void> {
  * Falls back to the most expensive model in the same provider family if exact match not found.
  */
 export function getModelPricing(db: AppDatabase, model: string): ModelPricing | null {
-  const row = db
-    .select({ value: appConfig.value })
-    .from(appConfig)
-    .where(eq(appConfig.key, PRICING_CACHE_KEY))
-    .get();
-
-  if (!row) return null;
-
-  let pricingMap: Record<string, ModelPricing>;
-  try {
-    pricingMap = JSON.parse(row.value);
-  } catch {
-    return null;
-  }
+  const pricingMap = getAllModelPricing(db);
+  if (!pricingMap) return getCustomModelPricing(db);
 
   // Exact match
   if (pricingMap[model]) {
     return pricingMap[model];
   }
+
+  const custom = getCustomModelPricing(db);
+  if (custom) return custom;
 
   // Fallback: find the most expensive model in the same provider family
   const familyIds = OPENAI_MODELS.some((m) => m.id === model) ? OPENAI_MODELS.map((m) => m.id) : [];
@@ -245,9 +237,27 @@ export function getModelPricing(db: AppDatabase, model: string): ModelPricing | 
   return fallback;
 }
 
+/** Explicit custom rates fill missing prices without replacing a cached model price. */
+function getCustomModelPricing(db: AppDatabase): ModelPricing | null {
+  const { customInputPricePerMTok, customOutputPricePerMTok } = getAiConfig(db);
+  // Preserve the default provider's unknown-price guard; a configured local server may be free.
+  if (
+    !process.env.AI_OPENAI_BASE_URL &&
+    customInputPricePerMTok === 0 &&
+    customOutputPricePerMTok === 0
+  )
+    return null;
+  return {
+    inputPerToken: customInputPricePerMTok / 1_000_000,
+    outputPerToken: customOutputPricePerMTok / 1_000_000,
+    cacheReadPerToken: null,
+    cacheCreationPerToken: null,
+  };
+}
+
 /** Exact lookup used by scheduled AI, where a fallback could under-reserve. */
 export function getExactModelPricing(db: AppDatabase, model: string): ModelPricing | null {
-  return getAllModelPricing(db)?.[model] ?? null;
+  return getAllModelPricing(db)?.[model] ?? getCustomModelPricing(db);
 }
 
 /**
