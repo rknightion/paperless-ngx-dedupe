@@ -417,6 +417,43 @@ plus `hasOcr`, `duplicateGroupCount`, `duplicateGroupId`, `duplicateGroupStatus`
 `aiFailureType` and `aiFreshness`. `meta` contains `nextCursor`, normalized `query`, and
 `counts: { total, missingOcr, duplicateInvolved, aiUnprocessed, aiStale }`.
 
+### POST /api/v1/documents/similar
+
+Find similar stored documents without running analysis or changing review state. Send exactly one
+of `paperlessId` (a positive integer) or `text` (at most 500,000 characters). Optional `limit` is
+an integer from 1 to 50, default 10; `minSimilarity` is from 0 to 1 and defaults to the configured
+similarity threshold.
+
+```json
+{ "paperlessId": 123, "limit": 5, "minSimilarity": 0.8 }
+```
+
+Returns `data: [{ documentId, paperlessId, title, jaccard }]` and `meta: { compared }`.
+Results use the MinHash Jaccard estimate only, ordered by descending score with lower Paperless
+IDs breaking ties. An ID lookup excludes itself and uses its stored signature's permutation count.
+Text is normalized and signed using the current analysis settings. Only stored signatures with the
+same permutation count are compared; missing or malformed signatures are excluded. The request
+streams signatures and keeps only the best requested matches in memory.
+
+Text too short for the configured minimum word count or n-gram size returns `400 VALIDATION_FAILED`.
+An ID without a usable signature returns `404 NOT_FOUND`; its `error.validationIssues` explains
+that analysis has not processed the document yet. The top-level error message remains the standard
+fixed message. Run sync and analysis first: this endpoint neither fetches from Paperless nor creates
+signatures. Existing request body size limits also apply.
+
+A post-consume script can inspect matches after that document has been synced and analysed:
+
+```sh
+curl --fail-with-body --request POST \
+  --header "Authorization: Bearer ${APP_API_TOKEN}" \
+  --header 'Content-Type: application/json' \
+  --data "$(jq -n --argjson id "$DOCUMENT_ID" '{paperlessId: $id, limit: 5}')" \
+  "${DEDUPE_URL}/api/v1/documents/similar"
+```
+
+The environment values above belong to the script. Use the application access token when access
+protection is enabled; never put the upstream Paperless credential in this request.
+
 ### GET /api/v1/documents/:id
 
 Returns one document, plus content and group memberships.
