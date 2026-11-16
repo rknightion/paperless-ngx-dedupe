@@ -2,6 +2,8 @@ import { type PaperlessFileMetadata } from '../paperless/types.js';
 import { and, count, desc, asc, eq, gte, lt, lte, or, sql, inArray, ne } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
+import { recordPairDecisions } from '../dedup/pair-decisions.js';
+import { createLogger } from '../logger.js';
 import { buildMatchExplanation } from '../dedup/explanations.js';
 import type { GroupStatus } from '../types/enums.js';
 
@@ -14,7 +16,11 @@ export class StatusTransitionError extends Error {
   }
 }
 import { document, documentContent } from '../schema/sqlite/documents.js';
-import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
+import {
+  duplicateGroup,
+  duplicateMember,
+  duplicatePairDecision,
+} from '../schema/sqlite/duplicates.js';
 import { parseTagsJson } from './helpers.js';
 import { incrementUsageStats } from './documents.js';
 import type {
@@ -956,8 +962,10 @@ export function removeMemberFromGroup(db: AppDatabase, groupId: string, memberId
     .select({
       id: duplicateMember.id,
       isPrimary: duplicateMember.isPrimary,
+      paperlessId: document.paperlessId,
     })
     .from(duplicateMember)
+    .innerJoin(document, eq(document.id, duplicateMember.documentId))
     .where(and(eq(duplicateMember.id, memberId), eq(duplicateMember.groupId, groupId)))
     .get();
 
@@ -986,11 +994,68 @@ export function removeMemberFromGroup(db: AppDatabase, groupId: string, memberId
         .where(eq(duplicateGroup.id, groupId))
         .run();
     } else {
+      if (remaining + 1 > 200) {
+        createLogger('duplicate-decisions').warn(
+          'Pair decisions skipped: group exceeds 200 members',
+        );
+      } else {
+        const ids = tx
+          .select({ id: document.paperlessId })
+          .from(duplicateMember)
+          .innerJoin(document, eq(document.id, duplicateMember.documentId))
+          .where(eq(duplicateMember.groupId, groupId))
+          .all();
+        for (const other of ids)
+          recordPairDecisions(
+            tx as unknown as AppDatabase,
+            [member.paperlessId, other.id],
+            'member_removed',
+          );
+      }
       tx.update(duplicateGroup).set({ updatedAt: now }).where(eq(duplicateGroup.id, groupId)).run();
     }
   });
 
   return true;
+}
+
+function changeGroupPairDecisions(
+  db: AppDatabase,
+  groupId: string,
+  from: GroupStatus,
+  to: GroupStatus,
+): void {
+  if (from === to) return;
+  if (to === 'false_positive') {
+    const ids = db
+      .select({ id: document.paperlessId })
+      .from(duplicateMember)
+      .innerJoin(document, eq(document.id, duplicateMember.documentId))
+      .where(eq(duplicateMember.groupId, groupId))
+      .limit(201)
+      .all()
+      .map((row) => row.id);
+    if (ids.length > 200) {
+      createLogger('duplicate-decisions').warn('Pair decisions skipped: group exceeds 200 members');
+      return;
+    }
+    recordPairDecisions(db, ids, 'group_false_positive');
+  } else if (from === 'false_positive' && to === 'pending') {
+    const ids = db
+      .select({ id: document.paperlessId })
+      .from(duplicateMember)
+      .innerJoin(document, eq(document.id, duplicateMember.documentId))
+      .where(eq(duplicateMember.groupId, groupId));
+    db.delete(duplicatePairDecision)
+      .where(
+        and(
+          eq(duplicatePairDecision.source, 'group_false_positive'),
+          inArray(duplicatePairDecision.paperlessIdLow, ids),
+          inArray(duplicatePairDecision.paperlessIdHigh, ids),
+        ),
+      )
+      .run();
+  }
 }
 
 export function setGroupStatus(db: AppDatabase, groupId: string, status: GroupStatus): boolean {
@@ -1015,11 +1080,19 @@ export function setGroupStatus(db: AppDatabase, groupId: string, status: GroupSt
     return archiveAndDeleteMembers(db, groupId);
   }
 
-  const result = db
-    .update(duplicateGroup)
-    .set({ status, updatedAt: new Date().toISOString() })
-    .where(eq(duplicateGroup.id, groupId))
-    .run();
+  const result = db.transaction((tx) => {
+    changeGroupPairDecisions(
+      tx as unknown as AppDatabase,
+      groupId,
+      group.status as GroupStatus,
+      status,
+    );
+    return tx
+      .update(duplicateGroup)
+      .set({ status, updatedAt: new Date().toISOString() })
+      .where(eq(duplicateGroup.id, groupId))
+      .run();
+  });
 
   if (result.changes > 0) {
     incrementUsageStats(db, { groupsActioned: 1 });
@@ -1056,11 +1129,25 @@ export function batchSetStatus(
   const now = new Date().toISOString();
 
   for (const chunk of chunkArray(groupIds, CHUNK_SIZE)) {
-    const result = db
-      .update(duplicateGroup)
-      .set({ status, updatedAt: now })
-      .where(and(inArray(duplicateGroup.id, chunk), ne(duplicateGroup.status, 'deleted')))
-      .run();
+    const result = db.transaction((tx) => {
+      const groups = tx
+        .select({ id: duplicateGroup.id, status: duplicateGroup.status })
+        .from(duplicateGroup)
+        .where(and(inArray(duplicateGroup.id, chunk), ne(duplicateGroup.status, 'deleted')))
+        .all();
+      for (const group of groups)
+        changeGroupPairDecisions(
+          tx as unknown as AppDatabase,
+          group.id,
+          group.status as GroupStatus,
+          status,
+        );
+      return tx
+        .update(duplicateGroup)
+        .set({ status, updatedAt: now })
+        .where(and(inArray(duplicateGroup.id, chunk), ne(duplicateGroup.status, 'deleted')))
+        .run();
+    });
     updated += result.changes;
   }
 

@@ -211,6 +211,7 @@ export function clearDatabase(dbPath: string): void {
       DELETE FROM automation_schedule;
       DELETE FROM ai_result_revision;
       DELETE FROM ai_processing_result;
+      DELETE FROM duplicate_pair_decision;
       DELETE FROM duplicate_member;
       DELETE FROM duplicate_group;
       DELETE FROM document_signature;

@@ -5,7 +5,8 @@ import type { AppDatabase } from '../../db/client.js';
 import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { eq } from 'drizzle-orm';
-import { recordPairDecisions } from '../pair-decisions.js';
+import { setGroupStatus, removeMemberFromGroup } from '../../queries/duplicates.js';
+import { loadSuppressedPairSet, recordPairDecisions } from '../pair-decisions.js';
 import { runAnalysis } from '../analyze.js';
 import { setDedupConfig } from '../config.js';
 import { LSHIndex } from '../lsh.js';
@@ -621,4 +622,78 @@ describe('remembered pair decisions', () => {
         .sort(),
     ).toEqual(ids.sort());
   });
+});
+
+it.each([false, true])(
+  'keeps a reviewed pair suppressed when a third document matches both: %s',
+  async (matchesBoth) => {
+    const text = generateText('synthetic original invoice services payment reference', 30);
+    const ids = [1, 2].map((id) => seedDocument(db, id, `Synthetic ${id}`, text));
+    await runAnalysis(db, { force: true });
+    const original = db.select().from(duplicateGroup).get()!;
+    setGroupStatus(db, original.id, 'false_positive');
+    expect(loadSuppressedPairSet(db)).toEqual(new Set(['1|2']));
+    ids.push(
+      seedDocument(
+        db,
+        3,
+        'Synthetic third',
+        matchesBoth
+          ? text
+          : generateText('unrelated garden plants weather flowers seasonal maintenance', 30),
+      ),
+    );
+    await runAnalysis(db, { force: true });
+    expect(
+      db.select().from(duplicateGroup).where(eq(duplicateGroup.id, original.id)).get()?.status,
+    ).toBe('false_positive');
+    const pending = db
+      .select()
+      .from(duplicateGroup)
+      .where(eq(duplicateGroup.status, 'pending'))
+      .all();
+    if (matchesBoth) {
+      expect(pending).toHaveLength(1);
+      expect(
+        db
+          .select()
+          .from(duplicateMember)
+          .where(eq(duplicateMember.groupId, pending[0].id))
+          .all()
+          .map((member) => member.documentId)
+          .sort(),
+      ).toEqual(ids.sort());
+    } else expect(pending).toEqual([]);
+  },
+);
+
+it('does not regroup a removed member after forced analysis', async () => {
+  const text = generateText('synthetic invoice services payment reference', 30);
+  const ids = [1, 2, 3].map((id) => seedDocument(db, id, `Synthetic ${id}`, text));
+  await runAnalysis(db, { force: true });
+  const group = db.select().from(duplicateGroup).get()!;
+  const removed = db
+    .select()
+    .from(duplicateMember)
+    .where(eq(duplicateMember.documentId, ids[2]))
+    .get()!;
+  expect(removed.isPrimary).toBe(false);
+  removeMemberFromGroup(db, group.id, removed.id);
+  await runAnalysis(db, { force: true });
+  const pending = db
+    .select()
+    .from(duplicateGroup)
+    .where(eq(duplicateGroup.status, 'pending'))
+    .all();
+  expect(pending).toHaveLength(1);
+  expect(
+    db
+      .select()
+      .from(duplicateMember)
+      .where(eq(duplicateMember.groupId, pending[0].id))
+      .all()
+      .map((member) => member.documentId)
+      .sort(),
+  ).toEqual(ids.slice(0, 2).sort());
+  expect(loadSuppressedPairSet(db)).toEqual(new Set(['1|3', '2|3']));
 });
