@@ -116,6 +116,22 @@ Payloads contain counts, job identifiers and an optional application link, never
 text or raw job errors. See [Security](security.md#where-document-content-can-leave-the-deployment)
 and the [notification API](api-reference.md#get-apiv1notifications).
 
+### Webhook Sync (Optional)
+
+In **Settings > Automation > Webhook sync**, enable consumption-triggered sync and choose how
+long to wait after the most recent webhook. These preferences are stored in the database:
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `automation.webhookSyncEnabled` | `false` | Accept authenticated requests to the Paperless webhook endpoint |
+| `automation.webhookQuietSeconds` | `60` | Quiet period in seconds, an integer from 10 to 3600 |
+
+Configure `APP_API_TOKEN` in the deployment environment and restart before sending webhooks.
+The Settings card reports whether a token is configured without exposing it. Enabling the
+preference does not remove the token requirement. See [Trigger on consumption](getting-started.md#trigger-on-consumption)
+for the Paperless workflow setup and the [webhook API](api-reference.md#post-apiv1hookspaperless)
+for response details.
+
 ### Observability (Optional)
 
 `APP_VERSION` is set by the image build and reported as `service.version`; it is not meant to be overridden.

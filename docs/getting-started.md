@@ -59,6 +59,37 @@ For large numbers of duplicates, use the **Bulk Operations Wizard** (button on t
 !!! danger "Destructive Action"
     The "Delete Non-Primary Documents" batch operation permanently removes documents from Paperless-NGX. Always verify your primary document selections before using this feature.
 
+## Trigger on consumption
+
+To sync shortly after Paperless-NGX consumes documents:
+
+1. Configure `APP_API_TOKEN` in the dedupe app's deployment environment and restart the app.
+2. Open **Settings > Automation > Webhook sync**, enable **Sync when Paperless sends a webhook**,
+   choose the quiet period and save. The default waits 60 seconds after the latest request.
+3. In Paperless-NGX, create a workflow with trigger **Document Added** and action **Webhook**.
+   Use the following action fields:
+
+   | Field | Value |
+   | --- | --- |
+   | URL | `<dedupe-base-url>/api/v1/hooks/paperless` |
+   | Body | `{}` |
+   | Encoding | JSON |
+   | Headers | `Authorization: Bearer <APP_API_TOKEN value>` and `Content-Type: application/json` |
+
+   Use the dedupe app's API token, not the Paperless API credential. These fields match the
+   [upstream Webhook action documentation](https://docs.paperless-ngx.com/usage/#webhook).
+   Paperless may restrict webhook ports and local URLs; check its
+   [workflow webhook configuration](https://docs.paperless-ngx.com/configuration/#workflow-webhooks)
+   if it cannot reach your chosen URL.
+
+Each accepted webhook returns 202 and restarts the quiet period. A burst produces one sync after
+requests become quiet and the operation lease is available. A request arriving during a sync
+remains pending for a later run. Jobs use the existing manual trigger; analysis afterward follows
+your Automation settings. The ordinary Sync button and scheduled sync remain available.
+
+The webhook payload is currently ignored. See [Webhook Sync configuration](configuration.md#webhook-sync-optional)
+for the supported quiet-period range and defaults.
+
 ## What's Next
 
 Now that you have completed your first run:

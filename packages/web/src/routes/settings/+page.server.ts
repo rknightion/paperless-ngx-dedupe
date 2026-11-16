@@ -5,6 +5,7 @@ import {
   DEFAULT_EXTRACTION_PROMPT,
   DEFAULT_TAG_ALIAS_MAP,
   getAutomationSettings,
+  getWebhookSyncSettings,
   getMaintenanceReport,
 } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
@@ -34,6 +35,10 @@ export const load: PageServerLoad = async ({ locals }) => {
     isDefaultTagAliasMap: aiConfig ? aiConfig.tagAliasMap === DEFAULT_TAG_ALIAS_MAP : true,
     hasOpenAiKey: !!locals.config.AI_OPENAI_API_KEY,
     automation: getAutomationSettings(locals.sqlite),
+    webhookSync: {
+      ...getWebhookSyncSettings(locals.sqlite),
+      apiTokenConfigured: Boolean(locals.config.APP_API_TOKEN),
+    },
     maintenance: getMaintenanceReport(locals.sqlite),
   };
 };
