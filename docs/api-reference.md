@@ -1194,6 +1194,32 @@ Returns aggregate AI processing statistics.
 
 ## Batch Operations
 
+### GET /api/v1/batch/deletions
+
+List completed duplicate-delete runs, newest completion first. `limit` defaults to 20 and accepts
+integers from 1 to 100. Each item in `data` has `planId`, `completedAt`, `documentsDeleted` and
+`groups` (checkpoint group IDs in review order). Counts include distinct documents actually
+deleted by the run, excluding documents that were already missing.
+
+### POST /api/v1/batch/deletions/:planId/restore
+
+After explicit confirmation, restore the selected completed run from the Paperless-NGX recycle
+bin. No request body or new review token is required. Returns HTTP 202 with
+`data: { jobId }` for a `duplicate_restore` job. It returns `404 NOT_FOUND` for a missing or
+incomplete deletion run, `409 JOB_ALREADY_RUNNING` while an incompatible operation holds the
+mutation lease, and `403 READ_ONLY` when Paperless mutations are disabled.
+
+The completed job result contains `restored` and `notRestorable` counts. Only documents deleted by
+that run are selected. Documents no longer in the recycle bin count as `notRestorable`; an entirely
+purged run completes with a nothing-to-restore result. A retained run can be retried: its selected
+IDs are refreshed locally even if a previous attempt already restored them remotely.
+
+Restored documents are fetched by ID and written locally without waiting for incremental sync,
+which may miss unchanged modification timestamps. Archived deleted groups remain history;
+the next analysis re-evaluates the restored documents. Restoration is available only while the
+run's checkpoints exist and Paperless retains the documents. Single-document deletes outside a
+reviewed plan are not included.
+
 ### POST /api/v1/batch/status
 
 Updates status for many groups.

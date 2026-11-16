@@ -13,6 +13,7 @@ import { removeDocumentFromAllGroups } from '../queries/duplicates.js';
 import type { SyncDependencies, SyncOptions, SyncResult, ReferenceMaps } from './types.js';
 import type { PaperlessDocument } from '../paperless/types.js';
 import type { PaperlessClient } from '../paperless/client.js';
+import { PaperlessApiError } from '../paperless/errors.js';
 import type { AppDatabase } from '../db/client.js';
 
 const DEFAULT_PAGE_SIZE = 100;
@@ -211,6 +212,64 @@ export async function syncDocuments(
 
     return result;
   });
+}
+
+/** Refresh explicit IDs without scanning the library or advancing the full-sync cursor. */
+export async function syncDocumentsById(
+  { db, client }: SyncDependencies,
+  paperlessIds: readonly number[],
+  options: Pick<SyncOptions, 'maxOcrLength' | 'onProgress' | 'syncJobId' | 'syncGenerationId'> = {},
+): Promise<{ inserted: number; updated: number; notFound: number[] }> {
+  const ids = [...new Set(paperlessIds)];
+  const result = { inserted: 0, updated: 0, notFound: [] as number[] };
+  if (ids.length === 0) return result;
+  await options.onProgress?.(0, 'Refreshing selected documents');
+  const refs = await fetchReferenceMaps(client);
+  for (const [index, id] of ids.entries()) {
+    await options.onProgress?.(index / ids.length, 'Refreshing selected documents');
+    let remote: PaperlessDocument;
+    try {
+      remote = await client.getDocument(id);
+    } catch (error) {
+      if (error instanceof PaperlessApiError && error.statusCode === 404) {
+        result.notFound.push(id);
+        continue;
+      }
+      throw error;
+    }
+    const existing = db
+      .select({ id: document.id })
+      .from(document)
+      .where(eq(document.paperlessId, id))
+      .get();
+    const fingerprint = computeFingerprint(remote);
+    const maxLength = options.maxOcrLength ?? DEFAULT_MAX_OCR_LENGTH;
+    if (existing) {
+      updateDocument(
+        db,
+        existing.id,
+        remote,
+        fingerprint,
+        refs,
+        maxLength,
+        options.syncJobId,
+        options.syncGenerationId,
+      );
+      result.updated++;
+    } else {
+      insertDocument(
+        db,
+        remote,
+        fingerprint,
+        refs,
+        maxLength,
+        options.syncJobId,
+        options.syncGenerationId,
+      );
+      result.inserted++;
+    }
+  }
+  return result;
 }
 
 async function fetchReferenceMaps(client: PaperlessClient): Promise<ReferenceMaps> {

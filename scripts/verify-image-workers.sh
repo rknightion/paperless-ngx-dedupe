@@ -29,7 +29,7 @@ trap 'exit 143' TERM
 docker run --rm --entrypoint node "$image" -e '
   const fs = require("node:fs");
   const workers = [
-    "sync-worker", "analysis-worker", "batch-worker", "ai-processing-worker",
+    "sync-worker", "analysis-worker", "batch-worker", "restore-worker", "ai-processing-worker",
     "ai-apply-worker", "ai-revert-worker", "custom-field-discovery-worker"
   ];
   const missing = workers

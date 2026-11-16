@@ -8,6 +8,7 @@ export type WorkerName =
   | 'sync-worker'
   | 'analysis-worker'
   | 'batch-worker'
+  | 'restore-worker'
   | 'ai-processing-worker'
   | 'ai-apply-worker'
   | 'ai-revert-worker'

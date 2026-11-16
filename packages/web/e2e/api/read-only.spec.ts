@@ -95,6 +95,7 @@ test('read-only API refuses upstream mutations without creating jobs', async ({ 
     const before = await (await request.get(`${url}/api/v1/jobs`)).json();
     for (const [method, route] of [
       ['POST', '/batch/delete-non-primary'],
+      ['POST', '/batch/deletions/test-plan/restore'],
       ['POST', '/ai/results/1/apply'],
       ['POST', '/ai/results/batch-apply'],
       ['POST', '/ai/results/apply-all'],

@@ -8,6 +8,7 @@ export const JobType = {
   SYNC: 'sync',
   ANALYSIS: 'analysis',
   BATCH_OPERATION: 'batch_operation',
+  DUPLICATE_RESTORE: 'duplicate_restore',
   AI_PROCESSING: 'ai_processing',
   AI_APPLY: 'ai_apply',
   AI_REVERT: 'ai_revert',
