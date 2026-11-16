@@ -353,6 +353,8 @@ function fetchGroupWithMembers(
       archiveSerialNumber: document.archiveSerialNumber,
       pageCount: document.pageCount,
       mimeType: document.mimeType,
+      originalSize: document.originalSize,
+      archiveSize: document.archiveSize,
       correspondent: document.correspondent,
       documentType: document.documentType,
       tagsJson: document.tagsJson,
@@ -415,6 +417,8 @@ function fetchGroupWithMembers(
       archiveSerialNumber: m.archiveSerialNumber,
       pageCount: m.pageCount,
       mimeType: m.mimeType,
+      originalSize: m.originalSize,
+      archiveSize: m.archiveSize,
       correspondent: m.correspondent,
       documentType: m.documentType,
       tags: parseTagsJson(m.tagsJson),
@@ -514,6 +518,42 @@ export async function getDuplicateGroupFiles(
   };
 }
 
+/** Refresh cached file sizes after analysis, with one read per unique pending member. */
+export async function refreshPendingGroupFileSizes(
+  db: AppDatabase,
+  client: { getDocumentMetadata(id: number, kind: 'files'): Promise<PaperlessFileMetadata> },
+  beforeRead?: () => Promise<void>,
+): Promise<{ refreshed: number; failed: number }> {
+  const members = db
+    .selectDistinct({ id: document.id, paperlessId: document.paperlessId })
+    .from(document)
+    .innerJoin(duplicateMember, eq(duplicateMember.documentId, document.id))
+    .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
+    .where(eq(duplicateGroup.status, 'pending'))
+    .all();
+  let refreshed = 0;
+  let failed = 0;
+  // Sequential reads use the client's existing retry/back-off and keep cancellation between reads.
+  for (const member of members) {
+    await beforeRead?.();
+    let sizes: { originalSize: number | null; archiveSize: number | null };
+    try {
+      const metadata = await client.getDocumentMetadata(member.paperlessId, 'files');
+      sizes = {
+        originalSize: metadata.originalSize,
+        archiveSize: metadata.hasArchive ? metadata.archiveSize : 0,
+      };
+      refreshed++;
+    } catch {
+      // A failed refresh cannot leave an old byte count looking current.
+      sizes = { originalSize: null, archiveSize: null };
+      failed++;
+    }
+    db.update(document).set(sizes).where(eq(document.id, member.id)).run();
+  }
+  return { refreshed, failed };
+}
+
 // ── Stats query ─────────────────────────────────────────────────────────
 
 export function getDuplicateStats(db: AppDatabase): DuplicateStats {
@@ -588,7 +628,22 @@ export function getDuplicateStats(db: AppDatabase): DuplicateStats {
     .limit(10)
     .all() as { correspondent: string; groupCount: number }[];
 
+  const candidates = db
+    .selectDistinct({ documentId: duplicateMember.documentId })
+    .from(duplicateMember)
+    .innerJoin(duplicateGroup, eq(duplicateMember.groupId, duplicateGroup.id))
+    .where(and(eq(duplicateGroup.status, 'pending'), eq(duplicateMember.isPrimary, false)));
+  const storage = db
+    .select({
+      unknown: sql<number>`COALESCE(SUM(CASE WHEN ${document.originalSize} IS NULL OR ${document.archiveSize} IS NULL THEN 1 ELSE 0 END), 0)`,
+      bytes: sql<number>`COALESCE(SUM(${document.originalSize} + ${document.archiveSize}), 0)`,
+    })
+    .from(document)
+    .where(inArray(document.id, candidates))
+    .get()!;
+
   return {
+    reclaimableBytes: storage.unknown > 0 ? null : storage.bytes,
     totalGroups: total,
     pendingGroups: statusMap.get('pending') ?? 0,
     falsePositiveGroups: statusMap.get('false_positive') ?? 0,

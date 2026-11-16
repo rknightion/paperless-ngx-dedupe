@@ -130,6 +130,7 @@ export async function migrateDatabase(sqlite: Database.Database): Promise<void> 
 
   // Pre-DDL migration: retain file facts without re-queuing existing documents.
   migrateDocumentFileFacts(sqlite);
+  migrateDocumentFileSizes(sqlite);
 
   // Pre-DDL migration: backfill appliedAt for failed AI results
   migrateFailedResultAppliedAt(sqlite);
@@ -2141,6 +2142,16 @@ function migrateDocumentFileFacts(sqlite: Database.Database): void {
   ]) {
     if (!tableHasColumn(sqlite, 'document', column)) {
       sqlite.exec(`ALTER TABLE document ADD COLUMN ${column} ${type}`);
+    }
+  }
+}
+
+/** Add cached byte counts without treating unknown sizes as zero. */
+function migrateDocumentFileSizes(sqlite: Database.Database): void {
+  if (!tableHasColumn(sqlite, 'document', 'id')) return;
+  for (const column of ['original_size', 'archive_size']) {
+    if (!tableHasColumn(sqlite, 'document', column)) {
+      sqlite.exec(`ALTER TABLE document ADD COLUMN ${column} INTEGER`);
     }
   }
 }

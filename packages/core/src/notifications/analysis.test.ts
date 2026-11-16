@@ -40,6 +40,12 @@ async function analyze(
   }> = [];
   let jobId = '';
   const server = createServer(async (request, response) => {
+    if (request.method === 'GET' && request.url?.endsWith('/metadata/')) {
+      response
+        .writeHead(200, { 'Content-Type': 'application/json' })
+        .end(JSON.stringify({ original_size: 100, archive_size: 20, has_archive_version: true }));
+      return;
+    }
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
     requests.push({
@@ -73,7 +79,7 @@ async function analyze(
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('Missing test address');
-    vi.stubEnv('PAPERLESS_URL', 'https://paperless.example.test');
+    vi.stubEnv('PAPERLESS_URL', `http://127.0.0.1:${address.port}`);
     vi.stubEnv('PAPERLESS_API_TOKEN', 'synthetic-token');
     vi.stubEnv(
       'NOTIFY_URL',
@@ -101,6 +107,9 @@ async function analyze(
       jobId,
       requests,
       status: getJob(db, jobId)?.status,
+      sizes: sqlite
+        .prepare('SELECT original_size, archive_size FROM document ORDER BY paperless_id')
+        .all(),
       result: JSON.parse(getJob(db, jobId)!.resultJson!),
     };
   } finally {
@@ -163,14 +172,22 @@ it('sends only when the number of newly created groups reaches minNewGroups', as
   expect(result.requests).toEqual([]);
 }, 15000);
 
-it('makes no outbound request when an analysis creates groups with NOTIFY_URL unset', async () => {
+it('makes only metadata reads and no notification request with NOTIFY_URL unset', async () => {
   const fetch = vi.spyOn(globalThis, 'fetch');
   try {
     const result = await analyze({ configured: false });
     expect(result.result.groupsCreated).toBe(1);
     expect(result.status).toBe('completed');
     expect(result.requests).toEqual([]);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(
+      fetch.mock.calls.map(([url, options]) => ({
+        path: new URL(String(url)).pathname,
+        method: options?.method ?? 'GET',
+      })),
+    ).toEqual([
+      { path: '/api/documents/1/metadata/', method: 'GET' },
+      { path: '/api/documents/2/metadata/', method: 'GET' },
+    ]);
   } finally {
     fetch.mockRestore();
   }
@@ -197,4 +214,13 @@ it('includes analysis dependencies from scheduled work while scheduledRunsOnly i
   expect(
     result.requests.map(({ body }) => ({ event: body.event, newGroups: body.data.newGroups })),
   ).toEqual([{ event: 'duplicates.new', newGroups: 1 }]);
+}, 15000);
+
+it('refreshes pending group file sizes after analysis through the real worker task', async () => {
+  const result = await analyze({ configured: false });
+  expect(result.status).toBe('completed');
+  expect(result.sizes).toEqual([
+    { original_size: 100, archive_size: 20 },
+    { original_size: 100, archive_size: 20 },
+  ]);
 }, 15000);

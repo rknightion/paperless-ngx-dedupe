@@ -14,6 +14,8 @@ export const document = sqliteTable(
     archiveSerialNumber: integer('archive_serial_number'),
     pageCount: integer('page_count'),
     mimeType: text('mime_type'),
+    originalSize: integer('original_size'),
+    archiveSize: integer('archive_size'),
     correspondent: text('correspondent'),
     documentType: text('document_type'),
     tagsJson: text('tags_json'),

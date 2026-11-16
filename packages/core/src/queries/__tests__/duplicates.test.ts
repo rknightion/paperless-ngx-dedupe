@@ -635,28 +635,45 @@ describe('getDuplicateGroup', () => {
         archiveSerialNumber: 42,
         pageCount: 7,
         mimeType: 'application/pdf',
+        originalSize: 1234,
+        archiveSize: 567,
       })
       .run();
     for (const detail of [getDuplicateGroup(db, 'grp-1'), getDuplicateGroupLight(db, 'grp-1')]) {
       expect(
-        detail!.members.map(({ originalFileName, archiveSerialNumber, pageCount, mimeType }) => ({
-          originalFileName,
-          archiveSerialNumber,
-          pageCount,
-          mimeType,
-        })),
+        detail!.members.map(
+          ({
+            originalFileName,
+            archiveSerialNumber,
+            pageCount,
+            mimeType,
+            originalSize,
+            archiveSize,
+          }) => ({
+            originalFileName,
+            archiveSerialNumber,
+            pageCount,
+            mimeType,
+            originalSize,
+            archiveSize,
+          }),
+        ),
       ).toEqual([
         {
           originalFileName: 'synthetic-scan.pdf',
           archiveSerialNumber: 42,
           pageCount: 7,
           mimeType: 'application/pdf',
+          originalSize: 1234,
+          archiveSize: 567,
         },
         {
           originalFileName: 'synthetic-scan.pdf',
           archiveSerialNumber: 42,
           pageCount: 7,
           mimeType: 'application/pdf',
+          originalSize: 1234,
+          archiveSize: 567,
         },
       ]);
     }

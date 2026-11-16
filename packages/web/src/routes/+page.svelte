@@ -210,6 +210,19 @@
 
   <OutcomeSummary dashboard={data.dashboard} jobs={data.jobs} aiStats={data.aiStats} />
 
+  <section aria-label="Reclaimable storage" class="panel-inset">
+    <h2 class="text-ink text-base font-semibold">Reclaimable storage</h2>
+    <p class="text-ink mt-1 text-lg font-semibold">
+      {data.duplicateStats.reclaimableBytes === null
+        ? 'Unknown'
+        : `${data.duplicateStats.reclaimableBytes.toLocaleString()} bytes`}
+    </p>
+    <p class="text-muted mt-1 text-sm">
+      Estimated original and archive sizes of non-primary documents in pending groups. Refreshed
+      after analysis; space is freed only after Paperless purges its recycle bin.
+    </p>
+  </section>
+
   <CompactTrends
     topCorrespondents={data.dashboard.topCorrespondents}
     confidenceDistribution={data.duplicateStats.confidenceDistribution}

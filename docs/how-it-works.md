@@ -140,6 +140,23 @@ Each cluster becomes a **duplicate group** in the database with:
 
 Groups are presented in the web UI for review, sorted by confidence.
 
+## File facts and storage estimates
+
+After an analysis, the worker refreshes file sizes for documents in pending duplicate groups.
+Each distinct member costs one metadata request, made sequentially with the Paperless client's
+normal retry and back-off. It does not download files or scan the rest of the library.
+
+The dashboard's reclaimable storage estimate sums original and archive bytes for distinct
+non-primary documents in pending groups. A document without an archive contributes zero archive
+bytes. If any required size is unavailable, the total is shown as Unknown rather than understating
+storage. Failed metadata reads leave those sizes unknown and do not discard the analysis results.
+Run analysis again to refresh the cached estimate after upstream file changes.
+
+The estimate is not a promise of immediate free disk space: deleted documents remain in Paperless's
+recycle bin until purged. File sizes and matching checksums are review information and never trigger
+automatic deletion. The duplicate detail page reads live per-member facts independently of this
+cached dashboard estimate.
+
 ## Tuning Guide
 
 ### Too many false positives (unrelated documents grouped together)

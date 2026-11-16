@@ -1218,3 +1218,44 @@ it('adds nullable file facts to an existing released document without data loss 
     sqlite.close();
   }
 });
+
+it('adds nullable stored sizes to an existing database and preserves rows on repeat migration', async () => {
+  const { sqlite } = createDatabaseWithHandle(':memory:');
+  try {
+    sqlite.exec(v015Fixture);
+    await migrateDatabase(sqlite);
+    const columns = () =>
+      (sqlite.prepare('PRAGMA table_info(document)').all() as { name: string }[]).map(
+        ({ name }) => name,
+      );
+    for (const name of ['original_size', 'archive_size']) {
+      if (columns().includes(name)) sqlite.exec(`ALTER TABLE document DROP COLUMN ${name}`);
+    }
+    sqlite.prepare("DELETE FROM app_config WHERE key = 'schema_ddl_snapshot'").run();
+    sqlite
+      .prepare(
+        "INSERT INTO document (id, paperless_id, title, processing_status, synced_at) VALUES ('legacy-sizes', 99998, 'Synthetic legacy file', 'completed', '2024-01-01')",
+      )
+      .run();
+    expect(columns()).not.toContain('original_size');
+    await migrateDatabase(sqlite);
+    expect(columns()).toEqual(expect.arrayContaining(['original_size', 'archive_size']));
+    expect(
+      sqlite
+        .prepare(
+          "SELECT title, processing_status, original_size, archive_size FROM document WHERE id = 'legacy-sizes'",
+        )
+        .get(),
+    ).toEqual({
+      title: 'Synthetic legacy file',
+      processing_status: 'completed',
+      original_size: null,
+      archive_size: null,
+    });
+    const version = sqlite.pragma('schema_version', { simple: true });
+    await migrateDatabase(sqlite);
+    expect(sqlite.pragma('schema_version', { simple: true })).toBe(version);
+  } finally {
+    sqlite.close();
+  }
+});

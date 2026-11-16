@@ -1,4 +1,8 @@
 import { runWorkerTask } from '../worker-entry.js';
+import { PaperlessClient } from '../../paperless/client.js';
+import { toPaperlessConfig } from '../../paperless/schemas.js';
+import { refreshPendingGroupFileSizes } from '../../queries/duplicates.js';
+import { createLogger } from '../../logger.js';
 import { runAnalysis } from '../../dedup/analyze.js';
 import { assertOperationLeaseOwnership } from '../../scheduler/coordinator.js';
 import { count, eq, sql } from 'drizzle-orm';
@@ -13,6 +17,13 @@ runWorkerTask(async (ctx, onProgress) => {
   assertOperationLeaseOwnership(ctx.sqlite, 'analysis', ctx.jobId);
   const taskData = ctx.taskData as { force?: boolean } | undefined;
   const result = await runAnalysis(ctx.db, { force: taskData?.force, onProgress });
+  const client = new PaperlessClient(toPaperlessConfig(parseConfig(process.env)));
+  const fileSizes = await refreshPendingGroupFileSizes(ctx.db, client, () =>
+    onProgress(1, 'Refreshing pending group file sizes'),
+  );
+  if (fileSizes.failed > 0) {
+    createLogger('analysis-worker').warn(fileSizes, 'Some pending file sizes remain unknown');
+  }
   if (process.env.NOTIFY_URL) {
     ctx.afterCompletion?.(async () => {
       const preferences = getNotificationSettings(ctx.db);
