@@ -34,7 +34,7 @@ server that implements Chat Completions instead; restart after changing either e
 Chat requests use `response_format` with the same classification schema and `max_completion_tokens`
 for the output limit. Refusals, truncated output and invalid JSON remain per-document failures;
 reported prompt, completion and cached token usage is retained even for rejected output. Model names are entered manually, and extraction quality depends on the model.
-Failures remain isolated to each document. Scheduled processing still requires a known model price.
+Failures remain isolated to each document. Scheduled processing uses cached prices or the custom prices described below.
 
 A custom base URL always disables Flex Processing and uses the standard 60-second per-attempt
 timeout. Interactive requests keep their existing retry cap. Leaving both variables unset keeps
@@ -48,6 +48,8 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | --- | --- | --- | --- |
 | `provider` | `openai` | `openai` | LLM provider to use |
 | `model` | `gpt-5.4-mini` | see below | Model identifier |
+| `customInputPricePerMTok` | `0` | finite number, 0 or greater | USD per million input tokens when no cached model price exists |
+| `customOutputPricePerMTok` | `0` | finite number, 0 or greater | USD per million output tokens when no cached model price exists |
 | `promptTemplate` | built-in | string | Prompt template with placeholders |
 | `maxContentLength` | `8000` | 500--100,000 | Max characters of document text sent to the model |
 | `batchSize` | `100` | 1--500 | Maximum concurrent AI requests |
@@ -247,7 +249,22 @@ and explicitly applies a selected set of fields.
 
 ## Cost Tracking
 
-Per-result cost estimates are computed automatically using pricing data fetched from the LiteLLM public pricing index, which is refreshed every 24 hours. The cost statistics API (`GET /api/v1/ai/costs`) provides:
+Per-result cost estimates are computed automatically using pricing data fetched from the LiteLLM public pricing index, which is refreshed every 24 hours. For an unpriced model, set `ai.customInputPricePerMTok` and
+`ai.customOutputPricePerMTok` through the configuration API (omit the `ai.` prefix
+for `PUT /api/v1/ai/config`). These are USD per million tokens and default to 0.
+An exact cached model price takes precedence. With `AI_OPENAI_BASE_URL` set,
+zero prices are valid for a local model; without it, both prices at zero retain
+the unknown-price guard. Scheduled AI still requires a positive monthly budget
+and a document cap, even for free requests.
+
+For custom servers with an unknown tokenizer, scheduled requests reserve one
+token per UTF-8 byte of the complete serialized request plus the framing allowance.
+This is a conservative estimate, not a guarantee about every server's tokenizer.
+Reported usage above the reservation logs a budget invariant error and retains
+at least the reported charge; subsequent reservations include that charge. The default endpoint retains
+its supported-tokenizer guard. No provider or model-quality guarantee is added.
+
+The cost statistics API (`GET /api/v1/ai/costs`) provides:
 
 - Total cost across all AI processing
 - Cost broken down by provider and model

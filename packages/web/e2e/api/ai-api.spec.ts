@@ -15,6 +15,34 @@ test.describe('AI API', () => {
     clearDB();
   });
 
+  test('custom model prices persist and reject invalid updates atomically', async ({ request }) => {
+    const initial = (await (await request.get('/api/v1/ai/config')).json()).data;
+    const response = await request.put('/api/v1/ai/config', {
+      data: { customInputPricePerMTok: 2.5, customOutputPricePerMTok: 7 },
+    });
+    expect(response.status()).toBe(200);
+    expect((await response.json()).data).toMatchObject({
+      customInputPricePerMTok: 2.5,
+      customOutputPricePerMTok: 7,
+    });
+    expect((await (await request.get('/api/v1/ai/config')).json()).data).toEqual({
+      ...initial,
+      customInputPricePerMTok: 2.5,
+      customOutputPricePerMTok: 7,
+    });
+    expect(
+      (
+        await request.put('/api/v1/ai/config', {
+          data: { customInputPricePerMTok: -1, customOutputPricePerMTok: 99 },
+        })
+      ).status(),
+    ).toBe(400);
+    expect((await (await request.get('/api/v1/ai/config')).json()).data).toMatchObject({
+      customInputPricePerMTok: 2.5,
+      customOutputPricePerMTok: 7,
+    });
+  });
+
   test('invalid process scopes and JSON create no job', async ({ request }) => {
     const sqlite = new Database(DB_PATH);
     try {

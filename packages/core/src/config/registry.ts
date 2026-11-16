@@ -188,6 +188,20 @@ const entries: InternalRegistryEntry[] = [
       value.every((item) => typeof item === 'string' && item.length <= 200),
   ),
   databaseEntry('ai.protectedTagsEnabled', 'boolean', DEFAULT_AI_CONFIG.protectedTagsEnabled, 'ai'),
+  databaseEntry(
+    'ai.customInputPricePerMTok',
+    'number',
+    DEFAULT_AI_CONFIG.customInputPricePerMTok,
+    'ai',
+    finite(0, Number.MAX_VALUE),
+  ),
+  databaseEntry(
+    'ai.customOutputPricePerMTok',
+    'number',
+    DEFAULT_AI_CONFIG.customOutputPricePerMTok,
+    'ai',
+    finite(0, Number.MAX_VALUE),
+  ),
   databaseEntry('ai.provider', 'string', DEFAULT_AI_CONFIG.provider, 'ai', oneOf(['openai'])),
   databaseEntry(
     'ai.rateDelayMs',

@@ -81,8 +81,20 @@ export async function countAiPromptTokens(
   flexProcessing: boolean,
   options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL'> = {},
 ): Promise<number> {
+  let tokenizerModel: 'gpt-5';
+  try {
+    tokenizerModel = resolveOpenAiTokenizerModel(model);
+  } catch (error) {
+    if (!(error instanceof UnsupportedAiModelEncodingError) || !options.baseURL) throw error;
+    const params = await buildOpenAiRequestParams(request, model, flexProcessing, options);
+    // Custom servers do not expose a tokenizer contract. Reserve one token per UTF-8 byte
+    // plus framing; reconciliation retains at least the reported charge if usage exceeds it.
+    return (
+      Buffer.byteLength(JSON.stringify(params), 'utf8') + OPENAI_RESPONSES_FRAMING_ALLOWANCE_TOKENS
+    );
+  }
   const { encodingForModel } = await import('js-tiktoken');
-  const encoding = encodingForModel(resolveOpenAiTokenizerModel(model));
+  const encoding = encodingForModel(tokenizerModel);
   const params = await buildOpenAiRequestParams(request, model, flexProcessing, options);
   return encoding.encode(JSON.stringify(params)).length + OPENAI_RESPONSES_FRAMING_ALLOWANCE_TOKENS;
 }
