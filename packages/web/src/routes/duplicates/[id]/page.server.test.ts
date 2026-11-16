@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getDuplicateGroupLight: vi.fn(),
   getDedupConfig: vi.fn(),
+  getNextDuplicateGroupId: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('@paperless-dedupe/core', () => ({
-  getDuplicateGroupLight: mocks.getDuplicateGroupLight,
-  getDedupConfig: mocks.getDedupConfig,
+vi.mock('@paperless-dedupe/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...mocks,
 }));
 
 import { load } from './+page.server';
@@ -32,6 +33,7 @@ describe('duplicate detail page load', () => {
   it('returns browser-safe signed media URLs for every duplicate member', async () => {
     const result = (await load({
       params: { id: 'group-1' },
+      url: new URL('http://localhost/duplicates/group-1'),
       locals: {
         db: {},
         config: {

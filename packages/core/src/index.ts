@@ -623,3 +623,5 @@ export {
   DeletionRunNotFoundError,
 } from './review/restore.js';
 export type { CompletedDeletionRun } from './review/restore.js';
+
+export { getNextDuplicateGroupId } from './queries/duplicates.js';

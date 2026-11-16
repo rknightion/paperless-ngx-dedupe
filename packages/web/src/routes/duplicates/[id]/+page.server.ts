@@ -1,14 +1,31 @@
 import { error } from '@sveltejs/kit';
-import { getDuplicateGroupLight, getDedupConfig } from '@paperless-dedupe/core';
+import {
+  getDuplicateGroupLight,
+  getDedupConfig,
+  getNextDuplicateGroupId,
+  duplicateInboxQuerySchema,
+} from '@paperless-dedupe/core';
 import { createPaperlessMediaUrl } from '$lib/server/paperless-auth';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, url }) => {
   const group = getDuplicateGroupLight(locals.db, params.id);
   if (!group) {
     throw error(404, 'Duplicate group not found');
   }
 
+  const returnParams = new URLSearchParams(url.searchParams.get('returnParams') ?? '');
+  const queue = duplicateInboxQuerySchema.shape.queue.safeParse(
+    returnParams.get('queue') ?? undefined,
+  );
+  const correspondent = duplicateInboxQuerySchema.shape.correspondent.safeParse(
+    returnParams.get('correspondent') ?? undefined,
+  );
+  const nextGroupId = getNextDuplicateGroupId(locals.db, {
+    queue: queue.success ? queue.data : 'pending',
+    correspondent: correspondent.success ? correspondent.data : undefined,
+    afterGroupId: params.id,
+  });
   const dedupConfig = getDedupConfig(locals.db);
   const mediaByDocumentId = Object.fromEntries(
     group.members.map((member) => [
@@ -22,6 +39,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   return {
     group,
+    nextGroupId,
     mediaByDocumentId,
     paperlessUrl: locals.config.PAPERLESS_URL,
     weights: {

@@ -35,11 +35,87 @@ describe('duplicate inbox contract', () => {
     await migrateDatabase(handle.sqlite);
   });
 
+  it('getNextDuplicateGroupId follows inbox order through confidence, date and id ties', () => {
+    insertTestData(db);
+    db.insert(duplicateGroup)
+      .values([
+        {
+          id: 'grp-3',
+          confidenceScore: 0.95,
+          algorithmVersion: 'v1',
+          createdAt: '2024-01-10T00:00:00Z',
+          updatedAt: '2024-01-10T00:00:00Z',
+        },
+        {
+          id: 'grp-recent',
+          confidenceScore: 0.95,
+          algorithmVersion: 'v1',
+          createdAt: '2024-01-11T00:00:00Z',
+          updatedAt: '2024-01-11T00:00:00Z',
+        },
+      ])
+      .run();
+    const ids = duplicateQueries
+      .listDuplicateInbox(db, { queue: 'pending', limit: 20 })
+      .items.map((group) => group.id);
+    expect(ids).toEqual(['grp-recent', 'grp-3', 'grp-1', 'grp-2']);
+    for (const [index, id] of ids.entries())
+      expect(
+        duplicateQueries.getNextDuplicateGroupId(db, { queue: 'pending', afterGroupId: id }),
+      ).toBe(ids[index + 1] ?? null);
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, { queue: 'pending', afterGroupId: 'missing' }),
+    ).toBeNull();
+  });
+
+  it('getNextDuplicateGroupId remains positional after status changes and respects queue and correspondent', () => {
+    insertTestData(db);
+    setGroupStatus(db, 'grp-1', 'false_positive');
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, { queue: 'pending', afterGroupId: 'grp-1' }),
+    ).toBe('grp-2');
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, {
+        queue: 'ambiguous',
+        afterGroupId: 'grp-1',
+        correspondent: 'Bob',
+      }),
+    ).toBe('grp-2');
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, {
+        queue: 'pending',
+        afterGroupId: 'grp-1',
+        correspondent: 'Alice',
+      }),
+    ).toBeNull();
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, {
+        queue: 'high-confidence',
+        afterGroupId: 'grp-1',
+      }),
+    ).toBeNull();
+    setGroupStatus(db, 'grp-2', 'ignored');
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, { queue: 'pending', afterGroupId: 'grp-1' }),
+    ).toBeNull();
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, { queue: 'ignored', afterGroupId: 'grp-1' }),
+    ).toBe('grp-2');
+    db.update(duplicateGroup)
+      .set({ status: 'deleted' })
+      .where(eq(duplicateGroup.id, 'grp-2'))
+      .run();
+    expect(
+      duplicateQueries.getNextDuplicateGroupId(db, { queue: 'deleted', afterGroupId: 'grp-1' }),
+    ).toBe('grp-2');
+  });
+
   it('exports the duplicate inbox schema and query', () => {
     expect(queryTypes).toHaveProperty('duplicateInboxQuerySchema');
     expect(duplicateQueries).toHaveProperty('listDuplicateInbox');
     expect(core).toHaveProperty('duplicateInboxQuerySchema');
     expect(core).toHaveProperty('listDuplicateInbox');
+    expect(core).toHaveProperty('getNextDuplicateGroupId');
   });
 
   it('strictly validates and normalizes URL-backed query state', () => {
