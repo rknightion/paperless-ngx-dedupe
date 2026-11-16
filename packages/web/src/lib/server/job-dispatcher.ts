@@ -96,7 +96,17 @@ export function createJobDispatcher(options: JobDispatcherOptions): SchedulerDis
         if (intent.status === 'dispatched') return;
         if (!intent.jobId) throw new Error(`Dispatch intent '${intentId}' has no durable job`);
 
-        const workerName = WORKER_BY_TASK[intent.task as keyof typeof WORKER_BY_TASK];
+        const jobType =
+          intent.task === 'duplicate_delete'
+            ? (
+                options.sqlite.prepare('SELECT type FROM job WHERE id = ?').get(intent.jobId) as
+                  { type: string } | undefined
+              )?.type
+            : undefined;
+        const workerName =
+          jobType === 'duplicate_restore'
+            ? 'restore-worker'
+            : WORKER_BY_TASK[intent.task as keyof typeof WORKER_BY_TASK];
         if (!workerName) {
           const job = options.sqlite
             .prepare('SELECT status FROM job WHERE id = ?')

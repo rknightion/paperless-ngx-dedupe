@@ -661,3 +661,46 @@ describe('createJobDispatcher', () => {
     expect(launch).not.toHaveBeenCalled();
   });
 });
+
+it('dispatches a restore job through the existing duplicate mutation lease to its own worker', async () => {
+  const handle = createDatabaseWithHandle(':memory:');
+  await migrateDatabase(handle.sqlite);
+  const intent = enqueueManualOperation(
+    handle.sqlite,
+    'duplicate_delete',
+    { kind: 'manual' },
+    'duplicate_restore',
+    { planId: 'completed-plan' },
+  );
+  const launch = vi.fn(() => ({
+    jobId: intent.jobId,
+    worker: {},
+    ready: Promise.resolve({ claimed: true }),
+    done: Promise.resolve(),
+  }));
+  const resolveWorker = vi.fn((name: string) => `/workers/${name}.js`);
+  const dispatcher = createJobDispatcher({
+    sqlite: handle.sqlite,
+    dbPath: ':memory:',
+    logger: { info: vi.fn(), error: vi.fn() } as never,
+    launchWorker: launch as never,
+    getWorkerPath: resolveWorker,
+  });
+  try {
+    await dispatcher.launchIntent(intent.id, 'restore-dispatch');
+    expect(resolveWorker).toHaveBeenCalledExactlyOnceWith('restore-worker');
+    expect(launch).toHaveBeenCalledWith({
+      jobId: intent.jobId,
+      dbPath: ':memory:',
+      workerScriptPath: '/workers/restore-worker.js',
+      taskData: { planId: 'completed-plan' },
+    });
+    expect(
+      handle.sqlite
+        .prepare('SELECT operation FROM operation_lease WHERE owner_id=?')
+        .get(intent.jobId),
+    ).toEqual({ operation: 'duplicate_delete' });
+  } finally {
+    handle.sqlite.close();
+  }
+});

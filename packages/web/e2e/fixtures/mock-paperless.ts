@@ -27,6 +27,7 @@ interface MockDocument {
 interface MockState {
   failDeletes: boolean;
   documents: MockDocument[];
+  trash: MockDocument[];
   correspondents: Array<{ id: number; name: string }>;
   documentTypes: Array<{ id: number; name: string }>;
   tags: Array<{ id: number; name: string }>;
@@ -54,6 +55,7 @@ function createDefaultState(): MockState {
   return {
     failDeletes: false,
     documents,
+    trash: [],
     correspondents: [
       { id: 1, name: 'Alice Corp' },
       { id: 2, name: 'Bob Industries' },
@@ -184,6 +186,31 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     });
   }
 
+  if (path === '/api/trash/' && req.method === 'GET') {
+    return jsonResponse(res, paginate(state.trash, url));
+  }
+  if (path === '/api/trash/' && req.method === 'POST') {
+    const body = await readJsonBody(req);
+    if (body.action === 'empty') {
+      const ids = state.trash.map((doc) => doc.id);
+      state.trash = [];
+      return jsonResponse(res, { result: 'OK', doc_ids: ids });
+    }
+    const ids = body.documents;
+    if (
+      body.action !== 'restore' ||
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      new Set(ids).size !== ids.length ||
+      ids.some((id) => !state.trash.some((doc) => doc.id === id))
+    ) {
+      return jsonResponse(res, { detail: 'Invalid restore selection' }, 400);
+    }
+    state.documents.push(...state.trash.filter((doc) => ids.includes(doc.id)));
+    state.trash = state.trash.filter((doc) => !ids.includes(doc.id));
+    return jsonResponse(res, { result: 'OK', doc_ids: ids });
+  }
+
   // GET /api/documents/
   if (path === '/api/documents/' && req.method === 'GET') {
     return jsonResponse(res, paginate(state.documents, url));
@@ -230,7 +257,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     if (index === -1) {
       return jsonResponse(res, { detail: 'Not found.' }, 404);
     }
-    state.documents.splice(index, 1);
+    state.trash.push(...state.documents.splice(index, 1));
     res.writeHead(204, {
       'X-Api-Version': '5',
       'X-Version': '2.14.0',

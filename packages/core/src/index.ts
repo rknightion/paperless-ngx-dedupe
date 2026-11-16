@@ -615,3 +615,11 @@ export {
   SimilarDocumentValidationError,
 } from './dedup/lookup.js';
 export type { SimilarDocumentMatch } from './dedup/lookup.js';
+
+export {
+  listCompletedDeletionRuns,
+  assertCompletedDeletionRun,
+  restoreDeletionRun,
+  DeletionRunNotFoundError,
+} from './review/restore.js';
+export type { CompletedDeletionRun } from './review/restore.js';

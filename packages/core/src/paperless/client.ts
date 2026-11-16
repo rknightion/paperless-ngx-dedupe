@@ -460,6 +460,37 @@ export class PaperlessClient {
     }
   }
 
+  /** Restore only the selected IDs; an empty selection never means the whole recycle bin. */
+  async restoreFromTrash(documentIds: number[]): Promise<number[]> {
+    if (this.readOnly) throw new PaperlessReadOnlyError();
+    const ids = [...new Set(documentIds)];
+    if (ids.length === 0) return [];
+    const response = await this.fetchWithRetry(this.buildUrl('/api/trash/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restore', documents: ids }),
+    });
+    return z
+      .object({ result: z.literal('OK'), doc_ids: z.array(z.number().int().positive()) })
+      .parse(await response.json()).doc_ids;
+  }
+
+  /** Page recycle-bin IDs so callers can intersect them with a deletion run before restoring. */
+  async *getTrashDocumentIds(): AsyncGenerator<number[]> {
+    const schema = paginatedResponseSchema(z.object({ id: z.number().int().positive() }));
+    let page = 1;
+    let hasNext = true;
+    while (hasNext) {
+      const response = await this.fetchWithRetry(
+        this.buildUrl(`/api/trash/?page=${page}&page_size=100&fields=id`),
+      );
+      const parsed = schema.parse(await response.json());
+      yield parsed.results.map((doc) => doc.id);
+      hasNext = parsed.next !== null;
+      page++;
+    }
+  }
+
   async bulkEdit(
     documentIds: number[],
     method: string,
