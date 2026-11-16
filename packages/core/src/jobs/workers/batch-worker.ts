@@ -7,6 +7,8 @@ import { PaperlessClient } from '../../paperless/client.js';
 import { PaperlessApiError, PaperlessConnectionError } from '../../paperless/errors.js';
 import { toPaperlessConfig } from '../../paperless/schemas.js';
 import { parseConfig } from '../../config.js';
+import { planMetadataMerge } from '../../review/metadata-merge.js';
+import { type DocumentUpdate } from '../../paperless/types.js';
 import {
   claimDuplicateDeletionPlan,
   completeDuplicateDeletionPlan,
@@ -17,6 +19,7 @@ import {
   markDuplicateDocumentRemoteDeleted,
   markDuplicateGroupConflict,
   markDuplicateGroupStarted,
+  markDuplicateGroupFailed,
   reconcileDuplicateDocumentLocally,
   revalidateFrozenDuplicateGroup,
 } from '../../review/mutation-plans.js';
@@ -27,7 +30,8 @@ const batchTaskDataSchema = z
   })
   .strict();
 
-type DeleteDocumentClient = Pick<PaperlessClient, 'deleteDocument'>;
+type DeleteDocumentClient = Pick<PaperlessClient, 'deleteDocument'> &
+  Partial<Pick<PaperlessClient, 'getDocument' | 'getTags' | 'updateDocument'>>;
 
 type BatchConflict = {
   groupId: string;
@@ -143,7 +147,7 @@ export async function executeReviewedDuplicateDeletion(
   if (!taskData.success) throw new Error('Invalid duplicate deletion task data');
 
   const plan = claimDuplicateDeletionPlan(ctx.db, taskData.data.planToken, ctx.jobId, now);
-  if (plan.mergeMetadata) throw new Error('Metadata copying is not available yet');
+  const mergeErrors = new Map<string, BatchError>();
 
   for (let index = 0; index < plan.groups.length; index++) {
     const frozenGroup = plan.groups[index];
@@ -178,6 +182,54 @@ export async function executeReviewedDuplicateDeletion(
     }
 
     markDuplicateGroupStarted(ctx.sqlite, plan.planId, frozenGroup.groupId, now);
+    if (plan.mergeMetadata) {
+      try {
+        if (getJob(ctx.db, ctx.jobId)?.status === 'cancelled')
+          throw new CancellationError('Job was cancelled');
+        const tags = await client.getTags!();
+        const keeper = await client.getDocument!(frozenGroup.primaryPaperlessId);
+        const others = [];
+        for (const member of frozenGroup.nonPrimaryDocuments) {
+          const checkpoint = beforeState.documents.find(
+            (row) => row.groupId === frozenGroup.groupId && row.documentId === member.documentId,
+          );
+          if (checkpoint?.status === 'remote_deleted' || checkpoint?.status === 'reconciled')
+            continue;
+          try {
+            others.push(await client.getDocument!(member.paperlessId));
+          } catch (error) {
+            // A crashed DELETE may have succeeded before its success checkpoint was written.
+            if (
+              checkpoint?.status !== 'delete_started' ||
+              !(error instanceof PaperlessApiError) ||
+              error.statusCode !== 404
+            )
+              throw error;
+          }
+        }
+        const merge = planMetadataMerge(keeper, others, {
+          inboxTagIds: tags.filter((tag) => tag.isInboxTag).map((tag) => tag.id),
+        });
+        if (merge.addCustomFields.length)
+          throw new Error('Custom-field copying is not available yet');
+        const update: DocumentUpdate = {};
+        if (merge.addTagIds.length) update.tags = [...keeper.tags, ...merge.addTagIds];
+        if (merge.setCorrespondent !== null) update.correspondent = merge.setCorrespondent;
+        if (merge.setDocumentType !== null) update.documentType = merge.setDocumentType;
+        if (getJob(ctx.db, ctx.jobId)?.status === 'cancelled')
+          throw new CancellationError('Job was cancelled');
+        if (Object.keys(update).length)
+          await client.updateDocument!(frozenGroup.primaryPaperlessId, update);
+      } catch (error) {
+        if (error instanceof CancellationError) throw error;
+        markDuplicateGroupFailed(ctx.sqlite, plan.planId, frozenGroup.groupId);
+        mergeErrors.set(frozenGroup.groupId, {
+          groupId: frozenGroup.groupId,
+          ...classifyPaperlessFailure(error),
+        });
+        continue;
+      }
+    }
     for (const frozenDocument of frozenGroup.nonPrimaryDocuments) {
       const checkpoint = getDuplicateDeletionCheckpointState(
         ctx.sqlite,
@@ -259,6 +311,12 @@ export async function executeReviewedDuplicateDeletion(
   }
 
   const result = resultFromCheckpoints(ctx, plan.planId);
+  result.errors = [
+    ...new Map([
+      ...result.errors.map((error) => [error.groupId, error] as const),
+      ...mergeErrors,
+    ]).values(),
+  ];
   if (result.errors.length > 0) {
     throw new DuplicateDeletionRemoteError(result.errors.some(({ retryable }) => retryable));
   }
