@@ -1,6 +1,7 @@
 import {
   createDuplicateDeletionPlan,
   DuplicateDeletionPreviewError,
+  MutationPlanError,
   PaperlessClient,
   PaperlessApiError,
   toPaperlessConfig,
@@ -15,6 +16,7 @@ import type { RequestHandler } from './$types';
 const bodySchema = z.object({
   groupIds: z.array(z.string().min(1)).min(1).max(50000),
   mergeMetadata: z.boolean().optional(),
+  planToken: z.string().min(32).max(256).optional(),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -60,8 +62,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     return runtime.acceptingGate.run(() => {
-      const preview = mergeOptions
-        ? createDuplicateDeletionPlan(locals.db, parsed.data.groupIds, mergeOptions)
+      const options = parsed.data.planToken
+        ? { ...mergeOptions, planToken: parsed.data.planToken }
+        : mergeOptions;
+      const preview = options
+        ? createDuplicateDeletionPlan(locals.db, parsed.data.groupIds, options)
         : createDuplicateDeletionPlan(locals.db, parsed.data.groupIds);
       return apiSuccess({
         planToken: preview.token,
@@ -81,6 +86,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         { operation: 'preview_duplicate_deletion', retryable: true },
         503,
       );
+    }
+    if (error instanceof MutationPlanError) {
+      return apiError(ErrorCode.CONFLICT, {
+        operation: 'preview_duplicate_deletion',
+        retryable: false,
+      });
     }
     if (error instanceof DuplicateDeletionPreviewError) {
       return apiError(ErrorCode.VALIDATION_FAILED, {

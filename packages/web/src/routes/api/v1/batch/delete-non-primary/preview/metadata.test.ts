@@ -115,6 +115,83 @@ async function preview(mergeMetadata: unknown, responseStatus = 200) {
   }
 }
 
+it('extends an existing preview through the HTTP contract and refuses unusable tokens', async () => {
+  const handle = createDatabaseWithHandle(':memory:');
+  try {
+    await migrateDatabase(handle.sqlite);
+    handle.db
+      .insert(document)
+      .values([
+        {
+          id: 'keeper',
+          paperlessId: 1,
+          title: 'Synthetic keeper',
+          syncedAt: new Date().toISOString(),
+        },
+        { id: 'copy', paperlessId: 2, title: 'Synthetic copy', syncedAt: new Date().toISOString() },
+      ])
+      .run();
+    for (const id of ['first-group', 'second-group']) {
+      handle.db
+        .insert(duplicateGroup)
+        .values({
+          id,
+          status: 'pending',
+          confidenceScore: 0.99,
+          algorithmVersion: 'synthetic',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .run();
+      handle.db
+        .insert(duplicateMember)
+        .values([
+          { id: `${id}-keeper`, groupId: id, documentId: 'keeper', isPrimary: true },
+          { id: `${id}-copy`, groupId: id, documentId: 'copy', isPrimary: false },
+        ])
+        .run();
+    }
+    runtime.get.mockResolvedValue({
+      acceptingGate: {
+        assertAccepting() {},
+        run<T>(operation: () => T) {
+          return operation();
+        },
+      },
+    });
+    const post = (body: unknown) =>
+      POST({
+        locals: { db: handle.db },
+        request: new Request('http://app.example.test/api/v1/batch/delete-non-primary/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+      } as never);
+    const first = await post({ groupIds: ['first-group'] });
+    expect(first.status).toBe(200);
+    const firstBody = await first.json();
+    const next = await post({ groupIds: ['second-group'], planToken: firstBody.data.planToken });
+    expect(next.status).toBe(200);
+    const nextBody = await next.json();
+    expect(nextBody.data.groupCount).toBe(2);
+    expect(nextBody.data.groups.map((group: { groupId: string }) => group.groupId)).toEqual([
+      'first-group',
+      'second-group',
+    ]);
+    expect(nextBody.data.planToken).not.toBe(firstBody.data.planToken);
+    const invalid = await post({
+      groupIds: ['second-group'],
+      planToken: 'unknown-synthetic-token-00000000000000000000',
+    });
+    expect(invalid.status).toBe(409);
+    expect((await invalid.json()).error.code).toBe('CONFLICT');
+    expect((await post({ groupIds: ['second-group'], planToken: 'short' })).status).toBe(400);
+  } finally {
+    handle.sqlite.close();
+  }
+});
+
 it('previews local additions with live inbox and custom-field names and freezes the enabled option', async () => {
   const result = await preview(true);
   expect(result.status).toBe(200);

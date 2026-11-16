@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SvelteMap } from 'svelte/reactivity';
+  import { createDeletionPreview } from '$lib/duplicate-deletion-preview';
   import KeeperSelection from '$lib/components/duplicates/KeeperSelection.svelte';
   import {
     deletionRunFromCompletion,
@@ -311,10 +312,11 @@
 
     if (selectedAction === 'delete') {
       try {
+        const preview = await createDeletionPreview(allGroupIds);
         const res = await fetch('/api/v1/batch/delete-non-primary', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ groupIds: allGroupIds, confirm: true }),
+          body: JSON.stringify({ planToken: preview.planToken, confirm: true }),
         });
         if (res.ok) {
           const json = await res.json();
@@ -883,7 +885,7 @@
           onclick={handleNext}
           disabled={!canProceedStep4 || (readOnly && selectedAction === 'delete')}
           title={readOnly && selectedAction === 'delete' ? 'Paperless is read-only' : undefined}
-          class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50
+          class="text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50
             {selectedAction === 'delete'
             ? 'bg-ember hover:opacity-90'
             : 'bg-accent hover:bg-accent-hover'}"
