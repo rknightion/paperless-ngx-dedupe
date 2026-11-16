@@ -1,4 +1,5 @@
 import { applySecurityHeaders } from '$lib/server/security-headers';
+import { decideAccess } from '$lib/server/access';
 import { apiError, ErrorCode } from '$lib/server/api';
 import { sequence } from '@sveltejs/kit/hooks';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
@@ -82,6 +83,26 @@ const handleCors: Handle = async ({ event, resolve }) => {
   return newResponse;
 };
 
+const handleAuth: Handle = async ({ event, resolve }) => {
+  const { config } = await getServerRuntime();
+  const decision = decideAccess(
+    config,
+    event.request.method,
+    event.url.pathname,
+    event.request.headers,
+    '',
+  );
+  if (decision.allowed) return resolve(event);
+  const response = event.url.pathname.startsWith('/api/')
+    ? apiError(ErrorCode.UNAUTHORIZED, { operation: 'authenticate', retryable: false }, 401)
+    : new Response('Authentication required', { status: 401 });
+  response.headers.set(
+    'WWW-Authenticate',
+    config.APP_AUTH_MODE === 'basic' ? 'Basic realm="Paperless Dedupe", charset="UTF-8"' : 'Bearer',
+  );
+  return response;
+};
+
 const handleRequest: Handle = async ({ event, resolve }) => {
   const runtime = await getServerRuntime();
   const logger = createLogger('http');
@@ -121,4 +142,10 @@ const handleRequest: Handle = async ({ event, resolve }) => {
   return response;
 };
 
-export const handle = sequence(handleSecurityHeaders, handleCsrf, handleCors, handleRequest);
+export const handle = sequence(
+  handleSecurityHeaders,
+  handleCsrf,
+  handleCors,
+  handleAuth,
+  handleRequest,
+);

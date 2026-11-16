@@ -1,0 +1,149 @@
+import { test, expect } from '../fixtures/test-app';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { createServer } from 'node:net';
+import path from 'node:path';
+
+async function withProtectedApp(
+  variables: Record<string, string | undefined>,
+  check: (url: string, output: () => string) => Promise<void>,
+) {
+  const port = await new Promise<number>((resolve, reject) => {
+    const listener = createServer();
+    listener.on('error', reject);
+    listener.listen(0, '127.0.0.1', () => {
+      const address = listener.address();
+      listener.close((error) => {
+        if (error) reject(error);
+        else if (address && typeof address === 'object') resolve(address.port);
+        else reject(new Error('Missing test port'));
+      });
+    });
+  });
+  const directory = mkdtempSync(path.join(tmpdir(), 'app-access-'));
+  const child = spawn(process.execPath, ['build/index.js'], {
+    cwd: path.resolve(import.meta.dirname, '../..'),
+    env: {
+      ...process.env,
+      HOST: '127.0.0.1',
+      PORT: String(port),
+      ORIGIN: `http://127.0.0.1:${port}`,
+      DATABASE_URL: path.join(directory, 'test.db'),
+      PAPERLESS_URL: 'http://localhost:18923',
+      PAPERLESS_API_TOKEN: 'test-token-e2e',
+      AI_ENABLED: 'false',
+      OTEL_ENABLED: 'false',
+      OTEL_PROMETHEUS_ENABLED: 'false',
+      PYROSCOPE_ENABLED: 'false',
+      LOG_LEVEL: 'info',
+      APP_AUTH_MODE: undefined,
+      APP_AUTH_USERNAME: undefined,
+      APP_AUTH_PASSWORD: undefined,
+      APP_API_TOKEN: undefined,
+      SHUTDOWN_TIMEOUT: '1',
+      ...variables,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = '';
+  let startupError: Error | undefined;
+  child.on('error', (error) => {
+    startupError = error;
+  });
+  child.stdout.on('data', (data) => {
+    output += data.toString();
+  });
+  child.stderr.on('data', (data) => {
+    output += data.toString();
+  });
+  try {
+    await expect
+      .poll(
+        () => {
+          if (startupError) throw startupError;
+          if (child.exitCode !== null) throw new Error(`Test server exited: ${output}`);
+          return output.includes('Listening on');
+        },
+        { timeout: 15000 },
+      )
+      .toBe(true);
+    await check(`http://127.0.0.1:${port}`, () => output);
+  } finally {
+    if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) {
+      const exited = once(child, 'exit');
+      child.kill('SIGTERM');
+      const timeout = setTimeout(() => child.kill('SIGKILL'), 5000);
+      try {
+        await exited;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+const basicEnvironment = {
+  APP_AUTH_MODE: 'basic',
+  APP_AUTH_USERNAME: 'operator',
+  APP_AUTH_PASSWORD: 'synthetic-access-password',
+  APP_API_TOKEN: 'synthetic-access-token',
+};
+
+test('rejects an unauthenticated API request when APP_AUTH_MODE is basic', async ({ request }) => {
+  await withProtectedApp(basicEnvironment, async (url) => {
+    const response = await request.get(`${url}/api/v1/config`);
+    expect(response.status()).toBe(401);
+    expect(response.headers()['www-authenticate']).toContain('Basic');
+    expect((await response.json()).error.code).toBe('UNAUTHORIZED');
+  });
+});
+
+test('serves configured credentials and public probes while protecting pages and metrics', async ({
+  request,
+}) => {
+  await withProtectedApp(basicEnvironment, async (url, output) => {
+    const wrong = await request.get(`${url}/api/v1/config`, {
+      headers: { Authorization: 'Bearer incorrect' },
+    });
+    expect(wrong.status()).toBe(401);
+    for (const authorization of [
+      `Basic ${Buffer.from('operator:synthetic-access-password').toString('base64')}`,
+      'Bearer synthetic-access-token',
+    ]) {
+      const response = await request.get(`${url}/api/v1/config`, {
+        headers: { Authorization: authorization },
+      });
+      expect(response.status()).toBe(200);
+      expect((await response.json()).data).toBeDefined();
+    }
+    for (const route of ['/api/v1/health', '/api/v1/ready']) {
+      expect((await request.get(`${url}${route}`)).status()).toBe(200);
+    }
+    expect((await request.fetch(`${url}/api/v1/config`, { method: 'OPTIONS' })).status()).toBe(204);
+    expect((await request.get(`${url}/api/v1/metrics`)).status()).toBe(401);
+    expect((await request.get(url)).status()).toBe(401);
+    expect(
+      (
+        await request.get(url, {
+          headers: {
+            Authorization: `Basic ${Buffer.from('operator:synthetic-access-password').toString('base64')}`,
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    expect(output()).not.toContain('synthetic-access-password');
+    expect(output()).not.toContain('synthetic-access-token');
+  });
+});
+
+test('keeps the default mode open and logs one startup notice', async ({ request }) => {
+  await withProtectedApp({}, async (url, output) => {
+    for (let index = 0; index < 2; index++) {
+      expect((await request.get(`${url}/api/v1/config`)).status()).toBe(200);
+    }
+    expect(output().match(/Application access protection is disabled/g)).toHaveLength(1);
+  });
+});

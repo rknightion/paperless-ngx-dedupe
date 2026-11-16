@@ -75,6 +75,11 @@ export function initializeServerRuntime(): Promise<ServerRuntime> {
     const config = parseConfig(process.env as Record<string, string | undefined>);
     initLogger(config.LOG_LEVEL);
     const logger = createLogger('server-runtime');
+    if (config.APP_AUTH_MODE === 'none') {
+      logger.info(
+        'Application access protection is disabled; restrict access to a trusted network or authenticating proxy',
+      );
+    }
     const { db, sqlite } = await getDatabase(config);
     const acceptingGate = createRuntimeAcceptingGate();
     const dispatcher = createJobDispatcher({

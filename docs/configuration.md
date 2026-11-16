@@ -36,6 +36,21 @@ reads, stores, exports, or accepts these values through the database or configur
 legacy credential rows in `app_config` are removed during startup migration. Keep the values in your
 deployment environment or secret manager when moving an installation.
 
+### Access Protection
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `APP_AUTH_MODE` | No | `none` | `none` keeps access open; `basic` requires a shared credential |
+| `APP_AUTH_USERNAME` | In basic mode | - | Shared application username, separate from Paperless authentication |
+| `APP_AUTH_PASSWORD` | In basic mode | - | Shared application password; sensitive and environment-owned |
+| `APP_API_TOKEN` | No | - | Sensitive bearer token accepted on `/api/v1/*` in any supported mode |
+
+Basic mode refuses to start without both username and password. Keep these credentials in the
+deployment environment; the configuration API cannot change or export them. GET health and
+readiness probes and OPTIONS requests remain unauthenticated; metrics require credentials when
+protection is enabled. For scripts, send `Authorization: Bearer <app-api-token>`.
+See the [access model](security.md#access-model) for the default trust boundary and HTTPS guidance.
+
 ### Container Runtime
 
 | Variable | Required | Default | Notes |

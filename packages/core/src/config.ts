@@ -11,6 +11,10 @@ const configSchema = z
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
     CORS_ALLOW_ORIGIN: z.string().default(''),
     ORIGIN: z.string().optional(),
+    APP_AUTH_MODE: z.enum(['none', 'basic']).default('none'),
+    APP_AUTH_USERNAME: z.string().optional(),
+    APP_AUTH_PASSWORD: z.string().optional(),
+    APP_API_TOKEN: z.string().optional(),
     NOTIFY_URL: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
     NOTIFY_FORMAT: z.enum(['json', 'ntfy', 'apprise']).default('json'),
     NOTIFY_AUTH_HEADER: z.string().optional(),
@@ -58,6 +62,13 @@ const configSchema = z
     error: 'When AI_ENABLED=true, AI_OPENAI_API_KEY is required',
     path: ['AI_ENABLED'],
   })
+  .refine(
+    (data) => data.APP_AUTH_MODE !== 'basic' || (data.APP_AUTH_USERNAME && data.APP_AUTH_PASSWORD),
+    {
+      error: 'APP_AUTH_MODE=basic requires APP_AUTH_USERNAME and APP_AUTH_PASSWORD',
+      path: ['APP_AUTH_MODE'],
+    },
+  )
   .refine((data) => !data.FARO_ENABLED || data.FARO_COLLECTOR_URL, {
     error: 'When FARO_ENABLED=true, FARO_COLLECTOR_URL is required',
     path: ['FARO_ENABLED'],

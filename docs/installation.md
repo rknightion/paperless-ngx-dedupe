@@ -35,10 +35,12 @@ The supplied compose file binds to loopback by default; to publish on other inte
 
 Open `http://localhost:3000`.
 
-!!! warning "No built-in login"
-    The application has no built-in login, so anyone who can reach its port can use it with the
-    server's Paperless-NGX credential. Keep it on a trusted network or behind an authenticating
-    proxy; see the [access model](security.md#access-model) before exposing the port.
+!!! warning "Access protection is optional"
+    The default mode permits anyone who can reach the port to use the application. Keep it on a
+    trusted network or behind an authenticating proxy, or set `APP_AUTH_MODE=basic` with
+    `APP_AUTH_USERNAME` and `APP_AUTH_PASSWORD` before starting. Use HTTPS outside a trusted local
+    link. See the [access model](security.md#access-model) and
+    [configuration](configuration.md#access-protection).
 
 ### Important URL Note
 
