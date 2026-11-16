@@ -68,7 +68,9 @@ describe('typed config API', () => {
   });
 
   it('returns compatible values with deterministic registry metadata and no secrets', async () => {
-    const response = await GET({ locals: { db: {} } } as never);
+    const response = await GET({
+      locals: { db: {}, config: { PAPERLESS_READ_ONLY: false } },
+    } as never);
     const body = await response.json();
 
     expect(body).toEqual({

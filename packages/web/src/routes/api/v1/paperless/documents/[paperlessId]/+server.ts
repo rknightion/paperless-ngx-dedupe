@@ -25,6 +25,10 @@ function buildAuthHeaders(config: App.Locals['config']): Record<string, string> 
 }
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
+  if (locals.config.PAPERLESS_READ_ONLY) {
+    return apiError(ErrorCode.READ_ONLY, { operation: 'delete_document', retryable: false });
+  }
+
   const paperlessId = Number(params.paperlessId);
   if (isNaN(paperlessId) || paperlessId <= 0) {
     return apiError(ErrorCode.BAD_REQUEST, 'Invalid paperless document ID');

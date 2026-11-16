@@ -49,6 +49,14 @@ loopback only in Compose:
 ports: ['127.0.0.1:3000:3000']
 ```
 
+## Read-only use
+
+Set `PAPERLESS_READ_ONLY=true` to refuse changes to Paperless-NGX before a request is made.
+Delete, AI apply and revert operations return HTTP 403 without creating a job. Sync, analysis,
+AI extraction for suggestions, local review statuses, settings, backups and exports remain available.
+This protects the upstream library; it does not restrict access to local data or replace access
+protection. Leave the variable unset for the existing writable behavior.
+
 ## Paperless-NGX credentials
 
 Authenticate with `PAPERLESS_API_TOKEN` (preferred) or `PAPERLESS_USERNAME` +

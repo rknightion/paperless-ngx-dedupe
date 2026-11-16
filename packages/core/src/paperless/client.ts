@@ -30,13 +30,19 @@ import {
   paperlessRemoteVersionSchema,
   paginatedResponseSchema,
 } from './schemas.js';
-import { PaperlessApiError, PaperlessAuthError, PaperlessConnectionError } from './errors.js';
+import {
+  PaperlessApiError,
+  PaperlessAuthError,
+  PaperlessConnectionError,
+  PaperlessReadOnlyError,
+} from './errors.js';
 
 /** Paperless-NGX matching_algorithm=0 disables automatic assignment matching. */
 const MATCHING_NONE = 0;
 
 export class PaperlessClient {
   private readonly baseUrl: string;
+  private readonly readOnly: boolean;
   private readonly headers: Record<string, string>;
   private readonly timeout: number;
   private readonly maxRetries: number;
@@ -59,6 +65,7 @@ export class PaperlessClient {
       this.headers['Authorization'] = `Basic ${encoded}`;
     }
 
+    this.readOnly = config.readOnly ?? false;
     this.timeout = config.timeout ?? 30000;
     this.maxRetries = config.maxRetries ?? 3;
     this.logger = createLogger('paperless-client');
@@ -390,6 +397,7 @@ export class PaperlessClient {
   }
 
   async updateDocument(id: number, update: DocumentUpdate): Promise<void> {
+    if (this.readOnly) throw new PaperlessReadOnlyError();
     const body: Record<string, unknown> = {};
     if (update.title !== undefined) body.title = update.title;
     if (update.correspondent !== undefined) body.correspondent = update.correspondent;
@@ -405,6 +413,7 @@ export class PaperlessClient {
   }
 
   async createCorrespondent(name: string): Promise<PaperlessCorrespondent> {
+    if (this.readOnly) throw new PaperlessReadOnlyError();
     const response = await this.fetchWithRetry(this.buildUrl('/api/correspondents/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -415,6 +424,7 @@ export class PaperlessClient {
   }
 
   async createDocumentType(name: string): Promise<PaperlessDocumentType> {
+    if (this.readOnly) throw new PaperlessReadOnlyError();
     const response = await this.fetchWithRetry(this.buildUrl('/api/document_types/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -425,6 +435,7 @@ export class PaperlessClient {
   }
 
   async createTag(name: string): Promise<PaperlessTag> {
+    if (this.readOnly) throw new PaperlessReadOnlyError();
     const response = await this.fetchWithRetry(this.buildUrl('/api/tags/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -435,6 +446,7 @@ export class PaperlessClient {
   }
 
   async deleteDocument(id: number): Promise<void> {
+    if (this.readOnly) throw new PaperlessReadOnlyError();
     const response = await this.fetchWithRetry(this.buildUrl(`/api/documents/${id}/`), {
       method: 'DELETE',
     });
@@ -453,6 +465,7 @@ export class PaperlessClient {
     method: string,
     parameters: Record<string, unknown>,
   ): Promise<void> {
+    if (this.readOnly) throw new PaperlessReadOnlyError();
     await this.fetchWithRetry(this.buildUrl('/api/documents/bulk_edit/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
