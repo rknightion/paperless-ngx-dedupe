@@ -90,7 +90,8 @@ const handleAuth: Handle = async ({ event, resolve }) => {
     event.request.method,
     event.url.pathname,
     event.request.headers,
-    '',
+    // Forwarded address headers must never establish trust in the identity header.
+    config.APP_AUTH_MODE === 'proxy' ? (event.platform?.req?.socket.remoteAddress ?? '') : '',
   );
   if (decision.allowed) return resolve(event);
   const response = event.url.pathname.startsWith('/api/')

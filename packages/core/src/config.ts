@@ -1,4 +1,21 @@
 import { z } from 'zod';
+import { isIP } from 'node:net';
+
+function validProxyCidrs(value: string | undefined): boolean {
+  return Boolean(
+    value?.split(',').every((entry) => {
+      const parts = entry.trim().split('/');
+      const [address, prefix] = parts;
+      const family = isIP(address);
+      return (
+        parts.length === 2 &&
+        family !== 0 &&
+        /^\d+$/.test(prefix ?? '') &&
+        Number(prefix) <= (family === 4 ? 32 : 128)
+      );
+    }),
+  );
+}
 
 const configSchema = z
   .object({
@@ -11,10 +28,17 @@ const configSchema = z
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
     CORS_ALLOW_ORIGIN: z.string().default(''),
     ORIGIN: z.string().optional(),
-    APP_AUTH_MODE: z.enum(['none', 'basic']).default('none'),
+    APP_AUTH_MODE: z.enum(['none', 'basic', 'proxy']).default('none'),
     APP_AUTH_USERNAME: z.string().optional(),
     APP_AUTH_PASSWORD: z.string().optional(),
     APP_API_TOKEN: z.string().optional(),
+    APP_AUTH_PROXY_HEADER: z
+      .string()
+      .regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/, {
+        error: 'APP_AUTH_PROXY_HEADER must be a valid HTTP header name',
+      })
+      .default('Remote-User'),
+    APP_AUTH_TRUSTED_PROXIES: z.string().optional(),
     NOTIFY_URL: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
     NOTIFY_FORMAT: z.enum(['json', 'ntfy', 'apprise']).default('json'),
     NOTIFY_AUTH_HEADER: z.string().optional(),
@@ -67,6 +91,13 @@ const configSchema = z
     {
       error: 'APP_AUTH_MODE=basic requires APP_AUTH_USERNAME and APP_AUTH_PASSWORD',
       path: ['APP_AUTH_MODE'],
+    },
+  )
+  .refine(
+    (data) => data.APP_AUTH_MODE !== 'proxy' || validProxyCidrs(data.APP_AUTH_TRUSTED_PROXIES),
+    {
+      error: 'APP_AUTH_MODE=proxy requires valid APP_AUTH_TRUSTED_PROXIES CIDRs',
+      path: ['APP_AUTH_TRUSTED_PROXIES'],
     },
   )
   .refine((data) => !data.FARO_ENABLED || data.FARO_COLLECTOR_URL, {

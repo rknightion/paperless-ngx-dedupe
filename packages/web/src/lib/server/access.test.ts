@@ -17,9 +17,13 @@ it('denies missing Basic credentials without exposing configuration values', () 
   ).toEqual({ allowed: false, reason: 'credentials_required' });
 });
 
-it('accepts an API bearer token in either mode and refuses wrong or malformed bearer credentials', () => {
-  for (const mode of ['none', 'basic']) {
-    const config = parseConfig({ ...environment, APP_AUTH_MODE: mode });
+it('accepts an API bearer token in every mode and refuses wrong or malformed bearer credentials', () => {
+  for (const mode of ['none', 'basic', 'proxy']) {
+    const config = parseConfig({
+      ...environment,
+      APP_AUTH_MODE: mode,
+      APP_AUTH_TRUSTED_PROXIES: '192.0.2.0/24',
+    });
     expect(
       decideAccess(
         config,
@@ -101,6 +105,40 @@ it('limits bearer access to API routes when Basic protection is enabled', () => 
       '/',
       new Headers({ Authorization: 'Bearer synthetic-app-token' }),
       '',
+    ).allowed,
+  ).toBe(false);
+});
+
+it('accepts proxy identity only from trusted IPv4, mapped IPv4 or IPv6 peers', () => {
+  const config = parseConfig({
+    ...environment,
+    APP_AUTH_MODE: 'proxy',
+    APP_AUTH_TRUSTED_PROXIES: '192.0.2.0/24, 2001:db8:1::/48',
+    APP_AUTH_PROXY_HEADER: 'X-Authenticated-User',
+  });
+  const headers = new Headers({ 'X-Authenticated-User': 'synthetic-user' });
+  for (const peer of ['192.0.2.1', '::ffff:192.0.2.1', '2001:db8:1::1']) {
+    expect(decideAccess(config, 'GET', '/', headers, peer)).toEqual({ allowed: true });
+  }
+  for (const peer of ['198.51.100.1', '2001:db8:2::1', '', 'invalid']) {
+    expect(decideAccess(config, 'GET', '/', headers, peer).allowed).toBe(false);
+  }
+  for (const missing of [
+    new Headers(),
+    new Headers({ 'Remote-User': 'synthetic-user' }),
+    new Headers({ 'X-Authenticated-User': '  ' }),
+  ]) {
+    expect(decideAccess(config, 'GET', '/', missing, '192.0.2.1').allowed).toBe(false);
+  }
+  expect(
+    decideAccess(
+      config,
+      'GET',
+      '/',
+      new Headers({
+        Authorization: `Basic ${Buffer.from('operator:synthetic-password').toString('base64')}`,
+      }),
+      '192.0.2.1',
     ).allowed,
   ).toBe(false);
 });

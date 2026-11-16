@@ -23,6 +23,17 @@ credential. The browser handles the password prompt; there are no user accounts,
 Use HTTPS for connections outside a trusted local link because Basic authentication does not
 encrypt credentials. These credentials are separate from the upstream Paperless credential.
 
+Set `APP_AUTH_MODE=proxy` to use an authenticating reverse proxy. Set
+`APP_AUTH_TRUSTED_PROXIES` to comma-separated CIDRs for the proxies that directly connect to the
+application, and optionally change `APP_AUTH_PROXY_HEADER` (default `Remote-User`). The proxy must
+authenticate the user and replace any client-supplied identity header. Any nonempty identity from a
+trusted proxy grants the same application access; it does not create an account or role.
+
+Trust uses the actual socket peer from the built Node adapter, including IPv4-mapped IPv6 addresses.
+Forwarded address headers, including a configured SvelteKit `ADDRESS_HEADER`, cannot establish
+proxy trust. If the adapter does not provide the socket peer, proxy identity is refused; use the
+built server for this mode. Configure the narrowest proxy CIDRs and prevent direct untrusted access.
+
 An optional `APP_API_TOKEN` is accepted as a bearer token on `/api/v1/*`, including metrics.
 Setting this token alone does not enable protection: mode `none` still permits requests without
 credentials, while an explicitly supplied incorrect bearer token is refused. GET health and

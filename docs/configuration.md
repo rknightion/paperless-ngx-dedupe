@@ -40,12 +40,15 @@ deployment environment or secret manager when moving an installation.
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `APP_AUTH_MODE` | No | `none` | `none` keeps access open; `basic` requires a shared credential |
+| `APP_AUTH_MODE` | No | `none` | `none` keeps access open; `basic` requires a shared credential; `proxy` trusts identity only from configured proxy CIDRs |
 | `APP_AUTH_USERNAME` | In basic mode | - | Shared application username, separate from Paperless authentication |
 | `APP_AUTH_PASSWORD` | In basic mode | - | Shared application password; sensitive and environment-owned |
+| `APP_AUTH_PROXY_HEADER` | No | `Remote-User` | Identity header set by the authenticating proxy |
+| `APP_AUTH_TRUSTED_PROXIES` | In proxy mode | - | Comma-separated IPv4 or IPv6 CIDRs for the directly connecting proxies |
 | `APP_API_TOKEN` | No | - | Sensitive bearer token accepted on `/api/v1/*` in any supported mode |
 
-Basic mode refuses to start without both username and password. Keep these credentials in the
+Basic mode refuses to start without both username and password. Proxy mode refuses to start
+without a valid, nonempty trusted CIDR list; plain addresses need a /32 or /128 prefix. Keep these credentials in the
 deployment environment; the configuration API cannot change or export them. GET health and
 readiness probes and OPTIONS requests remain unauthenticated; metrics require credentials when
 protection is enabled. For scripts, send `Authorization: Bearer <app-api-token>`.
