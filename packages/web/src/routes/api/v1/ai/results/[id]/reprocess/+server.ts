@@ -26,7 +26,11 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
     const provider = await createInteractiveAiProvider(
       locals.config.AI_OPENAI_API_KEY,
       aiConfig.model,
-      { maxRetries: aiConfig.maxRetries, baseURL: locals.config.AI_OPENAI_BASE_URL },
+      {
+        maxRetries: aiConfig.maxRetries,
+        baseURL: locals.config.AI_OPENAI_BASE_URL,
+        apiStyle: locals.config.AI_OPENAI_API_STYLE,
+      },
     );
 
     const result = await reprocessSingleResult(locals.db, params.id, {

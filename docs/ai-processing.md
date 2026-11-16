@@ -16,6 +16,7 @@ AI processing is disabled by default. Configure its environment before starting 
 | `AI_ENABLED` | No | `false` | Master switch for all AI features |
 | `AI_OPENAI_API_KEY` | Without a base URL | - | API key for the configured AI server |
 | `AI_OPENAI_BASE_URL` | No | - | Absolute http or https base URL for an OpenAI-compatible server |
+| `AI_OPENAI_API_STYLE` | No | `responses` | Request API: `responses` or `chat` |
 
 The API key is required when `AI_ENABLED=true` unless `AI_OPENAI_BASE_URL` is set.
 
@@ -27,12 +28,16 @@ use a URL reachable from that container. Supply `AI_OPENAI_API_KEY` if the serve
 credentials; otherwise the client sends a placeholder key.
 
 Document text and enabled reference metadata go to this configured server instead of OpenAI.
-Support is best effort: the server must support the Responses API and JSON-schema structured
-outputs. Model names are entered manually, and extraction quality depends on the model.
+Support is best effort: the server must support JSON-schema structured outputs. The default
+`AI_OPENAI_API_STYLE=responses` uses the Responses API. Set `AI_OPENAI_API_STYLE=chat` for a
+server that implements Chat Completions instead; restart after changing either environment variable.
+Chat requests use `response_format` with the same classification schema and `max_completion_tokens`
+for the output limit. Refusals, truncated output and invalid JSON remain per-document failures;
+reported prompt, completion and cached token usage is retained even for rejected output. Model names are entered manually, and extraction quality depends on the model.
 Failures remain isolated to each document. Scheduled processing still requires a known model price.
 
 A custom base URL always disables Flex Processing and uses the standard 60-second per-attempt
-timeout. Interactive requests keep their existing retry cap. Leaving the variable unset keeps
+timeout. Interactive requests keep their existing retry cap. Leaving both variables unset keeps
 the default OpenAI endpoint, authentication requirement and request behavior.
 
 ## Configuration

@@ -732,3 +732,24 @@ describe('scheduled worker failure settlement policy', () => {
     expect(held.reservedCostUsd).toBeCloseTo(201 * PRICING.inputPerToken, 12);
   });
 });
+
+it('counts chat schema, roles, and bounds in the actual request representation', async () => {
+  const request = { systemPrompt: 'System', userPrompt: 'Synthetic body', maxOutputTokens: 777 };
+  const options = { apiStyle: 'chat' as const, baseURL: 'http://localhost:11434/v1' };
+  const { zodResponseFormat } = await import('openai/helpers/zod');
+  const { aiExtractionResponseSchema } = await import('../providers/types.js');
+  const { encodingForModel } = await import('js-tiktoken');
+  const params = await buildOpenAiRequestParams(request, 'gpt-5.4-mini', false, options);
+  expect(params.messages).toEqual([
+    { role: 'system', content: 'System' },
+    { role: 'user', content: 'Synthetic body' },
+  ]);
+  expect(params.response_format.json_schema.schema).toEqual(
+    zodResponseFormat(aiExtractionResponseSchema, 'document_classification').json_schema.schema,
+  );
+  expect(params).not.toHaveProperty('service_tier');
+  expect(await countAiPromptTokens(request, 'gpt-5.4-mini', false, options)).toBe(
+    encodingForModel('gpt-5').encode(JSON.stringify(params)).length +
+      OPENAI_RESPONSES_FRAMING_ALLOWANCE_TOKENS,
+  );
+});
