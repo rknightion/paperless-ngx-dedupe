@@ -3,6 +3,7 @@ import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import type { AppDatabase } from '../../db/client.js';
 import { syncDocuments } from '../sync-documents.js';
+import { paperlessDocumentSchema } from '../../paperless/schemas.js';
 import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { syncState } from '../../schema/sqlite/app.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
@@ -116,6 +117,111 @@ describe('syncDocuments', () => {
     const handle = createDatabaseWithHandle(':memory:');
     db = handle.db;
     await migrateDatabase(handle.sqlite);
+  });
+
+  it('stores original file name and archive serial number, and back-fills them for unchanged documents', async () => {
+    const upstream = makePaperlessDoc(1, {
+      originalFileName: 'synthetic-scan.pdf',
+      archiveSerialNumber: 42,
+      pageCount: 7,
+      mimeType: 'application/pdf',
+    });
+    await syncDocuments({ db, client: createSimpleClient([upstream]) });
+    const first = db.select().from(document).get()!;
+    expect(first).toMatchObject({
+      originalFileName: 'synthetic-scan.pdf',
+      archiveSerialNumber: 42,
+      pageCount: 7,
+      mimeType: 'application/pdf',
+    });
+    db.update(document)
+      .set({
+        originalFileName: null,
+        archiveSerialNumber: null,
+        pageCount: null,
+        mimeType: null,
+        processingStatus: 'completed',
+      })
+      .run();
+    const result = await syncDocuments({ db, client: createSimpleClient([upstream]) });
+    expect(result).toMatchObject({ inserted: 0, updated: 0, skipped: 1, failed: 0 });
+    expect(db.select().from(document).get()).toMatchObject({
+      originalFileName: 'synthetic-scan.pdf',
+      archiveSerialNumber: 42,
+      pageCount: 7,
+      mimeType: 'application/pdf',
+      fingerprint: first.fingerprint,
+      processingStatus: 'completed',
+      syncedAt: first.syncedAt,
+    });
+  });
+
+  it('accepts missing list file facts as null and preserves facts returned by newer Paperless versions', async () => {
+    const raw = {
+      id: 1,
+      title: 'Synthetic document',
+      content: 'Synthetic content',
+      created: '2024-01-01T00:00:00Z',
+      added: '2024-01-01T00:00:00Z',
+      modified: '2024-01-01T00:00:00Z',
+    };
+    const legacy = paperlessDocumentSchema.parse(raw);
+    expect(legacy).toMatchObject({ pageCount: null, mimeType: null });
+    await syncDocuments({ db, client: createSimpleClient([legacy]) });
+    expect(db.select().from(document).get()).toMatchObject({ pageCount: null, mimeType: null });
+    const current = paperlessDocumentSchema.parse({
+      ...raw,
+      page_count: 12,
+      mime_type: 'application/pdf',
+    });
+    expect(current).toMatchObject({ pageCount: 12, mimeType: 'application/pdf' });
+    expect(await syncDocuments({ db, client: createSimpleClient([current]) })).toMatchObject({
+      updated: 0,
+      skipped: 1,
+    });
+    expect(db.select().from(document).get()).toMatchObject({
+      pageCount: 12,
+      mimeType: 'application/pdf',
+    });
+  });
+
+  it('preserves populated file facts on unchanged documents and refreshes them after a real update', async () => {
+    const initial = makePaperlessDoc(1, {
+      originalFileName: 'first.pdf',
+      archiveSerialNumber: 10,
+      pageCount: 2,
+      mimeType: 'application/pdf',
+    });
+    await syncDocuments({ db, client: createSimpleClient([initial]) });
+    const changed = {
+      ...initial,
+      originalFileName: 'second.png',
+      archiveSerialNumber: 20,
+      pageCount: 1,
+      mimeType: 'image/png',
+    };
+    expect(await syncDocuments({ db, client: createSimpleClient([changed]) })).toMatchObject({
+      updated: 0,
+      skipped: 1,
+    });
+    expect(db.select().from(document).get()).toMatchObject({
+      originalFileName: 'first.pdf',
+      archiveSerialNumber: 10,
+      pageCount: 2,
+      mimeType: 'application/pdf',
+    });
+    expect(
+      await syncDocuments({
+        db,
+        client: createSimpleClient([{ ...changed, modified: '2026-07-24T12:00:00Z' }]),
+      }),
+    ).toMatchObject({ updated: 1, skipped: 0 });
+    expect(db.select().from(document).get()).toMatchObject({
+      originalFileName: 'second.png',
+      archiveSerialNumber: 20,
+      pageCount: 1,
+      mimeType: 'image/png',
+    });
   });
 
   it('counts local documents after full, incremental and purge syncs', async () => {

@@ -93,6 +93,25 @@ afterEach(() => {
 });
 
 describe('PaperlessClient', () => {
+  it('requests list file facts and parses only fields returned by Paperless', async () => {
+    const client = new PaperlessClient({
+      url: 'https://paperless.example.test',
+      token: 'synthetic-token',
+    });
+    mockFetch.mockImplementation(async (url: string) => {
+      const fields = new Set(new URL(url).searchParams.get('fields')!.split(','));
+      const upstream = makeSnakeCaseDocument({ page_count: 9, mime_type: 'application/pdf' });
+      return mockResponse(
+        makePaginatedResponse([
+          Object.fromEntries(Object.entries(upstream).filter(([key]) => fields.has(key))),
+        ]),
+      );
+    });
+    const pages = [];
+    for await (const page of client.getDocuments()) pages.push(page);
+    expect(pages[0].results[0]).toMatchObject({ pageCount: 9, mimeType: 'application/pdf' });
+  });
+
   it('fetches document metadata without OCR and preserves full-content reads', async () => {
     const client = new PaperlessClient({ url: 'http://localhost:8000', token: 'test-token' });
     const metadata = makeSnakeCaseDocument({

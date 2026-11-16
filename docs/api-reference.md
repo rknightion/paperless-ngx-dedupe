@@ -448,7 +448,15 @@ Query params:
 
 ### GET /api/v1/duplicates/:id
 
-Returns group details.
+Returns group details. Each member includes the nullable file facts `originalFileName`,
+`archiveSerialNumber`, `pageCount`, and `mimeType`, including in light responses. These are
+stored list metadata, not file contents or checksums. Sync fills missing facts on documents it
+fetches without counting unchanged documents as updated or re-queuing them for analysis.
+A full sync can backfill older documents outside the incremental fetch window.
+
+Paperless-NGX v2.13.5 exposes `page_count` but not the list `mime_type`; v2.20.6 exposes both.
+Missing fields remain `null` and the comparison displays a dash. These two versions were checked
+against their tagged upstream serializers; this is not a claim about the first supporting release.
 
 Optional query:
 

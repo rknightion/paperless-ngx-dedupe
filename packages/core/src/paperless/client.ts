@@ -284,6 +284,8 @@ export class PaperlessClient {
       'original_file_name',
       'archived_file_name',
       'archive_serial_number',
+      'page_count',
+      'mime_type',
       'custom_fields',
     ].join(',');
 

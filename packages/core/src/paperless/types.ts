@@ -20,6 +20,8 @@ export interface PaperlessDocument {
   originalFileName: string | null;
   archivedFileName: string | null;
   archiveSerialNumber: number | null;
+  pageCount?: number | null;
+  mimeType?: string | null;
   customFields: PaperlessCustomFieldInstance[];
 }
 

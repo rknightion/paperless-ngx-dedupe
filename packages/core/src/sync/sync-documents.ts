@@ -1,4 +1,4 @@
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq, isNull, or, sql } from 'drizzle-orm';
 import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
 import { syncState } from '../schema/sqlite/app.js';
 import { createLogger } from '../logger.js';
@@ -112,7 +112,8 @@ export async function syncDocuments(
             );
             result.updated++;
           } else {
-            // Unchanged - skip
+            // Back-fill display facts without changing the analysis fingerprint or status.
+            backfillFileFacts(db, localDoc.id, doc);
             result.skipped++;
           }
         } catch (error) {
@@ -289,6 +290,7 @@ function insertDocument(
         paperlessId: doc.id,
         title: doc.title,
         fingerprint,
+        ...fileFacts(doc),
         correspondent:
           doc.correspondent !== null
             ? (refMaps.correspondents.get(doc.correspondent) ?? null)
@@ -344,6 +346,7 @@ function updateDocument(
       .set({
         title: doc.title,
         fingerprint,
+        ...fileFacts(doc),
         correspondent:
           doc.correspondent !== null
             ? (refMaps.correspondents.get(doc.correspondent) ?? null)
@@ -398,4 +401,30 @@ function updateDocument(
         .run();
     }
   });
+}
+
+function fileFacts(doc: PaperlessDocument) {
+  return {
+    originalFileName: doc.originalFileName,
+    archiveSerialNumber: doc.archiveSerialNumber,
+    pageCount: doc.pageCount ?? null,
+    mimeType: doc.mimeType ?? null,
+  };
+}
+
+function backfillFileFacts(db: AppDatabase, id: string, doc: PaperlessDocument): void {
+  const facts = fileFacts(doc);
+  const missing = (Object.keys(facts) as Array<keyof typeof facts>)
+    .filter((key) => facts[key] !== null)
+    .map((key) => isNull(document[key]));
+  if (missing.length === 0) return;
+  db.update(document)
+    .set({
+      originalFileName: sql`COALESCE(${document.originalFileName}, ${facts.originalFileName})`,
+      archiveSerialNumber: sql`COALESCE(${document.archiveSerialNumber}, ${facts.archiveSerialNumber})`,
+      pageCount: sql`COALESCE(${document.pageCount}, ${facts.pageCount})`,
+      mimeType: sql`COALESCE(${document.mimeType}, ${facts.mimeType})`,
+    })
+    .where(and(eq(document.id, id), or(...missing)))
+    .run();
 }

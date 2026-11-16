@@ -1166,3 +1166,55 @@ it('adds the covering OCR word-count index to a released database only once', as
     sqlite.close();
   }
 });
+
+it('adds nullable file facts to an existing released document without data loss or repeat DDL', async () => {
+  const { sqlite } = createDatabaseWithHandle(':memory:');
+  try {
+    sqlite.exec(v015Fixture);
+    // Bring the released fixture forward, then emulate a pre-file-facts schema
+    // without an incremental snapshot. This avoids unrelated legacy upgrades.
+    await migrateDatabase(sqlite);
+    for (const name of ['original_file_name', 'archive_serial_number', 'page_count', 'mime_type']) {
+      sqlite.exec(`ALTER TABLE document DROP COLUMN ${name}`);
+    }
+    // Older installations may have the schema hash but no incremental DDL snapshot.
+    sqlite.prepare("DELETE FROM app_config WHERE key = 'schema_ddl_snapshot'").run();
+    sqlite
+      .prepare(
+        `INSERT INTO document (id, paperless_id, title, processing_status, synced_at) VALUES ('file-facts-legacy', 99999, 'Synthetic legacy document', 'completed', '2024-01-01T00:00:00Z')`,
+      )
+      .run();
+    const columns = () =>
+      (sqlite.prepare('PRAGMA table_info(document)').all() as { name: string }[]).map(
+        ({ name }) => name,
+      );
+    expect(columns()).not.toContain('original_file_name');
+    await migrateDatabase(sqlite);
+    expect(columns()).toEqual(
+      expect.arrayContaining([
+        'original_file_name',
+        'archive_serial_number',
+        'page_count',
+        'mime_type',
+      ]),
+    );
+    const row = sqlite
+      .prepare(
+        `SELECT title, processing_status, original_file_name, archive_serial_number, page_count, mime_type FROM document WHERE id = 'file-facts-legacy'`,
+      )
+      .get();
+    expect(row).toEqual({
+      title: 'Synthetic legacy document',
+      processing_status: 'completed',
+      original_file_name: null,
+      archive_serial_number: null,
+      page_count: null,
+      mime_type: null,
+    });
+    const version = sqlite.pragma('schema_version', { simple: true });
+    await migrateDatabase(sqlite);
+    expect(sqlite.pragma('schema_version', { simple: true })).toBe(version);
+  } finally {
+    sqlite.close();
+  }
+});
