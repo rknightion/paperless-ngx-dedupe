@@ -323,11 +323,12 @@ export function importConfig(
 
     for (const [shortKey, value] of Object.entries(validated.dedupConfig)) {
       const key = `dedup.${shortKey}`;
+      const serialized = Array.isArray(value) ? JSON.stringify(value) : String(value);
       tx.insert(appConfig)
-        .values({ key, value: String(value), updatedAt: nowIso })
+        .values({ key, value: serialized, updatedAt: nowIso })
         .onConflictDoUpdate({
           target: appConfig.key,
-          set: { value: String(value), updatedAt: nowIso },
+          set: { value: serialized, updatedAt: nowIso },
         })
         .run();
     }

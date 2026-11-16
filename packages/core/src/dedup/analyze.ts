@@ -2,6 +2,7 @@
  * Analysis pipeline orchestrator — 10-stage deduplication engine.
  */
 
+import { parseTagsJson } from '../queries/helpers.js';
 import { selectPrimary, type PrimaryMember } from './primary.js';
 import { loadSuppressedPairSet, pairDecisionKey } from './pair-decisions.js';
 import { eq, inArray, count } from 'drizzle-orm';
@@ -73,18 +74,28 @@ export async function runAnalysis(
     // Stage 2: Load documents
     await onProgress?.(0.02, 'Loading documents...');
 
-    const allDocs = db
+    const libraryDocs = db
       .select({
         id: document.id,
         paperlessId: document.paperlessId,
         processingStatus: document.processingStatus,
+        tagsJson: document.tagsJson,
       })
       .from(document)
       .all();
 
-    result.totalDocuments = allDocs.length;
+    const excludedTags = new Set(config.excludedTagNames.map((name) => name.toLowerCase()));
+    const excludedDocIds = new Set(
+      libraryDocs
+        .filter((doc) =>
+          parseTagsJson(doc.tagsJson).some((tag) => excludedTags.has(tag.toLowerCase())),
+        )
+        .map((doc) => doc.id),
+    );
+    const allDocs = libraryDocs.filter((doc) => !excludedDocIds.has(doc.id));
+    result.totalDocuments = libraryDocs.length;
 
-    if (allDocs.length === 0) {
+    if (libraryDocs.length === 0) {
       logger.info('No documents to analyze');
       await onProgress?.(1.0, 'No documents to analyze');
       result.durationMs = Date.now() - startTime;
@@ -124,7 +135,7 @@ export async function runAnalysis(
     }
 
     const processedDocIds: string[] = [];
-    const skippedDocIds: string[] = [];
+    const skippedDocIds: string[] = [...excludedDocIds];
     let skipNoContent = 0;
     let skipTooShort = 0;
     let skipShinglesFailed = 0;
@@ -222,6 +233,7 @@ export async function runAnalysis(
     result.documentsAnalyzed = processedDocIds.length;
     result.documentsSkipped = skippedDocIds.length;
     result.skipReasons = {
+      excludedByTag: excludedDocIds.size,
       noContent: skipNoContent,
       tooShort: skipTooShort,
       shinglesFailed: skipShinglesFailed,
@@ -253,7 +265,7 @@ export async function runAnalysis(
         const sigMap = new Map<string, Uint32Array>();
 
         for (const row of allSignatureRows) {
-          if (!row.minhashSignature) continue;
+          if (!row.minhashSignature || excludedDocIds.has(row.documentId)) continue;
           const sig = new Uint32Array(
             row.minhashSignature.buffer.slice(
               row.minhashSignature.byteOffset,
@@ -654,7 +666,9 @@ export async function runAnalysis(
 
         if (!isSubsumed) {
           // Not subsumed — only delete if at least one member was in search scope
-          const wasEvaluated = [...memberIds].some((id) => searchDocIdSet.has(id));
+          const wasEvaluated = [...memberIds].some(
+            (id) => searchDocIdSet.has(id) || excludedDocIds.has(id),
+          );
           if (!wasEvaluated) continue;
         }
 
@@ -690,7 +704,7 @@ export async function runAnalysis(
         .run();
     }
 
-    // Mark skipped documents as completed — they've been evaluated but lack sufficient content
+    // Mark evaluated documents complete, including tag exclusions and insufficient content.
     for (let i = 0; i < skippedDocIds.length; i += SQL_VARIABLE_LIMIT) {
       const batch = skippedDocIds.slice(i, i + SQL_VARIABLE_LIMIT);
       db.update(document)

@@ -24,6 +24,7 @@ const ANALYSIS_AFFECTING_FIELDS = [
   'confidenceWeightFuzzy',
   'confidenceWeightJaccard',
   'discriminativePenaltyStrength',
+  'excludedTagNames',
   'fuzzySampleSize',
   'minWords',
   'ngramSize',
@@ -47,7 +48,11 @@ export interface AnalysisStalenessInfo {
 export function computeAnalysisConfigHash(config: DedupConfig): string {
   const parts: string[] = [`algorithmVersion=${ALGORITHM_VERSION}`];
   for (const field of ANALYSIS_AFFECTING_FIELDS) {
-    parts.push(`${field}=${config[field]}`);
+    if (field === 'excludedTagNames') {
+      const names = [...new Set(config.excludedTagNames.map((name) => name.toLowerCase()))].sort();
+      // Keep existing hashes when no exclusions are configured; JSON avoids delimiter collisions.
+      if (names.length > 0) parts.push(`${field}=${JSON.stringify(names)}`);
+    } else parts.push(`${field}=${config[field]}`);
   }
   return createHash('sha256').update(parts.join('|')).digest('hex');
 }

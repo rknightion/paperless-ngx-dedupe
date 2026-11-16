@@ -180,6 +180,7 @@ describe('setDedupConfig', () => {
   it('should round-trip: write then read returns same values', () => {
     const input = {
       primaryStrategy: 'most_text' as const,
+      excludedTagNames: ['synthetic, ignored'],
       numPermutations: 128,
       numBands: 16,
       ngramSize: 4,
