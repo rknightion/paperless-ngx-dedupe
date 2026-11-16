@@ -25,7 +25,7 @@ test.describe('Bulk Operations Wizard', () => {
     await page.goto('/duplicates/wizard');
 
     await expect(page.getByText('Filter')).toBeVisible();
-    await expect(page.getByText('Review')).toBeVisible();
+    await expect(page.getByText('Review', { exact: true })).toBeVisible();
     await expect(page.getByText('Action')).toBeVisible();
     await expect(page.getByText('Confirm')).toBeVisible();
     await expect(page.getByText('Execute')).toBeVisible();

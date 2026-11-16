@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PrimaryStrategySelect from '$lib/components/duplicates/PrimaryStrategySelect.svelte';
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { InfoIcon, RichTooltip, StaleAnalysisBanner, Tabs } from '$lib/components';
@@ -63,6 +64,7 @@
   let isTesting = $state(false);
 
   // Dedup settings - use $state for form binding
+  let primaryStrategy = $state(initialDedup.primaryStrategy);
   let threshold = $state(Math.round(initialDedup.similarityThreshold * 100));
   let weightJaccard = $state(initialDedup.confidenceWeightJaccard);
   let weightFuzzy = $state(initialDedup.confidenceWeightFuzzy);
@@ -223,6 +225,7 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          primaryStrategy,
           similarityThreshold: threshold / 100,
           confidenceWeightJaccard: weightJaccard,
           confidenceWeightFuzzy: weightFuzzy,
@@ -531,6 +534,13 @@
     </h2>
 
     <div class="mt-4">
+      <div class="mb-5">
+        <PrimaryStrategySelect bind:value={primaryStrategy} disabled={isSavingDedup} />
+        <p class="text-muted mt-2 text-sm">
+          Applies to newly created groups. Existing keepers change only when you apply a rule in the
+          bulk wizard.
+        </p>
+      </div>
       <label for="excluded-tag-names" class="text-ink block text-sm font-medium"
         >Exclude documents with tags</label
       >

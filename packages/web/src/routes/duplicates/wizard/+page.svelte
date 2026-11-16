@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SvelteMap } from 'svelte/reactivity';
+  import KeeperSelection from '$lib/components/duplicates/KeeperSelection.svelte';
   import {
     deletionRunFromCompletion,
     type UndoDeletionRun,
@@ -43,6 +45,7 @@
 
   // ── Shared state ──────────────────────────────────────────────────────
   let step = $state(1);
+  let keeperBusy = $state(false);
   let threshold = $state(95);
   let matchCount = $state<number | null>(null);
   let totalMemberCountAll = $state<number | null>(null);
@@ -70,7 +73,8 @@
   let viewMode = $state<'condensed' | 'expanded'>('condensed');
 
   // Expanded view member cache
-  let memberCache = $state<Map<string, DuplicateGroupMember[]>>(new Map());
+  const memberCache = new SvelteMap<string, DuplicateGroupMember[]>();
+  let memberCacheGeneration = 0;
 
   // Preview modal
   let previewGroupId: string | null = $state(null);
@@ -173,6 +177,7 @@
   }
 
   async function fetchMembersForExpandedView() {
+    const generation = memberCacheGeneration;
     const uncached = groups.filter((g) => !memberCache.has(g.id));
     if (uncached.length === 0) return;
     const results = await Promise.all(
@@ -186,10 +191,13 @@
         }
       }),
     );
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const next = new Map(memberCache);
-    for (const r of results) next.set(r.id, r.members);
-    memberCache = next;
+    if (generation !== memberCacheGeneration) return;
+    for (const r of results) memberCache.set(r.id, r.members);
+  }
+
+  function invalidateMemberCache() {
+    memberCacheGeneration++;
+    memberCache.clear();
   }
 
   // ── Effects ───────────────────────────────────────────────────────────
@@ -405,7 +413,7 @@
     excludedGroupIds = new Set();
     isLoadingGroups = false;
     viewMode = 'condensed';
-    memberCache = new Map();
+    invalidateMemberCache();
     previewGroupId = null;
     selectedAction = 'false_positive';
     confirmChecks = { understand: false, irreversible: false };
@@ -482,6 +490,7 @@
             <span class="text-accent text-lg font-semibold">{threshold}%</span>
           </div>
           <input
+            disabled={keeperBusy}
             id="threshold-range"
             type="range"
             min="50"
@@ -495,6 +504,16 @@
             <span>100%</span>
           </div>
         </div>
+
+        <KeeperSelection
+          bind:busy={keeperBusy}
+          minConfidence={threshold / 100}
+          onApplied={() => {
+            invalidateMemberCache();
+            groups = [];
+            void fetchMatchCount();
+          }}
+        />
 
         <EChart option={chartOption} height="250px" />
 
@@ -510,7 +529,7 @@
       <div class="mt-8 flex justify-end">
         <button
           onclick={handleNext}
-          disabled={!canProceedStep1}
+          disabled={!canProceedStep1 || keeperBusy}
           class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Next
