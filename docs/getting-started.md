@@ -57,7 +57,24 @@ Navigate to **Duplicates** in the sidebar. You will see a list of duplicate grou
 For large numbers of duplicates, use the **Bulk Operations Wizard** (button on the Duplicates page) to dismiss, ignore, or delete non-primary documents in batch.
 
 !!! danger "Destructive Action"
-    The "Delete Non-Primary Documents" batch operation permanently removes documents from Paperless-NGX. Always verify your primary document selections before using this feature.
+    The "Delete Non-Primary Documents" batch operation moves documents to the Paperless-NGX recycle bin. Emptying that bin permanently removes them. Always verify your primary document selections before deleting.
+
+## Undo a completed deletion
+
+Use **Undo** on a completed deletion result or a row in the **Deleted** queue. The confirmation
+shows the document and group counts for the entire deletion run: restoring from one row also
+restores the other documents deleted by that same run. No restore starts until you confirm.
+
+Restore runs as a background job. It reports how many documents were restored and how many are
+no longer in the recycle bin. If the bin was already emptied, the result is **Nothing to restore**.
+If another document mutation is running, wait for it to finish and retry. A restore cannot overlap
+a delete job. Read-only deployments disable Undo.
+
+Restored documents and their text return to the local database immediately, even if Paperless
+keeps their original modified timestamp. Deleted groups remain as history. Run analysis again to
+review the restored documents. Undo is available while the deletion checkpoints are retained and
+the documents remain in the Paperless recycle bin; it does not cover individual document deletes
+that bypassed a reviewed deletion plan.
 
 ## Trigger on consumption
 

@@ -1,4 +1,9 @@
 <script lang="ts">
+  import {
+    deletionRunFromCompletion,
+    type UndoDeletionRun,
+  } from '$lib/components/duplicates/UndoDeletion.svelte';
+  let deletionRun = $state<UndoDeletionRun | null>(null);
   import { goto } from '$app/navigation';
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
   import {
@@ -312,7 +317,8 @@
                 executionProgress = d.progress;
                 executionMessage = d.message ?? '';
               },
-              onComplete: () => {
+              onComplete: (event) => {
+                deletionRun = deletionRunFromCompletion(event);
                 executionResult = { success: true, processed: allGroupIds.length, errors: [] };
                 showRecycleBinSection = true;
                 stopWizardTimer();
@@ -891,7 +897,7 @@
         </div>
 
         {#if showRecycleBinSection && selectedAction === 'delete'}
-          <RecycleBinPrompt />
+          <RecycleBinPrompt {deletionRun} />
         {/if}
       {:else}
         <div class="flex flex-col items-center text-center">

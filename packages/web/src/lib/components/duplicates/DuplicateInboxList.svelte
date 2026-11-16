@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { type CompletedDeletionRun } from '@paperless-dedupe/core';
+  import UndoDeletion from './UndoDeletion.svelte';
+  import { SvelteMap } from 'svelte/reactivity';
   import { browser } from '$app/environment';
   import { page } from '$app/stores';
   import {
@@ -22,6 +25,7 @@
 
   interface Props {
     groups: Group[];
+    deletionRuns?: CompletedDeletionRun[];
     total: number;
     limit: number;
     offset: number;
@@ -34,6 +38,7 @@
 
   let {
     groups,
+    deletionRuns = [],
     total,
     limit,
     offset,
@@ -43,6 +48,15 @@
     onselectionchange,
     onpreview,
   }: Props = $props();
+
+  const runByGroup = $derived(
+    new SvelteMap(
+      deletionRuns.flatMap((run) => run.groups.map((groupId) => [groupId, run] as const)),
+    ),
+  );
+  const hasUndo = $derived(
+    groups.some((group) => group.status === 'deleted' && runByGroup.has(group.id)),
+  );
 
   let allSelected = $derived(groups.length > 0 && selectedIds.size === groups.length);
   let cursorPreviousHref = $state('');
@@ -204,14 +218,18 @@
           <th class="text-muted px-3 py-3 font-medium">Confidence</th>
           <th class="text-muted hidden px-3 py-3 font-medium sm:table-cell">Status</th>
           <th class="text-muted hidden px-3 py-3 font-medium lg:table-cell">Updated</th>
+          {#if hasUndo}<th class="text-muted px-3 py-3 font-medium">Restore</th>{/if}
         </tr>
       </thead>
       <tbody>
         {#each groups as group, index (group.id)}
+          {@const run = runByGroup.get(group.id)}
           <tr
             class="border-soft hover:bg-accent-subtle border-b {index % 2 === 0
               ? 'bg-surface'
-              : 'bg-canvas'} {group.status === 'deleted' ? 'opacity-60' : ''}"
+              : 'bg-canvas'} {group.status === 'deleted' && !runByGroup.has(group.id)
+              ? 'opacity-60'
+              : ''}"
           >
             <td class="px-3 py-3">
               <input
@@ -262,6 +280,17 @@
             <td class="text-muted hidden px-3 py-3 text-xs lg:table-cell">
               {new Date(group.updatedAt).toLocaleDateString()}
             </td>
+            {#if hasUndo}<td class="px-3 py-3">
+                {#if group.status === 'deleted' && run}
+                  <UndoDeletion
+                    run={{
+                      planId: run.planId,
+                      documentsDeleted: run.documentsDeleted,
+                      groupCount: run.groups.length,
+                    }}
+                  />
+                {/if}
+              </td>{/if}
           </tr>
         {/each}
       </tbody>

@@ -1,14 +1,16 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { ConfirmDialog } from '$lib/components';
+  import UndoDeletion, { type UndoDeletionRun } from './UndoDeletion.svelte';
 
   const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
     onclose?: () => void;
+    deletionRun?: UndoDeletionRun | null;
   }
 
-  let { onclose }: Props = $props();
+  let { onclose, deletionRun }: Props = $props();
 
   let trashCount = $state<number | null>(null);
   let isLoading = $state(true);
@@ -66,6 +68,8 @@
     Deleted documents are in the Paperless-NGX recycle bin. You can restore them from Paperless-NGX
     until the bin is emptied.
   </p>
+
+  {#if deletionRun}<div class="mt-3"><UndoDeletion run={deletionRun} /></div>{/if}
 
   {#if isLoading}
     <p class="text-muted mt-3 text-sm">Loading recycle bin status...</p>
