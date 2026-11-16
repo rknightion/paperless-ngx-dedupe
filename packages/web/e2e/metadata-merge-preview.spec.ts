@@ -1,14 +1,14 @@
 import { test, expect } from './fixtures/test-app';
 
 for (const mode of ['bulk', 'single'] as const) {
-  test(`previews missing metadata in the ${mode} confirmation without enabling deletion`, async ({
+  test(`previews missing metadata in the ${mode} confirmation before submitting the frozen deletion plan`, async ({
     page,
     seedDB,
     clearDB,
   }) => {
     const seed = seedDB();
     const previews: Array<{ groupIds: string[]; mergeMetadata?: boolean }> = [];
-    let executions = 0;
+    const executions: unknown[] = [];
     await page.route('**/api/v1/batch/delete-non-primary/preview', async (route) => {
       const body = route.request().postDataJSON();
       previews.push(body);
@@ -43,7 +43,7 @@ for (const mode of ['bulk', 'single'] as const) {
       });
     });
     await page.route('**/api/v1/batch/delete-non-primary', async (route) => {
-      executions++;
+      executions.push(route.request().postDataJSON());
       await route.fulfill({
         status: 202,
         contentType: 'application/json',
@@ -74,8 +74,8 @@ for (const mode of ['bulk', 'single'] as const) {
         exact: true,
       });
       if (mode === 'bulk') await dialog.getByLabel('I reviewed this exact deletion list').check();
-      await expect(deleteButton).toBeDisabled();
-      expect(executions).toBe(0);
+      await expect(deleteButton).toBeEnabled();
+      expect(executions).toEqual([]);
       await option.uncheck();
       if (mode === 'bulk') {
         await expect(dialog.getByText('Synthetic tag')).toHaveCount(0);
@@ -83,8 +83,18 @@ for (const mode of ['bulk', 'single'] as const) {
         expect(previews.at(-1)).not.toHaveProperty('mergeMetadata');
       }
       await expect(deleteButton).toBeEnabled();
-      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-      expect(executions).toBe(0);
+      await option.check();
+      await expect(dialog).toContainText('Reference');
+      if (mode === 'bulk') await dialog.getByLabel('I reviewed this exact deletion list').check();
+      await deleteButton.click();
+      if (mode === 'bulk')
+        await page
+          .getByRole('dialog', { name: 'Confirm deletion of reviewed documents', exact: true })
+          .getByRole('button', { name: 'Move documents to recycle bin', exact: true })
+          .click();
+      await expect
+        .poll(() => executions)
+        .toEqual([{ planToken: 'synthetic-reviewed-merge-plan-token-0001', confirm: true }]);
     } finally {
       clearDB();
     }

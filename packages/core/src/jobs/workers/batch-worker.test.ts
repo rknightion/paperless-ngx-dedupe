@@ -196,6 +196,25 @@ describe('reviewed duplicate deletion worker', () => {
           tags: id === 201 ? [1] : [1, 2, 3],
           correspondent: id === 201 ? null : 4,
           document_type: id === 201 ? 9 : 5,
+          custom_fields:
+            id === 201
+              ? [
+                  { field: 1, value: false },
+                  { field: 2, value: 0 },
+                  { field: 3, value: '' },
+                  { field: 4, value: null },
+                  { field: 5, value: [] },
+                  { field: 6, value: 'Keeper reference' },
+                ]
+              : [
+                  { field: 1, value: true },
+                  { field: 2, value: 99 },
+                  { field: 3, value: 'Filled reference' },
+                  { field: 4, value: false },
+                  { field: 5, value: [12, 13] },
+                  { field: 6, value: 'Other reference' },
+                  { field: 7, value: 0 },
+                ],
         },
       ]),
     );
@@ -257,7 +276,23 @@ describe('reviewed duplicate deletion worker', () => {
         }),
       ).rejects.toThrow('Synthetic crash');
       expect(writes).toEqual([
-        { method: 'PATCH', id: 201, body: { tags: [1, 2], correspondent: 4 } },
+        {
+          method: 'PATCH',
+          id: 201,
+          body: {
+            tags: [1, 2],
+            correspondent: 4,
+            custom_fields: [
+              { field: 1, value: false },
+              { field: 2, value: 0 },
+              { field: 3, value: 'Filled reference' },
+              { field: 4, value: false },
+              { field: 5, value: [12, 13] },
+              { field: 6, value: 'Keeper reference' },
+              { field: 7, value: 0 },
+            ],
+          },
+        },
         { method: 'DELETE', id: 202 },
       ]);
       await expect(
@@ -408,7 +443,7 @@ describe('reviewed duplicate deletion worker', () => {
     ).toEqual({ status: 'in_progress' });
   });
 
-  it('refuses missing custom-field copying before its execution support is available without deleting documents', async () => {
+  it('leaves the group undeleted when a custom-field-only update fails', async () => {
     const now = new Date('2026-07-24T11:00:00.000Z');
     const preview = createDuplicateDeletionPlan(handle.db, ['stable-group'], {
       now,
@@ -428,7 +463,7 @@ describe('reviewed duplicate deletion worker', () => {
           custom_fields: id === 201 ? [] : [{ field: 7, value: 'Synthetic reference' }],
         }),
       ),
-      updateDocument: vi.fn().mockResolvedValue(undefined),
+      updateDocument: vi.fn().mockRejectedValue(new PaperlessApiError('Synthetic refusal', 503)),
       deleteDocument: vi.fn().mockResolvedValue(undefined),
     };
     await expect(
@@ -444,7 +479,14 @@ describe('reviewed duplicate deletion worker', () => {
         now,
       ),
     ).rejects.toThrow('Paperless duplicate deletion failed');
-    expect(client.updateDocument).not.toHaveBeenCalled();
+    expect(client.updateDocument).toHaveBeenCalledWith(201, {
+      customFields: [{ field: 7, value: 'Synthetic reference' }],
+    });
+    expect(
+      handle.sqlite
+        .prepare('SELECT status FROM reviewed_mutation_group_checkpoint WHERE group_id = ?')
+        .get('stable-group'),
+    ).toEqual({ status: 'failed' });
     expect(client.deleteDocument).not.toHaveBeenCalled();
     expect(
       handle.db
