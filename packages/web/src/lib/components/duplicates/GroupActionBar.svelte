@@ -1,4 +1,9 @@
 <script lang="ts">
+  import {
+    deletionRunFromCompletion,
+    type UndoDeletionRun,
+  } from '$lib/components/duplicates/UndoDeletion.svelte';
+  let deletionRun = $state<UndoDeletionRun | null>(null);
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { ConfirmDialog, RecycleBinPrompt } from '$lib/components';
@@ -115,7 +120,8 @@
           onProgress: (data) => {
             deleteProgress = { progress: data.progress, message: data.message ?? '' };
           },
-          onComplete: () => {
+          onComplete: (event) => {
+            deletionRun = deletionRunFromCompletion(event);
             deleteProgress = null;
             isUpdating = false;
             showRecycleBinPrompt = true;
@@ -252,6 +258,6 @@
     class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
   >
     <h2 class="text-ink text-lg font-semibold">Delete Complete</h2>
-    <RecycleBinPrompt onclose={() => goto(returnHref)} />
+    <RecycleBinPrompt {deletionRun} onclose={() => goto(returnHref)} />
   </dialog>
 {/if}

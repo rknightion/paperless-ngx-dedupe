@@ -26,6 +26,7 @@
     confirmDisabled = false,
   }: Props = $props();
 
+  const dialogId = $props.id();
   let dialog: HTMLDialogElement | undefined = $state();
 
   $effect(() => {
@@ -57,8 +58,8 @@
     if (e.target === dialog) oncancel();
   }}
   class="border-soft bg-surface m-auto max-w-md rounded-xl border p-0 shadow-lg backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-200"
-  aria-labelledby="confirm-dialog-title"
-  aria-describedby="confirm-dialog-message"
+  aria-labelledby={`${dialogId}-title`}
+  aria-describedby={`${dialogId}-message`}
 >
   <div class="p-6">
     <div class="flex items-start gap-3">
@@ -70,8 +71,8 @@
         </div>
       {/if}
       <div>
-        <h2 id="confirm-dialog-title" class="text-ink text-lg font-semibold">{title}</h2>
-        <p id="confirm-dialog-message" class="text-muted mt-2 text-sm">{message}</p>
+        <h2 id={`${dialogId}-title`} class="text-ink text-lg font-semibold">{title}</h2>
+        <p id={`${dialogId}-message`} class="text-muted mt-2 text-sm">{message}</p>
       </div>
     </div>
     {@render children?.()}

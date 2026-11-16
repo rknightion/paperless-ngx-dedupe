@@ -1,5 +1,6 @@
 import {
   getDuplicateGroups,
+  listCompletedDeletionRuns,
   getDuplicateStats,
   listDuplicateInbox,
   paginationSchema,
@@ -33,6 +34,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
     return {
       groups: page.items,
+      deletionRuns: listCompletedDeletionRuns(
+        locals.db,
+        page.items.length,
+        page.items.filter((group) => group.status === 'deleted').map((group) => group.id),
+      ),
       total: totalByQueue[page.query.queue],
       limit: page.query.limit,
       offset: 0,
@@ -65,6 +71,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   return {
     groups: result.items,
+    deletionRuns: listCompletedDeletionRuns(
+      locals.db,
+      result.items.length,
+      result.items.filter((group) => group.status === 'deleted').map((group) => group.id),
+    ),
     total: result.total,
     limit: result.limit,
     offset: result.offset,

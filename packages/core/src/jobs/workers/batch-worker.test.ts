@@ -600,6 +600,13 @@ describe('reviewed duplicate deletion worker', () => {
 
     expect(client.deleteDocument).toHaveBeenCalledTimes(1);
     expect(client.deleteDocument).toHaveBeenCalledWith(202);
+    expect(result.planId).toBe(
+      (
+        handle.sqlite
+          .prepare('SELECT id FROM reviewed_mutation_plan WHERE claimed_by_job_id=?')
+          .get('job-1') as { id: string }
+      ).id,
+    );
     expect(result).toMatchObject({
       deletedDocuments: 1,
       deletedGroups: 1,

@@ -31,7 +31,19 @@ export function assertCompletedDeletionRun(db: AppDatabase, planId: string): voi
 }
 
 /** List completed deletion runs; groups contains their checkpoint group IDs in review order. */
-export function listCompletedDeletionRuns(db: AppDatabase, limit = 20): CompletedDeletionRun[] {
+export function listCompletedDeletionRuns(
+  db: AppDatabase,
+  limit = 20,
+  groupIds?: readonly string[],
+): CompletedDeletionRun[] {
+  if (groupIds?.length === 0) return [];
+  const visibleGroups = groupIds
+    ? sql`EXISTS (SELECT 1 FROM reviewed_mutation_group_checkpoint visible
+        WHERE visible.plan_id = p.id AND visible.group_id IN (${sql.join(
+          groupIds.map((id) => sql`${id}`),
+          sql`, `,
+        )}))`
+    : sql`1`;
   const rows = db.all<{
     planId: string;
     completedAt: string;
@@ -46,7 +58,7 @@ export function listCompletedDeletionRuns(db: AppDatabase, limit = 20): Complete
         WHERE g.plan_id = p.id ORDER BY ordinal
       )) AS groupsJson
     FROM reviewed_mutation_plan p
-    WHERE p.operation = 'duplicate_delete' AND p.completed_at IS NOT NULL
+    WHERE p.operation = 'duplicate_delete' AND p.completed_at IS NOT NULL AND ${visibleGroups}
     ORDER BY p.completed_at DESC, p.id DESC LIMIT ${limit}
   `);
   return rows.map(({ groupsJson, ...row }) => ({ ...row, groups: JSON.parse(groupsJson) }));

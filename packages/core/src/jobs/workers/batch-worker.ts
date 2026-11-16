@@ -45,6 +45,7 @@ type BatchError = {
 };
 
 export type ReviewedDuplicateDeletionResult = {
+  planId: string;
   deletedDocuments: number;
   alreadyMissingDocuments: number;
   deletedGroups: number;
@@ -113,6 +114,7 @@ function resultFromCheckpoints(
     }
   }
   return {
+    planId,
     deletedDocuments: state.documents.filter(({ status }) => status === 'reconciled').length,
     alreadyMissingDocuments: state.documents.filter(
       ({ status, outcome }) => status === 'reconciled' && outcome === 'already_missing',

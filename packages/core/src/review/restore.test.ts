@@ -252,3 +252,16 @@ it('rejects incomplete plans, handles empty runs and repairs local state after a
     { paperless_id: 3 },
   ]);
 });
+
+it('finds an older run for visible deleted groups before applying the list limit', () => {
+  plan('old');
+  group('old', 'visible', 0);
+  deletion('old', 'visible', 3, 0);
+  plan('new', 'duplicate_delete', '2026-01-03T00:00:00.000Z');
+  group('new', 'off-page', 0);
+  deletion('new', 'off-page', 5, 0);
+  expect(listCompletedDeletionRuns(handle.db, 1, ['visible']).map((run) => run.planId)).toEqual([
+    'old',
+  ]);
+  expect(listCompletedDeletionRuns(handle.db, 20, [])).toEqual([]);
+});

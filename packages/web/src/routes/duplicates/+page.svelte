@@ -1,4 +1,9 @@
 <script lang="ts">
+  import {
+    deletionRunFromCompletion,
+    type UndoDeletionRun,
+  } from '$lib/components/duplicates/UndoDeletion.svelte';
+  let deletionRun = $state<UndoDeletionRun | null>(null);
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import { connectJobSSE } from '$lib/sse';
@@ -69,7 +74,8 @@
       onProgress: (event) => {
         deleteProgress = { progress: event.progress, message: event.message ?? '' };
       },
-      onComplete: async () => {
+      onComplete: async (event) => {
+        deletionRun = deletionRunFromCompletion(event);
         deleteProgress = null;
         isSubmitting = false;
         selectedIds = new Set();
@@ -215,6 +221,7 @@
 
   <DuplicateInboxList
     groups={data.groups}
+    deletionRuns={data.deletionRuns}
     total={data.total}
     limit={data.limit}
     offset={data.offset}
@@ -250,7 +257,7 @@
     class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
   >
     <h2 id="delete-complete-title" class="text-ink text-lg font-semibold">Delete complete</h2>
-    <RecycleBinPrompt onclose={() => (showRecycleBinPrompt = false)} />
+    <RecycleBinPrompt {deletionRun} onclose={() => (showRecycleBinPrompt = false)} />
   </dialog>
 {/if}
 

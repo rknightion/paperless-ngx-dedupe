@@ -1,5 +1,19 @@
 import { browser } from '$app/environment';
 
+export interface JobCompletion {
+  status: string;
+  progress?: number;
+  phaseProgress?: number;
+  message?: string;
+  result?: unknown;
+  planId?: string;
+  deletedDocuments?: number;
+  alreadyMissingDocuments?: number;
+  deletedGroups?: number;
+  restored?: number;
+  notRestorable?: number;
+}
+
 export interface SSECallbacks {
   onProgress?: (data: {
     progress: number;
@@ -7,13 +21,7 @@ export interface SSECallbacks {
     message?: string;
     status?: string;
   }) => void;
-  onComplete?: (data: {
-    status: string;
-    progress?: number;
-    phaseProgress?: number;
-    message?: string;
-    result?: unknown;
-  }) => void;
+  onComplete?: (data: JobCompletion) => void;
   onError?: (error: Event) => void;
   onDiagnostic?: (diagnostic: {
     code: 'malformed_event';
