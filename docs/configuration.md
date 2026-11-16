@@ -270,8 +270,14 @@ correspondent, document type, tags and custom fields). Ties use the lowest ID;
 missing or invalid added dates rank after known dates. A custom field with value
 zero or false counts as filled. Existing groups keep their current primary when
 the setting changes, including during forced analysis. File-based rules are not
-part of this setting. Configure it through the config API until the Settings UI
-is available.
+part of this setting. Choose the default in Settings > Deduplication using Keeper rule.
+
+For existing pending groups, the bulk wizard's filter step previews a keeper rule
+at the selected confidence threshold. Preview shows the changing count and a sample;
+Apply changes local keepers before the normal review and deletion preview. Manual
+choices are protected unless Include manually selected keepers is checked. A conflict
+requires another preview. Changing the wizard rule does not change the default for
+new groups; the wizard starts with lowest_id and applies nothing automatically.
 
 Change these in **Settings** or via `PUT /api/v1/config/dedup`.
 
