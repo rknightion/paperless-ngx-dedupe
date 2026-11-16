@@ -38,6 +38,7 @@ export function purgeAllDocumentData(db: AppDatabase): PurgeResult {
         .select({ count: sql<number>`count(*)` })
         .from(aiProcessingResult)
         .get()?.count ?? 0;
+    // Keep duplicate_pair_decision: Paperless IDs survive a local purge and resync.
     // Delete in FK-safe order
     tx.delete(duplicateMember).run();
     tx.delete(duplicateGroup).run();

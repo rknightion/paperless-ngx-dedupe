@@ -2,6 +2,7 @@
  * Analysis pipeline orchestrator — 10-stage deduplication engine.
  */
 
+import { loadSuppressedPairSet, pairDecisionKey } from './pair-decisions.js';
 import { eq, inArray, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
@@ -56,6 +57,7 @@ export async function runAnalysis(
       candidatePairsFound: 0,
       candidatePairsScored: 0,
       candidatePairsSkippedConnected: 0,
+      pairsSuppressed: 0,
       groupsCreated: 0,
       groupsUpdated: 0,
       groupsRemoved: 0,
@@ -424,6 +426,14 @@ export async function runAnalysis(
       }
     }
 
+    // Build paperlessId lookup for pair decisions and primary selection
+    const paperlessIdMap = new Map<string, number>();
+    for (const doc of allDocs) {
+      paperlessIdMap.set(doc.id, doc.paperlessId);
+    }
+
+    const suppressedPairs = loadSuppressedPairSet(db);
+
     // Strongest pairs connect components first; redundant edges need no fuzzy scoring.
     filteredPairs.sort((left, right) => right.jaccard - left.jaccard);
     const uf = new UnionFind<string>();
@@ -444,12 +454,15 @@ export async function runAnalysis(
         });
 
         if (similarity.overall >= config.similarityThreshold) {
-          scoredPairs.push({
-            docId1: pair.docId1,
-            docId2: pair.docId2,
-            similarity,
-          });
-          uf.union(pair.docId1, pair.docId2);
+          const key = pairDecisionKey(
+            paperlessIdMap.get(pair.docId1)!,
+            paperlessIdMap.get(pair.docId2)!,
+          );
+          if (suppressedPairs.has(key)) result.pairsSuppressed++;
+          else {
+            scoredPairs.push({ docId1: pair.docId1, docId2: pair.docId2, similarity });
+            uf.union(pair.docId1, pair.docId2);
+          }
         }
       }
 
@@ -497,12 +510,6 @@ export async function runAnalysis(
 
     // Stage 8: Write results in transaction
     await onProgress?.(0.85, 'Writing results...');
-
-    // Build paperlessId lookup for primary selection
-    const paperlessIdMap = new Map<string, number>();
-    for (const doc of allDocs) {
-      paperlessIdMap.set(doc.id, doc.paperlessId);
-    }
 
     // Build groupId -> memberIds lookup for deletion scope check
     const existingGroupMemberIds = new Map<string, Set<string>>();

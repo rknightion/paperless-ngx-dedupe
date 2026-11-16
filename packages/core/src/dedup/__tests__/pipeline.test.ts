@@ -5,6 +5,7 @@ import type { AppDatabase } from '../../db/client.js';
 import { document, documentContent, documentSignature } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import { eq } from 'drizzle-orm';
+import { recordPairDecisions } from '../pair-decisions.js';
 import { runAnalysis } from '../analyze.js';
 import { setDedupConfig } from '../config.js';
 import { LSHIndex } from '../lsh.js';
@@ -586,5 +587,38 @@ describe('runAnalysis pipeline', () => {
     for (let i = 1; i < progressValues.length; i++) {
       expect(progressValues[i]).toBeGreaterThanOrEqual(progressValues[i - 1]);
     }
+  });
+});
+
+describe('remembered pair decisions', () => {
+  it('suppresses an explicitly recorded identical pair without changing candidate counts', async () => {
+    const text = generateText('synthetic duplicate invoice line items payment reference', 30);
+    seedDocument(db, 1, 'First', text);
+    seedDocument(db, 2, 'Second', text);
+    await runAnalysis(db, { force: true });
+    expect(db.select().from(duplicateGroup).all()).toHaveLength(1);
+    recordPairDecisions(db, [1, 2], 'manual');
+    const result = await runAnalysis(db, { force: true });
+    expect(result.candidatePairsFound).toBe(1);
+    expect(result.pairsSuppressed).toBe(1);
+    expect(result.groupsRemoved).toBe(1);
+    expect(db.select().from(duplicateGroup).all()).toEqual([]);
+  });
+  it('allows an indirect connection through a third similar document', async () => {
+    const text = generateText('synthetic duplicate invoice line items payment reference', 30);
+    const ids = [1, 2, 3].map((id) => seedDocument(db, id, `Synthetic ${id}`, text));
+    recordPairDecisions(db, [1, 2], 'manual');
+    await runAnalysis(db, { force: true });
+    const groups = db.select().from(duplicateGroup).all();
+    expect(groups).toHaveLength(1);
+    expect(
+      db
+        .select()
+        .from(duplicateMember)
+        .where(eq(duplicateMember.groupId, groups[0].id))
+        .all()
+        .map((member) => member.documentId)
+        .sort(),
+    ).toEqual(ids.sort());
   });
 });

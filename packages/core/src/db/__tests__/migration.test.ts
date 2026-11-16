@@ -1259,3 +1259,44 @@ it('adds nullable stored sizes to an existing database and preserves rows on rep
     sqlite.close();
   }
 });
+
+it('adds pair decisions to the released database without losing documents', async () => {
+  const { sqlite } = createDatabaseWithHandle(':memory:');
+  try {
+    sqlite.exec(v015Fixture);
+    sqlite
+      .prepare(
+        "INSERT INTO document (id,paperless_id,title,synced_at) VALUES ('legacy-pair-document',99997,'Synthetic retained document','2024-01-01')",
+      )
+      .run();
+    expect(
+      sqlite.prepare("SELECT name FROM sqlite_master WHERE name='duplicate_pair_decision'").get(),
+    ).toBeUndefined();
+    await migrateDatabase(sqlite);
+    expect(
+      sqlite
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='duplicate_pair_decision'",
+        )
+        .get(),
+    ).toEqual({ name: 'duplicate_pair_decision' });
+    expect(
+      sqlite
+        .prepare("SELECT paperless_id,title FROM document WHERE id='legacy-pair-document'")
+        .get(),
+    ).toEqual({ paperless_id: 99997, title: 'Synthetic retained document' });
+    sqlite
+      .prepare(
+        "INSERT INTO duplicate_pair_decision (id,paperless_id_low,paperless_id_high,decision,source,created_at) VALUES ('retained',1,2,'not_duplicate','manual','2026-01-01')",
+      )
+      .run();
+    const version = sqlite.pragma('schema_version', { simple: true });
+    await migrateDatabase(sqlite);
+    expect(sqlite.pragma('schema_version', { simple: true })).toBe(version);
+    expect(sqlite.prepare('SELECT id FROM duplicate_pair_decision').all()).toEqual([
+      { id: 'retained' },
+    ]);
+  } finally {
+    sqlite.close();
+  }
+});

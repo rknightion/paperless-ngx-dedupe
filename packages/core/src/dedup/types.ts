@@ -94,6 +94,7 @@ export interface AnalysisResult {
   candidatePairsFound: number;
   candidatePairsScored: number;
   candidatePairsSkippedConnected: number;
+  pairsSuppressed: number;
   groupsCreated: number;
   groupsUpdated: number;
   groupsRemoved: number;

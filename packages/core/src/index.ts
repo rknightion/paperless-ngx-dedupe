@@ -625,3 +625,12 @@ export {
 export type { CompletedDeletionRun } from './review/restore.js';
 
 export { getNextDuplicateGroupId } from './queries/duplicates.js';
+
+export { duplicatePairDecision } from './schema/sqlite/duplicates.js';
+export {
+  pairDecisionKey,
+  recordPairDecisions,
+  loadSuppressedPairSet,
+  listPairDecisions,
+  deletePairDecision,
+} from './dedup/pair-decisions.js';
