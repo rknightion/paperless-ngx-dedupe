@@ -20,7 +20,14 @@ const provider = { provider: 'openai', extract: vi.fn() };
 function request(query: string) {
   return POST({
     params: { id: 'result-test' },
-    locals: { config: { AI_ENABLED: true, AI_OPENAI_API_KEY: 'test-api-key' }, db: {} },
+    locals: {
+      config: {
+        AI_ENABLED: true,
+        AI_OPENAI_API_KEY: 'test-api-key',
+        AI_OPENAI_API_STYLE: 'responses',
+      },
+      db: {},
+    },
     url: new URL(`http://localhost/api/v1/ai/results/result-test/reprocess${query}`),
   } as never);
 }
@@ -40,6 +47,7 @@ describe('interactive reprocess HTTP contract', () => {
     expect(mocks.createInteractiveAiProvider).toHaveBeenCalledWith('test-api-key', 'test-model', {
       maxRetries: 10,
       baseURL: undefined,
+      apiStyle: 'responses',
     });
     expect(mocks.createAiProvider).not.toHaveBeenCalled();
     expect(mocks.reprocessSingleResult).toHaveBeenCalledWith(
@@ -70,6 +78,7 @@ describe('interactive reprocess HTTP contract', () => {
       expect(mocks.createInteractiveAiProvider).toHaveBeenCalledWith('test-api-key', 'test-model', {
         maxRetries: 10,
         baseURL: undefined,
+        apiStyle: 'responses',
       });
     },
   );
@@ -80,7 +89,11 @@ it('reprocesses with a keyless custom endpoint through the interactive factory',
   const response = await POST({
     params: { id: 'local-result' },
     locals: {
-      config: { AI_ENABLED: true, AI_OPENAI_BASE_URL: 'http://localhost:11434/v1' },
+      config: {
+        AI_ENABLED: true,
+        AI_OPENAI_BASE_URL: 'http://localhost:11434/v1',
+        AI_OPENAI_API_STYLE: 'chat',
+      },
       db: {},
     },
     url: new URL('http://localhost/api/v1/ai/results/local-result/reprocess'),
@@ -90,5 +103,6 @@ it('reprocesses with a keyless custom endpoint through the interactive factory',
   expect(mocks.createInteractiveAiProvider).toHaveBeenLastCalledWith(undefined, 'test-model', {
     maxRetries: 10,
     baseURL: 'http://localhost:11434/v1',
+    apiStyle: 'chat',
   });
 });

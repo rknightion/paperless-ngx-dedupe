@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 
 import type { ModelPricing } from './costs.js';
-import { buildOpenAiRequestParams } from './providers/openai.js';
+import { buildOpenAiRequestParams, type OpenAiProviderOptions } from './providers/openai.js';
 import type { AiExtractionRequest } from './providers/types.js';
 
 export class AiBudgetPolicyError extends Error {}
@@ -79,10 +79,11 @@ export async function countAiPromptTokens(
   request: AiExtractionRequest,
   model: string,
   flexProcessing: boolean,
+  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL'> = {},
 ): Promise<number> {
   const { encodingForModel } = await import('js-tiktoken');
   const encoding = encodingForModel(resolveOpenAiTokenizerModel(model));
-  const params = await buildOpenAiRequestParams(request, model, flexProcessing);
+  const params = await buildOpenAiRequestParams(request, model, flexProcessing, options);
   return encoding.encode(JSON.stringify(params)).length + OPENAI_RESPONSES_FRAMING_ALLOWANCE_TOKENS;
 }
 

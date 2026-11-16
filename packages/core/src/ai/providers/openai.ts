@@ -62,30 +62,43 @@ export function parseRateLimitHeaders(headers: Headers): RateLimitInfo | undefin
   return { limitTokens, remainingTokens, resetTokensMs };
 }
 
-/** Build the exact Responses API parameters used for extraction and budget token accounting. */
+/** Build the selected API parameters for extraction and budget token accounting. */
 export async function buildOpenAiRequestParams(
   request: AiExtractionRequest,
   model: string,
   flexProcessing: boolean,
+  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL'> = {},
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<Record<string, any>> {
-  const { zodTextFormat } = await import('openai/helpers/zod');
+  const { zodTextFormat, zodResponseFormat } = await import('openai/helpers/zod');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const params: Record<string, any> = {
-    model,
-    input: [
+  const params: Record<string, any> = { model };
+  if (options.apiStyle === 'chat') {
+    params.messages = [
+      { role: 'system', content: request.systemPrompt },
+      { role: 'user', content: request.userPrompt },
+    ];
+    params.response_format = zodResponseFormat(
+      aiExtractionResponseSchema,
+      'document_classification',
+    );
+    if (request.maxOutputTokens !== undefined)
+      params.max_completion_tokens = request.maxOutputTokens;
+    if (request.reasoningEffort && request.reasoningEffort !== 'none') {
+      params.reasoning_effort = request.reasoningEffort;
+    }
+  } else {
+    params.input = [
       { role: 'developer', content: request.systemPrompt },
       { role: 'user', content: request.userPrompt },
-    ],
-    text: { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') },
-    service_tier: flexProcessing ? 'flex' : 'default',
-  };
-  if (request.maxOutputTokens !== undefined) {
-    params.max_output_tokens = request.maxOutputTokens;
+    ];
+    params.text = { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') };
+    if (request.maxOutputTokens !== undefined) params.max_output_tokens = request.maxOutputTokens;
+    if (request.reasoningEffort && request.reasoningEffort !== 'none') {
+      params.reasoning = { effort: request.reasoningEffort };
+    }
   }
-  if (request.reasoningEffort && request.reasoningEffort !== 'none') {
-    params.reasoning = { effort: request.reasoningEffort };
-  }
+  if (!options.baseURL) params.service_tier = flexProcessing ? 'flex' : 'default';
   return params;
 }
 
@@ -93,6 +106,7 @@ export interface OpenAiProviderOptions {
   maxRetries?: number;
   flexProcessing?: boolean;
   baseURL?: string;
+  apiStyle?: 'responses' | 'chat';
 }
 
 export class OpenAiProvider implements AiProviderInterface {
@@ -101,14 +115,14 @@ export class OpenAiProvider implements AiProviderInterface {
   private client: any;
   private model: string;
   private flexProcessing: boolean;
-  private customBaseURL: boolean;
+  private options: OpenAiProviderOptions;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private constructor(client: any, model: string, flexProcessing: boolean, customBaseURL: boolean) {
+  private constructor(client: any, model: string, options: OpenAiProviderOptions) {
     this.client = client;
     this.model = model;
-    this.flexProcessing = flexProcessing;
-    this.customBaseURL = customBaseURL;
+    this.flexProcessing = options.flexProcessing ?? true;
+    this.options = options;
   }
 
   static async create(
@@ -127,24 +141,31 @@ export class OpenAiProvider implements AiProviderInterface {
         timeout,
         ...(baseURL ? { baseURL } : {}),
       });
-      return new OpenAiProvider(client, model, flexProcessing, Boolean(baseURL));
+      return new OpenAiProvider(client, model, { ...options, flexProcessing });
     } catch {
       throw new Error('OpenAI SDK not installed. Install it with: pnpm add openai');
     }
   }
 
   async extract(request: AiExtractionRequest): Promise<AiExtractionResult> {
-    const params = await buildOpenAiRequestParams(request, this.model, this.flexProcessing);
-    if (this.customBaseURL) delete params.service_tier;
+    const params = await buildOpenAiRequestParams(
+      request,
+      this.model,
+      this.flexProcessing,
+      this.options,
+    );
 
     let response;
     let rateLimit: RateLimitInfo | undefined;
 
     try {
-      const { data, response: httpResponse } = await this.client.responses
-        .parse(params)
-        .withResponse();
-      response = data;
+      // SDK chat parsing throws on truncation before exposing billed usage.
+      const { data, response: httpResponse } = await (
+        this.options.apiStyle === 'chat'
+          ? this.client.chat.completions.create(params)
+          : this.client.responses.parse(params)
+      ).withResponse();
+      response = this.options.apiStyle === 'chat' ? normalizeChatCompletion(data) : data;
       rateLimit = parseRateLimitHeaders(httpResponse.headers);
     } catch (error) {
       // Catch OpenAI SDK RateLimitError and wrap it
@@ -242,4 +263,47 @@ export class OpenAiProvider implements AiProviderInterface {
       );
     }
   }
+}
+
+// Keep SDK imports dynamic so importing core does not require the optional OpenAI peer.
+type ChatCompletion = {
+  id: string;
+  choices: {
+    finish_reason: string;
+    message: { content: string | null; refusal?: string | null };
+  }[];
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+  };
+  service_tier?: string | null;
+};
+
+/** Adapt chat output before the shared schema validation and billed-failure handling. */
+function normalizeChatCompletion(response: ChatCompletion) {
+  const choice = response.choices[0];
+  let parsed: unknown = null;
+  if (choice?.message.content) {
+    try {
+      parsed = JSON.parse(choice.message.content);
+    } catch {
+      /* Schema failure below retains usage. */
+    }
+  }
+  return {
+    id: response.id,
+    refusal:
+      choice?.message.refusal ||
+      (choice?.finish_reason === 'content_filter' ? 'Content filtered' : undefined),
+    status: choice?.finish_reason === 'length' ? 'incomplete' : 'completed',
+    incomplete_details: { reason: 'max_output_tokens' },
+    output_parsed: parsed,
+    usage: {
+      input_tokens: response.usage?.prompt_tokens,
+      output_tokens: response.usage?.completion_tokens,
+      input_tokens_details: { cached_tokens: response.usage?.prompt_tokens_details?.cached_tokens },
+    },
+    service_tier: response.service_tier,
+  };
 }

@@ -60,6 +60,7 @@ const configSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     AI_OPENAI_API_KEY: z.string().optional(),
+    AI_OPENAI_API_STYLE: z.enum(['responses', 'chat']).default('responses'),
     AI_OPENAI_BASE_URL: z
       .url({
         protocol: /^https?$/,

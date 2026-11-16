@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   appConfig: {
     AI_OPENAI_API_KEY: 'test-key' as string | undefined,
     AI_OPENAI_BASE_URL: undefined as string | undefined,
+    AI_OPENAI_API_STYLE: 'responses' as 'responses' | 'chat',
   },
   aiConfig: {
     maxRetries: 10,
@@ -37,6 +38,7 @@ afterEach(() => {
   vi.clearAllMocks();
   mocks.appConfig.AI_OPENAI_API_KEY = 'test-key';
   mocks.appConfig.AI_OPENAI_BASE_URL = undefined;
+  mocks.appConfig.AI_OPENAI_API_STYLE = 'responses';
 });
 
 describe('AI processing worker', () => {
@@ -168,6 +170,7 @@ describe('AI processing worker', () => {
       maxRetries: 0,
       flexProcessing: true,
       baseURL: undefined,
+      apiStyle: 'responses',
     });
     expect(mocks.processBatch).toHaveBeenCalledWith(
       handle.db,
@@ -235,6 +238,7 @@ describe('AI processing worker', () => {
 it('runs manual AI with a keyless custom endpoint', async () => {
   mocks.appConfig.AI_OPENAI_API_KEY = undefined;
   mocks.appConfig.AI_OPENAI_BASE_URL = 'http://localhost:11434/v1';
+  mocks.appConfig.AI_OPENAI_API_STYLE = 'chat';
   await import('./ai-processing-worker.js');
   const task = mocks.runWorkerTask.mock.calls[0]?.[0] as TaskFunction;
   const handle = createDatabaseWithHandle(':memory:');
@@ -249,6 +253,7 @@ it('runs manual AI with a keyless custom endpoint', async () => {
       maxRetries: 2,
       flexProcessing: true,
       baseURL: 'http://localhost:11434/v1',
+      apiStyle: 'chat',
     });
   } finally {
     handle.sqlite.close();
