@@ -56,7 +56,12 @@ it('references only defined telemetry instruments in the shipped dashboard', () 
   visit(dashboard);
   expect(expressions.length).toBeGreaterThan(0);
   const references = expressions.flatMap(
-    (expression) => expression.match(/paperless_ngx_dedupe_[a-zA-Z0-9_]+/g) ?? [],
+    (expression) =>
+      expression
+        .replace(/\{[^}]*\}|\[[^\]]*\]/g, '')
+        .replace(/\b(?:by|without)\s*\([^)]*\)/g, '')
+        .replace(/\b[a-zA-Z_][a-zA-Z0-9_]*\s*(?=\()/g, '')
+        .match(/[a-zA-Z_:][a-zA-Z0-9_:]*/g) ?? [],
   );
   expect(references.length).toBeGreaterThan(0);
   expect([...new Set(references)].filter((name) => !available.has(name))).toEqual([]);
