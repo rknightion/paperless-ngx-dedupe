@@ -1,4 +1,4 @@
-import { getWebhookSyncSettings } from '@paperless-dedupe/core';
+import { getWebhookSyncSettings, requestWebhookSync } from '@paperless-dedupe/core';
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
 import { decideAccess } from '$lib/server/access';
 import type { RequestHandler } from './$types';
@@ -13,14 +13,22 @@ export const POST: RequestHandler = async ({ locals, request, url }) => {
   ) {
     return apiError(ErrorCode.UNAUTHORIZED, { operation: 'webhook_sync' });
   }
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    /* Generic webhook payloads still request a full sync. */
+  }
+  const documentId =
+    payload &&
+    typeof payload === 'object' &&
+    !Array.isArray(payload) &&
+    'documentId' in payload &&
+    typeof payload.documentId === 'number'
+      ? payload.documentId
+      : undefined;
   const now = new Date();
-  const requestedAt = now.toISOString();
-  locals.sqlite
-    .prepare(
-      `INSERT INTO app_config (key, value, updated_at) VALUES ('hooks.syncRequestedAt', ?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    )
-    .run(requestedAt, requestedAt);
+  requestWebhookSync(locals.sqlite, now, documentId);
   return apiSuccess(
     {
       accepted: true,

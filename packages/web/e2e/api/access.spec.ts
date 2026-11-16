@@ -332,3 +332,102 @@ test('enabled webhook requires an API token even with access mode none', async (
     }
   });
 });
+
+test('webhook document IDs refresh only the selected documents through the real worker', async ({
+  request,
+}) => {
+  await request.post('http://localhost:18923/__control__/reset');
+  await withProtectedApp(
+    { APP_API_TOKEN: 'synthetic-webhook-token' },
+    async (url, _output, dbPath) => {
+      await request.get(`${url}/api/v1/health`);
+      const db = new Database(dbPath);
+      const headers = { Authorization: 'Bearer synthetic-webhook-token' };
+      try {
+        expect(
+          (
+            await request.put(`${url}/api/v1/config`, {
+              data: {
+                settings: {
+                  'automation.webhookSyncEnabled': true,
+                  'automation.webhookQuietSeconds': 10,
+                },
+              },
+            })
+          ).status(),
+        ).toBe(200);
+        db.prepare(
+          "INSERT INTO sync_state (id,last_sync_at) VALUES ('singleton','2026-01-01') ON CONFLICT(id) DO UPDATE SET last_sync_at='2026-01-01'",
+        ).run();
+        for (const documentId of [3, 5, 3, 999])
+          expect(
+            (
+              await request.post(`${url}/api/v1/hooks/paperless`, { headers, data: { documentId } })
+            ).status(),
+          ).toBe(202);
+        db.prepare(
+          "UPDATE app_config SET value='2024-01-01T00:00:00.000Z' WHERE key='hooks.syncRequestedAt'",
+        ).run();
+        await expect
+          .poll(() => db.prepare("SELECT status FROM job WHERE type='sync'").get(), {
+            timeout: 20000,
+          })
+          .toEqual({ status: 'completed' });
+        expect(db.prepare('SELECT paperless_id FROM document ORDER BY paperless_id').all()).toEqual(
+          [{ paperless_id: 3 }, { paperless_id: 5 }],
+        );
+        expect(db.prepare('SELECT last_sync_at FROM sync_state').get()).toEqual({
+          last_sync_at: '2026-01-01',
+        });
+        const job = db.prepare("SELECT result_json FROM job WHERE type='sync'").get() as {
+          result_json: string;
+        };
+        expect(JSON.parse(job.result_json)).toMatchObject({
+          inserted: 2,
+          updated: 0,
+          skipped: 1,
+          notFound: [999],
+        });
+        expect(
+          (
+            await request.patch('http://localhost:18923/api/documents/3/', {
+              headers: { Authorization: 'Token test-token-e2e' },
+              data: { title: 'Synthetic webhook refreshed' },
+            })
+          ).status(),
+        ).toBe(200);
+        expect(
+          (
+            await request.post(`${url}/api/v1/hooks/paperless`, {
+              headers,
+              data: { documentId: 3 },
+            })
+          ).status(),
+        ).toBe(202);
+        db.prepare(
+          "UPDATE app_config SET value='2024-01-01T00:00:00.000Z' WHERE key='hooks.syncRequestedAt'",
+        ).run();
+        await expect
+          .poll(
+            () =>
+              db
+                .prepare(
+                  "SELECT COUNT(*) AS count FROM job WHERE type='sync' AND status='completed'",
+                )
+                .get(),
+            { timeout: 20000 },
+          )
+          .toEqual({ count: 2 });
+        expect(db.prepare('SELECT title FROM document WHERE paperless_id=3').get()).toEqual({
+          title: 'Synthetic webhook refreshed',
+        });
+        expect(db.prepare('SELECT last_sync_at FROM sync_state').get()).toEqual({
+          last_sync_at: '2026-01-01',
+        });
+      } finally {
+        db.close();
+      }
+    },
+  );
+  await request.post('http://localhost:18923/__control__/reset');
+});

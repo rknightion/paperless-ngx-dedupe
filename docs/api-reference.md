@@ -179,7 +179,11 @@ Enable it through the configuration API. It requires a configured `APP_API_TOKEN
 `Authorization: Bearer <token>` header, including when access mode is `none`; missing or invalid
 credentials return `401 UNAUTHORIZED`.
 
-The body is ignored. When sending a body, use `Content-Type: application/json` as required by the
+Send `{"documentId": 123}` to refresh one Paperless document without scanning the library. The
+ID must be a positive safe integer. IDs from a burst are combined and deduplicated. An absent,
+invalid or generic payload still requests a full-library sync; any such request in the burst
+takes precedence over the selected IDs. More than 1000 distinct pending IDs also falls back
+to a library sync. When sending a body, use `Content-Type: application/json` as required by the
 API's origin protection. Each accepted request restarts the quiet period set by
 `automation.webhookQuietSeconds` (integer 10 to 3600, default 60).
 
@@ -196,8 +200,11 @@ Returns HTTP 202 with:
 
 `syncNotBefore` is the earliest eligible time, not a completion promise. The scheduler enqueues
 one sync after the quiet period when the operation lease is available. A newer request remains
-pending for a later sync; existing automation settings determine subsequent analysis. The direct
-`POST /api/v1/sync` endpoint is unchanged.
+pending for a later sync, including requests received in the same millisecond. Selected-ID jobs
+fetch each document directly, refresh its local text even when its modified timestamp is old,
+and preserve the full-sync cursor. Missing IDs are reported in the job result as `notFound`
+and counted as skipped. The existing manual-sync behavior is retained: run analysis manually
+or use its configured schedule. The direct `POST /api/v1/sync` endpoint is unchanged.
 
 ### GET /api/v1/sync/status
 

@@ -22,6 +22,7 @@ import {
   consumeDispatchIntents,
   enqueueDueSchedules,
   enqueueRequestedSync,
+  requestWebhookSync,
   releaseOperation,
   enqueueManualOperation,
   getDispatchIntent,
@@ -1139,5 +1140,60 @@ describe('debounced webhook sync requests', () => {
     write('automation.webhookQuietSeconds', '10');
     expect(enqueueRequestedSync(sqlite, at(9))).toBeNull();
     expect(enqueueRequestedSync(sqlite, at(10))).toMatchObject({ task: 'sync' });
+  });
+  it('combines selected webhook document IDs into one durable sync without duplicates', () => {
+    for (const id of [3, 5, 3]) requestWebhookSync(sqlite, at(0), id);
+    expect(enqueueRequestedSync(sqlite, at(59))).toBeNull();
+    const intent = enqueueRequestedSync(sqlite, at(60))!;
+    expect(getDispatchIntent(sqlite, intent.id)?.taskData).toEqual({ paperlessIds: [3, 5] });
+    expect(pending()).toBeUndefined();
+  });
+
+  it('retains a same-millisecond selected request arriving during enqueue', () => {
+    requestWebhookSync(sqlite, at(0), 3);
+    sqlite.exec(`CREATE TRIGGER same_time_webhook AFTER INSERT ON dispatch_intent BEGIN
+      UPDATE app_config SET value='{"revision":"newer","documentIds":[5]}' WHERE key='hooks.syncRequest'; END`);
+    const first = enqueueRequestedSync(sqlite, at(60))!;
+    expect(getDispatchIntent(sqlite, first.id)?.taskData).toEqual({ paperlessIds: [3] });
+    expect(pending()).toBeDefined();
+    sqlite.exec('DROP TRIGGER same_time_webhook');
+    sqlite.prepare("UPDATE job SET status='completed' WHERE id=?").run(first.jobId!);
+    releaseOperation(sqlite, first.jobId!);
+    const second = enqueueRequestedSync(sqlite, at(60))!;
+    expect(getDispatchIntent(sqlite, second.id)?.taskData).toEqual({ paperlessIds: [5] });
+    expect(pending()).toBeUndefined();
+  });
+  it('keeps selected IDs behind a lease and lets generic or legacy requests cover the whole library', () => {
+    requestWebhookSync(sqlite, at(0), 3);
+    acquireOperation(sqlite, 'sync', 'other-sync');
+    expect(enqueueRequestedSync(sqlite, at(60))).toBeNull();
+    requestWebhookSync(sqlite, at(1), 5);
+    releaseOperation(sqlite, 'other-sync');
+    const selected = enqueueRequestedSync(sqlite, at(61))!;
+    expect(getDispatchIntent(sqlite, selected.id)?.taskData).toEqual({ paperlessIds: [3, 5] });
+    sqlite.prepare("UPDATE job SET status='completed' WHERE id=?").run(selected.jobId!);
+    releaseOperation(sqlite, selected.jobId!);
+    requestWebhookSync(sqlite, at(70), 3);
+    requestWebhookSync(sqlite, at(71));
+    requestWebhookSync(sqlite, at(72), 5);
+    const full = enqueueRequestedSync(sqlite, at(132))!;
+    expect(getDispatchIntent(sqlite, full.id)?.taskData).toBeUndefined();
+    sqlite.prepare("UPDATE job SET status='completed' WHERE id=?").run(full.jobId!);
+    releaseOperation(sqlite, full.jobId!);
+    request(140);
+    requestWebhookSync(sqlite, at(141), 3);
+    const legacy = enqueueRequestedSync(sqlite, at(201))!;
+    expect(getDispatchIntent(sqlite, legacy.id)?.taskData).toBeUndefined();
+  });
+  it('falls back to a full sync for oversized or corrupt pending selections', () => {
+    for (let id = 1; id <= 1001; id++) requestWebhookSync(sqlite, at(0), id);
+    const full = enqueueRequestedSync(sqlite, at(60))!;
+    expect(getDispatchIntent(sqlite, full.id)?.taskData).toBeUndefined();
+    sqlite.prepare("UPDATE job SET status='completed' WHERE id=?").run(full.jobId!);
+    releaseOperation(sqlite, full.jobId!);
+    request(70);
+    write('hooks.syncRequest', 'invalid');
+    const corrupt = enqueueRequestedSync(sqlite, at(130))!;
+    expect(getDispatchIntent(sqlite, corrupt.id)?.taskData).toBeUndefined();
   });
 });
