@@ -1632,3 +1632,30 @@ filter are eligible. Manual choices are excluded unless `includeManual` is true;
 overridden manual group retains that protection for later requests. Changed groups
 receive a newer update timestamp, invalidating earlier deletion plans. No document is
 deleted or modified in Paperless. Invalid bodies return 400 `VALIDATION_FAILED`.
+
+### POST /api/v1/import/decisions
+
+Import the raw version-1 JSON file from the decision export. Add `?dryRun=true` to
+preview without changing review decisions. The response is
+`{ "data": { "groupsMatched": 2, "groupsUnmatched": 1, "pairDecisionsAdded": 3 } }`.
+The adapter's `BODY_SIZE_LIMIT` applies, exactly as for configuration import.
+
+Matching uses the exact Paperless-ID set of current pending groups, regardless of order.
+Matches take the saved status; unmatched false positives become remembered pairs with
+source `import`. Unmatched ignored groups have no effect. An already resolved exact match
+with the same status is left alone, so importing twice creates no additional changes.
+Existing pair provenance is preserved. `decidedAt` is informational; a changed local group
+gets its current update time. The file must belong to the same Paperless library.
+
+The whole file is validated before any writes. Unsupported versions, malformed entries,
+conflicting statuses for one ID set and noncanonical pairs return 400 `VALIDATION_FAILED`.
+An unmatched false-positive group over 200 members also fails validation before any writes,
+preserving the pair store's limit. Larger groups can restore a matching pending status;
+use a full database backup when oversized unmatched groups must be restored.
+
+Both preview and apply hold the duplicate mutation lease and return 409 `CONFLICT` while
+another duplicate operation is active. Dry run is advisory: apply recomputes against the
+current library. Settings > System & backup provides Export decisions, file upload,
+Preview decisions import and an explicit Apply decisions import action. Neither operation
+changes Paperless documents or imports AI results or settings. Run analysis after import
+to apply remembered pairs to future matching.
