@@ -251,6 +251,16 @@ Credit: metric definitions and collector design inspired by [prometheus-paperles
 
 ## Deduplication Settings
 
+`dedup.primaryStrategy` controls the keeper for newly created groups. The default
+`lowest_id` preserves the lowest Paperless ID. Other choices are `oldest_added`,
+`newest_added`, `most_text` (word count), and `most_metadata` (non-empty categories:
+correspondent, document type, tags and custom fields). Ties use the lowest ID;
+missing or invalid added dates rank after known dates. A custom field with value
+zero or false counts as filled. Existing groups keep their current primary when
+the setting changes, including during forced analysis. File-based rules are not
+part of this setting. Configure it through the config API until the Settings UI
+is available.
+
 Change these in **Settings** or via `PUT /api/v1/config/dedup`.
 
 ### Algorithm Parameters
