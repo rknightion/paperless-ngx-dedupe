@@ -369,27 +369,100 @@ export function getWebhookSyncSettings(sqlite: Database.Database): {
   };
 }
 
+const WEBHOOK_SELECTION_KEY = 'hooks.syncRequest';
+const MAX_WEBHOOK_DOCUMENT_IDS = 1000;
+
+function readWebhookRequest(sqlite: Database.Database): {
+  requestedAt?: string;
+  selection?: string;
+} {
+  const rows = sqlite
+    .prepare("SELECT key,value FROM app_config WHERE key IN ('hooks.syncRequestedAt', ?)")
+    .all(WEBHOOK_SELECTION_KEY) as { key: string; value: string }[];
+  return {
+    requestedAt: rows.find((row) => row.key === 'hooks.syncRequestedAt')?.value,
+    selection: rows.find((row) => row.key === WEBHOOK_SELECTION_KEY)?.value,
+  };
+}
+
+function selectedWebhookIds(raw: string | undefined): number[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const ids = parsed?.documentIds;
+    if (
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      ids.length > MAX_WEBHOOK_DOCUMENT_IDS ||
+      !ids.every((id) => Number.isSafeInteger(id) && id > 0)
+    )
+      return null;
+    return [...new Set<number>(ids)].sort((a, b) => a - b);
+  } catch {
+    return null;
+  }
+}
+
+/** Persist a webhook request; absent/invalid IDs retain the payload-agnostic full-sync behavior. */
+export function requestWebhookSync(
+  sqlite: Database.Database,
+  now: Date,
+  documentId?: number,
+): void {
+  sqlite
+    .transaction(() => {
+      const previous = readWebhookRequest(sqlite);
+      const ids = previous.requestedAt === undefined ? [] : selectedWebhookIds(previous.selection);
+      let documentIds: number[] | null = null;
+      if (ids !== null && Number.isSafeInteger(documentId) && documentId! > 0) {
+        const combined = [...new Set([...ids, documentId!])].sort((a, b) => a - b);
+        if (combined.length <= MAX_WEBHOOK_DOCUMENT_IDS) documentIds = combined;
+      }
+      // A revision distinguishes two requests received during the same millisecond.
+      const selection = JSON.stringify({ revision: nanoid(), documentIds });
+      const stamp = now.toISOString();
+      const write = sqlite.prepare(
+        'INSERT INTO app_config (key,value,updated_at) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at',
+      );
+      write.run('hooks.syncRequestedAt', stamp, stamp);
+      write.run(WEBHOOK_SELECTION_KEY, selection, stamp);
+    })
+    .immediate();
+}
+
 /** Enqueue one quiet webhook request, retaining newer requests and requests blocked by a lease. */
 export function enqueueRequestedSync(sqlite: Database.Database, now: Date): DispatchIntent | null {
   const settings = getWebhookSyncSettings(sqlite);
   if (!settings.enabled) return null;
-  const request = sqlite
-    .prepare("SELECT value FROM app_config WHERE key = 'hooks.syncRequestedAt'")
-    .get() as { value: string } | undefined;
-  if (!request) return null;
-  const requestedAt = Date.parse(request.value);
+  const request = readWebhookRequest(sqlite);
+  if (request.requestedAt === undefined) return null;
+  const requestedAt = Date.parse(request.requestedAt);
   if (!Number.isFinite(requestedAt) || now.getTime() < requestedAt + settings.quietSeconds * 1000)
     return null;
   let intent: DispatchIntent;
   try {
-    intent = enqueueManualOperation(sqlite, 'sync', { kind: 'manual' });
+    const paperlessIds = selectedWebhookIds(request.selection);
+    intent = enqueueManualOperation(
+      sqlite,
+      'sync',
+      { kind: 'manual' },
+      'sync',
+      paperlessIds ? { paperlessIds } : undefined,
+    );
   } catch (error) {
     if (error instanceof OperationConflictError) return null;
     throw error;
   }
   sqlite
-    .prepare("DELETE FROM app_config WHERE key = 'hooks.syncRequestedAt' AND value = ?")
-    .run(request.value);
+    .transaction(() => {
+      const current = readWebhookRequest(sqlite);
+      if (current.requestedAt === request.requestedAt && current.selection === request.selection) {
+        sqlite
+          .prepare("DELETE FROM app_config WHERE key IN ('hooks.syncRequestedAt', ?)")
+          .run(WEBHOOK_SELECTION_KEY);
+      }
+    })
+    .immediate();
   return intent;
 }
 

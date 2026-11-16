@@ -101,11 +101,16 @@ To sync shortly after Paperless-NGX consumes documents:
 
 Each accepted webhook returns 202 and restarts the quiet period. A burst produces one sync after
 requests become quiet and the operation lease is available. A request arriving during a sync
-remains pending for a later run. Jobs use the existing manual trigger; analysis afterward follows
-your Automation settings. The ordinary Sync button and scheduled sync remain available.
+remains pending for a later run. Jobs use the existing manual trigger. Run analysis manually or
+use its configured schedule afterward. The ordinary Sync button and scheduled sync remain available.
 
-The webhook payload is currently ignored. See [Webhook Sync configuration](configuration.md#webhook-sync-optional)
-for the supported quiet-period range and defaults.
+For a document-specific request, send JSON with a numeric Paperless ID, for example
+`{"documentId": 123}`. This fetches and refreshes that document directly, even if its modified
+timestamp is older than the last sync. A burst combines IDs; a generic payload such as `{}`
+requests a normal library sync instead. Selected-document refreshes do not advance the library
+sync cursor. Missing documents are reported as skipped. See the
+[webhook API](api-reference.md#post-apiv1hookspaperless) for the burst limit and
+[Webhook Sync configuration](configuration.md#webhook-sync-optional) for timing settings.
 
 ## What's Next
 

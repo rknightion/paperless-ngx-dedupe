@@ -180,6 +180,7 @@ export {
   enqueueDueSchedules,
   enqueueRequestedSync,
   getWebhookSyncSettings,
+  requestWebhookSync,
   enqueueManualOperation,
   getDispatchIntent,
   OperationConflictError,
