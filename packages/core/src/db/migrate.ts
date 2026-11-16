@@ -4,7 +4,11 @@ import type Database from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 
 import { document, documentContent, documentSignature } from '../schema/sqlite/documents.js';
-import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
+import {
+  duplicateGroup,
+  duplicateMember,
+  duplicatePairDecision,
+} from '../schema/sqlite/duplicates.js';
 import { job } from '../schema/sqlite/jobs.js';
 import { appConfig, syncState } from '../schema/sqlite/app.js';
 import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
@@ -36,6 +40,7 @@ const allTables = {
   documentSignature,
   duplicateGroup,
   duplicateMember,
+  duplicatePairDecision,
   job,
   appConfig,
   syncState,

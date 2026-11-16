@@ -1,5 +1,13 @@
-import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { desc } from 'drizzle-orm';
+import {
+  check,
+  index,
+  integer,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
+import { desc, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 import { document } from './documents.js';
@@ -52,5 +60,36 @@ export const duplicateMember = sqliteTable(
   (table) => [
     uniqueIndex('duplicate_member_group_document_unique').on(table.groupId, table.documentId),
     index('idx_dm_document_id').on(table.documentId),
+  ],
+);
+
+export const duplicatePairDecision = sqliteTable(
+  'duplicate_pair_decision',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    paperlessIdLow: integer('paperless_id_low').notNull(),
+    paperlessIdHigh: integer('paperless_id_high').notNull(),
+    decision: text('decision', { enum: ['not_duplicate'] }).notNull(),
+    source: text('source', {
+      enum: ['group_false_positive', 'member_removed', 'manual', 'import'],
+    }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('duplicate_pair_decision_pair_unique').on(
+      table.paperlessIdLow,
+      table.paperlessIdHigh,
+    ),
+    check(
+      'duplicate_pair_decision_order_check',
+      sql`${table.paperlessIdLow} < ${table.paperlessIdHigh}`,
+    ),
+    check('duplicate_pair_decision_decision_check', sql`${table.decision} = 'not_duplicate'`),
+    check(
+      'duplicate_pair_decision_source_check',
+      sql`${table.source} IN ('group_false_positive','member_removed','manual','import')`,
+    ),
   ],
 );
