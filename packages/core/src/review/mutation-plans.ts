@@ -591,6 +591,20 @@ export function markDuplicateGroupConflict(
     .run(reason, now.toISOString(), planId, groupId);
 }
 
+/** Record a pre-deletion failure without changing any document deletion checkpoint. */
+export function markDuplicateGroupFailed(
+  sqlite: Database.Database,
+  planId: string,
+  groupId: string,
+): void {
+  sqlite
+    .prepare(
+      `UPDATE reviewed_mutation_group_checkpoint SET status = 'failed'
+    WHERE plan_id = ? AND group_id = ? AND status = 'in_progress'`,
+    )
+    .run(planId, groupId);
+}
+
 export function markDuplicateDocumentDeleteStarted(
   sqlite: Database.Database,
   planId: string,

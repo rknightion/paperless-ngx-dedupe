@@ -1175,9 +1175,17 @@ Local document metadata supplies the preview, while read-only Paperless tag and 
 lookups identify inbox tags and field names. An upstream lookup failure returns `502 BAD_GATEWAY`
 without storing a plan. The enabled option and additions are frozen with the reviewed plan.
 
-Copying metadata can currently be previewed, but merge-enabled deletion is rejected before any
-document is deleted. Omit the option or set it to false to retain the existing deletion behavior,
-response shape and absence of metadata lookups.
+Merge-enabled execution reads the keeper, remaining members and inbox-tag definitions from
+Paperless before deleting a group. It fills missing tags, correspondent and document type on the
+keeper first. A metadata read or update failure marks that group failed and skips all its deletes;
+other groups can still finish. A resumed job preserves completed deletion checkpoints and does not
+repeat an already satisfied metadata update.
+
+Custom-field additions are previewed but are not yet copied. If the live merge needs any, execution
+fails that group before updating or deleting documents. The UI remains preview-only until
+custom-field execution is available. Omit the option or set it to false to retain the existing
+deletion behavior, response shape and absence of metadata lookups. Copying metadata is not an undo:
+restoring a deleted document does not revert additions to the keeper.
 
 ### POST /api/v1/batch/purge-deleted
 

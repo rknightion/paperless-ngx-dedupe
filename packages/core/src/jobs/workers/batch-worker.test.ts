@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createServer } from 'node:http';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
@@ -19,6 +20,8 @@ import {
   type MutationPlanError,
 } from '../../review/mutation-plans.js';
 import { PaperlessApiError, PaperlessConnectionError } from '../../paperless/errors.js';
+import { paperlessDocumentSchema, paperlessTagSchema } from '../../paperless/schemas.js';
+import { PaperlessClient } from '../../paperless/client.js';
 import type { AppDatabase } from '../../db/client.js';
 import type { WorkerContext } from '../worker-entry.js';
 
@@ -112,7 +115,7 @@ describe('reviewed duplicate deletion worker', () => {
       .run();
   });
 
-  it('refuses a merge-enabled preview before execution support is available without deleting documents', async () => {
+  it('leaves every group document undeleted and marks the group failed when the keeper update fails', async () => {
     const now = new Date('2026-07-24T11:00:00.000Z');
     const preview = createDuplicateDeletionPlan(handle.db, ['stable-group'], {
       now,
@@ -120,7 +123,25 @@ describe('reviewed duplicate deletion worker', () => {
       inboxTagNames: [],
       customFieldNames: new Map(),
     });
-    const client = { deleteDocument: vi.fn().mockResolvedValue(undefined) };
+    const client = {
+      getDocument: vi.fn(async (id: number) =>
+        paperlessDocumentSchema.parse({
+          id,
+          title: 'Synthetic document',
+          created: now.toISOString(),
+          modified: now.toISOString(),
+          added: now.toISOString(),
+          tags: id === 201 ? [1] : [1, 2, 3],
+          correspondent: id === 201 ? null : 4,
+          document_type: id === 201 ? null : 5,
+        }),
+      ),
+      getTags: vi.fn(async () => [
+        paperlessTagSchema.parse({ id: 3, name: 'Inbox', is_inbox_tag: true }),
+      ]),
+      updateDocument: vi.fn().mockRejectedValue(new PaperlessApiError('Synthetic refusal', 503)),
+      deleteDocument: vi.fn().mockResolvedValue(undefined),
+    };
     await expect(
       executeReviewedDuplicateDeletion(
         {
@@ -133,7 +154,297 @@ describe('reviewed duplicate deletion worker', () => {
         client,
         now,
       ),
-    ).rejects.toThrow('Metadata copying is not available yet');
+    ).rejects.toThrow('Paperless duplicate deletion failed');
+    expect(client.updateDocument).toHaveBeenCalledWith(201, {
+      tags: [1, 2],
+      correspondent: 4,
+      documentType: 5,
+    });
+    expect(client.deleteDocument).not.toHaveBeenCalled();
+    expect(
+      handle.sqlite
+        .prepare('SELECT status FROM reviewed_mutation_group_checkpoint WHERE group_id = ?')
+        .get('stable-group'),
+    ).toEqual({ status: 'failed' });
+    expect(
+      handle.db
+        .select()
+        .from(document)
+        .all()
+        .map((row) => row.paperlessId)
+        .sort((a, b) => a - b),
+    ).toEqual([101, 102, 201, 202]);
+  });
+
+  it('copies live missing metadata once and resumes after an acknowledged remote delete without losing the keeper', async () => {
+    const now = new Date('2026-07-24T11:00:00.000Z');
+    const preview = createDuplicateDeletionPlan(handle.db, ['stable-group'], {
+      now,
+      mergeMetadata: true,
+      inboxTagNames: [],
+      customFieldNames: new Map(),
+    });
+    const remote = new Map<number, Record<string, unknown>>(
+      [201, 202].map((id) => [
+        id,
+        {
+          id,
+          title: 'Synthetic document',
+          created: now.toISOString(),
+          modified: now.toISOString(),
+          added: now.toISOString(),
+          tags: id === 201 ? [1] : [1, 2, 3],
+          correspondent: id === 201 ? null : 4,
+          document_type: id === 201 ? 9 : 5,
+        },
+      ]),
+    );
+    const writes: Array<{ method: string; id: number; body?: unknown }> = [];
+    const server = createServer(async (request, response) => {
+      const path = new URL(request.url!, 'http://localhost').pathname;
+      response.setHeader('Content-Type', 'application/json');
+      if (path === '/api/tags/') {
+        response.end(
+          JSON.stringify({
+            count: 1,
+            next: null,
+            previous: null,
+            results: [{ id: 3, name: 'Inbox', is_inbox_tag: true }],
+          }),
+        );
+        return;
+      }
+      const id = Number(path.split('/')[3]);
+      const current = remote.get(id);
+      if (!current) {
+        response.writeHead(404).end('{}');
+        return;
+      }
+      if (request.method === 'PATCH') {
+        let body = '';
+        for await (const chunk of request) body += chunk;
+        const update = JSON.parse(body);
+        writes.push({ method: 'PATCH', id, body: update });
+        Object.assign(current, update);
+      } else if (request.method === 'DELETE') {
+        writes.push({ method: 'DELETE', id });
+        remote.delete(id);
+        response.writeHead(204).end();
+        return;
+      }
+      response.end(JSON.stringify(current));
+    });
+    try {
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Missing port');
+      const client = new PaperlessClient({
+        url: `http://127.0.0.1:${address.port}`,
+        token: 'synthetic-token',
+        maxRetries: 0,
+      });
+      const ctx = {
+        db: handle.db,
+        sqlite: handle.sqlite,
+        jobId: 'job-1',
+        taskData: { planToken: preview.token },
+      };
+      await expect(
+        executeReviewedDuplicateDeletion(ctx, vi.fn(), client, now, {
+          afterRemoteDelete: () => {
+            throw new Error('Synthetic crash');
+          },
+        }),
+      ).rejects.toThrow('Synthetic crash');
+      expect(writes).toEqual([
+        { method: 'PATCH', id: 201, body: { tags: [1, 2], correspondent: 4 } },
+        { method: 'DELETE', id: 202 },
+      ]);
+      await expect(
+        executeReviewedDuplicateDeletion(ctx, vi.fn(), client, now),
+      ).resolves.toMatchObject({
+        deletedDocuments: 1,
+        alreadyMissingDocuments: 1,
+        deletedGroups: 1,
+        errors: [],
+      });
+      expect(writes).toHaveLength(2);
+      expect(remote.get(201)).toMatchObject({ tags: [1, 2], correspondent: 4, document_type: 9 });
+      expect(remote.has(202)).toBe(false);
+      expect(
+        handle.db
+          .select()
+          .from(document)
+          .all()
+          .map((row) => row.paperlessId)
+          .sort((a, b) => a - b),
+      ).toEqual([101, 102, 201]);
+    } finally {
+      server.closeAllConnections();
+      if (server.listening) await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it.each([
+    [201, 0],
+    [202, 0],
+    [202, 404],
+  ])(
+    'isolates a metadata fetch failure for document %s with status %s while other groups finish',
+    async (failedId, statusCode) => {
+      const now = new Date('2026-07-24T11:00:00.000Z');
+      const preview = createDuplicateDeletionPlan(handle.db, ['stable-group', 'changed-group'], {
+        now,
+        mergeMetadata: true,
+        inboxTagNames: [],
+        customFieldNames: new Map(),
+      });
+      const client = {
+        getTags: vi.fn(async () => []),
+        getDocument: vi.fn(async (id: number) => {
+          if (id === failedId)
+            throw statusCode
+              ? new PaperlessApiError('Synthetic missing document', statusCode)
+              : new PaperlessConnectionError('Synthetic unavailable document');
+          return paperlessDocumentSchema.parse({
+            id,
+            title: 'Synthetic document',
+            created: now.toISOString(),
+            modified: now.toISOString(),
+            added: now.toISOString(),
+          });
+        }),
+        updateDocument: vi.fn().mockResolvedValue(undefined),
+        deleteDocument: vi.fn().mockResolvedValue(undefined),
+      };
+      await expect(
+        executeReviewedDuplicateDeletion(
+          {
+            db: handle.db,
+            sqlite: handle.sqlite,
+            jobId: 'job-1',
+            taskData: { planToken: preview.token },
+          },
+          vi.fn(),
+          client,
+          now,
+        ),
+      ).rejects.toMatchObject({ retryable: statusCode !== 404 });
+      expect(client.updateDocument).not.toHaveBeenCalled();
+      expect(client.deleteDocument.mock.calls).toEqual([[102]]);
+      expect(
+        handle.sqlite
+          .prepare(
+            'SELECT group_id, status FROM reviewed_mutation_group_checkpoint ORDER BY group_id',
+          )
+          .all(),
+      ).toEqual([
+        { group_id: 'changed-group', status: 'completed' },
+        { group_id: 'stable-group', status: 'failed' },
+      ]);
+      expect(
+        handle.db
+          .select()
+          .from(document)
+          .all()
+          .map((row) => row.paperlessId)
+          .sort((a, b) => a - b),
+      ).toEqual([101, 201, 202]);
+    },
+  );
+
+  it('does not patch the keeper when cancellation arrives during metadata reads', async () => {
+    const now = new Date('2026-07-24T11:00:00.000Z');
+    handle.db
+      .insert(job)
+      .values({
+        id: 'job-1',
+        type: 'duplicate_delete',
+        status: 'running',
+        createdAt: now.toISOString(),
+      })
+      .run();
+    const preview = createDuplicateDeletionPlan(handle.db, ['stable-group'], {
+      now,
+      mergeMetadata: true,
+      inboxTagNames: [],
+      customFieldNames: new Map(),
+    });
+    const client = {
+      getTags: vi.fn(async () => []),
+      getDocument: vi.fn(async (id: number) => {
+        if (id === 202) cancelJob(handle.db, 'job-1');
+        return paperlessDocumentSchema.parse({
+          id,
+          title: 'Synthetic document',
+          created: now.toISOString(),
+          modified: now.toISOString(),
+          added: now.toISOString(),
+          tags: id === 201 ? [] : [2],
+        });
+      }),
+      updateDocument: vi.fn().mockResolvedValue(undefined),
+      deleteDocument: vi.fn().mockResolvedValue(undefined),
+    };
+    await expect(
+      executeReviewedDuplicateDeletion(
+        {
+          db: handle.db,
+          sqlite: handle.sqlite,
+          jobId: 'job-1',
+          taskData: { planToken: preview.token },
+        },
+        vi.fn(),
+        client,
+        now,
+      ),
+    ).rejects.toThrow('Job was cancelled');
+    expect(client.updateDocument).not.toHaveBeenCalled();
+    expect(client.deleteDocument).not.toHaveBeenCalled();
+    expect(
+      handle.sqlite
+        .prepare('SELECT status FROM reviewed_mutation_group_checkpoint WHERE group_id = ?')
+        .get('stable-group'),
+    ).toEqual({ status: 'in_progress' });
+  });
+
+  it('refuses missing custom-field copying before its execution support is available without deleting documents', async () => {
+    const now = new Date('2026-07-24T11:00:00.000Z');
+    const preview = createDuplicateDeletionPlan(handle.db, ['stable-group'], {
+      now,
+      mergeMetadata: true,
+      inboxTagNames: [],
+      customFieldNames: new Map(),
+    });
+    const client = {
+      getTags: vi.fn(async () => []),
+      getDocument: vi.fn(async (id: number) =>
+        paperlessDocumentSchema.parse({
+          id,
+          title: 'Synthetic document',
+          created: now.toISOString(),
+          modified: now.toISOString(),
+          added: now.toISOString(),
+          custom_fields: id === 201 ? [] : [{ field: 7, value: 'Synthetic reference' }],
+        }),
+      ),
+      updateDocument: vi.fn().mockResolvedValue(undefined),
+      deleteDocument: vi.fn().mockResolvedValue(undefined),
+    };
+    await expect(
+      executeReviewedDuplicateDeletion(
+        {
+          db: handle.db,
+          sqlite: handle.sqlite,
+          jobId: 'job-1',
+          taskData: { planToken: preview.token },
+        },
+        vi.fn(),
+        client,
+        now,
+      ),
+    ).rejects.toThrow('Paperless duplicate deletion failed');
+    expect(client.updateDocument).not.toHaveBeenCalled();
     expect(client.deleteDocument).not.toHaveBeenCalled();
     expect(
       handle.db
