@@ -24,6 +24,9 @@ export const duplicateGroup = sqliteTable(
     discriminativeScore: real('discriminative_score'),
     algorithmVersion: text('algorithm_version').notNull(),
     status: text('status').notNull().default('pending'),
+    primarySource: text('primary_source', { enum: ['auto', 'manual'] })
+      .notNull()
+      .default('auto'),
     archivedMemberCount: integer('archived_member_count'),
     archivedPrimaryTitle: text('archived_primary_title'),
     deletedAt: text('deleted_at'),

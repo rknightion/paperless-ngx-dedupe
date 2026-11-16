@@ -1300,3 +1300,45 @@ it('adds pair decisions to the released database without losing documents', asyn
     sqlite.close();
   }
 });
+
+it('adds auto primary provenance to existing groups and preserves manual choices on repeat migration', async () => {
+  const { sqlite } = createDatabaseWithHandle(':memory:');
+  try {
+    sqlite.exec(v015Fixture);
+    sqlite
+      .prepare(
+        "INSERT INTO duplicate_group (id,confidence_score,algorithm_version,status,created_at,updated_at) VALUES ('legacy-primary',1,'test','pending','2024-01-01','2024-01-01')",
+      )
+      .run();
+    expect(
+      (sqlite.prepare('PRAGMA table_info(duplicate_group)').all() as { name: string }[]).some(
+        (column) => column.name === 'primary_source',
+      ),
+    ).toBe(false);
+    await migrateDatabase(sqlite);
+    expect(
+      sqlite
+        .prepare("SELECT status,primary_source FROM duplicate_group WHERE id='legacy-primary'")
+        .get(),
+    ).toEqual({ status: 'pending', primary_source: 'auto' });
+    const column = (
+      sqlite.prepare('PRAGMA table_info(duplicate_group)').all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string;
+      }[]
+    ).find((column) => column.name === 'primary_source');
+    expect(column).toMatchObject({ notnull: 1, dflt_value: "'auto'" });
+    sqlite
+      .prepare("UPDATE duplicate_group SET primary_source='manual' WHERE id='legacy-primary'")
+      .run();
+    const before = tableSignature(sqlite, 'duplicate_group');
+    await migrateDatabase(sqlite);
+    expect(tableSignature(sqlite, 'duplicate_group')).toEqual(before);
+    expect(
+      sqlite.prepare("SELECT primary_source FROM duplicate_group WHERE id='legacy-primary'").get(),
+    ).toEqual({ primary_source: 'manual' });
+  } finally {
+    sqlite.close();
+  }
+});
