@@ -19,6 +19,9 @@ import {
 import { withSpan } from '../telemetry/spans.js';
 import { withPyroscopeLabels } from '../telemetry/pyroscope.js';
 import type { AppDatabase } from '../db/client.js';
+import { parseConfig } from '../config.js';
+import { getNotificationSettings } from '../notifications/settings.js';
+import { sendNotification } from '../notifications/send.js';
 
 export type ProgressCallback = (
   progress: number,
@@ -218,6 +221,27 @@ export async function runWorkerTaskWithData(
     const errorMessage = error instanceof Error ? error.message : String(error);
     failJob(db, jobId, errorMessage, executionToken);
     logger.error({ jobId, error: errorMessage }, 'Worker task failed');
+    if (process.env.NOTIFY_URL) {
+      try {
+        const failed = getJob(db, jobId);
+        const preferences = getNotificationSettings(db);
+        if (
+          failed?.status === 'failed' &&
+          preferences.onJobFailure &&
+          (!preferences.scheduledRunsOnly ||
+            failed.triggerKind === 'schedule' ||
+            failed.triggerKind === 'dependency')
+        ) {
+          await sendNotification(parseConfig(process.env), {
+            event: 'job.failed',
+            occurredAt: failed.completedAt ?? new Date().toISOString(),
+            data: { jobId, jobType: failed.type },
+          });
+        }
+      } catch {
+        logger.warn('Post-failure notification failed');
+      }
+    }
   } finally {
     releaseCancelledJobLease(db, jobId);
     await shutdownWorkerTelemetry();
