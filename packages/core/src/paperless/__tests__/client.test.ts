@@ -93,6 +93,30 @@ afterEach(() => {
 });
 
 describe('PaperlessClient', () => {
+  it('reads file metadata without document content and preserves unknown archive sizes', async () => {
+    const client = new PaperlessClient({
+      url: 'https://paperless.example.test',
+      token: 'synthetic-token',
+    });
+    mockFetch.mockResolvedValueOnce(
+      mockResponse({
+        original_checksum: 'synthetic-checksum',
+        original_size: 1234,
+        archive_size: null,
+        original_mime_type: 'application/pdf',
+        has_archive_version: true,
+      }),
+    );
+    await expect(client.getDocumentMetadata(7, 'files')).resolves.toEqual({
+      originalChecksum: 'synthetic-checksum',
+      originalSize: 1234,
+      archiveSize: null,
+      originalMimeType: 'application/pdf',
+      hasArchive: true,
+    });
+    expect(new URL(mockFetch.mock.calls[0][0]).pathname).toBe('/api/documents/7/metadata/');
+  });
+
   it('requests list file facts and parses only fields returned by Paperless', async () => {
     const client = new PaperlessClient({
       url: 'https://paperless.example.test',

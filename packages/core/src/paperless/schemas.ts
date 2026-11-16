@@ -329,3 +329,19 @@ export function paginatedResponseSchema<T extends ZodType>(itemSchema: T) {
     results: z.array(itemSchema),
   });
 }
+
+export const paperlessFileMetadataSchema = z
+  .object({
+    original_checksum: z.string().nullable().default(null),
+    original_size: z.number().int().nonnegative().nullable().default(null),
+    archive_size: z.number().int().nonnegative().nullable().default(null),
+    original_mime_type: z.string().nullable().default(null),
+    has_archive_version: z.boolean(),
+  })
+  .transform((raw) => ({
+    originalChecksum: raw.original_checksum,
+    originalSize: raw.original_size,
+    archiveSize: raw.archive_size,
+    originalMimeType: raw.original_mime_type,
+    hasArchive: raw.has_archive_version,
+  }));

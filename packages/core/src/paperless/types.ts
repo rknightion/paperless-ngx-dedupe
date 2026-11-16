@@ -148,3 +148,12 @@ export interface DocumentUpdate {
   tags?: number[];
   customFields?: PaperlessCustomFieldInstance[];
 }
+
+/** File facts reported by Paperless metadata; unavailable sizes remain unknown. */
+export interface PaperlessFileMetadata {
+  originalChecksum: string | null;
+  originalSize: number | null;
+  archiveSize: number | null;
+  originalMimeType: string | null;
+  hasArchive: boolean;
+}

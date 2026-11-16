@@ -1,3 +1,4 @@
+import { type PaperlessFileMetadata } from '../paperless/types.js';
 import { and, count, desc, asc, eq, gte, lt, lte, or, sql, inArray, ne } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
@@ -21,6 +22,7 @@ import type {
   DuplicateGroupSummary,
   DuplicateGroupDetail,
   DuplicateGroupMember,
+  DuplicateGroupFiles,
   DuplicateStats,
   ConfidenceBucket,
   PaginatedResult,
@@ -464,6 +466,52 @@ export function getDuplicateGroup(db: AppDatabase, id: string): DuplicateGroupDe
 
 export function getDuplicateGroupLight(db: AppDatabase, id: string): DuplicateGroupDetail | null {
   return fetchGroupWithMembers(db, id, { includeFullText: false });
+}
+
+/** Fetch file facts for this group's members, without downloading files or storing metadata. */
+export async function getDuplicateGroupFiles(
+  db: AppDatabase,
+  id: string,
+  client: {
+    getDocumentMetadata(id: number, kind: 'files'): Promise<PaperlessFileMetadata>;
+  },
+): Promise<DuplicateGroupFiles | null> {
+  const group = getDuplicateGroupLight(db, id);
+  if (!group) return null;
+  const members: DuplicateGroupFiles['members'] = new Array(group.members.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(4, group.members.length) }, async () => {
+      while (next < group.members.length) {
+        const index = next++;
+        const member = group.members[index];
+        members[index] = {
+          documentId: member.documentId,
+          paperlessId: member.paperlessId,
+          ...(await client.getDocumentMetadata(member.paperlessId, 'files')),
+        };
+      }
+    }),
+  );
+  const checksum = members[0]?.originalChecksum;
+  let reclaimableBytes: number | null = 0;
+  for (let index = 0; index < members.length; index++) {
+    if (group.members[index].isPrimary) continue;
+    const file = members[index];
+    if (file.originalSize === null || (file.hasArchive && file.archiveSize === null)) {
+      reclaimableBytes = null;
+      break;
+    }
+    reclaimableBytes += file.originalSize + (file.hasArchive ? file.archiveSize! : 0);
+  }
+  return {
+    members,
+    identicalOriginals:
+      members.length > 1 &&
+      Boolean(checksum) &&
+      members.every((member) => member.originalChecksum === checksum),
+    reclaimableBytes,
+  };
 }
 
 // ── Stats query ─────────────────────────────────────────────────────────

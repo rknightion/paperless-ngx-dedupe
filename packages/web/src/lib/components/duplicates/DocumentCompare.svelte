@@ -1,14 +1,24 @@
 <script lang="ts">
-  import type { DuplicateGroupMember } from '@paperless-dedupe/core';
+  import type { DuplicateGroupMember, PaperlessFileMetadata } from '@paperless-dedupe/core';
   import { ExternalLink } from 'lucide-svelte';
 
   interface Props {
     primary: DuplicateGroupMember;
     secondary: DuplicateGroupMember;
     paperlessUrl: string;
+    primaryFile?: PaperlessFileMetadata;
+    secondaryFile?: PaperlessFileMetadata;
   }
 
-  let { primary, secondary, paperlessUrl }: Props = $props();
+  let { primary, secondary, paperlessUrl, primaryFile, secondaryFile }: Props = $props();
+
+  function fileSize(value: number | null | undefined): string {
+    return value == null ? 'Unknown' : `${value.toLocaleString()} bytes`;
+  }
+
+  function archiveSize(file: PaperlessFileMetadata | undefined): string {
+    return file?.hasArchive === false ? 'No archive' : fileSize(file?.archiveSize);
+  }
 
   function formatDate(date: string | null): string {
     if (!date) return '-';
@@ -76,6 +86,18 @@
       primaryValue: primary.mimeType ?? '-',
       secondaryValue: secondary.mimeType ?? '-',
       isDifferent: differs(primary.mimeType, secondary.mimeType),
+    },
+    {
+      label: 'Original Size',
+      primaryValue: fileSize(primaryFile?.originalSize),
+      secondaryValue: fileSize(secondaryFile?.originalSize),
+      isDifferent: differs(primaryFile?.originalSize, secondaryFile?.originalSize),
+    },
+    {
+      label: 'Archive Size',
+      primaryValue: archiveSize(primaryFile),
+      secondaryValue: archiveSize(secondaryFile),
+      isDifferent: archiveSize(primaryFile) !== archiveSize(secondaryFile),
     },
     {
       label: 'Word Count',

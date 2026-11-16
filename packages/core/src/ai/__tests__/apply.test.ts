@@ -502,7 +502,7 @@ describe('reviewed AI apply plans', () => {
       finished.push(id);
       return { ...template, id, title: `Live ${id}` };
     });
-    client.getDocumentMetadata = fetch;
+    vi.spyOn(client, 'getDocumentMetadata').mockImplementation(fetch);
     const preview = await createAiApplyPlan(
       db,
       client,

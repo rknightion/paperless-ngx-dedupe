@@ -5,6 +5,7 @@ import { paperlessRequestsTotal } from '../telemetry/metrics.js';
 import type {
   PaperlessConfig,
   PaperlessDocument,
+  PaperlessFileMetadata,
   PaperlessTag,
   PaperlessCorrespondent,
   PaperlessDocumentType,
@@ -18,6 +19,7 @@ import type {
 } from './types.js';
 import {
   paperlessDocumentSchema,
+  paperlessFileMetadataSchema,
   paperlessTagSchema,
   paperlessCorrespondentSchema,
   paperlessDocumentTypeSchema,
@@ -312,7 +314,17 @@ export class PaperlessClient {
     return paperlessDocumentSchema.parse(json);
   }
 
-  async getDocumentMetadata(id: number): Promise<PaperlessDocument> {
+  async getDocumentMetadata(id: number, kind: 'files'): Promise<PaperlessFileMetadata>;
+  async getDocumentMetadata(id: number): Promise<PaperlessDocument>;
+  /** Keep the metadata-only document read by default; request file facts explicitly. */
+  async getDocumentMetadata(
+    id: number,
+    kind?: 'files',
+  ): Promise<PaperlessDocument | PaperlessFileMetadata> {
+    if (kind === 'files') {
+      const response = await this.fetchWithRetry(this.buildUrl(`/api/documents/${id}/metadata/`));
+      return paperlessFileMetadataSchema.parse(await response.json());
+    }
     const fields =
       'id,title,tags,correspondent,document_type,created,modified,added,original_file_name,archived_file_name,archive_serial_number,custom_fields';
     const response = await this.fetchWithRetry(

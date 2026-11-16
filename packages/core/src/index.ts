@@ -200,6 +200,7 @@ export type { Logger } from './logger.js';
 export type {
   PaperlessConfig,
   PaperlessDocument,
+  PaperlessFileMetadata,
   PaperlessTag,
   PaperlessCorrespondent,
   PaperlessDocumentType,
@@ -341,6 +342,7 @@ export type {
   DuplicateGroupSummary,
   DuplicateGroupDetail,
   DuplicateGroupMember,
+  DuplicateGroupFiles,
   DuplicateStats,
   ConfidenceBucket,
   DashboardData,
@@ -371,6 +373,7 @@ export {
   getDuplicateGroups,
   getDuplicateGroup,
   getDuplicateGroupLight,
+  getDuplicateGroupFiles,
   getDuplicateStats,
   getSimilarityGraph,
   setPrimaryDocument,
