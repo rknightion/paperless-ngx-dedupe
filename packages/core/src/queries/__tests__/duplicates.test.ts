@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
@@ -23,6 +23,7 @@ import {
 import { document, documentContent } from '../../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../../schema/sqlite/duplicates.js';
 import * as core from '../../index.js';
+import { loadSuppressedPairSet, recordPairDecisions } from '../../dedup/pair-decisions.js';
 import * as duplicateQueries from '../duplicates.js';
 import * as queryTypes from '../types.js';
 
@@ -1591,5 +1592,112 @@ describe('removeDocumentFromAllGroups', () => {
       .where(eq(duplicateMember.groupId, 'grp-2'))
       .all();
     expect(grp2Members).toHaveLength(2);
+  });
+});
+
+describe('remembering review decisions', () => {
+  let handle: ReturnType<typeof createDatabaseWithHandle>;
+  beforeEach(async () => {
+    handle = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(handle.sqlite);
+    insertTestData(handle.db);
+  });
+  afterEach(() => handle.sqlite.close());
+  it('marking a group false_positive records its member pairs', () => {
+    expect(setGroupStatus(handle.db, 'grp-1', 'false_positive')).toBe(true);
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['1|2']));
+    expect(handle.sqlite.prepare('SELECT source FROM duplicate_pair_decision').all()).toEqual([
+      { source: 'group_false_positive' },
+    ]);
+    expect(setGroupStatus(handle.db, 'grp-1', 'false_positive')).toBe(true);
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['1|2']));
+  });
+  it('batch decisions record and restore pairs while Keep All records nothing', () => {
+    setGroupStatus(handle.db, 'grp-1', 'ignored');
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set());
+    expect(batchSetStatus(handle.db, ['grp-1', 'grp-2'], 'false_positive')).toEqual({ updated: 2 });
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['1|2', '3|4']));
+    batchSetStatus(handle.db, ['grp-1'], 'pending');
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['3|4']));
+  });
+  it('restoring clears only group-sourced pairs fully inside its current members', () => {
+    handle.db
+      .insert(duplicateMember)
+      .values({ id: 'mem-extra', groupId: 'grp-1', documentId: 'doc-3', isPrimary: false })
+      .run();
+    recordPairDecisions(handle.db, [1, 3], 'manual');
+    recordPairDecisions(handle.db, [3, 4], 'group_false_positive');
+    setGroupStatus(handle.db, 'grp-1', 'false_positive');
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['1|2', '1|3', '2|3', '3|4']));
+    setGroupStatus(handle.db, 'grp-1', 'pending');
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['1|3', '3|4']));
+  });
+  it('removal records only removed-versus-remaining pairs and not automatic resolution', () => {
+    handle.db
+      .insert(duplicateMember)
+      .values({ id: 'mem-extra', groupId: 'grp-1', documentId: 'doc-3', isPrimary: false })
+      .run();
+    removeMemberFromGroup(handle.db, 'grp-1', 'mem-2');
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['1|2', '2|3']));
+    expect(handle.sqlite.prepare('SELECT source FROM duplicate_pair_decision').all()).toEqual([
+      { source: 'member_removed' },
+      { source: 'member_removed' },
+    ]);
+    removeMemberFromGroup(handle.db, 'grp-2', 'mem-4');
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set(['1|2', '2|3']));
+    expect(getDuplicateGroup(handle.db, 'grp-2')?.status).toBe('false_positive');
+  });
+  it('rolls back status, member and batch writes if recording fails', () => {
+    handle.sqlite.exec(
+      "CREATE TRIGGER reject_pair BEFORE INSERT ON duplicate_pair_decision BEGIN SELECT RAISE(ABORT,'synthetic pair failure'); END",
+    );
+    expect(() => setGroupStatus(handle.db, 'grp-1', 'false_positive')).toThrow(
+      'synthetic pair failure',
+    );
+    expect(getDuplicateGroup(handle.db, 'grp-1')?.status).toBe('pending');
+    expect(() => batchSetStatus(handle.db, ['grp-1', 'grp-2'], 'false_positive')).toThrow(
+      'synthetic pair failure',
+    );
+    expect(getDuplicateGroup(handle.db, 'grp-2')?.status).toBe('pending');
+    handle.db
+      .insert(duplicateMember)
+      .values({ id: 'mem-extra', groupId: 'grp-1', documentId: 'doc-3', isPrimary: false })
+      .run();
+    expect(() => removeMemberFromGroup(handle.db, 'grp-1', 'mem-2')).toThrow(
+      'synthetic pair failure',
+    );
+    expect(
+      getDuplicateGroup(handle.db, 'grp-1')
+        ?.members.map((member) => member.memberId)
+        .sort(),
+    ).toEqual(['mem-1', 'mem-2', 'mem-extra']);
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set());
+  });
+  it('skips pair storage for groups over 200 members without blocking review', () => {
+    for (let id = 5; id <= 203; id++) {
+      handle.db
+        .insert(document)
+        .values({
+          id: `large-doc-${id}`,
+          paperlessId: id,
+          title: 'Synthetic large group',
+          syncedAt: '2026-01-01',
+        })
+        .run();
+      handle.db
+        .insert(duplicateMember)
+        .values({
+          id: `large-member-${id}`,
+          groupId: 'grp-1',
+          documentId: `large-doc-${id}`,
+          isPrimary: false,
+        })
+        .run();
+    }
+    expect(getDuplicateGroup(handle.db, 'grp-1')?.members).toHaveLength(201);
+    expect(setGroupStatus(handle.db, 'grp-1', 'false_positive')).toBe(true);
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set());
+    expect(removeMemberFromGroup(handle.db, 'grp-1', 'mem-2')).toBe(true);
+    expect(loadSuppressedPairSet(handle.db)).toEqual(new Set());
   });
 });
