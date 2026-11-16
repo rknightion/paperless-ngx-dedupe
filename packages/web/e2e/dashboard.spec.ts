@@ -29,12 +29,26 @@ test.describe('Dashboard', () => {
     await expect(checklist).toContainText('Run duplicate analysis');
   });
 
+  test('shows unknown storage until pending non-primary sizes are known', async ({ page }) => {
+    await page.goto('/');
+    const storage = page.getByRole('region', { name: 'Reclaimable storage' });
+    await expect(storage).toContainText('Unknown');
+    const db = new Database(DB_PATH);
+    try {
+      db.prepare('UPDATE document SET original_size = 100, archive_size = 20').run();
+    } finally {
+      db.close();
+    }
+    await page.reload();
+    await expect(storage).toContainText('120 bytes');
+  });
+
   test('stat cards render with data', async ({ page }) => {
     await page.goto('/');
 
     // Stat cards should display
     await expect(page.getByText('Total Documents')).toBeVisible();
-    await expect(page.getByText('Pending Groups')).toBeVisible();
+    await expect(page.getByText('Pending Groups', { exact: true })).toBeVisible();
     await expect(page.getByText('Pending Analysis')).toBeVisible();
     await expect(page.getByText('10 documents changed')).toBeVisible();
     await expect(page.getByText('3 groups found')).toBeVisible();

@@ -395,6 +395,8 @@ export interface DuplicateGroupMember {
   archiveSerialNumber: number | null;
   pageCount: number | null;
   mimeType: string | null;
+  originalSize: number | null;
+  archiveSize: number | null;
   correspondent: string | null;
   documentType: string | null;
   tags: string[];
@@ -430,6 +432,8 @@ export interface ConfidenceBucket {
 }
 
 export interface DuplicateStats {
+  /** Pending non-primary bytes; null when any required size is unknown. */
+  reclaimableBytes: number | null;
   totalGroups: number;
   pendingGroups: number;
   falsePositiveGroups: number;
