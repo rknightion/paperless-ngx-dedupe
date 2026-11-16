@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { coerceConfigBatch, getConfigMetadata } from '../config/registry.js';
+
 import { parseConfig } from '../config.js';
 
 const baseEnv = {
@@ -26,5 +28,42 @@ describe('parseConfig', () => {
     });
 
     expect(config).not.toHaveProperty('RAG_ENABLED');
+  });
+});
+
+it('requires both access credentials in basic mode without including secret values in errors', () => {
+  for (const credentials of [
+    {},
+    { APP_AUTH_USERNAME: 'operator' },
+    { APP_AUTH_PASSWORD: 'synthetic-private-password' },
+  ]) {
+    expect(() => parseConfig({ ...baseEnv, APP_AUTH_MODE: 'basic', ...credentials })).toThrow(
+      'APP_AUTH_MODE=basic requires APP_AUTH_USERNAME and APP_AUTH_PASSWORD',
+    );
+  }
+  expect(parseConfig(baseEnv).APP_AUTH_MODE).toBe('none');
+  expect(
+    parseConfig({
+      ...baseEnv,
+      APP_AUTH_MODE: 'basic',
+      APP_AUTH_USERNAME: 'operator',
+      APP_AUTH_PASSWORD: 'synthetic-private-password',
+    }).APP_AUTH_MODE,
+  ).toBe('basic');
+});
+
+it('keeps access credentials environment-owned and sensitive', () => {
+  for (const key of ['APP_AUTH_USERNAME', 'APP_AUTH_PASSWORD', 'APP_API_TOKEN']) {
+    expect(getConfigMetadata().find((entry) => entry.key === key)).toMatchObject({
+      source: 'environment',
+      sensitive: true,
+      readOnly: true,
+    });
+    expect(() => coerceConfigBatch({ [key]: 'synthetic-value' })).toThrow(/read-only/);
+  }
+  expect(getConfigMetadata().find((entry) => entry.key === 'APP_AUTH_MODE')).toMatchObject({
+    source: 'environment',
+    default: 'none',
+    readOnly: true,
   });
 });

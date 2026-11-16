@@ -14,8 +14,20 @@ what its Paperless-NGX credential needs, and where secrets live.
 
 ## Access model
 
-The application has no built-in authentication or user accounts. Anyone who can reach its port
-can use the UI and the API with the Paperless-NGX credential the server holds.
+Access protection is off by default (`APP_AUTH_MODE=none`). Anyone who can reach the port can
+use the UI and API with the Paperless-NGX credential the server holds. The server logs this
+trust model once at startup.
+
+Set `APP_AUTH_MODE=basic` with `APP_AUTH_USERNAME` and `APP_AUTH_PASSWORD` to require one shared
+credential. The browser handles the password prompt; there are no user accounts, sessions or roles.
+Use HTTPS for connections outside a trusted local link because Basic authentication does not
+encrypt credentials. These credentials are separate from the upstream Paperless credential.
+
+An optional `APP_API_TOKEN` is accepted as a bearer token on `/api/v1/*`, including metrics.
+Setting this token alone does not enable protection: mode `none` still permits requests without
+credentials, while an explicitly supplied incorrect bearer token is refused. GET health and
+readiness probes and OPTIONS requests are exempt. Access protection does not replace the origin
+and cross-site request checks. See [access configuration](configuration.md#access-protection).
 
 Run it on a trusted network or behind an authenticating reverse proxy or forward-auth layer.
 Do not expose it directly to the internet. To keep it local to the host, publish the port on
