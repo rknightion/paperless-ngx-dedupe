@@ -1,7 +1,13 @@
 <script lang="ts">
-  import type { AutomationSettings, ScheduleCadence, ScheduleTask } from '@paperless-dedupe/core';
+  import {
+    type AutomationSettings,
+    type ScheduleCadence,
+    type ScheduleTask,
+    type getNotificationSettings,
+    type AppConfig,
+  } from '@paperless-dedupe/core';
   import { CalendarClock, Play } from 'lucide-svelte';
-  import { untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
 
   interface Props {
     settings: AutomationSettings;
@@ -54,6 +60,84 @@
   let maxDocumentsPerRun = $state(initialSettings.ai.maxDocumentsPerRun);
   let busy = $state<ScheduleTask | null>(null);
   let statuses = $state<Partial<Record<ScheduleTask, { ok: boolean; message: string }>>>({});
+
+  let notifications = $state<{
+    configured: boolean;
+    format: AppConfig['NOTIFY_FORMAT'];
+    events: ReturnType<typeof getNotificationSettings>;
+  } | null>(null);
+  let notificationLoadError = $state(false);
+  let notificationBusy = $state<'save' | 'test' | null>(null);
+  let notificationStatus = $state<{ ok: boolean; message: string } | null>(null);
+
+  async function loadNotifications() {
+    notificationLoadError = false;
+    try {
+      const response = await fetch('/api/v1/notifications');
+      if (!response.ok) throw new Error('Unable to load notification preferences');
+      notifications = (await response.json()).data;
+    } catch {
+      notificationLoadError = true;
+    }
+  }
+
+  onMount(() => {
+    void loadNotifications();
+  });
+
+  async function saveNotifications() {
+    if (!notifications || notificationBusy) return;
+    notificationBusy = 'save';
+    notificationStatus = null;
+    try {
+      const response = await fetch('/api/v1/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: Object.fromEntries(
+            Object.entries(notifications.events).map(([key, value]) => [
+              `notifications.${key}`,
+              value,
+            ]),
+          ),
+        }),
+      });
+      if (!response.ok) throw new Error('Unable to save notification preferences');
+      notificationStatus = { ok: true, message: 'Preferences saved' };
+    } catch {
+      notificationStatus = {
+        ok: false,
+        message: 'Unable to save notification preferences. Try again.',
+      };
+    } finally {
+      notificationBusy = null;
+    }
+  }
+
+  async function sendTestNotification() {
+    if (!notifications?.configured || notificationBusy) return;
+    notificationBusy = 'test';
+    notificationStatus = null;
+    try {
+      const response = await fetch('/api/v1/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!response.ok) throw new Error('Unable to send test notification');
+      const { data } = await response.json();
+      notificationStatus = {
+        ok: data.delivered,
+        message: data.delivered
+          ? 'Test notification delivered'
+          : `Test notification not delivered${data.status === null ? '. No HTTP response received.' : ` (HTTP ${data.status}).`}`,
+      };
+    } catch {
+      notificationStatus = { ok: false, message: 'Unable to send test notification. Try again.' };
+    } finally {
+      notificationBusy = null;
+    }
+  }
 
   function cadence(task: ScheduleTask): ScheduleCadence {
     const value = schedules[task];
@@ -290,4 +374,86 @@
       </fieldset>
     {/each}
   </div>
+</section>
+
+<section class="panel mt-6" aria-label="Notifications">
+  <h2 class="text-ink text-lg font-semibold">Notifications</h2>
+  <p class="text-muted mt-1 text-sm">
+    Receive counts and a link after new duplicates or a failed job.
+  </p>
+  {#if notifications}
+    <p class="text-muted mt-3 text-sm">
+      {#if notifications.configured}
+        Destination configured. Format: {notifications.format}.
+      {:else}
+        Set NOTIFY_URL in the deployment environment and restart to enable delivery.
+      {/if}
+    </p>
+    <form
+      class="mt-4 space-y-4"
+      onsubmit={(event) => {
+        event.preventDefault();
+        void saveNotifications();
+      }}
+    >
+      <fieldset disabled={notificationBusy !== null} class="space-y-4">
+        <label class="text-ink flex items-center gap-2 text-sm">
+          <input type="checkbox" bind:checked={notifications.events.onNewDuplicates} />
+          Notify when new duplicates are found
+        </label>
+        <label class="text-ink block text-sm" for="notification-minimum">Minimum new groups</label>
+        <input
+          id="notification-minimum"
+          type="number"
+          min="1"
+          max="10000"
+          step="1"
+          required
+          bind:value={notifications.events.minNewGroups}
+          class="border-soft bg-surface text-ink w-full max-w-40 rounded-lg border px-3 py-2 text-sm"
+        />
+        <label class="text-ink flex items-center gap-2 text-sm">
+          <input type="checkbox" bind:checked={notifications.events.onJobFailure} />
+          Notify when a job fails
+        </label>
+        <label class="text-ink flex items-center gap-2 text-sm">
+          <input type="checkbox" bind:checked={notifications.events.scheduledRunsOnly} />
+          Scheduled runs only
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {notificationBusy === 'save' ? 'Saving…' : 'Save notification preferences'}
+          </button>
+          <button
+            type="button"
+            disabled={!notifications.configured}
+            onclick={sendTestNotification}
+            class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50"
+            >{notificationBusy === 'test' ? 'Sending…' : 'Send test'}</button
+          >
+        </div>
+      </fieldset>
+    </form>
+    {#if notificationStatus}
+      <p
+        role={notificationStatus.ok ? 'status' : 'alert'}
+        aria-live="polite"
+        class="mt-3 text-sm {notificationStatus.ok ? 'text-success' : 'text-ember'}"
+      >
+        {notificationStatus.message}
+      </p>
+    {/if}
+  {:else if notificationLoadError}
+    <p role="alert" class="text-ember mt-3 text-sm">Unable to load notification preferences.</p>
+    <button
+      type="button"
+      onclick={loadNotifications}
+      class="border-soft text-ink mt-2 rounded-lg border px-3 py-2 text-sm">Retry</button
+    >
+  {:else}
+    <p role="status" class="text-muted mt-3 text-sm">Loading notification preferences…</p>
+  {/if}
 </section>

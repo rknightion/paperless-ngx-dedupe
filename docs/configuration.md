@@ -77,6 +77,40 @@ The Node adapter limits request bodies independently of API validation. Large ba
 
 The API key is required when `AI_ENABLED=true`. Runtime settings (model, prompt, etc.) are configured in the Settings page or via API. See [AI Processing](ai-processing.md) for full details.
 
+### Notifications (Optional)
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `NOTIFY_URL` | To send notifications | - | Sensitive outbound destination URL; environment-owned, never stored in the database |
+| `NOTIFY_FORMAT` | No | `json` | Receiver format: `json`, `ntfy` or `apprise` |
+| `NOTIFY_AUTH_HEADER` | No | - | Sensitive literal `Authorization` header value sent to the receiver |
+
+Set the destination in the deployment environment and restart the app. In **Settings > Automation >
+Notifications**, choose the events and use **Send test** to send a synthetic, zero-count event.
+The card reports whether a destination is configured and its format, without exposing the URL or
+authorization value. Set `ORIGIN` to the application's public URL to include review or activity links.
+Apprise can forward notifications to its configured email and messaging services.
+
+These preferences are stored in the database and can also be set through the configuration API:
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `notifications.onNewDuplicates` | `true` | Notify after analysis creates enough new groups |
+| `notifications.minNewGroups` | `1` | Minimum new groups in that run, an integer from 1 to 10000 |
+| `notifications.onJobFailure` | `true` | Notify when a worker job reaches terminal failure, after retries are exhausted |
+| `notifications.scheduledRunsOnly` | `true` | Notify for scheduled work and its dependencies; turn off to include manual runs |
+
+With `NOTIFY_URL` unset, no notification requests are made. Delivery starts after the job's terminal
+transition and lease release, so receiver failure cannot change the job's result. A delivery uses
+at most three attempts, each with a 10-second timeout. Retry waits start at 1 and 4 seconds, include
+jitter, honor `Retry-After` within a 10-second cap, and total at most 50 seconds including requests.
+The **Send test** button waits for that delivery result. Process crashes and failures before a worker
+starts do not pass through the worker failure hook and do not send notifications.
+
+Payloads contain counts, job identifiers and an optional application link, never document titles,
+text or raw job errors. See [Security](security.md#where-document-content-can-leave-the-deployment)
+and the [notification API](api-reference.md#get-apiv1notifications).
+
 ### Observability (Optional)
 
 `APP_VERSION` is set by the image build and reported as `service.version`; it is not meant to be overridden.

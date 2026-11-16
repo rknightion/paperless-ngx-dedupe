@@ -85,6 +85,13 @@ AI results are stored as `pending_review` and are never applied to Paperless-NGX
 scheduled AI processing creates suggestions for review only. See [AI Processing — Status
 Lifecycle](ai-processing.md#status-lifecycle).
 
+Outbound notifications are a separate, optional network path. Setting `NOTIFY_URL` enables delivery
+to your chosen receiver; without it, no notification request is made. Notifications contain counts,
+job identifiers and, when `ORIGIN` is set, an application link. They never include document titles,
+text or raw job errors. The destination URL and optional `NOTIFY_AUTH_HEADER` may contain secrets:
+they stay in the deployment environment and are not returned by the notification API or written to
+notification logs. See [notification configuration](configuration.md#notifications-optional).
+
 Optional OpenTelemetry traces/metrics/logs, Grafana Faro frontend telemetry, and Pyroscope
 profiles are separate, independent telemetry paths that you configure with your own OTLP
 endpoint — see [Observability](observability.md). Enabling them is unrelated to, and does not
