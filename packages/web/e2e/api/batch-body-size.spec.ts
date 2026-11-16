@@ -114,7 +114,22 @@ test('delivers the accepted batch boundary through the default Node body limit',
       data: { groupIds: previewIds.slice(0, 10_000) },
     });
     expect(chunkPreview.status()).toBe(200);
-    expect((await chunkPreview.json()).data.groupCount).toBe(10_000);
+    let combined = (await chunkPreview.json()).data;
+    expect(combined.groupCount).toBe(10_000);
+    for (let start = 10_000; start < previewIds.length; start += 10_000) {
+      const next = await request.post(`${url}/api/v1/batch/delete-non-primary/preview`, {
+        headers: { Host: host },
+        data: { groupIds: previewIds.slice(start, start + 10_000), planToken: combined.planToken },
+      });
+      expect(next.status()).toBe(200);
+      const previous = combined;
+      combined = (await next.json()).data;
+      expect(combined.planToken).not.toBe(previous.planToken);
+      expect(combined.expiresAt).toBe(previous.expiresAt);
+    }
+    expect(combined.groupCount).toBe(25_000);
+    expect(combined.documentCount).toBe(25_000);
+    expect(combined.groups.map((group: { groupId: string }) => group.groupId)).toEqual(previewIds);
     for (const count of [20_000, 20_001]) {
       const response = await request.post(`${url}/api/v1/batch/status`, {
         headers: { Host: host },
@@ -242,6 +257,136 @@ for (const failSecondChunk of [false, true]) {
           });
         console.log(`Wizard result contrast, ${colorScheme}, failure=${failSecondChunk}: ${ratio}`);
         expect(ratio).toBeGreaterThanOrEqual(4.5);
+      }
+    } finally {
+      clearDB();
+    }
+  });
+}
+
+for (const failSecondChunk of [false, true]) {
+  test(`wizard previews deletion chunks before one job: failure=${failSecondChunk}`, async ({
+    page,
+    seedDB,
+    clearDB,
+  }) => {
+    seedDB();
+    const ids = groupIds(25_001);
+    const previews: Array<{ groupIds: string[]; planToken?: string }> = [];
+    const executions: unknown[] = [];
+    try {
+      await page.route('**/api/v1/duplicates?*', async (route) => {
+        const url = new URL(route.request().url());
+        const offset = Number(url.searchParams.get('offset') ?? 0);
+        const limit = Number(url.searchParams.get('limit') ?? 10);
+        await route.fulfill({
+          json: {
+            data: ids.slice(offset, offset + limit).map((id) => ({
+              id,
+              primaryDocumentTitle: 'Synthetic duplicate',
+              primaryPaperlessId: 1,
+              confidenceScore: 0.99,
+              memberCount: 2,
+            })),
+            meta: { total: ids.length, totalMemberCount: ids.length * 2 },
+          },
+        });
+      });
+      await page.route('**/api/v1/batch/delete-non-primary/preview', async (route) => {
+        previews.push(route.request().postDataJSON());
+        await route.fulfill(
+          failSecondChunk && previews.length === 2
+            ? { status: 409, json: { error: { code: 'CONFLICT', message: 'Preview expired' } } }
+            : {
+                json: {
+                  data: {
+                    planToken: `synthetic-combined-preview-token-${previews.length}`,
+                    expiresAt: '2099-01-01T00:00:00Z',
+                    groupCount: previews.flatMap((part) => part.groupIds).length,
+                    documentCount: previews.flatMap((part) => part.groupIds).length,
+                    groups: [],
+                  },
+                },
+              },
+        );
+      });
+      await page.route('**/api/v1/batch/delete-non-primary', async (route) => {
+        executions.push(route.request().postDataJSON());
+        await route.fulfill({ status: 202, json: { data: { jobId: 'synthetic-combined-job' } } });
+      });
+      await page.route('**/api/v1/jobs/synthetic-combined-job/progress', (route) =>
+        route.fulfill({
+          contentType: 'text/event-stream',
+          body: 'event: complete\ndata: {"status":"completed","progress":1}\n\n',
+        }),
+      );
+      await page.goto('/duplicates/wizard');
+      await page.getByRole('button', { name: 'Next', exact: true }).click();
+      await page.getByRole('button', { name: 'Next', exact: true }).last().click();
+      await page.getByRole('button', { name: /Delete Non-Primary Documents/ }).click();
+      await page.getByRole('button', { name: 'Next', exact: true }).click();
+      await page.getByLabel(/I understand this action affects/).check();
+      await page.getByLabel(/I understand deleted documents/).check();
+      for (const colorScheme of ['light', 'dark'] as const) {
+        await page.emulateMedia({ colorScheme });
+        await expect(page.locator('html')).toHaveClass(
+          colorScheme === 'dark' ? /dark/ : /^(?!.*dark).*$/,
+        );
+        await page
+          .getByRole('button', { name: 'Execute', exact: true })
+          .evaluate(async (element) => {
+            // Theme changes animate both colors; measure the settled foreground and background.
+            await Promise.all(element.getAnimations().map((animation) => animation.finished));
+          });
+        await page.screenshot({
+          path: test.info().outputPath(`deletion-confirmation-${colorScheme}.png`),
+        });
+        const ratio = await page
+          .getByRole('button', { name: 'Execute', exact: true })
+          .evaluate((element) => {
+            const style = getComputedStyle(element);
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 1;
+            const context = canvas.getContext('2d')!;
+            const luminance = (color: string) => {
+              context.fillStyle = color;
+              context.fillRect(0, 0, 1, 1);
+              const [r, g, b] = Array.from(context.getImageData(0, 0, 1, 1).data)
+                .slice(0, 3)
+                .map((byte) => {
+                  const value = byte / 255;
+                  return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+                });
+              return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            };
+            const values = [luminance(style.color), luminance(style.backgroundColor)].sort(
+              (a, b) => a - b,
+            );
+            return (values[1] + 0.05) / (values[0] + 0.05);
+          });
+        console.log(`Wizard deletion action contrast, ${colorScheme}: ${ratio}`);
+        expect(ratio).toBeGreaterThanOrEqual(4.5);
+      }
+      await page.getByRole('button', { name: 'Execute', exact: true }).click();
+      await expect(
+        page.getByRole('heading', {
+          name: failSecondChunk ? 'Operation Failed' : 'Operation Complete',
+        }),
+      ).toBeVisible({ timeout: 25_000 });
+      expect(previews.map((part) => part.groupIds.length)).toEqual(
+        failSecondChunk ? [10_000, 10_000] : [10_000, 10_000, 5_001],
+      );
+      expect(previews.flatMap((part) => part.groupIds)).toEqual(
+        ids.slice(0, failSecondChunk ? 20_000 : ids.length),
+      );
+      expect(previews[0]).not.toHaveProperty('planToken');
+      expect(previews[1].planToken).toBe('synthetic-combined-preview-token-1');
+      if (failSecondChunk) expect(executions).toEqual([]);
+      else {
+        expect(previews[2].planToken).toBe('synthetic-combined-preview-token-2');
+        expect(executions).toEqual([
+          { planToken: 'synthetic-combined-preview-token-3', confirm: true },
+        ]);
       }
     } finally {
       clearDB();

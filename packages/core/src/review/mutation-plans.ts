@@ -63,6 +63,7 @@ export class MutationPlanError extends Error {
 
 export type DuplicateDeletionPreviewFailure =
   | 'duplicate_group'
+  | 'too_many_groups'
   | 'missing_group'
   | 'non_pending_group'
   | 'missing_primary'
@@ -293,6 +294,10 @@ function freezeDuplicateGroups(
   });
 }
 
+/**
+ * Freeze a deletion selection, optionally extending an unclaimed preview without changing it.
+ * The combined token retains the earlier expiry and is claimed by one deletion job.
+ */
 export function createDuplicateDeletionPlan(
   db: AppDatabase,
   groupIds: readonly string[],
@@ -300,6 +305,7 @@ export function createDuplicateDeletionPlan(
     now?: Date;
     ttlMs?: number;
     tokenFactory?: () => string;
+    planToken?: string;
   } & ({ mergeMetadata?: false } | ({ mergeMetadata: true } & MergePreviewOptions)) = {},
 ): DuplicateDeletionPlanPreview {
   if (groupIds.length === 0) throw new DuplicateDeletionPreviewError('missing_group');
@@ -307,14 +313,30 @@ export function createDuplicateDeletionPlan(
   const now = options.now ?? new Date();
   const ttlMs = options.ttlMs ?? REVIEWED_MUTATION_PLAN_TTL_MS;
   const token = (options.tokenFactory ?? (() => nanoid(48)))();
-  const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
   return db.transaction(
     (tx) => {
-      const groups = freezeDuplicateGroups(
-        tx,
-        groupIds,
-        options.mergeMetadata ? options : undefined,
-      );
+      let expiresAt = new Date(now.getTime() + ttlMs).toISOString();
+      let previousGroups: FrozenDuplicateGroup[] = [];
+      if (options.planToken) {
+        const previous = getReviewedMutationPlan(tx, options.planToken, 'duplicate_delete', now);
+        const payload = parseDuplicateDeletionPayload(previous.payloadJson);
+        if (Boolean(payload.mergeMetadata) !== Boolean(options.mergeMetadata)) {
+          throw new MutationPlanError('invalid_payload');
+        }
+        previousGroups = payload.groups;
+        if (previous.expiresAt < expiresAt) expiresAt = previous.expiresAt;
+      }
+      if (previousGroups.length + groupIds.length > 50_000) {
+        throw new DuplicateDeletionPreviewError('too_many_groups');
+      }
+      const previousIds = new Set(previousGroups.map((group) => group.groupId));
+      if (groupIds.some((id) => previousIds.has(id))) {
+        throw new DuplicateDeletionPreviewError('duplicate_group');
+      }
+      const groups = [
+        ...previousGroups,
+        ...freezeDuplicateGroups(tx, groupIds, options.mergeMetadata ? options : undefined),
+      ];
       const payload: DuplicateDeletionPlanPayload = {
         groups,
         ...(options.mergeMetadata ? { mergeMetadata: true } : {}),
@@ -399,7 +421,7 @@ export function revalidateFrozenDuplicateGroup(
 }
 
 export function getReviewedMutationPlan(
-  db: AppDatabase,
+  db: Pick<AppDatabase, 'select'>,
   token: string,
   operation: ReviewedMutationOperation,
   now: Date = new Date(),

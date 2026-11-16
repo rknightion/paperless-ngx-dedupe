@@ -1,23 +1,12 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { ConfirmDialog } from '$lib/components';
-  import { type FrozenDuplicateGroup } from '@paperless-dedupe/core';
+  import {
+    createDeletionPreview,
+    type DuplicateDeletionPreview,
+  } from '$lib/duplicate-deletion-preview';
   import MetadataMergePreview from './MetadataMergePreview.svelte';
 
-  type FrozenDocument = { documentId: string; paperlessId: number };
-  type FrozenGroup = {
-    groupId: string;
-    primaryPaperlessId: number;
-    nonPrimaryDocuments: FrozenDocument[];
-    merge?: FrozenDuplicateGroup['merge'];
-  };
-  interface Preview {
-    planToken: string;
-    expiresAt: string;
-    groupCount: number;
-    documentCount: number;
-    groups: FrozenGroup[];
-  }
   const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
@@ -30,7 +19,7 @@
   let { open, groupIds, oncancel, onsubmitted }: Props = $props();
   let dialog = $state<HTMLDialogElement>();
   let cancelButton = $state<HTMLButtonElement>();
-  let preview = $state<Preview | null>(null);
+  let preview = $state<DuplicateDeletionPreview | null>(null);
   let loading = $state(false);
   let executing = $state(false);
   let reviewed = $state(false);
@@ -64,13 +53,10 @@
     reviewed = false;
     error = null;
     try {
-      const response = await fetch('/api/v1/batch/delete-non-primary/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupIds: ids, ...(mergeMetadata ? { mergeMetadata: true } : {}) }),
+      const result = await createDeletionPreview(ids, {
+        mergeMetadata,
         signal: controller.signal,
       });
-      const body = await response.json();
       if (
         generation !== requestGeneration ||
         expectedSelection !== selectionKey(snapshotIds) ||
@@ -78,20 +64,17 @@
       ) {
         return;
       }
-      if (!response.ok) {
-        invalidatePlan(
-          body.error?.message ??
-            'The reviewed selection changed or expired. Refresh the inbox and review it again.',
-        );
-        return;
-      }
-      preview = body.data;
+      preview = result;
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') {
         return;
       }
       if (generation === requestGeneration && expectedSelection === selectionKey(snapshotIds)) {
-        invalidatePlan('Unable to create the reviewed deletion preview. Try again.');
+        invalidatePlan(
+          caught instanceof Error
+            ? caught.message
+            : 'Unable to create the reviewed deletion preview. Try again.',
+        );
       }
     } finally {
       if (generation === requestGeneration) loading = false;

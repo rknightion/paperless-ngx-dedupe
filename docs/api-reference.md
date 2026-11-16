@@ -1345,6 +1345,19 @@ Returns `data: { planToken, expiresAt, groupCount, documentCount, groups }`.
 `planToken` is the opaque token for execution, `expiresAt` is an ISO timestamp, and counts
 are numbers. Each group contains `groupId`, `updatedAt`, `primaryDocumentId`,
 `primaryPaperlessId` and `nonPrimaryDocuments: [{ documentId, paperlessId }]`.
+For selections above 10000 groups, send sequential preview requests with at most 10000 IDs each.
+Include the previous response's `planToken` in each later request. Each response returns a new
+combined token and the full frozen selection, up to 50000 groups. Earlier plans are unchanged;
+the combined plan keeps the earliest expiry. Repeat the same `mergeMetadata` option for every
+chunk. Repeated group IDs, even across chunks, are rejected. Execute only the final combined token
+to create one deletion job after reviewing the complete selection. If any preview fails, stop
+without executing a partial plan and start a fresh review.
+
+The wizard and bulk deletion dialog use this chunked preview flow automatically. The default
+Node body limit remains unchanged; API clients sending a large single body may still exceed it.
+An expired, claimed, consumed or unavailable previous token, or changing its metadata option,
+returns `409 CONFLICT`.
+
 The plan expires after 15 minutes. Invalid JSON, IDs or group state return
 `400 VALIDATION_FAILED`; a runtime not accepting work returns `503 SERVICE_UNAVAILABLE`.
 

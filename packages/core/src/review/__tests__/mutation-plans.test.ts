@@ -136,6 +136,132 @@ describe('reviewed duplicate deletion plans', () => {
     expect(persisted.consumedAt).toBeNull();
   });
 
+  it.each([false, true])(
+    'combines preview chunks with the earliest expiry: metadata=%s',
+    (mergeMetadata) => {
+      const mergeOptions = mergeMetadata
+        ? {
+            mergeMetadata: true as const,
+            inboxTagNames: [],
+            customFieldNames: new Map<number, string>(),
+          }
+        : {};
+      db.insert(duplicateGroup)
+        .values({
+          id: 'group-2',
+          status: 'pending',
+          confidenceScore: 0.9,
+          algorithmVersion: 'synthetic',
+          createdAt: '2026-07-24T09:00:00.000Z',
+          updatedAt: '2026-07-24T10:00:00.000Z',
+        })
+        .run();
+      db.insert(duplicateMember)
+        .values([
+          { id: 'second-primary', groupId: 'group-2', documentId: 'doc-primary', isPrimary: true },
+          { id: 'second-other', groupId: 'group-2', documentId: 'doc-delete-1', isPrimary: false },
+        ])
+        .run();
+      const first = createDuplicateDeletionPlan(db, ['group-1'], {
+        now: new Date('2026-07-24T11:00:00.000Z'),
+        ...mergeOptions,
+      });
+      const combined = createDuplicateDeletionPlan(db, ['group-2'], {
+        now: new Date('2026-07-24T11:01:00.000Z'),
+        planToken: first.token,
+        ...mergeOptions,
+      });
+      expect(combined.token).not.toBe(first.token);
+      expect(combined.expiresAt).toBe(first.expiresAt);
+      expect(combined.groups.map((group) => group.groupId)).toEqual(['group-1', 'group-2']);
+      expect(combined.groups[0]).toEqual(first.groups[0]);
+      expect(
+        JSON.parse(
+          getReviewedMutationPlan(
+            db,
+            first.token,
+            'duplicate_delete',
+            new Date('2026-07-24T11:02:00.000Z'),
+          ).payloadJson,
+        ).groups,
+      ).toEqual(first.groups);
+      const claimed = claimDuplicateDeletionPlan(
+        db,
+        combined.token,
+        'combined-job',
+        new Date('2026-07-24T11:02:00.000Z'),
+      );
+      expect(claimed.groups).toEqual(combined.groups);
+      expect(claimed.mergeMetadata).toBe(mergeMetadata || undefined);
+      expect(
+        claimDuplicateDeletionPlan(
+          db,
+          combined.token,
+          'combined-job',
+          new Date('2026-07-24T11:03:00.000Z'),
+        ).groups,
+      ).toEqual(combined.groups);
+    },
+  );
+
+  it('rejects invalid extensions without changing either the source plan or the library', () => {
+    const now = new Date('2026-07-24T11:00:00.000Z');
+    const first = createDuplicateDeletionPlan(db, ['group-1'], { now });
+    const original = getReviewedMutationPlan(db, first.token, 'duplicate_delete', now);
+    expect(() =>
+      createDuplicateDeletionPlan(db, ['group-1'], {
+        now,
+        planToken: first.token,
+      }),
+    ).toThrow('duplicate group');
+    expect(() =>
+      createDuplicateDeletionPlan(db, ['another-group'], {
+        now,
+        planToken: first.token,
+        mergeMetadata: true,
+        inboxTagNames: [],
+        customFieldNames: new Map(),
+      }),
+    ).toThrow('invalid payload');
+    expect(() =>
+      createDuplicateDeletionPlan(
+        db,
+        Array.from({ length: 50_000 }, (_, i) => `group-${i + 2}`),
+        {
+          now,
+          planToken: first.token,
+        },
+      ),
+    ).toThrow('too many groups');
+    expect(() =>
+      createDuplicateDeletionPlan(db, ['another-group'], {
+        now: new Date('2026-07-24T11:15:00.000Z'),
+        planToken: first.token,
+      }),
+    ).toThrow('expired');
+    expect(() =>
+      createDuplicateDeletionPlan(db, ['another-group'], {
+        now,
+        planToken: 'unknown-token',
+      }),
+    ).toThrow('not found');
+    expect(db.select().from(reviewedMutationPlan).all()).toEqual([original]);
+    expect(
+      db
+        .select()
+        .from(duplicateGroup)
+        .all()
+        .map((group) => group.status),
+    ).toEqual(['pending']);
+    claimDuplicateDeletionPlan(db, first.token, 'already-started-job', now);
+    expect(() =>
+      createDuplicateDeletionPlan(db, ['another-group'], {
+        now,
+        planToken: first.token,
+      }),
+    ).toThrow('claimed');
+  });
+
   it('freezes named missing metadata additions without copying inbox tags or replacing keeper values', () => {
     db.update(document)
       .set({
