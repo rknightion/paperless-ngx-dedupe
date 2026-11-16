@@ -151,3 +151,27 @@ This app follows OpenTelemetry semantic conventions:
 - **Database:** Stable conventions (`db.system.name`, `db.operation.name`, `db.query.text`). Set `OTEL_SEMCONV_STABILITY_OPT_IN=database`.
 - **GenAI:** Experimental conventions (`gen_ai.system`, `gen_ai.request.model`, `gen_ai.request.batch_size`, `gen_ai.request.target_rpm`, `gen_ai.token.type`).
 - **App-specific:** Prefixed with `app.*` (`app.job.id`, `app.ai.total_documents`, `app.batch.*`).
+
+## Application dashboard
+
+Download [the Grafana dashboard JSON](https://github.com/rknightion/paperless-ngx-dedupe/blob/main/deploy/grafana/paperless-ngx-dedupe.json),
+import it into Grafana, and select a Prometheus datasource. It includes overview, sync, analysis,
+review backlog, AI cost and tokens, and Paperless API errors. Queries use the names observed from
+the application's Prometheus exporter, including histogram suffixes and normalized label names.
+
+The selected datasource must contain worker metrics received through OTLP for sync and analysis
+activity, AI tokens and worker Paperless requests. Scraping only the server metrics endpoint gives
+the state gauges and server activity; it does not include worker counters and histograms, even
+when both export modes are enabled. Datasource translation settings must preserve the names shown
+by the application exporter. Missing series display no data, rather than an invented zero.
+
+The dashboard aggregates the selected datasource's application series. Use a datasource scoped to
+one installation when you need an installation-specific view. Last-success panels show the most
+recent success among those series and remain empty before the first successful run.
+
+AI cost is not exported as a metric. The cost panel directs you to the application's AI Processing
+page for estimates; token counts cannot determine cost without model prices, caching and service
+tier. Cached input is a subset of input tokens and must not be added to input to calculate a total.
+
+The dashboard is validated against the telemetry definitions and a local exporter capture. A live
+Grafana stack is not part of this repository's validation environment.
