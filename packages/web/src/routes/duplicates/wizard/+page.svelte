@@ -34,6 +34,7 @@
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
+  const readOnly = $derived(data.readOnly === true);
 
   // ── Shared state ──────────────────────────────────────────────────────
   let step = $state(1);
@@ -262,6 +263,7 @@
 
   // ── Execution ─────────────────────────────────────────────────────────
   async function execute() {
+    if (readOnly && selectedAction === 'delete') return;
     executionProgress = 0;
     executionMessage = 'Gathering group IDs...';
     const stopWizardTimer = startTimer('wizard_execution_duration');
@@ -729,7 +731,10 @@
 
         <button
           onclick={() => (selectedAction = 'delete')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'delete'
+          disabled={readOnly}
+          title={readOnly ? 'Paperless is read-only' : undefined}
+          class="w-full rounded-lg border-2 px-4 py-4 text-left disabled:opacity-50 {selectedAction ===
+          'delete'
             ? 'border-ember bg-ember-light'
             : 'border-soft hover:border-ember'}"
         >
@@ -743,6 +748,7 @@
               type="radio"
               name="action"
               checked={selectedAction === 'delete'}
+              disabled={readOnly}
               class="accent-ember"
             />
             <div>
@@ -850,7 +856,8 @@
         </button>
         <button
           onclick={handleNext}
-          disabled={!canProceedStep4}
+          disabled={!canProceedStep4 || (readOnly && selectedAction === 'delete')}
+          title={readOnly && selectedAction === 'delete' ? 'Paperless is read-only' : undefined}
           class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50
             {selectedAction === 'delete'
             ? 'bg-ember hover:opacity-90'

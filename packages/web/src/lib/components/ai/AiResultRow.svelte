@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { ConfidenceBadge } from '$lib/components';
   import { Check, X, FileText, AlertCircle } from 'lucide-svelte';
   import type { AiResultSummary } from './AiReviewStore.svelte';
+
+  const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
     result: AiResultSummary;
@@ -207,8 +210,10 @@
             e.stopPropagation();
             onapply();
           }}
-          class="text-success hover:bg-success-light rounded-lg p-1.5 transition-colors"
-          title="Apply suggestions"
+          class="text-success hover:bg-success-light rounded-lg p-1.5 transition-colors disabled:opacity-50"
+          disabled={readOnly}
+          aria-label="Apply suggestions"
+          title={readOnly ? 'Paperless is read-only' : 'Apply suggestions'}
         >
           <Check class="h-4 w-4" />
         </button>

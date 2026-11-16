@@ -54,6 +54,8 @@ ports: ['127.0.0.1:3000:3000']
 Set `PAPERLESS_READ_ONLY=true` to refuse changes to Paperless-NGX before a request is made.
 Delete, AI apply and revert operations return HTTP 403 without creating a job. Sync, analysis,
 AI extraction for suggestions, local review statuses, settings, backups and exports remain available.
+A persistent banner identifies this mode, and Paperless-changing controls are disabled with a
+read-only tooltip. Local review controls stay available.
 This protects the upstream library; it does not restrict access to local data or replace access
 protection. Leave the variable unset for the existing writable behavior.
 

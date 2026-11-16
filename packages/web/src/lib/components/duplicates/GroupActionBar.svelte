@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { ConfirmDialog, RecycleBinPrompt } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import { XCircle, CheckCircle, Trash2, RotateCcw } from 'lucide-svelte';
   import { type FrozenDuplicateGroup } from '@paperless-dedupe/core';
   import MetadataMergePreview from './MetadataMergePreview.svelte';
+
+  const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
     groupId: string;
@@ -87,6 +90,7 @@
   }
 
   async function deleteNonPrimary() {
+    if (readOnly) return;
     if (mergeMetadata && (mergeLoading || !mergePlanToken || mergeError)) return;
     showDeleteConfirm = false;
     isUpdating = true;
@@ -166,7 +170,8 @@
         void previewMerge(false);
         showDeleteConfirm = true;
       }}
-      disabled={isUpdating || memberCount < 2}
+      disabled={readOnly || isUpdating || memberCount < 2}
+      title={readOnly ? 'Paperless is read-only' : undefined}
       class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
     >
       <span class="flex items-center gap-2">
@@ -211,7 +216,7 @@
   message="This will delete all non-primary documents in this group from Paperless-NGX. Documents are moved to the Paperless-NGX recycle bin and can be restored from there."
   confirmLabel="Delete Documents"
   variant="ember"
-  confirmDisabled={mergeMetadata && (mergeLoading || !mergePlanToken || !!mergeError)}
+  confirmDisabled={readOnly || (mergeMetadata && (mergeLoading || !mergePlanToken || !!mergeError))}
   onconfirm={deleteNonPrimary}
   oncancel={() => {
     showDeleteConfirm = false;

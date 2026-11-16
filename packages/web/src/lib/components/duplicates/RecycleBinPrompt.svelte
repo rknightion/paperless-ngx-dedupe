@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { ConfirmDialog } from '$lib/components';
+
+  const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
     onclose?: () => void;
@@ -30,6 +33,7 @@
   }
 
   async function emptyTrash() {
+    if (readOnly) return;
     showEmptyConfirm = false;
     isEmptying = true;
     emptyResult = null;
@@ -82,7 +86,8 @@
     {:else}
       <button
         onclick={() => (showEmptyConfirm = true)}
-        disabled={isEmptying}
+        disabled={readOnly || isEmptying}
+        title={readOnly ? 'Paperless is read-only' : undefined}
         class="bg-ember text-on-accent mt-3 rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
       >
         {isEmptying ? 'Emptying...' : 'Empty Recycle Bin'}
@@ -118,6 +123,7 @@
   message="This permanently deletes all {trashCount} documents in the Paperless-NGX recycle bin, including any that were not deleted by this app. After this, the delete can no longer be undone."
   confirmLabel="Empty Recycle Bin"
   variant="ember"
+  confirmDisabled={readOnly}
   onconfirm={emptyTrash}
   oncancel={() => (showEmptyConfirm = false)}
 />

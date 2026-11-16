@@ -19,6 +19,7 @@
   import { ArrowLeft, ExternalLink, Trash2, UserMinus } from 'lucide-svelte';
 
   let { data } = $props();
+  const readOnly = $derived(data.readOnly === true);
 
   let fileFacts = $state<DuplicateGroupFiles | null>(null);
   let fileError = $state(false);
@@ -123,6 +124,7 @@
   }
 
   async function handleDeleteFromPaperless() {
+    if (readOnly) return;
     if (!selectedSecondary) return;
     showDeleteFromPaperless = false;
     isMemberAction = true;
@@ -398,7 +400,8 @@
               variant="destructive"
               size="sm"
               icon={Trash2}
-              disabled={isMemberAction}
+              disabled={readOnly || isMemberAction}
+              title={readOnly ? 'Paperless is read-only' : undefined}
               onclick={() => (showDeleteFromPaperless = true)}
             >
               Delete from Paperless
@@ -469,6 +472,7 @@
   message="This will delete the document from Paperless-NGX (moved to recycle bin) and remove it from this group. This can be undone from the Paperless-NGX recycle bin."
   confirmLabel="Delete Document"
   variant="ember"
+  confirmDisabled={readOnly}
   onconfirm={handleDeleteFromPaperless}
   oncancel={() => (showDeleteFromPaperless = false)}
 />

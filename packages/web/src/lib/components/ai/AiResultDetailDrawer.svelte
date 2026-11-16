@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { X, ExternalLink, Loader2, AlertCircle, RefreshCw, Check } from 'lucide-svelte';
   import {
     fieldSelections,
@@ -13,6 +14,8 @@
     AiFieldSelection as AiFieldSelectionValue,
     AiInboxResultDetail,
   } from '@paperless-dedupe/core';
+
+  const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
     resultId: string;
@@ -414,7 +417,8 @@
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
         <button
           onclick={handleApply}
-          disabled={isApplying || checkedCount === 0}
+          disabled={readOnly || isApplying || checkedCount === 0}
+          title={readOnly ? 'Paperless is read-only' : undefined}
           class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
         >
           {#if isApplying}
@@ -444,7 +448,8 @@
       <div class="border-soft bg-surface sticky bottom-0 flex border-t px-4 py-3">
         <button
           onclick={handleRevert}
-          disabled={isApplying || checkedCount === 0}
+          disabled={readOnly || isApplying || checkedCount === 0}
+          title={readOnly ? 'Paperless is read-only' : undefined}
           class="border-ember text-ember hover:bg-ember-light flex flex-1 items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Revert selected audited fields
@@ -471,7 +476,8 @@
         {:else}
           <button
             onclick={handleRetry}
-            disabled={isRetrying}
+            disabled={readOnly || isRetrying}
+            title={readOnly ? 'Paperless is read-only' : undefined}
             class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
           >
             {#if isRetrying}
