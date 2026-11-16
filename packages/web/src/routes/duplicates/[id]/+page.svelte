@@ -1,7 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { type DuplicateGroupFiles } from '@paperless-dedupe/core';
-  import { invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
+  import { browser } from '$app/environment';
   import { page } from '$app/stores';
   import {
     ConfidenceBadge,
@@ -64,6 +65,44 @@
   let returnUrl = $derived(
     documentReturnUrl ?? (returnParams ? `/duplicates?${returnParams}` : '/duplicates'),
   );
+
+  let autoAdvance = $state(true);
+  $effect(() => {
+    if (!browser) return;
+    try {
+      autoAdvance = localStorage.getItem('pnd.review.autoAdvance') !== 'false';
+    } catch {
+      /* Keep the default when browser storage is unavailable. */
+    }
+  });
+
+  function setAutoAdvance(value: boolean) {
+    autoAdvance = value;
+    try {
+      localStorage.setItem('pnd.review.autoAdvance', String(value));
+    } catch {
+      /* The preference still applies to this page session. */
+    }
+  }
+
+  async function goToNextGroup() {
+    if (data.nextGroupId)
+      await goto(
+        `/duplicates/${data.nextGroupId}?returnParams=${encodeURIComponent(returnParams)}`,
+      );
+  }
+
+  async function handleGroupAction() {
+    const groupId = data.group.id;
+    await invalidateAll();
+    if (data.group.id !== groupId) return;
+    if (
+      autoAdvance &&
+      (data.group.status === 'false_positive' || data.group.status === 'ignored')
+    ) {
+      await goToNextGroup();
+    }
+  }
 
   untrack(() =>
     trackGroupViewed({
@@ -172,13 +211,32 @@
 
 <div class="space-y-6">
   <!-- Breadcrumb -->
-  <a
-    href={returnUrl}
-    class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm"
-  >
-    <ArrowLeft class="h-4 w-4" />
-    {documentReturnUrl ? 'Back to Documents' : 'Back to Duplicates'}
-  </a>
+  <div class="flex flex-wrap items-center gap-3">
+    <a
+      href={returnUrl}
+      class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm"
+    >
+      <ArrowLeft class="h-4 w-4" />
+      {documentReturnUrl ? 'Back to Documents' : 'Back to Duplicates'}
+    </a>
+    {#if data.nextGroupId}<Button variant="secondary" size="sm" onclick={() => void goToNextGroup()}
+        >Skip</Button
+      >{/if}
+  </div>
+  <label class="text-ink flex items-center gap-2 text-sm">
+    <input
+      type="checkbox"
+      checked={autoAdvance}
+      onchange={(event) => setAutoAdvance(event.currentTarget.checked)}
+    />
+    Go to next group after an action
+  </label>
+  {#if !data.nextGroupId && data.group.status !== 'pending'}
+    <p class="text-muted text-sm">
+      <span>Queue empty</span> ·
+      <a class="text-accent underline" href={returnUrl}>Return to queue</a>
+    </p>
+  {/if}
 
   <!-- Group header -->
   <div>
@@ -201,7 +259,7 @@
     groupId={data.group.id}
     status={data.group.status}
     memberCount={data.group.members.length}
-    onaction={() => invalidateAll()}
+    onaction={() => void handleGroupAction()}
     {returnParams}
     {returnUrl}
   />

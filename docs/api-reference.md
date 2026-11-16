@@ -534,6 +534,21 @@ against their tagged upstream serializers; this is not a claim about the first s
 Optional query:
 
 - `light=true` to omit full member text content.
+- `queue=pending|high-confidence|ambiguous|ignored|deleted` adds `meta.nextGroupId` (a group ID or
+  `null`). The existing `data` is unchanged; omitting `queue` keeps the original response without
+  `meta`.
+- With `queue`, optional `correspondent` is trimmed and must contain 1–200 characters. Invalid
+  queue or correspondent values return 400 `VALIDATION_FAILED`.
+
+The neighbour follows inbox order: confidence descending, creation time descending, then ID
+descending. Its position is calculated from the current group even after that group's status
+changes. Confidence range filters do not affect this neighbour.
+
+The detail page defaults to the pending queue when opened without valid inbox return filters.
+**Not a Duplicate** and **Keep All** advance by default; **Skip** advances without changing status.
+The **Go to next group after an action** preference is saved in this browser. The delete flow keeps
+its existing recycle-bin result screen.
+
 
 ### GET /api/v1/duplicates/:id/files
 

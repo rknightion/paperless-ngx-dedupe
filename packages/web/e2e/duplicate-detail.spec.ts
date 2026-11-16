@@ -214,3 +214,101 @@ test.describe('Duplicate Detail Page', () => {
     await expect(page.getByText('Document Comparison')).toBeVisible();
   });
 });
+
+test.describe('Next duplicate in the review queue', () => {
+  let seed: SeedResult;
+  test.beforeEach(({ seedDB }) => {
+    seed = seedDB();
+    const db = new Database(DB_PATH);
+    db.prepare("UPDATE duplicate_group SET status='pending'").run();
+    db.close();
+  });
+  test.afterEach(({ clearDB }) => clearDB());
+
+  test('queue API metadata is additive, positional and validates filters', async ({ request }) => {
+    const path = `/api/v1/duplicates/${seed.groupIds[0]}`;
+    const original = await (await request.get(path)).json();
+    expect(original).not.toHaveProperty('meta');
+    const queued = await (await request.get(`${path}?queue=pending`)).json();
+    expect(queued).toEqual({ ...original, meta: { nextGroupId: seed.groupIds[1] } });
+    expect(
+      (await (await request.get(`${path}?queue=ambiguous&correspondent=Alice%20Corp`)).json()).meta
+        .nextGroupId,
+    ).toBe(seed.groupIds[1]);
+    for (const query of [
+      'queue=invalid',
+      'queue=pending&correspondent=',
+      'queue=pending&correspondent=' + 'x'.repeat(201),
+    ]) {
+      const response = await request.get(`${path}?${query}`);
+      expect(response.status()).toBe(400);
+      expect((await response.json()).error.code).toBe('VALIDATION_FAILED');
+    }
+    await request.put(`${path}/status`, { data: { status: 'false_positive' } });
+    expect((await (await request.get(`${path}?queue=pending`)).json()).meta.nextGroupId).toBe(
+      seed.groupIds[1],
+    );
+  });
+
+  for (const action of ['Not a Duplicate', 'Keep All'])
+    test(`${action} advances and preserves return filters`, async ({ page, request }) => {
+      const returnParams = 'queue=pending&correspondent=Alice+Corp&minConfidence=0.9';
+      await page.goto(
+        `/duplicates/${seed.groupIds[0]}?returnParams=${encodeURIComponent(returnParams)}`,
+      );
+      await page.getByRole('button', { name: action, exact: true }).click();
+      await expect(page).toHaveURL(
+        `/duplicates/${seed.groupIds[1]}?returnParams=${encodeURIComponent(returnParams)}`,
+      );
+      expect(
+        (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+      ).toBe(action === 'Keep All' ? 'ignored' : 'false_positive');
+    });
+
+  test('Skip changes no status and the last group offers the return link', async ({
+    page,
+    request,
+  }) => {
+    await page.goto(`/duplicates/${seed.groupIds[0]}`);
+    await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await expect(page).toHaveURL(`/duplicates/${seed.groupIds[1]}?returnParams=`);
+    expect(
+      (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+    ).toBe('pending');
+    await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await expect(page).toHaveURL(`/duplicates/${seed.groupIds[2]}?returnParams=`);
+    await expect(page.getByRole('button', { name: 'Skip', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Not a Duplicate', exact: true }).click();
+    await expect(page.getByText('Queue empty', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Return to queue', exact: true })).toHaveAttribute(
+      'href',
+      '/duplicates',
+    );
+  });
+
+  test('the auto-advance preference persists and invalid return filters use pending', async ({
+    page,
+    request,
+  }) => {
+    const path = `/duplicates/${seed.groupIds[0]}?returnParams=${encodeURIComponent('queue=invalid&correspondent=')}`;
+    await page.goto(path);
+    const toggle = page.getByLabel('Go to next group after an action');
+    await expect(toggle).toBeChecked();
+    await toggle.uncheck();
+    await page.reload();
+    await expect(toggle).not.toBeChecked();
+    await page.getByRole('button', { name: 'Keep All', exact: true }).click();
+    await expect(page).toHaveURL(path);
+    await expect
+      .poll(
+        async () =>
+          (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+      )
+      .toBe('ignored');
+    await expect(page.getByRole('button', { name: 'Skip', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Skip', exact: true }).click();
+    await expect(page).toHaveURL(
+      `/duplicates/${seed.groupIds[1]}?returnParams=${encodeURIComponent('queue=invalid&correspondent=')}`,
+    );
+  });
+});

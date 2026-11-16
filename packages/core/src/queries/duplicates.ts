@@ -76,6 +76,61 @@ function duplicateInboxCorrespondentWhere(correspondent: string | undefined) {
   )`;
 }
 
+function duplicateInboxAfterWhere(cursor: {
+  confidenceScore: number;
+  createdAt: string;
+  id: string;
+}) {
+  return or(
+    lt(duplicateGroup.confidenceScore, cursor.confidenceScore),
+    and(
+      eq(duplicateGroup.confidenceScore, cursor.confidenceScore),
+      lt(duplicateGroup.createdAt, cursor.createdAt),
+    ),
+    and(
+      eq(duplicateGroup.confidenceScore, cursor.confidenceScore),
+      eq(duplicateGroup.createdAt, cursor.createdAt),
+      lt(duplicateGroup.id, cursor.id),
+    ),
+  );
+}
+
+/** Find the next queue row even after the current group leaves that queue. */
+export function getNextDuplicateGroupId(
+  db: AppDatabase,
+  query: { queue: DuplicateInboxQueue; correspondent?: string; afterGroupId: string },
+): string | null {
+  const current = db
+    .select({
+      id: duplicateGroup.id,
+      confidenceScore: duplicateGroup.confidenceScore,
+      createdAt: duplicateGroup.createdAt,
+    })
+    .from(duplicateGroup)
+    .where(eq(duplicateGroup.id, query.afterGroupId))
+    .get();
+  if (!current) return null;
+  return (
+    db
+      .select({ id: duplicateGroup.id })
+      .from(duplicateGroup)
+      .where(
+        and(
+          duplicateInboxQueueWhere(query.queue),
+          duplicateInboxCorrespondentWhere(query.correspondent),
+          duplicateInboxAfterWhere(current),
+        ),
+      )
+      .orderBy(
+        desc(duplicateGroup.confidenceScore),
+        desc(duplicateGroup.createdAt),
+        desc(duplicateGroup.id),
+      )
+      .limit(1)
+      .get()?.id ?? null
+  );
+}
+
 export function listDuplicateInbox(
   db: AppDatabase,
   query: DuplicateInboxQuery,
@@ -90,20 +145,7 @@ export function listDuplicateInbox(
       : lte(duplicateGroup.confidenceScore, query.maxConfidence),
   );
   const cursor = query.cursor ? decodeDuplicateInboxCursor(query.cursor) : null;
-  const cursorWhere = cursor
-    ? or(
-        lt(duplicateGroup.confidenceScore, cursor.confidenceScore),
-        and(
-          eq(duplicateGroup.confidenceScore, cursor.confidenceScore),
-          lt(duplicateGroup.createdAt, cursor.createdAt),
-        ),
-        and(
-          eq(duplicateGroup.confidenceScore, cursor.confidenceScore),
-          eq(duplicateGroup.createdAt, cursor.createdAt),
-          lt(duplicateGroup.id, cursor.id),
-        ),
-      )
-    : undefined;
+  const cursorWhere = cursor ? duplicateInboxAfterWhere(cursor) : undefined;
   const where = and(
     duplicateInboxQueueWhere(query.queue),
     correspondentWhere,
