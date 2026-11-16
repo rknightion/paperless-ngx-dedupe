@@ -21,6 +21,7 @@
   import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
   import RememberedDecisions from '$lib/components/settings/RememberedDecisions.svelte';
   import WebhookSyncSettings from '$lib/components/settings/WebhookSyncSettings.svelte';
+  import DecisionBackup from '$lib/components/settings/DecisionBackup.svelte';
   import DatabaseBackupSettings from '$lib/components/settings/DatabaseBackupSettings.svelte';
   import DiagnosticsSettings from '$lib/components/settings/DiagnosticsSettings.svelte';
   import CustomFieldPolicySettings from '$lib/components/settings/CustomFieldPolicySettings.svelte';
@@ -1513,6 +1514,7 @@
           </div>
         </div>
       </div>
+      <DecisionBackup />
       {#if importStatus}
         <div
           class="mt-3 rounded-lg px-3 py-2 text-sm {importStatus.type === 'success'
