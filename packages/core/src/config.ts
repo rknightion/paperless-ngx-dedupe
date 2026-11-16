@@ -60,6 +60,12 @@ const configSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     AI_OPENAI_API_KEY: z.string().optional(),
+    AI_OPENAI_BASE_URL: z
+      .url({
+        protocol: /^https?$/,
+        error: 'AI_OPENAI_BASE_URL must be an absolute http or https URL',
+      })
+      .optional(),
     AI_BULK_ALL_ENABLED: z
       .string()
       .default('false')
@@ -86,8 +92,8 @@ const configSchema = z
       path: ['PAPERLESS_API_TOKEN'],
     },
   )
-  .refine((data) => !data.AI_ENABLED || data.AI_OPENAI_API_KEY, {
-    error: 'When AI_ENABLED=true, AI_OPENAI_API_KEY is required',
+  .refine((data) => !data.AI_ENABLED || data.AI_OPENAI_API_KEY || data.AI_OPENAI_BASE_URL, {
+    error: 'When AI_ENABLED=true, AI_OPENAI_API_KEY or AI_OPENAI_BASE_URL is required',
     path: ['AI_ENABLED'],
   })
   .refine(

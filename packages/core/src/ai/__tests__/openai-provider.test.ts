@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAiProvider, createInteractiveAiProvider } from '../providers/factory.js';
 import { OpenAiProvider } from '../providers/openai.js';
 
 describe('OpenAI provider client policy', () => {
   it('passes zero retries through to the real SDK client', async () => {
-    const provider = await OpenAiProvider.create('test-api-key', 'gpt-5.4-mini', 0);
+    const provider = await OpenAiProvider.create('test-api-key', 'gpt-5.4-mini', { maxRetries: 0 });
     const client = (provider as unknown as { client: { maxRetries: number } }).client;
 
     expect(client.maxRetries).toBe(0);
@@ -13,7 +14,7 @@ describe('OpenAI provider client policy', () => {
 
 describe('OpenAI transient request failures', () => {
   async function rejectRequest(error: unknown) {
-    const provider = await OpenAiProvider.create('test-api-key', 'gpt-5.4-mini', 0);
+    const provider = await OpenAiProvider.create('test-api-key', 'gpt-5.4-mini', { maxRetries: 0 });
     const client = (provider as unknown as { client: { responses: { parse: unknown } } }).client;
     client.responses.parse = vi.fn(() => ({ withResponse: () => Promise.reject(error) }));
     return provider.extract({
@@ -83,7 +84,7 @@ describe('OpenAI response usage', () => {
     serviceTier: 'flex',
   };
   async function respond(overrides: Record<string, unknown> = {}) {
-    const provider = await OpenAiProvider.create('test-api-key', 'gpt-5.4-mini', 0);
+    const provider = await OpenAiProvider.create('test-api-key', 'gpt-5.4-mini', { maxRetries: 0 });
     const client = (provider as unknown as { client: { responses: { parse: unknown } } }).client;
     client.responses.parse = vi.fn(() => ({
       withResponse: async () => ({
@@ -122,5 +123,100 @@ describe('OpenAI response usage', () => {
       requestId: 'response-test',
       usage,
     });
+  });
+});
+
+describe('OpenAI-compatible base URL', () => {
+  it('passes the configured base URL to the client and disables flex processing', async () => {
+    for (const create of [createAiProvider, createInteractiveAiProvider]) {
+      const provider = await create(undefined, 'synthetic-local-model', {
+        baseURL: 'http://localhost:11434/v1',
+        maxRetries: 0,
+        flexProcessing: true,
+      });
+      const client = (
+        provider as unknown as {
+          client: {
+            baseURL: string;
+            apiKey: string;
+            timeout: number;
+            maxRetries: number;
+            responses: { parse: unknown };
+          };
+        }
+      ).client;
+      expect(client.baseURL).toBe('http://localhost:11434/v1');
+      expect(client.apiKey).toBeTruthy();
+      expect(client.timeout).toBe(60000);
+      expect(client.maxRetries).toBe(0);
+      const parse = vi.fn((_params: Record<string, unknown>) => ({
+        withResponse: async () => ({
+          data: {
+            status: 'completed',
+            output_parsed: {
+              title: 'Synthetic',
+              correspondent: null,
+              documentType: null,
+              tags: [],
+              customFields: [],
+              confidence: { title: 0.9, correspondent: 0, documentType: 0, tags: 0 },
+              evidence: 'Synthetic evidence',
+            },
+          },
+          response: { headers: new Headers() },
+        }),
+      }));
+      client.responses.parse = parse;
+      await expect(
+        provider.extract({ systemPrompt: 'Classify', userPrompt: 'Synthetic content' }),
+      ).resolves.toMatchObject({ response: { title: 'Synthetic' } });
+      expect(parse.mock.calls[0]?.[0]).not.toHaveProperty('service_tier');
+    }
+  });
+
+  it('preserves default client policy and explicit credentials with the options form', async () => {
+    const provider = await createAiProvider('synthetic-key', 'synthetic-model', {
+      maxRetries: 4,
+    });
+    const client = (
+      provider as unknown as {
+        client: {
+          baseURL: string;
+          apiKey: string;
+          timeout: number;
+          maxRetries: number;
+          responses: { parse: unknown };
+        };
+      }
+    ).client;
+    expect(client.baseURL).toBe('https://api.openai.com/v1');
+    expect(client.apiKey).toBe('synthetic-key');
+    expect(client.timeout).toBe(900000);
+    expect(client.maxRetries).toBe(4);
+    const parse = vi.fn((_params: Record<string, unknown>) => ({
+      withResponse: async () => ({
+        data: { refusal: 'Synthetic refusal' },
+        response: { headers: new Headers() },
+      }),
+    }));
+    client.responses.parse = parse;
+    await expect(
+      provider.extract({ systemPrompt: 'Classify', userPrompt: 'Synthetic content' }),
+    ).rejects.toMatchObject({ failureType: 'refusal' });
+    expect(parse.mock.calls[0][0]).toMatchObject({
+      model: 'synthetic-model',
+      service_tier: 'flex',
+      input: [
+        { role: 'developer', content: 'Classify' },
+        { role: 'user', content: 'Synthetic content' },
+      ],
+    });
+    const local = await createAiProvider('synthetic-key', 'synthetic-model', {
+      baseURL: 'https://example.test/v1',
+      flexProcessing: false,
+    });
+    expect((local as unknown as { client: { apiKey: string } }).client.apiKey).toBe(
+      'synthetic-key',
+    );
   });
 });

@@ -307,6 +307,7 @@ const entries: InternalRegistryEntry[] = [
   environmentEntry('AI_BULK_ALL_ENABLED', 'boolean', 'ai', false, false),
   environmentEntry('AI_ENABLED', 'boolean', 'ai', false, false),
   environmentEntry('AI_OPENAI_API_KEY', 'string', 'ai', true),
+  environmentEntry('AI_OPENAI_BASE_URL', 'string', 'ai', false),
   environmentEntry('APP_AUTH_MODE', 'string', 'advanced', false, 'none'),
   environmentEntry('APP_AUTH_USERNAME', 'string', 'advanced', true),
   environmentEntry('APP_AUTH_PASSWORD', 'string', 'advanced', true),

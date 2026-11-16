@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
   runWorkerTask: vi.fn(),
   createAiProvider: vi.fn().mockResolvedValue({ provider: 'openai' }),
   processBatch: vi.fn(),
+  appConfig: {
+    AI_OPENAI_API_KEY: 'test-key' as string | undefined,
+    AI_OPENAI_BASE_URL: undefined as string | undefined,
+  },
   aiConfig: {
     maxRetries: 10,
     model: 'gpt-5.4-mini',
@@ -24,13 +28,15 @@ vi.mock('../../ai/batch.js', () => ({ processBatch: mocks.processBatch }));
 vi.mock('../../ai/config.js', () => ({ getAiConfig: () => mocks.aiConfig }));
 vi.mock('../../index.js', () => ({
   PaperlessClient: class PaperlessClient {},
-  parseConfig: () => ({ AI_OPENAI_API_KEY: 'test-key' }),
+  parseConfig: () => mocks.appConfig,
   toPaperlessConfig: () => ({}),
 }));
 
 afterEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  mocks.appConfig.AI_OPENAI_API_KEY = 'test-key';
+  mocks.appConfig.AI_OPENAI_BASE_URL = undefined;
 });
 
 describe('AI processing worker', () => {
@@ -158,7 +164,11 @@ describe('AI processing worker', () => {
       vi.fn(),
     );
 
-    expect(mocks.createAiProvider).toHaveBeenCalledWith('test-key', 'gpt-5.4-mini', 0, true);
+    expect(mocks.createAiProvider).toHaveBeenCalledWith('test-key', 'gpt-5.4-mini', {
+      maxRetries: 0,
+      flexProcessing: true,
+      baseURL: undefined,
+    });
     expect(mocks.processBatch).toHaveBeenCalledWith(
       handle.db,
       expect.objectContaining({ maxDocuments: 25 }),
@@ -220,4 +230,27 @@ describe('AI processing worker', () => {
     expect(mocks.createAiProvider).not.toHaveBeenCalled();
     expect(mocks.processBatch).not.toHaveBeenCalled();
   });
+});
+
+it('runs manual AI with a keyless custom endpoint', async () => {
+  mocks.appConfig.AI_OPENAI_API_KEY = undefined;
+  mocks.appConfig.AI_OPENAI_BASE_URL = 'http://localhost:11434/v1';
+  await import('./ai-processing-worker.js');
+  const task = mocks.runWorkerTask.mock.calls[0]?.[0] as TaskFunction;
+  const handle = createDatabaseWithHandle(':memory:');
+  await migrateDatabase(handle.sqlite);
+  const result = { processed: 0 };
+  mocks.processBatch.mockResolvedValue(result);
+  try {
+    await expect(
+      task({ db: handle.db, sqlite: handle.sqlite, jobId: 'manual-local', taskData: {} }, vi.fn()),
+    ).resolves.toEqual(result);
+    expect(mocks.createAiProvider).toHaveBeenCalledWith(undefined, 'gpt-5.4-mini', {
+      maxRetries: 2,
+      flexProcessing: true,
+      baseURL: 'http://localhost:11434/v1',
+    });
+  } finally {
+    handle.sqlite.close();
+  }
 });

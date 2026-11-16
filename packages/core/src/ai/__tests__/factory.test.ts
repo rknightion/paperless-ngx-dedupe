@@ -23,20 +23,27 @@ describe('createAiProvider', () => {
 
   it('passes maxRetries to provider constructor', async () => {
     const { OpenAiProvider } = await import('../providers/openai.js');
-    await createAiProvider('sk-test-key', 'gpt-5.4-mini', 5);
-    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 5, true);
+    await createAiProvider('sk-test-key', 'gpt-5.4-mini', { maxRetries: 5 });
+    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', {
+      maxRetries: 5,
+    });
   });
 
   it('passes maxRetries and flexProcessing to provider constructor', async () => {
     const { OpenAiProvider } = await import('../providers/openai.js');
-    await createAiProvider('sk-test-key', 'gpt-5.4-mini', 5, false);
-    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 5, false);
+    await createAiProvider('sk-test-key', 'gpt-5.4-mini', { maxRetries: 5, flexProcessing: false });
+    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', {
+      maxRetries: 5,
+      flexProcessing: false,
+    });
   });
 
-  it('defaults flexProcessing to true', async () => {
+  it('leaves the default Flex policy to the provider', async () => {
     const { OpenAiProvider } = await import('../providers/openai.js');
-    await createAiProvider('sk-test-key', 'gpt-5.4-mini', 3);
-    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', 3, true);
+    await createAiProvider('sk-test-key', 'gpt-5.4-mini', { maxRetries: 3 });
+    expect(OpenAiProvider.create).toHaveBeenCalledWith('sk-test-key', 'gpt-5.4-mini', {
+      maxRetries: 3,
+    });
   });
 });
 
@@ -47,13 +54,13 @@ describe('createInteractiveAiProvider', () => {
     [0, 0],
   ])('caps configured retries %s at %s and disables Flex', async (configured, expected) => {
     const { OpenAiProvider } = await import('../providers/openai.js');
-    const provider = await createInteractiveAiProvider('test-api-key', 'test-model', configured);
+    const provider = await createInteractiveAiProvider('test-api-key', 'test-model', {
+      maxRetries: configured,
+    });
     expect(provider.provider).toBe('openai');
-    expect(OpenAiProvider.create).toHaveBeenLastCalledWith(
-      'test-api-key',
-      'test-model',
-      expected,
-      false,
-    );
+    expect(OpenAiProvider.create).toHaveBeenLastCalledWith('test-api-key', 'test-model', {
+      maxRetries: expected,
+      flexProcessing: false,
+    });
   });
 });

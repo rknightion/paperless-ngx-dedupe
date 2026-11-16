@@ -37,11 +37,10 @@ describe('interactive reprocess HTTP contract', () => {
     const response = await request(query);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: { reprocessed: true, resultId: 'result-test' } });
-    expect(mocks.createInteractiveAiProvider).toHaveBeenCalledWith(
-      'test-api-key',
-      'test-model',
-      10,
-    );
+    expect(mocks.createInteractiveAiProvider).toHaveBeenCalledWith('test-api-key', 'test-model', {
+      maxRetries: 10,
+      baseURL: undefined,
+    });
     expect(mocks.createAiProvider).not.toHaveBeenCalled();
     expect(mocks.reprocessSingleResult).toHaveBeenCalledWith(
       {},
@@ -68,11 +67,28 @@ describe('interactive reprocess HTTP contract', () => {
           occurredAt: expect.any(String),
         },
       });
-      expect(mocks.createInteractiveAiProvider).toHaveBeenCalledWith(
-        'test-api-key',
-        'test-model',
-        10,
-      );
+      expect(mocks.createInteractiveAiProvider).toHaveBeenCalledWith('test-api-key', 'test-model', {
+        maxRetries: 10,
+        baseURL: undefined,
+      });
     },
   );
+});
+
+it('reprocesses with a keyless custom endpoint through the interactive factory', async () => {
+  mocks.reprocessSingleResult.mockResolvedValue({ resultId: 'local-result' });
+  const response = await POST({
+    params: { id: 'local-result' },
+    locals: {
+      config: { AI_ENABLED: true, AI_OPENAI_BASE_URL: 'http://localhost:11434/v1' },
+      db: {},
+    },
+    url: new URL('http://localhost/api/v1/ai/results/local-result/reprocess'),
+  } as never);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ data: { reprocessed: true, resultId: 'local-result' } });
+  expect(mocks.createInteractiveAiProvider).toHaveBeenLastCalledWith(undefined, 'test-model', {
+    maxRetries: 10,
+    baseURL: 'http://localhost:11434/v1',
+  });
 });

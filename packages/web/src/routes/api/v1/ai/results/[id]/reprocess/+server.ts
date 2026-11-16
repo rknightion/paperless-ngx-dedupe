@@ -14,7 +14,7 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
     return apiError(ErrorCode.BAD_REQUEST, 'AI processing is not enabled');
   }
 
-  if (!locals.config.AI_OPENAI_API_KEY) {
+  if (!locals.config.AI_OPENAI_API_KEY && !locals.config.AI_OPENAI_BASE_URL) {
     return apiError(ErrorCode.BAD_REQUEST, 'OpenAI API key is not configured');
   }
 
@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
     const provider = await createInteractiveAiProvider(
       locals.config.AI_OPENAI_API_KEY,
       aiConfig.model,
-      aiConfig.maxRetries,
+      { maxRetries: aiConfig.maxRetries, baseURL: locals.config.AI_OPENAI_BASE_URL },
     );
 
     const result = await reprocessSingleResult(locals.db, params.id, {
