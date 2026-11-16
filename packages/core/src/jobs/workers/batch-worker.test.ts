@@ -112,6 +112,39 @@ describe('reviewed duplicate deletion worker', () => {
       .run();
   });
 
+  it('refuses a merge-enabled preview before execution support is available without deleting documents', async () => {
+    const now = new Date('2026-07-24T11:00:00.000Z');
+    const preview = createDuplicateDeletionPlan(handle.db, ['stable-group'], {
+      now,
+      mergeMetadata: true,
+      inboxTagNames: [],
+      customFieldNames: new Map(),
+    });
+    const client = { deleteDocument: vi.fn().mockResolvedValue(undefined) };
+    await expect(
+      executeReviewedDuplicateDeletion(
+        {
+          db: handle.db,
+          sqlite: handle.sqlite,
+          jobId: 'job-1',
+          taskData: { planToken: preview.token },
+        },
+        vi.fn(),
+        client,
+        now,
+      ),
+    ).rejects.toThrow('Metadata copying is not available yet');
+    expect(client.deleteDocument).not.toHaveBeenCalled();
+    expect(
+      handle.db
+        .select()
+        .from(document)
+        .all()
+        .map(({ paperlessId }) => paperlessId)
+        .sort((a, b) => a - b),
+    ).toEqual([101, 102, 201, 202]);
+  });
+
   it.each(['between groups', 'within a group'] as const)(
     'does not issue another remote deletion after cancellation %s',
     async (boundary) => {

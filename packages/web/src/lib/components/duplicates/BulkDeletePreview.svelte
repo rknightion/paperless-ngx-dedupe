@@ -1,11 +1,14 @@
 <script lang="ts">
   import { ConfirmDialog } from '$lib/components';
+  import { type FrozenDuplicateGroup } from '@paperless-dedupe/core';
+  import MetadataMergePreview from './MetadataMergePreview.svelte';
 
   type FrozenDocument = { documentId: string; paperlessId: number };
   type FrozenGroup = {
     groupId: string;
     primaryPaperlessId: number;
     nonPrimaryDocuments: FrozenDocument[];
+    merge?: FrozenDuplicateGroup['merge'];
   };
   interface Preview {
     planToken: string;
@@ -29,6 +32,7 @@
   let executing = $state(false);
   let reviewed = $state(false);
   let showConfirm = $state(false);
+  let mergeMetadata = $state(false);
   let error = $state<string | null>(null);
   let snapshotIds = $state<string[]>([]);
   let wasOpen = $state(false);
@@ -60,7 +64,7 @@
       const response = await fetch('/api/v1/batch/delete-non-primary/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupIds: ids }),
+        body: JSON.stringify({ groupIds: ids, ...(mergeMetadata ? { mergeMetadata: true } : {}) }),
         signal: controller.signal,
       });
       const body = await response.json();
@@ -94,6 +98,7 @@
   $effect(() => {
     if (open && !wasOpen) {
       wasOpen = true;
+      mergeMetadata = false;
       snapshotIds = [...groupIds];
       restoreFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       if (dialog && !dialog.open) {
@@ -144,7 +149,7 @@
   }
 
   async function execute() {
-    if (executing || !preview) return;
+    if (executing || !preview || mergeMetadata) return;
     executing = true;
     showConfirm = false;
     error = null;
@@ -190,6 +195,25 @@
       recycle bin, where they can be restored.
     </p>
 
+    <label class="text-ink mt-4 flex items-start gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={mergeMetadata}
+        disabled={loading || executing}
+        class="mt-0.5"
+        onchange={(event) => {
+          mergeMetadata = event.currentTarget.checked;
+          void loadPreview(snapshotIds);
+        }}
+      />
+      Copy missing tags and metadata to the kept document
+    </label>
+    {#if mergeMetadata}
+      <p class="text-muted mt-2 text-sm">
+        Copying metadata is not yet available. Clear this option to continue without copying.
+      </p>
+    {/if}
+
     {#if loading && !preview}
       <p class="text-muted mt-5 text-sm">Preparing exact deletion preview…</p>
     {:else if error}
@@ -218,6 +242,7 @@
                 <li>Paperless document #{document.paperlessId}</li>
               {/each}
             </ul>
+            {#if group.merge}<MetadataMergePreview merge={group.merge} />{/if}
           </section>
         {/each}
         <p class="text-muted text-xs">
@@ -243,7 +268,7 @@
       {#if preview}
         <button
           type="button"
-          disabled={!reviewed || loading || executing}
+          disabled={!reviewed || loading || executing || mergeMetadata}
           onclick={() => (showConfirm = true)}
           class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >

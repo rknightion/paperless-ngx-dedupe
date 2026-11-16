@@ -1167,6 +1167,18 @@ are numbers. Each group contains `groupId`, `updatedAt`, `primaryDocumentId`,
 The plan expires after 15 minutes. Invalid JSON, IDs or group state return
 `400 VALIDATION_FAILED`; a runtime not accepting work returns `503 SERVICE_UNAVAILABLE`.
 
+Optional `mergeMetadata: true` previews missing metadata to copy to the keeper. Each group then
+also contains `merge: { addTags, setCorrespondent, setDocumentType, addCustomFieldNames }`.
+The scalar additions are null when no assignment is needed; custom-field values are not returned.
+Tags exclude inbox tags and existing keeper tags. Nonempty keeper values always win conflicts.
+Local document metadata supplies the preview, while read-only Paperless tag and custom-field
+lookups identify inbox tags and field names. An upstream lookup failure returns `502 BAD_GATEWAY`
+without storing a plan. The enabled option and additions are frozen with the reviewed plan.
+
+Copying metadata can currently be previewed, but merge-enabled deletion is rejected before any
+document is deleted. Omit the option or set it to false to retain the existing deletion behavior,
+response shape and absence of metadata lookups.
+
 ### POST /api/v1/batch/purge-deleted
 
 Purges all duplicate groups with `deleted` status from the database. No request body required.
