@@ -462,6 +462,24 @@ Optional query:
 
 - `light=true` to omit full member text content.
 
+### GET /api/v1/duplicates/:id/files
+
+Read live file metadata for each member of a duplicate group. No file contents are downloaded and
+nothing is stored. Up to four Paperless requests run concurrently, using the existing retry policy.
+A missing group returns 404; an upstream failure returns 502 without a partial result.
+
+The response data contains members with documentId, paperlessId, originalChecksum, originalSize,
+archiveSize, originalMimeType and hasArchive, plus identicalOriginals and reclaimableBytes. Sizes
+are bytes. Unknown sizes are null, including a missing archive size when hasArchive is true;
+Paperless versions may omit a cached archive size. An absent archive contributes zero bytes.
+Reclaimable bytes sum original and archive sizes for non-primary members and are null if any
+required size is unknown. Space is reclaimed only after the Paperless recycle bin is emptied.
+
+The identical-originals flag is true only when at least two members all have the same known,
+nonempty original checksum. It is a display fact and never triggers deletion automatically.
+The detail page loads these facts separately, so an unavailable upstream does not block comparison
+of the locally stored document metadata.
+
 ### DELETE /api/v1/duplicates/:id
 
 Deletes group record and memberships (does not delete documents in Paperless).

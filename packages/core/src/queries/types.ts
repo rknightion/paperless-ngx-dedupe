@@ -1,3 +1,4 @@
+import { type PaperlessFileMetadata } from '../paperless/types.js';
 import { z } from 'zod';
 
 import type { DuplicateMatchExplanation } from '../dedup/explanations.js';
@@ -540,4 +541,16 @@ export interface SimilarityGraphData {
   edges: GraphEdge[];
   totalGroupsMatched: number;
   groupsIncluded: number;
+}
+
+/** Read-only live file facts for one duplicate group; unknown sizes are not zero. */
+export interface DuplicateGroupFiles {
+  members: Array<
+    PaperlessFileMetadata & {
+      documentId: string;
+      paperlessId: number;
+    }
+  >;
+  identicalOriginals: boolean;
+  reclaimableBytes: number | null;
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { type DuplicateGroupFiles } from '@paperless-dedupe/core';
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import {
@@ -18,6 +19,29 @@
   import { ArrowLeft, ExternalLink, Trash2, UserMinus } from 'lucide-svelte';
 
   let { data } = $props();
+
+  let fileFacts = $state<DuplicateGroupFiles | null>(null);
+  let fileError = $state(false);
+  let fileRequest = $state(0);
+  $effect(() => {
+    const group = data.group;
+    void fileRequest;
+    const controller = new AbortController();
+    fileFacts = null;
+    fileError = false;
+    void fetch(`/api/v1/duplicates/${encodeURIComponent(group.id)}/files`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('File metadata unavailable');
+        const body = await response.json();
+        if (!controller.signal.aborted) fileFacts = body.data;
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) fileError = true;
+      });
+    return () => controller.abort();
+  });
 
   let selectedSecondaryIndex = $state(0);
   let isSettingPrimary = $state(false);
@@ -296,6 +320,21 @@
         </div>
 
         <h3 class="text-ink text-base font-semibold">Document Comparison</h3>
+        {#if fileFacts?.identicalOriginals}
+          <span class="bg-canvas text-ink inline-flex rounded-full px-3 py-1 text-sm"
+            >Byte-identical originals</span
+          >
+        {/if}
+        {#if fileError}
+          <p role="status" class="text-muted text-sm">
+            File metadata is unavailable.
+            <button class="text-accent underline" onclick={() => fileRequest++}
+              >Retry file metadata</button
+            >
+          </p>
+        {:else if !fileFacts}
+          <p role="status" class="text-muted text-sm">Loading file metadata…</p>
+        {/if}
 
         {#if secondaryMembers.length > 1}
           {#if secondaryMembers.length <= 4}
@@ -377,6 +416,12 @@
           primary={primaryMember}
           secondary={selectedSecondary}
           paperlessUrl={data.paperlessUrl}
+          primaryFile={fileFacts?.members.find(
+            (member) => member.documentId === primaryMember.documentId,
+          )}
+          secondaryFile={fileFacts?.members.find(
+            (member) => member.documentId === selectedSecondary.documentId,
+          )}
         />
 
         {#key `${primaryMember.documentId}-${selectedSecondary.documentId}`}
