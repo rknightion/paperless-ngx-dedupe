@@ -312,3 +312,132 @@ test.describe('Next duplicate in the review queue', () => {
     );
   });
 });
+
+test.describe('Duplicate review shortcuts', () => {
+  let seed: SeedResult;
+  test.beforeEach(({ seedDB }) => {
+    seed = seedDB();
+    const db = new Database(DB_PATH);
+    db.prepare("UPDATE duplicate_group SET status='pending'").run();
+    db.close();
+  });
+  test.afterEach(({ clearDB }) => clearDB());
+
+  test('n resolves the group and advances with the current filters', async ({ page, request }) => {
+    await page.goto(`/duplicates/${seed.groupIds[0]}?returnParams=queue%3Dpending`);
+    await expect(page.getByRole('button', { name: 'Not a Duplicate', exact: true })).toBeVisible();
+    await page.keyboard.press('n');
+    await expect(page).toHaveURL(`/duplicates/${seed.groupIds[1]}?returnParams=queue%3Dpending`);
+    expect(
+      (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+    ).toBe('false_positive');
+  });
+
+  test('d only opens confirmation and typing, dialogs and modifiers block actions', async ({
+    page,
+    request,
+  }) => {
+    const db = new Database(DB_PATH);
+    try {
+      await page.goto(`/duplicates/${seed.groupIds[0]}`);
+      await expect(
+        page.getByRole('button', { name: 'Not a Duplicate', exact: true }),
+      ).toBeVisible();
+      const before = db.prepare('SELECT COUNT(*) AS count FROM document').get();
+      await page.evaluate(() => {
+        const input = document.createElement('input');
+        input.setAttribute('aria-label', 'Synthetic typing target');
+        document.querySelector('main')!.append(input);
+        input.focus();
+      });
+      await page.keyboard.type('nkds?p');
+      await expect(page.getByLabel('Synthetic typing target')).toHaveValue('nkds?p');
+      await page.getByLabel('Synthetic typing target').evaluate((e) => e.remove());
+      for (const key of ['Control+n', 'Alt+k', 'Meta+d', 'Shift+N', 'Shift+?'])
+        await page.keyboard.press(key);
+      expect(
+        (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+      ).toBe('pending');
+      await expect(page.locator('dialog[open]')).toHaveCount(0);
+      await page.keyboard.press('d');
+      const dialog = page.getByRole('dialog', {
+        name: 'Delete Non-Primary Documents',
+        exact: true,
+      });
+      await expect(dialog).toBeVisible();
+      await page.keyboard.press('n');
+      await page.keyboard.press('k');
+      await page.keyboard.press('s');
+      expect(
+        (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+      ).toBe('pending');
+      expect(db.prepare('SELECT COUNT(*) AS count FROM document').get()).toEqual(before);
+      expect(
+        db.prepare("SELECT COUNT(*) AS count FROM job WHERE type='batch_operation'").get(),
+      ).toEqual({ count: 0 });
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(dialog).not.toBeVisible();
+    } finally {
+      db.close();
+    }
+  });
+
+  test('question mark opens help and keeps review actions inactive until closed', async ({
+    page,
+    request,
+  }) => {
+    await page.goto(`/duplicates/${seed.groupIds[0]}`);
+    await expect(
+      page.getByRole('button', { name: 'Keyboard shortcuts (?)', exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press('?');
+    const help = page.getByRole('dialog', { name: 'Keyboard shortcuts', exact: true });
+    await expect(help).toBeVisible();
+    for (const key of ['n', 'k', 'd', 's', '1–9', 'p', '?'])
+      await expect(
+        help.locator('kbd').filter({ hasText: new RegExp(`^${key.replace('?', '\\?')}$`) }),
+      ).toBeVisible();
+    await page.keyboard.press('n');
+    expect(
+      (await (await request.get(`/api/v1/duplicates/${seed.groupIds[0]}`)).json()).data.status,
+    ).toBe('pending');
+    await page.keyboard.press('Escape');
+    await expect(help).not.toBeVisible();
+    await page.keyboard.press('s');
+    await expect(page).toHaveURL(`/duplicates/${seed.groupIds[1]}?returnParams=`);
+    await page.keyboard.press('k');
+    await expect(page).toHaveURL(`/duplicates/${seed.groupIds[2]}?returnParams=`);
+    expect(
+      (await (await request.get(`/api/v1/duplicates/${seed.groupIds[1]}`)).json()).data.status,
+    ).toBe('ignored');
+  });
+  test('number keys select a comparison document and p persists it as primary', async ({
+    page,
+    request,
+  }) => {
+    const path = `/api/v1/duplicates/${seed.groupIds[1]}`;
+    const before = (await (await request.get(path)).json()).data;
+    const secondary = before.members.filter((member: { isPrimary: boolean }) => !member.isPrimary);
+    await page.goto(`/duplicates/${seed.groupIds[1]}`);
+    await expect(
+      page.getByRole('button', { name: 'Keyboard shortcuts (?)', exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press('2');
+    await page.keyboard.press('p');
+    await expect
+      .poll(
+        async () =>
+          (await (await request.get(path)).json()).data.members.find(
+            (member: { isPrimary: boolean }) => member.isPrimary,
+          ).documentId,
+      )
+      .toBe(secondary[1].documentId);
+    await page.reload();
+    const promoted = page
+      .locator('table')
+      .first()
+      .locator('tbody tr')
+      .filter({ hasText: secondary[1].title });
+    await expect(promoted.getByText('Primary', { exact: true })).toBeVisible();
+  });
+});

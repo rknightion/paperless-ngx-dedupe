@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DuplicateKeyboardHandler from '$lib/components/duplicates/DuplicateKeyboardHandler.svelte';
   import { untrack } from 'svelte';
   import { type DuplicateGroupFiles } from '@paperless-dedupe/core';
   import { goto, invalidateAll } from '$app/navigation';
@@ -47,6 +48,13 @@
 
   let selectedSecondaryIndex = $state(0);
   let isSettingPrimary = $state(false);
+  let actionBar: HTMLDivElement | undefined = $state();
+  function activateGroupAction(label: string) {
+    const button = [...(actionBar?.querySelectorAll('button') ?? [])].find(
+      (button) => button.textContent?.trim() === label,
+    );
+    if (button && !button.disabled) button.click();
+  }
 
   let isDeleted = $derived(data.group.status === 'deleted');
   let primaryMember = $derived(
@@ -254,15 +262,33 @@
     </p>
   </div>
 
-  <!-- Action bar -->
-  <GroupActionBar
-    groupId={data.group.id}
-    status={data.group.status}
-    memberCount={data.group.members.length}
-    onaction={() => void handleGroupAction()}
-    {returnParams}
-    {returnUrl}
+  <DuplicateKeyboardHandler
+    shortcutState={{
+      pending: data.group.status === 'pending',
+      canDelete: !readOnly,
+      hasNext: Boolean(data.nextGroupId),
+      secondaryCount: secondaryMembers.length,
+      canSetPrimary: !isDeleted && !isSettingPrimary && Boolean(selectedSecondary),
+    }}
+    onaction={activateGroupAction}
+    onselect={(index) => (selectedSecondaryIndex = index)}
+    onprimary={() => {
+      if (selectedSecondary && !isSettingPrimary && !isDeleted)
+        void setPrimary(selectedSecondary.documentId);
+    }}
+    onskip={() => void goToNextGroup()}
   />
+  <!-- Action bar -->
+  <div bind:this={actionBar}>
+    <GroupActionBar
+      groupId={data.group.id}
+      status={data.group.status}
+      memberCount={data.group.members.length}
+      onaction={() => void handleGroupAction()}
+      {returnParams}
+      {returnUrl}
+    />
+  </div>
 
   <!-- Confidence section divider -->
   <div class="flex items-center gap-4">
