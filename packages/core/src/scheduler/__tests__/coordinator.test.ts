@@ -21,6 +21,8 @@ import {
   acquireOperation,
   consumeDispatchIntents,
   enqueueDueSchedules,
+  enqueueRequestedSync,
+  releaseOperation,
   enqueueManualOperation,
   getDispatchIntent,
   renewOperationLease,
@@ -1051,5 +1053,91 @@ describe('schedule coordinator durable claims', () => {
         .prepare('SELECT status, terminal_reason AS terminalReason FROM job WHERE id = ?')
         .get(intent.jobId),
     ).toEqual({ status: 'failed', terminalReason: 'automated_retry_exhausted' });
+  });
+});
+
+describe('debounced webhook sync requests', () => {
+  let sqlite: ReturnType<typeof createDatabaseWithHandle>['sqlite'];
+  const start = new Date('2026-01-01T00:00:00.000Z');
+  const at = (seconds: number) => new Date(start.getTime() + seconds * 1000);
+  const write = (key: string, value: string) =>
+    sqlite
+      .prepare(
+        'INSERT INTO app_config (key,value,updated_at) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at',
+      )
+      .run(key, value, start.toISOString());
+  const request = (seconds: number) => write('hooks.syncRequestedAt', at(seconds).toISOString());
+  const pending = () =>
+    sqlite.prepare("SELECT value FROM app_config WHERE key='hooks.syncRequestedAt'").get();
+  const jobs = () => sqlite.prepare('SELECT type, trigger_kind FROM job').all();
+  beforeEach(async () => {
+    ({ sqlite } = createDatabaseWithHandle(':memory:'));
+    await migrateDatabase(sqlite);
+    write('automation.webhookSyncEnabled', 'true');
+    vi.useFakeTimers();
+    vi.setSystemTime(start);
+  });
+  afterEach(() => {
+    sqlite.close();
+    vi.useRealTimers();
+  });
+
+  it('a burst of webhook requests enqueues exactly one sync after the quiet period', () => {
+    for (let seconds = 0; seconds < 30; seconds++) {
+      request(seconds);
+      expect(enqueueRequestedSync(sqlite, at(seconds))).toBeNull();
+    }
+    expect(enqueueRequestedSync(sqlite, at(88))).toBeNull();
+    expect(jobs()).toEqual([]);
+    expect(enqueueRequestedSync(sqlite, at(89))).toMatchObject({
+      task: 'sync',
+      triggerKind: 'manual',
+    });
+    expect(jobs()).toEqual([{ type: 'sync', trigger_kind: 'manual' }]);
+    expect(pending()).toBeUndefined();
+    expect(enqueueRequestedSync(sqlite, at(180))).toBeNull();
+    expect(jobs()).toHaveLength(1);
+  });
+
+  it('keeps a request arriving during enqueue and runs a second sync', () => {
+    request(0);
+    sqlite.exec(`CREATE TRIGGER newer_webhook AFTER INSERT ON dispatch_intent BEGIN
+      UPDATE app_config SET value='2026-01-01T00:01:00.000Z' WHERE key='hooks.syncRequestedAt'; END`);
+    const first = enqueueRequestedSync(sqlite, at(60))!;
+    expect(first.task).toBe('sync');
+    expect(pending()).toEqual({ value: at(60).toISOString() });
+    sqlite.exec('DROP TRIGGER newer_webhook');
+    sqlite.prepare("UPDATE job SET status = 'completed' WHERE id = ?").run(first.jobId);
+    releaseOperation(sqlite, first.jobId!);
+    expect(enqueueRequestedSync(sqlite, at(119))).toBeNull();
+    expect(enqueueRequestedSync(sqlite, at(120))).toMatchObject({ task: 'sync' });
+    expect(jobs()).toHaveLength(2);
+    expect(pending()).toBeUndefined();
+  });
+
+  it('retains a quiet request until the active sync releases its lease', () => {
+    request(0);
+    acquireOperation(sqlite, 'sync', 'other-sync');
+    expect(enqueueRequestedSync(sqlite, at(60))).toBeNull();
+    expect(pending()).toEqual({ value: at(0).toISOString() });
+    expect(jobs()).toEqual([]);
+    releaseOperation(sqlite, 'other-sync');
+    expect(enqueueRequestedSync(sqlite, at(61))).toMatchObject({ task: 'sync' });
+    expect(pending()).toBeUndefined();
+  });
+
+  it('honours custom quiet periods and leaves disabled or malformed requests alone', () => {
+    expect(enqueueRequestedSync(sqlite, at(100))).toBeNull();
+    request(0);
+    write('automation.webhookSyncEnabled', 'false');
+    expect(enqueueRequestedSync(sqlite, at(100))).toBeNull();
+    expect(pending()).toBeDefined();
+    write('automation.webhookSyncEnabled', 'true');
+    write('hooks.syncRequestedAt', 'invalid');
+    expect(enqueueRequestedSync(sqlite, at(100))).toBeNull();
+    request(0);
+    write('automation.webhookQuietSeconds', '10');
+    expect(enqueueRequestedSync(sqlite, at(9))).toBeNull();
+    expect(enqueueRequestedSync(sqlite, at(10))).toMatchObject({ task: 'sync' });
   });
 });

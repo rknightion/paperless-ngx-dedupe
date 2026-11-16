@@ -211,6 +211,8 @@ const entries: InternalRegistryEntry[] = [
     (value) => typeof value === 'string' && validateTagAliasYaml(value).valid,
   ),
   databaseEntry('ai.tagAliasesEnabled', 'boolean', DEFAULT_AI_CONFIG.tagAliasesEnabled, 'ai'),
+  databaseEntry('automation.webhookSyncEnabled', 'boolean', false, 'automation'),
+  databaseEntry('automation.webhookQuietSeconds', 'integer', 60, 'automation', integer(10, 3600)),
   databaseEntry('automation.aiMaxDocumentsPerRun', 'integer', 25, 'automation', integer(1, 10_000)),
   databaseEntry('automation.aiMonthlyBudgetUsd', 'number', 0, 'automation', finite(0, 1_000_000)),
   databaseEntry(
