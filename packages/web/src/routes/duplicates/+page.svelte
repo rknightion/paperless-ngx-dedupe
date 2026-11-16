@@ -10,6 +10,7 @@
   import { Download, Network, Trash2, Wand2 } from 'lucide-svelte';
 
   let { data } = $props();
+  const readOnly = $derived(data.readOnly === true);
   let selectedIds = $state<Set<string>>(new Set());
   let isSubmitting = $state(false);
   let actionFeedback = $state<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -191,7 +192,8 @@
       <Button
         variant="destructive"
         size="sm"
-        disabled={isSubmitting}
+        disabled={readOnly || isSubmitting}
+        title={readOnly ? 'Paperless is read-only' : undefined}
         onclick={() => (showDeletePreview = true)}
       >
         Delete Non-Primary

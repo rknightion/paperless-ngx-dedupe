@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { AlertTriangle, ChevronDown, ChevronUp, Loader2 } from 'lucide-svelte';
   import type { ApplyPreflightResult } from '@paperless-dedupe/core';
+
+  const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
     open: boolean;
@@ -262,7 +265,9 @@
         </button>
         <button
           onclick={onconfirm}
-          class="text-on-accent rounded-lg px-4 py-2 text-sm font-medium {hasWarnings
+          disabled={readOnly}
+          title={readOnly ? 'Paperless is read-only' : undefined}
+          class="text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 {hasWarnings
             ? 'bg-ember hover:opacity-90'
             : 'bg-accent hover:bg-accent-hover'}"
         >

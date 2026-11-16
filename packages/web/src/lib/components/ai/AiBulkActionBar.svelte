@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { Check, X } from 'lucide-svelte';
+
+  const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
     selectedCount: number;
@@ -15,7 +18,9 @@
     <span class="text-muted text-sm font-medium">{selectedCount} selected across pages</span>
     <button
       onclick={onbatchapply}
-      class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+      disabled={readOnly}
+      title={readOnly ? 'Paperless is read-only' : undefined}
+      class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
     >
       <Check class="h-3.5 w-3.5" /> Review selected fields
     </button>

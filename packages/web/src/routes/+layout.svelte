@@ -141,6 +141,15 @@
     >
       <Menu class="h-6 w-6" />
     </button>
+    {#if data.readOnly}
+      <aside role="note" aria-label="Paperless read-only" class="panel text-ink mb-6">
+        <p class="font-semibold">Paperless is read-only</p>
+        <p class="text-muted mt-1 text-sm">
+          Changes to Paperless are disabled. Sync, analysis, AI suggestions and local review remain
+          available.
+        </p>
+      </aside>
+    {/if}
     {@render children()}
   </main>
   <ActivityPanel jobs={activity.jobs} />

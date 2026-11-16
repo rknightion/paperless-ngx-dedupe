@@ -30,6 +30,7 @@
   import type { AiFailureCategory } from '@paperless-dedupe/core';
 
   let { data } = $props();
+  const readOnly = $derived(data.readOnly === true);
 
   // ── Bulk Apply State ──
   let showPreflight = $state(false);
@@ -80,6 +81,7 @@
     selection: AiFieldSelection,
     options: { allowClearing: boolean; createMissingEntities: boolean },
   ) {
+    if (readOnly) return;
     const fieldsApplied = [
       selection.title && 'title',
       selection.correspondent && 'correspondent',
@@ -211,6 +213,7 @@
   }
 
   async function executeApply(planToken: string) {
+    if (readOnly) return;
     showPreflight = false;
     try {
       const res = await fetch('/api/v1/ai/results/batch-apply', {
@@ -251,6 +254,7 @@
   }
 
   async function handleBatchApply() {
+    if (readOnly) return;
     const ids = [...selectedIds];
     if (ids.length === 0) return;
     const customFieldIds = [
@@ -320,6 +324,7 @@
   }
 
   async function handleRevert(id: string, selection: AiFieldSelection) {
+    if (readOnly) return;
     try {
       const previewResponse = await fetch(`/api/v1/ai/results/${id}/revert/preview`, {
         method: 'POST',

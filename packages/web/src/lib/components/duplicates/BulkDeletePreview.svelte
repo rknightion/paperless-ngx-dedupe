@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { ConfirmDialog } from '$lib/components';
   import { type FrozenDuplicateGroup } from '@paperless-dedupe/core';
   import MetadataMergePreview from './MetadataMergePreview.svelte';
@@ -17,6 +18,8 @@
     documentCount: number;
     groups: FrozenGroup[];
   }
+  const readOnly = $derived(page.data.readOnly === true);
+
   interface Props {
     open: boolean;
     groupIds: string[];
@@ -149,7 +152,7 @@
   }
 
   async function execute() {
-    if (executing || !preview) return;
+    if (readOnly || executing || !preview) return;
     executing = true;
     showConfirm = false;
     error = null;
@@ -263,7 +266,8 @@
       {#if preview}
         <button
           type="button"
-          disabled={!reviewed || loading || executing}
+          disabled={readOnly || !reviewed || loading || executing}
+          title={readOnly ? 'Paperless is read-only' : undefined}
           onclick={() => (showConfirm = true)}
           class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
@@ -280,6 +284,7 @@
   message="Move only the documents in the reviewed list to the Paperless-NGX recycle bin?"
   confirmLabel="Move documents to recycle bin"
   variant="ember"
+  confirmDisabled={readOnly}
   onconfirm={execute}
   oncancel={() => (showConfirm = false)}
 />

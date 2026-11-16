@@ -21,6 +21,7 @@
   } from 'lucide-svelte';
 
   let { data } = $props();
+  const readOnly = $derived(data.readOnly === true);
 
   const initialSearch = untrack(() => data.search);
 
@@ -153,6 +154,7 @@
 
   // ── Revert Handler ──
   async function handleRevert(id: string) {
+    if (readOnly) return;
     isReverting = true;
     try {
       const res = await fetch(`/api/v1/ai/results/${id}/revert`, { method: 'POST' });
@@ -172,6 +174,7 @@
   }
 
   async function handleRetryApply(id: string) {
+    if (readOnly) return;
     isRetryingApply = true;
     try {
       const res = await fetch(`/api/v1/ai/results/${id}/apply`, {
@@ -556,7 +559,8 @@
             <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
               <button
                 onclick={() => activeResultDetail && handleRevert(activeResultDetail.id)}
-                disabled={isReverting}
+                disabled={readOnly || isReverting}
+                title={readOnly ? 'Paperless is read-only' : undefined}
                 class="border-ember text-ember hover:bg-ember-light flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {#if isReverting}
@@ -588,7 +592,8 @@
               {:else}
                 <button
                   onclick={() => activeResultDetail && handleRetryApply(activeResultDetail.id)}
-                  disabled={isRetryingApply}
+                  disabled={readOnly || isRetryingApply}
+                  title={readOnly ? 'Paperless is read-only' : undefined}
                   class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
                 >
                   {#if isRetryingApply}

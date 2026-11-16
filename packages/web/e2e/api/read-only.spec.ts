@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/test-app';
+import Database from 'better-sqlite3';
 import { seedDatabase } from '../fixtures/seed-data';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -143,3 +144,66 @@ test('read-only mode keeps local review, settings, backup, export and sync avail
     expect((await sync.json()).data.jobId).toEqual(expect.any(String));
   });
 });
+
+for (const readOnly of [true, false]) {
+  test(`read-only UI protects Paperless controls while local review stays enabled: ${readOnly}`, async ({
+    browser,
+    request,
+  }) => {
+    await withReadOnlyApp(
+      {
+        PAPERLESS_READ_ONLY: String(readOnly),
+        AI_ENABLED: 'true',
+        AI_OPENAI_API_KEY: 'synthetic-ai-key',
+      },
+      async (url, _output, dbPath) => {
+        await request.get(`${url}/api/v1/health`);
+        const seed = seedDatabase(dbPath);
+        const db = new Database(dbPath);
+        try {
+          db.prepare(
+            "INSERT INTO ai_processing_result (id, document_id, paperless_id, provider, model, suggested_title, current_title, confidence_json, applied_status, created_at) VALUES ('read-only-review', ?, 1, 'openai', 'synthetic-model', 'Synthetic reviewed title', 'Test Document 1', '{\"title\":0.9}', 'pending_review', '2026-01-01')",
+          ).run(seed.documentIds[0]);
+        } finally {
+          db.close();
+        }
+        const context = await browser.newContext({ baseURL: url });
+        try {
+          const page = await context.newPage();
+          await page.goto(`/duplicates/${seed.groupIds[0]}`);
+          const notice = page.getByRole('note', { name: 'Paperless read-only' });
+          if (readOnly) await expect.soft(notice).toBeVisible();
+          else await expect(notice).toHaveCount(0);
+          const deletion = page.getByRole('button', { name: 'Delete Duplicates', exact: true });
+          if (readOnly) {
+            await expect.soft(deletion).toBeDisabled();
+            await expect.soft(deletion).toHaveAttribute('title', /read-only/);
+          } else await expect(deletion).toBeEnabled();
+          await expect(
+            page.getByRole('button', { name: 'Not a Duplicate', exact: true }),
+          ).toBeEnabled();
+          await expect(page.getByRole('button', { name: 'Keep All', exact: true })).toBeEnabled();
+          await page.goto('/ai-processing/review?queue=review');
+          const apply = page.getByRole('button', { name: 'Apply suggestions', exact: true });
+          if (readOnly) await expect.soft(apply).toBeDisabled();
+          else await expect(apply).toBeEnabled();
+          await page.getByRole('row').filter({ hasText: 'Test Document 1' }).click();
+          const applyFields = page.getByRole('button', { name: /^Apply \d+ fields?$/ });
+          if (readOnly) {
+            await expect.soft(applyFields).toBeDisabled();
+            const attempts: string[] = [];
+            page.on('request', (incoming) => {
+              if (incoming.url().includes('/api/v1/ai/results/preflight'))
+                attempts.push(incoming.url());
+            });
+            await page.keyboard.press('a');
+            expect(attempts).toEqual([]);
+          } else await expect(applyFields).toBeEnabled();
+          await expect(page.getByRole('button', { name: 'Reject', exact: true })).toBeEnabled();
+        } finally {
+          await context.close();
+        }
+      },
+    );
+  });
+}
