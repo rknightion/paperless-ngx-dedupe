@@ -2,7 +2,7 @@ import { type PaperlessFileMetadata } from '../paperless/types.js';
 import { and, count, desc, asc, eq, gte, lt, lte, or, sql, inArray, ne } from 'drizzle-orm';
 
 import type { AppDatabase } from '../db/client.js';
-import { recordPairDecisions } from '../dedup/pair-decisions.js';
+import { recordPairDecisions, listPairDecisions } from '../dedup/pair-decisions.js';
 import { createLogger } from '../logger.js';
 import { buildMatchExplanation } from '../dedup/explanations.js';
 import type { GroupStatus } from '../types/enums.js';
@@ -1236,4 +1236,57 @@ export function removeDocumentFromAllGroups(
   });
 
   return { groupsAffected: memberships.length, groupsAutoResolved };
+}
+
+/** Create one manual decision, returning its stable identity on repeated input. */
+export function createPairDecision(db: AppDatabase, paperlessIds: [number, number]): string {
+  if (paperlessIds[0] === paperlessIds[1])
+    throw new RangeError('A decision requires two distinct IDs');
+  return db.transaction((tx) => {
+    recordPairDecisions(tx as unknown as AppDatabase, paperlessIds, 'manual');
+    return tx
+      .select({ id: duplicatePairDecision.id })
+      .from(duplicatePairDecision)
+      .where(
+        and(
+          eq(duplicatePairDecision.paperlessIdLow, Math.min(...paperlessIds)),
+          eq(duplicatePairDecision.paperlessIdHigh, Math.max(...paperlessIds)),
+        ),
+      )
+      .get()!.id;
+  });
+}
+
+/** List decisions with current local titles, retaining IDs for documents absent from the library. */
+export function listPairDecisionsWithDocuments(
+  db: AppDatabase,
+  options: { limit: number; cursor?: string },
+) {
+  const { items, nextCursor } = listPairDecisions(db, options);
+  const paperlessIds = [
+    ...new Set(items.flatMap((item) => [item.paperlessIdLow, item.paperlessIdHigh])),
+  ];
+  const titles = new Map(
+    paperlessIds.length === 0
+      ? []
+      : db
+          .select({ id: document.paperlessId, title: document.title })
+          .from(document)
+          .where(inArray(document.paperlessId, paperlessIds))
+          .all()
+          .map((row) => [row.id, row.title]),
+  );
+  return {
+    items: items.map((item) => ({
+      id: item.id,
+      source: item.source,
+      createdAt: item.createdAt,
+      documents: [item.paperlessIdLow, item.paperlessIdHigh].map((paperlessId) => ({
+        paperlessId,
+        title: titles.get(paperlessId) ?? null,
+      })),
+    })),
+    nextCursor,
+    total: db.select({ value: count() }).from(duplicatePairDecision).get()!.value,
+  };
 }
