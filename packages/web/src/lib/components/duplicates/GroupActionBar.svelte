@@ -3,6 +3,8 @@
   import { ConfirmDialog, RecycleBinPrompt } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import { XCircle, CheckCircle, Trash2, RotateCcw } from 'lucide-svelte';
+  import { type FrozenDuplicateGroup } from '@paperless-dedupe/core';
+  import MetadataMergePreview from './MetadataMergePreview.svelte';
 
   interface Props {
     groupId: string;
@@ -29,8 +31,39 @@
   let isUpdating = $state(false);
   let error = $state<string | null>(null);
   let showDeleteConfirm = $state(false);
+  let mergeMetadata = $state(false);
+  let mergePreview = $state<FrozenDuplicateGroup['merge'] | null>(null);
+  let mergeLoading = $state(false);
+  let mergeError = $state<string | null>(null);
+  let mergeGeneration = 0;
   let deleteProgress = $state<{ progress: number; message: string } | null>(null);
   let showRecycleBinPrompt = $state(false);
+
+  async function previewMerge(enabled: boolean) {
+    mergeMetadata = enabled;
+    mergePreview = null;
+    mergeError = null;
+    const generation = ++mergeGeneration;
+    mergeLoading = enabled;
+    if (!enabled) return;
+    const selectedGroup = groupId;
+    try {
+      const response = await fetch('/api/v1/batch/delete-non-primary/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupIds: [selectedGroup], mergeMetadata: true }),
+      });
+      const body = await response.json();
+      if (generation !== mergeGeneration || !showDeleteConfirm || selectedGroup !== groupId) return;
+      if (!response.ok) throw new Error(body.error?.message ?? 'Unable to preview metadata');
+      mergePreview = body.data.groups[0].merge;
+    } catch (error) {
+      if (generation === mergeGeneration)
+        mergeError = error instanceof Error ? error.message : 'Unable to preview metadata';
+    } finally {
+      if (generation === mergeGeneration) mergeLoading = false;
+    }
+  }
 
   async function setStatus(newStatus: string) {
     isUpdating = true;
@@ -51,6 +84,7 @@
   }
 
   async function deleteNonPrimary() {
+    if (mergeMetadata) return;
     showDeleteConfirm = false;
     isUpdating = true;
     error = null;
@@ -122,6 +156,7 @@
 
     <button
       onclick={() => {
+        void previewMerge(false);
         showDeleteConfirm = true;
       }}
       disabled={isUpdating || memberCount < 2}
@@ -169,11 +204,37 @@
   message="This will delete all non-primary documents in this group from Paperless-NGX. Documents are moved to the Paperless-NGX recycle bin and can be restored from there."
   confirmLabel="Delete Documents"
   variant="ember"
+  confirmDisabled={mergeMetadata}
   onconfirm={deleteNonPrimary}
   oncancel={() => {
     showDeleteConfirm = false;
   }}
-/>
+>
+  <div class="mt-4">
+    <label class="text-ink flex items-start gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={mergeMetadata}
+        disabled={mergeLoading}
+        class="mt-0.5"
+        onchange={(event) => previewMerge(event.currentTarget.checked)}
+      />
+      Copy missing tags and metadata to the kept document
+    </label>
+    {#if mergeMetadata}
+      <p class="text-muted mt-2 text-sm">
+        Copying metadata is not yet available. Clear this option to continue without copying.
+      </p>
+    {/if}
+    {#if mergeLoading}
+      <p class="text-muted mt-2 text-sm">Preparing metadata preview…</p>
+    {:else if mergeError}
+      <p role="alert" class="text-ember mt-2 text-sm">{mergeError}</p>
+    {:else if mergePreview}
+      <MetadataMergePreview merge={mergePreview} />
+    {/if}
+  </div>
+</ConfirmDialog>
 
 {#if showRecycleBinPrompt}
   <dialog

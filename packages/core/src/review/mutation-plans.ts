@@ -11,6 +11,8 @@ import { document } from '../schema/sqlite/documents.js';
 import { duplicateGroup, duplicateMember } from '../schema/sqlite/duplicates.js';
 import { reviewedMutationPlan } from '../schema/sqlite/review.js';
 import { acquireOperation, releaseOperation } from '../scheduler/coordinator.js';
+import { planNamedMetadataMerge, type NamedMergeDocument } from './metadata-merge.js';
+import { type PaperlessCustomFieldInstance } from '../paperless/types.js';
 
 export const REVIEWED_MUTATION_PLAN_TTL_MS = 15 * 60 * 1000;
 
@@ -27,10 +29,17 @@ export type FrozenDuplicateGroup = {
   primaryDocumentId: string;
   primaryPaperlessId: number;
   nonPrimaryDocuments: FrozenDuplicateDocument[];
+  merge?: ReturnType<typeof planNamedMetadataMerge>;
 };
 
 export type DuplicateDeletionPlanPayload = {
   groups: FrozenDuplicateGroup[];
+  mergeMetadata?: true;
+};
+
+type MergePreviewOptions = {
+  inboxTagNames: readonly string[];
+  customFieldNames: ReadonlyMap<number, string>;
 };
 
 export type DuplicateDeletionPlanPreview = {
@@ -78,10 +87,19 @@ const frozenGroupSchema = z.object({
   primaryDocumentId: z.string().min(1),
   primaryPaperlessId: z.number().int().nonnegative(),
   nonPrimaryDocuments: z.array(frozenDocumentSchema).min(1),
+  merge: z
+    .object({
+      addTags: z.array(z.string()),
+      setCorrespondent: z.string().nullable(),
+      setDocumentType: z.string().nullable(),
+      addCustomFieldNames: z.array(z.string()),
+    })
+    .optional(),
 });
 
 const duplicateDeletionPayloadSchema = z.object({
   groups: z.array(frozenGroupSchema).min(1),
+  mergeMetadata: z.literal(true).optional(),
 });
 
 const GROUP_QUERY_CHUNK_SIZE = 400;
@@ -156,6 +174,7 @@ function chunks<T>(values: readonly T[], size: number): T[][] {
 function freezeDuplicateGroups(
   db: Pick<AppDatabase, 'select'>,
   requestedGroupIds: readonly string[],
+  mergeOptions?: MergePreviewOptions,
 ): FrozenDuplicateGroup[] {
   if (new Set(requestedGroupIds).size !== requestedGroupIds.length) {
     throw new DuplicateDeletionPreviewError('duplicate_group');
@@ -166,7 +185,9 @@ function freezeDuplicateGroups(
     {
       updatedAt: string;
       status: string;
-      members: Array<FrozenDuplicateDocument & { isPrimary: boolean | null }>;
+      members: Array<
+        FrozenDuplicateDocument & { isPrimary: boolean | null; metadata?: NamedMergeDocument }
+      >;
     }
   >();
 
@@ -190,6 +211,10 @@ function freezeDuplicateGroups(
         documentId: duplicateMember.documentId,
         isPrimary: duplicateMember.isPrimary,
         paperlessId: document.paperlessId,
+        tagsJson: document.tagsJson,
+        correspondent: document.correspondent,
+        documentType: document.documentType,
+        customFieldsJson: document.customFieldsJson,
       })
       .from(duplicateMember)
       .innerJoin(document, eq(duplicateMember.documentId, document.id))
@@ -200,6 +225,21 @@ function freezeDuplicateGroups(
         documentId: member.documentId,
         paperlessId: member.paperlessId,
         isPrimary: member.isPrimary,
+        ...(mergeOptions
+          ? {
+              metadata: {
+                tags: JSON.parse(member.tagsJson ?? '[]') as string[],
+                correspondent: member.correspondent,
+                documentType: member.documentType,
+                customFields: (
+                  JSON.parse(member.customFieldsJson ?? '[]') as PaperlessCustomFieldInstance[]
+                ).flatMap(({ field, value }) => {
+                  const name = mergeOptions.customFieldNames.get(field);
+                  return name === undefined ? [] : [{ field: name, value }];
+                }),
+              },
+            }
+          : {}),
       });
     }
   }
@@ -219,13 +259,16 @@ function freezeDuplicateGroups(
       throw new DuplicateDeletionPreviewError('multiple_primaries');
     }
 
-    const nonPrimaryDocuments = group.members
+    const nonPrimaryMembers = group.members
       .filter((member) => member.isPrimary !== true)
-      .map(({ documentId, paperlessId }) => ({ documentId, paperlessId }))
       .sort(
         (left, right) =>
           left.paperlessId - right.paperlessId || left.documentId.localeCompare(right.documentId),
       );
+    const nonPrimaryDocuments = nonPrimaryMembers.map(({ documentId, paperlessId }) => ({
+      documentId,
+      paperlessId,
+    }));
     if (nonPrimaryDocuments.length === 0) {
       throw new DuplicateDeletionPreviewError('no_non_primary_documents');
     }
@@ -237,6 +280,15 @@ function freezeDuplicateGroups(
       primaryDocumentId: primary.documentId,
       primaryPaperlessId: primary.paperlessId,
       nonPrimaryDocuments,
+      ...(mergeOptions
+        ? {
+            merge: planNamedMetadataMerge(
+              primary.metadata!,
+              nonPrimaryMembers.map((member) => member.metadata!),
+              mergeOptions,
+            ),
+          }
+        : {}),
     };
   });
 }
@@ -248,7 +300,7 @@ export function createDuplicateDeletionPlan(
     now?: Date;
     ttlMs?: number;
     tokenFactory?: () => string;
-  } = {},
+  } & ({ mergeMetadata?: false } | ({ mergeMetadata: true } & MergePreviewOptions)) = {},
 ): DuplicateDeletionPlanPreview {
   if (groupIds.length === 0) throw new DuplicateDeletionPreviewError('missing_group');
 
@@ -258,8 +310,15 @@ export function createDuplicateDeletionPlan(
   const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
   return db.transaction(
     (tx) => {
-      const groups = freezeDuplicateGroups(tx, groupIds);
-      const payload: DuplicateDeletionPlanPayload = { groups };
+      const groups = freezeDuplicateGroups(
+        tx,
+        groupIds,
+        options.mergeMetadata ? options : undefined,
+      );
+      const payload: DuplicateDeletionPlanPayload = {
+        groups,
+        ...(options.mergeMetadata ? { mergeMetadata: true } : {}),
+      };
 
       tx.insert(reviewedMutationPlan)
         .values({

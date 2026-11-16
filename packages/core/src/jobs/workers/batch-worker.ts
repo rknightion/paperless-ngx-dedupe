@@ -143,6 +143,7 @@ export async function executeReviewedDuplicateDeletion(
   if (!taskData.success) throw new Error('Invalid duplicate deletion task data');
 
   const plan = claimDuplicateDeletionPlan(ctx.db, taskData.data.planToken, ctx.jobId, now);
+  if (plan.mergeMetadata) throw new Error('Metadata copying is not available yet');
 
   for (let index = 0; index < plan.groups.length; index++) {
     const frozenGroup = plan.groups[index];

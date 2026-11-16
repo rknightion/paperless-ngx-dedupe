@@ -136,6 +136,48 @@ describe('reviewed duplicate deletion plans', () => {
     expect(persisted.consumedAt).toBeNull();
   });
 
+  it('freezes named missing metadata additions without copying inbox tags or replacing keeper values', () => {
+    db.update(document)
+      .set({
+        tagsJson: JSON.stringify(['Retained']),
+        documentType: 'Keeper type',
+        customFieldsJson: JSON.stringify([{ field: 7, value: null }]),
+      })
+      .where(eq(document.id, 'doc-primary'))
+      .run();
+    db.update(document)
+      .set({
+        tagsJson: JSON.stringify(['Inbox', 'Added', 'Retained']),
+        correspondent: 'Synthetic supplier',
+        documentType: 'Other type',
+        customFieldsJson: JSON.stringify([{ field: 7, value: 'synthetic reference' }]),
+      })
+      .where(eq(document.id, 'doc-delete-1'))
+      .run();
+    const now = new Date('2026-07-24T11:00:00.000Z');
+    const preview = createDuplicateDeletionPlan(db, ['group-1'], {
+      now,
+      mergeMetadata: true,
+      inboxTagNames: ['Inbox'],
+      customFieldNames: new Map([[7, 'Reference']]),
+    });
+    expect(preview.groups[0].merge).toEqual({
+      addTags: ['Added'],
+      setCorrespondent: 'Synthetic supplier',
+      setDocumentType: null,
+      addCustomFieldNames: ['Reference'],
+    });
+    const persisted = getReviewedMutationPlan(db, preview.token, 'duplicate_delete', now);
+    expect(JSON.parse(persisted.payloadJson)).toEqual({
+      mergeMetadata: true,
+      groups: preview.groups,
+    });
+    expect(claimDuplicateDeletionPlan(db, preview.token, 'synthetic-owner', now)).toMatchObject({
+      mergeMetadata: true,
+      groups: preview.groups,
+    });
+  });
+
   it('atomically binds a plan to one job while allowing the same job to resume', () => {
     const preview = createDuplicateDeletionPlan(db, ['group-1'], {
       now: new Date('2026-07-24T11:00:00.000Z'),

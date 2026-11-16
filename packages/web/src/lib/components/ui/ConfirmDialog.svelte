@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AlertTriangle } from 'lucide-svelte';
+  import { type Snippet } from 'svelte';
 
   interface Props {
     open: boolean;
@@ -9,6 +10,8 @@
     variant?: 'accent' | 'ember';
     onconfirm: () => void;
     oncancel: () => void;
+    children?: Snippet;
+    confirmDisabled?: boolean;
   }
 
   let {
@@ -19,6 +22,8 @@
     variant = 'ember',
     onconfirm,
     oncancel,
+    children,
+    confirmDisabled = false,
   }: Props = $props();
 
   let dialog: HTMLDialogElement | undefined = $state();
@@ -69,6 +74,7 @@
         <p id="confirm-dialog-message" class="text-muted mt-2 text-sm">{message}</p>
       </div>
     </div>
+    {@render children?.()}
     <div class="mt-6 flex justify-end gap-3">
       <button
         onclick={oncancel}
@@ -78,7 +84,10 @@
       </button>
       <button
         onclick={onconfirm}
-        class="rounded-lg px-4 py-2 text-sm font-medium {confirmClasses[variant]}"
+        disabled={confirmDisabled}
+        class="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 {confirmClasses[
+          variant
+        ]}"
       >
         {confirmLabel}
       </button>

@@ -1,4 +1,10 @@
-import { createDuplicateDeletionPlan, DuplicateDeletionPreviewError } from '@paperless-dedupe/core';
+import {
+  createDuplicateDeletionPlan,
+  DuplicateDeletionPreviewError,
+  PaperlessClient,
+  PaperlessApiError,
+  toPaperlessConfig,
+} from '@paperless-dedupe/core';
 import { z } from 'zod';
 
 import { apiError, apiSuccess, ErrorCode } from '$lib/server/api';
@@ -8,6 +14,7 @@ import type { RequestHandler } from './$types';
 
 const bodySchema = z.object({
   groupIds: z.array(z.string().min(1)).min(1).max(50000),
+  mergeMetadata: z.boolean().optional(),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -34,8 +41,28 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       });
     }
 
+    let mergeOptions: Parameters<typeof createDuplicateDeletionPlan>[2];
+    if (parsed.data.mergeMetadata) {
+      try {
+        const client = new PaperlessClient(toPaperlessConfig(runtime.config));
+        const [tags, fields] = await Promise.all([client.getTags(), client.getCustomFields()]);
+        mergeOptions = {
+          mergeMetadata: true,
+          inboxTagNames: tags.filter((tag) => tag.isInboxTag).map((tag) => tag.name),
+          customFieldNames: new Map(fields.map((field) => [field.id, field.name])),
+        };
+      } catch (error) {
+        return apiError(ErrorCode.BAD_GATEWAY, {
+          operation: 'preview_duplicate_deletion',
+          retryable: !(error instanceof PaperlessApiError) || error.isRetryable,
+        });
+      }
+    }
+
     return runtime.acceptingGate.run(() => {
-      const preview = createDuplicateDeletionPlan(locals.db, parsed.data.groupIds);
+      const preview = mergeOptions
+        ? createDuplicateDeletionPlan(locals.db, parsed.data.groupIds, mergeOptions)
+        : createDuplicateDeletionPlan(locals.db, parsed.data.groupIds);
       return apiSuccess({
         planToken: preview.token,
         expiresAt: preview.expiresAt,
