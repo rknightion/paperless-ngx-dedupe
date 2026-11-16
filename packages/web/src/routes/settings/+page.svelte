@@ -19,6 +19,7 @@
   } from 'lucide-svelte';
   import { parse as parseYaml } from 'yaml';
   import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
+  import WebhookSyncSettings from '$lib/components/settings/WebhookSyncSettings.svelte';
   import DatabaseBackupSettings from '$lib/components/settings/DatabaseBackupSettings.svelte';
   import DiagnosticsSettings from '$lib/components/settings/DiagnosticsSettings.svelte';
   import CustomFieldPolicySettings from '$lib/components/settings/CustomFieldPolicySettings.svelte';
@@ -512,6 +513,7 @@
 
   <div id="automation" class:hidden={activeSettingsSection !== 'automation'}>
     <AutomationSettings settings={data.automation} />
+    <WebhookSyncSettings settings={data.webhookSync} />
   </div>
 
   <!-- Dedup Parameters -->
