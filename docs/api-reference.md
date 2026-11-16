@@ -526,6 +526,47 @@ Query params:
 - `sortBy` (`confidence | created_at | member_count`)
 - `sortOrder` (`asc | desc`)
 
+### GET /api/v1/duplicates/pair-decisions
+
+Lists remembered not-a-duplicate decisions, newest first. Optional `limit` is an integer
+from 1 to 200 (default 20); `cursor` is the previous response's `meta.nextCursor`.
+
+```json
+{
+  "data": [
+    {
+      "id": "decision-id",
+      "source": "manual",
+      "createdAt": "2030-01-01T00:00:00.000Z",
+      "documents": [
+        { "paperlessId": 1, "title": "Synthetic document" },
+        { "paperlessId": 2, "title": null }
+      ]
+    }
+  ],
+  "meta": { "nextCursor": null, "total": 1 }
+}
+```
+
+The two documents are ordered by Paperless ID. Titles are null when a document is absent
+from the local library. Sources are `manual`, `group_false_positive`, `member_removed` or
+`import`. Invalid limits and unknown or deleted cursors return `400 VALIDATION_FAILED`;
+restart from the first page after a cursor is removed.
+
+### POST /api/v1/duplicates/pair-decisions
+
+Send `{ "paperlessIds": [1, 2] }` with exactly two distinct positive safe integer IDs.
+The documents need not be present locally. Returns HTTP 201 with `data: { id }`.
+Repeated input, in either order, returns the existing ID and preserves its source and date.
+Malformed input returns `400 VALIDATION_FAILED`.
+
+### DELETE /api/v1/duplicates/pair-decisions/:id
+
+Removes one remembered decision and returns `data: { deleted: true }`. A missing decision
+returns `404 NOT_FOUND`. Creation and deletion use the duplicate-operation lease and return
+`409 CONFLICT` when it is held. Neither operation modifies Paperless. Removing a decision
+allows the pair to be considered by a later analysis; it does not run analysis itself.
+
 ### GET /api/v1/duplicates/:id
 
 Returns group details. Each member includes the nullable file facts `originalFileName`,

@@ -1701,3 +1701,74 @@ describe('remembering review decisions', () => {
     expect(loadSuppressedPairSet(handle.db)).toEqual(new Set());
   });
 });
+
+it('lists remembered pair documents and creates a stable manual decision', async () => {
+  const { createPairDecision, listPairDecisionsWithDocuments } = await import('../duplicates.js');
+  const { db, sqlite } = createDatabaseWithHandle(':memory:');
+  try {
+    await migrateDatabase(sqlite);
+    const id = createPairDecision(db, [2, 1]);
+    expect(createPairDecision(db, [1, 2])).toBe(id);
+    expect(listPairDecisionsWithDocuments(db, { limit: 20 })).toEqual({
+      items: [
+        {
+          id,
+          source: 'manual',
+          createdAt: expect.any(String),
+          documents: [
+            { paperlessId: 1, title: null },
+            { paperlessId: 2, title: null },
+          ],
+        },
+      ],
+      nextCursor: null,
+      total: 1,
+    });
+  } finally {
+    sqlite.close();
+  }
+});
+
+it('enriches paginated decisions without overwriting their source or accepting invalid IDs', async () => {
+  const { createPairDecision, listPairDecisionsWithDocuments } = await import('../duplicates.js');
+  const { db, sqlite } = createDatabaseWithHandle(':memory:');
+  try {
+    await migrateDatabase(sqlite);
+    db.insert(document)
+      .values({
+        id: 'local',
+        paperlessId: 7,
+        title: 'Synthetic remembered title',
+        syncedAt: '2024-01-01',
+      })
+      .run();
+    recordPairDecisions(db, [7, 8], 'member_removed');
+    const first = createPairDecision(db, [8, 7]);
+    const second = createPairDecision(db, [9, 10]);
+    const listed = listPairDecisionsWithDocuments(db, { limit: 200 });
+    expect(listed.items.find((item) => item.id === first)).toEqual({
+      id: first,
+      source: 'member_removed',
+      createdAt: expect.any(String),
+      documents: [
+        { paperlessId: 7, title: 'Synthetic remembered title' },
+        { paperlessId: 8, title: null },
+      ],
+    });
+    const page = listPairDecisionsWithDocuments(db, { limit: 1 });
+    const next = listPairDecisionsWithDocuments(db, { limit: 1, cursor: page.nextCursor! });
+    expect([page.items[0].id, next.items[0].id].sort()).toEqual([first, second].sort());
+    expect(next.total).toBe(2);
+    expect(next.nextCursor).toBeNull();
+    for (const ids of [
+      [1, 1],
+      [0, 2],
+      [-1, 2],
+      [1.5, 2],
+    ] as [number, number][])
+      expect(() => createPairDecision(db, ids)).toThrow(RangeError);
+    expect(listPairDecisionsWithDocuments(db, { limit: 20 })).toEqual(listed);
+  } finally {
+    sqlite.close();
+  }
+});
