@@ -33,6 +33,35 @@ PYROSCOPE_BASIC_AUTH_PASSWORD=<api-key>
 OTEL_SEMCONV_STABILITY_OPT_IN=database
 ```
 
+## Application State Gauges
+
+The server registers these gauges when either `OTEL_ENABLED` or `OTEL_PROMETHEUS_ENABLED` is true.
+They do not require the optional Paperless metrics collectors. With telemetry disabled no application
+gauge query runs. All gauges share one snapshot cached for 15 seconds, so repeated scrapes reuse the
+same database reads. Refreshing the snapshot uses five small statements: document count, pending
+group counts, job/dispatch counts, AI review count and the singleton success timestamps.
+
+| OpenTelemetry name | Value | Labels |
+| --- | --- | --- |
+| `paperless_ngx_dedupe.documents_count` | Locally synced documents | None |
+| `paperless_ngx_dedupe.duplicates.unresolved_count` | Pending duplicate groups | None |
+| `paperless_ngx_dedupe.jobs.active_count` | Running jobs | None |
+| `paperless_ngx_dedupe.ai.pending_count` | AI results awaiting review | None |
+| `paperless_ngx_dedupe.sync.last_success_timestamp` | Stored last successful sync time, seconds since epoch | None |
+| `paperless_ngx_dedupe.analysis.last_success_timestamp` | Stored last successful analysis time, seconds since epoch | None |
+| `paperless_ngx_dedupe.duplicates.pending_count` | Pending groups in each review queue | `confidence`: `high` or `ambiguous` |
+| `paperless_ngx_dedupe.jobs.dead_letter_count` | Durable dispatch intents in the dead-letter state, awaiting manual recovery | None |
+
+Success timestamps have no sample before the first success; they are not zero or the server start
+time. High confidence uses the same threshold as the review inbox (currently 0.95); ambiguous is
+the remaining pending groups. Resolved groups and ordinary failed jobs are not backlog samples.
+Dead letters include exhausted launch attempts and terminal automated failures; a retry removes the
+intent from that count. No gauge labels contain document, job or entity identifiers.
+
+These are OpenTelemetry instrument names. Prometheus replaces separators and may append unit
+suffixes, so inspect the local `/api/v1/metrics` exposition when writing PromQL. Worker counters and
+histograms still require the OTLP pipeline described below; they do not appear in the server scrape.
+
 ## End-to-End Trace Correlation
 
 Frontend and backend traces are automatically correlated when both `OTEL_ENABLED` and `FARO_ENABLED` are set. Faro injects `traceparent` and `tracestate` headers into API requests, which the backend OTel instrumentation picks up to create connected traces.

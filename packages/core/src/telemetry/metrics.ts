@@ -174,9 +174,47 @@ export function registerObservableGauges(
     unresolvedDuplicatesCount: number;
     activeJobsCount: number;
     aiPendingCount?: number;
+    pendingHighConfidenceCount?: number;
+    pendingAmbiguousCount?: number;
+    deadLetterJobsCount?: number;
+    lastSyncSuccessTimestamp?: number;
+    lastAnalysisSuccessTimestamp?: number;
   },
 ): void {
   const meter = getMeter();
+
+  for (const [name, field] of [
+    ['sync', 'lastSyncSuccessTimestamp'],
+    ['analysis', 'lastAnalysisSuccessTimestamp'],
+  ] as const) {
+    meter
+      .createObservableGauge(`paperless_ngx_dedupe.${name}.last_success_timestamp`, {
+        description: `Last successful ${name} time in seconds since epoch`,
+        unit: 's',
+      })
+      .addCallback((result) => {
+        const timestamp = getStats()[field];
+        if (timestamp !== undefined) result.observe(timestamp);
+      });
+  }
+
+  meter
+    .createObservableGauge('paperless_ngx_dedupe.duplicates.pending_count', {
+      description: 'Pending duplicate groups by review confidence',
+      unit: '{group}',
+    })
+    .addCallback((result) => {
+      const stats = getStats();
+      result.observe(stats.pendingHighConfidenceCount ?? 0, { confidence: 'high' });
+      result.observe(stats.pendingAmbiguousCount ?? 0, { confidence: 'ambiguous' });
+    });
+
+  meter
+    .createObservableGauge('paperless_ngx_dedupe.jobs.dead_letter_count', {
+      description: 'Durable dispatch intents awaiting manual recovery',
+      unit: '{job}',
+    })
+    .addCallback((result) => result.observe(getStats().deadLetterJobsCount ?? 0));
 
   meter
     .createObservableGauge('paperless_ngx_dedupe.documents_count', {
