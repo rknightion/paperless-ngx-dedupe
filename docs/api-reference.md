@@ -1338,6 +1338,34 @@ The exact count and feature-flag keys are defined by `DiagnosticsBundle` in
 
 ## Notifications
 
+### GET /api/v1/notifications
+
+Returns notification availability and stored event preferences:
+
+```json
+{
+  "data": {
+    "configured": true,
+    "format": "json",
+    "events": {
+      "onNewDuplicates": true,
+      "minNewGroups": 1,
+      "onJobFailure": true,
+      "scheduledRunsOnly": true
+    }
+  }
+}
+```
+
+`configured` indicates whether `NOTIFY_URL` is set. The destination URL and authorization
+header are never returned. Event preferences use the corresponding `notifications.*` keys
+through the configuration API; `minNewGroups` accepts integers from 1 through 10000.
+
+After successful analysis, `onNewDuplicates` allows a count-only event when the number of newly
+created groups reaches `minNewGroups`. By default only scheduled jobs and their dependent analysis
+jobs notify. Set `scheduledRunsOnly` to false to include manual runs. Delivery starts after the
+job is completed and its operation lease is released; delivery failure cannot change that outcome.
+
 ### POST /api/v1/notifications/test
 
 Sends a synthetic, zero-count `duplicates.new` event to the environment-owned notification destination.
