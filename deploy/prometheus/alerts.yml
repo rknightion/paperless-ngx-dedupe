@@ -1,0 +1,38 @@
+groups:
+  - name: paperless-ngx-dedupe
+    rules:
+      - alert: PaperlessDedupeSyncStale
+        # Example: two daily schedule intervals (2 * 86400 seconds).
+        expr: time() - paperless_ngx_dedupe_sync_last_success_timestamp > 172800
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Paperless sync is stale
+          description: The last successful sync is older than two configured example schedule intervals. Check the automation schedule and recent sync jobs.
+      - alert: PaperlessDedupeJobFailures
+        expr: sum by (type) (increase(paperless_ngx_dedupe_jobs_total{outcome="failed"}[15m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Paperless Dedupe jobs failed
+          description: At least one job reached a failed state in the last 15 minutes. Inspect job history before retrying it.
+      - alert: PaperlessDedupeDeadLetterJobs
+        expr: paperless_ngx_dedupe_jobs_dead_letter_count > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Paperless Dedupe work needs manual recovery
+          description: Durable dispatch intents have remained in the dead-letter state for at least five minutes. Review automation recovery actions.
+      - alert: PaperlessDedupePaperlessErrors
+        expr: >-
+          sum(rate(paperless_ngx_dedupe_paperless_requests_total{status_code=~"5.."}[5m]))
+          / sum(rate(paperless_ngx_dedupe_paperless_requests_total[5m])) > 0.05
+          and sum(increase(paperless_ngx_dedupe_paperless_requests_total[5m])) >= 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Paperless API has a sustained high error ratio
+          description: More than five percent of requests returned a 5xx response for ten minutes, with at least 100 requests per five-minute window. Check the upstream service.

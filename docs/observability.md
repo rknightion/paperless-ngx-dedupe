@@ -175,3 +175,28 @@ tier. Cached input is a subset of input tokens and must not be added to input to
 
 The dashboard is validated against the telemetry definitions and a local exporter capture. A live
 Grafana stack is not part of this repository's validation environment.
+
+## Example alert rules
+
+[Download the Prometheus alert rules](https://github.com/rknightion/paperless-ngx-dedupe/blob/main/deploy/prometheus/alerts.yml)
+and mount them in your Prometheus server. Add the mounted path to its `rule_files` configuration,
+validate it with `promtool check rules`, and reload Prometheus through your normal deployment process.
+The repository does not install rules or configure notification routing for you.
+
+The sync rule uses a daily schedule example: 172800 seconds is two 86400-second intervals. Replace
+that threshold with twice your configured sync interval before enabling the rule, and disable the
+rule if sync is manual or unscheduled. Calendar schedules can have different intervals around clock
+changes; choose a threshold covering the longest expected interval. A further 15-minute pending
+period tolerates brief delays. No timestamp exists before the first successful sync, so this rule
+does not detect an installation that has never synced; check the initial sync separately.
+
+The other examples alert on any failed job in 15 minutes, dead-letter work lasting five minutes,
+and a Paperless 5xx ratio above 5% for ten minutes when each five-minute window contains at least
+100 requests. Tune those example thresholds to your workload. A failed job counter can include an
+automated attempt that will be retried; inspect its current job state before intervening.
+
+As with the dashboard, worker activity needs OTLP ingestion into the Prometheus datasource. The
+request-ratio rule aggregates application series, so scope the datasource to one installation when
+independent alerting is needed. Missing metrics are not treated as healthy zero values; monitor
+scrape and collector availability separately. Live alert evaluation and notification delivery are
+operator checks outside this repository's local validation.
