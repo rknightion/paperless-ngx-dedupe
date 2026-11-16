@@ -1,6 +1,7 @@
 import { DEFAULT_AI_CONFIG } from '../ai/types.js';
 import { validateTagAliasYaml } from '../ai/tag-alias-validation.js';
 import { DEFAULT_DEDUP_CONFIG } from '../dedup/types.js';
+import { DEFAULT_NOTIFICATION_SETTINGS } from '../notifications/settings.js';
 import { DEFAULT_OTEL_SERVICE_NAME } from '../telemetry/constants.js';
 
 export type ConfigValueType = 'boolean' | 'integer' | 'number' | 'string' | 'string-array';
@@ -212,6 +213,31 @@ const entries: InternalRegistryEntry[] = [
   databaseEntry('ai.tagAliasesEnabled', 'boolean', DEFAULT_AI_CONFIG.tagAliasesEnabled, 'ai'),
   databaseEntry('automation.aiMaxDocumentsPerRun', 'integer', 25, 'automation', integer(1, 10_000)),
   databaseEntry('automation.aiMonthlyBudgetUsd', 'number', 0, 'automation', finite(0, 1_000_000)),
+  databaseEntry(
+    'notifications.onNewDuplicates',
+    'boolean',
+    DEFAULT_NOTIFICATION_SETTINGS.onNewDuplicates,
+    'automation',
+  ),
+  databaseEntry(
+    'notifications.minNewGroups',
+    'integer',
+    DEFAULT_NOTIFICATION_SETTINGS.minNewGroups,
+    'automation',
+    integer(1, 10000),
+  ),
+  databaseEntry(
+    'notifications.onJobFailure',
+    'boolean',
+    DEFAULT_NOTIFICATION_SETTINGS.onJobFailure,
+    'automation',
+  ),
+  databaseEntry(
+    'notifications.scheduledRunsOnly',
+    'boolean',
+    DEFAULT_NOTIFICATION_SETTINGS.scheduledRunsOnly,
+    'automation',
+  ),
   databaseEntry('dedup.autoAnalyze', 'boolean', DEFAULT_DEDUP_CONFIG.autoAnalyze, 'deduplication'),
   databaseEntry(
     'dedup.confidenceWeightFuzzy',

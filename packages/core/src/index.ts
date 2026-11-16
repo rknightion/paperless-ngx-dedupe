@@ -600,3 +600,4 @@ export { clearAiResultHistory, replaceAiResultWithRevision } from './ai/history.
 export { sendNotification } from './notifications/send.js';
 export type { NotificationConfig, NotificationDelivery } from './notifications/send.js';
 export type { NotificationEvent } from './notifications/format.js';
+export { getNotificationSettings } from './notifications/settings.js';

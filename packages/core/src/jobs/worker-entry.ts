@@ -32,6 +32,8 @@ export interface WorkerContext {
   jobId: string;
   taskData: unknown;
   executionToken?: string;
+  /** Register delivery work that cannot hold the job's completion or lease open. */
+  afterCompletion?: (deliver: () => Promise<unknown>) => void;
 }
 
 export type TaskFunction = (ctx: WorkerContext, onProgress: ProgressCallback) => Promise<unknown>;
@@ -134,6 +136,7 @@ export async function runWorkerTaskWithData(
   logger.info({ jobId }, 'Worker task started');
 
   let lastCancelCheck = Date.now();
+  const completionDeliveries: Array<() => Promise<unknown>> = [];
   let lastFlushTime = Date.now();
   const FLUSH_INTERVAL_MS = 30_000;
 
@@ -180,9 +183,30 @@ export async function runWorkerTaskWithData(
     await context.with(parentContext, async () => {
       await withPyroscopeLabels({ operation: 'worker' }, async () => {
         await withSpan('dedupe.worker.task', { 'app.job.id': jobId }, async () => {
-          const result = await taskFn({ db, sqlite, jobId, taskData, executionToken }, onProgress);
+          const result = await taskFn(
+            {
+              db,
+              sqlite,
+              jobId,
+              taskData,
+              executionToken,
+              afterCompletion: (deliver) => {
+                completionDeliveries.push(deliver);
+              },
+            },
+            onProgress,
+          );
           completeJob(db, jobId, result, executionToken);
           logger.info({ jobId }, 'Worker task completed successfully');
+          if (getJob(db, jobId)?.status === 'completed') {
+            for (const deliver of completionDeliveries) {
+              try {
+                await deliver();
+              } catch {
+                logger.warn('Post-completion notification failed');
+              }
+            }
+          }
         });
       });
     });
