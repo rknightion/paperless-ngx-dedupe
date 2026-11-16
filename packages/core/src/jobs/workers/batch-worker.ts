@@ -210,9 +210,12 @@ export async function executeReviewedDuplicateDeletion(
         const merge = planMetadataMerge(keeper, others, {
           inboxTagIds: tags.filter((tag) => tag.isInboxTag).map((tag) => tag.id),
         });
-        if (merge.addCustomFields.length)
-          throw new Error('Custom-field copying is not available yet');
         const update: DocumentUpdate = {};
+        if (merge.addCustomFields.length) {
+          const fields = new Map(keeper.customFields.map((instance) => [instance.field, instance]));
+          for (const instance of merge.addCustomFields) fields.set(instance.field, instance);
+          update.customFields = [...fields.values()];
+        }
         if (merge.addTagIds.length) update.tags = [...keeper.tags, ...merge.addTagIds];
         if (merge.setCorrespondent !== null) update.correspondent = merge.setCorrespondent;
         if (merge.setDocumentType !== null) update.documentType = merge.setDocumentType;

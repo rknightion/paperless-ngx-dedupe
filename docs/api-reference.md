@@ -1177,13 +1177,13 @@ without storing a plan. The enabled option and additions are frozen with the rev
 
 Merge-enabled execution reads the keeper, remaining members and inbox-tag definitions from
 Paperless before deleting a group. It fills missing tags, correspondent and document type on the
-keeper first. A metadata read or update failure marks that group failed and skips all its deletes;
+keeper first, including custom fields. Existing field values win; null, empty strings and empty
+arrays can be filled, while false and zero remain populated values. A metadata read or update failure marks that group failed and skips all its deletes;
 other groups can still finish. A resumed job preserves completed deletion checkpoints and does not
 repeat an already satisfied metadata update.
 
-Custom-field additions are previewed but are not yet copied. If the live merge needs any, execution
-fails that group before updating or deleting documents. The UI remains preview-only until
-custom-field execution is available. Omit the option or set it to false to retain the existing
+Both deletion dialogs let you review additions before confirming the frozen plan. Omit the option
+or set it to false to retain the existing
 deletion behavior, response shape and absence of metadata lookups. Copying metadata is not an undo:
 restoring a deleted document does not revert additions to the keeper.
 

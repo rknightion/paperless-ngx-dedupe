@@ -33,6 +33,7 @@
   let showDeleteConfirm = $state(false);
   let mergeMetadata = $state(false);
   let mergePreview = $state<FrozenDuplicateGroup['merge'] | null>(null);
+  let mergePlanToken = $state<string | null>(null);
   let mergeLoading = $state(false);
   let mergeError = $state<string | null>(null);
   let mergeGeneration = 0;
@@ -42,6 +43,7 @@
   async function previewMerge(enabled: boolean) {
     mergeMetadata = enabled;
     mergePreview = null;
+    mergePlanToken = null;
     mergeError = null;
     const generation = ++mergeGeneration;
     mergeLoading = enabled;
@@ -57,6 +59,7 @@
       if (generation !== mergeGeneration || !showDeleteConfirm || selectedGroup !== groupId) return;
       if (!response.ok) throw new Error(body.error?.message ?? 'Unable to preview metadata');
       mergePreview = body.data.groups[0].merge;
+      mergePlanToken = body.data.planToken;
     } catch (error) {
       if (generation === mergeGeneration)
         mergeError = error instanceof Error ? error.message : 'Unable to preview metadata';
@@ -84,7 +87,7 @@
   }
 
   async function deleteNonPrimary() {
-    if (mergeMetadata) return;
+    if (mergeMetadata && (mergeLoading || !mergePlanToken || mergeError)) return;
     showDeleteConfirm = false;
     isUpdating = true;
     error = null;
@@ -92,7 +95,11 @@
       const res = await fetch('/api/v1/batch/delete-non-primary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupIds: [groupId], confirm: true }),
+        body: JSON.stringify(
+          mergeMetadata
+            ? { planToken: mergePlanToken, confirm: true }
+            : { groupIds: [groupId], confirm: true },
+        ),
       });
       if (!res.ok) throw new Error('Failed to start delete operation');
 
@@ -204,7 +211,7 @@
   message="This will delete all non-primary documents in this group from Paperless-NGX. Documents are moved to the Paperless-NGX recycle bin and can be restored from there."
   confirmLabel="Delete Documents"
   variant="ember"
-  confirmDisabled={mergeMetadata}
+  confirmDisabled={mergeMetadata && (mergeLoading || !mergePlanToken || !!mergeError)}
   onconfirm={deleteNonPrimary}
   oncancel={() => {
     showDeleteConfirm = false;
@@ -221,11 +228,6 @@
       />
       Copy missing tags and metadata to the kept document
     </label>
-    {#if mergeMetadata}
-      <p class="text-muted mt-2 text-sm">
-        Copying metadata is not yet available. Clear this option to continue without copying.
-      </p>
-    {/if}
     {#if mergeLoading}
       <p class="text-muted mt-2 text-sm">Preparing metadata preview…</p>
     {:else if mergeError}

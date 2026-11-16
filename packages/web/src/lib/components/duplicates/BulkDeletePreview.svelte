@@ -149,7 +149,7 @@
   }
 
   async function execute() {
-    if (executing || !preview || mergeMetadata) return;
+    if (executing || !preview) return;
     executing = true;
     showConfirm = false;
     error = null;
@@ -208,11 +208,6 @@
       />
       Copy missing tags and metadata to the kept document
     </label>
-    {#if mergeMetadata}
-      <p class="text-muted mt-2 text-sm">
-        Copying metadata is not yet available. Clear this option to continue without copying.
-      </p>
-    {/if}
 
     {#if loading && !preview}
       <p class="text-muted mt-5 text-sm">Preparing exact deletion preview…</p>
@@ -268,7 +263,7 @@
       {#if preview}
         <button
           type="button"
-          disabled={!reviewed || loading || executing || mergeMetadata}
+          disabled={!reviewed || loading || executing}
           onclick={() => (showConfirm = true)}
           class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
