@@ -9,8 +9,6 @@ FROM node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13
 
 WORKDIR /app
 
-RUN corepack enable
-
 ENV CI=true
 
 # better-sqlite3 v13 is built from source during installation.
@@ -19,6 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json ./packages/core/
 COPY packages/web/package.json ./packages/web/
+
+# Node 26 no longer ships corepack: install the pnpm version pinned in package.json
+RUN npm install -g "pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
 
 RUN pnpm install --frozen-lockfile
 
