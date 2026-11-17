@@ -62,7 +62,7 @@ curl http://localhost:3000/api/v1/sync/status
 If a sync appears stuck, check the container logs for errors. If needed, cancel the job:
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/jobs/{jobId}/cancel
+curl -X POST -H "Content-Type: application/json" http://localhost:3000/api/v1/jobs/{jobId}/cancel
 ```
 
 ### Documents synced but no content

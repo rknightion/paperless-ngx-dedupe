@@ -14,6 +14,9 @@ export default defineConfig({
   globalTeardown: './e2e/global-teardown.ts',
   use: {
     baseURL: 'http://localhost:4173',
+    // SvelteKit 3 rejects mutating requests that carry neither an Origin nor a Content-Type.
+    // Browsers always send an Origin; the API request fixtures declare JSON instead.
+    extraHTTPHeaders: { 'content-type': 'application/json' },
     trace: 'on-first-retry',
   },
   projects: [
