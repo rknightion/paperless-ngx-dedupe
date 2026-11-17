@@ -1,4 +1,4 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 /**
  * Theme preference. `system` follows the OS and keeps following it — it is the

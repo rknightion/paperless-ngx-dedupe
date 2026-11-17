@@ -1,4 +1,4 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { requestJson } from '$lib/api/client';
 import { connectJobSSE } from '$lib/sse';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';

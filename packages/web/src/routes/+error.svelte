@@ -1,8 +1,8 @@
 <script>
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
 
-  let status = $derived($page.status);
-  let message = $derived($page.error?.message ?? 'An unexpected error occurred');
+  let status = $derived(page.status);
+  let message = $derived(page.error?.message ?? 'An unexpected error occurred');
 
   let title = $derived(
     status === 404 ? 'Page Not Found' : status === 500 ? 'Server Error' : `Error ${status}`,

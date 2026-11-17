@@ -1,6 +1,6 @@
 <script lang="ts">
   import { afterNavigate, goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import {
     removeLibraryFilterHref,
     scalarSubmitInsightKeys,
@@ -69,7 +69,7 @@
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams();
     for (const key of EXPORT_FILTER_KEYS) {
-      const value = $page.url.searchParams.get(key);
+      const value = page.url.searchParams.get(key);
       if (value !== null) params.set(key, value);
     }
     const suffix = params.toString();
@@ -111,7 +111,7 @@
       tag: String(formData.get('tag') ?? ''),
     });
     for (const key of insightKeysToPreserve) {
-      const current = $page.url.searchParams.get(key);
+      const current = page.url.searchParams.get(key);
       if (current !== null) params.set(key, current);
     }
     for (const [key, entry] of formData.entries()) {
@@ -120,7 +120,7 @@
       params.set(key, normalized);
     }
     submitting = true;
-    void goto(`${$page.url.pathname}?${params.toString()}`);
+    void goto(`${page.url.pathname}?${params.toString()}`);
   }
 </script>
 

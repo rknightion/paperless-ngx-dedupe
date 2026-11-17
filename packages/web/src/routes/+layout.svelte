@@ -7,7 +7,7 @@
   import ThemeToggle from '$lib/components/ui/ThemeToggle.svelte';
   import { theme } from '$lib/theme/ThemeStore.svelte';
   import '../app.css';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { untrack, onMount } from 'svelte';
   import {
     LayoutDashboard,
@@ -69,7 +69,7 @@
   });
 
   $effect(() => {
-    void $page.url.pathname;
+    void page.url.pathname;
     sidebarOpen = false;
   });
 </script>
@@ -110,7 +110,7 @@
 
     <nav class="flex flex-col gap-1 px-3">
       {#each items as item (item.href)}
-        {@const active = isActive(item.href, $page.url.pathname)}
+        {@const active = isActive(item.href, page.url.pathname)}
         <a
           href={item.href}
           aria-current={active ? 'page' : undefined}

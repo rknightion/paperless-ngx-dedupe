@@ -5,7 +5,7 @@
   } from '$lib/components/duplicates/UndoDeletion.svelte';
   let deletionRun = $state<UndoDeletionRun | null>(null);
   import { invalidateAll } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { connectJobSSE } from '$lib/sse';
   import { Button, ConfirmDialog, GroupPreviewModal, RecycleBinPrompt } from '$lib/components';
   import BulkDeletePreview from '$lib/components/duplicates/BulkDeletePreview.svelte';
@@ -133,7 +133,7 @@
       </Button>
       <Button
         variant="secondary"
-        href="/api/v1/export/duplicates.csv?{$page.url.searchParams.toString()}"
+        href="/api/v1/export/duplicates.csv?{page.url.searchParams.toString()}"
         icon={Download}
         fullWidth
         onclick={() => trackCsvExported()}

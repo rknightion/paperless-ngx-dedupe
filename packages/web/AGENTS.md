@@ -1,6 +1,6 @@
 # packages/web
 
-SvelteKit 2 app on `adapter-node`, deployed as the Docker image.
+SvelteKit 3 app on `adapter-node`, deployed as the Docker image.
 
 ## Traps
 

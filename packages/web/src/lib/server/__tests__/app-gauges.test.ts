@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   stats: vi.fn(),
   runtime: { db: {}, config: { PAPERLESS_METRICS_ENABLED: false } },
 }));
-vi.mock('$app/environment', () => ({ building: true }));
+vi.mock('$app/env', () => ({ building: true }));
 vi.mock('@paperless-dedupe/core', () => ({
   createLogger: () => ({ info: vi.fn() }),
   initLogger: vi.fn(),

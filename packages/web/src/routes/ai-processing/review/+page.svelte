@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll, goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { browser } from '$app/environment';
+  import { page } from '$app/state';
+  import { browser } from '$app/env';
   import { ProgressBar } from '$lib/components';
   import AiResultList from '$lib/components/ai/AiResultList.svelte';
   import AiBulkActionBar from '$lib/components/ai/AiBulkActionBar.svelte';
@@ -310,14 +310,14 @@
   function goToCursor(cursor: string | null) {
     if (!cursor) return;
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('cursor', cursor);
     goto(`/ai-processing/review?${params.toString()}`);
   }
 
   function changePageSize(e: Event) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('limit', (e.target as HTMLSelectElement).value);
     params.delete('cursor');
     goto(`/ai-processing/review?${params.toString()}`);

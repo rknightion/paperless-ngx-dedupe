@@ -2,8 +2,8 @@
   import { type CompletedDeletionRun } from '@paperless-dedupe/core';
   import UndoDeletion from './UndoDeletion.svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import { browser } from '$app/environment';
-  import { page } from '$app/stores';
+  import { browser } from '$app/env';
+  import { page } from '$app/state';
   import {
     ConfidenceBadge,
     ConfidenceTooltipContent,
@@ -64,7 +64,7 @@
   const CURSOR_HISTORY_KEY = 'paperless-dedupe:duplicate-cursor-predecessors';
 
   function currentRelativeUrl(): string {
-    return `${$page.url.pathname}${$page.url.search}`;
+    return `${page.url.pathname}${page.url.search}`;
   }
 
   function readCursorHistory(): Record<string, string> {
@@ -80,12 +80,12 @@
   }
 
   function relativeUrl(href: string): string {
-    const url = new URL(href, $page.url);
+    const url = new URL(href, page.url.href);
     return `${url.pathname}${url.search}`;
   }
 
   function detailHref(id: string): string {
-    const returnParams = $page.url.searchParams.toString();
+    const returnParams = page.url.searchParams.toString();
     return returnParams
       ? `/duplicates/${id}?returnParams=${encodeURIComponent(returnParams)}`
       : `/duplicates/${id}`;
@@ -100,14 +100,14 @@
 
   $effect(() => {
     if (!browser) return;
-    void $page.url;
+    void page.url;
     cursorPreviousHref = readCursorHistory()[currentRelativeUrl()] ?? '';
     cursorHistoryReady = true;
   });
 
   function withPage(update: { cursor?: string; offset?: number; limit?: number }): string {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     if (update.cursor) params.set('cursor', update.cursor);
     else if ('cursor' in update) params.delete('cursor');
     if (update.offset !== undefined) params.set('offset', String(update.offset));
@@ -180,7 +180,7 @@
 
   function changePageSize(event: Event) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('limit', (event.target as HTMLSelectElement).value);
     if (paginationMode === 'inbox') params.set('queue', params.get('queue') ?? 'pending');
     params.delete('cursor');
@@ -358,13 +358,13 @@
       </select>
     </div>
   </nav>
-  {#if paginationMode === 'inbox' && cursorHistoryReady && $page.url.searchParams.has('cursor') && !cursorPreviousHref}
+  {#if paginationMode === 'inbox' && cursorHistoryReady && page.url.searchParams.has('cursor') && !cursorPreviousHref}
     <p class="text-muted text-right text-xs">Previous page is unavailable for this direct link.</p>
   {/if}
 {:else}
   <div class="panel py-14 text-center">
     <p class="text-muted">
-      {$page.url.search
+      {page.url.search
         ? 'No groups match your filters.'
         : 'No duplicates found yet. Run analysis from the Dashboard.'}
     </p>

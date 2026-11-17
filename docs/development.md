@@ -52,7 +52,7 @@ paperless-ngx-dedupe/
 │   │       ├── export/     # CSV and JSON export
 │   │       ├── telemetry/  # OpenTelemetry tracing and metrics
 │   │       └── config.ts   # Zod-validated environment config
-│   ├── web/            # SvelteKit 2 application
+│   ├── web/            # SvelteKit 3 application
 │   │   └── src/
 │   │       ├── routes/     # UI pages and API endpoints
 │   │       └── lib/        # Shared components and utilities
