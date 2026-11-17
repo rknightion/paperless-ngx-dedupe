@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
   import { goto, invalidateAll } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { SvelteSet } from 'svelte/reactivity';
   import type { AiStats, UnprocessedDocument, DetailedCostEstimate } from '@paperless-dedupe/core';
   import {
@@ -64,20 +64,20 @@
   // ── Pagination ──
   const totalPages = $derived(Math.ceil(data.unprocessed.total / data.limit));
   const offset = $derived(
-    Math.max(parseInt($page.url.searchParams.get('offset') ?? '0', 10) || 0, 0),
+    Math.max(parseInt(page.url.searchParams.get('offset') ?? '0', 10) || 0, 0),
   );
   const currentPage = $derived(Math.floor(offset / data.limit) + 1);
 
   function goToPage(p: number) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('offset', String((p - 1) * data.limit));
     goto(`/ai-processing/queue?${params.toString()}`);
   }
 
   function changePageSize(e: Event) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('limit', (e.target as HTMLSelectElement).value);
     params.set('offset', '0');
     goto(`/ai-processing/queue?${params.toString()}`);

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { goto, invalidateAll } from '$app/navigation';
   import { JobStatusCard } from '$lib/components';
   import { Trash2 } from 'lucide-svelte';
@@ -32,7 +32,7 @@
 
   function applyFilter(key: string, value: string) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     if (value) {
       params.set(key, value);
     } else {
@@ -45,7 +45,7 @@
   let nextPageHref = $derived.by(() => {
     if (!data.nextCursor) return null;
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('cursor', data.nextCursor);
     params.set('pageSize', String(data.filters.pageSize));
     return `?${params.toString()}`;

@@ -3,8 +3,8 @@
   import { untrack } from 'svelte';
   import { type DuplicateGroupFiles } from '@paperless-dedupe/core';
   import { goto, invalidateAll } from '$app/navigation';
-  import { browser } from '$app/environment';
-  import { page } from '$app/stores';
+  import { browser } from '$app/env';
+  import { page } from '$app/state';
   import {
     ConfidenceBadge,
     StatusBadge,
@@ -66,10 +66,8 @@
   let selectedSecondary = $derived(secondaryMembers[selectedSecondaryIndex] || secondaryMembers[0]);
 
   let groupStatus = $derived(data.group.status);
-  let returnParams = $derived($page.url.searchParams.get('returnParams') ?? '');
-  let documentReturnUrl = $derived(
-    safeDocumentReturnTarget($page.url.searchParams.get('returnTo')),
-  );
+  let returnParams = $derived(page.url.searchParams.get('returnParams') ?? '');
+  let documentReturnUrl = $derived(safeDocumentReturnTarget(page.url.searchParams.get('returnTo')));
   let returnUrl = $derived(
     documentReturnUrl ?? (returnParams ? `/duplicates?${returnParams}` : '/duplicates'),
   );

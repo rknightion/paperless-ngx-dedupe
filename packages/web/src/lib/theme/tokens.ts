@@ -1,4 +1,4 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 /**
  * Resolved design-system token values, for the places that cannot use a

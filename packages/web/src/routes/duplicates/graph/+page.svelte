@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { EChart } from '$lib/components';
   import type { ECharts } from 'echarts';
@@ -150,7 +150,7 @@
   // Filter helpers
   function applyFilters(updates: Record<string, string>) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     for (const [key, value] of Object.entries(updates)) {
       if (value) {
         params.set(key, value);
@@ -177,7 +177,7 @@
   }
 
   let currentStatus = $derived(() => {
-    return $page.url.searchParams.get('status') ?? 'all';
+    return page.url.searchParams.get('status') ?? 'all';
   });
 </script>
 
@@ -218,8 +218,8 @@
           min="0"
           max="100"
           placeholder="0"
-          value={$page.url.searchParams.get('minConfidence')
-            ? Math.round(Number($page.url.searchParams.get('minConfidence')) * 100)
+          value={page.url.searchParams.get('minConfidence')
+            ? Math.round(Number(page.url.searchParams.get('minConfidence')) * 100)
             : ''}
           onchange={handleMinConfidence}
           class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
@@ -231,7 +231,7 @@
         <select
           id="graph-max-groups"
           onchange={handleMaxGroups}
-          value={$page.url.searchParams.get('maxGroups') ?? '100'}
+          value={page.url.searchParams.get('maxGroups') ?? '100'}
           class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         >
           <option value="25">25</option>

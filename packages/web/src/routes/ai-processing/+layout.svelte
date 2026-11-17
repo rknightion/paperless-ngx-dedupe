@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack, setContext } from 'svelte';
   import { invalidateAll } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { ProgressBar, ConfirmDialog, Tabs } from '$lib/components';
   import AiToastContainer from '$lib/components/ai/AiToastContainer.svelte';
   import AiDocumentPickerModal from '$lib/components/ai/AiDocumentPickerModal.svelte';
@@ -56,11 +56,11 @@
   const historyCount = $derived(stats.applied + stats.rejected + stats.reverted);
 
   function isActive(path: string): boolean {
-    return $page.url.pathname.startsWith(path);
+    return page.url.pathname.startsWith(path);
   }
 
   function tabHref(path: string): string {
-    const limit = $page.url.searchParams.get('limit');
+    const limit = page.url.searchParams.get('limit');
     return limit ? `${path}?limit=${limit}` : path;
   }
 

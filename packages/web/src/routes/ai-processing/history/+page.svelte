@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { goto, invalidateAll } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
   import AiApplyAuditCard from '$lib/components/ai/AiApplyAuditCard.svelte';
   import type { AiResultDetail } from '@paperless-dedupe/core';
@@ -113,14 +113,14 @@
 
   function goToPage(p: number) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('offset', String((p - 1) * data.limit));
     goto(`/ai-processing/history?${params.toString()}`);
   }
 
   function changePageSize(e: Event) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('limit', (e.target as HTMLSelectElement).value);
     params.set('offset', '0');
     goto(`/ai-processing/history?${params.toString()}`);

@@ -1,10 +1,9 @@
 import { applySecurityHeaders } from '$lib/server/security-headers';
 import { decideAccess } from '$lib/server/access';
 import { apiError, ErrorCode } from '$lib/server/api';
-import { sequence } from '@sveltejs/kit/hooks';
+import { sequence, type Handle } from '@sveltejs/kit/hooks';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '@paperless-dedupe/core';
-import type { Handle } from '@sveltejs/kit';
 import { getServerRuntime } from './runtime.server';
 
 const handleSecurityHeaders: Handle = async ({ event, resolve }) =>

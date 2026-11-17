@@ -82,7 +82,7 @@ compromised-chain probes; the Node bundled trust store and operating-system stor
 
 - `packages/core` owns all business logic and must stay importable without SvelteKit or browser
   APIs. No web-framework imports here.
-- `packages/web` is the SvelteKit 2 app (Svelte 5 runes) serving the UI and `/api/v1/*`. It calls
+- `packages/web` is the SvelteKit 3 app (Svelte 5 runes) serving the UI and `/api/v1/*`. It calls
   core for logic rather than reimplementing it, and a page `.server.ts` load function calls the same
   core query functions as the matching API route.
 - Path alias `@paperless-dedupe/core` resolves to `packages/core/src/index.ts`, source rather than

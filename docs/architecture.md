@@ -13,7 +13,7 @@ Paperless NGX Dedupe is a pnpm monorepo with two packages that separate concerns
 graph TD
     subgraph "packages/"
         Core["core<br/><small>Business logic, algorithms, DB</small>"]
-        Web["web<br/><small>SvelteKit 2 app (UI + API)</small>"]
+        Web["web<br/><small>SvelteKit 3 app (UI + API)</small>"]
     end
 
     Web -->|"imports"| Core
@@ -47,7 +47,7 @@ Framework-agnostic TypeScript library containing all business logic. No web fram
 
 ### packages/web
 
-SvelteKit 2 application (Svelte 5 runes) that serves both the web UI and the REST API. Uses `adapter-node` for Docker deployment.
+SvelteKit 3 application (Svelte 5 runes) that serves both the web UI and the REST API. Uses `adapter-node` for Docker deployment.
 
 **Key areas:**
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { browser } from '$app/environment';
-  import { page } from '$app/stores';
+  import { browser } from '$app/env';
+  import { page } from '$app/state';
   import { ExternalLink } from 'lucide-svelte';
   import { aiReviewHref } from './document-library-links';
 
@@ -34,11 +34,11 @@
   const HISTORY_KEY = 'paperless-dedupe:document-library-cursor-predecessors';
 
   function currentRelativeUrl(): string {
-    return `${$page.url.pathname}${$page.url.search}`;
+    return `${page.url.pathname}${page.url.search}`;
   }
 
   function relativeUrl(href: string): string {
-    const url = new URL(href, $page.url);
+    const url = new URL(href, page.url.href);
     return `${url.pathname}${url.search}`;
   }
 
@@ -53,12 +53,12 @@
 
   function withQuery(updates: { cursor?: string; limit?: number }): string {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.set('library', 'true');
     if (updates.cursor) params.set('cursor', updates.cursor);
     else if ('cursor' in updates) params.delete('cursor');
     if (updates.limit !== undefined) params.set('limit', String(updates.limit));
-    return `${$page.url.pathname}?${params.toString()}`;
+    return `${page.url.pathname}?${params.toString()}`;
   }
 
   let nextHref = $derived(nextCursor ? withQuery({ cursor: nextCursor }) : '');
@@ -87,7 +87,7 @@
 
   $effect(() => {
     if (!browser) return;
-    void $page.url;
+    void page.url;
     previousHref = readHistory()[currentRelativeUrl()] ?? '';
     historyReady = true;
   });
@@ -229,7 +229,7 @@
         >
           Previous page
         </a>
-      {:else if historyReady && $page.url.searchParams.has('cursor')}
+      {:else if historyReady && page.url.searchParams.has('cursor')}
         <span class="text-muted text-sm">Previous page unavailable for this direct link.</span>
       {/if}
     </div>

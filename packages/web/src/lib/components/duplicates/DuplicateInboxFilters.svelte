@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { ArrowDown, ArrowUp } from 'lucide-svelte';
 
   interface Props {
@@ -8,12 +8,12 @@
   }
 
   let { paginationMode, queue = 'pending' }: Props = $props();
-  let correspondent = $derived($page.url.searchParams.get('correspondent') ?? '');
-  let sortOrder = $derived($page.url.searchParams.get('sortOrder') ?? 'desc');
+  let correspondent = $derived(page.url.searchParams.get('correspondent') ?? '');
+  let sortOrder = $derived(page.url.searchParams.get('sortOrder') ?? 'desc');
 
   function navigate(updates: Record<string, string>, mode: 'inbox' | 'legacy') {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     for (const [key, value] of Object.entries(updates)) {
       if (value) params.set(key, value);
       else params.delete(key);
@@ -32,13 +32,13 @@
   }
 
   function confidenceValue(key: string): string {
-    const value = $page.url.searchParams.get(key);
+    const value = page.url.searchParams.get(key);
     return value ? String(Math.round(Number(value) * 100)) : '';
   }
 
   function modeSwitchHref(mode: 'inbox' | 'legacy'): string {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams.toString());
     params.delete('cursor');
     params.delete('offset');
     if (mode === 'legacy') {
@@ -130,7 +130,7 @@
         <label for="status-filter" class="text-ink block text-sm font-medium">Status</label>
         <select
           id="status-filter"
-          value={$page.url.searchParams.get('status') ?? 'all'}
+          value={page.url.searchParams.get('status') ?? 'all'}
           onchange={(event) => {
             const value = (event.target as HTMLSelectElement).value;
             navigate({ status: value === 'all' ? '' : value }, 'legacy');
@@ -150,7 +150,7 @@
         <div class="mt-1 flex gap-1">
           <select
             id="sort-by"
-            value={$page.url.searchParams.get('sortBy') ?? 'confidence'}
+            value={page.url.searchParams.get('sortBy') ?? 'confidence'}
             onchange={(event) =>
               navigate({ sortBy: (event.target as HTMLSelectElement).value }, 'legacy')}
             class="border-soft bg-surface text-ink min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm"
@@ -176,7 +176,7 @@
       <label class="text-ink flex items-center gap-2 self-end py-2 text-sm">
         <input
           type="checkbox"
-          checked={$page.url.searchParams.get('includeDeleted') === 'true'}
+          checked={page.url.searchParams.get('includeDeleted') === 'true'}
           onchange={(event) =>
             navigate(
               { includeDeleted: (event.target as HTMLInputElement).checked ? 'true' : '' },

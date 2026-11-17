@@ -1,6 +1,8 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import faroUploader from '@grafana/faro-rollup-plugin';
+import adapter from '@sveltejs/adapter-node';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vite';
 
 const faroApiKey = process.env.FARO_SOURCEMAP_API_KEY;
@@ -8,7 +10,13 @@ const faroApiKey = process.env.FARO_SOURCEMAP_API_KEY;
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    sveltekit(),
+    sveltekit({
+      preprocess: vitePreprocess(),
+      alias: { $lib: 'src/lib' },
+      adapter: adapter({
+        precompress: true,
+      }),
+    }),
     ...(faroApiKey
       ? [
           faroUploader({
