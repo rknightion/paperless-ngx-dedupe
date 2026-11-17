@@ -5,7 +5,7 @@ RUN GOBIN=/out/0.18.20 go install github.com/evanw/esbuild/cmd/esbuild@v0.18.20 
     GOBIN=/out/0.25.12 go install github.com/evanw/esbuild/cmd/esbuild@v0.25.12
 
 # Stage 1: Install dependencies
-FROM node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS deps
+FROM node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS deps
 
 WORKDIR /app
 
@@ -48,7 +48,7 @@ RUN set -eu; case "$TARGETARCH" in amd64) platform=x64 ;; arm64) platform=arm64 
 RUN node -e "import('/app/deployed/node_modules/@paperless-dedupe/core/dist/scheduler/occurrences.js')"
 
 # Stage 3: Production runtime
-FROM node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS production
+FROM node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS production
 
 WORKDIR /app
 
