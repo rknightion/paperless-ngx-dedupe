@@ -55,7 +55,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends tini gosu ca-certificates zlib1g && rm -rf /var/lib/apt/lists/*
 
-RUN npm install --global npm@12.2.2 && npm cache clean --force
+# The production entrypoint runs Node directly. Keep package managers in the build stage.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # Copy production deps from pnpm deploy (flat node_modules, no symlinks)
 COPY --from=build /app/deployed/node_modules ./node_modules

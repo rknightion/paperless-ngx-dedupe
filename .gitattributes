@@ -1,0 +1,3 @@
+# Generated files have separate source and validation.
+/.release-please-manifest.json linguist-generated=true
+/pnpm-lock.yaml linguist-generated=true
