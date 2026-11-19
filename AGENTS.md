@@ -161,3 +161,12 @@ file such as `ROADMAP.md` beside them.
   correspondent"). Aggregate counts, timings and structural findings are fine.
 - Older commits, docs and tests cite legacy board ids such as `PND-0001`. `just issue <ID>` prints
   the issue each one became; `.github/tracker/id-map.json` is the map.
+
+## Cursor Cloud specific instructions
+
+- Build uses the Node version from the production Dockerfile and pnpm from `package.json` to run
+  the frozen install and build both packages.
+- Run `bash .cursor/node.sh just typecheck </dev/null` for fast feedback and
+  `bash .cursor/node.sh just check </dev/null` for the full source gate.
+- The preview uses an empty in-memory database and a local placeholder Paperless endpoint. Use
+  hosted CI for browser coverage and the production image worker smoke test.

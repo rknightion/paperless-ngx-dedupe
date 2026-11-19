@@ -8,6 +8,10 @@ default:
 setup:
     pnpm install --frozen-lockfile
 
+# install the pinned workspace and build the packages for the preview
+cloud-bootstrap:
+    bash .cursor/node.sh bootstrap
+
 # format source in place (prettier)
 [group('check')]
 fmt:

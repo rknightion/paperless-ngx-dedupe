@@ -1,0 +1,9 @@
+{
+  "image": "ghcr.io/rknightion/cursor-cloud-base:1@sha256:ea97a0c79849151e4c823ec9d42f9692fdda68d93e17d6dfe653a4e4bcee17d6",
+  "user": "ubuntu",
+  "install": "CI=true just cloud-bootstrap </dev/null",
+  "egressMode": "network_settings_only",
+  "egressAllowlist": ["nodejs.org", "registry.npmjs.org"],
+  "terminals": [{ "name": "Paperless preview", "command": "bash .cursor/node.sh preview" }],
+  "ports": [{ "name": "Paperless preview", "port": 3000 }]
+}
