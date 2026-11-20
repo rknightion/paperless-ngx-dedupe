@@ -22,10 +22,10 @@
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/api-logs": "^0.223.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.82.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.83.0",
     "@opentelemetry/exporter-metrics-otlp-proto": "^0.301.0",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.301.0",
-    "@opentelemetry/instrumentation-undici": "^0.34.0",
+    "@opentelemetry/instrumentation-undici": "^0.35.0",
     "@opentelemetry/resources": "^3.0.0",
     "@opentelemetry/sdk-metrics": "^3.0.0",
     "@opentelemetry/sdk-node": "^0.301.0",
