@@ -250,7 +250,7 @@ importers:
         version: 1.44.0
       better-sqlite3:
         specifier: ^13.0.0
-        version: 13.0.3
+        version: 13.2.0
       croner:
         specifier: ^11.0.0
         version: 11.0.1
@@ -259,7 +259,7 @@ importers:
         version: 0.31.11
       drizzle-orm:
         specifier: ^0.45.0
-        version: 0.45.4(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.0.3)
+        version: 0.45.4(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.2.0)
       fastest-levenshtein:
         specifier: ^1.0.16
         version: 1.0.16
@@ -347,7 +347,7 @@ importers:
         version: 0.7.1
       better-sqlite3:
         specifier: ^13.0.0
-        version: 13.0.3
+        version: 13.2.0
       diff-match-patch:
         specifier: ^1.0.5
         version: 1.0.5
@@ -356,7 +356,7 @@ importers:
         version: 0.31.11
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.4(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.0.3)
+        version: 0.45.4(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.2.0)
       echarts:
         specifier: ^6.0.0
         version: 6.1.0
@@ -2115,8 +2115,8 @@ packages:
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
 
-  better-sqlite3@13.0.3:
-    resolution: {integrity: sha512-RbOBxmLBG8uvFUc15X9+9SFemKcQ0WBuISBVkpuiaUB2qblC8UWlHEjdWVoZ8AdhSwmoEgsiXKfopX0CQxaACQ==}
+  better-sqlite3@13.2.0:
+    resolution: {integrity: sha512-Z8Q/9x/uNyKxA1v4FNodyItRVRw1TeKBrmj32JhxhR0ceNcBY+wMobt/Bv7M7TzwPAXjnZRtNaEsATnUZSKWZQ==}
     engines: {node: '>=22'}
 
   bignumber.js@9.3.1:
@@ -5109,7 +5109,7 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  better-sqlite3@13.0.3:
+  better-sqlite3@13.2.0:
     dependencies:
       node-addon-api: 8.9.2
 
@@ -5192,12 +5192,12 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.4(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.0.3):
+  drizzle-orm@0.45.4(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.2.0):
     optionalDependencies:
       '@opentelemetry/api': 1.10.0
       '@types/better-sqlite3': 9.6.0
       '@types/pg': 8.15.6
-      better-sqlite3: 13.0.3
+      better-sqlite3: 13.2.0
 
   eastasianwidth@0.2.0: {}
 
