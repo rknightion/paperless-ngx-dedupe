@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: read
       packages: write # delete package versions
-    uses: rknightion/.github/.github/workflows/ghcr-cleanup.yml@4c666344d276c46c07ba94bc45dd30deee22929d # v1.30.11
+    uses: rknightion/.github/.github/workflows/ghcr-cleanup.yml@18c5119e3b14f88ba77d773a8bddd8b05b7b5dac # v1.30.12
     with:
       packages: "paperless-ngx-dedupe"
       # Scheduled runs prune for real; a manual dispatch defaults to dry-run.
