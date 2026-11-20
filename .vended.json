@@ -28,11 +28,11 @@
     ".agents/skills/write-tests/SKILL.md": "56a08e2276b2aa64e666ad184f768b53d89668b25da21c3d38ec01dd5779955e",
     ".github/privacy/identifier-patterns.txt": "85cadcfb81ec1dae95543723e6d6eed80fcbd0a4eed4ce2f9ec32acecd42971f",
     ".github/privacy/sweep": "914d03f4a0d5fa50458532e1b6beb381dda30a965b21694a14f68c8226ec2c3b",
-    "AGENTS.md": "5eb5e75e0552b06b05de329e31fb85132d0090f04d78364e35ece196837dd942",
-    "CONTRIBUTING.md": "a0c45771d721e146cedc891433761ea73bb5dad09dd5d51dd99e3ccb3cda0fc3"
+    "AGENTS.md": "98f4ca528e5f0d99d940f47978a9fcc4371a7ac2d5749a4b61106b240ade5d83",
+    "CONTRIBUTING.md": "e0c9d6943b25810cd3265c1574a22f08f5cb9d8d92cc01a374527ddf50033d89"
   },
   "ref": "main",
   "schema": 1,
-  "sha": "f132643e6658fe7781489869aa6aeaf0c76b6835",
+  "sha": "e1ad29cb99d1cc1004a72b78fefbe2342d2c410d",
   "source": "rknightion/.github"
 }

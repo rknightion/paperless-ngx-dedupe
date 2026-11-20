@@ -40,7 +40,10 @@ an issue, pull request, test or doc.
 
 - Run `just check` with stdin from `/dev/null`. It is the same gate pull request CI runs. If part
   of it is too slow or needs something you do not have, the section above says so; say in the pull
-  request what you ran and what you left to CI.
+  request what you ran and what you left to CI. Where the `justfile` has `just check-fast`, that
+  is the part to run before every push, and `just setup` installs a pre-push hook that runs it.
+- If you change the pull request's base branch afterwards, push a commit or run
+  `gh pr update-branch`: the required workflow does not restart for a base change.
 - Keep the change small and on one subject. Do not reformat or rewrite files you did not need to
   touch.
 - Read your own diff before you push it.
