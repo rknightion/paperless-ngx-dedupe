@@ -300,7 +300,7 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
-    uses: rknightion/.github/.github/workflows/ac-evidence.yml@4c666344d276c46c07ba94bc45dd30deee22929d # v1.30.11
+    uses: rknightion/.github/.github/workflows/ac-evidence.yml@18c5119e3b14f88ba77d773a8bddd8b05b7b5dac # v1.30.12
 
   # The lines a pull request adds carry no identifier, email address, public address or credential
   # shape. Pull requests only, like ac-evidence. Check run: `privacy-sweep / Privacy sweep`.
@@ -308,7 +308,7 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
-    uses: rknightion/.github/.github/workflows/privacy-sweep.yml@4c666344d276c46c07ba94bc45dd30deee22929d # v1.30.11
+    uses: rknightion/.github/.github/workflows/privacy-sweep.yml@18c5119e3b14f88ba77d773a8bddd8b05b7b5dac # v1.30.12
 
   # The Backlog.md board is retired: issues are the queue. A pull request may delete files under
   # backlog/ or move them out, never add or change one there. Reads the file list from the API, so
@@ -357,7 +357,7 @@ jobs:
       contents: read
       security-events: write
       actions: read
-    uses: rknightion/.github/.github/workflows/zizmor.yml@4c666344d276c46c07ba94bc45dd30deee22929d # v1.30.11
+    uses: rknightion/.github/.github/workflows/zizmor.yml@18c5119e3b14f88ba77d773a8bddd8b05b7b5dac # v1.30.12
     with:
       enforce: true
 
