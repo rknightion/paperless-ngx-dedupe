@@ -11,8 +11,12 @@ or coding agent working in this repository. `CONTRIBUTING.md` has the longer ver
 
 - Work on a branch of this repository, or a branch of your fork. Changes land through a pull
   request.
-- Run `just setup` once, then `just check` with stdin from `/dev/null` before you push. Say in the
-  pull request what you ran and what you could not run.
+- Run `just setup` once. Before you push, run the gate this repository's own section names for a
+  push, with stdin from `/dev/null`: `just check-fast` where the `justfile` has that recipe (`just
+  setup` installs a pre-push hook that runs it), otherwise `just check`. Say in the pull request
+  what you ran and what you left to CI.
+- After changing a pull request's base branch, push a commit or run `gh pr update-branch`: the
+  required workflow does not restart for a base change, so its check stays missing or stale.
 - The pull request title is a Conventional Commit subject (`fix: ...`, `feat: ...`), using one of
   the types `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build` or `perf`, or another
   type the repository's release configuration lists. Mark a breaking change with `!` (`feat!: ...`).
