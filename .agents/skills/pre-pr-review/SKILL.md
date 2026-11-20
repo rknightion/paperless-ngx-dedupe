@@ -1,6 +1,6 @@
 ---
 name: pre-pr-review
-description: Review a diff before it becomes a pull request, or review someone else's pull request, against a short explicit list of what blocks a merge, a cap on findings, and a list of what never to report because CI already enforces it. Also judges a pull request's acceptance evidence table. Use before opening or updating a pull request, before handing back a candidate, and when asked to review, audit or check a change. Not for applying review feedback or proving work is done: the repository's AGENTS.md covers both.
+description: "Review a diff before it becomes a pull request, or review someone else's pull request, against a short explicit list of what blocks a merge, a cap on findings, and a list of what never to report because CI already enforces it. Also judges a pull request's acceptance evidence table. Use before opening or updating a pull request, before handing back a candidate, and when asked to review, audit or check a change. Not for applying review feedback or proving work is done: the repository's AGENTS.md covers both."
 license: Apache-2.0 AND MIT
 ---
 

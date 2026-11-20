@@ -17,7 +17,7 @@
     ".agents/skills/github-actions-security-review/LICENSE": "96e78a9ce85795b117c8929887bdb78f88bf23f7b85a31f0872cde4dff7e92cd",
     ".agents/skills/github-actions-security-review/SKILL.md": "d51c4dc1c29d997b03805338d2e2aba4dc0a4bbb8e190150ee8c03a798a3a70e",
     ".agents/skills/pre-pr-review/LICENSE": "82b68f22c1e09282c25183b2dbf5d0a9366cd5a699bedeebff1a6a1fc2d8c6ba",
-    ".agents/skills/pre-pr-review/SKILL.md": "b598cc8ccf16e74bf1e8f50a4d28abf1020a0ca08909959b2851a0d34081c3c4",
+    ".agents/skills/pre-pr-review/SKILL.md": "81c36fccc280635de484c43fbe1c9d0abdb73d09fae3665de86180a89ac00e7b",
     ".agents/skills/refactor-clean/LICENSE": "653bb41fb060605c0e01fd72e6e6be72bffef192e0ab6ae8b0cd4abf9ba8d040",
     ".agents/skills/refactor-clean/SKILL.md": "d4c554c0f4a1d0af9c6f6558b8fba26ff52bfa0dc22ffeaa7630a826a66bfd52",
     ".agents/skills/repo-conventions/LICENSE": "93fe4303403cdc2eb4d4aadd96be4208ef217537a454a220648afbb21fe89bc8",
@@ -33,6 +33,6 @@
   },
   "ref": "main",
   "schema": 1,
-  "sha": "da0e056c29e0fbae1dff837ffaa922fe998ce92b",
+  "sha": "f132643e6658fe7781489869aa6aeaf0c76b6835",
   "source": "rknightion/.github"
 }
