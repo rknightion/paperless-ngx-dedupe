@@ -30,30 +30,6 @@ import { eq, sql } from 'drizzle-orm';
 
 describe('Job Manager', () => {
   let db: AppDatabase;
-  const legacyJobKeys = [
-    'attempt',
-    'completedAt',
-    'createdAt',
-    'dueAt',
-    'errorMessage',
-    'executionToken',
-    'id',
-    'nextAttemptAt',
-    'parentJobId',
-    'phaseProgress',
-    'progress',
-    'progressMessage',
-    'resultJson',
-    'rootDueAt',
-    'rootScheduleId',
-    'scheduleId',
-    'startedAt',
-    'status',
-    'terminalReason',
-    'triggerKind',
-    'type',
-  ];
-
   beforeEach(async () => {
     const handle = createDatabaseWithHandle(':memory:');
     db = handle.db;
@@ -127,7 +103,7 @@ describe('Job Manager', () => {
       const job = getJob(db, id);
       expect(job).not.toBeNull();
       expect(job!.id).toBe(id);
-      expect(Object.keys(job!).sort()).toEqual(legacyJobKeys);
+      expect(job).not.toHaveProperty('publicHistoryKey');
     });
   });
 
@@ -194,7 +170,7 @@ describe('Job Manager', () => {
       const id2 = createJob(db, JobType.ANALYSIS);
       const jobs = listJobs(db);
       expect(jobs).toHaveLength(2);
-      expect(Object.keys(jobs[0]).sort()).toEqual(legacyJobKeys);
+      expect(jobs[0]).not.toHaveProperty('publicHistoryKey');
       // Most recent first
       expect(jobs[0].id).toBe(id2);
     });

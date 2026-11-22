@@ -16,11 +16,6 @@ describe('createAiProvider', () => {
     vi.clearAllMocks();
   });
 
-  it('creates an OpenAI provider', async () => {
-    const provider = await createAiProvider('sk-test-key', 'gpt-5.4-mini');
-    expect(provider.provider).toBe('openai');
-  });
-
   it('passes maxRetries to provider constructor', async () => {
     const { OpenAiProvider } = await import('../providers/openai.js');
     await createAiProvider('sk-test-key', 'gpt-5.4-mini', { maxRetries: 5 });

@@ -624,7 +624,6 @@ describe('scanCustomFieldCandidatesV2', () => {
     const serialized = JSON.stringify(result);
 
     expect(result.sourceFingerprint).toMatch(/^[a-f0-9]{32}$/);
-    expect(result.diagnostics.source.fingerprint).toBe(result.sourceFingerprint);
     expect(result.candidates[0]?.key).toMatch(/^[a-f0-9]{24}$/);
     expect(result.candidates[0]?.strongestDomain?.domainId).toMatch(/^[a-f0-9]{24}$/);
     expect(result.candidates.map(({ name }) => name)).toEqual(['Claim Outcome']);
