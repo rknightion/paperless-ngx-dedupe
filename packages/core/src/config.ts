@@ -67,6 +67,13 @@ const configSchema = z
         error: 'AI_OPENAI_BASE_URL must be an absolute http or https URL',
       })
       .optional(),
+    AI_OPENAI_TIMEOUT_MS: z
+      .string()
+      .regex(/^[1-9]\d*$/, {
+        error: 'AI_OPENAI_TIMEOUT_MS must be a positive integer (milliseconds)',
+      })
+      .transform((v) => Number(v))
+      .optional(),
     AI_BULK_ALL_ENABLED: z
       .string()
       .default('false')

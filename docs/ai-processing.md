@@ -17,6 +17,7 @@ AI processing is disabled by default. Configure its environment before starting 
 | `AI_OPENAI_API_KEY` | Without a base URL | - | API key for the configured AI server |
 | `AI_OPENAI_BASE_URL` | No | - | Absolute http or https base URL for an OpenAI-compatible server |
 | `AI_OPENAI_API_STYLE` | No | `responses` | Request API: `responses` or `chat` |
+| `AI_OPENAI_TIMEOUT_MS` | No | `900000` with Flex, otherwise `60000` | Per-attempt request timeout in milliseconds; raise it for a slow or cold local model |
 
 The API key is required when `AI_ENABLED=true` unless `AI_OPENAI_BASE_URL` is set.
 
@@ -32,7 +33,8 @@ Support is best effort: the server must support JSON-schema structured outputs. 
 `AI_OPENAI_API_STYLE=responses` uses the Responses API. Set `AI_OPENAI_API_STYLE=chat` for a
 server that implements Chat Completions instead; restart after changing either environment variable.
 Chat requests use `response_format` with the same classification schema and `max_completion_tokens`
-for the output limit. Refusals, truncated output and invalid JSON remain per-document failures;
+for the output limit; with a base URL it also sends the legacy `max_tokens`, and an effort of `none`
+is sent explicitly instead of omitted, so servers such as Ollama turn thinking off. Refusals, truncated output and invalid JSON remain per-document failures;
 reported prompt, completion and cached token usage is retained even for rejected output. Model names are entered manually, and extraction quality depends on the model.
 Failures remain isolated to each document. Scheduled processing uses cached prices or the custom prices described below.
 

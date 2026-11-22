@@ -112,6 +112,7 @@ runWorkerTask(async (ctx, onProgress) => {
     flexProcessing: aiConfig.flexProcessing,
     baseURL: config.AI_OPENAI_BASE_URL,
     apiStyle: config.AI_OPENAI_API_STYLE,
+    timeoutMs: config.AI_OPENAI_TIMEOUT_MS,
   });
 
   const result = await processBatch(ctx.db, {

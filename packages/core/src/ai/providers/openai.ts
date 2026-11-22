@@ -82,9 +82,13 @@ export async function buildOpenAiRequestParams(
       aiExtractionResponseSchema,
       'document_classification',
     );
-    if (request.maxOutputTokens !== undefined)
+    if (request.maxOutputTokens !== undefined) {
       params.max_completion_tokens = request.maxOutputTokens;
-    if (request.reasoningEffort && request.reasoningEffort !== 'none') {
+      // Some OpenAI-compatible servers (e.g. Ollama) honour only the legacy field.
+      if (options.baseURL) params.max_tokens = request.maxOutputTokens;
+    }
+    // Omitting effort lets a custom server fall back to the model default, which may be to think.
+    if (request.reasoningEffort && (request.reasoningEffort !== 'none' || options.baseURL)) {
       params.reasoning_effort = request.reasoningEffort;
     }
   } else {
@@ -94,7 +98,7 @@ export async function buildOpenAiRequestParams(
     ];
     params.text = { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') };
     if (request.maxOutputTokens !== undefined) params.max_output_tokens = request.maxOutputTokens;
-    if (request.reasoningEffort && request.reasoningEffort !== 'none') {
+    if (request.reasoningEffort && (request.reasoningEffort !== 'none' || options.baseURL)) {
       params.reasoning = { effort: request.reasoningEffort };
     }
   }
@@ -107,6 +111,8 @@ export interface OpenAiProviderOptions {
   flexProcessing?: boolean;
   baseURL?: string;
   apiStyle?: 'responses' | 'chat';
+  /** Per-attempt client timeout in ms; overrides the flex/non-flex default. */
+  timeoutMs?: number;
 }
 
 export class OpenAiProvider implements AiProviderInterface {
@@ -130,11 +136,11 @@ export class OpenAiProvider implements AiProviderInterface {
     model: string,
     options: OpenAiProviderOptions = {},
   ): Promise<OpenAiProvider> {
-    const { maxRetries = 3, flexProcessing: requestedFlex = true, baseURL } = options;
+    const { maxRetries = 3, flexProcessing: requestedFlex = true, baseURL, timeoutMs } = options;
     const flexProcessing = !baseURL && requestedFlex;
     try {
       const { default: OpenAI } = await import('openai');
-      const timeout = flexProcessing ? 900_000 : 60_000;
+      const timeout = timeoutMs ?? (flexProcessing ? 900_000 : 60_000);
       const client = new OpenAI({
         apiKey: apiKey || (baseURL ? 'not-required' : undefined),
         maxRetries,

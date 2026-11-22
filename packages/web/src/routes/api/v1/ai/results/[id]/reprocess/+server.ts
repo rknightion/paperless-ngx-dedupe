@@ -30,6 +30,7 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
         maxRetries: aiConfig.maxRetries,
         baseURL: locals.config.AI_OPENAI_BASE_URL,
         apiStyle: locals.config.AI_OPENAI_API_STYLE,
+        timeoutMs: locals.config.AI_OPENAI_TIMEOUT_MS,
       },
     );
 

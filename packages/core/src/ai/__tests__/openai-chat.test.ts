@@ -85,6 +85,7 @@ describe('OpenAI chat extraction', () => {
         { role: 'user', content: 'Synthetic content' },
       ],
       max_completion_tokens: 123,
+      max_tokens: 123,
       reasoning_effort: 'low',
       response_format: JSON.parse(
         JSON.stringify(zodResponseFormat(aiExtractionResponseSchema, 'document_classification')),
