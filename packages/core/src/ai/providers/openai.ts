@@ -84,8 +84,11 @@ export async function buildOpenAiRequestParams(
     );
     if (request.maxOutputTokens !== undefined) {
       params.max_completion_tokens = request.maxOutputTokens;
-      // Some OpenAI-compatible servers (e.g. Ollama) honour only the legacy field.
-      if (options.baseURL) params.max_tokens = request.maxOutputTokens;
+      // Some OpenAI-compatible servers (e.g. Ollama) honour only the legacy field; OpenAI's own
+      // hosts reject it for reasoning models.
+      if (options.baseURL && acceptsLegacyMaxTokens(options.baseURL)) {
+        params.max_tokens = request.maxOutputTokens;
+      }
     }
     // Omitting effort lets a custom server fall back to the model default, which may be to think.
     if (request.reasoningEffort && (request.reasoningEffort !== 'none' || options.baseURL)) {
@@ -104,6 +107,17 @@ export async function buildOpenAiRequestParams(
   }
   if (!options.baseURL) params.service_tier = flexProcessing ? 'flex' : 'default';
   return params;
+}
+
+/** False for OpenAI and Azure OpenAI hosts, which reject max_tokens for o-series models. */
+function acceptsLegacyMaxTokens(baseURL: string): boolean {
+  let host: string;
+  try {
+    host = new URL(baseURL).hostname.toLowerCase();
+  } catch {
+    return true;
+  }
+  return host !== 'api.openai.com' && !host.endsWith('.openai.azure.com');
 }
 
 export interface OpenAiProviderOptions {

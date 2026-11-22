@@ -258,6 +258,18 @@ describe('custom endpoint request parameters', () => {
     expect(responses.max_output_tokens).toBe(321);
   });
 
+  it.each(['https://api.openai.com/v1', 'https://example-resource.openai.azure.com/openai/v1'])(
+    'omits max_tokens in chat style when the base URL is an OpenAI host (%s)',
+    async (baseURL) => {
+      const params = await buildOpenAiRequestParams(base, 'm', false, {
+        apiStyle: 'chat',
+        baseURL,
+      });
+      expect(params).not.toHaveProperty('max_tokens');
+      expect(params.max_completion_tokens).toBe(321);
+    },
+  );
+
   it('uses the configured timeout for the client, with and without a base URL', async () => {
     const timeoutOf = async (options: Record<string, unknown>) =>
       (
