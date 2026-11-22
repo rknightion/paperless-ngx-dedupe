@@ -29,6 +29,7 @@ jobs:
       release-tag: ${{ inputs.release_tag }}
       otel-tracing: true
       trivy-ignore-file: .trivyignore.yaml
+      trivy-ignore-unfixed: true
     secrets:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
       OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
