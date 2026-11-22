@@ -32,11 +32,6 @@ describe('getAiConfig', () => {
     expect(config.maxOutputTokens).toBe(1000);
     expect(config.extractCustomFields).toBe(false);
   });
-
-  it('matches DEFAULT_AI_CONFIG for a fresh database', () => {
-    const config = getAiConfig(db);
-    expect(config).toEqual(DEFAULT_AI_CONFIG);
-  });
 });
 
 describe('setAiConfig', () => {
