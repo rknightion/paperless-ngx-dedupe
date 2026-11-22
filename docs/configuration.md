@@ -80,6 +80,7 @@ The Node adapter limits request bodies independently of API validation. Large ba
 | `AI_OPENAI_API_KEY` | When AI enabled without a base URL | - | API key for the configured AI server |
 | `AI_OPENAI_BASE_URL` | No | - | Absolute http or https endpoint for an OpenAI-compatible server; disables Flex |
 | `AI_OPENAI_API_STYLE` | No | `responses` | `responses` for Responses API or `chat` for JSON-schema Chat Completions |
+| `AI_OPENAI_TIMEOUT_MS` | No | `900000` with Flex, otherwise `60000` | Per-attempt AI request timeout in milliseconds; positive integer |
 
 The API key is required when `AI_ENABLED=true` unless `AI_OPENAI_BASE_URL` is set. Runtime settings (model, prompt, etc.) are configured in the Settings page or via API. See [AI Processing](ai-processing.md) for full details.
 

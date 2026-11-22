@@ -82,9 +82,16 @@ export async function buildOpenAiRequestParams(
       aiExtractionResponseSchema,
       'document_classification',
     );
-    if (request.maxOutputTokens !== undefined)
+    if (request.maxOutputTokens !== undefined) {
       params.max_completion_tokens = request.maxOutputTokens;
-    if (request.reasoningEffort && request.reasoningEffort !== 'none') {
+      // Some OpenAI-compatible servers (e.g. Ollama) honour only the legacy field; OpenAI's own
+      // hosts reject it for reasoning models.
+      if (options.baseURL && acceptsLegacyMaxTokens(options.baseURL)) {
+        params.max_tokens = request.maxOutputTokens;
+      }
+    }
+    // Omitting effort lets a custom server fall back to the model default, which may be to think.
+    if (request.reasoningEffort && (request.reasoningEffort !== 'none' || options.baseURL)) {
       params.reasoning_effort = request.reasoningEffort;
     }
   } else {
@@ -94,7 +101,7 @@ export async function buildOpenAiRequestParams(
     ];
     params.text = { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') };
     if (request.maxOutputTokens !== undefined) params.max_output_tokens = request.maxOutputTokens;
-    if (request.reasoningEffort && request.reasoningEffort !== 'none') {
+    if (request.reasoningEffort && (request.reasoningEffort !== 'none' || options.baseURL)) {
       params.reasoning = { effort: request.reasoningEffort };
     }
   }
@@ -102,11 +109,24 @@ export async function buildOpenAiRequestParams(
   return params;
 }
 
+/** False for OpenAI and Azure OpenAI hosts, which reject max_tokens for o-series models. */
+function acceptsLegacyMaxTokens(baseURL: string): boolean {
+  let host: string;
+  try {
+    host = new URL(baseURL).hostname.toLowerCase();
+  } catch {
+    return true;
+  }
+  return host !== 'api.openai.com' && !host.endsWith('.openai.azure.com');
+}
+
 export interface OpenAiProviderOptions {
   maxRetries?: number;
   flexProcessing?: boolean;
   baseURL?: string;
   apiStyle?: 'responses' | 'chat';
+  /** Per-attempt client timeout in ms; overrides the flex/non-flex default. */
+  timeoutMs?: number;
 }
 
 export class OpenAiProvider implements AiProviderInterface {
@@ -130,11 +150,11 @@ export class OpenAiProvider implements AiProviderInterface {
     model: string,
     options: OpenAiProviderOptions = {},
   ): Promise<OpenAiProvider> {
-    const { maxRetries = 3, flexProcessing: requestedFlex = true, baseURL } = options;
+    const { maxRetries = 3, flexProcessing: requestedFlex = true, baseURL, timeoutMs } = options;
     const flexProcessing = !baseURL && requestedFlex;
     try {
       const { default: OpenAI } = await import('openai');
-      const timeout = flexProcessing ? 900_000 : 60_000;
+      const timeout = timeoutMs ?? (flexProcessing ? 900_000 : 60_000);
       const client = new OpenAI({
         apiKey: apiKey || (baseURL ? 'not-required' : undefined),
         maxRetries,

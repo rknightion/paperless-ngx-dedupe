@@ -128,3 +128,20 @@ it('describes the AI base URL as an environment-owned non-sensitive setting', ()
     /read-only/,
   );
 });
+
+it('accepts AI_OPENAI_TIMEOUT_MS as a positive integer and rejects anything else', () => {
+  expect(parseConfig({ ...baseEnv, AI_OPENAI_TIMEOUT_MS: '180000' })).toMatchObject({
+    AI_OPENAI_TIMEOUT_MS: 180000,
+  });
+  expect(parseConfig(baseEnv)).not.toHaveProperty('AI_OPENAI_TIMEOUT_MS');
+  for (const value of ['0', '-5', '1.5', 'abc', '', '10s']) {
+    expect(() => parseConfig({ ...baseEnv, AI_OPENAI_TIMEOUT_MS: value })).toThrow(
+      /AI_OPENAI_TIMEOUT_MS must be a positive integer/,
+    );
+  }
+  expect(getConfigMetadata().find((entry) => entry.key === 'AI_OPENAI_TIMEOUT_MS')).toMatchObject({
+    source: 'environment',
+    sensitive: false,
+    readOnly: true,
+  });
+});

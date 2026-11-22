@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createAiProvider, createInteractiveAiProvider } from '../providers/factory.js';
-import { OpenAiProvider } from '../providers/openai.js';
+import { OpenAiProvider, buildOpenAiRequestParams } from '../providers/openai.js';
 
 describe('OpenAI provider client policy', () => {
   it('passes zero retries through to the real SDK client', async () => {
@@ -218,5 +218,68 @@ describe('OpenAI-compatible base URL', () => {
     expect((local as unknown as { client: { apiKey: string } }).client.apiKey).toBe(
       'synthetic-key',
     );
+  });
+});
+
+describe('custom endpoint request parameters', () => {
+  const local = 'http://localhost:11434/v1';
+  const base = { systemPrompt: 'Classify', userPrompt: 'Synthetic content', maxOutputTokens: 321 };
+
+  it('sends reasoning none explicitly in chat style only with a base URL', async () => {
+    const request = { ...base, reasoningEffort: 'none' as const };
+    const custom = await buildOpenAiRequestParams(request, 'm', false, {
+      apiStyle: 'chat',
+      baseURL: local,
+    });
+    expect(custom.reasoning_effort).toBe('none');
+    const stock = await buildOpenAiRequestParams(request, 'm', true, { apiStyle: 'chat' });
+    expect(stock).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('sends reasoning none explicitly in responses style only with a base URL', async () => {
+    const request = { ...base, reasoningEffort: 'none' as const };
+    const custom = await buildOpenAiRequestParams(request, 'm', false, { baseURL: local });
+    expect(custom.reasoning).toEqual({ effort: 'none' });
+    const stock = await buildOpenAiRequestParams(request, 'm', true, {});
+    expect(stock).not.toHaveProperty('reasoning');
+  });
+
+  it('sends max_tokens beside max_completion_tokens in chat style with a base URL', async () => {
+    const custom = await buildOpenAiRequestParams(base, 'm', false, {
+      apiStyle: 'chat',
+      baseURL: local,
+    });
+    expect(custom).toMatchObject({ max_tokens: 321, max_completion_tokens: 321 });
+    const stock = await buildOpenAiRequestParams(base, 'm', true, { apiStyle: 'chat' });
+    expect(stock).not.toHaveProperty('max_tokens');
+    expect(stock.max_completion_tokens).toBe(321);
+    const responses = await buildOpenAiRequestParams(base, 'm', false, { baseURL: local });
+    expect(responses).not.toHaveProperty('max_tokens');
+    expect(responses.max_output_tokens).toBe(321);
+  });
+
+  it.each(['https://api.openai.com/v1', 'https://example-resource.openai.azure.com/openai/v1'])(
+    'omits max_tokens in chat style when the base URL is an OpenAI host (%s)',
+    async (baseURL) => {
+      const params = await buildOpenAiRequestParams(base, 'm', false, {
+        apiStyle: 'chat',
+        baseURL,
+      });
+      expect(params).not.toHaveProperty('max_tokens');
+      expect(params.max_completion_tokens).toBe(321);
+    },
+  );
+
+  it('uses the configured timeout for the client, with and without a base URL', async () => {
+    const timeoutOf = async (options: Record<string, unknown>) =>
+      (
+        (await OpenAiProvider.create('k', 'm', options)) as unknown as {
+          client: { timeout: number };
+        }
+      ).client.timeout;
+    expect(await timeoutOf({ baseURL: local, timeoutMs: 180_000 })).toBe(180_000);
+    expect(await timeoutOf({ timeoutMs: 45_000 })).toBe(45_000);
+    expect(await timeoutOf({ baseURL: local })).toBe(60_000);
+    expect(await timeoutOf({})).toBe(900_000);
   });
 });
