@@ -471,7 +471,7 @@
   {/if}
 
   <!-- Sticky section nav on a solid canvas fill. -->
-  <div class="bg-canvas sticky top-0 z-10 -mx-4 px-4 py-2 sm:-mx-6 md:-mx-8">
+  <div class="bg-canvas sticky top-0 z-10 -mx-3 px-3 py-2 md:-mx-6 md:px-6">
     <Tabs
       tabs={settingsTabs}
       active={activeSettingsSection}
@@ -800,11 +800,15 @@
 
     <!-- Save Button -->
     <div class="mt-6 flex items-center gap-3">
-      <Button onclick={saveDedupConfig} disabled={!weightsValid || isSavingDedup}>
+      <Button
+        onclick={saveDedupConfig}
+        disabled={!weightsValid || isSavingDedup}
+        describedBy={!weightsValid ? 'dedup-weights-error' : undefined}
+      >
         {isSavingDedup ? 'Saving...' : 'Save Configuration'}
       </Button>
       {#if !weightsValid}
-        <span class="text-ember text-sm">Weights must sum to 100</span>
+        <span id="dedup-weights-error" class="text-ember text-sm">Weights must sum to 100</span>
       {/if}
     </div>
     {#if dedupSaveStatus}
@@ -1051,6 +1055,7 @@
             {/if}
             <!-- Native textarea: no multi-line primitive exists in the component set. -->
             <textarea
+              aria-label="Prompt Template"
               bind:value={aiPromptTemplate}
               rows="12"
               class="border-border-hover bg-surface-raised text-ink w-full rounded-sm border px-3 py-2 font-mono text-xs leading-relaxed"
@@ -1146,13 +1151,16 @@
                 {/if}
                 <!-- Native textarea: no multi-line primitive exists in the component set. -->
                 <textarea
+                  aria-label="Tag Alias Map"
+                  aria-invalid={tagAliasValidationError ? 'true' : undefined}
+                  aria-describedby={tagAliasValidationError ? 'tag-alias-error' : undefined}
                   bind:value={aiTagAliasMap}
                   rows="16"
                   class="bg-surface-raised text-ink w-full rounded-sm border px-3 py-2 font-mono text-xs leading-relaxed {tagAliasValidationError
                     ? 'border-ember'
                     : 'border-border-hover'}"></textarea>
                 {#if tagAliasValidationError}
-                  <p class="text-ember text-xs">{tagAliasValidationError}</p>
+                  <p id="tag-alias-error" class="text-ember text-xs">{tagAliasValidationError}</p>
                 {/if}
               </div>
             {/if}
