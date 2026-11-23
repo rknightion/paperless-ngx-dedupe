@@ -96,7 +96,7 @@
 </script>
 
 <div class="panel" bind:this={containerRef}>
-  <h3 class="text-ink mb-3 text-base font-semibold">OCR Text Comparison</h3>
+  <h3 class="text-ink mb-3 text-lg font-semibold">OCR Text Comparison</h3>
 
   {#if loadState === 'idle'}
     <p class="text-muted text-sm">Scroll down to load text comparison...</p>
@@ -111,7 +111,7 @@
       {textA === null ? 'Primary document' : 'Compared document'} has no OCR text available.
     </p>
   {:else if isIdentical}
-    <div class="bg-success-light text-success rounded-lg p-3 text-sm">
+    <div class="border-success bg-success-light text-success border p-3 text-sm">
       Text content is identical between both documents.
     </div>
   {:else}
@@ -129,9 +129,12 @@
       </p>
     {/if}
     <pre
-      class="bg-canvas max-h-96 overflow-auto rounded-lg p-4 font-mono text-xs leading-relaxed">{#each diffs as [op, text], i (i)}{#if op === -1}<span
-            class="bg-ember-light text-ember line-through">{text}</span
-          >{:else if op === 1}<span class="bg-success-light text-success">{text}</span
+      class="bg-canvas border-border max-h-96 overflow-auto border p-4 font-mono text-xs leading-relaxed">{#each diffs as [op, text], i (i)}{#if op === -1}<span
+            class="text-ink bg-[color-mix(in_oklab,var(--color-ember)_12%,var(--color-surface))] line-through before:mr-px before:content-['-'] before:select-none"
+            >{text}</span
+          >{:else if op === 1}<span
+            class="text-ink bg-[color-mix(in_oklab,var(--color-success)_12%,var(--color-surface))] before:mr-px before:content-['+'] before:select-none"
+            >{text}</span
           >{:else}{text}{/if}{/each}</pre>
   {/if}
 </div>

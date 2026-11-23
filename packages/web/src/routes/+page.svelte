@@ -2,18 +2,24 @@
   import { invalidateAll } from '$app/navigation';
   import { activity } from '$lib/activity/ActivityStore.svelte';
   import { requestJson } from '$lib/api/client';
+  import JobMeter from '$lib/components/activity/JobMeter.svelte';
+  import {
+    jobDisplayName,
+    jobProgressPercent,
+    jobStatusWord,
+  } from '$lib/components/activity/job-status';
   import CompactTrends from '$lib/components/dashboard/CompactTrends.svelte';
+  import FirstRunChecklist from '$lib/components/dashboard/FirstRunChecklist.svelte';
   import NextActions from '$lib/components/dashboard/NextActions.svelte';
   import OutcomeSummary from '$lib/components/dashboard/OutcomeSummary.svelte';
   import ReadinessStrip from '$lib/components/dashboard/ReadinessStrip.svelte';
+  import StatStrip from '$lib/components/dashboard/StatStrip.svelte';
   import {
     trackAnalysisFailed,
     trackAnalysisStarted,
     trackSyncFailed,
     trackSyncStarted,
   } from '$lib/faro-events';
-  import PulseIcon from 'phosphor-svelte/lib/PulseIcon';
-  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
 
   let { data } = $props();
 
@@ -35,10 +41,6 @@
         job.type.toLowerCase() === type &&
         !['completed', 'failed', 'cancelled'].includes(job.status),
     );
-  }
-
-  function jobLabel(type: string): string {
-    return type.replaceAll('_', ' ').replace(/\b\w/g, (character) => character.toUpperCase());
   }
 
   function jobIdFrom(response: JobStartResponse): string | null {
@@ -123,109 +125,94 @@
   <title>Dashboard - Paperless NGX Dedupe</title>
 </svelte:head>
 
-<div class="space-y-8">
-  <header class="space-y-1">
-    <h1 class="text-ink text-2xl font-semibold tracking-tight">Dashboard</h1>
+<!-- The shell's main region pads its content; the title row and the stat strip
+     run edge to edge, so this cancels that padding and re-applies it below. -->
+<div class="-m-3 md:-m-6">
+  <header
+    class="border-border bg-surface flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b px-3 py-2.5 md:px-6"
+  >
+    <h1 class="text-ink text-xl font-semibold">Dashboard</h1>
     <p class="text-muted text-sm">
       Start with readiness, then move through the work that needs you.
     </p>
   </header>
 
-  <section class="panel" aria-label="First-run checklist">
-    <h2 class="text-ink text-lg font-semibold">First-run checklist</h2>
-    <p class="text-muted mt-1 text-sm">
-      Work through these in order. Nothing here changes Paperless without your review.
-    </p>
-    <ol class="mt-4 grid gap-3 sm:grid-cols-3">
-      <li class="panel-inset text-sm">
-        <span class="text-ink font-medium">1. Connect to Paperless</span>
-        <p class="text-muted mt-1 text-xs">Confirm the connection in Settings.</p>
-      </li>
-      <li class="panel-inset text-sm">
-        <span class="text-ink font-medium">2. Sync your library</span>
-        <p class="text-muted mt-1 text-xs">
-          Copy document metadata into the local review database.
-        </p>
-      </li>
-      <li class="panel-inset text-sm">
-        <span class="text-ink font-medium">3. Run duplicate analysis</span>
-        <p class="text-muted mt-1 text-xs">Review matches before any Paperless change.</p>
-      </li>
-    </ol>
-  </section>
-
-  <ReadinessStrip readiness={data.readiness} automation={data.automation} />
-
-  <NextActions
-    actions={data.dashboard.nextActions}
-    {syncDisabled}
-    {analysisDisabled}
-    onSync={startSync}
-    onAnalysis={startAnalysis}
+  <StatStrip
+    totalDocuments={data.dashboard.totalDocuments}
+    pendingGroups={data.dashboard.pendingGroups}
+    totalDuplicateGroups={data.dashboard.totalDuplicateGroups}
+    pendingAnalysis={data.dashboard.pendingAnalysis}
+    reclaimableBytes={data.duplicateStats.reclaimableBytes}
   />
 
-  {#if actionError}
-    <div
-      class="border-ember-light bg-ember-light/40 text-ember flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
-      role="alert"
-    >
-      <WarningCircleIcon class="mt-0.5 h-4 w-4 shrink-0" />
-      <p>{actionError}</p>
-    </div>
-  {/if}
+  <div class="flex flex-col gap-6 px-3 pt-5 pb-8 md:px-6">
+    <FirstRunChecklist
+      paperlessConnected={data.readiness.paperless.status === 'connected'}
+      synced={data.readiness.lastSyncAt !== null}
+      analysed={data.readiness.lastAnalysisAt !== null}
+    />
 
-  <section class="panel" aria-label="Current activity">
-    <div class="mb-4 flex items-center gap-2">
-      <PulseIcon class="text-accent h-5 w-5" />
-      <div>
-        <h2 class="text-ink text-lg font-semibold">Current activity</h2>
-        <p class="text-muted mt-1 text-sm">Live updates continue if you navigate elsewhere.</p>
+    <ReadinessStrip readiness={data.readiness} automation={data.automation} />
+
+    <NextActions
+      actions={data.dashboard.nextActions}
+      {syncDisabled}
+      {analysisDisabled}
+      onSync={startSync}
+      onAnalysis={startAnalysis}
+    />
+
+    {#if actionError}
+      <div
+        class="border-ember flex items-baseline gap-3 border bg-[color-mix(in_oklab,var(--color-ember)_7%,var(--color-surface))] px-4 py-3 text-base"
+        role="alert"
+      >
+        <span class="status-word text-ember">● FAIL</span>
+        <p class="text-ink">{actionError}</p>
       </div>
-    </div>
-    {#if currentActivity.length > 0}
-      <ul class="space-y-3">
-        {#each currentActivity as job (job.id)}
-          <li class="panel-inset" data-testid={`dashboard-activity-${job.id}`}>
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-ink text-sm font-medium">{jobLabel(job.type)}</p>
-                <p class="text-muted mt-1 text-xs">{job.message || 'Waiting for an update'}</p>
-              </div>
-              <span class="text-muted shrink-0 text-xs capitalize">
-                {job.connection === 'degraded' ? 'Updates delayed' : job.status}
-              </span>
-            </div>
-            <div class="bg-canvas-deep mt-3 h-2 overflow-hidden rounded-full" aria-hidden="true">
-              <div
-                class="bg-accent h-full rounded-full"
-                style={`width: ${Math.round(job.progress * 100)}%`}
-              ></div>
-            </div>
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <p class="panel-inset text-muted text-sm">Nothing is running right now.</p>
     {/if}
-  </section>
 
-  <OutcomeSummary dashboard={data.dashboard} jobs={data.jobs} aiStats={data.aiStats} />
+    <section aria-label="Current activity">
+      <h2 class="text-ink text-lg font-semibold">Current activity</h2>
+      <p class="text-muted mt-0.5 text-sm">Live updates continue if you navigate elsewhere.</p>
+      <div class="border-border bg-surface mt-3 border">
+        {#if currentActivity.length > 0}
+          <ul class="divide-border divide-y">
+            {#each currentActivity as job (job.id)}
+              {@const word = jobStatusWord(job)}
+              {@const percent = jobProgressPercent(job.progress)}
+              <li class="px-4 py-3" data-testid={`dashboard-activity-${job.id}`}>
+                <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span class="status-word {word.tone} uppercase">{word.shape} {word.label}</span>
+                  <span class="text-ink text-base font-medium">{jobDisplayName(job.type)}</span>
+                  <span class="text-muted min-w-0 text-sm">
+                    {job.message || 'Waiting for an update'}
+                  </span>
+                  <span
+                    class="ml-auto font-mono text-sm tabular-nums {percent > 0
+                      ? 'text-ink'
+                      : 'text-muted'}"
+                  >
+                    {percent}%
+                  </span>
+                </div>
+                <div class="mt-2">
+                  <JobMeter progress={job.progress} status={job.status} />
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="text-muted px-4 py-3 text-sm">Nothing is running right now.</p>
+        {/if}
+      </div>
+    </section>
 
-  <section aria-label="Reclaimable storage" class="panel-inset">
-    <h2 class="text-ink text-base font-semibold">Reclaimable storage</h2>
-    <p class="text-ink mt-1 text-lg font-semibold">
-      {data.duplicateStats.reclaimableBytes === null
-        ? 'Unknown'
-        : `${data.duplicateStats.reclaimableBytes.toLocaleString()} bytes`}
-    </p>
-    <p class="text-muted mt-1 text-sm">
-      Estimated original and archive sizes of non-primary documents in pending groups. Refreshed
-      after analysis; space is freed only after Paperless purges its recycle bin.
-    </p>
-  </section>
+    <OutcomeSummary dashboard={data.dashboard} jobs={data.jobs} aiStats={data.aiStats} />
 
-  <CompactTrends
-    topCorrespondents={data.dashboard.topCorrespondents}
-    confidenceDistribution={data.duplicateStats.confidenceDistribution}
-  />
+    <CompactTrends
+      topCorrespondents={data.dashboard.topCorrespondents}
+      confidenceDistribution={data.duplicateStats.confidenceDistribution}
+    />
+  </div>
 </div>

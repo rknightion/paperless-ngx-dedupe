@@ -170,7 +170,7 @@
     event.preventDefault();
     cancel();
   }}
-  class="border-soft bg-surface m-auto max-h-[90vh] w-[min(42rem,calc(100%-2rem))] overflow-y-auto rounded-xl border p-0 shadow-xl backdrop:bg-black/40"
+  class="border-border-hover bg-surface-raised rounded-overlay backdrop:bg-inverse/55 m-auto max-h-[90vh] w-[min(42rem,calc(100%-2rem))] overflow-y-auto border p-0 shadow-lg"
 >
   <div class="p-5 sm:p-6">
     <h2 id="bulk-preview-title" class="text-ink text-lg font-semibold">
@@ -195,7 +195,10 @@
     {#if loading && !preview}
       <p class="text-muted mt-5 text-sm">Preparing exact deletion preview…</p>
     {:else if error}
-      <div role="alert" class="bg-ember-light text-ember mt-5 rounded-lg px-3 py-2 text-sm">
+      <div
+        role="alert"
+        class="border-ember bg-ember-light text-ember mt-5 border px-3 py-2 text-sm"
+      >
         {error}
       </div>
       {#if !preview}
@@ -211,7 +214,7 @@
     {:else if preview}
       <div class="mt-5 space-y-3">
         {#each preview.groups as group (group.groupId)}
-          <section class="border-soft rounded-lg border p-3">
+          <section class="border-soft border p-3">
             <h3 class="text-ink text-sm font-semibold">
               Primary kept: Paperless document #{group.primaryPaperlessId}
             </h3>
@@ -223,7 +226,7 @@
             {#if group.merge}<MetadataMergePreview merge={group.merge} />{/if}
           </section>
         {/each}
-        <p class="text-muted text-xs">
+        <p class="text-muted font-mono text-xs">
           Review expires {new Date(preview.expiresAt).toLocaleString()}.
         </p>
         <Checkbox bind:checked={reviewed} label="I reviewed this exact deletion list" />
@@ -238,7 +241,7 @@
         type="button"
         onclick={cancel}
         disabled={executing}
-        class="border-soft text-ink rounded-lg border px-4 py-2 text-sm font-medium"
+        class="border-border-hover text-ink-light hover:bg-canvas-deep h-7 rounded-sm border px-2.5 px-4 text-sm font-medium"
       >
         Cancel
       </button>

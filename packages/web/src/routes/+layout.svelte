@@ -9,7 +9,7 @@
   import { theme } from '$lib/theme/ThemeStore.svelte';
   import '../app.css';
   import { page } from '$app/state';
-  import { untrack, onMount } from 'svelte';
+  import { untrack, onMount, tick } from 'svelte';
   import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
   import ClockCounterClockwiseIcon from 'phosphor-svelte/lib/ClockCounterClockwiseIcon';
   import CopyIcon from 'phosphor-svelte/lib/CopyIcon';
@@ -22,6 +22,11 @@
 
   let { data, children } = $props();
   let sidebarOpen = $state(false);
+  // Below 768px the rail leaves the flow and returns as a drawer.
+  let narrow = $state(false);
+  let drawer: HTMLElement | undefined = $state();
+  let menuButton: HTMLButtonElement | undefined = $state();
+  let closeButton: HTMLButtonElement | undefined = $state();
 
   type NavItem = {
     href: string;
@@ -41,9 +46,52 @@
 
   const items = $derived(NAV.filter((item) => !item.requiresAi || data.aiEnabled));
 
+  // The top bar context is the route path, never the Paperless host.
+  const context = $derived(page.route.id ?? page.url.pathname);
+
+  // While the drawer is open everything behind the scrim is inert, which is
+  // the focus trap; a closed drawer is inert so it cannot take focus offscreen.
+  const contentInert = $derived(narrow && sidebarOpen);
+  const drawerInert = $derived(narrow && !sidebarOpen);
+
   // Dashboard is an exact match; everything else owns its subtree.
   function isActive(href: string, pathname: string): boolean {
     return href === '/' ? pathname === '/' : pathname.startsWith(href);
+  }
+
+  async function openDrawer(): Promise<void> {
+    sidebarOpen = true;
+    await tick();
+    closeButton?.focus();
+  }
+
+  function closeDrawer(restoreFocus = true): void {
+    if (!sidebarOpen) return;
+    sidebarOpen = false;
+    if (restoreFocus) menuButton?.focus();
+  }
+
+  function onWindowKeydown(event: KeyboardEvent): void {
+    if (!sidebarOpen || !narrow) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDrawer();
+      return;
+    }
+    if (event.key !== 'Tab' || !drawer) return;
+    const focusable = [
+      ...drawer.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'),
+    ].filter((element) => element.offsetParent !== null);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   untrack(() => {
@@ -60,7 +108,15 @@
     if (data.faroEnabled) {
       initFaroRouteTracking();
     }
+    const query = window.matchMedia('(max-width: 767.98px)');
+    narrow = query.matches;
+    const onChange = (event: MediaQueryListEvent) => {
+      narrow = event.matches;
+      if (!event.matches) sidebarOpen = false;
+    };
+    query.addEventListener('change', onChange);
     return () => {
+      query.removeEventListener('change', onChange);
       activity.stop();
       stopTheme();
     };
@@ -72,89 +128,132 @@
   });
 </script>
 
+<svelte:window onkeydown={onWindowKeydown} />
+
 <!-- Phosphor icons render role="img". Every icon here is decorative (its
      control or text carries the name), so hide them from assistive tech by
      default. An icon that needs a name can override aria-hidden itself. -->
 <IconContext values={{ 'aria-hidden': 'true' }}>
-  <div class="flex min-h-screen">
-    <!-- Mobile overlay backdrop -->
-    <div
-      class="fixed inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden {sidebarOpen
-        ? 'opacity-100'
-        : 'pointer-events-none opacity-0'}"
-      onclick={() => (sidebarOpen = false)}
-      onkeydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}
-      role="button"
-      tabindex="-1"
-    ></div>
+  <!-- The shell never scrolls: the rail and top bar are fixed and main is the
+       only scrolling region. -->
+  <div class="bg-canvas flex h-dvh overflow-hidden">
+    {#if sidebarOpen}
+      <button
+        type="button"
+        class="bg-inverse/60 fixed inset-0 z-30 md:hidden"
+        tabindex="-1"
+        aria-hidden="true"
+        onclick={() => closeDrawer()}
+      ></button>
+    {/if}
 
     <aside
-      class="border-sidebar-border text-sidebar-ink fixed top-0 left-0 z-40 flex h-full w-64 flex-col border-r transition-transform duration-200 ease-in-out {sidebarOpen
-        ? 'translate-x-0'
-        : '-translate-x-full'} md:translate-x-0"
-      style="background: linear-gradient(180deg, var(--color-sidebar-top) 0%, var(--color-sidebar) 100%)"
+      bind:this={drawer}
+      id="app-sidebar"
+      inert={drawerInert}
+      class="border-sidebar-border bg-sidebar text-sidebar-ink fixed top-0 left-0 z-40 flex h-full w-60 flex-col border-r transition-transform duration-200 ease-out md:static md:z-auto md:w-50 md:shrink-0 md:translate-x-0 md:shadow-none {sidebarOpen
+        ? 'translate-x-0 shadow-lg'
+        : '-translate-x-full'}"
     >
-      <div class="flex items-center justify-between p-6">
-        <a href="/" class="flex items-center gap-3">
-          <!-- The m7kni mark stands alone with the product name beside it.
-             Never CSS-filter it; inverting changes the colour of the dot. -->
-          <img src="/m7kni-mark.svg" alt="" class="h-9 w-9 rounded-lg" />
-          <span class="text-sidebar-ink-active text-lg font-bold">Paperless NGX Dedupe</span>
+      <div class="flex items-start gap-2 px-4 py-3">
+        <a
+          href="/"
+          class="text-sidebar-ink-active hover:text-sidebar-ink-active flex items-start gap-2"
+        >
+          <!-- The m7kni house mark as shipped (small cut, stroke 4). Never
+             CSS-filter it; it takes currentColor from the accent. -->
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 72 72"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4"
+            stroke-linecap="butt"
+            stroke-linejoin="miter"
+            aria-hidden="true"
+            class="text-accent mt-px shrink-0"
+          >
+            <rect x="9" y="25" width="38" height="38" rx="3"></rect>
+            <path d="M28 25V63M9 44H47"></path>
+            <rect x="49" y="7" width="14" height="14" rx="3"></rect>
+          </svg>
+          <span class="text-base leading-tight font-semibold">Paperless NGX Dedupe</span>
         </a>
         <button
-          class="text-sidebar-ink hover:text-sidebar-ink-active md:hidden"
-          onclick={() => (sidebarOpen = false)}
-          aria-label="Close sidebar"
+          bind:this={closeButton}
+          type="button"
+          class="text-muted hover:text-ink ml-auto flex h-7 w-7 shrink-0 items-center justify-center md:hidden"
+          onclick={() => closeDrawer()}
+          aria-label="Close navigation"
         >
-          <XIcon class="h-6 w-6" />
+          <XIcon size={16} />
         </button>
       </div>
 
-      <nav class="flex flex-col gap-1 px-3">
+      <nav aria-label="Primary" class="flex min-h-0 flex-1 flex-col overflow-y-auto py-2">
+        <div class="label-micro px-4 pb-1">Views</div>
         {#each items as item (item.href)}
           {@const active = isActive(item.href, page.url.pathname)}
           <a
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            class="rounded-lg px-3 py-2 text-sm font-medium transition-colors {active
-              ? 'bg-sidebar-active text-sidebar-ink-active'
-              : 'hover:bg-sidebar-hover text-sidebar-ink hover:text-sidebar-ink-active'}"
+            class="flex items-center gap-2 border-l-2 px-4 py-2 text-base md:py-1.5 md:text-sm {active
+              ? 'border-accent bg-sidebar-active text-sidebar-ink-active'
+              : 'hover:bg-sidebar-hover text-sidebar-ink hover:text-sidebar-ink-active border-transparent'}"
           >
-            <span class="flex items-center gap-3">
-              <item.icon size={18} aria-hidden="true" />
-              {item.label}
-            </span>
+            <item.icon size={16} aria-hidden="true" class="shrink-0" />
+            <span>{item.label}</span>
           </a>
         {/each}
       </nav>
 
-      <div class="mt-auto flex flex-col gap-3 px-6 pb-6">
+      <div class="border-sidebar-border flex flex-col gap-2 border-t px-4 py-2.5">
         <ThemeToggle />
-        <p class="text-sidebar-ink text-xs">Paperless NGX Dedupe</p>
       </div>
     </aside>
 
-    <main class="bg-canvas min-h-screen min-w-0 flex-1 p-4 sm:p-6 md:ml-64 md:p-8">
-      <!-- Mobile hamburger -->
-      <button
-        class="text-ink mb-4 md:hidden"
-        onclick={() => (sidebarOpen = true)}
-        aria-label="Open sidebar"
-      >
-        <ListIcon class="h-6 w-6" />
-      </button>
-      {#if data.readOnly}
-        <aside role="note" aria-label="Paperless read-only" class="panel text-ink mb-6">
-          <p class="font-semibold">Paperless is read-only</p>
-          <p class="text-muted mt-1 text-sm">
-            Changes to Paperless are disabled. Sync, analysis, AI suggestions and local review
-            remain available.
-          </p>
-        </aside>
-      {/if}
-      {@render children()}
-    </main>
-    <ActivityPanel jobs={activity.jobs} />
-    <ActivityLiveRegion jobs={activity.jobs} />
+    <div class="contents" inert={contentInert}>
+      <div class="flex min-w-0 flex-1 flex-col">
+        <header
+          class="border-border bg-surface flex items-center gap-3 border-b px-3 py-2.5 md:px-6"
+        >
+          <button
+            bind:this={menuButton}
+            type="button"
+            class="border-border text-sidebar-ink hover:bg-canvas-deep flex h-8 w-8 shrink-0 items-center justify-center border md:hidden"
+            onclick={() => void openDrawer()}
+            aria-label="Open navigation"
+            aria-expanded={sidebarOpen}
+            aria-controls="app-sidebar"
+          >
+            <ListIcon size={16} />
+          </button>
+          <p class="text-muted truncate font-mono text-xs">{context}</p>
+        </header>
+
+        <main class="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 md:p-6">
+          {#if data.readOnly}
+            <div
+              role="note"
+              aria-label="Paperless read-only"
+              class="border-border bg-surface text-ink mb-6 flex items-start gap-3 border px-4 py-3"
+            >
+              <span class="status-word text-warn" aria-hidden="true">◆</span>
+              <div>
+                <p class="font-medium">Paperless is read-only</p>
+                <p class="text-muted mt-1 text-sm">
+                  Changes to Paperless are disabled. Sync, analysis, AI suggestions and local review
+                  remain available.
+                </p>
+              </div>
+            </div>
+          {/if}
+          {@render children()}
+        </main>
+      </div>
+      <ActivityPanel jobs={activity.jobs} />
+      <ActivityLiveRegion jobs={activity.jobs} />
+    </div>
   </div>
 </IconContext>
