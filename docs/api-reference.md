@@ -960,6 +960,9 @@ Poll the job for plan validation and the mutation outcome.
 
 ### POST /api/v1/ai/results/preflight
 
+The `all_pending` and `current_filter` scopes require `AI_BULK_ALL_ENABLED=true`; otherwise they
+return `401 UNAUTHORIZED`. `selected_result_ids` does not.
+
 Creates a reviewed apply plan without changing Paperless documents. A local plan stores the
 selected result versions and live document state for execution-time checks.
 

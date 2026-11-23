@@ -53,6 +53,18 @@ if (otelEnabled || prometheusEnabled) {
               req.url === '/api/v1/ready' ||
               req.url === '/api/v1/metrics',
           },
+          '@opentelemetry/instrumentation-undici': {
+            // A notification URL can carry its secret in the path, and spans record the full URL.
+            ignoreRequestHook: (request) => {
+              if (!process.env.NOTIFY_URL) return false;
+              try {
+                const target = new URL(process.env.NOTIFY_URL);
+                return request.origin === target.origin && request.path.startsWith(target.pathname);
+              } catch {
+                return true;
+              }
+            },
+          },
           '@opentelemetry/instrumentation-fs': {
             requireParentSpan: true,
           },
