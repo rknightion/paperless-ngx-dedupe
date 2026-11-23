@@ -51,7 +51,10 @@ for (const scheme of ['light', 'dark'] as const) {
         const { documentIds, groupIds } = seedDB();
         if (route.startsWith('/ai-processing')) seedAiResults(documentIds);
 
-        const path = route.replace('[id]', groupIds[0]);
+        const path =
+          route === missingPage
+            ? `${missingPage}/${'x'.repeat(240)}`
+            : route.replace('[id]', groupIds[0]);
         const response = await page.goto(path);
         expect(response?.status()).toBe(route === missingPage ? 404 : 200);
         await expect(page).toHaveURL(route === '/ai-processing' ? '/ai-processing/review' : path);
@@ -90,6 +93,8 @@ for (const scheme of ['light', 'dark'] as const) {
 
         if (route === '/ai-processing/history') {
           await expect(main.getByRole('table')).toBeVisible();
+        }
+        if (route === '/ai-processing/history' || route === missingPage) {
           await expect
             .poll(() => main.evaluate((element) => element.scrollWidth - element.clientWidth))
             .toBe(0);
