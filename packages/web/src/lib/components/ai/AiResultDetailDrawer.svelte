@@ -216,6 +216,7 @@
   {:else}
     <!-- Desktop aside -->
     <aside
+      aria-label="AI result details"
       class="border-border bg-canvas sticky top-4 max-h-[calc(100vh-8rem)] w-[380px] shrink-0 overflow-y-auto border-l"
     >
       {@render drawerContent()}
