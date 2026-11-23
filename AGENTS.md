@@ -105,6 +105,9 @@ in `packages/core/src/coverage-thresholds.ts`; run `just coverage` to check them
 - `just audit-prod` gates: CI fails on a critical advisory in a production dependency.
 - CI's unit-tests job adds coverage and JUnit reporter arguments for artifact upload. Those belong
   in the workflow, not in `just test`.
+- CI's `pr-metadata` job packs the `backlog/` freeze and privacy sweep. zizmor keeps its own job because
+  the shared workflow's zizmor step pins a version its action rejects. `ac-evidence` stays separate
+  because the tracker recognises it by name.
 - No recipe is marked `[confirm]`. Never bypass one added later with `--yes` or `JUST_YES=1`.
 
 ## Conventions
