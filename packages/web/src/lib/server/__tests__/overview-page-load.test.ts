@@ -6,6 +6,7 @@ const core = vi.hoisted(() => ({
   getAutomationSettings: vi.fn(),
   getDashboard: vi.fn(),
   getDuplicateStats: vi.fn(),
+  getFirstRunChecklist: vi.fn(),
   listJobs: vi.fn(),
   getStatistics: vi.fn(),
   PaperlessClient: vi.fn(),

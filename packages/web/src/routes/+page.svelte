@@ -146,11 +146,7 @@
   />
 
   <div class="flex flex-col gap-6 px-3 pt-5 pb-8 md:px-6">
-    <FirstRunChecklist
-      paperlessConnected={data.readiness.paperless.status === 'connected'}
-      synced={data.readiness.lastSyncAt !== null}
-      analysed={data.readiness.lastAnalysisAt !== null}
-    />
+    <FirstRunChecklist checklist={data.firstRunChecklist} />
 
     <ReadinessStrip readiness={data.readiness} automation={data.automation} />
 
