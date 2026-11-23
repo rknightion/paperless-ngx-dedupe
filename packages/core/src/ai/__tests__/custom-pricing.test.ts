@@ -2,7 +2,14 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createDatabaseWithHandle } from '../../db/client.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import { getAiConfig, setAiConfig } from '../config.js';
-import { getModelPricing, getExactModelPricing, estimateResultCost } from '../costs.js';
+import {
+  estimateBatchCost,
+  estimateResultCost,
+  getExactModelPricing,
+  getModelPricing,
+  refreshPricingIfStale,
+} from '../costs.js';
+import { OPENAI_MODELS } from '../types.js';
 
 let handle: ReturnType<typeof createDatabaseWithHandle>;
 beforeEach(async () => {
@@ -134,4 +141,58 @@ it('reserves and reconciles custom-server requests at zero or configured prices'
         .get(reservation.id),
     ).toEqual({ status: 'reconciled', cost: (12 * inputPrice + 8 * outputPrice) / 1_000_000 });
   }
+});
+
+const GATEWAY_URL = 'https://gateway.ai.cloudflare.com/v1/test-account/test-gateway/openai';
+const PRICE = {
+  inputPerToken: 0.000001,
+  outputPerToken: 0.000002,
+  cacheReadPerToken: null,
+  cacheCreationPerToken: null,
+};
+
+function cachePricing(ids: readonly string[], ageMs: number) {
+  const statement = handle.sqlite.prepare(
+    'INSERT OR REPLACE INTO app_config (key,value,updated_at) VALUES (?,?,?)',
+  );
+  const now = new Date().toISOString();
+  statement.run(
+    'ai.modelPricingCache',
+    JSON.stringify(Object.fromEntries(ids.map((id) => [id, PRICE]))),
+    now,
+  );
+  statement.run('ai.modelPricingUpdatedAt', new Date(Date.now() - ageMs).toISOString(), now);
+}
+
+it('keeps the missing-price guard when calls reach OpenAI through a gateway', () => {
+  vi.stubEnv('AI_OPENAI_BASE_URL', GATEWAY_URL);
+  expect(getExactModelPricing(handle.db, 'gpt-6-luna')).toBeNull();
+});
+
+it('applies the Flex discount only to models that still offer Flex', () => {
+  cachePricing(['gpt-6-luna', 'gpt-6.2-sol'], 0);
+  const luna = estimateBatchCost(handle.db, 'gpt-6-luna', 10, true)!.estimatedCostUsd;
+  const lunaStandard = estimateBatchCost(handle.db, 'gpt-6-luna', 10, false)!.estimatedCostUsd;
+  const sol = estimateBatchCost(handle.db, 'gpt-6.2-sol', 10, true)!.estimatedCostUsd;
+  const solStandard = estimateBatchCost(handle.db, 'gpt-6.2-sol', 10, false)!.estimatedCostUsd;
+  expect(luna).toBeCloseTo(lunaStandard / 2);
+  expect(sol).toBe(solStandard);
+});
+
+it.each([
+  ['a model added since the last fetch, after an hour', 'missing', 2 * 60 * 60 * 1000, 1],
+  ['a model added since the last fetch, within the hour', 'missing', 10 * 60 * 1000, 0],
+  ['a complete cache younger than a day', 'complete', 2 * 60 * 60 * 1000, 0],
+  ['a complete cache older than a day', 'complete', 25 * 60 * 60 * 1000, 1],
+])('refreshes pricing for %s', async (_name, coverage, ageMs, fetches) => {
+  const ids = OPENAI_MODELS.map((model) => model.id);
+  cachePricing(coverage === 'complete' ? ids : ids.slice(1), ageMs);
+  const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+  try {
+    await refreshPricingIfStale(handle.db);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  expect(fetchMock).toHaveBeenCalledTimes(fetches);
 });

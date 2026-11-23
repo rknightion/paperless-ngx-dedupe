@@ -115,6 +115,10 @@ Reference Data
 {{existing_tags}}`;
 
 export const OPENAI_MODELS = [
+  { id: 'gpt-6-luna', name: 'GPT-6 Luna' },
+  { id: 'gpt-6.1-terra', name: 'GPT-6.1 Terra' },
+  { id: 'gpt-6.2-sol', name: 'GPT-6.2 Sol' },
+  { id: 'gpt-6.2-astra', name: 'GPT-6.2 Astra' },
   { id: 'gpt-5.4', name: 'GPT-5.4' },
   { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini' },
   { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano' },
@@ -123,7 +127,7 @@ export const OPENAI_MODELS = [
 export const aiConfigSchema = z
   .object({
     provider: z.literal('openai').default('openai'),
-    model: z.string().default('gpt-5.4-mini'),
+    model: z.string().default('gpt-6-luna'),
     promptTemplate: z.string().default(DEFAULT_EXTRACTION_PROMPT),
     maxContentLength: z.number().int().min(500).max(100000).default(8000),
     batchSize: z.number().int().min(1).max(500).default(100),

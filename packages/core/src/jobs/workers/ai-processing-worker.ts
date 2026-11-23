@@ -64,7 +64,11 @@ runWorkerTask(async (ctx, onProgress) => {
           request.extractionRequest,
           aiConfig.model,
           aiConfig.flexProcessing,
-          { apiStyle: config.AI_OPENAI_API_STYLE, baseURL: config.AI_OPENAI_BASE_URL },
+          {
+            apiStyle: config.AI_OPENAI_API_STYLE,
+            baseURL: config.AI_OPENAI_BASE_URL,
+            gatewayToken: config.AI_OPENAI_GATEWAY_TOKEN,
+          },
         );
         return reserveAiBudget(ctx.sqlite, {
           dispatchIntentId: dispatch.id,
@@ -111,6 +115,7 @@ runWorkerTask(async (ctx, onProgress) => {
     maxRetries: batchMaxRetries,
     flexProcessing: aiConfig.flexProcessing,
     baseURL: config.AI_OPENAI_BASE_URL,
+    gatewayToken: config.AI_OPENAI_GATEWAY_TOKEN,
     apiStyle: config.AI_OPENAI_API_STYLE,
     timeoutMs: config.AI_OPENAI_TIMEOUT_MS,
   });

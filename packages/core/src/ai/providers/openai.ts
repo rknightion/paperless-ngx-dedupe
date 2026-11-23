@@ -7,6 +7,12 @@ import type {
   RateLimitInfo,
 } from './types.js';
 import { AiExtractionError, aiExtractionResponseSchema } from './types.js';
+import {
+  isCloudflareOpenAiGateway,
+  resolveOpenAiReasoningEffort,
+  supportsFlexProcessing,
+  usesOpenAiApi,
+} from './openai-capabilities.js';
 
 /** Parse OpenAI's x-ratelimit-reset-tokens duration string (e.g., "6ms", "1.5s", "1m30s") to ms. */
 export function parseResetDuration(value: string): number | null {
@@ -67,12 +73,15 @@ export async function buildOpenAiRequestParams(
   request: AiExtractionRequest,
   model: string,
   flexProcessing: boolean,
-  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL'> = {},
+  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL' | 'gatewayToken'> = {},
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<Record<string, any>> {
   const { zodTextFormat, zodResponseFormat } = await import('openai/helpers/zod');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: Record<string, any> = { model };
+  const reasoningEffort = usesOpenAiApi(options.baseURL, options.gatewayToken)
+    ? resolveOpenAiReasoningEffort(model, request.reasoningEffort)
+    : request.reasoningEffort;
   if (options.apiStyle === 'chat') {
     params.messages = [
       { role: 'system', content: request.systemPrompt },
@@ -86,14 +95,16 @@ export async function buildOpenAiRequestParams(
       params.max_completion_tokens = request.maxOutputTokens;
       // Some OpenAI-compatible servers (e.g. Ollama) honour only the legacy field; OpenAI's own
       // hosts reject it for reasoning models.
-      if (options.baseURL && acceptsLegacyMaxTokens(options.baseURL)) {
+      if (
+        options.baseURL &&
+        !usesOpenAiApi(options.baseURL, options.gatewayToken) &&
+        acceptsLegacyMaxTokens(options.baseURL)
+      ) {
         params.max_tokens = request.maxOutputTokens;
       }
     }
     // Omitting effort lets a custom server fall back to the model default, which may be to think.
-    if (request.reasoningEffort && (request.reasoningEffort !== 'none' || options.baseURL)) {
-      params.reasoning_effort = request.reasoningEffort;
-    }
+    if (reasoningEffort) params.reasoning_effort = reasoningEffort;
   } else {
     params.input = [
       { role: 'developer', content: request.systemPrompt },
@@ -101,11 +112,11 @@ export async function buildOpenAiRequestParams(
     ];
     params.text = { format: zodTextFormat(aiExtractionResponseSchema, 'document_classification') };
     if (request.maxOutputTokens !== undefined) params.max_output_tokens = request.maxOutputTokens;
-    if (request.reasoningEffort && (request.reasoningEffort !== 'none' || options.baseURL)) {
-      params.reasoning = { effort: request.reasoningEffort };
-    }
+    if (reasoningEffort) params.reasoning = { effort: reasoningEffort };
   }
-  if (!options.baseURL) params.service_tier = flexProcessing ? 'flex' : 'default';
+  if (usesOpenAiApi(options.baseURL, options.gatewayToken)) {
+    params.service_tier = flexProcessing && supportsFlexProcessing(model) ? 'flex' : 'default';
+  }
   return params;
 }
 
@@ -127,6 +138,25 @@ export interface OpenAiProviderOptions {
   apiStyle?: 'responses' | 'chat';
   /** Per-attempt client timeout in ms; overrides the flex/non-flex default. */
   timeoutMs?: number;
+  /** Cloudflare AI Gateway token, sent only to a gateway base URL. */
+  gatewayToken?: string;
+}
+
+/**
+ * Keeps document text out of gateway logs and caches, and refuses redirects because fetch would
+ * forward the gateway token to the new host. Without a provider key the gateway uses its stored one.
+ */
+function cloudflareGatewayClientOptions(apiKey: string | undefined, gatewayToken?: string) {
+  return {
+    defaultHeaders: {
+      'cf-aig-collect-log-payload': 'false',
+      'cf-aig-skip-cache': 'true',
+      ...(gatewayToken ? { 'cf-aig-authorization': `Bearer ${gatewayToken}` } : {}),
+      ...(apiKey ? {} : { Authorization: null }),
+    },
+    fetch: (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+      fetch(input, { ...init, redirect: 'error' }),
+  };
 }
 
 export class OpenAiProvider implements AiProviderInterface {
@@ -150,8 +180,15 @@ export class OpenAiProvider implements AiProviderInterface {
     model: string,
     options: OpenAiProviderOptions = {},
   ): Promise<OpenAiProvider> {
-    const { maxRetries = 3, flexProcessing: requestedFlex = true, baseURL, timeoutMs } = options;
-    const flexProcessing = !baseURL && requestedFlex;
+    const {
+      maxRetries = 3,
+      flexProcessing: requestedFlex = true,
+      baseURL,
+      timeoutMs,
+      gatewayToken,
+    } = options;
+    const flexProcessing =
+      usesOpenAiApi(baseURL, gatewayToken) && requestedFlex && supportsFlexProcessing(model);
     try {
       const { default: OpenAI } = await import('openai');
       const timeout = timeoutMs ?? (flexProcessing ? 900_000 : 60_000);
@@ -160,6 +197,9 @@ export class OpenAiProvider implements AiProviderInterface {
         maxRetries,
         timeout,
         ...(baseURL ? { baseURL } : {}),
+        ...(isCloudflareOpenAiGateway(baseURL, gatewayToken)
+          ? cloudflareGatewayClientOptions(apiKey, gatewayToken)
+          : {}),
       });
       return new OpenAiProvider(client, model, { ...options, flexProcessing });
     } catch {

@@ -160,6 +160,8 @@ describe('scheduled AI budget reservations', () => {
     const wireTokens = encoding.encode(JSON.stringify(params)).length;
 
     expect(resolveOpenAiTokenizerModel('gpt-5.4-mini')).toBe('gpt-5');
+    expect(resolveOpenAiTokenizerModel('gpt-6-luna')).toBe('gpt-5');
+    expect(resolveOpenAiTokenizerModel('gpt-6.2-sol')).toBe('gpt-5');
     expect(params.input).toEqual([
       { role: 'developer', content: 'System instructions' },
       { role: 'user', content: 'Document body' },
@@ -752,4 +754,12 @@ it('counts chat schema, roles, and bounds in the actual request representation',
     encodingForModel('gpt-5').encode(JSON.stringify(params)).length +
       OPENAI_RESPONSES_FRAMING_ALLOWANCE_TOKENS,
   );
+});
+
+it('keeps the tokenizer guard for an unrecognised model on a gateway route', async () => {
+  await expect(
+    countAiPromptTokens({ systemPrompt: 'System', userPrompt: 'Body' }, 'custom-model', false, {
+      baseURL: 'https://gateway.ai.cloudflare.com/v1/test-account/test-gateway/openai',
+    }),
+  ).rejects.toThrow(UnsupportedAiModelEncodingError);
 });

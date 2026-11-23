@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 
 import type { ModelPricing } from './costs.js';
 import { buildOpenAiRequestParams, type OpenAiProviderOptions } from './providers/openai.js';
+import { usesOpenAiApi } from './providers/openai-capabilities.js';
 import type { AiExtractionRequest } from './providers/types.js';
 
 export class AiBudgetPolicyError extends Error {}
@@ -68,6 +69,8 @@ function billingMonth(now: Date): string {
 /** Resolve only tokenizer families whose mapping is explicitly supported by this application. */
 export function resolveOpenAiTokenizerModel(model: string): 'gpt-5' {
   if (/^gpt-5(?:\.4)?(?:-(?:mini|nano))?$/.test(model)) return 'gpt-5';
+  // The GPT-6 family shares the o200k encoding that the gpt-5 mapping selects.
+  if (/^gpt-6(?:\.\d+)?-(?:luna|terra|sol|astra)$/.test(model)) return 'gpt-5';
   throw new UnsupportedAiModelEncodingError(model);
 }
 
@@ -79,13 +82,18 @@ export async function countAiPromptTokens(
   request: AiExtractionRequest,
   model: string,
   flexProcessing: boolean,
-  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL'> = {},
+  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL' | 'gatewayToken'> = {},
 ): Promise<number> {
   let tokenizerModel: 'gpt-5';
   try {
     tokenizerModel = resolveOpenAiTokenizerModel(model);
   } catch (error) {
-    if (!(error instanceof UnsupportedAiModelEncodingError) || !options.baseURL) throw error;
+    if (
+      !(error instanceof UnsupportedAiModelEncodingError) ||
+      usesOpenAiApi(options.baseURL, options.gatewayToken)
+    ) {
+      throw error;
+    }
     const params = await buildOpenAiRequestParams(request, model, flexProcessing, options);
     // Custom servers do not expose a tokenizer contract. Reserve one token per UTF-8 byte
     // plus framing; reconciliation retains at least the reported charge if usage exceeds it.

@@ -5,6 +5,7 @@ import { aiProcessingResult } from '../schema/sqlite/ai-processing.js';
 import { createLogger } from '../logger.js';
 import { OPENAI_MODELS } from './types.js';
 import { getAiConfig } from './config.js';
+import { supportsFlexProcessing, usesOpenAiApi } from './providers/openai-capabilities.js';
 
 const logger = createLogger('ai-costs');
 
@@ -15,6 +16,7 @@ const LITELLM_PRICING_URL =
 const PRICING_CACHE_KEY = 'ai.modelPricingCache';
 const PRICING_UPDATED_KEY = 'ai.modelPricingUpdatedAt';
 const PRICING_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MISSING_MODEL_REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 export interface ModelPricing {
   inputPerToken: number;
@@ -197,7 +199,11 @@ export async function refreshPricingIfStale(db: AppDatabase): Promise<void> {
   }
 
   const updatedAt = new Date(row.value).getTime();
-  if (Date.now() - updatedAt > PRICING_REFRESH_INTERVAL_MS) {
+  // A release can add a model after the last fetch; the hour bounds retries for an unpriced one.
+  const interval = getKnownModelIds().every((id) => pricingMap[id])
+    ? PRICING_REFRESH_INTERVAL_MS
+    : MISSING_MODEL_REFRESH_INTERVAL_MS;
+  if (Date.now() - updatedAt > interval) {
     await fetchAndCachePricing(db);
   }
 }
@@ -242,7 +248,7 @@ function getCustomModelPricing(db: AppDatabase): ModelPricing | null {
   const { customInputPricePerMTok, customOutputPricePerMTok } = getAiConfig(db);
   // Preserve the default provider's unknown-price guard; a configured local server may be free.
   if (
-    !process.env.AI_OPENAI_BASE_URL &&
+    usesOpenAiApi(process.env.AI_OPENAI_BASE_URL, process.env.AI_OPENAI_GATEWAY_TOKEN) &&
     customInputPricePerMTok === 0 &&
     customOutputPricePerMTok === 0
   )
@@ -332,7 +338,7 @@ export function estimateBatchCost(
   const avgCompletion = avgRow && avgRow.avgCompletion > 0 ? avgRow.avgCompletion : 200;
 
   // Flex processing uses Batch API rates (~50% of standard pricing)
-  const flexDiscount = flexProcessing ? FLEX_COST_FACTOR : 1;
+  const flexDiscount = flexProcessing && supportsFlexProcessing(model) ? FLEX_COST_FACTOR : 1;
   const inputCost = avgPrompt * documentCount * pricing.inputPerToken * flexDiscount;
   const outputCost = avgCompletion * documentCount * pricing.outputPerToken * flexDiscount;
 

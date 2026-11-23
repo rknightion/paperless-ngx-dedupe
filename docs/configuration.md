@@ -78,7 +78,8 @@ The Node adapter limits request bodies independently of API validation. Large ba
 | `AI_ENABLED` | No | `false` | Enable AI-powered document classification |
 | `AI_BULK_ALL_ENABLED` | No | `false` | Allow the apply-all and reject-all API endpoints |
 | `AI_OPENAI_API_KEY` | When AI enabled without a base URL | - | API key for the configured AI server |
-| `AI_OPENAI_BASE_URL` | No | - | Absolute http or https endpoint for an OpenAI-compatible server; disables Flex |
+| `AI_OPENAI_BASE_URL` | No | - | Absolute http or https endpoint for an OpenAI-compatible server (disables Flex) or Cloudflare AI Gateway route |
+| `AI_OPENAI_GATEWAY_TOKEN` | No | - | Cloudflare AI Gateway token; requires an https gateway base URL |
 | `AI_OPENAI_API_STYLE` | No | `responses` | `responses` for Responses API or `chat` for JSON-schema Chat Completions |
 | `AI_OPENAI_TIMEOUT_MS` | No | `900000` with Flex, otherwise `60000` | Per-attempt AI request timeout in milliseconds; positive integer |
 
