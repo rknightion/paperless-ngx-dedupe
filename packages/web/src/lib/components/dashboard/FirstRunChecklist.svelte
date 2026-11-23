@@ -14,7 +14,8 @@
   let expanded = $state(false);
   let dismissing = $state(false);
   let dismissError = $state<string | null>(null);
-  // Hides the row at once; the server copy is what makes it hold across browsers.
+  // Hides the completed row at once. A regressed step still reopens the checklist, and
+  // the server copy is what makes the dismissal hold across browsers.
   let dismissedHere = $state(false);
 
   async function dismiss(): Promise<void> {
@@ -73,7 +74,7 @@
   const showSteps = $derived(!allDone || expanded);
 </script>
 
-{#if checklist.visible && !dismissedHere}
+{#if checklist.visible && !(dismissedHere && allDone)}
   <section aria-label="First-run checklist" class="border-border bg-surface border">
     {#if allDone}
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2">
