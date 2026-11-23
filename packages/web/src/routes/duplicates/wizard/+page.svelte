@@ -525,8 +525,8 @@
           {#if isLoadingCount}
             Loading matching groups...
           {:else if matchCount !== null}
-            <span class="text-ink font-mono font-semibold tabular-nums">{matchCount}</span> pending groups
-            match this threshold
+            <span class="text-ink font-mono font-semibold tabular-nums">{matchCount}</span>
+            <span>pending groups match this threshold</span>
           {/if}
         </div>
       </div>
@@ -866,8 +866,8 @@
           <CheckCircleIcon class="text-success h-6 w-6" />
           <h2 class="text-success mt-2 text-lg font-semibold">Operation Complete</h2>
           <div class="border-success bg-success-light text-success mt-4 border px-4 py-3 text-sm">
-            <span class="font-mono font-semibold tabular-nums">{executionResult.processed}</span> groups
-            processed successfully.
+            <span class="font-mono font-semibold tabular-nums">{executionResult.processed}</span>
+            <span>groups processed successfully.</span>
           </div>
         </div>
 
