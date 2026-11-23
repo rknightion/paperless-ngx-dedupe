@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.1.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v1.0.0...v1.1.0) (2026-11-23)
+
+
+### Features
+
+* **ai:** add gpt-6 models and cloudflare ai gateway routing ([#986](https://github.com/rknightion/paperless-ngx-dedupe/issues/986)) ([c32d37b](https://github.com/rknightion/paperless-ngx-dedupe/commit/c32d37b1024f6a77ff06c7a45f21a0ac5a15ba12))
+* **jobs:** retry or dismiss dead-letter jobs ([#992](https://github.com/rknightion/paperless-ngx-dedupe/issues/992)) ([9b83eca](https://github.com/rknightion/paperless-ngx-dedupe/commit/9b83ecada6d34f2baaf0e1c54e7efc629a14c0fc))
+
+
+### Bug Fixes
+
+* **ai:** enforce the bulk switch on apply plans ([#990](https://github.com/rknightion/paperless-ngx-dedupe/issues/990)) ([9ddb7e3](https://github.com/rknightion/paperless-ngx-dedupe/commit/9ddb7e39e73426c52f72cc5468ba5aeca6186556))
+* **ai:** refresh model prices before processing ([#989](https://github.com/rknightion/paperless-ngx-dedupe/issues/989)) ([0c2be35](https://github.com/rknightion/paperless-ngx-dedupe/commit/0c2be35fa7f009fcbb383d0a074d2fab225f441f))
+* **web:** load document thumbnails on list and review pages ([#988](https://github.com/rknightion/paperless-ngx-dedupe/issues/988)) ([bcedf8e](https://github.com/rknightion/paperless-ngx-dedupe/commit/bcedf8e84f0748a71018f2b8b9bf76740fdb13c9))
+* **web:** validate request hosts and escape graph tooltips ([#987](https://github.com/rknightion/paperless-ngx-dedupe/issues/987)) ([3241378](https://github.com/rknightion/paperless-ngx-dedupe/commit/324137893e3df72a2d48025cab9bc0087bea3e27))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#981](https://github.com/rknightion/paperless-ngx-dedupe/issues/981)) ([cd4107e](https://github.com/rknightion/paperless-ngx-dedupe/commit/cd4107e669f478b92569ddba79b8d0ecd089a4d8))
+* **deps:** update dependency svelte to v5.58.1 ([#973](https://github.com/rknightion/paperless-ngx-dedupe/issues/973)) ([988144b](https://github.com/rknightion/paperless-ngx-dedupe/commit/988144bbbc510fd8538c565ca7aa66f98eeb0bdc))
+* **deps:** update linters & formatters ([#947](https://github.com/rknightion/paperless-ngx-dedupe/issues/947)) ([99cac3f](https://github.com/rknightion/paperless-ngx-dedupe/commit/99cac3f052c971d2c43b363f1ff386ff63322874))
+* **deps:** update pnpm to v12.21.0 ([#948](https://github.com/rknightion/paperless-ngx-dedupe/issues/948)) ([1538461](https://github.com/rknightion/paperless-ngx-dedupe/commit/1538461ad08a1efa23ac4e212ccbc2d359bb65a8))
+* **deps:** update rknightion/.github action to v1.30.28 ([#972](https://github.com/rknightion/paperless-ngx-dedupe/issues/972)) ([26f6c43](https://github.com/rknightion/paperless-ngx-dedupe/commit/26f6c43e0372305260d5a53a9b93c615f6f8722d))
+* **deps:** update rknightion/.github action to v1.31.10 ([#985](https://github.com/rknightion/paperless-ngx-dedupe/issues/985)) ([ca8af41](https://github.com/rknightion/paperless-ngx-dedupe/commit/ca8af4195d6f2aaddd63436628bcc1db16947fe5))
+* **deps:** update rknightion/.github action to v1.31.2 ([#978](https://github.com/rknightion/paperless-ngx-dedupe/issues/978)) ([a2731b8](https://github.com/rknightion/paperless-ngx-dedupe/commit/a2731b868aa1ac791a1e06fef68d24445db99e46))
+* **deps:** update rknightion/.github action to v1.31.5 ([#979](https://github.com/rknightion/paperless-ngx-dedupe/issues/979)) ([73039d7](https://github.com/rknightion/paperless-ngx-dedupe/commit/73039d7d805d017144322dec67a1f2a300cd3c07))
+* **deps:** update rknightion/.github action to v1.31.6 ([#980](https://github.com/rknightion/paperless-ngx-dedupe/issues/980)) ([72414da](https://github.com/rknightion/paperless-ngx-dedupe/commit/72414da0f1748d9d9329e5b102271f72e99df4b2))
+* **deps:** update rknightion/.github action to v1.31.7 ([#982](https://github.com/rknightion/paperless-ngx-dedupe/issues/982)) ([7debbc7](https://github.com/rknightion/paperless-ngx-dedupe/commit/7debbc7d94c057941ccb40ca2a2bfc21a251c162))
+* **deps:** update rknightion/.github action to v1.31.8 ([#983](https://github.com/rknightion/paperless-ngx-dedupe/issues/983)) ([7610975](https://github.com/rknightion/paperless-ngx-dedupe/commit/7610975cacd0502c3e8a4a1f1597d3f14e9ac947))
+* **deps:** update rknightion/.github action to v1.31.9 ([#984](https://github.com/rknightion/paperless-ngx-dedupe/issues/984)) ([34e751c](https://github.com/rknightion/paperless-ngx-dedupe/commit/34e751c919a073820fe3b24eb80bc8038367f1fb))
+
 ## [1.0.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v0.18.1...v1.0.0) (2026-11-22)
 
 
