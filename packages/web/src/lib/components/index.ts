@@ -19,6 +19,7 @@ export { default as ThemeToggle } from './ui/ThemeToggle.svelte';
 
 export { default as ProgressBar } from './ui/ProgressBar.svelte';
 export { default as ConfidenceBadge } from './ui/ConfidenceBadge.svelte';
+export { default as ConfidenceLegend } from './ui/ConfidenceLegend.svelte';
 export { default as StatusBadge } from './ui/StatusBadge.svelte';
 export { default as StatCard } from './ui/StatCard.svelte';
 export { default as JobStatusCard } from './ui/JobStatusCard.svelte';

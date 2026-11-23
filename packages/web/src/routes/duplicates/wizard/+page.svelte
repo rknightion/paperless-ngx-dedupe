@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SvelteMap } from 'svelte/reactivity';
   import { createDeletionPreview } from '$lib/duplicate-deletion-preview';
-  import ConfidenceLegend from '$lib/components/duplicates/ConfidenceLegend.svelte';
+  import ConfidenceLegend from '$lib/components/ui/ConfidenceLegend.svelte';
   import KeeperSelection from '$lib/components/duplicates/KeeperSelection.svelte';
   import {
     deletionRunFromCompletion,
