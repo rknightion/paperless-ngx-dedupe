@@ -132,16 +132,17 @@
     </PageHeader>
 
     <DocumentLibraryFilters query={data.library.query} />
+    <DocumentLibraryTable
+      items={data.library.items}
+      totalCount={data.library.counts.total}
+      nextCursor={data.library.nextCursor}
+      limit={data.library.query.limit}
+      paperlessUrl={data.paperlessUrl}
+    />
     <DocumentQualitySummary
       counts={data.library.counts}
       query={data.library.query}
       insights={data.dataQuality.insights}
-    />
-    <DocumentLibraryTable
-      items={data.library.items}
-      nextCursor={data.library.nextCursor}
-      limit={data.library.query.limit}
-      paperlessUrl={data.paperlessUrl}
     />
   {:else}
     <PageHeader title="Documents" description="Library statistics and document overview.">

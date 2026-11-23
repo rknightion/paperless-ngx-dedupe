@@ -1,4 +1,5 @@
-import { type GraphEdge, type GraphNode } from '@paperless-dedupe/core';
+// A whole type-only import keeps the server-only core module out of the browser bundle.
+import type { GraphEdge, GraphNode } from '@paperless-dedupe/core';
 
 const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',

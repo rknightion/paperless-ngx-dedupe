@@ -21,6 +21,7 @@
 
   let { query }: Props = $props();
   let submitting = $state(false);
+  let advanced = $state(false);
   let customFieldValue = $derived(
     query.customFieldValue === undefined ? '' : JSON.stringify(query.customFieldValue),
   );
@@ -125,7 +126,7 @@
   }
 </script>
 
-<section class="panel space-y-4" aria-labelledby="document-library-filters">
+<section class="panel space-y-3 max-md:p-3" aria-labelledby="document-library-filters">
   <div class="flex flex-wrap items-start justify-between gap-3">
     <div>
       <h2 id="document-library-filters" class="text-ink text-lg font-semibold">
@@ -148,13 +149,13 @@
       </h3>
       <ul class="flex flex-wrap gap-2">
         {#each activeInsightFilters as filter (filter.key)}
-          <li>
+          <li class="max-w-full min-w-0">
             <a
               href={filter.href}
               aria-label="Remove {filter.label} filter"
               class="border-border text-ink-light hover:bg-canvas-deep inline-flex max-w-full items-center gap-1 rounded-sm border px-2 py-0.5 font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2"
             >
-              <span class="truncate">{filter.label}</span>
+              <span class="min-w-0 [overflow-wrap:anywhere]">{filter.label}</span>
               <span aria-hidden="true">×</span>
             </a>
           </li>
@@ -163,17 +164,29 @@
     </div>
   {/if}
 
-  <form class="space-y-4" onsubmit={applyFilters}>
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <TextField
-        label="Search title or OCR"
-        name="text"
-        value={query.text ?? ''}
-        maxlength={200}
-        placeholder="Invoice number, title or OCR phrase"
-        class="lg:col-span-2"
-      />
+  <form class="space-y-3" onsubmit={applyFilters}>
+    <TextField
+      label="Search title or OCR"
+      name="text"
+      value={query.text ?? ''}
+      maxlength={200}
+      placeholder="Invoice number, title or OCR phrase"
+    />
 
+    <button
+      type="button"
+      aria-controls="document-library-advanced-filters"
+      aria-expanded={advanced}
+      class="border-border text-ink hover:bg-canvas-deep h-8 rounded-sm border px-3 text-sm font-medium md:hidden"
+      onclick={() => (advanced = !advanced)}
+    >
+      More filters
+    </button>
+
+    <div
+      id="document-library-advanced-filters"
+      class="gap-3 sm:grid-cols-2 md:grid lg:grid-cols-4 {advanced ? 'grid' : 'hidden'}"
+    >
       <Select
         name="missingOcr"
         label="OCR content"
@@ -280,7 +293,7 @@
           Loading document library…
         </span>
       {/if}
-      <Button type="submit" disabled={submitting}>Apply library filters</Button>
+      <Button type="submit" disabled={submitting} class="max-md:h-8">Apply library filters</Button>
     </div>
   </form>
 </section>
