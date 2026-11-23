@@ -31,7 +31,8 @@
     // re-optioning an existing instance.
     echarts.registerTheme(THEME_NAME, echartsTheme());
 
-    chart = echarts.init(container, THEME_NAME);
+    // SVG renderer, so chart text renders in the real UI fonts.
+    chart = echarts.init(container, THEME_NAME, { renderer: 'svg' });
     chart.setOption(option);
     loading = false;
     onChartReady?.(chart);
@@ -84,7 +85,7 @@
 <div class="relative w-full {className}" style="height: {height}">
   {#if loading}
     <div
-      class="bg-canvas-deep absolute inset-0 flex items-center justify-center rounded-lg"
+      class="bg-canvas-deep absolute inset-0 flex items-center justify-center"
       style="animation: pulse-soft 2s ease-in-out infinite;"
     >
       <span class="text-muted text-sm">Loading chart...</span>

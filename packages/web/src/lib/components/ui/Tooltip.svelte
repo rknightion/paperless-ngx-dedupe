@@ -19,22 +19,18 @@
 >
   {@render children()}
   {#if visible}
+    <!-- Raised surface with a hairline. The two inverse tokens are re-pointed
+         locally so content written for the old inverse tooltip stays legible. -->
     <div
-      class="bg-inverse text-on-inverse pointer-events-none absolute z-50 w-64 rounded-lg px-3 py-2 text-xs leading-relaxed shadow-lg
+      class="rounded-overlay border-border-hover bg-surface-raised text-ink pointer-events-none absolute z-50 w-64 border px-3 py-2 text-sm leading-relaxed shadow-md
         {position === 'top' ? 'bottom-full left-1/2 mb-2 -translate-x-1/2' : ''}
         {position === 'bottom' ? 'top-full left-1/2 mt-2 -translate-x-1/2' : ''}
         {position === 'right' ? 'top-1/2 left-full ml-2 -translate-y-1/2' : ''}
         {position === 'left' ? 'top-1/2 right-full mr-2 -translate-y-1/2' : ''}"
+      style="--color-inverse: var(--color-surface-raised); --color-on-inverse: var(--color-ink); animation: scale-in var(--duration-base) var(--ease-standard);"
       role="tooltip"
     >
       {text}
-      <div
-        class="bg-inverse absolute h-2 w-2 rotate-45
-          {position === 'top' ? 'top-full left-1/2 -mt-1 -translate-x-1/2' : ''}
-          {position === 'bottom' ? 'bottom-full left-1/2 -mb-1 -translate-x-1/2' : ''}
-          {position === 'right' ? 'top-1/2 right-full -mr-1 -translate-y-1/2' : ''}
-          {position === 'left' ? 'top-1/2 left-full -ml-1 -translate-y-1/2' : ''}"
-      ></div>
     </div>
   {/if}
 </span>

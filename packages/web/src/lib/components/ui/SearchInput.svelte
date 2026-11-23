@@ -33,13 +33,12 @@
   }
 </script>
 
-<!-- The field pairs width:100% with padding for a leading glyph and a clear
-     button — 76px of it. That only fits because the base layer sets
-     box-sizing: border-box globally; without it this overflows its container,
-     which is invisible in a flex-1 column and obvious in a fixed sidebar. -->
+<!-- 28px field. The leading glyph and the clear button pair with padding on a
+     width:100% input, which relies on the global border-box. Focus is the
+     global 2px accent outline; the border does not change colour. -->
 <div class="relative {className}">
-  <span class="text-muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
-    <MagnifyingGlassIcon size={16} aria-hidden="true" />
+  <span class="text-muted pointer-events-none absolute top-1/2 left-2 -translate-y-1/2">
+    <MagnifyingGlassIcon size={14} aria-hidden="true" />
   </span>
 
   <input
@@ -52,7 +51,7 @@
     aria-label={ariaLabel}
     bind:value
     oninput={() => onchange?.(value)}
-    class="border-border bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-xl border py-2.5 pr-9 pl-10 text-sm transition-colors outline-none focus:ring-1 disabled:opacity-50"
+    class="border-border bg-surface-raised text-ink placeholder:text-disabled disabled:text-disabled h-7 w-full rounded-md border pr-8 pl-7 text-base placeholder:font-mono placeholder:text-xs disabled:cursor-not-allowed disabled:bg-transparent"
   />
 
   {#if value}
@@ -60,7 +59,7 @@
       type="button"
       aria-label="Clear search"
       onclick={clear}
-      class="text-muted hover:text-ink absolute top-1/2 right-3 -translate-y-1/2 p-0.5"
+      class="text-muted hover:text-ink absolute top-1/2 right-2 -translate-y-1/2 p-0.5"
     >
       <XIcon size={14} aria-hidden="true" />
     </button>

@@ -3,10 +3,9 @@
 
   interface Props {
     /**
-     * There is deliberately no solid variant. The brand accent is green and so
-     * is success, so state and action are told apart by treatment, never hue:
-     * state is always a tinted pill, the accent is always a solid fill or a
-     * link. A solid-filled badge collapses that distinction.
+     * Kept so existing call sites compile. v2 has no tinted-pill vocabulary:
+     * every tone renders the same hairline container. State belongs in
+     * StatusBadge (a mono status word) and metadata in plain mono text.
      */
     tone?: 'neutral' | 'accent' | 'success' | 'warn' | 'ember';
     size?: 'sm' | 'md';
@@ -16,19 +15,14 @@
 
   let { tone = 'neutral', size = 'sm', class: className = '', children }: Props = $props();
 
-  const TONES = {
-    neutral: 'bg-canvas-deep text-ink-faint',
-    accent: 'bg-accent-light text-accent',
-    success: 'bg-success-light text-success',
-    warn: 'bg-warn-light text-warn',
-    ember: 'bg-ember-light text-ember',
-  } as const;
-
-  const SIZES = { sm: 'px-2 py-0.5 text-xs', md: 'px-2.5 py-1 text-xs' } as const;
+  // Present only so the props are read; the treatment does not vary by tone.
+  const SIZES = { sm: 'px-1.5 py-0.5', md: 'px-2 py-1' } as const;
+  void tone;
 </script>
 
+<!-- Square 3px corners, 1px hairline, no fill, ink-light 11px mono text. -->
 <span
-  class="inline-flex items-center gap-1 rounded-full font-medium {TONES[tone]} {SIZES[
+  class="border-border text-ink-light inline-flex items-center gap-1 rounded-sm border font-mono text-xs {SIZES[
     size
   ]} {className}"
 >

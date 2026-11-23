@@ -2,8 +2,9 @@
   interface Tab {
     value: string;
     label: string;
-    /** Rendered as a tinted count pill beside the label. */
+    /** Rendered in mono tabular muted type beside the label. */
     count?: number;
+    /** Kept so existing call sites compile. v2 has no tinted count pills. */
     countTone?: 'neutral' | 'accent' | 'success' | 'warn' | 'ember';
     /** Renders an anchor instead of a button. */
     href?: string;
@@ -19,19 +20,11 @@
 
   let { tabs, active, ariaLabel = 'Sections', class: className = '', onchange }: Props = $props();
 
-  // Active is the accent underline plus accent text. No dark: variants —
-  // the tokens swap themselves.
-  const TONES = {
-    neutral: 'bg-canvas-deep text-ink-faint',
-    accent: 'bg-accent-light text-accent',
-    success: 'bg-success-light text-success',
-    warn: 'bg-warn-light text-warn',
-    ember: 'bg-ember-light text-ember',
-  } as const;
-
+  // Underline tabs: 36px high, 2px accent underline when selected, ink when
+  // selected and muted otherwise. No dark: variants, the tokens swap themselves.
   function tabClass(isActive: boolean): string {
-    return `border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-      isActive ? 'border-accent text-accent' : 'border-transparent text-ink-faint hover:text-ink'
+    return `inline-flex h-9 items-center border-b-2 px-3.5 text-base font-medium transition-colors ${
+      isActive ? 'border-accent text-ink' : 'border-transparent text-muted hover:text-ink'
     }`;
   }
 
@@ -52,13 +45,7 @@
       <a href={tab.href} aria-current={isActive ? 'page' : undefined} class={tabClass(isActive)}>
         {tab.label}
         {#if tab.count}
-          <span
-            class="ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium {TONES[
-              tab.countTone ?? 'neutral'
-            ]}"
-          >
-            {tab.count}
-          </span>
+          <span class="text-muted ml-1.5 font-mono tabular-nums">{tab.count}</span>
         {/if}
       </a>
     {:else}
@@ -71,13 +58,7 @@
       >
         {tab.label}
         {#if tab.count}
-          <span
-            class="ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium {TONES[
-              tab.countTone ?? 'neutral'
-            ]}"
-          >
-            {tab.count}
-          </span>
+          <span class="text-muted ml-1.5 font-mono tabular-nums">{tab.count}</span>
         {/if}
       </button>
     {/if}
