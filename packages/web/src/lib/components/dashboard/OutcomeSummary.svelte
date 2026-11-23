@@ -1,6 +1,11 @@
 <script lang="ts">
   import { JobStatusCard, StatCard } from '$lib/components';
-  import { AlertCircle, Brain, CheckCircle, Clock, FileStack, Zap } from 'lucide-svelte';
+  import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
+  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+  import ClockIcon from 'phosphor-svelte/lib/ClockIcon';
+  import FilesIcon from 'phosphor-svelte/lib/FilesIcon';
+  import LightningIcon from 'phosphor-svelte/lib/LightningIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
 
   interface Dashboard {
     totalDocuments: number;
@@ -53,17 +58,17 @@
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <a href="/documents" class="rounded-xl focus-visible:outline-none">
       <StatCard label="Total Documents" value={dashboard.totalDocuments.toLocaleString()}>
-        {#snippet icon()}<FileStack class="h-5 w-5" />{/snippet}
+        {#snippet icon()}<FilesIcon class="h-5 w-5" />{/snippet}
       </StatCard>
     </a>
     <a href="/duplicates" class="rounded-xl focus-visible:outline-none">
       <StatCard label="Pending Groups" value={dashboard.pendingGroups.toLocaleString()}>
-        {#snippet icon()}<AlertCircle class="h-5 w-5" />{/snippet}
+        {#snippet icon()}<WarningCircleIcon class="h-5 w-5" />{/snippet}
       </StatCard>
     </a>
     <a href="/documents?processingStatus=pending" class="rounded-xl focus-visible:outline-none">
       <StatCard label="Pending Analysis" value={dashboard.pendingAnalysis.toLocaleString()}>
-        {#snippet icon()}<Clock class="h-5 w-5" />{/snippet}
+        {#snippet icon()}<ClockIcon class="h-5 w-5" />{/snippet}
       </StatCard>
     </a>
   </div>
@@ -95,7 +100,7 @@
     <div class="panel">
       <div class="mb-4 flex items-center justify-between gap-3">
         <h3 class="text-ink flex items-center gap-2 text-base font-semibold">
-          <Brain class="text-accent h-5 w-5" /> AI processing
+          <BrainIcon class="text-accent h-5 w-5" /> AI processing
         </h3>
         <a href="/ai-processing" class="text-accent hover:text-accent-hover text-sm font-medium">
           View queue
@@ -103,29 +108,29 @@
       </div>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <a href="/ai-processing?status=pending_review" class="panel-inset text-center">
-          <Clock class="text-warn mx-auto h-5 w-5" />
+          <ClockIcon class="text-warn mx-auto h-5 w-5" />
           <p class="text-ink mt-2 text-lg font-semibold">
             {aiStats.pendingReview.toLocaleString()}
           </p>
           <p class="text-muted text-xs">Pending review</p>
         </a>
         <a href="/ai-processing?failed=true" class="panel-inset text-center">
-          <AlertCircle class="text-ember mx-auto h-5 w-5" />
+          <WarningCircleIcon class="text-ember mx-auto h-5 w-5" />
           <p class="text-ink mt-2 text-lg font-semibold">{aiStats.failed.toLocaleString()}</p>
           <p class="text-muted text-xs">Failed</p>
         </a>
         <div class="panel-inset text-center">
-          <FileStack class="text-muted mx-auto h-5 w-5" />
+          <FilesIcon class="text-muted mx-auto h-5 w-5" />
           <p class="text-ink mt-2 text-lg font-semibold">{aiStats.unprocessed.toLocaleString()}</p>
           <p class="text-muted text-xs">Unprocessed</p>
         </div>
         <div class="panel-inset text-center">
-          <CheckCircle class="text-success mx-auto h-5 w-5" />
+          <CheckCircleIcon class="text-success mx-auto h-5 w-5" />
           <p class="text-ink mt-2 text-lg font-semibold">{aiStats.applied.toLocaleString()}</p>
           <p class="text-muted text-xs">Applied</p>
         </div>
         <div class="panel-inset text-center">
-          <Zap class="text-accent mx-auto h-5 w-5" />
+          <LightningIcon class="text-accent mx-auto h-5 w-5" />
           <p class="text-ink mt-2 text-lg font-semibold">{totalTokens.toLocaleString()}</p>
           <p class="text-muted text-xs">Total tokens</p>
         </div>

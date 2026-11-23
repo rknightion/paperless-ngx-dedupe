@@ -1,6 +1,10 @@
 <script lang="ts">
   import { ConfidenceBadge } from '$lib/components';
-  import { TriangleAlert, Plus, Minus, Equal, Ban } from 'lucide-svelte';
+  import EqualsIcon from 'phosphor-svelte/lib/EqualsIcon';
+  import MinusIcon from 'phosphor-svelte/lib/MinusIcon';
+  import PlusIcon from 'phosphor-svelte/lib/PlusIcon';
+  import ProhibitIcon from 'phosphor-svelte/lib/ProhibitIcon';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
 
   interface Props {
     fieldName: string;
@@ -75,7 +79,7 @@
       <span
         class="bg-canvas text-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
       >
-        <Ban class="h-3 w-3" />
+        <ProhibitIcon class="h-3 w-3" />
         Disabled
       </span>
     {:else if confidence !== null}
@@ -145,22 +149,22 @@
       {#each warnings() as warning (warning)}
         {#if warning === 'low_confidence'}
           <span class="text-warn flex items-center gap-1 text-xs">
-            <TriangleAlert class="h-3 w-3" />
+            <WarningIcon class="h-3 w-3" />
             Low confidence
           </span>
         {:else if warning === 'will_create'}
           <span class="text-accent flex items-center gap-1 text-xs">
-            <Plus class="h-3 w-3" />
+            <PlusIcon class="h-3 w-3" />
             Will create new
           </span>
         {:else if warning === 'will_clear'}
           <span class="text-ember flex items-center gap-1 text-xs">
-            <Minus class="h-3 w-3" />
+            <MinusIcon class="h-3 w-3" />
             Will clear existing
           </span>
         {:else if warning === 'no_change'}
           <span class="text-muted flex items-center gap-1 text-xs">
-            <Equal class="h-3 w-3" />
+            <EqualsIcon class="h-3 w-3" />
             No change
           </span>
         {/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileText } from 'lucide-svelte';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
 
   interface Props {
     src?: string;
@@ -37,7 +37,7 @@
       <div
         class="border-soft bg-canvas flex h-full w-full items-center justify-center rounded-lg border"
       >
-        <FileText class="text-muted h-8 w-8" />
+        <FileTextIcon class="text-muted h-8 w-8" />
       </div>
     {/if}
   </div>
@@ -60,7 +60,7 @@
       <div
         class="border-soft bg-canvas flex h-full w-full flex-col items-center justify-center gap-2 rounded-lg border"
       >
-        <FileText class="text-muted h-8 w-8" />
+        <FileTextIcon class="text-muted h-8 w-8" />
         <p class="text-muted text-sm">Preview unavailable</p>
       </div>
     {/if}

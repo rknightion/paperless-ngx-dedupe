@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { AutomationSettings, Readiness } from '@paperless-dedupe/core';
-  import { CheckCircle2, CircleAlert, Database, Server } from 'lucide-svelte';
+  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+  import DatabaseIcon from 'phosphor-svelte/lib/DatabaseIcon';
+  import HardDrivesIcon from 'phosphor-svelte/lib/HardDrivesIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
 
   interface Props {
     readiness: Readiness;
@@ -39,7 +42,9 @@
 
   <ul class="grid gap-3 sm:grid-cols-3">
     <li class="panel-inset flex min-w-0 items-start gap-3">
-      <Server class="mt-0.5 h-4 w-4 shrink-0 {paperlessConnected ? 'text-success' : 'text-warn'}" />
+      <HardDrivesIcon
+        class="mt-0.5 h-4 w-4 shrink-0 {paperlessConnected ? 'text-success' : 'text-warn'}"
+      />
       <div class="min-w-0">
         <p class="text-ink text-sm font-medium">Paperless</p>
         <p class="text-muted mt-0.5 text-xs">
@@ -48,7 +53,7 @@
       </div>
     </li>
     <li class="panel-inset flex min-w-0 items-start gap-3">
-      <Database class="mt-0.5 h-4 w-4 shrink-0 {localReady ? 'text-success' : 'text-warn'}" />
+      <DatabaseIcon class="mt-0.5 h-4 w-4 shrink-0 {localReady ? 'text-success' : 'text-warn'}" />
       <div class="min-w-0">
         <p class="text-ink text-sm font-medium">Library sync</p>
         <p class="text-muted mt-0.5 text-xs">Last sync: {formatDate(readiness.lastSyncAt)}</p>
@@ -56,9 +61,9 @@
     </li>
     <li class="panel-inset flex min-w-0 items-start gap-3">
       {#if analysisReady}
-        <CheckCircle2 class="text-success mt-0.5 h-4 w-4 shrink-0" />
+        <CheckCircleIcon class="text-success mt-0.5 h-4 w-4 shrink-0" />
       {:else}
-        <CircleAlert class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+        <WarningCircleIcon class="text-warn mt-0.5 h-4 w-4 shrink-0" />
       {/if}
       <div class="min-w-0">
         <p class="text-ink text-sm font-medium">Duplicate analysis</p>

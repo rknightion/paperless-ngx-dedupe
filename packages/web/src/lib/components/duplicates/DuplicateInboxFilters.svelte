@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { ArrowDown, ArrowUp } from 'lucide-svelte';
+  import ArrowDownIcon from 'phosphor-svelte/lib/ArrowDownIcon';
+  import ArrowUpIcon from 'phosphor-svelte/lib/ArrowUpIcon';
 
   interface Props {
     paginationMode: 'inbox' | 'legacy';
@@ -167,7 +168,7 @@
             aria-label="Toggle sort order"
             class="border-soft text-ink rounded-lg border px-2"
           >
-            {#if sortOrder === 'desc'}<ArrowDown class="h-4 w-4" />{:else}<ArrowUp
+            {#if sortOrder === 'desc'}<ArrowDownIcon class="h-4 w-4" />{:else}<ArrowUpIcon
                 class="h-4 w-4"
               />{/if}
           </button>

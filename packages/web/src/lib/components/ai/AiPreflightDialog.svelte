@@ -1,6 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { AlertTriangle, ChevronDown, ChevronUp, Loader2 } from 'lucide-svelte';
+  import CaretDownIcon from 'phosphor-svelte/lib/CaretDownIcon';
+  import CaretUpIcon from 'phosphor-svelte/lib/CaretUpIcon';
+  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import type { ApplyPreflightResult } from '@paperless-dedupe/core';
 
   const readOnly = $derived(page.data.readOnly === true);
@@ -79,7 +82,7 @@
     {#if loading}
       <!-- Loading state -->
       <div class="flex flex-col items-center justify-center px-6 py-16">
-        <Loader2 class="text-accent mb-4 h-8 w-8 animate-spin" />
+        <CircleNotchIcon class="text-accent mb-4 h-8 w-8 animate-spin" />
         <p class="text-muted text-sm">Computing preflight summary...</p>
       </div>
     {:else if preflight}
@@ -167,7 +170,7 @@
         {#if hasWarnings}
           <div class="border-soft bg-canvas/60 space-y-2 rounded-lg border p-4">
             <div class="flex items-center gap-2">
-              <AlertTriangle class="text-warning h-4 w-4 shrink-0" />
+              <WarningIcon class="text-warning h-4 w-4 shrink-0" />
               <h3 class="text-ink text-sm font-medium">Warnings</h3>
             </div>
             <ul class="text-muted space-y-1.5 text-sm">
@@ -182,9 +185,9 @@
                   >
                     {showNewEntities ? 'Hide' : 'Show'}
                     {#if showNewEntities}
-                      <ChevronUp class="h-3 w-3" />
+                      <CaretUpIcon class="h-3 w-3" />
                     {:else}
-                      <ChevronDown class="h-3 w-3" />
+                      <CaretDownIcon class="h-3 w-3" />
                     {/if}
                   </button>
                 </li>

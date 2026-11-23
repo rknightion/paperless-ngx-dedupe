@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { AiFailureCategory, AiFailureGroup, AiResultSummary } from '@paperless-dedupe/core';
-  import { RefreshCw } from 'lucide-svelte';
+  import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
 
   interface Props {
     results: AiResultSummary[];
@@ -48,7 +48,9 @@
             disabled={retrying !== null}
             class="border-soft text-accent hover:bg-accent-subtle flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
           >
-            <RefreshCw class="h-3.5 w-3.5 {retrying === group.category ? 'animate-spin' : ''}" />
+            <ArrowsClockwiseIcon
+              class="h-3.5 w-3.5 {retrying === group.category ? 'animate-spin' : ''}"
+            />
             Retry visible
           </button>
         </div>

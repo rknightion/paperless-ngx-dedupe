@@ -1,7 +1,10 @@
 <script lang="ts">
   import { getToasts, dismissToast } from './AiReviewStore.svelte';
   import { fly } from 'svelte/transition';
-  import { CircleCheck, CircleX, TriangleAlert, Info } from 'lucide-svelte';
+  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+  import InfoIcon from 'phosphor-svelte/lib/InfoIcon';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
+  import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
 </script>
 
 {#if getToasts().length > 0}
@@ -20,13 +23,13 @@
       >
         <!-- Icon -->
         {#if toast.type === 'success'}
-          <CircleCheck class="mt-0.5 h-5 w-5 shrink-0" />
+          <CheckCircleIcon class="mt-0.5 h-5 w-5 shrink-0" />
         {:else if toast.type === 'error'}
-          <CircleX class="mt-0.5 h-5 w-5 shrink-0" />
+          <XCircleIcon class="mt-0.5 h-5 w-5 shrink-0" />
         {:else if toast.type === 'warning'}
-          <TriangleAlert class="mt-0.5 h-5 w-5 shrink-0" />
+          <WarningIcon class="mt-0.5 h-5 w-5 shrink-0" />
         {:else}
-          <Info class="mt-0.5 h-5 w-5 shrink-0" />
+          <InfoIcon class="mt-0.5 h-5 w-5 shrink-0" />
         {/if}
 
         <div class="min-w-0 flex-1">

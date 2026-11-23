@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertTriangle } from 'lucide-svelte';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import Button from './Button.svelte';
 
   interface Props {
@@ -13,7 +13,7 @@
 
 {#if compact}
   <div class="bg-warn-light text-ink flex items-center gap-3 rounded-lg px-4 py-3 text-sm">
-    <AlertTriangle class="text-warn h-5 w-5 shrink-0" />
+    <WarningIcon class="text-warn h-5 w-5 shrink-0" />
     <span>
       Analysis settings have changed since the last run. Results may be incomplete.
       {#if showRunButton && onrunAnalysis}
@@ -31,7 +31,7 @@
 {:else}
   <div class="border-warn bg-warn-light rounded-lg border px-4 py-4">
     <div class="flex items-start gap-3">
-      <AlertTriangle class="text-warn mt-0.5 h-5 w-5 shrink-0" />
+      <WarningIcon class="text-warn mt-0.5 h-5 w-5 shrink-0" />
       <div>
         <p class="text-ink text-sm font-semibold">Analysis results may be outdated</p>
         <p class="text-muted mt-1 text-sm">

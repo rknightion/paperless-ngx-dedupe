@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown } from 'lucide-svelte';
+  import CaretDownIcon from 'phosphor-svelte/lib/CaretDownIcon';
 
   interface Option {
     value: string;
@@ -67,7 +67,7 @@
     <!-- appearance-none strips the native arrow, so it is redrawn here in the
          system's own chevron rather than left to the platform. -->
     <span class="text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
-      <ChevronDown size={16} aria-hidden="true" />
+      <CaretDownIcon size={16} aria-hidden="true" />
     </span>
   </div>
 

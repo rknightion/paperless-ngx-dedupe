@@ -1,6 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { Search, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-svelte';
+  import CaretDownIcon from 'phosphor-svelte/lib/CaretDownIcon';
+  import CaretUpIcon from 'phosphor-svelte/lib/CaretUpIcon';
+  import MagnifyingGlassIcon from 'phosphor-svelte/lib/MagnifyingGlassIcon';
+  import SlidersHorizontalIcon from 'phosphor-svelte/lib/SlidersHorizontalIcon';
 
   interface Props {
     status: string | undefined;
@@ -80,7 +83,7 @@
     </select>
 
     <div class="relative">
-      <Search
+      <MagnifyingGlassIcon
         class="text-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
       />
       <input
@@ -111,12 +114,12 @@
       onclick={() => (showAdvanced = !showAdvanced)}
       class="border-soft text-muted hover:text-ink hover:bg-canvas flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
     >
-      <SlidersHorizontal class="h-3.5 w-3.5" />
+      <SlidersHorizontalIcon class="h-3.5 w-3.5" />
       More filters
       {#if showAdvanced}
-        <ChevronUp class="h-3.5 w-3.5" />
+        <CaretUpIcon class="h-3.5 w-3.5" />
       {:else}
-        <ChevronDown class="h-3.5 w-3.5" />
+        <CaretDownIcon class="h-3.5 w-3.5" />
       {/if}
     </button>
   </div>

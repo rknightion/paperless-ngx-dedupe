@@ -5,20 +5,18 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { Button, Select } from '$lib/components';
   import type { AiStats, UnprocessedDocument, DetailedCostEstimate } from '@paperless-dedupe/core';
-  import {
-    FileText,
-    AlertCircle,
-    RefreshCw,
-    ChevronLeft,
-    ChevronRight,
-    CheckSquare,
-    Square,
-    Play,
-    Inbox,
-    CircleX,
-    DollarSign,
-    BarChart3,
-  } from 'lucide-svelte';
+  import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
+  import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
+  import CaretRightIcon from 'phosphor-svelte/lib/CaretRightIcon';
+  import ChartBarIcon from 'phosphor-svelte/lib/ChartBarIcon';
+  import CheckSquareIcon from 'phosphor-svelte/lib/CheckSquareIcon';
+  import CurrencyDollarIcon from 'phosphor-svelte/lib/CurrencyDollarIcon';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
+  import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
+  import SquareIcon from 'phosphor-svelte/lib/SquareIcon';
+  import TrayIcon from 'phosphor-svelte/lib/TrayIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+  import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
   import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
   import AiCostComparisonDialog from '$lib/components/ai/AiCostComparisonDialog.svelte';
   import QueueFilterBar from '$lib/components/ai/QueueFilterBar.svelte';
@@ -199,7 +197,7 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="space-y-0.5">
         <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-          <Inbox class="h-5 w-5" />
+          <TrayIcon class="h-5 w-5" />
           Unprocessed Documents
         </h2>
         <p class="text-muted text-sm">
@@ -210,14 +208,14 @@
       </div>
       <div class="flex gap-2">
         {#if selectedDocIds.size > 0}
-          <Button icon={Play} onclick={handleProcessSelected} disabled={layoutCtx.isProcessing}>
+          <Button icon={PlayIcon} onclick={handleProcessSelected} disabled={layoutCtx.isProcessing}>
             Process {selectedDocIds.size} Selected
           </Button>
         {/if}
         {#if data.unprocessed.total > 0}
           <Button
             variant="outline"
-            icon={Play}
+            icon={PlayIcon}
             onclick={handleProcessAllUnprocessed}
             disabled={layoutCtx.isProcessing}
           >
@@ -257,7 +255,7 @@
           <div
             class="bg-accent-light mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
           >
-            <DollarSign class="text-accent h-4 w-4" />
+            <CurrencyDollarIcon class="text-accent h-4 w-4" />
           </div>
           <div>
             <p class="text-ink text-sm font-medium">
@@ -279,7 +277,7 @@
         <Button
           variant="outline"
           size="sm"
-          icon={BarChart3}
+          icon={ChartBarIcon}
           class="shrink-0"
           onclick={() => (showCostComparison = true)}
         >
@@ -288,7 +286,7 @@
       </div>
     {:else if costError}
       <div class="border-soft bg-surface flex items-center gap-3 rounded-lg border px-4 py-3">
-        <DollarSign class="text-muted h-4 w-4" />
+        <CurrencyDollarIcon class="text-muted h-4 w-4" />
         <p class="text-muted text-sm">Cost estimate unavailable</p>
       </div>
     {/if}
@@ -296,7 +294,7 @@
     {#if data.unprocessed.items.length === 0}
       <div class="panel flex flex-col items-center py-12 text-center">
         <div class="bg-success-light mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-          <FileText class="text-success h-7 w-7" />
+          <FileTextIcon class="text-success h-7 w-7" />
         </div>
         {#if hasActiveFilters}
           <p class="text-ink text-sm font-medium">No documents match your filters</p>
@@ -322,9 +320,9 @@
                   title={allSelected ? 'Deselect all' : 'Select all'}
                 >
                   {#if allSelected}
-                    <CheckSquare class="h-4 w-4" />
+                    <CheckSquareIcon class="h-4 w-4" />
                   {:else}
-                    <Square class="h-4 w-4" />
+                    <SquareIcon class="h-4 w-4" />
                   {/if}
                 </button>
               </th>
@@ -361,9 +359,9 @@
                     class="text-muted hover:text-ink transition-colors"
                   >
                     {#if isSelected}
-                      <CheckSquare class="text-accent h-4 w-4" />
+                      <CheckSquareIcon class="text-accent h-4 w-4" />
                     {:else}
-                      <Square class="h-4 w-4" />
+                      <SquareIcon class="h-4 w-4" />
                     {/if}
                   </button>
                 </td>
@@ -417,7 +415,7 @@
               <Button
                 variant="outline"
                 size="sm"
-                icon={ChevronLeft}
+                icon={CaretLeftIcon}
                 ariaLabel="Previous page"
                 onclick={() => goToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
@@ -428,7 +426,7 @@
               <Button
                 variant="outline"
                 size="sm"
-                icon={ChevronRight}
+                icon={CaretRightIcon}
                 ariaLabel="Next page"
                 onclick={() => goToPage(currentPage + 1)}
                 disabled={currentPage >= totalPages}
@@ -446,7 +444,7 @@
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="space-y-0.5">
           <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-            <AlertCircle class="text-ember h-5 w-5" />
+            <WarningCircleIcon class="text-ember h-5 w-5" />
             Failed Results
           </h2>
           <p class="text-muted text-sm">
@@ -456,7 +454,7 @@
         {#if data.failed.total > 0}
           <Button
             variant="outline"
-            icon={RefreshCw}
+            icon={ArrowsClockwiseIcon}
             onclick={handleRetryAllFailed}
             disabled={layoutCtx.isProcessing}
           >
@@ -494,7 +492,7 @@
               <Button
                 variant="outline"
                 size="sm"
-                icon={CircleX}
+                icon={XCircleIcon}
                 class="shrink-0"
                 onclick={() => handleDismissOne(result.id)}
                 disabled={layoutCtx.isProcessing}
@@ -505,7 +503,7 @@
               <Button
                 variant="outline"
                 size="sm"
-                icon={RefreshCw}
+                icon={ArrowsClockwiseIcon}
                 class="shrink-0"
                 onclick={() => handleRetryOne(result.documentId)}
                 disabled={layoutCtx.isProcessing}
@@ -523,7 +521,7 @@
     <section class="space-y-3">
       <div class="space-y-0.5">
         <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-          <AlertCircle class="text-warn h-5 w-5" />
+          <WarningCircleIcon class="text-warn h-5 w-5" />
           Skipped Documents
         </h2>
         <p class="text-muted text-sm">
@@ -550,7 +548,7 @@
             <Button
               variant="outline"
               size="sm"
-              icon={CircleX}
+              icon={XCircleIcon}
               class="shrink-0"
               onclick={() => handleDismissOne(result.id)}
               disabled={layoutCtx.isProcessing}

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AlertTriangle, Database, Sparkles } from 'lucide-svelte';
+  import DatabaseIcon from 'phosphor-svelte/lib/DatabaseIcon';
+  import SparkleIcon from 'phosphor-svelte/lib/SparkleIcon';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import { Button } from '$lib/components';
   import type {
     CustomFieldCandidateV2,
@@ -71,7 +73,7 @@
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-          <Database class="text-accent h-5 w-5" />
+          <DatabaseIcon class="text-accent h-5 w-5" />
           Discover Custom Fields
         </h2>
         <p class="text-muted mt-1 max-w-3xl text-sm">
@@ -80,7 +82,7 @@
           changes fields in Paperless.
         </p>
       </div>
-      <Button icon={Sparkles} {loading} onclick={generateRecommendations}>
+      <Button icon={SparkleIcon} {loading} onclick={generateRecommendations}>
         {loading ? (status ?? 'Starting scan…') : 'Generate Recommendations'}
       </Button>
     </div>
@@ -92,7 +94,7 @@
 
   {#if existingFieldsUnavailable}
     <div class="bg-warn-light text-warn flex items-start gap-2 rounded-lg p-4 text-sm">
-      <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
+      <WarningIcon class="mt-0.5 h-4 w-4 shrink-0" />
       Paperless custom fields could not be checked. Review recommendations carefully because an existing
       field may be included.
     </div>

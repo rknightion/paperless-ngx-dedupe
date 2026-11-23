@@ -12,7 +12,10 @@
   import DuplicateInboxFilters from '$lib/components/duplicates/DuplicateInboxFilters.svelte';
   import DuplicateInboxList from '$lib/components/duplicates/DuplicateInboxList.svelte';
   import { trackCsvExported, trackDuplicatesBulkAction, trackPurgeDeleted } from '$lib/faro-events';
-  import { Download, Network, Trash2, Wand2 } from 'lucide-svelte';
+  import DownloadSimpleIcon from 'phosphor-svelte/lib/DownloadSimpleIcon';
+  import GraphIcon from 'phosphor-svelte/lib/GraphIcon';
+  import MagicWandIcon from 'phosphor-svelte/lib/MagicWandIcon';
+  import TrashIcon from 'phosphor-svelte/lib/TrashIcon';
 
   let { data } = $props();
   const readOnly = $derived(data.readOnly === true);
@@ -128,24 +131,26 @@
       </span>
     </div>
     <div class="grid grid-cols-2 gap-2 sm:flex">
-      <Button variant="secondary" href="/duplicates/graph" icon={Network} fullWidth>
+      <Button variant="secondary" href="/duplicates/graph" icon={GraphIcon} fullWidth>
         Similarity Graph
       </Button>
       <Button
         variant="secondary"
         href="/api/v1/export/duplicates.csv?{page.url.searchParams.toString()}"
-        icon={Download}
+        icon={DownloadSimpleIcon}
         fullWidth
         onclick={() => trackCsvExported()}
       >
         Export CSV
       </Button>
       <!-- One primary action per view: this is the committing one. -->
-      <Button href="/duplicates/wizard" icon={Wand2} fullWidth>Bulk Operations Wizard</Button>
+      <Button href="/duplicates/wizard" icon={MagicWandIcon} fullWidth>
+        Bulk Operations Wizard
+      </Button>
       {#if data.deletedGroupCount > 0}
         <Button
           variant="secondary"
-          icon={Trash2}
+          icon={TrashIcon}
           fullWidth
           disabled={isSubmitting}
           class="text-ember"

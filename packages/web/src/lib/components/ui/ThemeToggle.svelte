@@ -1,16 +1,18 @@
 <script lang="ts">
-  import { Sun, Moon, Monitor } from 'lucide-svelte';
+  import DesktopIcon from 'phosphor-svelte/lib/DesktopIcon';
+  import MoonIcon from 'phosphor-svelte/lib/MoonIcon';
+  import SunIcon from 'phosphor-svelte/lib/SunIcon';
+  import { type IconComponent } from './icon-types';
   import { theme, type ThemePreference } from '$lib/theme/ThemeStore.svelte';
 
   /**
    * Three-way theme control. Sits in the sidebar footer, so it is styled
-   * against the dark rail rather than the canvas — the sidebar keeps its own
-   * near-black ramp in both themes.
+   * against the sidebar tokens, which follow the active theme.
    */
-  const OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
+  const OPTIONS: { value: ThemePreference; label: string; icon: IconComponent }[] = [
+    { value: 'light', label: 'Light', icon: SunIcon },
+    { value: 'dark', label: 'Dark', icon: MoonIcon },
+    { value: 'system', label: 'System', icon: DesktopIcon },
   ];
 </script>
 
@@ -28,8 +30,8 @@
       aria-label={option.label}
       title={option.label}
       class="flex flex-1 items-center justify-center rounded-md py-1.5 transition-colors {active
-        ? 'bg-sidebar-hover text-white'
-        : 'text-white/50 hover:text-white/80'}"
+        ? 'bg-sidebar-hover text-sidebar-ink-active'
+        : 'text-sidebar-ink hover:text-sidebar-ink-active'}"
       onclick={() => theme.set(option.value)}
     >
       <option.icon class="h-4 w-4" aria-hidden="true" />

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { Icon as LucideIcon } from 'lucide-svelte';
+  import { type IconComponent } from './icon-types';
   import Spinner from './Spinner.svelte';
 
   interface Props {
@@ -15,8 +15,8 @@
     variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline';
     /** sm in table rows and toolbars, md default, lg for stacked columns. */
     size?: 'sm' | 'md' | 'lg';
-    icon?: typeof LucideIcon;
-    iconRight?: typeof LucideIcon;
+    icon?: IconComponent;
+    iconRight?: IconComponent;
     loading?: boolean;
     disabled?: boolean;
     /** Renders an anchor instead of a button, with identical styling. */

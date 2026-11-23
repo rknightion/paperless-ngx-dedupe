@@ -12,7 +12,8 @@
     trackSyncFailed,
     trackSyncStarted,
   } from '$lib/faro-events';
-  import { Activity, CircleAlert } from 'lucide-svelte';
+  import PulseIcon from 'phosphor-svelte/lib/PulseIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
 
   let { data } = $props();
 
@@ -168,14 +169,14 @@
       class="border-ember-light bg-ember-light/40 text-ember flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
       role="alert"
     >
-      <CircleAlert class="mt-0.5 h-4 w-4 shrink-0" />
+      <WarningCircleIcon class="mt-0.5 h-4 w-4 shrink-0" />
       <p>{actionError}</p>
     </div>
   {/if}
 
   <section class="panel" aria-label="Current activity">
     <div class="mb-4 flex items-center gap-2">
-      <Activity class="text-accent h-5 w-5" />
+      <PulseIcon class="text-accent h-5 w-5" />
       <div>
         <h2 class="text-ink text-lg font-semibold">Current activity</h2>
         <p class="text-muted mt-1 text-sm">Live updates continue if you navigate elsewhere.</p>

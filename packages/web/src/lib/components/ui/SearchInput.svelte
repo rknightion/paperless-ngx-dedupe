@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Search, X } from 'lucide-svelte';
+  import MagnifyingGlassIcon from 'phosphor-svelte/lib/MagnifyingGlassIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
 
   interface Props {
     value?: string;
@@ -38,7 +39,7 @@
      which is invisible in a flex-1 column and obvious in a fixed sidebar. -->
 <div class="relative {className}">
   <span class="text-muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
-    <Search size={16} aria-hidden="true" />
+    <MagnifyingGlassIcon size={16} aria-hidden="true" />
   </span>
 
   <input
@@ -61,7 +62,7 @@
       onclick={clear}
       class="text-muted hover:text-ink absolute top-1/2 right-3 -translate-y-1/2 p-0.5"
     >
-      <X size={14} aria-hidden="true" />
+      <XIcon size={14} aria-hidden="true" />
     </button>
   {/if}
 </div>

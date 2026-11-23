@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
-  import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+  import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
+  import CaretRightIcon from 'phosphor-svelte/lib/CaretRightIcon';
 
   interface Props {
     primary: DuplicateGroupMember;
@@ -90,7 +91,7 @@
             class="border-soft text-ink hover:bg-canvas rounded-lg border p-1 text-xs font-medium disabled:opacity-30"
             title="Previous document"
           >
-            <ChevronLeft class="h-4 w-4" />
+            <CaretLeftIcon class="h-4 w-4" />
           </button>
           <button
             onclick={() => onnavigate(secondaryIndex + 1)}
@@ -98,7 +99,7 @@
             class="border-soft text-ink hover:bg-canvas rounded-lg border p-1 text-xs font-medium disabled:opacity-30"
             title="Next document"
           >
-            <ChevronRight class="h-4 w-4" />
+            <CaretRightIcon class="h-4 w-4" />
           </button>
         {/if}
         <button

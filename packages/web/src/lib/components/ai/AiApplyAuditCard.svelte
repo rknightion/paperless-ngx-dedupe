@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight } from 'lucide-svelte';
+  import ArrowRightIcon from 'phosphor-svelte/lib/ArrowRightIcon';
   import type { AiInboxResultDetail, AiResultDetail } from '@paperless-dedupe/core';
 
   interface Props {
@@ -65,7 +65,7 @@
             Correspondent
           </span>
           <span class="text-muted text-sm">{result.preApplyCorrespondentName ?? '(none)'}</span>
-          <ArrowRight class="text-muted h-3.5 w-3.5 shrink-0" />
+          <ArrowRightIcon class="text-muted h-3.5 w-3.5 shrink-0" />
           <span class="text-ink text-sm font-medium">
             {result.suggestedCorrespondent ?? '(none)'}
           </span>
@@ -79,7 +79,7 @@
             Doc Type
           </span>
           <span class="text-muted text-sm">{result.preApplyDocumentTypeName ?? '(none)'}</span>
-          <ArrowRight class="text-muted h-3.5 w-3.5 shrink-0" />
+          <ArrowRightIcon class="text-muted h-3.5 w-3.5 shrink-0" />
           <span class="text-ink text-sm font-medium">
             {result.suggestedDocumentType ?? '(none)'}
           </span>
@@ -99,7 +99,7 @@
               <span class="text-muted text-xs">(none)</span>
             {/each}
           </div>
-          <ArrowRight class="text-muted h-3.5 w-3.5 shrink-0" />
+          <ArrowRightIcon class="text-muted h-3.5 w-3.5 shrink-0" />
           <div class="flex flex-wrap gap-1">
             {#each result.suggestedTags as tag (tag)}
               <span

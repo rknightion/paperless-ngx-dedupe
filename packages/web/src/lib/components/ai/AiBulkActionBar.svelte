@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { Check, X } from 'lucide-svelte';
+  import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
 
   const readOnly = $derived(page.data.readOnly === true);
 
@@ -24,13 +25,13 @@
       title={readOnly ? 'Paperless is read-only' : undefined}
       class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
     >
-      <Check class="h-3.5 w-3.5" /> Review selected fields
+      <CheckIcon class="h-3.5 w-3.5" /> Review selected fields
     </button>
     <button
       onclick={onbatchreject}
       class="text-ember border-ember/20 hover:bg-ember-light flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
     >
-      <X class="h-3.5 w-3.5" /> Reject selected
+      <XIcon class="h-3.5 w-3.5" /> Reject selected
     </button>
   </div>
 {/if}

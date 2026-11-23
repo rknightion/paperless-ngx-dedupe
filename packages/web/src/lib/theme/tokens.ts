@@ -14,25 +14,26 @@ import { browser } from '$app/env';
 /** Fallbacks match the light scope in app.css. Used during SSR, where there
  *  is no computed style to read. */
 const FALLBACKS: Record<string, string> = {
-  '--color-chart-1': 'oklch(0.52 0.16 300)',
-  '--color-chart-2': 'oklch(0.55 0.14 245)',
-  '--color-chart-3': 'oklch(0.55 0.1 205)',
-  '--color-chart-4': 'oklch(0.58 0.13 70)',
-  '--color-chart-5': 'oklch(0.58 0.16 10)',
-  '--color-chart-6': 'oklch(0.55 0.1 130)',
-  '--color-accent': 'oklch(0.49 0.13 165)',
-  '--color-accent-product': 'oklch(0.53 0.16 300)',
-  '--color-success': 'oklch(0.49 0.15 155)',
-  '--color-warn': 'oklch(0.52 0.15 85)',
-  '--color-ember': 'oklch(0.52 0.2 25)',
-  '--color-ink': 'oklch(0.2 0.02 260)',
-  '--color-ink-light': 'oklch(0.35 0.02 260)',
-  '--color-muted': 'oklch(0.55 0.015 260)',
-  '--color-soft': 'oklch(0.885 0.009 85)',
-  '--color-border': 'oklch(0.9 0.007 85)',
-  '--color-surface': 'oklch(1 0 0)',
-  '--color-canvas': 'oklch(0.975 0.006 85)',
-  '--color-canvas-deep': 'oklch(0.945 0.009 85)',
+  '--color-chart-1': 'oklch(0.44 0.095 233)',
+  '--color-chart-2': 'oklch(0.48 0.115 281)',
+  '--color-chart-3': 'oklch(0.52 0.105 329)',
+  '--color-chart-4': 'oklch(0.56 0.115 17)',
+  '--color-chart-5': 'oklch(0.57 0.1 65)',
+  '--color-chart-6': 'oklch(0.6 0.095 161)',
+  '--color-accent': '#1d6a8a',
+  '--color-success': '#2f7d4f',
+  '--color-warn': '#8f6410',
+  '--color-ember': '#a83a2e',
+  '--color-ink': 'oklch(0.24 0.012 227)',
+  '--color-ink-light': 'oklch(0.37 0.015 227)',
+  '--color-muted': 'oklch(0.5 0.018 227)',
+  '--color-soft': 'oklch(0.9 0.008 227)',
+  '--color-border': 'oklch(0.9 0.008 227)',
+  '--color-surface': 'oklch(0.982 0.004 227)',
+  '--color-surface-raised': 'oklch(1 0 0)',
+  '--color-canvas': 'oklch(0.962 0.007 227)',
+  '--color-canvas-deep': 'oklch(0.945 0.009 227)',
+  '--font-mono': "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
 };
 
 /** Read one token off <html>. Returns the light-scope fallback off the browser. */
@@ -43,8 +44,9 @@ export function readToken(name: string): string {
 }
 
 /**
- * The six-series chart ramp, in order. Series 1 is violet rather than the
- * brand accent, so a single-series chart never reads as a primary action.
+ * The six-series chart ramp, in order (design system v2, derived from the
+ * accent hue by rotation). Series 1 is petrol, the same family as the accent;
+ * a chart is not an interactive control, so that is fine.
  */
 export function chartPalette(): string[] {
   return [
@@ -66,29 +68,31 @@ export function echartsTheme(): Record<string, unknown> {
   const ink = readToken('--color-ink-light');
   const muted = readToken('--color-muted');
   const border = readToken('--color-border');
+  const mono = readToken('--font-mono');
+
+  // Axis labels and legends are muted mono 11px; grid and axis lines use the
+  // hairline border token. The tooltip is a raised surface with a hairline.
+  const axis = {
+    axisLine: { lineStyle: { color: border } },
+    axisTick: { lineStyle: { color: border } },
+    axisLabel: { color: muted, fontFamily: mono, fontSize: 11 },
+    splitLine: { lineStyle: { color: border } },
+  };
 
   return {
     color: chartPalette(),
     backgroundColor: 'transparent',
-    textStyle: { color: ink },
+    textStyle: { color: ink, fontFamily: mono },
     title: { textStyle: { color: readToken('--color-ink') } },
-    legend: { textStyle: { color: muted } },
+    legend: { textStyle: { color: muted, fontFamily: mono, fontSize: 11 } },
     tooltip: {
-      backgroundColor: readToken('--color-surface'),
+      backgroundColor: readToken('--color-surface-raised'),
       borderColor: border,
-      textStyle: { color: ink },
+      borderWidth: 1,
+      textStyle: { color: ink, fontFamily: mono },
+      extraCssText: 'border-radius: 6px;',
     },
-    categoryAxis: {
-      axisLine: { lineStyle: { color: border } },
-      axisTick: { lineStyle: { color: border } },
-      axisLabel: { color: muted },
-      splitLine: { lineStyle: { color: border } },
-    },
-    valueAxis: {
-      axisLine: { lineStyle: { color: border } },
-      axisTick: { lineStyle: { color: border } },
-      axisLabel: { color: muted },
-      splitLine: { lineStyle: { color: border } },
-    },
+    categoryAxis: axis,
+    valueAxis: axis,
   };
 }

@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { NextAction } from '@paperless-dedupe/core';
-  import { ArrowRight, Play, RefreshCw } from 'lucide-svelte';
+  import ArrowRightIcon from 'phosphor-svelte/lib/ArrowRightIcon';
+  import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
+  import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
   import Button from '$lib/components/ui/Button.svelte';
 
   interface Props {
@@ -43,7 +45,7 @@
           <div class="shrink-0">
             {#if action.safeAction === 'sync'}
               <Button
-                icon={RefreshCw}
+                icon={ArrowsClockwiseIcon}
                 disabled={syncDisabled}
                 describedBy={syncDisabled ? 'sync-active-help' : undefined}
                 onclick={onSync}
@@ -58,7 +60,7 @@
               {/if}
             {:else if action.safeAction === 'analysis'}
               <Button
-                icon={Play}
+                icon={PlayIcon}
                 disabled={analysisDisabled}
                 describedBy={analysisDisabled ? 'analysis-active-help' : undefined}
                 onclick={onAnalysis}
@@ -76,7 +78,7 @@
                 href={action.href}
                 class="text-accent hover:text-accent-hover inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium"
               >
-                Review <ArrowRight class="h-4 w-4" />
+                Review <ArrowRightIcon class="h-4 w-4" />
               </a>
             {/if}
           </div>
@@ -101,7 +103,7 @@
         {#if !includesSync}
           <Button
             variant="secondary"
-            icon={RefreshCw}
+            icon={ArrowsClockwiseIcon}
             disabled={syncDisabled}
             describedBy={syncDisabled ? 'sync-active-help' : undefined}
             onclick={onSync}
@@ -118,7 +120,7 @@
         {#if !includesAnalysis}
           <Button
             variant="secondary"
-            icon={Play}
+            icon={PlayIcon}
             disabled={analysisDisabled}
             describedBy={analysisDisabled ? 'analysis-active-help' : undefined}
             onclick={onAnalysis}

@@ -26,7 +26,9 @@
     AiFieldSelection,
     AiMutationPlanPreview,
   } from '@paperless-dedupe/core';
-  import { Loader2, ChevronLeft, ChevronRight } from 'lucide-svelte';
+  import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
+  import CaretRightIcon from 'phosphor-svelte/lib/CaretRightIcon';
+  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
   import type { AiFailureCategory } from '@paperless-dedupe/core';
 
   let { data } = $props();
@@ -489,7 +491,7 @@
   <div class="panel">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2.5 text-sm font-medium">
-        <Loader2 class="text-accent h-4 w-4 animate-spin" />
+        <CircleNotchIcon class="text-accent h-4 w-4 animate-spin" />
         <span class="text-ink">Applying changes...</span>
       </div>
     </div>
@@ -539,7 +541,7 @@
             <Button
               variant="outline"
               size="sm"
-              icon={ChevronLeft}
+              icon={CaretLeftIcon}
               ariaLabel="Previous AI results"
               onclick={() => goToCursor(data.previousCursor)}
               disabled={!data.previousCursor}
@@ -547,7 +549,7 @@
             <Button
               variant="outline"
               size="sm"
-              icon={ChevronRight}
+              icon={CaretRightIcon}
               ariaLabel="Next AI results"
               onclick={() => goToCursor(data.nextCursor)}
               disabled={!data.nextCursor}

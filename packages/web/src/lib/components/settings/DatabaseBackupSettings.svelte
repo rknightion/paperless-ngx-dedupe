@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { DatabaseBackup, Download } from 'lucide-svelte';
+  import DownloadSimpleIcon from 'phosphor-svelte/lib/DownloadSimpleIcon';
+  import FloppyDiskIcon from 'phosphor-svelte/lib/FloppyDiskIcon';
 </script>
 
 <section class="panel" id="database-backup" aria-labelledby="database-backup-heading">
   <h2 id="database-backup-heading" class="text-ink flex items-center gap-2 text-lg font-semibold">
-    <DatabaseBackup class="text-accent h-5 w-5" aria-hidden="true" />
+    <FloppyDiskIcon class="text-accent h-5 w-5" aria-hidden="true" />
     Database backup
   </h2>
   <p class="text-muted mt-2 text-sm">
@@ -30,7 +31,7 @@
     download
     class="border-soft text-ink hover:bg-canvas mt-4 flex w-fit items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
   >
-    <Download class="h-4 w-4" aria-hidden="true" />
+    <DownloadSimpleIcon class="h-4 w-4" aria-hidden="true" />
     Download database backup
   </a>
 </section>

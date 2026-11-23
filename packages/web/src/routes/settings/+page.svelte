@@ -18,15 +18,14 @@
     trackConfigExported,
     trackConfigImported,
   } from '$lib/faro-events';
-  import {
-    Link,
-    SlidersHorizontal,
-    Info,
-    Archive,
-    Brain,
-    AlertTriangle,
-    Check,
-  } from 'lucide-svelte';
+  import ArchiveIcon from 'phosphor-svelte/lib/ArchiveIcon';
+  import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
+  import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
+  // Aliased: `InfoIcon` above is the tooltip trigger component.
+  import PhosphorInfoIcon from 'phosphor-svelte/lib/InfoIcon';
+  import LinkIcon from 'phosphor-svelte/lib/LinkIcon';
+  import SlidersHorizontalIcon from 'phosphor-svelte/lib/SlidersHorizontalIcon';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import { parse as parseYaml } from 'yaml';
   import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
   import RememberedDecisions from '$lib/components/settings/RememberedDecisions.svelte';
@@ -483,7 +482,7 @@
   <!-- Paperless-NGX Connection -->
   <div class="panel" id="connection" class:hidden={activeSettingsSection !== 'connection'}>
     <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-      <Link class="text-accent h-5 w-5" />
+      <LinkIcon class="text-accent h-5 w-5" />
       Paperless-NGX Connection
     </h2>
     <p class="text-muted mt-2 text-sm">Connection settings are managed by environment variables.</p>
@@ -532,7 +531,7 @@
   <!-- Dedup Parameters -->
   <div class="panel" id="dedup" class:hidden={activeSettingsSection !== 'dedup'}>
     <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-      <SlidersHorizontal class="text-accent h-5 w-5" />
+      <SlidersHorizontalIcon class="text-accent h-5 w-5" />
       Deduplication Parameters
     </h2>
 
@@ -843,7 +842,7 @@
   {#if data.aiEnabled}
     <div class="panel" id="ai-processing" class:hidden={activeSettingsSection !== 'ai'}>
       <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        <Brain class="text-accent h-5 w-5" />
+        <BrainIcon class="text-accent h-5 w-5" />
         AI Processing
       </h2>
 
@@ -904,7 +903,7 @@
               href="https://developers.openai.com/api/docs/guides/flex-processing"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-white underline hover:text-white/80"
+              class="text-on-inverse hover:text-on-inverse/80 underline"
             >
               Learn more
             </a>
@@ -1016,7 +1015,7 @@
               <div
                 class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
               >
-                <AlertTriangle class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+                <WarningIcon class="text-warn mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p>
                     Your prompt template has been customised and differs from the latest recommended
@@ -1036,7 +1035,7 @@
               <div
                 class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
               >
-                <Check class="text-success mt-0.5 h-4 w-4 shrink-0" />
+                <CheckIcon class="text-success mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p>
                     Prompt reverted to default. Reset processing history so documents can be
@@ -1108,7 +1107,7 @@
                   <div
                     class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
                   >
-                    <AlertTriangle class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+                    <WarningIcon class="text-warn mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <p>
                         Your tag alias map has been customised and differs from the latest
@@ -1128,7 +1127,7 @@
                   <div
                     class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
                   >
-                    <Check class="text-success mt-0.5 h-4 w-4 shrink-0" />
+                    <CheckIcon class="text-success mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <p>
                         Tag alias map reverted to default. Reset processing history so documents can
@@ -1181,7 +1180,7 @@
       <div class="border-soft mt-4 border-t pt-4">
         {#if resetConfirmCount !== null}
           <div class="bg-ember-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm">
-            <AlertTriangle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+            <WarningIcon class="text-ember mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p>
                 This will delete {resetConfirmCount} AI processing result{resetConfirmCount === 1
@@ -1432,7 +1431,7 @@
     <!-- System Information -->
     <div class="panel" id="system">
       <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        <Info class="text-accent h-5 w-5" />
+        <PhosphorInfoIcon class="text-accent h-5 w-5" />
         System Information
       </h2>
       <dl class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1485,7 +1484,7 @@
     <!-- Backup & Restore -->
     <div class="panel" id="backup">
       <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        <Archive class="text-accent h-5 w-5" />
+        <ArchiveIcon class="text-accent h-5 w-5" />
         Backup & Restore
       </h2>
       <div class="mt-4 space-y-4">

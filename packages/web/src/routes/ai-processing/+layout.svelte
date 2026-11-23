@@ -7,23 +7,21 @@
   import AiDocumentPickerModal from '$lib/components/ai/AiDocumentPickerModal.svelte';
   import { addToast, resetStore } from '$lib/components/ai/AiReviewStore.svelte';
   import { connectJobSSE } from '$lib/sse';
-  import {
-    Brain,
-    Play,
-    Pause,
-    RefreshCw,
-    Loader2,
-    FileText,
-    AlertCircle,
-    CircleDot,
-    CircleCheck,
-    CircleX,
-    TriangleAlert,
-    Undo2,
-    X,
-    Info,
-    ChevronDown,
-  } from 'lucide-svelte';
+  import ArrowUUpLeftIcon from 'phosphor-svelte/lib/ArrowUUpLeftIcon';
+  import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
+  import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
+  import CaretDownIcon from 'phosphor-svelte/lib/CaretDownIcon';
+  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
+  import InfoIcon from 'phosphor-svelte/lib/InfoIcon';
+  import PauseIcon from 'phosphor-svelte/lib/PauseIcon';
+  import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
+  import RadioButtonIcon from 'phosphor-svelte/lib/RadioButtonIcon';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
+  import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
 
   let { data, children } = $props();
 
@@ -281,20 +279,20 @@
     <div class="space-y-1">
       <h1 class="text-ink flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
         <div class="bg-accent-light flex h-8 w-8 items-center justify-center rounded-lg">
-          <Brain class="text-accent h-4.5 w-4.5" />
+          <BrainIcon class="text-accent h-4.5 w-4.5" />
         </div>
         AI Processing
       </h1>
       <p class="text-muted text-sm">Extract and apply document metadata using AI.</p>
     </div>
     <div class="relative flex gap-2">
-      <Button onclick={handleProcessNew} loading={isProcessing} icon={Play}>
+      <Button onclick={handleProcessNew} loading={isProcessing} icon={PlayIcon}>
         {isProcessing ? 'Processing...' : isResumable ? 'Resume' : 'Process New'}
       </Button>
       <div class="relative">
         <Button
           variant="outline"
-          icon={ChevronDown}
+          icon={CaretDownIcon}
           ariaLabel="Choose AI processing scope"
           onclick={() => (showProcessMenu = !showProcessMenu)}
           disabled={isProcessing}
@@ -311,14 +309,14 @@
               onclick={handleProcessNew}
               class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
             >
-              <Play class="h-4 w-4" /> Process New
+              <PlayIcon class="h-4 w-4" /> Process New
             </button>
             {#if stats.failed > 0}
               <button
                 onclick={handleRetryFailed}
                 class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
               >
-                <RefreshCw class="h-4 w-4" /> Retry Failed
+                <ArrowsClockwiseIcon class="h-4 w-4" /> Retry Failed
               </button>
             {/if}
             <button
@@ -328,7 +326,7 @@
               }}
               class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
             >
-              <FileText class="h-4 w-4" /> Process Selected...
+              <FileTextIcon class="h-4 w-4" /> Process Selected...
             </button>
             <div class="border-soft border-t"></div>
             <button
@@ -338,7 +336,7 @@
               }}
               class="text-ember hover:bg-ember-light flex w-full items-center gap-2 px-4 py-2.5 text-sm"
             >
-              <AlertCircle class="h-4 w-4" /> Re-run Entire Library
+              <WarningCircleIcon class="h-4 w-4" /> Re-run Entire Library
             </button>
           </div>
         {/if}
@@ -358,7 +356,7 @@
       data-sveltekit-preload-data
     >
       <div class="bg-accent-subtle flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <FileText class="text-accent h-4 w-4" />
+        <FileTextIcon class="text-accent h-4 w-4" />
       </div>
       <div class="min-w-0">
         <p class="text-muted text-xs font-medium">Processed</p>
@@ -373,7 +371,7 @@
       data-sveltekit-preload-data
     >
       <div class="bg-warn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <CircleDot class="text-warn h-4 w-4" />
+        <RadioButtonIcon class="text-warn h-4 w-4" />
       </div>
       <div class="min-w-0">
         <p class="text-muted text-xs font-medium">Pending</p>
@@ -388,7 +386,7 @@
       data-sveltekit-preload-data
     >
       <div class="bg-success-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <CircleCheck class="text-success h-4 w-4" />
+        <CheckCircleIcon class="text-success h-4 w-4" />
       </div>
       <div class="min-w-0">
         <p class="text-muted text-xs font-medium">Applied</p>
@@ -403,7 +401,7 @@
       data-sveltekit-preload-data
     >
       <div class="bg-canvas-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <CircleX class="text-muted h-4 w-4" />
+        <XCircleIcon class="text-muted h-4 w-4" />
       </div>
       <div class="min-w-0">
         <p class="text-muted text-xs font-medium">Rejected</p>
@@ -418,7 +416,7 @@
       data-sveltekit-preload-data
     >
       <div class="bg-accent-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <Undo2 class="text-accent h-4 w-4" />
+        <ArrowUUpLeftIcon class="text-accent h-4 w-4" />
       </div>
       <div class="min-w-0">
         <p class="text-muted text-xs font-medium">Reverted</p>
@@ -433,7 +431,7 @@
       data-sveltekit-preload-data
     >
       <div class="bg-ember-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <TriangleAlert class="text-ember h-4 w-4" />
+        <WarningIcon class="text-ember h-4 w-4" />
       </div>
       <div class="min-w-0">
         <p class="text-muted text-xs font-medium">Failed</p>
@@ -449,7 +447,7 @@
         data-sveltekit-preload-data
       >
         <div class="bg-warn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-          <AlertCircle class="text-warn h-4 w-4" />
+          <WarningCircleIcon class="text-warn h-4 w-4" />
         </div>
         <div class="min-w-0">
           <p class="text-muted text-xs font-medium">Skipped</p>
@@ -466,10 +464,12 @@
     <div class="panel">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2.5 text-sm font-medium">
-          <Loader2 class="text-accent h-4 w-4 animate-spin" />
+          <CircleNotchIcon class="text-accent h-4 w-4 animate-spin" />
           <span class="text-ink">Processing documents...</span>
         </div>
-        <Button variant="outline" size="sm" icon={Pause} onclick={cancelCurrentJob}>Pause</Button>
+        <Button variant="outline" size="sm" icon={PauseIcon} onclick={cancelCurrentJob}>
+          Pause
+        </Button>
       </div>
       <div class="mt-3">
         <ProgressBar progress={jobProgress} phaseProgress={jobPhaseProgress} message={jobMessage} />
@@ -481,7 +481,7 @@
   {#if jobError}
     <div class="bg-ember-light border-ember/20 flex items-start gap-3 rounded-xl border p-4">
       <div class="bg-ember/10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
-        <AlertCircle class="text-ember h-4 w-4" />
+        <WarningCircleIcon class="text-ember h-4 w-4" />
       </div>
       <div class="min-w-0 flex-1">
         <p class="text-ink text-sm font-medium">Processing failed</p>
@@ -490,7 +490,7 @@
       <Button
         variant="ghost"
         size="sm"
-        icon={X}
+        icon={XIcon}
         ariaLabel="Dismiss"
         title="Dismiss"
         class="-mt-0.5 shrink-0"
@@ -503,7 +503,7 @@
   {#if showResumeHint}
     <div class="bg-accent-light border-accent/20 flex items-start gap-3 rounded-xl border p-4">
       <div class="bg-accent/10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
-        <Info class="text-accent h-4 w-4" />
+        <InfoIcon class="text-accent h-4 w-4" />
       </div>
       <div class="min-w-0 flex-1">
         <p class="text-ink text-sm font-medium">Processing paused</p>
@@ -515,7 +515,7 @@
       <Button
         variant="ghost"
         size="sm"
-        icon={X}
+        icon={XIcon}
         ariaLabel="Dismiss"
         title="Dismiss"
         class="-mt-0.5 shrink-0"

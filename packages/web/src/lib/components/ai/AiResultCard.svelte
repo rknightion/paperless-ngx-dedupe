@@ -1,7 +1,10 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { Button, Checkbox, ConfidenceBadge } from '$lib/components';
-  import { Check, X, FileText, AlertCircle } from 'lucide-svelte';
+  import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
   import type { AiResultSummary } from './AiReviewStore.svelte';
 
   const readOnly = $derived(page.data.readOnly === true);
@@ -86,7 +89,7 @@
       />
     {:else}
       <div class="bg-canvas flex h-12 w-12 shrink-0 items-center justify-center rounded">
-        <FileText class="text-muted h-5 w-5" />
+        <FileTextIcon class="text-muted h-5 w-5" />
       </div>
     {/if}
     <div class="min-w-0 flex-1">
@@ -112,19 +115,19 @@
               <span
                 class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
               >
-                <AlertCircle class="h-3 w-3" /> No OCR Text
+                <WarningCircleIcon class="h-3 w-3" /> No OCR Text
               </span>
             {:else if result.failureType === 'no_suggestions'}
               <span
                 class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
               >
-                <AlertCircle class="h-3 w-3" /> No Suggestions
+                <WarningCircleIcon class="h-3 w-3" /> No Suggestions
               </span>
             {:else}
               <span
                 class="bg-ember-light text-ember inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
               >
-                <AlertCircle class="h-3 w-3" /> Failed
+                <WarningCircleIcon class="h-3 w-3" /> Failed
               </span>
             {/if}
             <p class="text-muted line-clamp-2 text-xs">{result.errorMessage}</p>
@@ -216,12 +219,12 @@
         title={readOnly ? 'Paperless is read-only' : undefined}
         class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
       >
-        <Check class="h-3.5 w-3.5" /> Apply
+        <CheckIcon class="h-3.5 w-3.5" /> Apply
       </button>
       <Button
         variant="ghost"
         size="sm"
-        icon={X}
+        icon={XIcon}
         onclick={(e) => {
           e.stopPropagation();
           onreject();
