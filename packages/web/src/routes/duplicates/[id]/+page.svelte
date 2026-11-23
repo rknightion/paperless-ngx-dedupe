@@ -588,7 +588,6 @@
     :global(main:has(> [data-comparison-review])) {
       display: flex;
       flex-direction: column;
-      overflow: hidden;
     }
 
     :global(main:has(> [data-comparison-review]) > [role='note']) {
@@ -601,7 +600,8 @@
     }
 
     .comparison-content {
-      min-height: 0;
+      /* Keep the shell scrollable if pinned content leaves too little room. */
+      min-height: 10rem;
       flex: 1;
       overflow-y: auto;
       /* Room for focus outlines inside the clipped scroll region. */

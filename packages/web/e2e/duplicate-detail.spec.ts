@@ -210,6 +210,20 @@ test.describe('Duplicate Detail Page', () => {
     expect(primaryBox!.x).toBeGreaterThanOrEqual(0);
   });
 
+  test('comparison and decisions remain reachable with enlarged text', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 576 });
+    await page.goto(`/duplicates/${seed.groupIds[0]}`);
+    await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+
+    const comparison = page.getByRole('heading', { name: 'Document Comparison', exact: true });
+    await comparison.scrollIntoViewIfNeeded();
+    await expect(comparison).toBeInViewport();
+
+    const decision = page.getByRole('button', { name: 'Keep All', exact: true });
+    await decision.scrollIntoViewIfNeeded();
+    await expect(decision).toBeInViewport();
+  });
+
   test('404 for non-existent group', async ({ page }) => {
     const response = await page.goto('/duplicates/nonexistent-id');
     expect(response?.status()).toBe(404);
