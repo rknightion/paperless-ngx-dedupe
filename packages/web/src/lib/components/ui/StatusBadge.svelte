@@ -7,8 +7,8 @@
 
   /**
    * A status word: a shape, the word and a colour. Colour is the third
-   * carrier, never the first. The DOM text stays the status as stored and is
-   * uppercased by CSS, so the word reads normally to assistive technology.
+   * carrier, never the first. The shape is drawn by CSS with empty alt text, so
+   * the DOM text stays the status as stored and is uppercased by CSS.
    * Static class strings so Tailwind sees every variant.
    */
   const STATUS: Record<string, { shape: string; text: string }> = {
@@ -30,7 +30,9 @@
   const meta = $derived(STATUS[status] ?? { shape: '○', text: 'text-muted' });
 </script>
 
-<span class="status-word inline-flex items-baseline gap-1 {meta.text}">
-  <span aria-hidden="true">{meta.shape}</span>
+<span
+  data-shape={meta.shape}
+  class="status-word inline-flex items-baseline gap-1 before:content-[attr(data-shape)_/_''] {meta.text}"
+>
   <span class="uppercase">{displayLabels[status] ?? status}</span>
 </span>
