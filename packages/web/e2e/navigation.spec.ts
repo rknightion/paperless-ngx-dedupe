@@ -6,7 +6,7 @@ test('narrow navigation returns focus and blocks duplicate shortcuts', async ({ 
   const seed = seedDB();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/duplicates/${seed.groupIds[0]}`);
-  await expect(page.getByRole('navigation', { name: 'Primary' })).toBeHidden();
+  await expect(page.locator('#app-sidebar')).toHaveAttribute('inert', '');
 
   const open = page.getByRole('button', { name: 'Open navigation' });
   const close = page.getByRole('button', { name: 'Close navigation' });
