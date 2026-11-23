@@ -39,7 +39,7 @@
       Counts reflect the complete filtered result, not just this page.
     </p>
   </div>
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+  <div class="border-border bg-surface flex flex-wrap border-t border-l">
     {@render SummaryCard('Matching documents', counts.total, libraryHref(query))}
     {@render SummaryCard('Missing OCR', counts.missingOcr, missingOcrHref)}
     {@render SummaryCard('In duplicate groups', counts.duplicateInvolved, duplicateHref)}
@@ -57,15 +57,17 @@
     {#if safeInsights.length === 0}
       <p class="text-muted text-sm">No quality opportunities found.</p>
     {:else}
-      <ul class="grid gap-2 sm:grid-cols-2">
+      <ul class="grid gap-x-6 sm:grid-cols-2">
         {#each safeInsights as insight (`${insight.kind}:${insight.url}`)}
-          <li>
+          <li class="border-border border-b">
             <a
               href={insight.url}
-              class="border-soft hover:bg-accent-subtle flex h-full items-start justify-between gap-3 rounded-lg border px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+              class="hover:bg-canvas-deep flex h-full items-start justify-between gap-3 px-2 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <span class="text-ink">{insight.label}</span>
-              <strong class="text-accent shrink-0">{insight.count.toLocaleString()}</strong>
+              <strong class="text-accent shrink-0 font-mono font-semibold tabular-nums">
+                {insight.count.toLocaleString()}
+              </strong>
             </a>
           </li>
         {/each}
@@ -76,15 +78,27 @@
 
 {#snippet SummaryCard(label: string, count: number, href: string | null)}
   {#if href}
-    <a {href} class="panel focus-visible:outline-2 focus-visible:outline-offset-2">
-      <span class="text-muted block text-xs">{label}</span>
-      <strong class="text-ink mt-1 block text-xl">{count.toLocaleString()}</strong>
+    <a
+      {href}
+      class="border-border hover:bg-canvas-deep min-w-40 flex-1 border-r border-b px-6 py-3 focus-visible:outline-2 focus-visible:-outline-offset-2"
+    >
+      <span class="label-micro block">{label}</span>
+      <strong class="text-ink block text-2xl font-semibold tabular-nums">
+        {count.toLocaleString()}
+      </strong>
     </a>
   {:else}
-    <div class="panel" aria-label="{label}: {count}">
-      <span class="text-muted block text-xs">{label}</span>
-      <strong class="text-ink mt-1 block text-xl">{count.toLocaleString()}</strong>
-      <span class="text-muted mt-1 block text-xs">Current filters exclude this population.</span>
+    <div
+      class="border-border min-w-40 flex-1 border-r border-b px-6 py-3"
+      aria-label="{label}: {count}"
+    >
+      <span class="label-micro block">{label}</span>
+      <strong class="text-ink block text-2xl font-semibold tabular-nums">
+        {count.toLocaleString()}
+      </strong>
+      <span class="text-muted block font-mono text-xs">
+        Current filters exclude this population.
+      </span>
     </div>
   {/if}
 {/snippet}

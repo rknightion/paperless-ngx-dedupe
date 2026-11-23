@@ -1,12 +1,8 @@
 <script lang="ts">
-  import { StatCard, EChart, ProgressBar, Button, PageHeader } from '$lib/components';
+  import { EChart, ProgressBar, Button, PageHeader } from '$lib/components';
   import DocumentLibraryFilters from '$lib/components/documents/DocumentLibraryFilters.svelte';
   import DocumentLibraryTable from '$lib/components/documents/DocumentLibraryTable.svelte';
   import DocumentQualitySummary from '$lib/components/documents/DocumentQualitySummary.svelte';
-  import ClockIcon from 'phosphor-svelte/lib/ClockIcon';
-  import CopyIcon from 'phosphor-svelte/lib/CopyIcon';
-  import FilesIcon from 'phosphor-svelte/lib/FilesIcon';
-  import TextAaIcon from 'phosphor-svelte/lib/TextAaIcon';
   import type { EChartsOption } from 'echarts';
   import { readToken } from '$lib/theme/tokens';
 
@@ -49,9 +45,6 @@
           value: d.count,
         })),
         label: { fontSize: 11 },
-        emphasis: {
-          itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.2)' },
-        },
       },
     ],
   });
@@ -127,7 +120,7 @@
   <title>Documents - Paperless NGX Dedupe</title>
 </svelte:head>
 
-<div class="space-y-8">
+<div class="space-y-6">
   {#if data.library}
     <PageHeader
       title="Document Library"
@@ -159,20 +152,25 @@
   {/if}
 
   <!-- Overview Divider -->
-  <div class="flex items-center gap-4">
-    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Overview</span>
-    <div class="divider flex-1"></div>
-  </div>
+  {@render sectionLabel('Overview')}
 
-  <!-- Summary Cards -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()}>
-      {#snippet icon()}<FilesIcon class="h-5 w-5" />{/snippet}
-    </StatCard>
-    <div class="panel">
-      <p class="text-muted text-sm">OCR Coverage</p>
-      <p class="text-ink mt-1 text-2xl font-semibold">{data.stats.ocrCoverage.percentage}%</p>
-      <div class="mt-2">
+  <!-- Stat strip: divided cells, mono label, 24px figure, mono note. -->
+  <div class="border-border bg-surface flex flex-wrap border-t border-l">
+    <div class="border-border min-w-44 flex-1 border-r border-b px-6 py-3">
+      <p class="label-micro">Total Documents</p>
+      <p class="text-ink text-2xl font-semibold tabular-nums">
+        {data.stats.totalDocuments.toLocaleString()}
+      </p>
+      <p class="text-muted font-mono text-xs tabular-nums">
+        Avg Word Count: {data.stats.averageWordCount.toLocaleString()}
+      </p>
+    </div>
+    <div class="border-border min-w-44 flex-1 border-r border-b px-6 py-3">
+      <p class="label-micro">OCR Coverage</p>
+      <p class="text-ink text-2xl font-semibold tabular-nums">
+        {data.stats.ocrCoverage.percentage}%
+      </p>
+      <div class="mt-1">
         <ProgressBar
           progress={data.stats.ocrCoverage.percentage / 100}
           message="{data.stats.ocrCoverage.withContent} of {data.stats.totalDocuments} documents"
@@ -180,58 +178,57 @@
         />
       </div>
     </div>
-    <StatCard
-      label="Processing"
-      value="{data.stats.processingStatus.completed} / {data.stats.totalDocuments}"
-      trendLabel="{data.stats.processingStatus.pending} pending"
-      trend={data.stats.processingStatus.pending > 0 ? 'neutral' : 'up'}
-    >
-      {#snippet icon()}<ClockIcon class="h-5 w-5" />{/snippet}
-    </StatCard>
-    <StatCard label="Avg Word Count" value={data.stats.averageWordCount.toLocaleString()}>
-      {#snippet icon()}<TextAaIcon class="h-5 w-5" />{/snippet}
-    </StatCard>
-    <StatCard
-      label="Duplicate Involvement"
-      value="{data.stats.duplicateInvolvement.percentage}%"
-      trendLabel="{data.stats.duplicateInvolvement.documentsInGroups} of {data.stats
-        .totalDocuments} documents"
-      trend={data.stats.duplicateInvolvement.percentage > 0 ? 'neutral' : 'up'}
-    >
-      {#snippet icon()}<CopyIcon class="h-5 w-5" />{/snippet}
-    </StatCard>
+    <div class="border-border min-w-44 flex-1 border-r border-b px-6 py-3">
+      <p class="label-micro">Processing</p>
+      <p class="text-ink text-2xl font-semibold tabular-nums">
+        {data.stats.processingStatus.completed} / {data.stats.totalDocuments}
+      </p>
+      <p class="text-muted font-mono text-xs tabular-nums">
+        {data.stats.processingStatus.pending} pending
+      </p>
+    </div>
+    <div class="border-border min-w-44 flex-1 border-r border-b px-6 py-3">
+      <p class="label-micro">Duplicate Involvement</p>
+      <p class="text-ink text-2xl font-semibold tabular-nums">
+        {data.stats.duplicateInvolvement.percentage}%
+      </p>
+      <p class="text-muted font-mono text-xs tabular-nums">
+        {data.stats.duplicateInvolvement.documentsInGroups} of {data.stats.totalDocuments} documents
+      </p>
+    </div>
   </div>
 
   <!-- Deduplication Activity -->
   {#if data.stats.usageStats.cumulativeGroupsActioned > 0 || data.stats.usageStats.cumulativeDocumentsDeleted > 0}
-    <div>
-      <h2 class="text-ink text-lg font-semibold">Deduplication Activity</h2>
-      <p class="text-muted mt-1 mb-3 text-sm">
-        Cumulative totals across all deduplication sessions.
-      </p>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard
-          label="Groups Actioned"
-          value={data.stats.usageStats.cumulativeGroupsActioned.toLocaleString()}
-        />
-        <StatCard
-          label="Documents Deleted"
-          value={data.stats.usageStats.cumulativeDocumentsDeleted.toLocaleString()}
-        />
+    <div class="space-y-3">
+      <div>
+        <h2 class="text-ink text-lg font-semibold">Deduplication activity</h2>
+        <p class="text-muted mt-1 text-sm">Cumulative totals across all deduplication sessions.</p>
+      </div>
+      <div class="border-border bg-surface flex flex-wrap border-t border-l">
+        <div class="border-border min-w-44 flex-1 border-r border-b px-6 py-3">
+          <p class="label-micro">Groups Actioned</p>
+          <p class="text-ink text-2xl font-semibold tabular-nums">
+            {data.stats.usageStats.cumulativeGroupsActioned.toLocaleString()}
+          </p>
+        </div>
+        <div class="border-border min-w-44 flex-1 border-r border-b px-6 py-3">
+          <p class="label-micro">Documents Deleted</p>
+          <p class="text-ink text-2xl font-semibold tabular-nums">
+            {data.stats.usageStats.cumulativeDocumentsDeleted.toLocaleString()}
+          </p>
+        </div>
       </div>
     </div>
   {/if}
 
   <!-- Analytics Divider -->
-  <div class="flex items-center gap-4">
-    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Analytics</span>
-    <div class="divider flex-1"></div>
-  </div>
+  {@render sectionLabel('Analytics')}
 
   <!-- Documents Over Time -->
   {#if data.stats.documentsOverTime.length > 0}
     <div class="panel">
-      <h2 class="text-ink mb-4 text-lg font-semibold">Documents Over Time</h2>
+      <h2 class="text-ink mb-4 text-lg font-semibold">Documents over time</h2>
       <EChart option={documentsOverTimeOption} height="300px" />
     </div>
   {/if}
@@ -239,7 +236,7 @@
   <!-- Word Count Distribution -->
   {#if data.stats.wordCountDistribution.some((d) => d.count > 0)}
     <div class="panel">
-      <h2 class="text-ink mb-4 text-lg font-semibold">Word Count Distribution</h2>
+      <h2 class="text-ink mb-4 text-lg font-semibold">Word count distribution</h2>
       <EChart option={wordCountOption} height="250px" />
     </div>
   {/if}
@@ -248,7 +245,7 @@
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     {#if data.stats.correspondentDistribution.length > 0}
       <div class="panel">
-        <h2 class="text-ink mb-4 text-lg font-semibold">Top Correspondents</h2>
+        <h2 class="text-ink mb-4 text-lg font-semibold">Top correspondents</h2>
         <EChart
           option={correspondentOption}
           height={`${Math.max(250, data.stats.correspondentDistribution.length * 28)}px`}
@@ -258,7 +255,7 @@
 
     {#if data.stats.documentTypeDistribution.length > 0}
       <div class="panel">
-        <h2 class="text-ink mb-4 text-lg font-semibold">Document Types</h2>
+        <h2 class="text-ink mb-4 text-lg font-semibold">Document types</h2>
         <EChart option={docTypeOption} height="300px" />
       </div>
     {/if}
@@ -267,40 +264,37 @@
   <!-- Tag Frequency -->
   {#if data.stats.tagDistribution.length > 0}
     <div class="panel">
-      <h2 class="text-ink mb-4 text-lg font-semibold">Tag Frequency</h2>
+      <h2 class="text-ink mb-4 text-lg font-semibold">Tag frequency</h2>
       <EChart option={tagOption} height="350px" />
     </div>
   {/if}
 
   <!-- Data Quality Divider -->
-  <div class="flex items-center gap-4">
-    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Data Quality</span>
-    <div class="divider flex-1"></div>
-  </div>
+  {@render sectionLabel('Data quality')}
 
   <!-- Data Quality -->
   {#if data.stats.unclassified.noCorrespondent > 0 || data.stats.unclassified.noDocumentType > 0 || data.stats.unclassified.noTags > 0}
     <div class="panel">
-      <h2 class="text-ink mb-4 text-lg font-semibold">Data Quality</h2>
+      <h2 class="text-ink mb-1 text-lg font-semibold">Data quality</h2>
       <p class="text-muted mb-3 text-sm">Documents missing classification metadata.</p>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="bg-canvas rounded-lg p-3 text-center">
-          <p class="text-ink text-2xl font-semibold">
+        <div class="panel-inset">
+          <p class="text-ink text-2xl font-semibold tabular-nums">
             {data.stats.unclassified.noCorrespondent}
           </p>
-          <p class="text-muted text-xs">No Correspondent</p>
+          <p class="label-micro">No correspondent</p>
         </div>
-        <div class="bg-canvas rounded-lg p-3 text-center">
-          <p class="text-ink text-2xl font-semibold">
+        <div class="panel-inset">
+          <p class="text-ink text-2xl font-semibold tabular-nums">
             {data.stats.unclassified.noDocumentType}
           </p>
-          <p class="text-muted text-xs">No Document Type</p>
+          <p class="label-micro">No document type</p>
         </div>
-        <div class="bg-canvas rounded-lg p-3 text-center">
-          <p class="text-ink text-2xl font-semibold">
+        <div class="panel-inset">
+          <p class="text-ink text-2xl font-semibold tabular-nums">
             {data.stats.unclassified.noTags}
           </p>
-          <p class="text-muted text-xs">No Tags</p>
+          <p class="label-micro">No tags</p>
         </div>
       </div>
     </div>
@@ -310,14 +304,15 @@
   {#if data.aiEnabled}
     <div class="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 class="text-ink text-lg font-semibold">AI Classification</h2>
+        <h2 class="text-ink text-lg font-semibold">AI classification</h2>
         <p class="text-muted mt-1 text-sm">
           Select documents to classify with AI metadata extraction.
         </p>
       </div>
+      <!-- One primary action per view region: the header owns it, so this is secondary. -->
       <a
         href="/ai-processing/queue"
-        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-center text-sm font-medium"
+        class="bg-surface text-ink border-border hover:bg-canvas hover:border-border-hover inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium whitespace-nowrap"
       >
         Go to AI Processing
       </a>
@@ -327,16 +322,23 @@
   <!-- External Link -->
   <div class="panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h2 class="text-ink text-lg font-semibold">Manage Documents</h2>
+      <h2 class="text-ink text-lg font-semibold">Manage documents</h2>
       <p class="text-muted mt-1 text-sm">Open Paperless-NGX to manage individual documents.</p>
     </div>
     <a
       href="{data.paperlessUrl}/documents/"
       target="_blank"
       rel="noopener noreferrer"
-      class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
+      class="bg-surface text-ink border-border hover:bg-canvas hover:border-border-hover inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium whitespace-nowrap"
     >
       Open Paperless-NGX
     </a>
   </div>
 </div>
+
+{#snippet sectionLabel(text: string)}
+  <div class="flex items-center gap-4">
+    <span class="label-micro">{text}</span>
+    <div class="divider flex-1"></div>
+  </div>
+{/snippet}
