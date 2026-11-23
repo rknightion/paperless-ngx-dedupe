@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@paperless-dedupe/core', () => ({
   CustomFieldPolicyError: mocks.PolicyError,
   createInteractiveAiProvider: mocks.createInteractiveAiProvider,
+  refreshPricingIfStale: vi.fn(),
   getAiConfig: vi.fn(() => ({
     model: 'gpt-5.4-mini',
     maxRetries: 1,

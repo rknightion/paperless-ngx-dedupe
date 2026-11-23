@@ -5,6 +5,7 @@ import { getAiConfig, setAiConfig } from '../config.js';
 import {
   estimateBatchCost,
   estimateResultCost,
+  fetchAndCachePricing,
   getExactModelPricing,
   getModelPricing,
   refreshPricingIfStale,
@@ -195,4 +196,26 @@ it.each([
     vi.unstubAllGlobals();
   }
   expect(fetchMock).toHaveBeenCalledTimes(fetches);
+});
+
+it('keeps cached prices for models missing from a refreshed price file', async () => {
+  const price = {
+    inputPerToken: 0.000001,
+    outputPerToken: 0.000002,
+    cacheReadPerToken: null,
+    cacheCreationPerToken: null,
+  };
+  handle.sqlite
+    .prepare("INSERT INTO app_config (key,value,updated_at) VALUES ('ai.modelPricingCache',?,?)")
+    .run(JSON.stringify({ 'gpt-5.4-mini': price }), new Date().toISOString());
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('{}', { status: 200 })),
+  );
+  try {
+    await fetchAndCachePricing(handle.db);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  expect(getExactModelPricing(handle.db, 'gpt-5.4-mini')).toEqual(price);
 });

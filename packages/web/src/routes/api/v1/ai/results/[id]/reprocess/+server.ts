@@ -4,6 +4,7 @@ import {
   createInteractiveAiProvider,
   getAiConfig,
   PaperlessClient,
+  refreshPricingIfStale,
   toPaperlessConfig,
   CustomFieldPolicyError,
 } from '@paperless-dedupe/core';
@@ -18,6 +19,7 @@ export const POST: RequestHandler = async ({ params, locals, url }) => {
     return apiError(ErrorCode.BAD_REQUEST, 'OpenAI API key is not configured');
   }
 
+  await refreshPricingIfStale(locals.db);
   const aiConfig = getAiConfig(locals.db);
   const paperlessConfig = toPaperlessConfig(locals.config);
   const client = new PaperlessClient(paperlessConfig);

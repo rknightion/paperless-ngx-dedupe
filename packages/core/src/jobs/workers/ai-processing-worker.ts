@@ -11,7 +11,7 @@ import {
   reserveAiBudget,
   UnknownAiModelPricingError,
 } from '../../ai/budget.js';
-import { getExactModelPricing } from '../../ai/costs.js';
+import { getExactModelPricing, refreshPricingIfStale } from '../../ai/costs.js';
 import type { AiRequestBudget } from '../../ai/extract.js';
 import { getAutomationSettings } from '../../scheduler/settings.js';
 
@@ -21,6 +21,8 @@ runWorkerTask(async (ctx, onProgress) => {
   const client = new PaperlessClient({ ...paperlessConfig, timeout: 120_000 });
 
   const aiConfig = getAiConfig(ctx.db);
+  // Every recorded cost and scheduled budget check below reads this cache.
+  await refreshPricingIfStale(ctx.db);
   const taskData = ctx.taskData as
     | {
         reprocess?: boolean;
