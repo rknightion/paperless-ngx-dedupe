@@ -143,8 +143,12 @@ require, the AI path above.
 - SvelteKit checks form submissions. Shared API validation also checks state-changing requests
   and requires `Content-Type: application/json` when they have a body. Automation may omit
   `Origin` and `Sec-Fetch-Site` headers.
-- Set `ORIGIN` to the URL users access, particularly behind a reverse proxy. When configured,
-  API requests must use its host and port. See [Troubleshooting ORIGIN environment
+- The app answers only for hosts it recognises: loopback, IP addresses, private-style names
+  (single-label, `.local`, `.lan`, `.internal`, `.intranet`, `.home`, `.home.arpa`), the
+  host in `ORIGIN`, and names listed in `ALLOWED_HOSTS`. Any other host gets `403`, so a public
+  domain needs one of those two settings. `ALLOWED_HOSTS=*` turns the check off and is not
+  recommended, because it lets a malicious website reach the app through the browser.
+- Set `ORIGIN` to the URL users access, particularly behind a reverse proxy. See [Troubleshooting ORIGIN environment
   variable](troubleshooting.md#origin-environment-variable).
 - If your Paperless-NGX instance uses a self-signed certificate, setting
   `NODE_TLS_REJECT_UNAUTHORIZED=0` to bypass the resulting Node.js TLS error is explicitly

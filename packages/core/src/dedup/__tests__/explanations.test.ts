@@ -240,3 +240,15 @@ describe('buildMatchExplanation', () => {
     });
   });
 });
+
+it('bounds the text it scans on the request thread', () => {
+  const filler = 'x '.repeat(30_000);
+  const explanation = buildMatchExplanation(
+    [
+      { documentId: 'primary', text: filler + 'Total £1,234.56' },
+      { documentId: 'comparison', text: filler + 'Total £9,876.54' },
+    ] as never,
+    'primary',
+  );
+  expect(explanation?.comparisons[0].differences).toEqual([]);
+});

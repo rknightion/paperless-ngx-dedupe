@@ -56,6 +56,7 @@ const configSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     PAPERLESS_METRICS_COLLECTORS: z.string().optional(),
+    ALLOWED_HOSTS: z.string().optional(),
     AI_ENABLED: z
       .string()
       .default('false')

@@ -5,6 +5,7 @@
   import type { ECharts } from 'echarts';
   import type { GraphNode, GraphEdge } from '@paperless-dedupe/core';
   import { chartPalette, readToken } from '$lib/theme/tokens';
+  import { formatGraphTooltip } from '$lib/duplicates/graph-tooltip';
 
   let { data } = $props();
 
@@ -50,35 +51,7 @@
     tooltip: {
       trigger: 'item',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      formatter: (params: any) => {
-        if (params.dataType === 'node') {
-          const d = params.data as { name: string; meta: GraphNode };
-          return [
-            `<strong>${d.meta.title}</strong>`,
-            `Correspondent: ${d.meta.correspondent ?? 'N/A'}`,
-            `Type: ${d.meta.documentType ?? 'N/A'}`,
-            `Groups: ${d.meta.groupCount}`,
-          ].join('<br/>');
-        }
-        if (params.dataType === 'edge') {
-          const d = params.data as { meta: GraphEdge };
-          const source = nodeMap.get(d.meta.source);
-          const target = nodeMap.get(d.meta.target);
-          const statusLabels: Record<string, string> = {
-            pending: 'Pending',
-            false_positive: 'False Positive',
-            ignored: 'Ignored',
-            deleted: 'Deleted',
-          };
-          const status = statusLabels[d.meta.status] ?? d.meta.status;
-          return [
-            `<strong>${(d.meta.confidenceScore * 100).toFixed(0)}% confidence</strong>`,
-            `${source?.title ?? '?'} &harr; ${target?.title ?? '?'}`,
-            `Status: ${status}`,
-          ].join('<br/>');
-        }
-        return '';
-      },
+      formatter: (params: any) => formatGraphTooltip(params, nodeMap),
     },
     series: [
       {

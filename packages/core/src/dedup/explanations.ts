@@ -96,6 +96,15 @@ function difference(left: Set<string>, right: Set<string>): Set<string> {
   return new Set([...left].filter((value) => !right.has(value)));
 }
 
+/** This runs on the request thread, so one very long document must not stall the server. */
+const MAX_EXPLANATION_TEXT_CHARS = 50_000;
+
+function explanationTokens(text: string | null | undefined) {
+  return extractDiscriminativeTokens(
+    (text ?? '').slice(0, MAX_EXPLANATION_TEXT_CHARS).toLowerCase(),
+  );
+}
+
 /**
  * Build a compact, deterministic explanation for one requested duplicate group.
  *
@@ -109,12 +118,12 @@ export function buildMatchExplanation(
   const primary = documents.find((document) => document.documentId === primaryDocumentId);
   if (!primary) return null;
 
-  const primaryTokens = extractDiscriminativeTokens((primary.text ?? '').toLowerCase());
+  const primaryTokens = explanationTokens(primary.text);
   const comparisons = documents
     .filter((document) => document.documentId !== primaryDocumentId)
     .sort((left, right) => left.documentId.localeCompare(right.documentId))
     .map((document): MatchExplanationComparison => {
-      const comparisonTokens = extractDiscriminativeTokens((document.text ?? '').toLowerCase());
+      const comparisonTokens = explanationTokens(document.text);
       const shared: MatchExplanationShared[] = [];
       const differences: MatchExplanationDifference[] = [];
 

@@ -553,3 +553,13 @@ describe('computeDiscriminativeScore', () => {
     });
   });
 });
+
+it('reads amounts without quadratic scanning of a long digit-and-comma run', () => {
+  const started = performance.now();
+  extractDiscriminativeTokens('111,'.repeat(40_000));
+  expect(performance.now() - started).toBeLessThan(5_000);
+  const { amounts } = extractDiscriminativeTokens(
+    'paid 1,234.56 usd then 2345.67 eur then 12,345,678.90',
+  );
+  expect([...amounts]).toEqual(expect.arrayContaining(['1234.56', '2345.67', '12345678.90']));
+}, 120_000);
