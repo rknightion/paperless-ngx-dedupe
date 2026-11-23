@@ -261,4 +261,24 @@ describe('duplicate inbox API', () => {
       },
     });
   });
+
+  it('adds a signed primary thumbnail only when media is requested', async () => {
+    mocks.getDuplicateGroups.mockReturnValue({
+      items: [
+        { id: 'with-primary', primaryPaperlessId: 7 },
+        { id: 'without-primary', primaryPaperlessId: null },
+      ],
+      total: 2,
+      totalMemberCount: 4,
+      limit: 10,
+      offset: 0,
+    });
+    const response = await GET({
+      url: new URL('http://localhost/api/v1/duplicates?includeMedia=true'),
+      locals: { db: {} },
+    } as never);
+    const { data } = await response.json();
+    expect(data[0].primaryThumbnailUrl).toMatch(/\/documents\/7\/thumb\?access=\d+\.[\w-]+$/);
+    expect(data[1].primaryThumbnailUrl).toBeNull();
+  });
 });

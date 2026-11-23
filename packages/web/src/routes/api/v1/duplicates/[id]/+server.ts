@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
+import { withThumbnailUrl } from '$lib/server/paperless-auth';
 import {
   getDuplicateGroup,
   getNextDuplicateGroupId,
@@ -35,7 +36,9 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   }
 
   return apiSuccess(
-    group,
+    light || url.searchParams.get('includeMedia') === 'true'
+      ? { ...group, members: group.members.map(withThumbnailUrl) }
+      : group,
     filters?.success
       ? {
           nextGroupId: getNextDuplicateGroupId(locals.db, {

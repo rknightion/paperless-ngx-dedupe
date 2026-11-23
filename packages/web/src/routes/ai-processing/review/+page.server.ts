@@ -1,4 +1,5 @@
 import { listAiReviewInbox, getAiConfig } from '@paperless-dedupe/core';
+import { withThumbnailUrl } from '$lib/server/paperless-auth';
 import { safeDocumentReturnTarget } from '$lib/utils/safe-return';
 import type { PageServerLoad } from './$types';
 
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   });
 
   return {
-    results: page.items,
+    results: page.items.map(withThumbnailUrl),
     total: page.total,
     limit,
     offset: 0,

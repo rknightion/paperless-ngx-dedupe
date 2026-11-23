@@ -95,6 +95,13 @@ export function createPaperlessMediaUrl(
   return `/api/v1/paperless/documents/${paperlessId}/${assetKind}?access=${expiresAt}.${signature}`;
 }
 
+/** Adds a signed thumbnail link to a row the application is already showing. */
+export function withThumbnailUrl<T extends { paperlessId: number }>(
+  item: T,
+): T & { thumbnailUrl: string } {
+  return { ...item, thumbnailUrl: createPaperlessMediaUrl(item.paperlessId, 'thumb') };
+}
+
 export function requirePaperlessAuthorization(
   request: Request,
   config: App.Locals['config'],

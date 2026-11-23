@@ -1,8 +1,10 @@
 import { apiSuccess } from '$lib/server/api';
+import { withThumbnailUrl } from '$lib/server/paperless-auth';
 import { getAiResults, listAiReviewInbox } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
+  const includeMedia = url.searchParams.get('includeMedia') === 'true';
   if (url.searchParams.get('mode') === 'inbox') {
     const requestedQueue = url.searchParams.get('queue');
     const queue =
@@ -32,7 +34,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         : {}),
       ...(failureCategory ? { failureCategory } : {}),
     });
-    return apiSuccess(page.items, {
+    return apiSuccess(includeMedia ? page.items.map(withThumbnailUrl) : page.items, {
       total: page.total,
       limit,
       nextCursor: page.nextCursor,
@@ -63,5 +65,5 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     offset,
   );
 
-  return apiSuccess(items, { total, limit, offset });
+  return apiSuccess(includeMedia ? items.map(withThumbnailUrl) : items, { total, limit, offset });
 };

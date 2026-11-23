@@ -60,6 +60,7 @@
       id: string;
       primaryDocumentTitle: string | null;
       primaryPaperlessId: number | null;
+      primaryThumbnailUrl?: string | null;
       confidenceScore: number;
       memberCount: number;
       jaccardSimilarity: number | null;
@@ -162,7 +163,7 @@
     isLoadingGroups = true;
     try {
       const res = await fetch(
-        `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=10&offset=${groupsOffset}&sortBy=${sortBy}&sortOrder=${sortOrder}`,
+        `/api/v1/duplicates?minConfidence=${threshold / 100}&status=pending&limit=10&offset=${groupsOffset}&sortBy=${sortBy}&sortOrder=${sortOrder}&includeMedia=true`,
       );
       const json = await res.json();
       groups = json.data ?? [];
@@ -611,7 +612,7 @@
                 class="rounded"
               />
               <ThumbnailPreview
-                paperlessId={group.primaryPaperlessId}
+                src={group.primaryThumbnailUrl}
                 alt={group.primaryDocumentTitle ?? 'Untitled'}
               />
               <span class="text-ink flex-1 truncate text-sm">

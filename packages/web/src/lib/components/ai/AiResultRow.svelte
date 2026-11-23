@@ -7,7 +7,7 @@
   const readOnly = $derived(page.data.readOnly === true);
 
   interface Props {
-    result: AiResultSummary;
+    result: AiResultSummary & { thumbnailUrl?: string };
     isSelected: boolean;
     isActive: boolean;
     onselect: () => void;
@@ -46,7 +46,7 @@
     }
   }
 
-  let thumbSrc = $derived(`/api/v1/paperless/documents/${result.paperlessId}/thumb`);
+  let thumbSrc = $derived(result.thumbnailUrl);
   let thumbError = $state(false);
 </script>
 
@@ -70,7 +70,7 @@
   </td>
   <td class="px-4 py-3">
     <div class="flex items-center gap-2.5">
-      {#if !thumbError}
+      {#if thumbSrc && !thumbError}
         <img
           src={thumbSrc}
           alt=""
