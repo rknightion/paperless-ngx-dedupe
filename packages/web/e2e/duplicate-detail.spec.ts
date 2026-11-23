@@ -57,7 +57,7 @@ test.describe('Duplicate Detail Page', () => {
     await page.goto(`/duplicates/${groupId}`);
 
     // Members heading
-    await expect(page.locator('h3', { hasText: 'Members' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Members', exact: true })).toBeVisible();
 
     // Members table should have headers
     const membersTable = page.locator('table').first();
@@ -198,6 +198,30 @@ test.describe('Duplicate Detail Page', () => {
     await expect(explanation.getByRole('heading', { name: 'Key differences' })).toBeVisible();
     await expect(explanation.getByText('lhr → jfk')).toBeVisible();
     await expect(explanation.getByText('jfk → lhr')).toBeVisible();
+
+    const primary = page.getByRole('article', { name: 'Primary Document' });
+    const compared = page.getByRole('article', { name: 'Compared Document' });
+    await expect(primary).toBeVisible();
+    await expect(compared).toBeVisible();
+    const primaryBox = await primary.boundingBox();
+    const comparedBox = await compared.boundingBox();
+    expect(comparedBox!.y).toBeGreaterThanOrEqual(primaryBox!.y + primaryBox!.height);
+    expect(comparedBox!.x + comparedBox!.width).toBeLessThanOrEqual(390);
+    expect(primaryBox!.x).toBeGreaterThanOrEqual(0);
+  });
+
+  test('comparison and decisions remain reachable with enlarged text', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 576 });
+    await page.goto(`/duplicates/${seed.groupIds[0]}`);
+    await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+
+    const comparison = page.getByRole('heading', { name: 'Document Comparison', exact: true });
+    await comparison.scrollIntoViewIfNeeded();
+    await expect(comparison).toBeInViewport();
+
+    const decision = page.getByRole('button', { name: 'Keep All', exact: true });
+    await decision.scrollIntoViewIfNeeded();
+    await expect(decision).toBeInViewport();
   });
 
   test('404 for non-existent group', async ({ page }) => {

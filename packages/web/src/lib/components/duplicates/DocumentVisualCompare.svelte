@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { DuplicateGroupMember } from '@paperless-dedupe/core';
+  import { type DuplicateGroupMember } from '@paperless-dedupe/core';
   import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
   import CaretRightIcon from 'phosphor-svelte/lib/CaretRightIcon';
 
@@ -32,10 +32,10 @@
   let thumbErrorSecondary = $state(false);
 </script>
 
-<div class="grid grid-cols-1 gap-4 overflow-hidden lg:grid-cols-2">
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
   <!-- Primary -->
   <div class="panel min-w-0">
-    <div class="mb-3 flex items-center justify-between">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <h4 class="text-ink text-lg font-semibold">Primary Document</h4>
         <span class="status-word text-ink uppercase">
@@ -45,7 +45,7 @@
       </div>
       <button
         onclick={() => (showPdfPrimary = !showPdfPrimary)}
-        class="border-border-hover text-ink-light hover:bg-canvas-deep h-[26px] rounded-sm border px-2.5 text-xs font-medium"
+        class="border-border-hover text-ink-light hover:bg-canvas-deep h-[26px] rounded-sm border px-2.5 text-xs font-medium max-md:h-8"
       >
         {showPdfPrimary ? 'Show Thumbnail' : 'View PDF'}
       </button>
@@ -77,7 +77,7 @@
 
   <!-- Secondary -->
   <div class="panel min-w-0">
-    <div class="mb-3 flex items-center justify-between">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <h4 class="text-ink text-lg font-semibold">Compared Document</h4>
         {#if secondaryCount > 1}
@@ -91,7 +91,7 @@
           <button
             onclick={() => onnavigate(secondaryIndex - 1)}
             disabled={!hasPrev}
-            class="border-border-hover text-ink-light hover:bg-canvas-deep disabled:text-disabled disabled:border-border inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm border disabled:cursor-not-allowed"
+            class="border-border-hover text-ink-light hover:bg-canvas-deep disabled:text-disabled disabled:border-border inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm border disabled:cursor-not-allowed max-md:size-8"
             title="Previous document"
           >
             <CaretLeftIcon class="h-4 w-4" />
@@ -99,7 +99,7 @@
           <button
             onclick={() => onnavigate(secondaryIndex + 1)}
             disabled={!hasNext}
-            class="border-border-hover text-ink-light hover:bg-canvas-deep disabled:text-disabled disabled:border-border inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm border disabled:cursor-not-allowed"
+            class="border-border-hover text-ink-light hover:bg-canvas-deep disabled:text-disabled disabled:border-border inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm border disabled:cursor-not-allowed max-md:size-8"
             title="Next document"
           >
             <CaretRightIcon class="h-4 w-4" />
@@ -107,7 +107,7 @@
         {/if}
         <button
           onclick={() => (showPdfSecondary = !showPdfSecondary)}
-          class="border-border-hover text-ink-light hover:bg-canvas-deep h-[26px] rounded-sm border px-2.5 text-xs font-medium"
+          class="border-border-hover text-ink-light hover:bg-canvas-deep h-[26px] rounded-sm border px-2.5 text-xs font-medium max-md:h-8"
         >
           {showPdfSecondary ? 'Show Thumbnail' : 'View PDF'}
         </button>

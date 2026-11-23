@@ -49,9 +49,9 @@
   );
 </script>
 
-<div class="panel">
-  <div class="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-    <h3 class="text-ink text-lg font-semibold">Confidence Breakdown</h3>
+<div class="panel max-md:p-2">
+  <div class="mb-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 md:mb-3">
+    <h2 class="text-ink text-lg font-semibold">Confidence Breakdown</h2>
     <ConfidenceBadge score={overallScore} />
     {#if showLegend}
       <ConfidenceLegend class="sm:ml-auto" />
@@ -59,17 +59,22 @@
   </div>
   <ul class="border-border divide-border divide-y border-y">
     {#each components as comp (comp.name)}
-      <li class="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
-        <span class="text-ink w-56 shrink-0 text-sm">
+      <li
+        class="grid grid-cols-[minmax(6.5rem,auto)_minmax(0,1fr)_auto] items-center gap-x-2 py-1 md:grid-cols-[14rem_minmax(6rem,1fr)_9rem] md:gap-x-4 md:py-2.5"
+      >
+        <span class="text-ink text-xs md:text-sm">
           {comp.name}
           {#if comp.note}<span class="text-muted font-mono">{comp.note}</span>{/if}
         </span>
-        <span class="h-1.5 min-w-24 flex-1 overflow-hidden bg-(--furniture)" aria-hidden="true">
+        <span
+          class="h-1.5 overflow-hidden {comp.pct > 0 ? 'bg-(--furniture)' : ''}"
+          aria-hidden="true"
+        >
           {#if comp.meta && comp.pct > 0}
             <span class="block h-full {comp.meta.fill}" style="width: {comp.pct}%"></span>
           {/if}
         </span>
-        <span class="w-36 shrink-0 text-right">
+        <span class="text-right">
           {#if comp.score !== null}
             <ConfidenceBadge score={comp.score} />
           {:else}

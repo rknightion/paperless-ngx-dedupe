@@ -41,6 +41,9 @@
 
   let isUpdating = $state(false);
   let error = $state<string | null>(null);
+  const deleteCountId = $props.id();
+  const deleteCount = $derived(Math.max(0, memberCount - 1));
+
   let showDeleteConfirm = $state(false);
   let mergeMetadata = $state(false);
   let mergePreview = $state<FrozenDuplicateGroup['merge'] | null>(null);
@@ -147,13 +150,15 @@
 </script>
 
 <div
-  class="border-border flex flex-wrap items-center gap-2 border px-4 py-3 {status === 'pending'
+  class="border-border flex flex-wrap items-center gap-2 border px-4 py-3 max-md:gap-1.5 max-md:p-2 {status ===
+  'pending'
     ? 'bg-surface'
     : 'bg-canvas'}"
 >
   {#if status === 'pending'}
     <Button
       variant="ghost"
+      class="max-md:h-8 max-md:flex-1 max-md:px-1.5 max-md:[&>svg]:hidden"
       icon={XCircleIcon}
       onclick={() => setStatus('false_positive')}
       disabled={isUpdating}
@@ -163,6 +168,7 @@
 
     <Button
       variant="secondary"
+      class="max-md:h-8 max-md:flex-1 max-md:px-1.5 max-md:[&>svg]:hidden"
       icon={CheckCircleIcon}
       onclick={() => setStatus('ignored')}
       disabled={isUpdating}
@@ -172,6 +178,9 @@
 
     <Button
       variant="destructive"
+      ariaLabel="Delete Duplicates"
+      describedBy={deleteCountId}
+      class="max-md:h-8 max-md:flex-1 max-md:px-1.5"
       icon={TrashIcon}
       onclick={() => {
         void previewMerge(false);
@@ -181,7 +190,11 @@
       title={readOnly ? 'Paperless is read-only' : undefined}
     >
       Delete Duplicates
+      <span aria-hidden="true" class="font-mono tabular-nums">({deleteCount})</span>
     </Button>
+    <span id={deleteCountId} class="sr-only">
+      Deletes {deleteCount} non-primary {deleteCount === 1 ? 'document' : 'documents'}.
+    </span>
   {:else if status === 'deleted'}
     <p class="text-muted text-sm">
       This group has been resolved — documents were deleted from Paperless-NGX.
