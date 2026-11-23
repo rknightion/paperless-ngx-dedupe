@@ -8,6 +8,8 @@
 exclude_paths:
   # Documentation site (Zensical/Markdown) — prose, not product code
   - 'docs/**'
+  # Design prototypes and mockups (design/ui-v2) — not shipped product code
+  - 'design/**'
   # Tests and fixtures — unit, e2e, and eval datasets
   - 'test/**'
   - 'tests/**'
