@@ -105,7 +105,9 @@ for (const scheme of ['light', 'dark'] as const) {
           await expect(result).toContainText('62.0%');
           await expect(result.getByText('lowest: Reference')).toBeVisible();
           await result.getByRole('button', { name: 'Test Document 1', exact: true }).press('Enter');
-          await expect(main.getByRole('button', { name: 'Close drawer' })).toBeVisible();
+          await expect(
+            main.getByRole('heading', { name: 'Test Document 1', exact: true }),
+          ).toBeVisible();
           await checkAxe();
         }
 
