@@ -60,14 +60,14 @@
   onclick={(e) => {
     if (e.target === dialog) onclose();
   }}
-  class="border-soft bg-surface m-auto w-full max-w-2xl rounded-xl border p-0 shadow-lg backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-200"
+  class="border-border-hover bg-surface-raised backdrop:bg-ink/50 m-auto w-full max-w-2xl rounded-md border p-0 shadow-lg backdrop:transition-opacity backdrop:duration-200"
   aria-labelledby="cost-comparison-title"
 >
   <div class="flex max-h-[80vh] flex-col">
     <!-- Header -->
-    <div class="border-soft flex items-start justify-between border-b px-6 py-4">
+    <div class="border-border flex items-start justify-between border-b px-6 py-4">
       <div>
-        <h2 id="cost-comparison-title" class="text-ink text-lg font-semibold">Cost Comparison</h2>
+        <h2 id="cost-comparison-title" class="text-ink text-lg font-semibold">Cost comparison</h2>
         <p class="text-muted mt-1 text-sm">
           {documentCount.toLocaleString()} unprocessed document{documentCount === 1 ? '' : 's'},
           {reasoningEffort} reasoning
@@ -75,9 +75,9 @@
       </div>
       <button
         onclick={onclose}
-        class="text-muted hover:text-ink -mt-1 -mr-1 rounded-lg p-1.5 transition-colors"
+        class="text-muted hover:text-ink -mt-1 -mr-1 p-1.5 transition-colors"
       >
-        <XIcon class="h-5 w-5" />
+        <XIcon class="h-4 w-4" />
       </button>
     </div>
 
@@ -86,20 +86,20 @@
       {#each [{ label: 'OpenAI', models: openaiModels }] as group (group.label)}
         {#if group.models.length > 0}
           <div class="mb-5 last:mb-0">
-            <h3 class="text-muted mb-2 text-xs font-medium tracking-wider uppercase">
+            <h3 class="label-micro mb-2">
               {group.label}
             </h3>
-            <div class="border-soft overflow-hidden rounded-lg border">
+            <div class="border-border overflow-hidden border">
               <table class="w-full">
                 <thead>
-                  <tr class="border-soft border-b">
+                  <tr class="border-border-hover border-b">
                     <th class="text-muted px-4 py-2.5 text-left text-xs font-medium">Model</th>
-                    <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">Best Case</th>
+                    <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">Best case</th>
                     <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">
-                      Worst Case
+                      Worst case
                     </th>
                     <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">
-                      Cache Savings
+                      Cache savings
                     </th>
                   </tr>
                 </thead>
@@ -107,18 +107,14 @@
                   {#each group.models as model (model.modelId)}
                     {@const isCurrent = model.modelId === currentModelId}
                     <tr
-                      class="border-soft border-b last:border-b-0 {isCurrent
-                        ? 'bg-accent-light/30'
+                      class="border-border border-b last:border-b-0 {isCurrent
+                        ? 'bg-selected'
                         : ''}"
                     >
                       <td class="px-4 py-3">
                         <span class="text-ink text-sm font-medium">{model.modelName}</span>
                         {#if isCurrent}
-                          <span
-                            class="bg-accent/10 text-accent ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                          >
-                            current
-                          </span>
+                          <span class="text-muted ml-1.5 font-mono text-xs">current</span>
                         {/if}
                       </td>
                       <td class="px-4 py-3 text-right">
@@ -162,10 +158,10 @@
     </div>
 
     <!-- Footer -->
-    <div class="border-soft flex items-center justify-end border-t px-6 py-4">
+    <div class="border-border flex items-center justify-end border-t px-6 py-4">
       <button
         onclick={onclose}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
+        class="border-border text-ink hover:bg-canvas-deep h-7 rounded-sm border px-3 text-sm font-medium"
       >
         Close
       </button>
