@@ -75,12 +75,13 @@
   );
 </script>
 
-<div class="border-soft bg-surface border p-4 transition-opacity {excluded ? 'opacity-50' : ''}">
+<div class="border-soft bg-surface border p-4">
   <!-- Header row -->
   <div class="mb-3 flex items-center gap-3">
     <input
       type="checkbox"
       checked={!excluded}
+      aria-label={`Include ${group.primaryDocumentTitle ?? 'untitled group'}`}
       onchange={ontoggle}
       class="accent-accent rounded-sm"
     />

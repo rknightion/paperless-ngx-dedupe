@@ -20,6 +20,7 @@
 <span
   class="relative inline-flex shrink-0"
   role="img"
+  aria-label={alt}
   onmouseenter={() => (hovered = true)}
   onmouseleave={() => (hovered = false)}
 >

@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { nanoid } from 'nanoid';
+import { randomBytes } from 'node:crypto';
 
 interface SeedOptions {
   documentCount?: number;
@@ -46,8 +47,8 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
   `);
 
   const insertJob = db.prepare(`
-    INSERT OR IGNORE INTO job (id, type, status, progress, progress_message, started_at, completed_at, error_message, result_json, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO job (id, type, status, progress, progress_message, started_at, completed_at, error_message, result_json, created_at, public_history_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const correspondents = ['Alice Corp', 'Bob Industries', 'Charlie LLC', null];
@@ -153,6 +154,7 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
       null,
       JSON.stringify({ documentsProcessed: docCount }),
       '2024-01-10T00:00:00Z',
+      randomBytes(16).toString('hex'),
     );
 
     insertJob.run(
@@ -166,6 +168,7 @@ export function seedDatabase(dbPath: string, options?: SeedOptions): SeedResult 
       null,
       JSON.stringify({ groupsFound: groupCount }),
       '2024-01-10T00:05:00Z',
+      randomBytes(16).toString('hex'),
     );
 
     // Insert sync state

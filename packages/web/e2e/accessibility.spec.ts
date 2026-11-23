@@ -1,24 +1,131 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from './fixtures/test-app';
+import Database from 'better-sqlite3';
+import { DB_PATH, expect, test } from './fixtures/test-app';
 
-test.describe('accessibility', () => {
-  test.beforeEach(async ({ seedDB }) => {
-    seedDB();
-  });
+const missingPage = '/accessibility-test-missing';
+const routes = [
+  ['/', 'Dashboard'],
+  ['/documents', 'Documents'],
+  ['/documents?library=true', 'Document Library'],
+  ['/duplicates', 'Duplicate Groups'],
+  ['/duplicates/[id]', 'Document Comparison'],
+  ['/duplicates/graph', 'Similarity Graph'],
+  ['/duplicates/wizard', 'Bulk Operations Wizard'],
+  ['/jobs', 'Job History'],
+  ['/settings', 'Settings'],
+  ['/ai-processing', 'AI processing'],
+  ['/ai-processing/queue', 'Unprocessed documents'],
+  ['/ai-processing/review', 'AI processing'],
+  ['/ai-processing/history', 'AI processing'],
+  ['/ai-processing/custom-fields', 'Discover custom fields'],
+  [missingPage, 'Page not found'],
+] as const;
 
-  test.afterEach(async ({ clearDB }) => {
-    clearDB();
-  });
-
-  for (const path of ['/', '/settings', '/documents', '/duplicates', '/ai-processing/review']) {
-    test(`${path} has no serious or critical accessibility violations`, async ({ page }) => {
-      await page.goto(path);
-      const results = await new AxeBuilder({ page }).analyze();
-      expect(
-        results.violations.filter((violation) =>
-          ['serious', 'critical'].includes(violation.impact ?? ''),
-        ),
-      ).toEqual([]);
-    });
+function seedAiResults(documentIds: string[]): void {
+  const db = new Database(DB_PATH);
+  try {
+    const insert = db.prepare(`
+      INSERT INTO ai_processing_result (
+        id, document_id, paperless_id, provider, model, suggested_title,
+        suggested_correspondent, confidence_json, suggested_custom_fields_json, applied_status, created_at
+      ) VALUES (?, ?, ?, 'openai', 'fixture', 'Suggested title', ?,
+        '{"title":0.82,"correspondent":0.95}', ?, ?, '2026-01-01T00:00:00.000Z')
+    `);
+    const customFields = JSON.stringify([
+      {
+        fieldId: 1,
+        fieldName: 'Reference',
+        value: 'sample',
+        confidence: 0.62,
+        evidence: 'Fixture',
+      },
+    ]);
+    insert.run('a11y-pending', documentIds[0], 1, null, customFields, 'pending_review');
+    insert.run('a11y-applied', documentIds[1], 2, 'long-value'.repeat(100), null, 'applied');
+  } finally {
+    db.close();
   }
-});
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test.describe(`accessibility in ${scheme} mode`, () => {
+    test.use({ colorScheme: scheme });
+
+    test.afterEach(({ clearDB }) => {
+      clearDB();
+    });
+
+    for (const [route, heading] of routes) {
+      test(`${route} passes axe`, async ({ page, seedDB }) => {
+        const { documentIds, groupIds } = seedDB();
+        if (route.startsWith('/ai-processing')) seedAiResults(documentIds);
+
+        const path =
+          route === missingPage
+            ? `${missingPage}/${'x'.repeat(240)}`
+            : route.replace('[id]', groupIds[0]);
+        const response = await page.goto(path);
+        expect(response?.status()).toBe(route === missingPage ? 404 : 200);
+        await expect(page).toHaveURL(route === '/ai-processing' ? '/ai-processing/review' : path);
+
+        // Wait for the real theme control to respond so an SSR shell or error
+        // page cannot stand in for the hydrated route.
+        const themeRadio = page.getByRole('radio', { name: scheme, exact: false });
+        await expect(async () => {
+          await themeRadio.click();
+          await expect(themeRadio).toBeChecked({ timeout: 500 });
+        }).toPass({ timeout: 10_000 });
+        await expect(page.locator('html')).toHaveCSS('color-scheme', scheme);
+        const main = page.getByRole('main');
+        await expect(main.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+
+        const checkAxe = async () => {
+          const results = await new AxeBuilder({ page }).analyze();
+          expect(results.violations).toEqual([]);
+        };
+        await checkAxe();
+
+        if (route === '/duplicates/wizard') {
+          await page.getByRole('slider').fill('50');
+          const next = page.getByRole('button', { name: 'Next', exact: true });
+          await next.click();
+          await expect(page.getByRole('heading', { name: 'Review Matching Groups' })).toBeVisible();
+          await expect(next).toBeEnabled();
+          // The populated panel enables Next asynchronously. Scan its settled colours.
+          await next.evaluate(async (button) => {
+            await Promise.allSettled(button.getAnimations().map((animation) => animation.finished));
+          });
+          await checkAxe();
+        }
+
+        if (route === '/settings') {
+          await page.getByRole('tab', { name: 'AI Processing', exact: true }).click();
+          await page.getByRole('button', { name: /^Show .*Prompt Template$/ }).click();
+          await page.getByRole('checkbox', { name: 'Enable Tag Alias Mapping' }).check();
+          await page.getByRole('button', { name: /^Show .*Tag Alias Map$/ }).click();
+          await checkAxe();
+        }
+
+        if (route === '/ai-processing/review') {
+          const result = main.getByRole('row').filter({ hasText: 'Test Document 1' });
+          await expect(result).toContainText('62.0%');
+          await expect(result.getByText('lowest: Reference')).toBeVisible();
+          await result.getByRole('button', { name: 'Test Document 1', exact: true }).press('Enter');
+          await expect(
+            main.getByRole('heading', { name: 'Test Document 1', exact: true }),
+          ).toBeVisible();
+          await checkAxe();
+        }
+
+        if (route === '/ai-processing/history') {
+          await expect(main.getByRole('table')).toBeVisible();
+        }
+        if (route === '/ai-processing/history' || route === missingPage) {
+          await expect
+            .poll(() => main.evaluate((element) => element.scrollWidth - element.clientWidth))
+            .toBe(0);
+        }
+      });
+    }
+  });
+}
