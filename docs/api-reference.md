@@ -573,6 +573,7 @@ allows the pair to be considered by a later analysis; it does not run analysis i
 ### GET /api/v1/duplicates/:id
 
 Add `includeMedia=true` to include a signed `thumbnailUrl` on each member, valid for one hour.
+A `light=true` response always includes it.
 
 Returns group details. Each member includes the nullable file facts `originalFileName`,
 `archiveSerialNumber`, `pageCount`, and `mimeType`, including in light responses. These are

@@ -36,7 +36,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
   }
 
   return apiSuccess(
-    url.searchParams.get('includeMedia') === 'true'
+    light || url.searchParams.get('includeMedia') === 'true'
       ? { ...group, members: group.members.map(withThumbnailUrl) }
       : group,
     filters?.success

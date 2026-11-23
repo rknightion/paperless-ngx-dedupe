@@ -185,7 +185,7 @@
     const results = await Promise.all(
       uncached.map(async (g) => {
         try {
-          const res = await fetch(`/api/v1/duplicates/${g.id}?light=true&includeMedia=true`);
+          const res = await fetch(`/api/v1/duplicates/${g.id}?light=true`);
           const json = await res.json();
           return { id: g.id, members: json.data.members as DuplicateGroupMember[] };
         } catch {
