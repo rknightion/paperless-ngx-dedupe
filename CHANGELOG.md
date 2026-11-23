@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.2.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v1.1.0...v1.2.0) (2026-11-23)
+
+
+### Features
+
+* **web:** move to design system v2 tokens, fonts and icons ([#999](https://github.com/rknightion/paperless-ngx-dedupe/issues/999)) ([9ee756d](https://github.com/rknightion/paperless-ngx-dedupe/commit/9ee756d455cc4278b8243b1b98e2d4d2c2f38252))
+* **web:** restyle AI onto design system v2 ([#1008](https://github.com/rknightion/paperless-ngx-dedupe/issues/1008)) ([cef0b4a](https://github.com/rknightion/paperless-ngx-dedupe/commit/cef0b4af99a7e9e1e7bbf5629e3179b28ac3a0c7))
+* **web:** restyle documents onto design system v2 ([#1002](https://github.com/rknightion/paperless-ngx-dedupe/issues/1002)) ([aec293c](https://github.com/rknightion/paperless-ngx-dedupe/commit/aec293c8f16071b5381b41082413e895e0e62a8e))
+* **web:** restyle duplicates onto design system v2 ([#1006](https://github.com/rknightion/paperless-ngx-dedupe/issues/1006)) ([a2d4693](https://github.com/rknightion/paperless-ngx-dedupe/commit/a2d4693bf244e756d13c8c6aa2453997d7b4fea2))
+* **web:** restyle first-run checklist dismissal onto design system v2 ([#1010](https://github.com/rknightion/paperless-ngx-dedupe/issues/1010)) ([c06d0bf](https://github.com/rknightion/paperless-ngx-dedupe/commit/c06d0bf737a85fe26133b067848657c8c9b2d406))
+* **web:** restyle primitives onto design system v2 ([#1007](https://github.com/rknightion/paperless-ngx-dedupe/issues/1007)) ([3b31c6e](https://github.com/rknightion/paperless-ngx-dedupe/commit/3b31c6ebc6fda0477327113c47131f8911716f22))
+* **web:** restyle settings and jobs onto design system v2 ([#1003](https://github.com/rknightion/paperless-ngx-dedupe/issues/1003)) ([e9760cf](https://github.com/rknightion/paperless-ngx-dedupe/commit/e9760cfd0039640b6061dd831d171fdf23ca5b1b))
+* **web:** restyle shell and dashboard onto design system v2 ([#1004](https://github.com/rknightion/paperless-ngx-dedupe/issues/1004)) ([76414e3](https://github.com/rknightion/paperless-ngx-dedupe/commit/76414e38fce692deb3682387370a93c3ebc7a026))
+
+
+### Bug Fixes
+
+* **web:** align the chart success token with app.css ([#1000](https://github.com/rknightion/paperless-ngx-dedupe/issues/1000)) ([64a85a5](https://github.com/rknightion/paperless-ngx-dedupe/commit/64a85a50511d8c4dccd4b0792973cffb3febb760))
+* **web:** fit duplicate comparisons and decisions at narrow widths ([#1020](https://github.com/rknightion/paperless-ngx-dedupe/issues/1020)) ([102e9e6](https://github.com/rknightion/paperless-ngx-dedupe/commit/102e9e64209a9bef365dd4820ec37924b1387137))
+* **web:** hydrate similarity graphs and refresh their palettes ([#1016](https://github.com/rknightion/paperless-ngx-dedupe/issues/1016)) ([f3cbcf4](https://github.com/rknightion/paperless-ngx-dedupe/commit/f3cbcf49237fc6476e5e287fb0f371ccd078d652))
+* **web:** keep document library results reachable at narrow widths ([#1019](https://github.com/rknightion/paperless-ngx-dedupe/issues/1019)) ([4a759a4](https://github.com/rknightion/paperless-ngx-dedupe/commit/4a759a4925f3d17a02e5fa724aa24dd22c099f43))
+* **web:** keep duplicate and job list headings in view ([#1017](https://github.com/rknightion/paperless-ngx-dedupe/issues/1017)) ([2e074aa](https://github.com/rknightion/paperless-ngx-dedupe/commit/2e074aaee011cbb8d59541ce794753fa25bcac68))
+* **web:** keep review controls and error details usable ([#1021](https://github.com/rknightion/paperless-ngx-dedupe/issues/1021)) ([02b8112](https://github.com/rknightion/paperless-ngx-dedupe/commit/02b811285005fee1107c4890316271122fd57656))
+* **web:** name AI queue controls and fit history rows ([#1014](https://github.com/rknightion/paperless-ngx-dedupe/issues/1014)) ([a24f85c](https://github.com/rknightion/paperless-ngx-dedupe/commit/a24f85c8f423dd2dca24f18f404824820d77a5e2))
+* **web:** restore focus from the navigation drawer ([#1018](https://github.com/rknightion/paperless-ngx-dedupe/issues/1018)) ([50fddae](https://github.com/rknightion/paperless-ngx-dedupe/commit/50fddaee3e35236a37915633a7e1d23c4096ed6e))
+* **web:** restore wizard landmarks and label settings fields ([#1015](https://github.com/rknightion/paperless-ngx-dedupe/issues/1015)) ([d1661db](https://github.com/rknightion/paperless-ngx-dedupe/commit/d1661db066dc7dea882d571a4be44a67d28392a2))
+* **web:** show weakest AI confidence and expose row details to keyboard ([#1022](https://github.com/rknightion/paperless-ngx-dedupe/issues/1022)) ([2963109](https://github.com/rknightion/paperless-ngx-dedupe/commit/2963109c2a07babd7fd3e1bc2328bc285b689023))
+
+
+### Miscellaneous
+
+* **vended:** sync from rknightion/.github main ([#1005](https://github.com/rknightion/paperless-ngx-dedupe/issues/1005)) ([241dc6f](https://github.com/rknightion/paperless-ngx-dedupe/commit/241dc6fd1351d56454db5c5b8f3338fd19a95029))
+* **vended:** sync from rknightion/.github main ([#1012](https://github.com/rknightion/paperless-ngx-dedupe/issues/1012)) ([211f3fb](https://github.com/rknightion/paperless-ngx-dedupe/commit/211f3fb62041e49b8870d3ffcab5b417efec46d7))
+
+
+### Documentation
+
+* record how pull request checks are packed ([#1001](https://github.com/rknightion/paperless-ngx-dedupe/issues/1001)) ([6d3f0c8](https://github.com/rknightion/paperless-ngx-dedupe/commit/6d3f0c8221da0e1d65d60f9c7f1f1db0a2c69d1f))
+
+
+### Refactoring
+
+* **web:** adopt shared button and form components ([#994](https://github.com/rknightion/paperless-ngx-dedupe/issues/994)) ([a465187](https://github.com/rknightion/paperless-ngx-dedupe/commit/a465187c0ac21dd4fe41ab6e30674cf7ebf56361))
+* **web:** use one confidence legend ([#1011](https://github.com/rknightion/paperless-ngx-dedupe/issues/1011)) ([13f6a90](https://github.com/rknightion/paperless-ngx-dedupe/commit/13f6a90c00c8ab019e22f898c5c1d99d37d9e2f3))
+
+
+### Tests
+
+* **web:** audit every route with axe in both themes ([#1013](https://github.com/rknightion/paperless-ngx-dedupe/issues/1013)) ([e1d7875](https://github.com/rknightion/paperless-ngx-dedupe/commit/e1d78751001eb7510c9a9dc18e77a89714dd1f5d))
+
 ## [1.1.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v1.0.0...v1.1.0) (2026-11-23)
 
 
