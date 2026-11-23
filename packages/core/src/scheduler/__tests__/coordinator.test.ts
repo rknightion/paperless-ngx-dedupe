@@ -991,6 +991,8 @@ describe('schedule coordinator durable claims', () => {
       status: 'failed',
     });
     expect(dismissDeadLetterJob(db, intent.jobId!)).toBe(false);
+    expect(clearJobHistory(db)).toBe(1);
+    expect(getJob(db, intent.jobId!)).toBeNull();
   });
 
   it('does not let the legacy createJob path bypass an existing compatible-operation lease', () => {

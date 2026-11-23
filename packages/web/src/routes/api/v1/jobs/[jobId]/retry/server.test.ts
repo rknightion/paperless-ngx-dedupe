@@ -24,10 +24,10 @@ vi.mock('../../../../../../runtime.server', () => ({
 
 import { POST } from './+server';
 
-const retry = (readOnly = false) =>
+const retry = (readOnly = false, aiEnabled = true) =>
   POST({
     params: { jobId: 'job-1' },
-    locals: { db: {}, config: { PAPERLESS_READ_ONLY: readOnly } },
+    locals: { db: {}, config: { PAPERLESS_READ_ONLY: readOnly, AI_ENABLED: aiEnabled } },
   } as never);
 
 beforeEach(() => {
@@ -61,6 +61,15 @@ it.each(['batch_operation', 'duplicate_restore', 'ai_apply', 'ai_revert'])(
     mocks.getJob.mockReturnValue({ id: 'job-1', type, status: 'failed' });
     const response = await retry(true);
     expect((await response.json()).error.code).toBe('READ_ONLY');
+    expect(mocks.retryDeadLetterJob).not.toHaveBeenCalled();
+  },
+);
+
+it.each(['ai_processing', 'ai_apply', 'ai_revert', 'custom_field_discovery'])(
+  'refuses to retry %s while AI is disabled',
+  async (type) => {
+    mocks.getJob.mockReturnValue({ id: 'job-1', type, status: 'failed' });
+    expect((await retry(false, false)).status).toBe(400);
     expect(mocks.retryDeadLetterJob).not.toHaveBeenCalled();
   },
 );

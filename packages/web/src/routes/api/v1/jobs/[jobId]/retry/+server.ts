@@ -11,11 +11,18 @@ const PAPERLESS_WRITING_JOBS = new Set([
   'ai_revert',
 ]);
 
+const AI_JOBS = new Set(['ai_processing', 'ai_apply', 'ai_revert', 'custom_field_discovery']);
+
 export const POST: RequestHandler = async ({ params, locals }) => {
   const job = getJob(locals.db, params.jobId);
   if (!job) return apiError(ErrorCode.NOT_FOUND, { operation: 'job_retry', retryable: false });
   if (locals.config.PAPERLESS_READ_ONLY && PAPERLESS_WRITING_JOBS.has(job.type)) {
     return apiError(ErrorCode.READ_ONLY, { operation: 'job_retry', retryable: false });
+  }
+
+  // The workers do not check this switch, and a retry would send document text to the provider.
+  if (!locals.config.AI_ENABLED && AI_JOBS.has(job.type)) {
+    return apiError(ErrorCode.BAD_REQUEST, { operation: 'job_retry', retryable: false });
   }
 
   const runtime = await getServerRuntime();

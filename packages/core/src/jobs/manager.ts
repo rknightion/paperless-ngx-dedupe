@@ -565,14 +565,28 @@ export function failJob(db: AppDatabase, id: string, error: string, executionTok
 
 /** Acknowledges an exhausted job without running it, so it stops counting as a dead letter. */
 export function dismissDeadLetterJob(db: AppDatabase, id: string): boolean {
-  const dismissed = sqliteFor(db)
-    .prepare(
-      `UPDATE dispatch_intent
-       SET status = 'cancelled', next_attempt_at = NULL, updated_at = ?
-       WHERE job_id = ? AND status = 'dead_letter'`,
-    )
-    .run(new Date().toISOString(), id);
-  return dismissed.changes > 0;
+  const sqlite = sqliteFor(db);
+  sqlite.exec('BEGIN IMMEDIATE');
+  try {
+    const dismissed = sqlite
+      .prepare(
+        `UPDATE dispatch_intent
+         SET status = 'cancelled', next_attempt_at = NULL, updated_at = ?
+         WHERE job_id = ? AND status = 'dead_letter'`,
+      )
+      .run(new Date().toISOString(), id);
+    // Without a terminal reason the failed job becomes ordinary, clearable history.
+    if (dismissed.changes > 0) {
+      sqlite
+        .prepare("UPDATE job SET terminal_reason = NULL WHERE id = ? AND status = 'failed'")
+        .run(id);
+    }
+    sqlite.exec('COMMIT');
+    return dismissed.changes > 0;
+  } catch (error) {
+    sqlite.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 /** Requeues an exhausted job only after an explicit manual retry request. */
