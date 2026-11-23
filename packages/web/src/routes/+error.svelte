@@ -29,7 +29,9 @@
     <p class="status-word text-ember">● FAIL</p>
     <h1 class="text-ink mt-2 text-lg font-semibold">{title}</h1>
     <p class="text-ink-light mt-1 text-base">{description}</p>
-    <p class="text-muted mt-3 font-mono text-xs">{status} · {page.url.pathname}</p>
+    <p class="text-muted mt-3 font-mono text-xs [overflow-wrap:anywhere]">
+      {status} · {page.url.pathname}
+    </p>
     <div class="mt-4 flex flex-wrap gap-2">
       <Button href="/">Back to Dashboard</Button>
       <Button variant="outline" onclick={() => history.back()}>Go Back</Button>

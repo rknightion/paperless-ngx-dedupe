@@ -32,7 +32,7 @@
     : 'hover:bg-canvas-deep'}"
   {onclick}
   onkeydown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       onclick();
     }

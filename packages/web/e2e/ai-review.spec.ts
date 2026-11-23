@@ -179,6 +179,17 @@ test.describe('unified AI review inbox', () => {
     clearDB();
   });
 
+  test('Space selects an AI result from a narrow review card', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/ai-processing/review');
+    const result = page
+      .locator('main [role="button"]')
+      .getByRole('checkbox', { name: 'Select Test Document 1', exact: true });
+    await result.focus();
+    await page.keyboard.press('Space');
+    await expect(result).toBeChecked();
+  });
+
   test('reviews explicit fields and creates a token-backed batch preview', async ({ page }) => {
     await page.goto('/ai-processing/review?queue=review&limit=20');
     const detailResponse = page.waitForResponse((response) =>

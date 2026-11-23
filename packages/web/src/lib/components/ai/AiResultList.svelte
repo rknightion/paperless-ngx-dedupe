@@ -38,7 +38,7 @@
     <p class="mt-1">Try adjusting your filters or process more documents to see results here.</p>
   </div>
 {:else if viewMode === 'table'}
-  <div class="border-border overflow-x-auto border-y">
+  <div class="border-border border-y">
     <table class="w-full table-fixed border-collapse text-left text-base">
       <thead>
         <tr>
@@ -59,7 +59,7 @@
             Document
           </th>
           <th
-            class="label-micro bg-surface border-border-hover sticky top-0 z-10 w-[34%] border-b px-3 py-1.5 text-left"
+            class="label-micro bg-surface border-border-hover sticky top-0 z-10 border-b px-3 py-1.5 text-left"
           >
             Suggested title
           </th>
