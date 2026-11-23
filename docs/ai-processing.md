@@ -196,9 +196,9 @@ background job ID. See the [reviewed API flow](api-reference.md#reviewed-apply-a
 
 ### Bulk apply and reject
 
-`AI_BULK_ALL_ENABLED=true` enables the apply-all and reject-all API endpoints; the default is
-`false`. Apply-all still requires a reviewed plan token. Batch operations for explicitly selected
-results do not require this switch.
+`AI_BULK_ALL_ENABLED=true` enables the apply-all and reject-all API endpoints, and apply plans for
+the `all_pending` and `current_filter` scopes; the default is `false`. Apply-all still requires a
+reviewed plan token. Batch operations for explicitly selected results do not require this switch.
 
 ## Discovering Custom Fields
 
