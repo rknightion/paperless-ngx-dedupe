@@ -6,7 +6,7 @@
   let deletionRun = $state<UndoDeletionRun | null>(null);
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { Button, Checkbox, ConfirmDialog, RecycleBinPrompt } from '$lib/components';
+  import { Button, Checkbox, ConfirmDialog, RecycleBinPrompt, Spinner } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import ArrowCounterClockwiseIcon from 'phosphor-svelte/lib/ArrowCounterClockwiseIcon';
   import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
@@ -147,13 +147,13 @@
 </script>
 
 <div
-  class="panel flex flex-wrap items-center gap-3 {status === 'pending'
-    ? 'border-accent bg-accent-subtle border-2'
+  class="border-border flex flex-wrap items-center gap-2 border px-4 py-3 {status === 'pending'
+    ? 'bg-surface'
     : 'bg-canvas'}"
 >
   {#if status === 'pending'}
     <Button
-      variant="outline"
+      variant="ghost"
       icon={XCircleIcon}
       onclick={() => setStatus('false_positive')}
       disabled={isUpdating}
@@ -161,7 +161,12 @@
       Not a Duplicate
     </Button>
 
-    <Button icon={CheckCircleIcon} onclick={() => setStatus('ignored')} disabled={isUpdating}>
+    <Button
+      variant="secondary"
+      icon={CheckCircleIcon}
+      onclick={() => setStatus('ignored')}
+      disabled={isUpdating}
+    >
       Keep All
     </Button>
 
@@ -183,7 +188,7 @@
     </p>
   {:else}
     <Button
-      variant="outline"
+      variant="secondary"
       icon={ArrowCounterClockwiseIcon}
       onclick={() => setStatus('pending')}
       disabled={isUpdating}
@@ -194,10 +199,10 @@
 
   {#if deleteProgress}
     <div class="text-muted flex items-center gap-2 text-sm">
-      <span
-        class="border-accent inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
-      ></span>
-      {deleteProgress.message || `${Math.round(deleteProgress.progress * 100)}%`}
+      <Spinner size="sm" label={null} class="text-accent" />
+      <span class="font-mono text-xs tabular-nums">
+        {deleteProgress.message || `${Math.round(deleteProgress.progress * 100)}%`}
+      </span>
     </div>
   {/if}
 
@@ -241,7 +246,7 @@
     onclick={(e) => {
       if (e.target === e.currentTarget) goto(returnHref);
     }}
-    class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
+    class="border-border-hover bg-surface-raised rounded-overlay backdrop:bg-inverse/55 fixed inset-0 z-50 m-auto max-w-md border p-6 shadow-lg"
   >
     <h2 class="text-ink text-lg font-semibold">Delete Complete</h2>
     <RecycleBinPrompt {deletionRun} onclose={() => goto(returnHref)} />

@@ -20,7 +20,7 @@
     {id}
     bind:value
     {disabled}
-    class="border-soft bg-surface text-ink mt-2 w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+    class="border-border bg-surface-raised text-ink disabled:text-disabled mt-1 h-7 w-full rounded-sm border px-2 text-sm disabled:cursor-not-allowed"
   >
     {#each PRIMARY_STRATEGIES as strategy (strategy)}<option value={strategy}>
         {labels[strategy]}
