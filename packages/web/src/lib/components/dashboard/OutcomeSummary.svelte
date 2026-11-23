@@ -1,16 +1,7 @@
 <script lang="ts">
-  import { JobStatusCard, StatCard } from '$lib/components';
-  import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
-  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
-  import ClockIcon from 'phosphor-svelte/lib/ClockIcon';
-  import FilesIcon from 'phosphor-svelte/lib/FilesIcon';
-  import LightningIcon from 'phosphor-svelte/lib/LightningIcon';
-  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+  import { JobStatusCard } from '$lib/components';
 
   interface Dashboard {
-    totalDocuments: number;
-    pendingGroups: number;
-    pendingAnalysis: number;
     lastSyncDocumentCount: number | null;
     totalDuplicateGroups: number | null;
   }
@@ -47,36 +38,21 @@
   const totalTokens = $derived(
     aiStats ? aiStats.totalPromptTokens + aiStats.totalCompletionTokens : 0,
   );
+
+  const aiCell = 'bg-surface px-4 py-3';
+  const aiLinkCell = `${aiCell} text-ink hover:bg-canvas-deep block`;
 </script>
 
 <section aria-labelledby="outcome-summary-heading" class="space-y-4">
   <div>
     <h2 id="outcome-summary-heading" class="text-ink text-lg font-semibold">Outcome summary</h2>
-    <p class="text-muted mt-1 text-sm">A compact view of the work completed and still waiting.</p>
+    <p class="text-muted mt-0.5 text-sm">A compact view of the work completed and still waiting.</p>
   </div>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <a href="/documents" class="rounded-xl focus-visible:outline-none">
-      <StatCard label="Total Documents" value={dashboard.totalDocuments.toLocaleString()}>
-        {#snippet icon()}<FilesIcon class="h-5 w-5" />{/snippet}
-      </StatCard>
-    </a>
-    <a href="/duplicates" class="rounded-xl focus-visible:outline-none">
-      <StatCard label="Pending Groups" value={dashboard.pendingGroups.toLocaleString()}>
-        {#snippet icon()}<WarningCircleIcon class="h-5 w-5" />{/snippet}
-      </StatCard>
-    </a>
-    <a href="/documents?processingStatus=pending" class="rounded-xl focus-visible:outline-none">
-      <StatCard label="Pending Analysis" value={dashboard.pendingAnalysis.toLocaleString()}>
-        {#snippet icon()}<ClockIcon class="h-5 w-5" />{/snippet}
-      </StatCard>
-    </a>
-  </div>
-
-  <div class="grid gap-3 sm:grid-cols-2">
-    <div class="panel-inset">
-      <p class="text-muted text-xs font-medium">Last sync outcome</p>
-      <p class="text-ink mt-1 text-sm">
+  <div class="border-border bg-border grid gap-px border sm:grid-cols-2">
+    <div class="bg-surface px-4 py-3">
+      <p class="label-micro">Last sync outcome</p>
+      <p class="text-ink mt-1 text-base">
         {#if dashboard.lastSyncDocumentCount === null}
           No previous sync outcome
         {:else if dashboard.lastSyncDocumentCount === 0}
@@ -86,9 +62,9 @@
         {/if}
       </p>
     </div>
-    <div class="panel-inset">
-      <p class="text-muted text-xs font-medium">Latest duplicate analysis</p>
-      <p class="text-ink mt-1 text-sm">
+    <div class="bg-surface px-4 py-3">
+      <p class="label-micro">Latest duplicate analysis</p>
+      <p class="text-ink mt-1 text-base">
         {dashboard.totalDuplicateGroups === null
           ? 'No completed analysis yet'
           : `${dashboard.totalDuplicateGroups.toLocaleString()} groups found`}
@@ -97,54 +73,55 @@
   </div>
 
   {#if aiStats}
-    <div class="panel">
-      <div class="mb-4 flex items-center justify-between gap-3">
-        <h3 class="text-ink flex items-center gap-2 text-base font-semibold">
-          <BrainIcon class="text-accent h-5 w-5" /> AI processing
-        </h3>
+    <div class="border-border bg-surface border">
+      <div class="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
+        <h3 class="text-ink text-lg font-semibold">AI processing</h3>
         <a href="/ai-processing" class="text-accent hover:text-accent-hover text-sm font-medium">
           View queue
         </a>
       </div>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <a href="/ai-processing?status=pending_review" class="panel-inset text-center">
-          <ClockIcon class="text-warn mx-auto h-5 w-5" />
-          <p class="text-ink mt-2 text-lg font-semibold">
+      <div class="bg-border grid grid-cols-2 gap-px sm:grid-cols-5">
+        <a href="/ai-processing?status=pending_review" class={aiLinkCell}>
+          <span class="label-micro block">Pending review</span>
+          <span class="block text-2xl font-semibold tabular-nums">
             {aiStats.pendingReview.toLocaleString()}
-          </p>
-          <p class="text-muted text-xs">Pending review</p>
+          </span>
         </a>
-        <a href="/ai-processing?failed=true" class="panel-inset text-center">
-          <WarningCircleIcon class="text-ember mx-auto h-5 w-5" />
-          <p class="text-ink mt-2 text-lg font-semibold">{aiStats.failed.toLocaleString()}</p>
-          <p class="text-muted text-xs">Failed</p>
+        <a href="/ai-processing?failed=true" class={aiLinkCell}>
+          <span class="label-micro block">Failed</span>
+          <span class="block text-2xl font-semibold tabular-nums">
+            {aiStats.failed.toLocaleString()}
+          </span>
         </a>
-        <div class="panel-inset text-center">
-          <FilesIcon class="text-muted mx-auto h-5 w-5" />
-          <p class="text-ink mt-2 text-lg font-semibold">{aiStats.unprocessed.toLocaleString()}</p>
-          <p class="text-muted text-xs">Unprocessed</p>
+        <div class={aiCell}>
+          <span class="label-micro block">Unprocessed</span>
+          <span class="block text-2xl font-semibold tabular-nums">
+            {aiStats.unprocessed.toLocaleString()}
+          </span>
         </div>
-        <div class="panel-inset text-center">
-          <CheckCircleIcon class="text-success mx-auto h-5 w-5" />
-          <p class="text-ink mt-2 text-lg font-semibold">{aiStats.applied.toLocaleString()}</p>
-          <p class="text-muted text-xs">Applied</p>
+        <div class={aiCell}>
+          <span class="label-micro block">Applied</span>
+          <span class="block text-2xl font-semibold tabular-nums">
+            {aiStats.applied.toLocaleString()}
+          </span>
         </div>
-        <div class="panel-inset text-center">
-          <LightningIcon class="text-accent mx-auto h-5 w-5" />
-          <p class="text-ink mt-2 text-lg font-semibold">{totalTokens.toLocaleString()}</p>
-          <p class="text-muted text-xs">Total tokens</p>
+        <div class={aiCell}>
+          <span class="label-micro block">Total tokens</span>
+          <span class="block text-2xl font-semibold tabular-nums">
+            {totalTokens.toLocaleString()}
+          </span>
         </div>
       </div>
     </div>
   {/if}
 
   {#if jobs.length > 0}
-    <div class="panel">
-      <div class="mb-4 flex items-center justify-between gap-3">
-        <h3 class="text-ink text-base font-semibold">Recent Jobs</h3>
+    <div class="border-border bg-surface border">
+      <div class="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
+        <h3 class="text-ink text-lg font-semibold">Recent Jobs</h3>
         <a href="/jobs" class="text-accent hover:text-accent-hover text-sm font-medium">View all</a>
       </div>
-      <div class="space-y-3">
+      <div class="divide-border divide-y">
         {#each jobs as job (job.id)}
           <JobStatusCard
             type={job.type}
