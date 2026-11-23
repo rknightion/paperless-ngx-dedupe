@@ -1,6 +1,6 @@
 ---
 name: commit-and-pr
-description: Write commit messages, pull request titles and pull request bodies that release-please can version and the acceptance evidence check accepts. Use when committing, drafting or fixing a commit message, choosing a pull request's squash title, or writing or refreshing a pull request description. Covers commit types, breaking changes, closing forms, the acceptance evidence table, the Task line, staging by pathspec and what never goes in commit or pull request text.
+description: Write commit messages, pull request titles and pull request bodies that release-please can version and the acceptance evidence check accepts. Use when committing, drafting or fixing a commit message, choosing a pull request's squash title, or writing or refreshing a pull request description. Covers commit types, breaking changes, closing forms, the evidence line or acceptance evidence table, the Task line, staging by pathspec and what never goes in commit or pull request text.
 license: Apache-2.0
 ---
 
@@ -11,7 +11,7 @@ https://github.com/getsentry/skills/blob/main/skills/pr-writer/SKILL.md
 
 Changes from the source: the fixed type list is replaced by the types in the repository's
 `release-please-config.json` when it has one, and by a default set when it has none, the subject is lower case, the pull request title is the squash commit
-subject, and added the closing forms, the acceptance evidence table, the `Task:` line, pathspec
+subject, and added the closing forms, the evidence line and acceptance evidence table, the `Task:` line, pathspec
 staging and fork rules.
 
 Inside the owner's agent loop, the repository's `LOOP.md` overrides this skill where they differ.
@@ -87,7 +87,7 @@ Who closes depends on who you are:
   working for them) writes `Refs #N` on a line of its own, never a closing keyword, and says in the
   body how the change was verified. A maintainer adds the acceptance evidence and closes the issue.
   Skip the rest of this section.
-- **A maintainer, or the owner's agent,** writes `Closes #N` with the evidence table, as below.
+- **A maintainer, or the owner's agent,** writes `Closes #N` with an evidence line, as below.
 
 The rest of this section is for maintainers:
 
@@ -97,8 +97,12 @@ The rest of this section is for maintainers:
   issue the change completes. The issue must be in the repository the pull request targets.
 - Any such pair in the body closes the issue, prose included ("this fixes #12"), so an outside
   contributor must avoid it in prose too. Write `Refs #N` for an issue you only mention.
-- A pull request that closes an issue carries an `Acceptance evidence` table with one row per
-  criterion of each closed issue, in the issue's order:
+- A pull request that closes an issue carries at least one line of its own that starts `Evidence:`
+  and names a command and its result, for example `Evidence: just check exit 0 on the head`. That
+  line is enough; no table is needed. The check confirms each closed issue is an issue of this
+  repository, and review judges whether the line proves the change.
+- The longer form, an `Acceptance evidence` table with one row per criterion of each closed issue
+  in the issue's order, is still accepted in place of the line:
 
   ```text
   | Issue | AC | AC text | Evidence class | Proof |
