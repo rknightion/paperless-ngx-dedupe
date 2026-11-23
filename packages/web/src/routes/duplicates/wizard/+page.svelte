@@ -435,11 +435,12 @@
 
 <div class="space-y-6">
   <!-- Breadcrumb -->
-  <nav class="text-muted text-sm">
-    <a href="/duplicates" class="text-accent hover:text-accent-hover">Duplicates</a>
-    <span class="mx-1">/</span>
-    <span class="text-ink">Bulk Operations Wizard</span>
-  </nav>
+  <div class="space-y-2">
+    <nav aria-label="Breadcrumb" class="text-sm">
+      <a href="/duplicates" class="text-accent hover:text-accent-hover underline">Duplicates</a>
+    </nav>
+    <h1 class="text-ink text-xl font-semibold">Bulk Operations Wizard</h1>
+  </div>
 
   <!-- Step Indicator -->
   <div class="flex items-center gap-2">
