@@ -1,63 +1,14 @@
 name: Docker Security
-
-# hadolint (Dockerfile lint) + Trivy (filesystem vuln/misconfig/secret scan), results uploaded to the
-# GitHub Security tab as SARIF. Runs on main pushes + weekly so newly disclosed CVEs surface without a
-# code change. Non-gating (not a required check). pull_request is intentionally omitted: SARIF upload
-# needs security-events: write, which fork PRs don't get.
 on:
   push:
     branches: [main]
   schedule:
     - cron: '30 5 * * 1'
   workflow_dispatch:
-
-permissions:
-  contents: read
-
-# Cancel a superseded run on the same ref (rapid pushes / PR updates) to free runners.
-concurrency:
-  group: docker-security-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
+permissions: {}
 jobs:
-  hadolint:
-    name: hadolint
-    runs-on: ubuntu-latest
+  docker-security:
     permissions:
       contents: read
       security-events: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
-        with:
-          dockerfile: Dockerfile
-          format: sarif
-          output-file: hadolint.sarif
-          no-fail: true
-      - uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
-        with:
-          sarif_file: hadolint.sarif
-          category: hadolint
-
-  trivy:
-    name: trivy
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          scan-type: fs
-          scanners: vuln,misconfig,secret
-          format: sarif
-          output: trivy.sarif
-      - uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
-        with:
-          sarif_file: trivy.sarif
-          category: trivy-fs
+    uses: rknightion/.github/.github/workflows/docker-security.yml@84486af028f18f4a2d93ee5c4eb954fdd541d800 # v1.31.10
