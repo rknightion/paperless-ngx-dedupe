@@ -332,6 +332,7 @@ const entries: InternalRegistryEntry[] = [
     'deduplication',
     finite(0, 1),
   ),
+  databaseEntry('ui.firstRunChecklistDismissed', 'boolean', false, 'advanced'),
   environmentEntry('AI_BULK_ALL_ENABLED', 'boolean', 'ai', false, false),
   environmentEntry('AI_ENABLED', 'boolean', 'ai', false, false),
   environmentEntry('AI_OPENAI_API_KEY', 'string', 'ai', true),

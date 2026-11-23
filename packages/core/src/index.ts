@@ -395,6 +395,17 @@ export {
   PrimaryMemberError,
 } from './queries/duplicates.js';
 export { getConfig, redactSensitiveConfig, setConfig, setConfigBatch } from './queries/config.js';
+export {
+  FIRST_RUN_DISMISSED_KEY,
+  FIRST_RUN_STEP_IDS,
+  evaluateFirstRunChecklist,
+  getFirstRunChecklist,
+  getFirstRunChecklistDismissed,
+  setFirstRunChecklistDismissed,
+  type FirstRunChecklistState,
+  type FirstRunSignals,
+  type FirstRunStepId,
+} from './queries/first-run-checklist.js';
 
 // Telemetry
 export {

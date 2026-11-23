@@ -7,6 +7,7 @@ import {
   toPaperlessConfig,
   type PaperlessReadiness,
   getAutomationSettings,
+  getFirstRunChecklist,
 } from '@paperless-dedupe/core';
 import type { PageServerLoad } from './$types';
 
@@ -17,8 +18,15 @@ export const load: PageServerLoad = async ({ locals }) => {
   const aiStats = locals.config.AI_ENABLED ? getAiStats(locals.db) : null;
   const paperless = await getPaperlessReadiness(locals.config);
 
+  const firstRunChecklist = getFirstRunChecklist(locals.db, {
+    paperlessConnected: paperless.status === 'connected',
+    synced: dashboard.readiness.lastSyncAt !== null,
+    analysed: dashboard.readiness.lastAnalysisAt !== null,
+  });
+
   return {
     dashboard,
+    firstRunChecklist,
     readiness: { ...dashboard.readiness, paperless },
     jobs,
     duplicateStats,
