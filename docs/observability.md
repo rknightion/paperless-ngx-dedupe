@@ -55,8 +55,9 @@ group counts, job/dispatch counts, AI review count and the singleton success tim
 Success timestamps have no sample before the first success; they are not zero or the server start
 time. High confidence uses the same threshold as the review inbox (currently 0.95); ambiguous is
 the remaining pending groups. Resolved groups and ordinary failed jobs are not backlog samples.
-Dead letters include exhausted launch attempts and terminal automated failures; a retry removes the
-intent from that count. No gauge labels contain document, job or entity identifiers.
+Dead letters include exhausted launch attempts and terminal automated failures. Clearing job history
+keeps them, so `POST /api/v1/jobs/:jobId/retry` or `/dismiss` is what removes one from that count
+and clears the example alert. No gauge labels contain document, job or entity identifiers.
 
 These are OpenTelemetry instrument names. Prometheus replaces separators and may append unit
 suffixes, so inspect the local `/api/v1/metrics` exposition when writing PromQL. Worker counters and

@@ -9,6 +9,7 @@ import {
   clearJobHistory,
   completeJob,
   createJob,
+  dismissDeadLetterJob,
   failJob,
   getJob,
   recoverStaleJobs,
@@ -969,6 +970,27 @@ describe('schedule coordinator durable claims', () => {
     expect(sqlite.prepare('SELECT status FROM job WHERE id = ?').get(intent.jobId)).toEqual({
       status: 'failed',
     });
+  });
+
+  it('dismisses a dead-letter job without running it and then refuses to retry it', () => {
+    const intent = enqueueManualOperation(sqlite, 'sync', { kind: 'manual' });
+    failJob(db, intent.jobId!, 'configuration validation failed');
+
+    expect(dismissDeadLetterJob(db, intent.jobId!)).toBe(true);
+
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS n FROM dispatch_intent WHERE status = 'dead_letter'")
+        .get(),
+    ).toEqual({ n: 0 });
+    expect(sqlite.prepare('SELECT status FROM job WHERE id = ?').get(intent.jobId)).toEqual({
+      status: 'failed',
+    });
+    expect(retryDeadLetterJob(db, intent.jobId!)).toBe(false);
+    expect(sqlite.prepare('SELECT status FROM job WHERE id = ?').get(intent.jobId)).toEqual({
+      status: 'failed',
+    });
+    expect(dismissDeadLetterJob(db, intent.jobId!)).toBe(false);
   });
 
   it('does not let the legacy createJob path bypass an existing compatible-operation lease', () => {

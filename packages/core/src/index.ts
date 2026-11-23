@@ -248,6 +248,7 @@ export {
   clearJobHistory,
   recoverStaleJobs,
   retryDeadLetterJob,
+  dismissDeadLetterJob,
   JobAlreadyRunningError,
 } from './jobs/manager.js';
 export type {
