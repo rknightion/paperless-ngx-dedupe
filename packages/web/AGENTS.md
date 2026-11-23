@@ -4,6 +4,10 @@ SvelteKit 3 app on `adapter-node`, deployed as the Docker image.
 
 ## Traps
 
+- In browser-reachable TypeScript, use a declaration-level type import when every import from
+  `@paperless-dedupe/core` is a type. With verbatim module syntax, an inline type-only import can
+  retain a side-effect import of the core entry point and load native SQLite code in the browser.
+
 - **adapter-node externalization is decided by this `package.json`, not by Vite.** The production
   build runs adapter-node's own Rollup pass, where `ssr.external` has no effect. Only packages in
   `dependencies` are externalized. Anything using native code or a dynamic `require()` must sit in
