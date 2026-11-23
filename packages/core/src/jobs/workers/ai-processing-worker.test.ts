@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TaskFunction } from '../worker-entry.js';
 import type { AiBatchResult } from '../../ai/types.js';
 import { createDatabaseWithHandle } from '../../db/client.js';
@@ -6,6 +6,7 @@ import { migrateDatabase } from '../../db/migrate.js';
 import { document } from '../../schema/sqlite/documents.js';
 import { aiProcessingResult } from '../../schema/sqlite/ai-processing.js';
 import { UnknownAiModelPricingError } from '../../ai/budget.js';
+import { getExactModelPricing } from '../../ai/costs.js';
 
 const mocks = vi.hoisted(() => ({
   runWorkerTask: vi.fn(),
@@ -35,7 +36,15 @@ vi.mock('../../index.js', () => ({
   toPaperlessConfig: () => ({}),
 }));
 
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('{}', { status: 200 })),
+  );
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.resetModules();
   vi.clearAllMocks();
   mocks.appConfig.AI_OPENAI_API_KEY = 'test-key';
@@ -260,4 +269,60 @@ it('runs manual AI with a keyless custom endpoint', async () => {
   } finally {
     handle.sqlite.close();
   }
+});
+
+describe('AI processing worker model pricing', () => {
+  const batchResult: AiBatchResult = {
+    totalDocuments: 0,
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    skipped: 0,
+    totalPromptTokens: 0,
+    totalCompletionTokens: 0,
+    durationMs: 1,
+    rateLimitRetries: 0,
+    rateLimitPauses: 0,
+  };
+
+  async function runManualTask() {
+    mocks.processBatch.mockResolvedValue(batchResult);
+    await import('./ai-processing-worker.js');
+    const task = mocks.runWorkerTask.mock.calls[0]?.[0] as TaskFunction;
+    const handle = createDatabaseWithHandle(':memory:');
+    await migrateDatabase(handle.sqlite);
+    const result = await task(
+      { db: handle.db, sqlite: handle.sqlite, jobId: 'job-1', taskData: {} },
+      vi.fn(),
+    );
+    return { handle, result };
+  }
+
+  it('refreshes prices before processing so results are costed at current rates', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              'gpt-5.4-mini': { input_cost_per_token: 1e-7, output_cost_per_token: 5e-7 },
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    const { handle } = await runManualTask();
+    expect(getExactModelPricing(handle.db, 'gpt-5.4-mini')?.inputPerToken).toBe(1e-7);
+  });
+
+  it('still processes documents when the price source is unavailable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('network unavailable');
+      }),
+    );
+    const { result } = await runManualTask();
+    expect(result).toEqual(batchResult);
+  });
 });

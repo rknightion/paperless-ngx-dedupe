@@ -10,6 +10,7 @@ vi.mock('@paperless-dedupe/core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   ...mocks,
   getAiConfig: vi.fn(() => ({ model: 'test-model', maxRetries: 10, flexProcessing: true })),
+  refreshPricingIfStale: vi.fn(),
   PaperlessClient: class {},
   toPaperlessConfig: vi.fn(() => ({})),
 }));

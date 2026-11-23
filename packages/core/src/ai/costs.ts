@@ -16,6 +16,7 @@ const LITELLM_PRICING_URL =
 const PRICING_CACHE_KEY = 'ai.modelPricingCache';
 const PRICING_UPDATED_KEY = 'ai.modelPricingUpdatedAt';
 const PRICING_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const PRICING_FETCH_TIMEOUT_MS = 15_000;
 const MISSING_MODEL_REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 export interface ModelPricing {
@@ -53,7 +54,9 @@ function getKnownModelIds(): string[] {
  */
 export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
   try {
-    const response = await fetch(LITELLM_PRICING_URL);
+    const response = await fetch(LITELLM_PRICING_URL, {
+      signal: AbortSignal.timeout(PRICING_FETCH_TIMEOUT_MS),
+    });
     if (!response.ok) {
       logger.warn(
         { status: response.status, statusText: response.statusText },
@@ -136,18 +139,20 @@ export async function fetchAndCachePricing(db: AppDatabase): Promise<void> {
     }
 
     const now = new Date().toISOString();
+    // A partial or changed upstream file must not erase prices that budget checks depend on.
+    const mergedPricing = JSON.stringify({ ...getAllModelPricing(db), ...pricingMap });
 
     db.transaction((tx) => {
       tx.insert(appConfig)
         .values({
           key: PRICING_CACHE_KEY,
-          value: JSON.stringify(pricingMap),
+          value: mergedPricing,
           updatedAt: now,
         })
         .onConflictDoUpdate({
           target: appConfig.key,
           set: {
-            value: JSON.stringify(pricingMap),
+            value: mergedPricing,
             updatedAt: now,
           },
         })
