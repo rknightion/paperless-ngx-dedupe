@@ -5,9 +5,18 @@
     message?: string;
     animated?: boolean;
     paused?: boolean;
+    /** Track height: cell is 4px (inside a table row), panel is 6px. */
+    size?: 'cell' | 'panel';
   }
 
-  let { progress, phaseProgress, message = '', animated = true, paused = false }: Props = $props();
+  let {
+    progress,
+    phaseProgress,
+    message = '',
+    animated = true,
+    paused = false,
+    size = 'panel',
+  }: Props = $props();
 
   // Bar width uses overall progress (never jumps backward)
   let barPct = $derived(Math.round(Math.min(1, Math.max(0, progress)) * 100));
@@ -19,6 +28,9 @@
 
   let isIndeterminate = $derived(barPct === 0 && animated);
   let barColor = $derived(barPct >= 100 ? 'bg-success' : paused ? 'bg-warn' : 'bg-accent');
+  // A meter at zero is a dim 0 and no track at all, unless there is genuinely
+  // no fraction to show, which is the shimmer below.
+  let isZero = $derived(barPct === 0 && !isIndeterminate && displayPct === 0);
 
   // ETA calculation from phaseProgress rate
   let etaStartTime = $state<number | null>(null);
@@ -85,25 +97,31 @@
 </script>
 
 <div class="w-full">
-  <div class="mb-1 flex items-center justify-between text-sm">
+  <div class="mb-1 flex items-center justify-between gap-2 text-sm">
     <span class="text-muted truncate">{message}</span>
-    <span class="text-ink shrink-0 font-mono text-xs font-medium">{displayPct}%</span>
+    <span
+      class="shrink-0 font-mono text-xs font-medium tabular-nums {isZero
+        ? 'text-muted'
+        : 'text-ink'}"
+    >
+      {isZero ? '0' : `${displayPct}%`}
+    </span>
   </div>
-  <div class="bg-soft h-3 w-full overflow-hidden rounded-full">
-    {#if isIndeterminate}
-      <div
-        class="h-full w-full rounded-full"
-        style="background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--color-accent) 40%, transparent) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite;"
-      ></div>
-    {:else}
-      <div
-        class="{barColor} h-full rounded-full {animated
-          ? 'transition-all duration-300 ease-out'
-          : ''}"
-        style="width: {barPct}%"
-      ></div>
-    {/if}
-  </div>
+  {#if !isZero}
+    <div class="{size === 'cell' ? 'h-1' : 'h-1.5'} w-full overflow-hidden bg-(--furniture)">
+      {#if isIndeterminate}
+        <div
+          class="h-full w-full"
+          style="background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--color-accent) 40%, transparent) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite;"
+        ></div>
+      {:else}
+        <div
+          class="{barColor} h-full {animated ? 'transition-all duration-200 ease-out' : ''}"
+          style="width: {barPct}%"
+        ></div>
+      {/if}
+    </div>
+  {/if}
   {#if etaText}
     <div class="text-muted mt-1 text-right text-xs">{etaText}</div>
   {/if}

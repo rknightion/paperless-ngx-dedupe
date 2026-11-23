@@ -1,5 +1,4 @@
 <script lang="ts">
-  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import Button from './Button.svelte';
 
   interface Props {
@@ -11,9 +10,11 @@
   let { onrunAnalysis, showRunButton = true, compact = false }: Props = $props();
 </script>
 
+<!-- A hairline row: warn status word, the sentence, the action. No tint, no
+     icon tile. -->
 {#if compact}
-  <div class="bg-warn-light text-ink flex items-center gap-3 rounded-lg px-4 py-3 text-sm">
-    <WarningIcon class="text-warn h-5 w-5 shrink-0" />
+  <div class="border-border text-ink flex items-baseline gap-3 border-y px-1 py-2.5 text-base">
+    <span class="status-word text-warn shrink-0"><span aria-hidden="true">◆</span> WARN</span>
     <span>
       Analysis settings have changed since the last run. Results may be incomplete.
       {#if showRunButton && onrunAnalysis}
@@ -29,19 +30,17 @@
     </span>
   </div>
 {:else}
-  <div class="border-warn bg-warn-light rounded-lg border px-4 py-4">
-    <div class="flex items-start gap-3">
-      <WarningIcon class="text-warn mt-0.5 h-5 w-5 shrink-0" />
-      <div>
-        <p class="text-ink text-sm font-semibold">Analysis results may be outdated</p>
-        <p class="text-muted mt-1 text-sm">
-          Deduplication settings or the analysis algorithm have changed since the last run. A full
-          rebuild is recommended to ensure accurate results.
-        </p>
-        {#if showRunButton && onrunAnalysis}
-          <Button class="mt-3" onclick={onrunAnalysis}>Run Full Analysis</Button>
-        {/if}
-      </div>
+  <div class="border-border flex flex-wrap items-baseline gap-x-3 gap-y-2 border-y px-1 py-3">
+    <span class="status-word text-warn shrink-0"><span aria-hidden="true">◆</span> WARN</span>
+    <div class="min-w-0 flex-1">
+      <p class="text-ink text-base font-semibold">Analysis results may be outdated</p>
+      <p class="text-ink-light mt-1 text-base">
+        Deduplication settings or the analysis algorithm have changed since the last run. A full
+        rebuild is recommended to ensure accurate results.
+      </p>
     </div>
+    {#if showRunButton && onrunAnalysis}
+      <Button variant="secondary" onclick={onrunAnalysis}>Run Full Analysis</Button>
+    {/if}
   </div>
 {/if}

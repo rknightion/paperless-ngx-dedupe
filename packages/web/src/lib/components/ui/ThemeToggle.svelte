@@ -7,7 +7,8 @@
 
   /**
    * Three-way theme control. Sits in the sidebar footer, so it is styled
-   * against the sidebar tokens, which follow the active theme.
+   * against the surface tokens: a hairline group, a selected fill on the
+   * active option, muted ink on the rest.
    */
   const OPTIONS: { value: ThemePreference; label: string; icon: IconComponent }[] = [
     { value: 'light', label: 'Light', icon: SunIcon },
@@ -17,7 +18,7 @@
 </script>
 
 <div
-  class="border-sidebar-border flex items-center gap-0.5 rounded-lg border p-0.5"
+  class="border-sidebar-border flex items-center gap-0.5 rounded-md border p-0.5"
   role="radiogroup"
   aria-label="Colour theme"
 >
@@ -29,12 +30,12 @@
       aria-checked={active}
       aria-label={option.label}
       title={option.label}
-      class="flex flex-1 items-center justify-center rounded-md py-1.5 transition-colors {active
-        ? 'bg-sidebar-hover text-sidebar-ink-active'
-        : 'text-sidebar-ink hover:text-sidebar-ink-active'}"
+      class="flex flex-1 items-center justify-center rounded-sm py-1.5 transition-colors {active
+        ? 'bg-selected text-ink'
+        : 'text-muted hover:text-ink'}"
       onclick={() => theme.set(option.value)}
     >
-      <option.icon class="h-4 w-4" aria-hidden="true" />
+      <option.icon size={14} aria-hidden="true" />
     </button>
   {/each}
 </div>

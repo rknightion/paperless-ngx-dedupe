@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { ConfidenceBadge, EChart } from '$lib/components';
-  import type { EChartsOption } from 'echarts';
-  import { readToken } from '$lib/theme/tokens';
+  import ConfidenceBadge from '../ui/ConfidenceBadge.svelte';
+  import ConfidenceLegend from '../ui/ConfidenceLegend.svelte';
+  import { BAND_META, confidenceBand } from '../ui/confidence';
 
   interface Props {
     overallScore: number;
@@ -9,92 +9,74 @@
     fuzzyTextRatio: number | null;
     discriminativeScore: number | null;
     weights?: { jaccard: number; fuzzy: number; penaltyStrength: number };
+    /** The band legend is printed once per screen, here, beside the headline score. */
+    showLegend?: boolean;
   }
 
-  let { overallScore, jaccardSimilarity, fuzzyTextRatio, discriminativeScore, weights }: Props =
-    $props();
+  let {
+    overallScore,
+    jaccardSimilarity,
+    fuzzyTextRatio,
+    discriminativeScore,
+    weights,
+    showLegend = true,
+  }: Props = $props();
 
-  // Same three bands as ConfidenceBadge — keep them in step. Resolved rather
-  // than var() references because these are painted onto an ECharts canvas.
-  const bandColors = $derived({
-    none: readToken('--color-muted'),
-    high: readToken('--color-success'),
-    medium: readToken('--color-warn'),
-    low: readToken('--color-ember'),
-  });
-
-  function scoreColor(score: number | null): string {
-    if (score === null) return bandColors.none;
-    if (score >= 0.9) return bandColors.high;
-    if (score >= 0.75) return bandColors.medium;
-    return bandColors.low;
-  }
-
-  const components = $derived([
-    { name: 'Jaccard (Shingles)', score: jaccardSimilarity, weight: weights?.jaccard },
-    { name: 'Fuzzy Text', score: fuzzyTextRatio, weight: weights?.fuzzy },
-    {
-      name:
-        weights?.penaltyStrength !== undefined
-          ? `Discriminative (Penalty ${weights.penaltyStrength}%)`
-          : 'Discriminative',
-      score: discriminativeScore,
-      weight: undefined,
-    },
-  ]);
-
-  let chartOption: EChartsOption = $derived({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: unknown) => {
-        const p = (params as { name: string; value: number }[])[0];
-        if (p.value < 0) return `${p.name}: N/A`;
-        return `${p.name}: ${Math.round(p.value * 100)}%`;
-      },
-    },
-    xAxis: {
-      type: 'value',
-      min: 0,
-      max: 1,
-      axisLabel: { formatter: (v: number) => `${Math.round(v * 100)}%` },
-    },
-    yAxis: {
-      type: 'category',
-      data: components
-        .map((c) => {
-          const label = c.name;
-          return c.weight !== undefined ? `${label} (${c.weight}%)` : label;
-        })
-        .reverse(),
-      axisLabel: { fontSize: 11, width: 140, overflow: 'truncate' },
-    },
-    series: [
+  // A magnitude readout, so three inline meters rather than a chart canvas.
+  // The same three bands as ConfidenceBadge, from ui/confidence.ts.
+  const components = $derived(
+    [
       {
-        type: 'bar',
-        data: components
-          .map((c) => ({
-            value: c.score ?? -0.01,
-            itemStyle: { color: scoreColor(c.score) },
-            label: {
-              show: true,
-              position: 'right' as const,
-              formatter: () => (c.score !== null ? `${Math.round(c.score * 100)}%` : 'N/A'),
-              fontSize: 11,
-            },
-          }))
-          .reverse(),
-        barMaxWidth: 28,
+        name: 'Jaccard (Shingles)',
+        note: weights?.jaccard !== undefined ? `${weights.jaccard}%` : null,
+        score: jaccardSimilarity,
       },
-    ],
-    grid: { left: 160, right: 60, top: 10, bottom: 30 },
-  });
+      {
+        name: 'Fuzzy Text',
+        note: weights?.fuzzy !== undefined ? `${weights.fuzzy}%` : null,
+        score: fuzzyTextRatio,
+      },
+      {
+        name: 'Discriminative',
+        note: weights?.penaltyStrength !== undefined ? `penalty ${weights.penaltyStrength}%` : null,
+        score: discriminativeScore,
+      },
+    ].map((c) => ({
+      ...c,
+      meta: c.score !== null ? BAND_META[confidenceBand(c.score)] : null,
+      pct: c.score !== null ? Math.round(Math.min(1, Math.max(0, c.score)) * 1000) / 10 : 0,
+    })),
+  );
 </script>
 
 <div class="panel">
-  <div class="mb-4 flex items-center gap-3">
-    <h3 class="text-ink text-base font-semibold">Confidence Breakdown</h3>
+  <div class="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+    <h3 class="text-ink text-lg font-semibold">Confidence Breakdown</h3>
     <ConfidenceBadge score={overallScore} />
+    {#if showLegend}
+      <ConfidenceLegend class="sm:ml-auto" />
+    {/if}
   </div>
-  <EChart option={chartOption} height="160px" />
+  <ul class="border-border divide-border divide-y border-y">
+    {#each components as comp (comp.name)}
+      <li class="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
+        <span class="text-ink w-56 shrink-0 text-sm">
+          {comp.name}
+          {#if comp.note}<span class="text-muted font-mono">{comp.note}</span>{/if}
+        </span>
+        <span class="h-1.5 min-w-24 flex-1 overflow-hidden bg-(--furniture)" aria-hidden="true">
+          {#if comp.meta && comp.pct > 0}
+            <span class="block h-full {comp.meta.fill}" style="width: {comp.pct}%"></span>
+          {/if}
+        </span>
+        <span class="w-36 shrink-0 text-right">
+          {#if comp.score !== null}
+            <ConfidenceBadge score={comp.score} />
+          {:else}
+            <span class="text-muted font-mono text-sm">N/A</span>
+          {/if}
+        </span>
+      </li>
+    {/each}
+  </ul>
 </div>

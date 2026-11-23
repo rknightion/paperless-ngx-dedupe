@@ -6,34 +6,31 @@
   let { status }: Props = $props();
 
   /**
-   * Always a tinted pill, never a solid fill — that treatment is what tells
-   * state apart from the accent, which is also green.
-   *
-   * `paused` is a state you need to come back to, so it takes the warn pair;
-   * neutral states use the canvas-deep tint. Static class strings so
-   * Tailwind sees every variant.
+   * A status word: a shape, the word and a colour. Colour is the third
+   * carrier, never the first. The DOM text stays the status as stored and is
+   * uppercased by CSS, so the word reads normally to assistive technology.
+   * Static class strings so Tailwind sees every variant.
    */
-  const statusClasses: Record<string, string> = {
-    pending: 'bg-warn-light text-warn',
-    running: 'bg-accent-light text-accent',
-    completed: 'bg-success-light text-success',
-    failed: 'bg-ember-light text-ember',
-    paused: 'bg-warn-light text-warn',
-    cancelled: 'bg-canvas-deep text-ink-faint',
-    false_positive: 'bg-canvas-deep text-ink-faint',
-    ignored: 'bg-accent-light text-accent',
-    deleted: 'bg-success-light text-success',
+  const STATUS: Record<string, { shape: string; text: string }> = {
+    pending: { shape: '◇', text: 'text-muted' },
+    running: { shape: '▸', text: 'text-ink' },
+    paused: { shape: '◆', text: 'text-warn' },
+    completed: { shape: '■', text: 'text-success' },
+    failed: { shape: '●', text: 'text-ember' },
+    cancelled: { shape: '○', text: 'text-muted' },
+    false_positive: { shape: '○', text: 'text-muted' },
+    ignored: { shape: '○', text: 'text-muted' },
+    deleted: { shape: '■', text: 'text-success' },
   };
 
   const displayLabels: Record<string, string> = {
     false_positive: 'False Positive',
   };
 
-  let classes = $derived(statusClasses[status] ?? 'bg-canvas-deep text-ink-faint');
+  const meta = $derived(STATUS[status] ?? { shape: '○', text: 'text-muted' });
 </script>
 
-<span
-  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize {classes}"
->
-  {displayLabels[status] ?? status}
+<span class="status-word inline-flex items-baseline gap-1 {meta.text}">
+  <span aria-hidden="true">{meta.shape}</span>
+  <span class="uppercase">{displayLabels[status] ?? status}</span>
 </span>

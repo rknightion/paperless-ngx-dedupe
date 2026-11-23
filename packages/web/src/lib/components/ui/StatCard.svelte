@@ -4,44 +4,27 @@
   interface Props {
     label: string;
     value: string | number;
+    /** Kept so existing call sites compile. v2 has no trend arrows: the note says it in words. */
     trend?: 'up' | 'down' | 'neutral';
+    /** Mono note beneath the figure. Say the change in words and numbers. */
     trendLabel?: string;
+    /** Rendered small and muted beside the label. */
     icon?: Snippet;
+    class?: string;
   }
 
-  let { label, value, trend, trendLabel, icon }: Props = $props();
-
-  const trendColors = {
-    up: 'text-success',
-    down: 'text-ember',
-    neutral: 'text-muted',
-  } as const;
-
-  const trendArrows = {
-    up: '\u2191',
-    down: '\u2193',
-    neutral: '\u2192',
-  } as const;
+  let { label, value, trendLabel, icon, class: className = '' }: Props = $props();
 </script>
 
-<div class="panel flex items-start gap-4">
-  {#if icon}
-    <div
-      class="bg-accent-light text-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-    >
-      {@render icon()}
-    </div>
-  {:else}
-    <div class="bg-accent h-10 w-0.5 shrink-0 rounded-full"></div>
+<!-- One cell of the stat strip: divided by 1px rules, no card, no tile. The
+     parent lays the cells out, four at most. -->
+<div class="border-border min-w-0 border-l px-6 py-3 first:border-l-0 {className}">
+  <p class="label-micro flex items-center gap-1.5">
+    {#if icon}<span class="inline-flex" aria-hidden="true">{@render icon()}</span>{/if}
+    {label}
+  </p>
+  <p class="text-ink mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+  {#if trendLabel}
+    <p class="text-muted mt-0.5 font-mono text-xs tabular-nums">{trendLabel}</p>
   {/if}
-  <div class="min-w-0 flex-1">
-    <p class="text-muted text-sm">{label}</p>
-    <p class="text-ink mt-1 text-2xl font-semibold">{value}</p>
-    {#if trend && trendLabel}
-      <p class="mt-1 text-xs {trendColors[trend]}">
-        {trendArrows[trend]}
-        {trendLabel}
-      </p>
-    {/if}
-  </div>
 </div>

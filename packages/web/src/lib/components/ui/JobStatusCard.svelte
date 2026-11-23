@@ -154,15 +154,18 @@
   };
 </script>
 
-<div class="border-soft bg-surface flex items-center gap-4 rounded-lg border px-4 py-3">
+<!-- A row, not a card: hairline rule, no fill, no radius. The per-type result
+     summaries are the Detail text; duration is right-aligned mono. -->
+<div class="border-border flex items-center gap-4 border-b px-1 py-3">
   <div class="min-w-0 flex-1">
     <div class="flex items-center gap-2">
-      <span class="text-ink text-sm font-medium">{typeLabels[type] ?? type}</span>
+      <span class="text-ink text-base font-medium">{typeLabels[type] ?? type}</span>
       <StatusBadge {status} />
     </div>
     {#if (status === 'running' || status === 'paused') && progress !== undefined}
       <div class="mt-2">
         <ProgressBar
+          size="cell"
           {progress}
           phaseProgress={phaseProgress ?? undefined}
           message={progressMessage ?? ''}
@@ -171,10 +174,10 @@
       </div>
     {/if}
     {#if status === 'failed' && errorMessage}
-      <p class="text-ember mt-1 truncate text-xs" title={errorMessage}>{errorMessage}</p>
+      <p class="text-ember mt-1 truncate text-sm" title={errorMessage}>{errorMessage}</p>
     {/if}
     {#if analysisParts}
-      <p class="text-muted mt-1 text-xs">
+      <p class="text-ink-light mt-1 text-sm">
         {analysisParts.text}{#if analysisParts.skipped > 0}{#if analysisParts.text},
           {/if}{#if analysisParts.skipReasons}<RichTooltip position="bottom">
               <span class="cursor-help border-b border-dotted border-current">
@@ -204,15 +207,15 @@
           {analysisParts.groupsSuffix}{/if}
       </p>
       {#if analysisParts.pairsSuppressed > 0}
-        <p class="text-muted mt-1 text-xs">
+        <p class="text-ink-light mt-1 text-sm">
           {analysisParts.pairsSuppressed.toLocaleString()} pairs skipped: previously marked not duplicates
         </p>
       {/if}
     {:else if resultSummary}
-      <p class="text-muted mt-1 text-xs">{resultSummary}</p>
+      <p class="text-ink-light mt-1 text-sm">{resultSummary}</p>
     {/if}
   </div>
   {#if duration}
-    <span class="text-muted shrink-0 font-mono text-xs">{duration}</span>
+    <span class="text-muted shrink-0 text-right font-mono text-xs tabular-nums">{duration}</span>
   {/if}
 </div>

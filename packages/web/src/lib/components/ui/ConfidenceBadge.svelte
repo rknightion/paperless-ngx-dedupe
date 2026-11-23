@@ -1,37 +1,30 @@
 <script lang="ts">
+  import { BAND_META, confidenceBand, formatConfidence } from './confidence';
+
   interface Props {
     score: number;
     format?: 'percent' | 'decimal';
+    /**
+     * Drops the band word in a tight cell. The shape and the number stay, and
+     * the word is still read by assistive technology.
+     */
+    compact?: boolean;
   }
 
-  let { score, format = 'percent' }: Props = $props();
+  let { score, format = 'percent', compact = false }: Props = $props();
 
-  let display = $derived(format === 'percent' ? `${Math.round(score * 100)}%` : score.toFixed(2));
-
-  /**
-   * Three bands, because the design system fixes the semantic palette at
-   * success / warn / ember and forbids inventing a fourth hue. This previously
-   * had four, with the middle two on raw `amber-*` and `orange-*` Tailwind
-   * classes — off-token, and the two were near-indistinguishable anyway.
-   *
-   * Always a tinted pill, never a solid fill: the brand accent is green and so
-   * is success, so state and action are told apart by treatment, not hue.
-   *
-   * Static class strings so Tailwind sees every variant.
-   */
-  const BANDS = {
-    high: 'bg-success-light text-success',
-    medium: 'bg-warn-light text-warn',
-    low: 'bg-ember-light text-ember',
-  } as const;
-
-  let band = $derived(score >= 0.9 ? BANDS.high : score >= 0.75 ? BANDS.medium : BANDS.low);
-
-  let ringClass = $derived(score >= 0.9 ? 'ring-1 ring-success/30' : '');
+  const meta = $derived(BAND_META[confidenceBand(score)]);
+  const display = $derived(formatConfidence(score, format));
 </script>
 
-<span
-  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {band} {ringClass}"
->
-  {display}
+<!-- Shape, word and number, in the band colour. No fill, no border: the
+     legend (ConfidenceLegend) is printed once per screen, not per row. -->
+<span class="status-word inline-flex items-baseline gap-1 tabular-nums {meta.text}">
+  <span aria-hidden="true">{meta.shape}</span>
+  {#if compact}
+    <span class="sr-only">{meta.word}</span>
+  {:else}
+    <span class="uppercase">{meta.word}</span>
+  {/if}
+  <span>{display}</span>
 </span>
