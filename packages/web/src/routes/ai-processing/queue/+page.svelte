@@ -11,7 +11,6 @@
   import ChartBarIcon from 'phosphor-svelte/lib/ChartBarIcon';
   import CheckSquareIcon from 'phosphor-svelte/lib/CheckSquareIcon';
   import CurrencyDollarIcon from 'phosphor-svelte/lib/CurrencyDollarIcon';
-  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
   import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
   import SquareIcon from 'phosphor-svelte/lib/SquareIcon';
   import TrayIcon from 'phosphor-svelte/lib/TrayIcon';
@@ -187,7 +186,7 @@
     const worst = est.currentModel.worstCase.totalCostUsd;
     const fmt = (v: number) => (v < 0.01 ? '<$0.01' : `$${v.toFixed(2)}`);
     if (best === worst) return fmt(worst);
-    return `${fmt(best)} – ${fmt(worst)}`;
+    return `${fmt(best)} - ${fmt(worst)}`;
   }
 </script>
 
@@ -198,7 +197,7 @@
       <div class="space-y-0.5">
         <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
           <TrayIcon class="h-5 w-5" />
-          Unprocessed Documents
+          Unprocessed documents
         </h2>
         <p class="text-muted text-sm">
           {data.unprocessed.total.toLocaleString()} document{data.unprocessed.total === 1
@@ -209,7 +208,7 @@
       <div class="flex gap-2">
         {#if selectedDocIds.size > 0}
           <Button icon={PlayIcon} onclick={handleProcessSelected} disabled={layoutCtx.isProcessing}>
-            Process {selectedDocIds.size} Selected
+            Process {selectedDocIds.size} selected
           </Button>
         {/if}
         {#if data.unprocessed.total > 0}
@@ -219,7 +218,7 @@
             onclick={handleProcessAllUnprocessed}
             disabled={layoutCtx.isProcessing}
           >
-            Process All Unprocessed
+            Process all unprocessed
           </Button>
         {/if}
       </div>
@@ -240,29 +239,26 @@
 
     <!-- Cost estimate banner -->
     {#if costLoading}
-      <div class="border-soft bg-surface flex items-center gap-3 rounded-lg border px-4 py-3">
-        <div class="bg-canvas-alt h-4 w-4 animate-pulse rounded"></div>
+      <div class="border-border bg-surface flex items-center gap-3 border px-4 py-3">
         <div class="flex-1 space-y-1.5">
-          <div class="bg-canvas-alt h-4 w-32 animate-pulse rounded"></div>
-          <div class="bg-canvas-alt h-3 w-48 animate-pulse rounded"></div>
+          <div class="bg-canvas-deep h-4 w-32 animate-pulse"></div>
+          <div class="bg-canvas-deep h-3 w-48 animate-pulse"></div>
         </div>
       </div>
     {:else if costEstimate}
       <div
-        class="border-soft bg-surface flex flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        class="border-border bg-surface flex flex-col gap-3 border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <div class="flex items-start gap-3">
-          <div
-            class="bg-accent-light mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-          >
-            <CurrencyDollarIcon class="text-accent h-4 w-4" />
-          </div>
+          <CurrencyDollarIcon class="text-muted mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p class="text-ink text-sm font-medium">
-              Estimated cost: <span class="tabular-nums">{formatCostRange(costEstimate)}</span>
+              Estimated cost: <span class="font-mono tabular-nums">
+                {formatCostRange(costEstimate)}
+              </span>
               <span class="text-muted font-normal">with {costEstimate.currentModel.modelName}</span>
             </p>
-            <p class="text-muted mt-0.5 text-xs">
+            <p class="text-muted mt-0.5 font-mono text-xs">
               {costEstimate.documentCount.toLocaleString()} document{costEstimate.documentCount ===
               1
                 ? ''
@@ -281,21 +277,18 @@
           class="shrink-0"
           onclick={() => (showCostComparison = true)}
         >
-          Compare Models
+          Compare models
         </Button>
       </div>
     {:else if costError}
-      <div class="border-soft bg-surface flex items-center gap-3 rounded-lg border px-4 py-3">
+      <div class="border-border bg-surface flex items-center gap-3 border px-4 py-3">
         <CurrencyDollarIcon class="text-muted h-4 w-4" />
         <p class="text-muted text-sm">Cost estimate unavailable</p>
       </div>
     {/if}
 
     {#if data.unprocessed.items.length === 0}
-      <div class="panel flex flex-col items-center py-12 text-center">
-        <div class="bg-success-light mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-          <FileTextIcon class="text-success h-7 w-7" />
-        </div>
+      <div class="flex flex-col items-center py-12 text-center">
         {#if hasActiveFilters}
           <p class="text-ink text-sm font-medium">No documents match your filters</p>
           <p class="text-muted mt-1 text-sm">Try adjusting your search or filter criteria.</p>
@@ -307,11 +300,13 @@
         {/if}
       </div>
     {:else}
-      <div class="panel overflow-hidden">
-        <table class="w-full">
+      <div class="border-border border-y">
+        <table class="w-full border-collapse">
           <thead>
-            <tr class="border-soft border-b text-left">
-              <th class="p-3">
+            <tr class="text-left">
+              <th
+                class="bg-surface border-border-hover sticky top-0 z-10 border-b py-1.5 pr-0 pl-6"
+              >
                 <!-- Table selection toggles (header and rows) stay inline: they are bare
                      icon-state toggles inside table cells, not Button-shaped actions. -->
                 <button
@@ -326,19 +321,23 @@
                   {/if}
                 </button>
               </th>
-              <th class="text-muted p-3 text-xs font-medium tracking-wider uppercase">Title</th>
               <th
-                class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase sm:table-cell"
+                class="label-micro bg-surface border-border-hover sticky top-0 z-10 border-b px-3 py-1.5 text-left"
+              >
+                Title
+              </th>
+              <th
+                class="label-micro bg-surface border-border-hover sticky top-0 z-10 hidden border-b px-3 py-1.5 text-left sm:table-cell"
               >
                 Correspondent
               </th>
               <th
-                class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase md:table-cell"
+                class="label-micro bg-surface border-border-hover sticky top-0 z-10 hidden border-b px-3 py-1.5 text-left md:table-cell"
               >
-                Document Type
+                Document type
               </th>
               <th
-                class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase lg:table-cell"
+                class="label-micro bg-surface border-border-hover sticky top-0 z-10 hidden border-b px-3 py-1.5 text-left lg:table-cell"
               >
                 Tags
               </th>
@@ -348,11 +347,11 @@
             {#each data.unprocessed.items as doc (doc.id)}
               {@const isSelected = selectedDocIds.has(doc.id)}
               <tr
-                class="border-soft hover:bg-canvas border-b transition-colors last:border-b-0 {isSelected
-                  ? 'bg-accent-light/30'
-                  : ''}"
+                class="border-border h-9 border-b transition-colors {isSelected
+                  ? 'bg-selected shadow-[inset_2px_0_0_var(--color-accent)]'
+                  : 'hover:bg-canvas-deep'}"
               >
-                <td class="p-3">
+                <td class="py-0 pr-0 pl-6">
                   <!-- Row selection toggle: inline for the same reason as the header toggle above. -->
                   <button
                     onclick={() => toggleDoc(doc.id)}
@@ -365,21 +364,19 @@
                     {/if}
                   </button>
                 </td>
-                <td class="p-3">
-                  <span class="text-ink text-sm font-medium">{doc.title}</span>
+                <td class="px-3 py-0">
+                  <span class="text-ink text-base font-medium">{doc.title}</span>
                 </td>
-                <td class="hidden p-3 sm:table-cell">
+                <td class="hidden px-3 py-0 sm:table-cell">
                   <span class="text-muted text-sm">{doc.correspondent ?? '--'}</span>
                 </td>
-                <td class="hidden p-3 md:table-cell">
+                <td class="hidden px-3 py-0 md:table-cell">
                   <span class="text-muted text-sm">{doc.documentType ?? '--'}</span>
                 </td>
-                <td class="hidden p-3 lg:table-cell">
+                <td class="hidden px-3 py-0 lg:table-cell">
                   <div class="flex flex-wrap gap-1">
                     {#each doc.tags as tag (tag)}
-                      <span
-                        class="bg-canvas-alt text-muted rounded-full px-2 py-0.5 text-xs font-medium"
-                      >
+                      <span class="border-border text-ink-light border px-1.5 font-mono text-xs">
                         {tag}
                       </span>
                     {:else}
@@ -398,10 +395,10 @@
         <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <p class="text-muted text-sm">
-              Showing <span class="text-ink font-medium">
-                {offset + 1}&ndash;{Math.min(offset + data.limit, data.unprocessed.total)}
+              Showing <span class="text-ink font-mono tabular-nums">
+                {offset + 1}-{Math.min(offset + data.limit, data.unprocessed.total)}
               </span>
-              of <span class="text-ink font-medium">{data.unprocessed.total}</span>
+              of <span class="text-ink font-mono tabular-nums">{data.unprocessed.total}</span>
             </p>
             <Select
               ariaLabel="Results per page"
@@ -420,7 +417,7 @@
                 onclick={() => goToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
               />
-              <span class="text-ink px-3 text-sm font-medium tabular-nums">
+              <span class="text-ink px-3 font-mono text-sm tabular-nums">
                 {currentPage} / {totalPages}
               </span>
               <Button
@@ -445,7 +442,7 @@
         <div class="space-y-0.5">
           <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
             <WarningCircleIcon class="text-ember h-5 w-5" />
-            Failed Results
+            Failed results
           </h2>
           <p class="text-muted text-sm">
             {data.failed.total} result{data.failed.total === 1 ? '' : 's'} failed during processing.
@@ -458,32 +455,30 @@
             onclick={handleRetryAllFailed}
             disabled={layoutCtx.isProcessing}
           >
-            Retry All Failed
+            Retry all failed
           </Button>
         {/if}
       </div>
 
-      <div class="space-y-2">
+      <div class="border-border divide-border divide-y border-y">
         {#each data.failed.items as result (result.id)}
-          <div class="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            class="flex flex-col gap-3 px-6 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+          >
             <div class="min-w-0 flex-1 space-y-1">
               <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
               <div class="space-y-1">
                 {#if result.failureType === 'no_suggestions'}
-                  <span
-                    class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
-                  >
-                    No Suggestions
+                  <span class="status-word text-warn">
+                    <span aria-hidden="true">◆</span> NO SUGGESTIONS
                   </span>
-                  <p class="text-muted text-xs">AI could not suggest metadata for this document</p>
+                  <p class="text-muted text-sm">AI could not suggest metadata for this document</p>
                 {:else}
-                  <span
-                    class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
-                  >
-                    Failed
+                  <span class="status-word text-ember">
+                    <span aria-hidden="true">●</span> FAILED
                   </span>
                   {#if result.errorMessage}
-                    <p class="text-muted line-clamp-3 text-xs">{result.errorMessage}</p>
+                    <p class="text-muted line-clamp-3 text-sm">{result.errorMessage}</p>
                   {/if}
                 {/if}
               </div>
@@ -522,7 +517,7 @@
       <div class="space-y-0.5">
         <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
           <WarningCircleIcon class="text-warn h-5 w-5" />
-          Skipped Documents
+          Skipped documents
         </h2>
         <p class="text-muted text-sm">
           {data.skipped.total} document{data.skipped.total === 1 ? '' : 's'} skipped due to missing OCR
@@ -530,16 +525,18 @@
         </p>
       </div>
 
-      <div class="space-y-2">
+      <div class="border-border divide-border divide-y border-y">
         {#each data.skipped.items as result (result.id)}
-          <div class="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            class="flex flex-col gap-3 px-6 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+          >
             <div class="min-w-0 flex-1 space-y-1">
               <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
               <div class="space-y-1">
-                <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium">
-                  No OCR Text
+                <span class="status-word text-warn">
+                  <span aria-hidden="true">◆</span> NO OCR TEXT
                 </span>
-                <p class="text-muted text-xs">
+                <p class="text-muted text-sm">
                   This document has no text content. Run OCR in Paperless-NGX, then re-sync and
                   retry.
                 </p>

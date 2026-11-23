@@ -75,19 +75,19 @@
   onclick={(e) => {
     if (e.target === dialog) oncancel();
   }}
-  class="border-soft bg-surface m-auto w-full max-w-lg rounded-xl border p-0 shadow-lg backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-200"
+  class="border-border-hover bg-surface-raised backdrop:bg-ink/50 m-auto w-full max-w-lg rounded-md border p-0 shadow-lg backdrop:transition-opacity backdrop:duration-200"
   aria-labelledby="preflight-title"
 >
   <div class="flex max-h-[80vh] flex-col">
     {#if loading}
       <!-- Loading state -->
       <div class="flex flex-col items-center justify-center px-6 py-16">
-        <CircleNotchIcon class="text-accent mb-4 h-8 w-8 animate-spin" />
+        <CircleNotchIcon class="text-accent mb-3 h-4 w-4 animate-spin" />
         <p class="text-muted text-sm">Computing preflight summary...</p>
       </div>
     {:else if preflight}
       <!-- Header -->
-      <div class="border-soft border-b px-6 py-4">
+      <div class="border-border border-b px-6 py-4">
         <h2 id="preflight-title" class="text-ink text-lg font-semibold">
           Apply to {preflight.totalDocuments} document{preflight.totalDocuments === 1 ? '' : 's'}
         </h2>
@@ -102,23 +102,29 @@
           <div class="space-y-1.5">
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted">Title</span>
-              <span class="text-ink font-medium">{preflight.fieldsChanged.title}</span>
+              <span class="text-ink font-mono tabular-nums">{preflight.fieldsChanged.title}</span>
             </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted">Correspondent</span>
-              <span class="text-ink font-medium">{preflight.fieldsChanged.correspondent}</span>
+              <span class="text-ink font-mono tabular-nums">
+                {preflight.fieldsChanged.correspondent}
+              </span>
             </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted">Document type</span>
-              <span class="text-ink font-medium">{preflight.fieldsChanged.documentType}</span>
+              <span class="text-ink font-mono tabular-nums">
+                {preflight.fieldsChanged.documentType}
+              </span>
             </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted">Tags</span>
-              <span class="text-ink font-medium">{preflight.fieldsChanged.tags}</span>
+              <span class="text-ink font-mono tabular-nums">{preflight.fieldsChanged.tags}</span>
             </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted">Custom fields</span>
-              <span class="text-ink font-medium">{preflight.fieldsChanged.customFields}</span>
+              <span class="text-ink font-mono tabular-nums">
+                {preflight.fieldsChanged.customFields}
+              </span>
             </div>
           </div>
         </div>
@@ -127,7 +133,7 @@
         <div>
           <h3 class="text-ink mb-2 text-sm font-medium">Confidence distribution</h3>
           {#if confidenceTotal > 0}
-            <div class="mb-2 flex h-3 overflow-hidden rounded-full">
+            <div class="mb-2 flex h-1.5 overflow-hidden">
               {#if preflight.confidenceDistribution.high > 0}
                 <div
                   class="bg-success"
@@ -136,7 +142,7 @@
               {/if}
               {#if preflight.confidenceDistribution.medium > 0}
                 <div
-                  class="bg-warning"
+                  class="bg-warn"
                   style="width: {pct(preflight.confidenceDistribution.medium)}%"
                 ></div>
               {/if}
@@ -147,17 +153,17 @@
                 ></div>
               {/if}
             </div>
-            <div class="flex items-center gap-4 text-xs">
+            <div class="flex items-center gap-4 font-mono text-xs">
               <span class="flex items-center gap-1.5">
-                <span class="bg-success inline-block h-2 w-2 rounded-full"></span>
+                <span class="status-word text-success"><span aria-hidden="true">■</span></span>
                 <span class="text-muted">High {preflight.confidenceDistribution.high}</span>
               </span>
               <span class="flex items-center gap-1.5">
-                <span class="bg-warning inline-block h-2 w-2 rounded-full"></span>
+                <span class="status-word text-warn"><span aria-hidden="true">◆</span></span>
                 <span class="text-muted">Medium {preflight.confidenceDistribution.medium}</span>
               </span>
               <span class="flex items-center gap-1.5">
-                <span class="bg-ember inline-block h-2 w-2 rounded-full"></span>
+                <span class="status-word text-ember"><span aria-hidden="true">●</span></span>
                 <span class="text-muted">Low {preflight.confidenceDistribution.low}</span>
               </span>
             </div>
@@ -168,12 +174,12 @@
 
         <!-- Warnings -->
         {#if hasWarnings}
-          <div class="border-soft bg-canvas/60 space-y-2 rounded-lg border p-4">
+          <div class="border-warn bg-warn-light space-y-2 border p-3">
             <div class="flex items-center gap-2">
-              <WarningIcon class="text-warning h-4 w-4 shrink-0" />
+              <WarningIcon class="text-warn h-4 w-4 shrink-0" />
               <h3 class="text-ink text-sm font-medium">Warnings</h3>
             </div>
-            <ul class="text-muted space-y-1.5 text-sm">
+            <ul class="text-ink-light space-y-1.5 text-sm">
               {#if totalNewEntities > 0}
                 <li class="flex items-start justify-between">
                   <span>
@@ -192,7 +198,7 @@
                   </button>
                 </li>
                 {#if showNewEntities}
-                  <li class="border-soft ml-2 border-l pl-3">
+                  <li class="border-border-hover ml-2 border-l pl-3">
                     {#if preflight.newEntitiesCreated.correspondents.length > 0}
                       <div class="mb-1">
                         <span class="text-ink text-xs font-medium">Correspondents:</span>
@@ -259,10 +265,10 @@
       </div>
 
       <!-- Footer -->
-      <div class="border-soft flex items-center justify-end gap-3 border-t px-6 py-4">
+      <div class="border-border flex items-center justify-end gap-3 border-t px-6 py-4">
         <button
           onclick={oncancel}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
+          class="border-border text-ink hover:bg-canvas-deep h-7 rounded-sm border px-3 text-sm font-medium"
         >
           Cancel
         </button>
@@ -270,11 +276,11 @@
           onclick={onconfirm}
           disabled={readOnly}
           title={readOnly ? 'Paperless is read-only' : undefined}
-          class="text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 {hasWarnings
+          class="text-on-accent h-7 rounded-sm px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 {hasWarnings
             ? 'bg-ember hover:opacity-90'
             : 'bg-accent hover:bg-accent-hover'}"
         >
-          Apply {preflight.totalDocuments} Document{preflight.totalDocuments === 1 ? '' : 's'}
+          Apply {preflight.totalDocuments} document{preflight.totalDocuments === 1 ? '' : 's'}
         </button>
       </div>
     {/if}

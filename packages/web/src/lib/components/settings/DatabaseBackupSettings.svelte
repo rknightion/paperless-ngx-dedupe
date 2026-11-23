@@ -1,13 +1,10 @@
 <script lang="ts">
   import DownloadSimpleIcon from 'phosphor-svelte/lib/DownloadSimpleIcon';
-  import FloppyDiskIcon from 'phosphor-svelte/lib/FloppyDiskIcon';
+  import { Button } from '$lib/components';
 </script>
 
 <section class="panel" id="database-backup" aria-labelledby="database-backup-heading">
-  <h2 id="database-backup-heading" class="text-ink flex items-center gap-2 text-lg font-semibold">
-    <FloppyDiskIcon class="text-accent h-5 w-5" aria-hidden="true" />
-    Database backup
-  </h2>
+  <h2 id="database-backup-heading" class="text-ink text-lg font-semibold">Database backup</h2>
   <p class="text-muted mt-2 text-sm">
     Download a consistent SQLite snapshot containing application settings, synced document metadata,
     duplicate analysis, job history, and AI review state.
@@ -26,12 +23,13 @@
   >
     Read the offline restore guide
   </a>
-  <a
+  <Button
     href="/api/v1/maintenance/backup"
     download
-    class="border-soft text-ink hover:bg-canvas mt-4 flex w-fit items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium"
+    variant="outline"
+    icon={DownloadSimpleIcon}
+    class="mt-4"
   >
-    <DownloadSimpleIcon class="h-4 w-4" aria-hidden="true" />
     Download database backup
-  </a>
+  </Button>
 </section>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from '$lib/components';
   let file = $state<File | null>(null);
   let backup = $state<string | null>(null);
   let busy = $state(false);
@@ -46,13 +47,7 @@
     modifies Paperless documents. Unmatched false-positive groups become remembered pairs for the
     next analysis. Groups over 200 members must match a pending group.
   </p>
-  <a
-    href="/api/v1/export/decisions.json"
-    download
-    class="border-soft text-ink hover:bg-canvas inline-block rounded-lg border px-4 py-2 text-sm font-medium"
-  >
-    Export decisions
-  </a>
+  <Button href="/api/v1/export/decisions.json" download variant="outline">Export decisions</Button>
   <div class="flex flex-wrap items-center gap-3">
     <input
       type="file"
@@ -66,27 +61,25 @@
         notice = '';
         error = '';
       }}
-      class="text-ink file:border-soft file:text-ink w-full min-w-0 text-sm file:mr-3 file:rounded-lg file:border file:bg-transparent file:px-3 file:py-1.5"
+      class="text-ink file:border-border-hover file:text-ink w-full min-w-0 text-sm file:mr-3 file:rounded-sm file:border file:bg-transparent file:px-3 file:py-1"
     />
-    <button
-      type="button"
-      disabled={!file || busy}
-      onclick={() => submit(true)}
-      class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
-    >
+    <Button variant="outline" disabled={!file || busy} onclick={() => submit(true)}>
       Preview decisions import
-    </button>
+    </Button>
     {#if preview}
-      <button
-        type="button"
-        disabled={busy}
-        onclick={() => submit(false)}
-        class="bg-accent text-on-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
-        Apply decisions import
-      </button>
+      <Button disabled={busy} onclick={() => submit(false)}>Apply decisions import</Button>
     {/if}
   </div>
-  {#if notice}<p role="status" class="text-success text-sm">{notice}</p>{/if}
-  {#if error}<p role="alert" class="text-ember text-sm">{error}</p>{/if}
+  {#if notice}<p
+      role="status"
+      class="border-success text-success border-l-2 py-1 pl-3 text-sm before:content-['■_']"
+    >
+      {notice}
+    </p>{/if}
+  {#if error}<p
+      role="alert"
+      class="border-ember text-ember border-l-2 py-1 pl-3 text-sm before:content-['●_']"
+    >
+      {error}
+    </p>{/if}
 </section>

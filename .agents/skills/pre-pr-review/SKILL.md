@@ -1,6 +1,6 @@
 ---
 name: pre-pr-review
-description: "Review a diff before it becomes a pull request, or review someone else's pull request, against a short explicit list of what blocks a merge, a cap on findings, and a list of what never to report because CI already enforces it. Also judges a pull request's acceptance evidence table. Use before opening or updating a pull request, before handing back a candidate, and when asked to review, audit or check a change. Not for applying review feedback or proving work is done: the repository's AGENTS.md covers both."
+description: "Decide whether a pull request needs a review at all (most need none), and review a diff or pull request when one is asked for, against a short explicit list of what blocks a merge, a cap on findings, and a list of what never to report because CI already enforces it. Also judges a pull request's acceptance evidence table. Use when opening a pull request, to decide its review, and when asked to review, audit or check a change. Not a step before every pull request, not for applying review feedback or proving work is done: the repository's AGENTS.md covers both."
 license: Apache-2.0 AND MIT
 ---
 
@@ -14,9 +14,32 @@ for the review lenses. `LICENSE` carries both texts.
 Changes from the source: the upstream project's design-document and command-surface rules are
 replaced by blockers that fit any repository; the lenses drop the framework-specific rules; the
 do-not-report list names `just check`; added the acceptance evidence review, the compatibility
-rule and the closeout order of the source's separate `review` skill.
+rule and the closeout order of the source's separate `review` skill; added the on-demand review
+table.
 
 Inside the owner's agent loop, the repository's `LOOP.md` overrides this skill where they differ.
+
+## When a review is needed
+
+Review is on demand. Most pull requests need none beyond their required checks, and there is no
+local review to run before opening one. The maintainer, or the owner's agent that started the work,
+decides when the pull request opens; a sub-agent or worker handed one piece of the work never asks
+for a review and never runs one, and an outside contributor leaves it to a maintainer. Count added
+plus deleted lines in the diff against the base, outside generated and lock files, and take the
+first row that matches:
+
+| Change | Review |
+| --- | --- |
+| Touches authentication, authorisation, permissions, secrets or credentials, privacy or redaction, a migration or destructive data operation, a public interface other code or users depend on, deploy, release or publish configuration, or a path the repository's `LOOP.md` lists under `guarded-paths:` | Two hosted reviewers, asked together |
+| Only documentation, comments, CI workflow YAML, dependency bumps, declarative configuration, generated or lock files, tests, or a mechanical rename, move or reformat | None |
+| More than about 400 changed lines | Two hosted reviewers, asked together |
+| About 50 changed lines or fewer | None |
+| Anything else | One hosted reviewer |
+
+When the change fits no row cleanly, ask one hosted reviewer. Say which row applied on one line of
+the pull request body, for example `Review: none, documentation only`. Ask once per head commit,
+when the required checks are green. The rest of this skill is how to review when a review is asked
+for, by a person or by a hosted reviewer's findings you are checking.
 
 ## How to review
 
@@ -31,8 +54,8 @@ Inside the owner's agent loop, the repository's `LOOP.md` overrides this skill w
    diff touches.
 4. Stop. Write the report. Never pad it.
 
-In a closeout of your own change, run `refactor-clean` first and `write-docs` after this review; a
-later fix that reopens an earlier pass returns to it.
+In a closeout of your own change, run `refactor-clean` first and `write-docs` after it; a later fix
+that reopens an earlier pass returns to it. Neither is a review, and neither needs one.
 
 Review changes to authentication, secrets, permissions, data deletion, migrations, release and
 deploy surfaces whatever their size. For a change under `.github/workflows/` or `.github/actions/`,

@@ -109,7 +109,7 @@
       </p>
     {/if}
 
-    <div class="border-soft mt-3 max-h-80 space-y-3 overflow-y-auto rounded-lg border p-3">
+    <div class="border-border mt-3 max-h-80 space-y-3 overflow-y-auto border p-3">
       {#if availableFields.length === 0}
         <p class="text-muted text-xs">No supported Paperless custom fields are available.</p>
       {/if}
@@ -126,7 +126,9 @@
               />
               <span>
                 <span class="font-medium">{field.name}</span>
-                <span class="text-muted ml-2 text-xs">{field.dataType} · ID {field.id}</span>
+                <span class="text-muted ml-2 font-mono text-xs">
+                  {field.dataType} · ID {field.id}
+                </span>
               </span>
             </label>
             {#if selection.selected}
@@ -161,7 +163,9 @@
 
   {#if status}
     <p
-      class="mt-2 text-xs {status.type === 'success' ? 'text-success' : 'text-ember'}"
+      class="mt-2 border-l-2 py-1 pl-3 text-xs {status.type === 'success'
+        ? "border-success text-success before:content-['■_']"
+        : "border-ember text-ember before:content-['●_']"}"
       role={status.type === 'error' ? 'alert' : 'status'}
     >
       {status.message}

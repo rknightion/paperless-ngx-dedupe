@@ -7,21 +7,14 @@
   import AiDocumentPickerModal from '$lib/components/ai/AiDocumentPickerModal.svelte';
   import { addToast, resetStore } from '$lib/components/ai/AiReviewStore.svelte';
   import { connectJobSSE } from '$lib/sse';
-  import ArrowUUpLeftIcon from 'phosphor-svelte/lib/ArrowUUpLeftIcon';
   import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
-  import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
   import CaretDownIcon from 'phosphor-svelte/lib/CaretDownIcon';
-  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
   import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
   import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
-  import InfoIcon from 'phosphor-svelte/lib/InfoIcon';
   import PauseIcon from 'phosphor-svelte/lib/PauseIcon';
   import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
-  import RadioButtonIcon from 'phosphor-svelte/lib/RadioButtonIcon';
-  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
   import XIcon from 'phosphor-svelte/lib/XIcon';
-  import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
 
   let { data, children } = $props();
 
@@ -52,6 +45,40 @@
   const queueCount = $derived(stats.unprocessed + stats.failed + stats.skipped);
   const pendingReviewCount = $derived(stats.pendingReview);
   const historyCount = $derived(stats.applied + stats.rejected + stats.reverted);
+
+  const appliedShare = $derived(
+    stats.totalProcessed > 0
+      ? `${((stats.applied / stats.totalProcessed) * 100).toFixed(1)}% of processed`
+      : 'nothing processed yet',
+  );
+
+  // Four cells maximum. Rejected and reverted are actioned on the History tab.
+  const stripCells = $derived([
+    {
+      href: '/ai-processing/history',
+      label: 'Processed',
+      value: stats.totalProcessed.toLocaleString(),
+      note: `${stats.unprocessed.toLocaleString()} not yet processed`,
+    },
+    {
+      href: '/ai-processing/review',
+      label: 'Pending review',
+      value: stats.pendingReview.toLocaleString(),
+      note: 'waiting for review',
+    },
+    {
+      href: '/ai-processing/history?status=applied',
+      label: 'Applied',
+      value: stats.applied.toLocaleString(),
+      note: appliedShare,
+    },
+    {
+      href: '/ai-processing/history?status=failed',
+      label: 'Failed',
+      value: stats.failed.toLocaleString(),
+      note: stats.skipped > 0 ? `${stats.skipped.toLocaleString()} skipped` : 'extraction failures',
+    },
+  ]);
 
   function isActive(path: string): boolean {
     return page.url.pathname.startsWith(path);
@@ -88,7 +115,7 @@
     },
     {
       value: '/ai-processing/custom-fields',
-      label: 'Custom Fields',
+      label: 'Custom fields',
       href: '/ai-processing/custom-fields',
     },
   ]);
@@ -273,21 +300,14 @@
   <title>AI Processing - Paperless NGX Dedupe</title>
 </svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-4">
   <!-- Header -->
-  <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div class="space-y-1">
-      <h1 class="text-ink flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-        <div class="bg-accent-light flex h-8 w-8 items-center justify-center rounded-lg">
-          <BrainIcon class="text-accent h-4.5 w-4.5" />
-        </div>
-        AI Processing
-      </h1>
-      <p class="text-muted text-sm">Extract and apply document metadata using AI.</p>
-    </div>
-    <div class="relative flex gap-2">
+  <header class="border-border flex flex-wrap items-center gap-x-3 gap-y-2 border-b pb-3">
+    <h1 class="text-ink text-xl font-semibold">AI processing</h1>
+    <span class="text-muted font-mono text-xs">{page.url.pathname}</span>
+    <div class="relative ml-auto flex items-center gap-2">
       <Button onclick={handleProcessNew} loading={isProcessing} icon={PlayIcon}>
-        {isProcessing ? 'Processing...' : isResumable ? 'Resume' : 'Process New'}
+        {isProcessing ? 'Processing...' : isResumable ? 'Resume' : 'Process new'}
       </Button>
       <div class="relative">
         <Button
@@ -300,23 +320,23 @@
         {#if showProcessMenu}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
-            class="border-soft bg-surface absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border shadow-lg"
+            class="border-border-hover bg-surface-raised absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-md border shadow-lg"
             onmouseleave={() => (showProcessMenu = false)}
           >
-            <!-- Menu items below stay inline: Button is a centred, rounded control and cannot
+            <!-- Menu items below stay inline: Button is a centred control and cannot
                  express a full-bleed, left-aligned row inside a popover menu. -->
             <button
               onclick={handleProcessNew}
-              class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+              class="hover:bg-canvas-deep text-ink flex w-full items-center gap-2 px-4 py-2 text-sm"
             >
-              <PlayIcon class="h-4 w-4" /> Process New
+              <PlayIcon class="h-3.5 w-3.5" /> Process new
             </button>
             {#if stats.failed > 0}
               <button
                 onclick={handleRetryFailed}
-                class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+                class="hover:bg-canvas-deep text-ink flex w-full items-center gap-2 px-4 py-2 text-sm"
               >
-                <ArrowsClockwiseIcon class="h-4 w-4" /> Retry Failed
+                <ArrowsClockwiseIcon class="h-3.5 w-3.5" /> Retry failed
               </button>
             {/if}
             <button
@@ -324,19 +344,19 @@
                 showProcessMenu = false;
                 showDocPicker = true;
               }}
-              class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+              class="hover:bg-canvas-deep text-ink flex w-full items-center gap-2 px-4 py-2 text-sm"
             >
-              <FileTextIcon class="h-4 w-4" /> Process Selected...
+              <FileTextIcon class="h-3.5 w-3.5" /> Process selected...
             </button>
-            <div class="border-soft border-t"></div>
+            <div class="border-border border-t"></div>
             <button
               onclick={() => {
                 showProcessMenu = false;
                 confirmReprocessAll = true;
               }}
-              class="text-ember hover:bg-ember-light flex w-full items-center gap-2 px-4 py-2.5 text-sm"
+              class="text-ember hover:bg-ember-light flex w-full items-center gap-2 px-4 py-2 text-sm"
             >
-              <WarningCircleIcon class="h-4 w-4" /> Re-run Entire Library
+              <WarningCircleIcon class="h-3.5 w-3.5" /> Re-run entire library
             </button>
           </div>
         {/if}
@@ -344,127 +364,27 @@
     </div>
   </header>
 
-  <!-- Stats Cards -->
-  <div
-    class="grid grid-cols-2 gap-3 sm:grid-cols-3 {stats.skipped > 0
-      ? 'lg:grid-cols-7'
-      : 'lg:grid-cols-6'}"
-  >
-    <a
-      href="/ai-processing/history"
-      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
-      data-sveltekit-preload-data
-    >
-      <div class="bg-accent-subtle flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <FileTextIcon class="text-accent h-4 w-4" />
-      </div>
-      <div class="min-w-0">
-        <p class="text-muted text-xs font-medium">Processed</p>
-        <p class="text-ink text-lg font-semibold tabular-nums">
-          {stats.totalProcessed.toLocaleString()}
-        </p>
-      </div>
-    </a>
-    <a
-      href="/ai-processing/review"
-      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
-      data-sveltekit-preload-data
-    >
-      <div class="bg-warn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <RadioButtonIcon class="text-warn h-4 w-4" />
-      </div>
-      <div class="min-w-0">
-        <p class="text-muted text-xs font-medium">Pending</p>
-        <p class="text-ink text-lg font-semibold tabular-nums">
-          {stats.pendingReview.toLocaleString()}
-        </p>
-      </div>
-    </a>
-    <a
-      href="/ai-processing/history?status=applied"
-      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
-      data-sveltekit-preload-data
-    >
-      <div class="bg-success-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <CheckCircleIcon class="text-success h-4 w-4" />
-      </div>
-      <div class="min-w-0">
-        <p class="text-muted text-xs font-medium">Applied</p>
-        <p class="text-ink text-lg font-semibold tabular-nums">
-          {stats.applied.toLocaleString()}
-        </p>
-      </div>
-    </a>
-    <a
-      href="/ai-processing/history?status=rejected"
-      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
-      data-sveltekit-preload-data
-    >
-      <div class="bg-canvas-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <XCircleIcon class="text-muted h-4 w-4" />
-      </div>
-      <div class="min-w-0">
-        <p class="text-muted text-xs font-medium">Rejected</p>
-        <p class="text-ink text-lg font-semibold tabular-nums">
-          {stats.rejected.toLocaleString()}
-        </p>
-      </div>
-    </a>
-    <a
-      href="/ai-processing/history?status=reverted"
-      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
-      data-sveltekit-preload-data
-    >
-      <div class="bg-accent-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <ArrowUUpLeftIcon class="text-accent h-4 w-4" />
-      </div>
-      <div class="min-w-0">
-        <p class="text-muted text-xs font-medium">Reverted</p>
-        <p class="text-ink text-lg font-semibold tabular-nums">
-          {stats.reverted.toLocaleString()}
-        </p>
-      </div>
-    </a>
-    <a
-      href="/ai-processing/history?status=failed"
-      class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
-      data-sveltekit-preload-data
-    >
-      <div class="bg-ember-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-        <WarningIcon class="text-ember h-4 w-4" />
-      </div>
-      <div class="min-w-0">
-        <p class="text-muted text-xs font-medium">Failed</p>
-        <p class="text-ink text-lg font-semibold tabular-nums">
-          {stats.failed.toLocaleString()}
-        </p>
-      </div>
-    </a>
-    {#if stats.skipped > 0}
+  <!-- Stat strip: four divided cells. Rejected and reverted live on the History tab. -->
+  <div class="bg-border border-border grid grid-cols-2 gap-px border lg:grid-cols-4">
+    {#each stripCells as cell (cell.href)}
       <a
-        href="/ai-processing/queue"
-        class="panel flex items-center gap-3 p-4 no-underline transition-shadow hover:ring-2 hover:ring-black/10"
+        href={cell.href}
+        class="bg-surface hover:bg-canvas-deep block px-6 py-3 no-underline transition-colors"
         data-sveltekit-preload-data
       >
-        <div class="bg-warn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-          <WarningCircleIcon class="text-warn h-4 w-4" />
-        </div>
-        <div class="min-w-0">
-          <p class="text-muted text-xs font-medium">Skipped</p>
-          <p class="text-ink text-lg font-semibold tabular-nums">
-            {stats.skipped.toLocaleString()}
-          </p>
-        </div>
+        <span class="label-micro block">{cell.label}</span>
+        <span class="text-ink block text-2xl font-semibold tabular-nums">{cell.value}</span>
+        <span class="text-muted block font-mono text-xs">{cell.note}</span>
       </a>
-    {/if}
+    {/each}
   </div>
 
   <!-- Progress Panel -->
   {#if isProcessing}
     <div class="panel">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2.5 text-sm font-medium">
-          <CircleNotchIcon class="text-accent h-4 w-4 animate-spin" />
+        <div class="flex items-center gap-2 text-sm font-medium">
+          <CircleNotchIcon class="text-accent h-3.5 w-3.5 animate-spin" />
           <span class="text-ink">Processing documents...</span>
         </div>
         <Button variant="outline" size="sm" icon={PauseIcon} onclick={cancelCurrentJob}>
@@ -479,12 +399,10 @@
 
   <!-- Error Banner -->
   {#if jobError}
-    <div class="bg-ember-light border-ember/20 flex items-start gap-3 rounded-xl border p-4">
-      <div class="bg-ember/10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
-        <WarningCircleIcon class="text-ember h-4 w-4" />
-      </div>
+    <div class="border-ember bg-ember-light flex items-start gap-3 border p-3">
+      <span class="status-word text-ember mt-0.5"><span aria-hidden="true">●</span> FAIL</span>
       <div class="min-w-0 flex-1">
-        <p class="text-ink text-sm font-medium">Processing failed</p>
+        <p class="text-ink text-sm font-semibold">Processing failed</p>
         <p class="text-ink-light mt-0.5 text-sm break-words">{jobError}</p>
       </div>
       <Button
@@ -501,15 +419,13 @@
 
   <!-- Resume Hint -->
   {#if showResumeHint}
-    <div class="bg-accent-light border-accent/20 flex items-start gap-3 rounded-xl border p-4">
-      <div class="bg-accent/10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
-        <InfoIcon class="text-accent h-4 w-4" />
-      </div>
+    <div class="border-border bg-surface flex items-start gap-3 border p-3">
+      <span class="status-word text-warn mt-0.5"><span aria-hidden="true">◆</span> PAUSED</span>
       <div class="min-w-0 flex-1">
-        <p class="text-ink text-sm font-medium">Processing paused</p>
+        <p class="text-ink text-sm font-semibold">Processing paused</p>
         <p class="text-ink-light mt-0.5 text-sm">
           {stats.unprocessed.toLocaleString()} document{stats.unprocessed === 1 ? '' : 's'} remaining.
-          Click "{isResumable ? 'Resume' : 'Process New'}" to continue from where you left off.
+          Click "{isResumable ? 'Resume' : 'Process new'}" to continue from where you left off.
         </p>
       </div>
       <Button
@@ -539,9 +455,9 @@
 />
 <ConfirmDialog
   open={confirmReprocessAll}
-  title="Re-run Entire Library?"
+  title="Re-run entire library?"
   message="This will re-process all documents in your library. Existing AI results will be overwritten. This may take a significant amount of time and API usage."
-  confirmLabel="Re-run All"
+  confirmLabel="Re-run all"
   variant="ember"
   onconfirm={handleReprocessAll}
   oncancel={() => (confirmReprocessAll = false)}

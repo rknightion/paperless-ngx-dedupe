@@ -373,43 +373,52 @@
   }
 </script>
 
-<nav class="border-soft mb-4 flex gap-1 border-b" aria-label="AI review queues">
+<nav
+  class="border-border bg-surface mb-4 inline-flex overflow-hidden rounded-sm border"
+  aria-label="AI review queues"
+>
   <a
     href="/ai-processing/review?queue=review&limit={data.limit}"
     aria-current={data.queue === 'review' ? 'page' : undefined}
-    class="border-b-2 px-4 py-2 text-sm font-medium {data.queue === 'review'
-      ? 'border-accent text-accent'
-      : 'text-muted border-transparent'}"
+    class="border-border inline-flex h-[26px] items-center border-l px-3 text-sm first:border-l-0 {data.queue ===
+    'review'
+      ? 'bg-selected text-ink font-medium'
+      : 'text-muted hover:bg-canvas-deep'}"
   >
     Review suggestions
   </a>
   <a
     href="/ai-processing/review?queue=failures&limit={data.limit}"
     aria-current={data.queue === 'failures' ? 'page' : undefined}
-    class="border-b-2 px-4 py-2 text-sm font-medium {data.queue === 'failures'
-      ? 'border-accent text-accent'
-      : 'text-muted border-transparent'}"
+    class="border-border inline-flex h-[26px] items-center border-l px-3 text-sm first:border-l-0 {data.queue ===
+    'failures'
+      ? 'bg-selected text-ink font-medium'
+      : 'text-muted hover:bg-canvas-deep'}"
   >
     Extraction failures
   </a>
   <a
     href="/ai-processing/review?queue=history&limit={data.limit}"
     aria-current={data.queue === 'history' ? 'page' : undefined}
-    class="border-b-2 px-4 py-2 text-sm font-medium {data.queue === 'history'
-      ? 'border-accent text-accent'
-      : 'text-muted border-transparent'}"
+    class="border-border inline-flex h-[26px] items-center border-l px-3 text-sm first:border-l-0 {data.queue ===
+    'history'
+      ? 'bg-selected text-ink font-medium'
+      : 'text-muted hover:bg-canvas-deep'}"
   >
     Apply audit
   </a>
 </nav>
 
 {#if data.returnTo}
-  <a href={data.returnTo} class="text-accent mb-4 inline-flex text-sm font-medium">
+  <a
+    href={data.returnTo}
+    class="text-accent hover:text-accent-hover mb-4 ml-3 inline-flex text-sm font-medium"
+  >
     Return to documents
   </a>
 {/if}
 
-<form method="GET" class="panel mb-4 flex flex-wrap items-end gap-3">
+<form method="GET" class="border-border mb-3 flex flex-wrap items-end gap-3 border-y py-2">
   <!-- Hidden inputs carry GET state through the filter form; they have no visible control. -->
   <input type="hidden" name="queue" value={data.queue} />
   {#if data.documentId}
@@ -447,19 +456,24 @@
       options={FAILURE_CATEGORY_OPTIONS}
     />
   {/if}
-  <Button type="submit">Apply filters</Button>
+  <Button type="submit" variant="secondary">Apply filters</Button>
 </form>
 
-<!-- Bulk Action Bar -->
+<!-- One legend per screen: the field codes and the confidence bands live here, not on every row. -->
+{#if data.queue !== 'failures'}
+  <p class="text-muted mb-3 font-mono text-xs">
+    TI title &middot; CO correspondent &middot; TY type &middot; TG tags &middot; CF custom field
+    &nbsp;&nbsp; <span aria-hidden="true">■</span> HIGH &gt;= 90 &middot;
+    <span aria-hidden="true">◆</span> MEDIUM 75-90 &middot;
+    <span aria-hidden="true">●</span> LOW &lt; 75
+  </p>
+{/if}
+
+<!-- Bulk field choices -->
 {#if data.queue === 'review'}
-  <AiBulkActionBar
-    selectedCount={selectedIds.size}
-    onbatchapply={handleBatchApply}
-    onbatchreject={handleBatchReject}
-  />
   {#if selectedIds.size > 0}
-    <fieldset class="panel mt-3 flex flex-wrap items-end gap-4">
-      <legend class="text-ink px-1 text-sm font-semibold">Fields for selected documents</legend>
+    <fieldset class="panel mb-3 flex flex-wrap items-end gap-4">
+      <legend class="text-ink px-1 text-lg font-semibold">Fields for selected documents</legend>
       {#if data.extractEnabled.title}
         <Checkbox bind:checked={batchSelection.title} label="Title" />
       {/if}
@@ -491,7 +505,7 @@
   <div class="panel">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2.5 text-sm font-medium">
-        <CircleNotchIcon class="text-accent h-4 w-4 animate-spin" />
+        <CircleNotchIcon class="text-accent h-3.5 w-3.5 animate-spin" />
         <span class="text-ink">Applying changes...</span>
       </div>
     </div>
@@ -526,8 +540,8 @@
       <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <p class="text-muted text-sm">
-            Showing <span class="text-ink font-medium">{results.length}</span>
-            of <span class="text-ink font-medium">{data.total}</span>
+            Showing <span class="text-ink font-mono tabular-nums">{results.length}</span>
+            of <span class="text-ink font-mono tabular-nums">{data.total}</span>
           </p>
           <Select
             ariaLabel="Results per page"
@@ -574,6 +588,16 @@
     />
   {/if}
 </div>
+
+<!-- Bulk action bar: pinned to the bottom edge of the content region. -->
+{#if data.queue === 'review'}
+  <AiBulkActionBar
+    selectedCount={selectedIds.size}
+    onbatchapply={handleBatchApply}
+    onbatchreject={handleBatchReject}
+    onclear={() => selectedIds.clear()}
+  />
+{/if}
 
 <!-- Mobile Detail Drawer -->
 {#if activeResultId && isMobile}

@@ -54,15 +54,15 @@
 </script>
 
 <div class="flex flex-wrap items-center gap-2">
-  <span class="text-muted text-xs font-medium">Quick filters:</span>
+  <span class="label-micro">Quick filters</span>
   {#each presets as preset, i (preset.label)}
     {@const active = activeIndex === i}
     <button
       onclick={() => applyPreset(preset)}
       title={preset.description}
-      class="rounded-full px-3 py-1 text-xs font-medium transition-colors {active
-        ? 'bg-accent text-on-accent'
-        : 'bg-canvas-alt text-muted hover:bg-canvas'}"
+      class="border-border h-[26px] rounded-sm border px-3 text-sm transition-colors {active
+        ? 'bg-selected text-ink font-medium'
+        : 'text-muted hover:bg-canvas-deep'}"
     >
       {preset.label}
     </button>

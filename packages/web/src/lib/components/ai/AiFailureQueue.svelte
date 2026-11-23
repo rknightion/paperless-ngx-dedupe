@@ -36,17 +36,19 @@
 
   <div class="grid gap-3 sm:grid-cols-2">
     {#each groups as group (group.category)}
-      <article class="border-soft bg-surface rounded-xl border p-4">
+      <article class="border-border bg-surface border p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="text-ink text-sm font-semibold">{group.label}</h3>
-            <p class="text-muted text-xs">{group.count} failure{group.count === 1 ? '' : 's'}</p>
+            <p class="text-muted font-mono text-xs tabular-nums">
+              {group.count} failure{group.count === 1 ? '' : 's'}
+            </p>
           </div>
           <button
             type="button"
             onclick={() => retry(group.category)}
             disabled={retrying !== null}
-            class="border-soft text-accent hover:bg-accent-subtle flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+            class="border-border text-ink hover:bg-canvas-deep flex h-7 items-center gap-1.5 rounded-sm border px-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ArrowsClockwiseIcon
               class="h-3.5 w-3.5 {retrying === group.category ? 'animate-spin' : ''}"
@@ -58,20 +60,20 @@
     {/each}
   </div>
 
-  <div class="border-soft divide-soft divide-y rounded-xl border">
+  <div class="border-border divide-border divide-y border-y">
     {#each results as result (result.id)}
       <button
         type="button"
         onclick={() => onopen(result.id)}
-        class="hover:bg-accent-subtle/40 flex w-full items-center justify-between gap-3 p-4 text-left"
+        class="hover:bg-canvas-deep flex w-full items-center justify-between gap-3 px-6 py-2.5 text-left"
       >
         <span class="min-w-0">
           <span class="text-ink block truncate text-sm font-medium">{result.documentTitle}</span>
-          <span class="text-muted block text-xs">
+          <span class="text-muted block text-sm">
             {result.safeFailure?.label ?? 'Extraction could not be completed'}
           </span>
         </span>
-        <span class="text-accent shrink-0 text-xs font-medium">Review</span>
+        <span class="text-accent shrink-0 text-sm font-medium">Review</span>
       </button>
     {:else}
       <p class="text-muted p-8 text-center text-sm">No extraction failures match these filters.</p>
