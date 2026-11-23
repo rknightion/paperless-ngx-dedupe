@@ -53,6 +53,7 @@ export function proposedFieldCodes(result: FieldCodeSource): string[] {
 }
 
 interface ConfidenceSource extends FieldCodeSource {
+  suggestedCustomFields: Array<{ fieldId: number; fieldName?: string; confidence: number }>;
   confidence: {
     title: number;
     correspondent: number;
@@ -66,20 +67,24 @@ export function weakestConfidence(
   result: ConfidenceSource,
 ): { score: number; field: string } | null {
   const c = result.confidence;
-  if (!c) return null;
   const candidates: Array<{ score: number; field: string }> = [];
-  if (result.suggestedTitle) candidates.push({ score: c.title, field: 'title' });
-  if (result.suggestedCorrespondent)
-    candidates.push({ score: c.correspondent, field: 'correspondent' });
-  if (result.suggestedDocumentType) candidates.push({ score: c.documentType, field: 'type' });
-  if (result.suggestedTags.length > 0) candidates.push({ score: c.tags, field: 'tags' });
-  if (candidates.length === 0) {
-    candidates.push(
-      { score: c.title, field: 'title' },
-      { score: c.correspondent, field: 'correspondent' },
-      { score: c.documentType, field: 'type' },
-      { score: c.tags, field: 'tags' },
-    );
+  if (c) {
+    if (result.suggestedTitle) candidates.push({ score: c.title, field: 'title' });
+    if (result.suggestedCorrespondent)
+      candidates.push({ score: c.correspondent, field: 'correspondent' });
+    if (result.suggestedDocumentType) candidates.push({ score: c.documentType, field: 'type' });
+    if (result.suggestedTags.length > 0) candidates.push({ score: c.tags, field: 'tags' });
   }
-  return candidates.reduce((min, next) => (next.score < min.score ? next : min));
+  for (const field of result.suggestedCustomFields) {
+    if (Number.isFinite(field.confidence)) {
+      candidates.push({
+        score: field.confidence,
+        field: field.fieldName ?? `Field #${field.fieldId}`,
+      });
+    }
+  }
+  return candidates.reduce<(typeof candidates)[number] | null>(
+    (min, next) => (!min || next.score < min.score ? next : min),
+    null,
+  );
 }
