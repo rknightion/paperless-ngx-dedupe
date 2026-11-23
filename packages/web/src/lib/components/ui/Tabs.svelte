@@ -55,8 +55,10 @@
           <span
             class="ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium {TONES[
               tab.countTone ?? 'neutral'
-            ]}">{tab.count}</span
+            ]}"
           >
+            {tab.count}
+          </span>
         {/if}
       </a>
     {:else}
@@ -72,8 +74,10 @@
           <span
             class="ml-1.5 rounded-full px-2 py-0.5 text-xs font-medium {TONES[
               tab.countTone ?? 'neutral'
-            ]}">{tab.count}</span
+            ]}"
           >
+            {tab.count}
+          </span>
         {/if}
       </button>
     {/if}

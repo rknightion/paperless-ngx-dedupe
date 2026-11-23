@@ -97,9 +97,9 @@
         <h3 class="text-ink flex items-center gap-2 text-base font-semibold">
           <Brain class="text-accent h-5 w-5" /> AI processing
         </h3>
-        <a href="/ai-processing" class="text-accent hover:text-accent-hover text-sm font-medium"
-          >View queue</a
-        >
+        <a href="/ai-processing" class="text-accent hover:text-accent-hover text-sm font-medium">
+          View queue
+        </a>
       </div>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <a href="/ai-processing?status=pending_review" class="panel-inset text-center">

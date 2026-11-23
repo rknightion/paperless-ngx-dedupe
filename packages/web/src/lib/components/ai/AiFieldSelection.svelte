@@ -140,9 +140,9 @@
       />
       <span>
         <span class="text-ink block font-medium">Add AI processed tag</span>
-        <span class="text-muted text-xs"
-          >Optional operational marker; never added automatically.</span
-        >
+        <span class="text-muted text-xs">
+          Optional operational marker; never added automatically.
+        </span>
       </span>
     </label>
   {/if}

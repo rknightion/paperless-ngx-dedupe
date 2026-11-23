@@ -54,8 +54,10 @@
     class="text-accent mt-2 inline-block text-sm underline"
     href="https://github.com/rknightion/paperless-ngx-dedupe/blob/main/docs/getting-started.md#trigger-on-consumption"
     target="_blank"
-    rel="noopener noreferrer">Workflow setup</a
+    rel="noopener noreferrer"
   >
+    Workflow setup
+  </a>
   <form
     class="mt-4 space-y-4"
     onsubmit={(event) => {
@@ -68,9 +70,9 @@
         <input type="checkbox" bind:checked={enabled} />
         Sync when Paperless sends a webhook
       </label>
-      <label class="text-ink block text-sm" for="webhook-quiet-seconds"
-        >Quiet period (seconds)</label
-      >
+      <label class="text-ink block text-sm" for="webhook-quiet-seconds">
+        Quiet period (seconds)
+      </label>
       <input
         id="webhook-quiet-seconds"
         type="number"

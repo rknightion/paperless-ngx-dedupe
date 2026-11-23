@@ -325,16 +325,19 @@
               <th class="text-muted p-3 text-xs font-medium tracking-wider uppercase">Title</th>
               <th
                 class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase sm:table-cell"
-                >Correspondent</th
               >
+                Correspondent
+              </th>
               <th
                 class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase md:table-cell"
-                >Document Type</th
               >
+                Document Type
+              </th>
               <th
                 class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase lg:table-cell"
-                >Tags</th
               >
+                Tags
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -371,8 +374,9 @@
                     {#each doc.tags as tag (tag)}
                       <span
                         class="bg-canvas-alt text-muted rounded-full px-2 py-0.5 text-xs font-medium"
-                        >{tag}</span
                       >
+                        {tag}
+                      </span>
                     {:else}
                       <span class="text-muted text-sm">--</span>
                     {/each}
@@ -389,9 +393,9 @@
         <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <p class="text-muted text-sm">
-              Showing <span class="text-ink font-medium"
-                >{offset + 1}&ndash;{Math.min(offset + data.limit, data.unprocessed.total)}</span
-              >
+              Showing <span class="text-ink font-medium">
+                {offset + 1}&ndash;{Math.min(offset + data.limit, data.unprocessed.total)}
+              </span>
               of <span class="text-ink font-medium">{data.unprocessed.total}</span>
             </p>
             <select
@@ -462,15 +466,18 @@
               <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
               <div class="space-y-1">
                 {#if result.failureType === 'no_suggestions'}
-                  <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
-                    >No Suggestions</span
+                  <span
+                    class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
                   >
+                    No Suggestions
+                  </span>
                   <p class="text-muted text-xs">AI could not suggest metadata for this document</p>
                 {:else}
                   <span
                     class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
-                    >Failed</span
                   >
+                    Failed
+                  </span>
                   {#if result.errorMessage}
                     <p class="text-muted line-clamp-3 text-xs">{result.errorMessage}</p>
                   {/if}
@@ -521,9 +528,9 @@
             <div class="min-w-0 flex-1 space-y-1">
               <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
               <div class="space-y-1">
-                <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium"
-                  >No OCR Text</span
-                >
+                <span class="bg-warn-light text-warn rounded-full px-2 py-0.5 text-xs font-medium">
+                  No OCR Text
+                </span>
                 <p class="text-muted text-xs">
                   This document has no text content. Run OCR in Paperless-NGX, then re-sync and
                   retry.

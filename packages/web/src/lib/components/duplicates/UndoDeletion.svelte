@@ -94,8 +94,10 @@
     size="sm"
     disabled={readOnly || busy}
     title={readOnly ? 'Paperless is read-only' : undefined}
-    onclick={() => (confirming = true)}>{busy ? 'Restoring...' : 'Undo'}</Button
+    onclick={() => (confirming = true)}
   >
+    {busy ? 'Restoring...' : 'Undo'}
+  </Button>
   {#if feedback}<p
       role={feedback.ok ? 'status' : 'alert'}
       class={feedback.ok ? 'text-success text-sm' : 'text-ember text-sm'}

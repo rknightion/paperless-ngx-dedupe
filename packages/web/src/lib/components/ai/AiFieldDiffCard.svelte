@@ -120,9 +120,9 @@
         <span class="text-muted text-sm italic">No suggestion</span>
       {:else if suggestedValue === currentValue}
         <span class="text-muted text-sm">{currentValue ?? 'None'}</span>
-        <span class="bg-canvas text-muted ml-2 rounded-full px-2 py-0.5 text-xs font-medium"
-          >No change</span
-        >
+        <span class="bg-canvas text-muted ml-2 rounded-full px-2 py-0.5 text-xs font-medium">
+          No change
+        </span>
       {:else}
         <div class="flex flex-wrap items-center gap-2 text-sm">
           {#if currentValue}

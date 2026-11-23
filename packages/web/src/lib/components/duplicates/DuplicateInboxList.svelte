@@ -335,8 +335,10 @@
           href={nextHref}
           data-sveltekit-reload
           onclick={() => rememberCursorPredecessor(nextHref)}
-          class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm">Next</a
+          class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm"
         >
+          Next
+        </a>
       {:else}
         <button
           disabled

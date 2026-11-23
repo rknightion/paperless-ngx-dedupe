@@ -203,20 +203,24 @@
                   class="rounded"
                 />
               </th>
-              <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">Title</th
-              >
+              <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">
+                Title
+              </th>
               <th
                 class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-                >Correspondent</th
               >
+                Correspondent
+              </th>
               <th
                 class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-                >Document Type</th
               >
+                Document Type
+              </th>
               <th
                 class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
-                >Tags</th
               >
+                Tags
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -236,8 +240,9 @@
                   />
                 </td>
                 <td class="text-ink max-w-[200px] truncate px-4 py-3 font-medium">{doc.title}</td>
-                <td class="text-muted hidden px-4 py-3 md:table-cell">{doc.correspondent ?? '—'}</td
-                >
+                <td class="text-muted hidden px-4 py-3 md:table-cell">
+                  {doc.correspondent ?? '—'}
+                </td>
                 <td class="text-muted hidden px-4 py-3 md:table-cell">{doc.documentType ?? '—'}</td>
                 <td class="text-muted hidden max-w-[180px] truncate px-4 py-3 lg:table-cell">
                   {doc.tags.length > 0 ? doc.tags.join(', ') : '—'}

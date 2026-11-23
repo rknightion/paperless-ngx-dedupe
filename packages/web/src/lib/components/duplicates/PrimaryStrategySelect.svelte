@@ -22,8 +22,8 @@
     {disabled}
     class="border-soft bg-surface text-ink mt-2 w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
   >
-    {#each PRIMARY_STRATEGIES as strategy (strategy)}<option value={strategy}
-        >{labels[strategy]}</option
-      >{/each}
+    {#each PRIMARY_STRATEGIES as strategy (strategy)}<option value={strategy}>
+        {labels[strategy]}
+      </option>{/each}
   </select>
 </div>

@@ -293,16 +293,19 @@
                 <th class="text-muted p-3 text-xs font-medium tracking-wider uppercase">Title</th>
                 <th
                   class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase sm:table-cell"
-                  >Status</th
                 >
+                  Status
+                </th>
                 <th
                   class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase md:table-cell"
-                  >Suggestion</th
                 >
+                  Suggestion
+                </th>
                 <th
                   class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase lg:table-cell"
-                  >Applied At</th
                 >
+                  Applied At
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -366,9 +369,9 @@
           <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
               <p class="text-muted text-sm">
-                Showing <span class="text-ink font-medium"
-                  >{data.offset + 1}&ndash;{Math.min(data.offset + data.limit, data.total)}</span
-                >
+                Showing <span class="text-ink font-medium">
+                  {data.offset + 1}&ndash;{Math.min(data.offset + data.limit, data.total)}
+                </span>
                 of <span class="text-ink font-medium">{data.total}</span>
               </p>
               <select

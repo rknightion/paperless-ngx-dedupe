@@ -446,8 +446,10 @@
         class="text-accent mt-2 inline-block text-sm underline"
         href="https://github.com/rknightion/paperless-ngx-dedupe/blob/main/docs/security.md#access-model"
         target="_blank"
-        rel="noopener noreferrer">Learn about access protection</a
+        rel="noopener noreferrer"
       >
+        Learn about access protection
+      </a>
     </aside>
   {/if}
 
@@ -541,9 +543,9 @@
           bulk wizard.
         </p>
       </div>
-      <label for="excluded-tag-names" class="text-ink block text-sm font-medium"
-        >Exclude documents with tags</label
-      >
+      <label for="excluded-tag-names" class="text-ink block text-sm font-medium">
+        Exclude documents with tags
+      </label>
       <textarea
         id="excluded-tag-names"
         bind:value={excludedTagNamesInput}
@@ -636,18 +638,14 @@
           ></div>
         </div>
         <div class="text-muted mt-1.5 flex gap-4 text-xs">
-          <span class="flex items-center gap-1"
-            ><span
-              class="inline-block h-2 w-2 rounded-full"
-              style="background: var(--color-chart-1)"
-            ></span> Jaccard</span
-          >
-          <span class="flex items-center gap-1"
-            ><span
-              class="inline-block h-2 w-2 rounded-full"
-              style="background: var(--color-chart-2)"
-            ></span> Fuzzy</span
-          >
+          <span class="flex items-center gap-1">
+            <span class="inline-block h-2 w-2 rounded-full" style="background: var(--color-chart-1)"
+            ></span> Jaccard
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="inline-block h-2 w-2 rounded-full" style="background: var(--color-chart-2)"
+            ></span> Fuzzy
+          </span>
         </div>
       </div>
     </div>
@@ -792,8 +790,10 @@
             <a
               href="#automation"
               class="text-accent hover:text-accent-hover underline"
-              onclick={() => (activeSettingsSection = 'automation')}>Automation</a
-            >.
+              onclick={() => (activeSettingsSection = 'automation')}
+            >
+              Automation
+            </a>.
           </p>
         </div>
       {/if}
@@ -908,8 +908,10 @@
               href="https://developers.openai.com/api/docs/guides/flex-processing"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-white underline hover:text-white/80">Learn more</a
+              class="text-white underline hover:text-white/80"
             >
+              Learn more
+            </a>
           {/snippet}
         </RichTooltip>
       </div>

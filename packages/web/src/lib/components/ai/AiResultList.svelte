@@ -60,30 +60,35 @@
           <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">Document</th>
           <th
             class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-            >Suggested Title</th
           >
+            Suggested Title
+          </th>
           <th
             class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-            >Correspondent</th
           >
+            Correspondent
+          </th>
           <th
             class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-            >Document Type</th
           >
+            Document Type
+          </th>
           <th
             class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
-            >Tags</th
           >
-          <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase"
-            >Confidence</th
-          >
+            Tags
+          </th>
+          <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">
+            Confidence
+          </th>
           <th
             class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase sm:table-cell"
-            >Status</th
           >
-          <th class="text-muted w-24 px-4 py-3 text-xs font-medium tracking-wide uppercase"
-            >Actions</th
-          >
+            Status
+          </th>
+          <th class="text-muted w-24 px-4 py-3 text-xs font-medium tracking-wide uppercase">
+            Actions
+          </th>
         </tr>
       </thead>
       <tbody>

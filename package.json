@@ -24,17 +24,17 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.0.0",
-    "@typescript-eslint/eslint-plugin": "8.72.1",
-    "@typescript-eslint/parser": "8.72.1",
+    "@typescript-eslint/eslint-plugin": "8.73.0",
+    "@typescript-eslint/parser": "8.73.0",
     "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.16.0",
     "globals": "^17.4.0",
-    "prettier": "~3.9.0",
+    "prettier": "~3.10.0",
     "prettier-plugin-svelte": "^4.0.0",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "typescript-eslint": "8.72.1",
+    "typescript-eslint": "8.73.0",
     "vitest": "^5.0.0"
   },
   "dependencies": {

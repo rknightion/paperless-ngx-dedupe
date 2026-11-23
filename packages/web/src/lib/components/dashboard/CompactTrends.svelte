@@ -39,9 +39,9 @@
         Use the detailed views when you are ready to investigate.
       </p>
     </div>
-    <a href="/duplicates" class="text-accent hover:text-accent-hover text-sm font-medium"
-      >Explore duplicates</a
-    >
+    <a href="/duplicates" class="text-accent hover:text-accent-hover text-sm font-medium">
+      Explore duplicates
+    </a>
   </div>
 
   <div class="grid gap-4 lg:grid-cols-2">
@@ -56,9 +56,9 @@
             <li class="space-y-1">
               <div class="flex items-center justify-between gap-3 text-sm">
                 <span class="text-ink truncate">{correspondent.correspondent}</span>
-                <span class="text-muted shrink-0 font-mono text-xs"
-                  >{correspondent.groupCount} groups</span
-                >
+                <span class="text-muted shrink-0 font-mono text-xs">
+                  {correspondent.groupCount} groups
+                </span>
               </div>
               <div class="bg-canvas-deep h-2 overflow-hidden rounded-full">
                 <div

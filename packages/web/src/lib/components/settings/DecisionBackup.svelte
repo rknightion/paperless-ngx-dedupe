@@ -50,8 +50,9 @@
     href="/api/v1/export/decisions.json"
     download
     class="border-soft text-ink hover:bg-canvas inline-block rounded-lg border px-4 py-2 text-sm font-medium"
-    >Export decisions</a
   >
+    Export decisions
+  </a>
   <div class="flex flex-wrap items-center gap-3">
     <input
       type="file"
@@ -72,16 +73,18 @@
       disabled={!file || busy}
       onclick={() => submit(true)}
       class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >Preview decisions import</button
     >
+      Preview decisions import
+    </button>
     {#if preview}
       <button
         type="button"
         disabled={busy}
         onclick={() => submit(false)}
         class="bg-accent text-on-accent hover:bg-accent-hover rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >Apply decisions import</button
       >
+        Apply decisions import
+      </button>
     {/if}
   </div>
   {#if notice}<p role="status" class="text-success text-sm">{notice}</p>{/if}
