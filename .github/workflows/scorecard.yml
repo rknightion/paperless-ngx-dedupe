@@ -10,4 +10,4 @@ jobs:
     permissions:
       security-events: write
       id-token: write
-    uses: rknightion/.github/.github/workflows/scorecard.yml@3f83f4c8cf2a4fed80faf085c3c7bd1328d72f79 # v1.31.9
+    uses: rknightion/.github/.github/workflows/scorecard.yml@84486af028f18f4a2d93ee5c4eb954fdd541d800 # v1.31.10
