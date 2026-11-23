@@ -16,7 +16,7 @@
     MatchExplanation,
   } from '$lib/components';
   import { ConfirmDialog, Button, Spinner } from '$lib/components';
-  import ConfidenceLegend from '$lib/components/duplicates/ConfidenceLegend.svelte';
+  import ConfidenceLegend from '$lib/components/ui/ConfidenceLegend.svelte';
   import { trackGroupViewed, trackMemberAction } from '$lib/faro-events';
   import { safeDocumentReturnTarget } from '$lib/utils/safe-return';
   import ArrowLeftIcon from 'phosphor-svelte/lib/ArrowLeftIcon';

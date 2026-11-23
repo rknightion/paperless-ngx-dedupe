@@ -1,6 +1,6 @@
 <script lang="ts">
   import { type CompletedDeletionRun } from '@paperless-dedupe/core';
-  import ConfidenceLegend from './ConfidenceLegend.svelte';
+  import ConfidenceLegend from '../ui/ConfidenceLegend.svelte';
   import UndoDeletion from './UndoDeletion.svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { browser } from '$app/env';
