@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { Button } from '$lib/components';
   import { SvelteURLSearchParams } from 'svelte/reactivity';
 
   interface Decision {
@@ -66,58 +67,56 @@
 <section class="panel mt-6 space-y-4" aria-label="Remembered decisions" aria-busy={busy}>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <h2 class="text-ink text-lg font-semibold">Remembered decisions ({total})</h2>
-    <button
-      type="button"
-      class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
-      disabled={busy}
-      onclick={() => load()}
-    >
-      Refresh
-    </button>
+    <Button variant="outline" size="sm" disabled={busy} onclick={() => load()}>Refresh</Button>
   </div>
   <p class="text-muted text-sm">
     These pairs were marked not duplicates. Removing a decision lets a later analysis reconsider the
     pair; it does not change Paperless documents.
   </p>
-  {#if error}<p role="alert" class="text-ember text-sm">{error}</p>{/if}
-  {#if notice}<p role="status" class="text-success text-sm">{notice}</p>{/if}
+  {#if error}<p
+      role="alert"
+      class="border-ember text-ember border-l-2 py-1 pl-3 text-sm before:content-['●_']"
+    >
+      {error}
+    </p>{/if}
+  {#if notice}<p
+      role="status"
+      class="border-success text-success border-l-2 py-1 pl-3 text-sm before:content-['■_']"
+    >
+      {notice}
+    </p>{/if}
   {#if items.length === 0 && !busy && !error}
     <p class="text-muted text-sm">No remembered decisions.</p>
   {/if}
-  <ul class="divide-soft divide-y">
+  <ul class="divide-border divide-y">
     {#each items as item (item.id)}
       <li class="flex flex-wrap items-center justify-between gap-3 py-3">
         <div class="min-w-0 flex-1 space-y-1">
           {#each item.documents as doc (doc.paperlessId)}
             <p class="text-ink text-sm break-words">
               <span>{doc.title ?? 'Not in local library'}</span>
-              <span class="text-muted">(#{doc.paperlessId})</span>
+              <span class="text-muted font-mono text-xs">(#{doc.paperlessId})</span>
             </p>
           {/each}
           <p class="text-muted text-xs break-words">
             {item.source.replaceAll('_', ' ')} · {item.createdAt}
           </p>
         </div>
-        <button
-          type="button"
-          class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+        <Button
+          variant="outline"
+          size="sm"
           disabled={busy}
-          aria-label={`Remove decision between ${item.documents[0].paperlessId} and ${item.documents[1].paperlessId}`}
+          ariaLabel={`Remove decision between ${item.documents[0].paperlessId} and ${item.documents[1].paperlessId}`}
           onclick={() => remove(item.id)}
         >
           Remove
-        </button>
+        </Button>
       </li>
     {/each}
   </ul>
   {#if nextCursor}
-    <button
-      type="button"
-      class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
-      disabled={busy}
-      onclick={() => load(true)}
-    >
+    <Button variant="outline" size="sm" disabled={busy} onclick={() => load(true)}>
       Load more
-    </button>
+    </Button>
   {/if}
 </section>
