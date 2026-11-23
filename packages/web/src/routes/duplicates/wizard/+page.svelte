@@ -695,6 +695,8 @@
       <!-- The three action cards stay native buttons: each is a whole-card selector that wraps a
            radio and a description, markup Button cannot express. The radios are display only. -->
       <div class="mt-6 space-y-3">
+        <!-- The three action cards stay native: each is a whole-card selector wrapping an icon,
+             a display-only radio and two lines of text, which Button cannot express. -->
         <button
           onclick={() => (selectedAction = 'false_positive')}
           class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'false_positive'
