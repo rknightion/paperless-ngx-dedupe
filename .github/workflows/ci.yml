@@ -302,51 +302,21 @@ jobs:
       pull-requests: read
     uses: rknightion/.github/.github/workflows/ac-evidence.yml@84486af028f18f4a2d93ee5c4eb954fdd541d800 # v1.31.10
 
-  # The lines a pull request adds carry no identifier, email address, public address or credential
-  # shape. Pull requests only, like ac-evidence. Check run: `privacy-sweep / Privacy sweep`.
-  privacy-sweep:
+  # One job for the pull request checks that need no build: the backlog/ freeze and the privacy
+  # sweep. actionlint and zizmor have their own jobs, and ac-evidence stays separate because the
+  # tracker recognises that check by name. Check run: `pr-metadata / PR metadata`.
+  pr-metadata:
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
-    uses: rknightion/.github/.github/workflows/privacy-sweep.yml@84486af028f18f4a2d93ee5c4eb954fdd541d800 # v1.31.10
-
-  # The Backlog.md board is retired: issues are the queue. A pull request may delete files under
-  # backlog/ or move them out, never add or change one there. Reads the file list from the API, so
-  # no pull request code is checked out.
-  backlog-freeze:
-    name: backlog/ is frozen
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-26.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
+      issues: read
       pull-requests: read
-    steps:
-      - name: Refuse additions and changes under backlog/
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
-        run: |
-          set -euo pipefail
-          if ! [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$CHANGED_FILES" =~ ^[0-9]+$ ]]; then
-            echo "::error title=backlog freeze::the pull request number or file count is malformed"
-            exit 1
-          fi
-          # The pull request files API lists at most 3000 files; refuse rather than check part of a change.
-          if (( CHANGED_FILES > 3000 )); then
-            echo "::error title=backlog freeze::${CHANGED_FILES} changed files is more than the API lists; split the pull request"
-            exit 1
-          fi
-          offending="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files?per_page=100" \
-            --jq '.[] | select(.status != "removed") | select(.filename | startswith("backlog/")) | "\(.status) \(.filename | @json)"')"
-          if [[ -n "$offending" ]]; then
-            echo "::error title=backlog freeze::this pull request adds or changes files under backlog/; the board is retired, so file the work as an issue"
-            printf '  %s\n' "$offending"
-            exit 1
-          fi
-          echo "No file under backlog/ is added or changed."
+    uses: rknightion/.github/.github/workflows/pr-metadata.yml@84486af028f18f4a2d93ee5c4eb954fdd541d800 # v1.31.10
+    with:
+      runs-on: ubuntu-26.04
+      harden: true
+      check-actionlint: false
+      check-zizmor: false
 
   # Single required status check: every always-on job must report success; skipped fails the gate.
   # Pull request-only jobs must also report success on pull requests. Main-only publish jobs are
@@ -365,7 +335,7 @@ jobs:
     name: ci-success
     runs-on: ubuntu-26.04
     if: always()
-    needs: [quality, unit-tests, e2e-tests, docker-build-verify, ac-evidence, privacy-sweep, backlog-freeze, zizmor]
+    needs: [quality, unit-tests, e2e-tests, docker-build-verify, ac-evidence, pr-metadata, zizmor]
     steps:
       - name: Fail if any required job did not pass
         env:
@@ -388,11 +358,10 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         env:
           AC_EVIDENCE: ${{ needs.ac-evidence.result }}
-          PRIVACY_SWEEP: ${{ needs.privacy-sweep.result }}
-          BACKLOG_FREEZE: ${{ needs.backlog-freeze.result }}
+          PR_METADATA: ${{ needs.pr-metadata.result }}
         run: |
-          if [[ "$AC_EVIDENCE" != "success" || "$PRIVACY_SWEEP" != "success" || "$BACKLOG_FREEZE" != "success" ]]; then
-            echo "ac-evidence: ${AC_EVIDENCE}, privacy-sweep: ${PRIVACY_SWEEP}, backlog-freeze: ${BACKLOG_FREEZE}; all must pass on a pull request"
+          if [[ "$AC_EVIDENCE" != "success" || "$PR_METADATA" != "success" ]]; then
+            echo "ac-evidence: ${AC_EVIDENCE}, pr-metadata: ${PR_METADATA}; both must pass on a pull request"
             exit 1
           fi
       - name: All required jobs passed
