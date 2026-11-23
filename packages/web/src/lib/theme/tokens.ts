@@ -21,7 +21,7 @@ const FALLBACKS: Record<string, string> = {
   '--color-chart-5': 'oklch(0.57 0.1 65)',
   '--color-chart-6': 'oklch(0.6 0.095 161)',
   '--color-accent': '#1d6a8a',
-  '--color-success': '#2f7d4f',
+  '--color-success': '#2d784c',
   '--color-warn': '#8f6410',
   '--color-ember': '#a83a2e',
   '--color-ink': 'oklch(0.24 0.012 227)',
