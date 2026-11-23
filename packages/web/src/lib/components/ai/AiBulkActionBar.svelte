@@ -16,6 +16,8 @@
 {#if selectedCount > 0}
   <div class="flex flex-wrap items-center gap-2">
     <span class="text-muted text-sm font-medium">{selectedCount} selected across pages</span>
+    <!-- Both actions stay inline: they are success-tinted and ember-tinted controls, and Button
+         deliberately has no semantic-tint variant. -->
     <button
       onclick={onbatchapply}
       disabled={readOnly}

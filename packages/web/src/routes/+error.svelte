@@ -1,5 +1,6 @@
 <script>
   import { page } from '$app/state';
+  import { Button } from '$lib/components';
 
   let status = $derived(page.status);
   let message = $derived(page.error?.message ?? 'An unexpected error occurred');
@@ -91,17 +92,7 @@
     <p class="text-muted mt-1 max-w-sm text-xs">{message}</p>
   {/if}
   <div class="mt-8 flex gap-3">
-    <a
-      href="/"
-      class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
-    >
-      Back to Dashboard
-    </a>
-    <button
-      onclick={() => history.back()}
-      class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-    >
-      Go Back
-    </button>
+    <Button href="/">Back to Dashboard</Button>
+    <Button variant="outline" onclick={() => history.back()}>Go Back</Button>
   </div>
 </div>

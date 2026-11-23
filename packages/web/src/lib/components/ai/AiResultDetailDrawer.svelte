@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { Button } from '$lib/components';
   import { X, ExternalLink, Loader2, AlertCircle, RefreshCw, Check } from 'lucide-svelte';
   import {
     fieldSelections,
@@ -221,6 +222,7 @@
   {#if mobile}
     <!-- Mobile drawer -->
     <div class="fixed inset-0 z-40">
+      <!-- Stays inline: a full-screen backdrop hit target, not a Button-shaped control. -->
       <button
         type="button"
         class="absolute inset-0 bg-black/40"
@@ -251,13 +253,14 @@
     <div class="space-y-4 p-4">
       <div class="flex items-center justify-between">
         <div class="bg-canvas-deep h-6 w-48 animate-pulse rounded"></div>
-        <button
-          onclick={onclose}
-          class="text-muted hover:text-ink rounded-lg p-1.5 transition-colors"
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={X}
+          ariaLabel="Close"
           title="Close"
-        >
-          <X class="h-4 w-4" />
-        </button>
+          onclick={onclose}
+        />
       </div>
       <div class="bg-canvas-deep h-[400px] animate-pulse rounded-lg"></div>
       <div class="space-y-3">
@@ -273,13 +276,9 @@
         <AlertCircle class="text-ember h-6 w-6" />
       </div>
       <p class="text-ink text-sm font-medium">Failed to load result</p>
-      <button
-        onclick={() => detailLoader.reload()}
-        class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
-      >
-        <RefreshCw class="h-4 w-4" />
+      <Button variant="outline" icon={RefreshCw} onclick={() => detailLoader.reload()}>
         Retry
-      </button>
+      </Button>
     </div>
   {:else if detail}
     <!-- Loaded content -->
@@ -309,13 +308,15 @@
             </a>
           </div>
         </div>
-        <button
-          onclick={onclose}
-          class="text-muted hover:text-ink shrink-0 rounded-lg p-1.5 transition-colors"
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={X}
+          ariaLabel="Close"
           title="Close"
-        >
-          <X class="h-4 w-4" />
-        </button>
+          class="shrink-0"
+          onclick={onclose}
+        />
       </div>
 
       {#if detail.truncation?.truncated}
@@ -415,20 +416,20 @@
     <!-- Action Footer -->
     {#if isReviewable}
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
-        <button
-          onclick={handleApply}
-          disabled={readOnly || isApplying || checkedCount === 0}
+        <Button
+          icon={Check}
+          class="flex-1"
+          loading={isApplying}
+          disabled={readOnly || checkedCount === 0}
           title={readOnly ? 'Paperless is read-only' : undefined}
-          class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+          onclick={handleApply}
         >
-          {#if isApplying}
-            <Loader2 class="h-4 w-4 animate-spin" />
-            Applying...
-          {:else}
-            <Check class="h-4 w-4" />
-            Apply {checkedCount} field{checkedCount !== 1 ? 's' : ''}
-          {/if}
-        </button>
+          {isApplying
+            ? 'Applying...'
+            : `Apply ${checkedCount} field${checkedCount !== 1 ? 's' : ''}`}
+        </Button>
+        <!-- Reject and Revert below stay inline: ember-outlined controls, and Button has no
+             semantic-tint variant (destructive is a solid fill). -->
         <button
           onclick={handleReject}
           disabled={isRejecting}
@@ -446,6 +447,7 @@
 
     {#if (detail.appliedStatus === 'applied' || detail.appliedStatus === 'partial') && onrevert}
       <div class="border-soft bg-surface sticky bottom-0 flex border-t px-4 py-3">
+        <!-- Stays inline: ember-outlined, see the note on Reject above. -->
         <button
           onclick={handleRevert}
           disabled={readOnly || isApplying || checkedCount === 0}
@@ -460,34 +462,25 @@
     {#if detail.appliedStatus === 'failed' && detail.failureType !== 'review_conflict'}
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
         {#if isExtractionFailure()}
-          <button
+          <Button
+            icon={RefreshCw}
+            class="flex-1"
+            loading={isReprocessing}
             onclick={handleReprocess}
-            disabled={isReprocessing}
-            class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
           >
-            {#if isReprocessing}
-              <Loader2 class="h-4 w-4 animate-spin" />
-              Retrying Extraction...
-            {:else}
-              <RefreshCw class="h-4 w-4" />
-              Retry Extraction
-            {/if}
-          </button>
+            {isReprocessing ? 'Retrying Extraction...' : 'Retry Extraction'}
+          </Button>
         {:else}
-          <button
-            onclick={handleRetry}
-            disabled={readOnly || isRetrying}
+          <Button
+            icon={RefreshCw}
+            class="flex-1"
+            loading={isRetrying}
+            disabled={readOnly}
             title={readOnly ? 'Paperless is read-only' : undefined}
-            class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+            onclick={handleRetry}
           >
-            {#if isRetrying}
-              <Loader2 class="h-4 w-4 animate-spin" />
-              Retrying...
-            {:else}
-              <RefreshCw class="h-4 w-4" />
-              Retry Apply
-            {/if}
-          </button>
+            {isRetrying ? 'Retrying...' : 'Retry Apply'}
+          </Button>
         {/if}
       </div>
     {/if}

@@ -2,6 +2,7 @@
   import { browser } from '$app/env';
   import { page } from '$app/state';
   import { ExternalLink } from 'lucide-svelte';
+  import { Button, Select } from '$lib/components';
   import { aiReviewHref } from './document-library-links';
 
   type LibraryItem = {
@@ -70,8 +71,8 @@
     sessionStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }
 
-  function changePageSize(event: Event) {
-    const nextLimit = Number((event.target as HTMLSelectElement).value);
+  function changePageSize(value: string) {
+    const nextLimit = Number(value);
     window.location.assign(withQuery({ cursor: undefined, limit: nextLimit }));
   }
 
@@ -99,18 +100,16 @@
       <h2 id="document-library-heading" class="text-ink text-lg font-semibold">Documents</h2>
       <p class="text-muted mt-1 text-sm">Newest Paperless additions appear first.</p>
     </div>
-    <label class="text-ink text-sm font-medium">
-      Documents per page
-      <select
-        value={String(limit)}
-        onchange={changePageSize}
-        class="border-soft bg-surface ml-2 rounded-lg border px-2 py-1.5"
-      >
-        <option value="25">25</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-      </select>
-    </label>
+    <Select
+      label="Documents per page"
+      value={String(limit)}
+      onchange={changePageSize}
+      options={[
+        { value: '25', label: '25' },
+        { value: '50', label: '50' },
+        { value: '100', label: '100' },
+      ]}
+    />
   </div>
 
   {#if items.length === 0}
@@ -223,24 +222,13 @@
   >
     <div>
       {#if previousHref}
-        <a
-          href={previousHref}
-          class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          Previous page
-        </a>
+        <Button variant="outline" href={previousHref}>Previous page</Button>
       {:else if historyReady && page.url.searchParams.has('cursor')}
         <span class="text-muted text-sm">Previous page unavailable for this direct link.</span>
       {/if}
     </div>
     {#if nextHref}
-      <a
-        href={nextHref}
-        onclick={rememberPredecessor}
-        class="bg-accent text-on-accent rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        Next page
-      </a>
+      <Button href={nextHref} onclick={rememberPredecessor}>Next page</Button>
     {/if}
   </nav>
 </section>

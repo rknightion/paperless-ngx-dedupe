@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { EChart } from '$lib/components';
+  import { Button, EChart, Select, TextField } from '$lib/components';
   import type { ECharts } from 'echarts';
   import type { GraphNode, GraphEdge } from '@paperless-dedupe/core';
   import { chartPalette, readToken } from '$lib/theme/tokens';
@@ -139,13 +139,11 @@
     applyFilters({ minConfidence: value ? String(Number(value) / 100) : '' });
   }
 
-  function handleMaxGroups(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
+  function handleMaxGroups(value: string) {
     applyFilters({ maxGroups: value });
   }
 
-  function handleStatusChange(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
+  function handleStatusChange(value: string) {
     applyFilters({ status: value === 'all' ? '' : value });
   }
 
@@ -164,12 +162,7 @@
     <div class="flex items-center gap-3">
       <h1 class="text-ink text-2xl font-semibold tracking-tight">Similarity Graph</h1>
     </div>
-    <a
-      href="/duplicates"
-      class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-    >
-      Back to List
-    </a>
+    <Button variant="outline" href="/duplicates">Back to List</Button>
   </div>
 
   <!-- Info Bar -->
@@ -181,55 +174,47 @@
   <!-- Filter Bar -->
   <div class="panel">
     <div class="flex flex-wrap items-end gap-4">
-      <div>
-        <label for="graph-min-confidence" class="text-ink block text-sm font-medium">
-          Min Confidence
-        </label>
-        <input
-          id="graph-min-confidence"
-          type="number"
-          min="0"
-          max="100"
-          placeholder="0"
-          value={page.url.searchParams.get('minConfidence')
-            ? Math.round(Number(page.url.searchParams.get('minConfidence')) * 100)
-            : ''}
-          onchange={handleMinConfidence}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-24 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        />
-      </div>
+      <TextField
+        id="graph-min-confidence"
+        label="Min Confidence"
+        type="number"
+        min={0}
+        max={100}
+        placeholder="0"
+        value={page.url.searchParams.get('minConfidence')
+          ? Math.round(Number(page.url.searchParams.get('minConfidence')) * 100)
+          : ''}
+        onchange={handleMinConfidence}
+        class="w-28"
+      />
 
-      <div>
-        <label for="graph-max-groups" class="text-ink block text-sm font-medium">Max Groups</label>
-        <select
-          id="graph-max-groups"
-          onchange={handleMaxGroups}
-          value={page.url.searchParams.get('maxGroups') ?? '100'}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        >
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-          <option value="200">200</option>
-          <option value="500">500</option>
-        </select>
-      </div>
+      <Select
+        id="graph-max-groups"
+        label="Max Groups"
+        value={page.url.searchParams.get('maxGroups') ?? '100'}
+        onchange={handleMaxGroups}
+        options={[
+          { value: '25', label: '25' },
+          { value: '50', label: '50' },
+          { value: '100', label: '100' },
+          { value: '200', label: '200' },
+          { value: '500', label: '500' },
+        ]}
+      />
 
-      <div>
-        <label for="graph-status" class="text-ink block text-sm font-medium">Status</label>
-        <select
-          id="graph-status"
-          onchange={handleStatusChange}
-          value={currentStatus()}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        >
-          <option value="all">All</option>
-          <option value="pending">Pending</option>
-          <option value="false_positive">False Positive</option>
-          <option value="ignored">Ignored</option>
-          <option value="deleted">Deleted</option>
-        </select>
-      </div>
+      <Select
+        id="graph-status"
+        label="Status"
+        value={currentStatus()}
+        onchange={handleStatusChange}
+        options={[
+          { value: 'all', label: 'All' },
+          { value: 'pending', label: 'Pending' },
+          { value: 'false_positive', label: 'False Positive' },
+          { value: 'ignored', label: 'Ignored' },
+          { value: 'deleted', label: 'Deleted' },
+        ]}
+      />
     </div>
   </div>
 
@@ -353,24 +338,22 @@
                 </dd>
               </div>
             </dl>
-            <a
-              href="/duplicates/{selectedEdge.groupId}"
-              class="bg-accent hover:bg-accent-hover text-on-accent mt-3 inline-block rounded-lg px-3 py-1.5 text-sm font-medium"
-            >
+            <Button size="sm" href="/duplicates/{selectedEdge.groupId}" class="mt-3">
               View Group
-            </a>
+            </Button>
           </div>
         {/if}
 
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onclick={() => {
             selectedNode = null;
             selectedEdge = null;
           }}
-          class="text-muted hover:text-ink text-sm"
         >
           Close panel
-        </button>
+        </Button>
       </div>
     {/if}
   </div>

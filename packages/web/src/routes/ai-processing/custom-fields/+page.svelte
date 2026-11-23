@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AlertTriangle, Database, Loader2, Sparkles } from 'lucide-svelte';
+  import { AlertTriangle, Database, Sparkles } from 'lucide-svelte';
+  import { Button } from '$lib/components';
   import type {
     CustomFieldCandidateV2,
     PublicCustomFieldDiscoveryRun,
@@ -79,19 +80,9 @@
           changes fields in Paperless.
         </p>
       </div>
-      <button
-        onclick={generateRecommendations}
-        disabled={loading}
-        class="bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
-        {#if loading}
-          <Loader2 class="h-4 w-4 animate-spin" />
-          {status ?? 'Starting scan…'}
-        {:else}
-          <Sparkles class="h-4 w-4" />
-          Generate Recommendations
-        {/if}
-      </button>
+      <Button icon={Sparkles} {loading} onclick={generateRecommendations}>
+        {loading ? (status ?? 'Starting scan…') : 'Generate Recommendations'}
+      </Button>
     </div>
   </div>
 

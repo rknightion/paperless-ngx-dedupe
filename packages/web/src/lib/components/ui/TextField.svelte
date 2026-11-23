@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { HTMLInputTypeAttribute } from 'svelte/elements';
+  import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
 
   interface Props {
     value?: string | number;
@@ -17,10 +17,19 @@
     min?: number | string;
     max?: number | string;
     step?: number | string;
+    maxlength?: number;
+    autocomplete?: HTMLInputAttributes['autocomplete'];
+    inputmode?: HTMLInputAttributes['inputmode'];
+    readonly?: boolean;
+    /** Accessible name. Required when there is no visible label. */
+    ariaLabel?: string;
+    /** The input element, for callers that move focus to it. */
+    ref?: HTMLInputElement | null;
     required?: boolean;
     class?: string;
     oninput?: (e: Event) => void;
     onchange?: (e: Event) => void;
+    onkeydown?: (e: KeyboardEvent) => void;
   }
 
   let {
@@ -37,10 +46,17 @@
     min,
     max,
     step,
+    maxlength,
+    autocomplete,
+    inputmode,
+    readonly = false,
+    ariaLabel,
+    ref = $bindable(),
     required = false,
     class: className = '',
     oninput,
     onchange,
+    onkeydown,
   }: Props = $props();
 
   // $props.id() gives a stable id across SSR and hydration, which crypto or a
@@ -61,6 +77,7 @@
   <!-- width:100% alongside its own padding — this relies on the global
        box-sizing: border-box in the base layer. -->
   <input
+    bind:this={ref}
     id={fieldId}
     {type}
     {name}
@@ -69,10 +86,16 @@
     {min}
     {max}
     {step}
+    {maxlength}
+    {autocomplete}
+    {inputmode}
+    {readonly}
     {required}
     bind:value
     {oninput}
     {onchange}
+    {onkeydown}
+    aria-label={ariaLabel}
     aria-invalid={error ? 'true' : undefined}
     aria-describedby={describedBy}
     class="bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm transition-colors outline-none disabled:opacity-50 {mono

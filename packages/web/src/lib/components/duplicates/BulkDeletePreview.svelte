@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { ConfirmDialog } from '$lib/components';
+  import { Button, Checkbox, ConfirmDialog } from '$lib/components';
   import {
     createDeletionPreview,
     type DuplicateDeletionPreview,
@@ -181,19 +181,16 @@
       recycle bin, where they can be restored.
     </p>
 
-    <label class="text-ink mt-4 flex items-start gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={mergeMetadata}
-        disabled={loading || executing}
-        class="mt-0.5"
-        onchange={(event) => {
-          mergeMetadata = event.currentTarget.checked;
-          void loadPreview(snapshotIds);
-        }}
-      />
-      Copy missing tags and metadata to the kept document
-    </label>
+    <Checkbox
+      class="mt-4"
+      checked={mergeMetadata}
+      disabled={loading || executing}
+      label="Copy missing tags and metadata to the kept document"
+      onchange={(checked) => {
+        mergeMetadata = checked;
+        void loadPreview(snapshotIds);
+      }}
+    />
 
     {#if loading && !preview}
       <p class="text-muted mt-5 text-sm">Preparing exact deletion preview…</p>
@@ -202,14 +199,14 @@
         {error}
       </div>
       {#if !preview}
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          class="mt-3"
           onclick={() => loadPreview(snapshotIds)}
           disabled={loading || executing}
-          class="border-soft text-ink mt-3 rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Review selection again
-        </button>
+        </Button>
       {/if}
     {:else if preview}
       <div class="mt-5 space-y-3">
@@ -229,14 +226,13 @@
         <p class="text-muted text-xs">
           Review expires {new Date(preview.expiresAt).toLocaleString()}.
         </p>
-        <label class="text-ink flex items-start gap-2 text-sm">
-          <input type="checkbox" bind:checked={reviewed} class="mt-0.5" />
-          I reviewed this exact deletion list
-        </label>
+        <Checkbox bind:checked={reviewed} label="I reviewed this exact deletion list" />
       </div>
     {/if}
 
     <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <!-- Stays a native button: the dialog focuses this element by reference on open
+           (cancelButton.focus()), and Button exposes no element ref. -->
       <button
         bind:this={cancelButton}
         type="button"
@@ -247,15 +243,14 @@
         Cancel
       </button>
       {#if preview}
-        <button
-          type="button"
+        <Button
+          variant="destructive"
           disabled={readOnly || !reviewed || loading || executing}
           title={readOnly ? 'Paperless is read-only' : undefined}
           onclick={() => (showConfirm = true)}
-          class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Delete {preview.documentCount} document{preview.documentCount === 1 ? '' : 's'}
-        </button>
+        </Button>
       {/if}
     </div>
   </div>

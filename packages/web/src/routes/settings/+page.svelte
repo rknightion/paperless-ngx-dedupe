@@ -2,7 +2,16 @@
   import PrimaryStrategySelect from '$lib/components/duplicates/PrimaryStrategySelect.svelte';
   import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
-  import { InfoIcon, RichTooltip, StaleAnalysisBanner, Tabs } from '$lib/components';
+  import {
+    Button,
+    Checkbox,
+    InfoIcon,
+    RichTooltip,
+    Select,
+    StaleAnalysisBanner,
+    Tabs,
+    TextField,
+  } from '$lib/components';
   import {
     trackSettingsSaved,
     trackConnectionTested,
@@ -26,6 +35,13 @@
   import DatabaseBackupSettings from '$lib/components/settings/DatabaseBackupSettings.svelte';
   import DiagnosticsSettings from '$lib/components/settings/DiagnosticsSettings.svelte';
   import CustomFieldPolicySettings from '$lib/components/settings/CustomFieldPolicySettings.svelte';
+
+  const reasoningEffortOptions = [
+    { value: 'none', label: 'None' },
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+  ];
 
   /** Validate YAML string as a tag alias map (Record<string, string[]>). */
   function validateTagAliasYaml(yaml: string): { valid: boolean; error?: string } {
@@ -472,16 +488,14 @@
     </h2>
     <p class="text-muted mt-2 text-sm">Connection settings are managed by environment variables.</p>
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
-      <div class="sm:col-span-2">
-        <label for="paperless-url" class="text-ink block text-sm font-medium">URL</label>
-        <input
-          id="paperless-url"
-          type="url"
-          value={data.connection.url}
-          readonly
-          class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        />
-      </div>
+      <TextField
+        id="paperless-url"
+        label="URL"
+        type="url"
+        value={data.connection.url}
+        readonly
+        class="sm:col-span-2"
+      />
       <div class="sm:col-span-2">
         <p class="text-muted text-xs">
           Authentication: {data.connection.apiToken.configured ||
@@ -492,22 +506,9 @@
       </div>
     </div>
     <div class="mt-4 flex items-center gap-3">
-      <button
-        onclick={testConnection}
-        disabled={isTesting || !data.connection.url}
-        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
-        {#if isTesting}
-          <span class="flex items-center gap-2">
-            <span
-              class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-            ></span>
-            Testing...
-          </span>
-        {:else}
-          Test Connection
-        {/if}
-      </button>
+      <Button onclick={testConnection} loading={isTesting} disabled={!data.connection.url}>
+        {isTesting ? 'Testing...' : 'Test Connection'}
+      </Button>
     </div>
     {#if connectionStatus}
       <div
@@ -546,6 +547,7 @@
       <label for="excluded-tag-names" class="text-ink block text-sm font-medium">
         Exclude documents with tags
       </label>
+      <!-- Native textarea: no multi-line primitive exists in the component set. -->
       <textarea
         id="excluded-tag-names"
         bind:value={excludedTagNamesInput}
@@ -563,6 +565,7 @@
       <label for="threshold" class="text-ink block text-sm font-medium">
         Similarity Threshold: <span class="font-mono">{threshold}%</span>
       </label>
+      <!-- Native range slider: no slider primitive exists in the component set. -->
       <input
         id="threshold"
         type="range"
@@ -593,6 +596,7 @@
               position="top"
             />
           </label>
+          <!-- Native range slider: no slider primitive exists in the component set. -->
           <input
             id="w-jaccard"
             type="range"
@@ -610,6 +614,7 @@
               position="top"
             />
           </label>
+          <!-- Native range slider: no slider primitive exists in the component set. -->
           <input
             id="w-fuzzy"
             type="range"
@@ -664,6 +669,7 @@
             position="top"
           />
         </label>
+        <!-- Native range slider: no slider primitive exists in the component set. -->
         <input
           id="w-penalty"
           type="range"
@@ -692,6 +698,7 @@
 
     <!-- Advanced Section -->
     <div class="border-soft mt-6 border-t pt-4">
+      <!-- Native button: text-link disclosure toggle; Button has no link variant. -->
       <button
         onclick={() => (showAdvanced = !showAdvanced)}
         class="text-accent hover:text-accent-hover text-sm font-medium"
@@ -708,13 +715,13 @@
                 position="top"
               />
             </label>
-            <input
+            <TextField
               id="num-perms"
               type="number"
-              min="16"
-              max="1024"
+              min={16}
+              max={1024}
+              class="mt-1"
               bind:value={numPermutations}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -725,13 +732,13 @@
                 position="top"
               />
             </label>
-            <input
+            <TextField
               id="num-bands"
               type="number"
-              min="1"
-              max="100"
+              min={1}
+              max={100}
+              class="mt-1"
               bind:value={numBands}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -742,13 +749,13 @@
                 position="top"
               />
             </label>
-            <input
+            <TextField
               id="ngram-size"
               type="number"
-              min="1"
-              max="10"
+              min={1}
+              max={10}
+              class="mt-1"
               bind:value={ngramSize}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -759,13 +766,13 @@
                 position="top"
               />
             </label>
-            <input
+            <TextField
               id="min-words"
               type="number"
-              min="1"
-              max="1000"
+              min={1}
+              max={1000}
+              class="mt-1"
               bind:value={minWords}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <div>
@@ -776,13 +783,13 @@
                 position="top"
               />
             </label>
-            <input
+            <TextField
               id="fuzzy-sample"
               type="number"
-              min="100"
-              max="100000"
+              min={100}
+              max={100000}
+              class="mt-1"
               bind:value={fuzzySampleSize}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
             />
           </div>
           <p class="text-muted text-sm">
@@ -801,13 +808,9 @@
 
     <!-- Save Button -->
     <div class="mt-6 flex items-center gap-3">
-      <button
-        onclick={saveDedupConfig}
-        disabled={!weightsValid || isSavingDedup}
-        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
+      <Button onclick={saveDedupConfig} disabled={!weightsValid || isSavingDedup}>
         {isSavingDedup ? 'Saving...' : 'Save Configuration'}
-      </button>
+      </Button>
       {#if !weightsValid}
         <span class="text-ember text-sm">Weights must sum to 100</span>
       {/if}
@@ -846,16 +849,13 @@
 
       <!-- Model Selection -->
       <div class="mt-4">
-        <label for="ai-model" class="text-ink block text-sm font-medium">Model</label>
-        <select
+        <Select
           id="ai-model"
+          label="Model"
+          options={aiModels.map((model) => ({ value: model.id, label: model.name }))}
           bind:value={aiModel}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none sm:w-64"
-        >
-          {#each aiModels as model (model.id)}
-            <option value={model.id}>{model.name}</option>
-          {/each}
-        </select>
+          class="w-full sm:w-64"
+        />
       </div>
 
       <!-- Reasoning Effort -->
@@ -870,22 +870,18 @@
             position="bottom"
           />
         </label>
-        <select
+        <Select
           id="ai-reasoning-effort"
+          options={reasoningEffortOptions}
           bind:value={aiReasoningEffort}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none sm:w-64"
-        >
-          <option value="none">None</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
+          class="mt-1 w-full sm:w-64"
+        />
       </div>
 
       <!-- Flex Processing -->
       <div class="mt-4 flex items-center gap-2">
         <label class="text-muted flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={aiFlexProcessing} class="rounded" />
+          <Checkbox bind:checked={aiFlexProcessing} />
           Flex Processing
         </label>
         <RichTooltip position="bottom">
@@ -920,28 +916,26 @@
       <div class="mt-4">
         <div class="flex items-center gap-3">
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiAddProcessedTag} class="rounded" />
+            <Checkbox bind:checked={aiAddProcessedTag} />
             Add tag:
           </label>
-          <input
-            aria-label="Processed tag name"
-            type="text"
+          <TextField
+            ariaLabel="Processed tag name"
             bind:value={aiProcessedTagName}
             disabled={!aiAddProcessedTag}
-            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-40 rounded-lg border px-3 py-1.5 text-sm focus:ring-1 focus:outline-none disabled:opacity-50"
+            class="w-40"
           />
         </div>
         <div class="flex items-center gap-3">
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiProtectedTagsEnabled} class="rounded" />
+            <Checkbox bind:checked={aiProtectedTagsEnabled} />
             Protected tags:
           </label>
-          <input
-            type="text"
+          <TextField
             bind:value={aiProtectedTagsInput}
             disabled={!aiProtectedTagsEnabled}
             placeholder="email, inbox"
-            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-64 rounded-lg border px-3 py-1.5 text-sm focus:ring-1 focus:outline-none disabled:opacity-50"
+            class="w-64"
           />
           <InfoIcon
             text="Tags listed here will never be added or removed by AI. If a document already has one of these tags (e.g. 'email' added by Paperless-NGX mail rules), it will be preserved. Comma-separated, case-insensitive."
@@ -959,19 +953,19 @@
         </p>
         <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiExtractTitle} class="rounded" />
+            <Checkbox bind:checked={aiExtractTitle} />
             Document Title
           </label>
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiExtractCorrespondent} class="rounded" />
+            <Checkbox bind:checked={aiExtractCorrespondent} />
             Correspondent
           </label>
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiExtractDocumentType} class="rounded" />
+            <Checkbox bind:checked={aiExtractDocumentType} />
             Document Type
           </label>
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiExtractTags} class="rounded" />
+            <Checkbox bind:checked={aiExtractTags} />
             Tags
           </label>
           <CustomFieldPolicySettings bind:enabled={aiExtractCustomFields} />
@@ -989,15 +983,15 @@
         </p>
         <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiIncludeCorrespondents} class="rounded" />
+            <Checkbox bind:checked={aiIncludeCorrespondents} />
             Correspondents
           </label>
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiIncludeDocumentTypes} class="rounded" />
+            <Checkbox bind:checked={aiIncludeDocumentTypes} />
             Document Types
           </label>
           <label class="text-muted flex items-center gap-2 text-sm">
-            <input type="checkbox" bind:checked={aiIncludeTags} class="rounded" />
+            <Checkbox bind:checked={aiIncludeTags} />
             Tags
           </label>
         </div>
@@ -1005,6 +999,7 @@
 
       <!-- Prompt Template -->
       <div class="border-soft mt-6 border-t pt-4">
+        <!-- Native button: text-link disclosure toggle; Button has no link variant. -->
         <button
           onclick={() => (showPrompt = !showPrompt)}
           class="text-accent hover:text-accent-hover text-sm font-medium"
@@ -1027,6 +1022,7 @@
                     Your prompt template has been customised and differs from the latest recommended
                     default. Newer features may not work as expected.
                   </p>
+                  <!-- Native button: text-link action; Button has no link variant. -->
                   <button
                     onclick={revertPrompt}
                     class="text-accent hover:text-accent-hover mt-2 text-xs font-medium"
@@ -1047,6 +1043,7 @@
                     reprocessed with the updated prompt?
                   </p>
                   <div class="mt-2 flex gap-2">
+                    <!-- Native buttons: text-link actions; Button has no link variant. -->
                     <button
                       onclick={async () => {
                         showRevertResetPrompt = false;
@@ -1069,6 +1066,7 @@
                 </div>
               </div>
             {/if}
+            <!-- Native textarea: no multi-line primitive exists in the component set. -->
             <textarea
               bind:value={aiPromptTemplate}
               rows="12"
@@ -1082,11 +1080,7 @@
       <div class="border-soft mt-6 border-t pt-4">
         <div class="flex items-center gap-3">
           <label class="flex items-center gap-2">
-            <input
-              type="checkbox"
-              bind:checked={aiTagAliasesEnabled}
-              class="accent-accent h-4 w-4 rounded"
-            />
+            <Checkbox bind:checked={aiTagAliasesEnabled} />
             <span class="text-ink text-sm font-medium">Enable Tag Alias Mapping</span>
           </label>
         </div>
@@ -1097,6 +1091,7 @@
 
         {#if aiTagAliasesEnabled}
           <div class="mt-3">
+            <!-- Native button: text-link disclosure toggle; Button has no link variant. -->
             <button
               onclick={() => (showTagAliases = !showTagAliases)}
               class="text-accent hover:text-accent-hover text-sm font-medium"
@@ -1119,6 +1114,7 @@
                         Your tag alias map has been customised and differs from the latest
                         recommended default.
                       </p>
+                      <!-- Native button: text-link action; Button has no link variant. -->
                       <button
                         onclick={revertTagAliases}
                         class="text-accent hover:text-accent-hover mt-2 text-xs font-medium"
@@ -1139,6 +1135,7 @@
                         be reprocessed with the updated aliases?
                       </p>
                       <div class="mt-2 flex gap-2">
+                        <!-- Native buttons: text-link actions; Button has no link variant. -->
                         <button
                           onclick={async () => {
                             showRevertResetTagAliases = false;
@@ -1164,6 +1161,7 @@
                     </div>
                   </div>
                 {/if}
+                <!-- Native textarea: no multi-line primitive exists in the component set. -->
                 <textarea
                   bind:value={aiTagAliasMap}
                   rows="16"
@@ -1191,13 +1189,15 @@
                   : 's'}. Documents will become eligible for reprocessing. This cannot be undone.
               </p>
               <div class="mt-2 flex gap-2">
-                <button
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onclick={resetProcessingHistory}
                   disabled={isResetting}
-                  class="bg-ember hover:bg-ember/90 text-on-accent rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
                 >
                   {isResetting ? 'Resetting...' : 'Confirm Reset'}
-                </button>
+                </Button>
+                <!-- Native button: text-link action; Button has no link variant. -->
                 <button
                   onclick={() => (resetConfirmCount = null)}
                   class="text-muted hover:text-ink text-xs font-medium"
@@ -1208,6 +1208,7 @@
             </div>
           </div>
         {:else}
+          <!-- Native button: text-link in the destructive colour; Button has no link variant. -->
           <button
             onclick={showResetConfirmation}
             class="text-ember hover:text-ember/80 text-sm font-medium"
@@ -1222,6 +1223,7 @@
 
       <!-- Advanced AI Settings -->
       <div class="border-soft mt-4 border-t pt-4">
+        <!-- Native button: text-link disclosure toggle; Button has no link variant. -->
         <button
           onclick={() => (showAiAdvanced = !showAiAdvanced)}
           class="text-accent hover:text-accent-hover text-sm font-medium"
@@ -1238,13 +1240,13 @@
                   position="top"
                 />
               </label>
-              <input
+              <TextField
                 id="ai-max-content"
                 type="number"
-                min="500"
-                max="100000"
+                min={500}
+                max={100000}
+                class="mt-1"
                 bind:value={aiMaxContentLength}
-                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
               />
             </div>
             <div>
@@ -1255,13 +1257,13 @@
                   position="top"
                 />
               </label>
-              <input
+              <TextField
                 id="ai-batch"
                 type="number"
-                min="1"
-                max="100"
+                min={1}
+                max={100}
+                class="mt-1"
                 bind:value={aiBatchSize}
-                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
               />
             </div>
             <div>
@@ -1272,13 +1274,13 @@
                   position="top"
                 />
               </label>
-              <input
+              <TextField
                 id="ai-delay"
                 type="number"
-                min="0"
-                max="60000"
+                min={0}
+                max={60000}
+                class="mt-1"
                 bind:value={aiRateDelayMs}
-                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
               />
             </div>
             <div>
@@ -1289,13 +1291,13 @@
                   position="top"
                 />
               </label>
-              <input
+              <TextField
                 id="ai-retries"
                 type="number"
-                min="0"
-                max="10"
+                min={0}
+                max={10}
+                class="mt-1"
                 bind:value={aiMaxRetries}
-                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
               />
             </div>
           </div>
@@ -1318,6 +1320,7 @@
             />
           </label>
           <div class="mt-1 flex items-center gap-3">
+            <!-- Native range slider: no slider primitive exists in the component set. -->
             <input
               id="ai-conf-global"
               type="range"
@@ -1330,6 +1333,7 @@
           </div>
         </div>
 
+        <!-- Native button: text-link disclosure toggle; Button has no link variant. -->
         <button
           onclick={() => (showConfidenceFields = !showConfidenceFields)}
           class="text-accent hover:text-accent-hover mt-3 text-sm font-medium"
@@ -1341,6 +1345,7 @@
             <div>
               <label for="ai-conf-title" class="text-muted text-sm">Title</label>
               <div class="mt-1 flex items-center gap-2">
+                <!-- Native range slider: no slider primitive exists in the component set. -->
                 <input
                   id="ai-conf-title"
                   type="range"
@@ -1355,6 +1360,7 @@
             <div>
               <label for="ai-conf-corr" class="text-muted text-sm">Correspondent</label>
               <div class="mt-1 flex items-center gap-2">
+                <!-- Native range slider: no slider primitive exists in the component set. -->
                 <input
                   id="ai-conf-corr"
                   type="range"
@@ -1369,6 +1375,7 @@
             <div>
               <label for="ai-conf-type" class="text-muted text-sm">Document Type</label>
               <div class="mt-1 flex items-center gap-2">
+                <!-- Native range slider: no slider primitive exists in the component set. -->
                 <input
                   id="ai-conf-type"
                   type="range"
@@ -1383,6 +1390,7 @@
             <div>
               <label for="ai-conf-tags" class="text-muted text-sm">Tags</label>
               <div class="mt-1 flex items-center gap-2">
+                <!-- Native range slider: no slider primitive exists in the component set. -->
                 <input
                   id="ai-conf-tags"
                   type="range"
@@ -1404,13 +1412,9 @@
 
       <!-- Save Button -->
       <div class="mt-6 flex items-center gap-3">
-        <button
-          onclick={saveAiConfig}
-          disabled={isSavingAi}
-          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
+        <Button onclick={saveAiConfig} disabled={isSavingAi}>
           {isSavingAi ? 'Saving...' : 'Save AI Configuration'}
-        </button>
+        </Button>
       </div>
       {#if aiSaveStatus}
         <div
@@ -1505,6 +1509,7 @@
             Restore settings from a previously exported backup file.
           </p>
           <div class="mt-2 flex items-center gap-3">
+            <!-- Native file input: no file-upload primitive exists in the component set. -->
             <input
               aria-label="Configuration backup file"
               type="file"
@@ -1516,13 +1521,9 @@
               }}
               class="text-ink file:border-soft file:text-ink file:hover:bg-canvas text-sm file:mr-3 file:rounded-lg file:border file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:font-medium"
             />
-            <button
-              onclick={handleImport}
-              disabled={!importFile || isImporting}
-              class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
+            <Button onclick={handleImport} disabled={!importFile || isImporting}>
               {isImporting ? 'Importing...' : 'Import'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -10,6 +10,8 @@
   import { goto } from '$app/navigation';
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
   import {
+    Button,
+    Checkbox,
     ConfidenceBadge,
     EChart,
     GroupPreviewModal,
@@ -17,6 +19,7 @@
     RichTooltip,
     ConfidenceTooltipContent,
     RecycleBinPrompt,
+    Select,
     ThumbnailPreview,
     WizardGroupCard,
   } from '$lib/components';
@@ -242,8 +245,8 @@
   }
 
   // ── Sort ──────────────────────────────────────────────────────────────
-  function handleSortChange(e: Event) {
-    sortBy = (e.target as HTMLSelectElement).value as typeof sortBy;
+  function handleSortChange(value: string) {
+    sortBy = value as typeof sortBy;
     groupsOffset = 0;
     fetchGroups();
   }
@@ -492,6 +495,7 @@
             </label>
             <span class="text-accent text-lg font-semibold">{threshold}%</span>
           </div>
+          <!-- Native: a range slider, which none of the form primitives cover. -->
           <input
             disabled={keeperBusy}
             id="threshold-range"
@@ -530,13 +534,7 @@
       </div>
 
       <div class="mt-8 flex justify-end">
-        <button
-          onclick={handleNext}
-          disabled={!canProceedStep1 || keeperBusy}
-          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Next
-        </button>
+        <Button onclick={handleNext} disabled={!canProceedStep1 || keeperBusy}>Next</Button>
       </div>
 
       <!-- Step 2: Review Groups -->
@@ -545,27 +543,25 @@
         <h2 class="text-ink text-xl font-semibold">Review Matching Groups</h2>
         <div class="flex items-center gap-2">
           <!-- Sort controls -->
-          <select
+          <Select
             onchange={handleSortChange}
             value={sortBy}
-            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-          >
-            <option value="confidence">Confidence</option>
-            <option value="created_at">Created</option>
-            <option value="member_count">Members</option>
-          </select>
-          <button
+            options={[
+              { value: 'confidence', label: 'Confidence' },
+              { value: 'created_at', label: 'Created' },
+              { value: 'member_count', label: 'Members' },
+            ]}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            icon={sortOrder === 'desc' ? ArrowDown : ArrowUp}
             onclick={toggleSortOrder}
-            class="border-soft text-ink hover:bg-canvas rounded-lg border px-2 py-2 text-sm"
             title="Toggle sort order"
-          >
-            {#if sortOrder === 'desc'}
-              <ArrowDown class="h-4 w-4" />
-            {:else}
-              <ArrowUp class="h-4 w-4" />
-            {/if}
-          </button>
-          <!-- View mode toggle -->
+          />
+          <!-- View mode toggle. The two buttons are segments of one control: the active segment is a
+               filled accent pill and the inactive one bare muted text inside a p-0.5 frame, which
+               no Button variant expresses, so they stay native. -->
           <div class="border-soft flex items-center gap-1 rounded-lg border p-0.5">
             <button
               onclick={() => (viewMode = 'condensed')}
@@ -605,11 +601,9 @@
             <div
               class="border-soft flex items-center gap-3 rounded-lg border px-3 py-2 sm:px-4 sm:py-3"
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={!excludedGroupIds.has(group.id)}
                 onchange={() => toggleGroup(group.id)}
-                class="rounded"
               />
               <ThumbnailPreview
                 src={group.primaryThumbnailUrl}
@@ -627,6 +621,8 @@
               >
                 <ExternalLink class="h-4 w-4" />
               </a>
+              <!-- Native: a bare icon-only control, with no border, fill or padding, inside a row.
+                   Button has no icon-only variant to express it. -->
               <button
                 onclick={() => openPreview(group)}
                 class="text-muted hover:text-accent shrink-0"
@@ -672,44 +668,32 @@
             Showing {groupsOffset + 1}-{Math.min(groupsOffset + 10, groupsTotal)} of {groupsTotal}
           </span>
           <div class="flex gap-2">
-            <button
-              onclick={prevPage}
-              disabled={groupsOffset === 0}
-              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-            >
+            <Button variant="outline" size="sm" onclick={prevPage} disabled={groupsOffset === 0}>
               Previous
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onclick={nextPage}
               disabled={groupsOffset + 10 >= groupsTotal}
-              class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       {/if}
 
       <div class="mt-8 flex justify-between">
-        <button
-          onclick={handleBack}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-        >
-          Back
-        </button>
-        <button
-          onclick={handleNext}
-          disabled={selectedCount === 0}
-          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Next
-        </button>
+        <Button variant="outline" onclick={handleBack}>Back</Button>
+        <Button onclick={handleNext} disabled={selectedCount === 0}>Next</Button>
       </div>
 
       <!-- Step 3: Select Action -->
     {:else if step === 3}
       <h2 class="text-ink text-xl font-semibold">Choose Action</h2>
 
+      <!-- The three action cards stay native buttons: each is a whole-card selector that wraps a
+           radio and a description, markup Button cannot express. The radios are display only. -->
       <div class="mt-6 space-y-3">
         <button
           onclick={() => (selectedAction = 'false_positive')}
@@ -791,18 +775,8 @@
       </div>
 
       <div class="mt-8 flex justify-between">
-        <button
-          onclick={handleBack}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-        >
-          Back
-        </button>
-        <button
-          onclick={handleNext}
-          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
-        >
-          Next
-        </button>
+        <Button variant="outline" onclick={handleBack}>Back</Button>
+        <Button onclick={handleNext}>Next</Button>
       </div>
 
       <!-- Step 4: Confirm -->
@@ -853,46 +827,30 @@
         {/if}
 
         <div class="space-y-3">
-          <label class="flex items-start gap-3">
-            <input type="checkbox" bind:checked={confirmChecks.understand} class="mt-0.5 rounded" />
-            <span class="text-ink text-sm">
-              I understand this action affects {selectedCount} groups
-            </span>
-          </label>
+          <Checkbox
+            bind:checked={confirmChecks.understand}
+            label="I understand this action affects {selectedCount} groups"
+          />
 
           {#if selectedAction === 'delete'}
-            <label class="flex items-start gap-3">
-              <input
-                type="checkbox"
-                bind:checked={confirmChecks.irreversible}
-                class="mt-0.5 rounded"
-              />
-              <span class="text-ink text-sm">
-                I understand deleted documents will be moved to the Paperless-NGX recycle bin
-              </span>
-            </label>
+            <Checkbox
+              bind:checked={confirmChecks.irreversible}
+              label="I understand deleted documents will be moved to the Paperless-NGX recycle bin"
+            />
           {/if}
         </div>
       </div>
 
       <div class="mt-8 flex justify-between">
-        <button
-          onclick={handleBack}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-        >
-          Back
-        </button>
-        <button
+        <Button variant="outline" onclick={handleBack}>Back</Button>
+        <Button
+          variant={selectedAction === 'delete' ? 'destructive' : 'primary'}
           onclick={handleNext}
           disabled={!canProceedStep4 || (readOnly && selectedAction === 'delete')}
           title={readOnly && selectedAction === 'delete' ? 'Paperless is read-only' : undefined}
-          class="text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50
-            {selectedAction === 'delete'
-            ? 'bg-ember hover:opacity-90'
-            : 'bg-accent hover:bg-accent-hover'}"
         >
           Execute
-        </button>
+        </Button>
       </div>
 
       <!-- Step 5: Execute -->
@@ -938,18 +896,8 @@
       {/if}
 
       <div class="mt-8 flex gap-3">
-        <button
-          onclick={() => goto('/duplicates')}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-        >
-          Back to Duplicates
-        </button>
-        <button
-          onclick={resetWizard}
-          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
-        >
-          Run Another Batch
-        </button>
+        <Button variant="outline" onclick={() => goto('/duplicates')}>Back to Duplicates</Button>
+        <Button onclick={resetWizard}>Run Another Batch</Button>
       </div>
     {/if}
   </div>

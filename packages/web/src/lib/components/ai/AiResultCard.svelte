@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { ConfidenceBadge } from '$lib/components';
+  import { Button, Checkbox, ConfidenceBadge } from '$lib/components';
   import { Check, X, FileText, AlertCircle } from 'lucide-svelte';
   import type { AiResultSummary } from './AiReviewStore.svelte';
 
@@ -65,15 +65,13 @@
   tabindex="0"
 >
   <!-- Checkbox top-right -->
-  <div class="absolute top-3 right-3">
-    <input
-      type="checkbox"
+  <!-- The wrapper keeps a click on the checkbox from also opening the card. -->
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="absolute top-3 right-3" onclick={(e) => e.stopPropagation()}>
+    <Checkbox
       checked={isSelected}
-      onclick={(e) => {
-        e.stopPropagation();
-        onselect();
-      }}
-      class="rounded"
+      ariaLabel={`Select ${result.documentTitle}`}
+      onchange={() => onselect()}
     />
   </div>
 
@@ -208,6 +206,7 @@
   <!-- Bottom: actions -->
   {#if result.appliedStatus === 'pending_review' && !result.errorMessage}
     <div class="border-soft flex items-center gap-2 border-t px-4 py-2.5">
+      <!-- Apply stays inline: it is a success-tinted control and Button has no tint variant. -->
       <button
         onclick={(e) => {
           e.stopPropagation();
@@ -219,15 +218,17 @@
       >
         <Check class="h-3.5 w-3.5" /> Apply
       </button>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={X}
         onclick={(e) => {
           e.stopPropagation();
           onreject();
         }}
-        class="text-muted hover:text-ink hover:bg-canvas flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
       >
-        <X class="h-3.5 w-3.5" /> Reject
-      </button>
+        Reject
+      </Button>
     </div>
   {/if}
 </div>

@@ -6,7 +6,7 @@
   let deletionRun = $state<UndoDeletionRun | null>(null);
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { ConfirmDialog, RecycleBinPrompt } from '$lib/components';
+  import { Button, Checkbox, ConfirmDialog, RecycleBinPrompt } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
   import { XCircle, CheckCircle, Trash2, RotateCcw } from 'lucide-svelte';
   import { type FrozenDuplicateGroup } from '@paperless-dedupe/core';
@@ -149,57 +149,44 @@
     : 'bg-canvas'}"
 >
   {#if status === 'pending'}
-    <button
+    <Button
+      variant="outline"
+      icon={XCircle}
       onclick={() => setStatus('false_positive')}
       disabled={isUpdating}
-      class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
     >
-      <span class="flex items-center gap-2">
-        <XCircle class="h-4 w-4" />
-        Not a Duplicate
-      </span>
-    </button>
+      Not a Duplicate
+    </Button>
 
-    <button
-      onclick={() => setStatus('ignored')}
-      disabled={isUpdating}
-      class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-    >
-      <span class="flex items-center gap-2">
-        <CheckCircle class="h-4 w-4" />
-        Keep All
-      </span>
-    </button>
+    <Button icon={CheckCircle} onclick={() => setStatus('ignored')} disabled={isUpdating}>
+      Keep All
+    </Button>
 
-    <button
+    <Button
+      variant="destructive"
+      icon={Trash2}
       onclick={() => {
         void previewMerge(false);
         showDeleteConfirm = true;
       }}
       disabled={readOnly || isUpdating || memberCount < 2}
       title={readOnly ? 'Paperless is read-only' : undefined}
-      class="bg-ember text-on-accent rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
     >
-      <span class="flex items-center gap-2">
-        <Trash2 class="h-4 w-4" />
-        Delete Duplicates
-      </span>
-    </button>
+      Delete Duplicates
+    </Button>
   {:else if status === 'deleted'}
     <p class="text-muted text-sm">
       This group has been resolved — documents were deleted from Paperless-NGX.
     </p>
   {:else}
-    <button
+    <Button
+      variant="outline"
+      icon={RotateCcw}
       onclick={() => setStatus('pending')}
       disabled={isUpdating}
-      class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
     >
-      <span class="flex items-center gap-2">
-        <RotateCcw class="h-4 w-4" />
-        Reopen
-      </span>
-    </button>
+      Reopen
+    </Button>
   {/if}
 
   {#if deleteProgress}
@@ -229,16 +216,12 @@
   }}
 >
   <div class="mt-4">
-    <label class="text-ink flex items-start gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={mergeMetadata}
-        disabled={mergeLoading}
-        class="mt-0.5"
-        onchange={(event) => previewMerge(event.currentTarget.checked)}
-      />
-      Copy missing tags and metadata to the kept document
-    </label>
+    <Checkbox
+      checked={mergeMetadata}
+      disabled={mergeLoading}
+      label="Copy missing tags and metadata to the kept document"
+      onchange={(checked) => previewMerge(checked)}
+    />
     {#if mergeLoading}
       <p class="text-muted mt-2 text-sm">Preparing metadata preview…</p>
     {:else if mergeError}
