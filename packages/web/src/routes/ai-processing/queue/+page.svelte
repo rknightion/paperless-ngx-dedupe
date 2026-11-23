@@ -301,7 +301,7 @@
       </div>
     {:else}
       <div class="border-border border-y">
-        <table class="w-full border-collapse">
+        <table class="w-full border-collapse [overflow-wrap:anywhere]">
           <thead>
             <tr class="text-left">
               <th
@@ -355,6 +355,8 @@
                   <!-- Row selection toggle: inline for the same reason as the header toggle above. -->
                   <button
                     onclick={() => toggleDoc(doc.id)}
+                    aria-label={`Select ${doc.title}`}
+                    aria-pressed={isSelected}
                     class="text-muted hover:text-ink transition-colors"
                   >
                     {#if isSelected}
@@ -376,7 +378,9 @@
                 <td class="hidden px-3 py-0 lg:table-cell">
                   <div class="flex flex-wrap gap-1">
                     {#each doc.tags as tag (tag)}
-                      <span class="border-border text-ink-light border px-1.5 font-mono text-xs">
+                      <span
+                        class="border-border text-ink-light min-w-0 border px-1.5 font-mono text-xs"
+                      >
                         {tag}
                       </span>
                     {:else}

@@ -264,7 +264,7 @@
         </div>
       {:else}
         <div class="border-border border-y">
-          <table class="w-full border-collapse">
+          <table class="w-full border-collapse [overflow-wrap:anywhere]">
             <thead>
               <tr class="text-left">
                 <th
@@ -303,7 +303,9 @@
                 >
                   <td class="py-2 pr-3 pl-6">
                     <div class="min-w-0">
-                      <p class="text-ink truncate text-base font-medium">{result.documentTitle}</p>
+                      <p class="text-ink line-clamp-2 text-base font-medium">
+                        {result.documentTitle}
+                      </p>
                       <p
                         class="status-word {aiStatusWord(result.appliedStatus)
                           .colorClass} sm:hidden"
