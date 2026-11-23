@@ -21,6 +21,12 @@ function matches(actual: string | Uint8Array, expected: string): boolean {
   );
 }
 
+/** True only for a well-formed bearer credential equal to the configured API token. */
+export function hasValidApiToken(config: Pick<AccessConfig, 'APP_API_TOKEN'>, headers: Headers) {
+  const bearer = headers.get('authorization')?.match(/^Bearer\s+(\S+)$/i);
+  return Boolean(config.APP_API_TOKEN && bearer && matches(bearer[1], config.APP_API_TOKEN));
+}
+
 /** Decide access without requests, sessions or exposing configured credentials in the result. */
 export function decideAccess(
   config: AccessConfig,

@@ -1,5 +1,7 @@
 import { applySecurityHeaders } from '$lib/server/security-headers';
 import { decideAccess } from '$lib/server/access';
+import { isAllowedHost, isSameHostOrigin } from '$lib/server/host-policy';
+import { isApiRequest, routedPathname } from '$lib/server/request-path';
 import { apiError, ErrorCode } from '$lib/server/api';
 import { sequence, type Handle } from '@sveltejs/kit/hooks';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
@@ -10,27 +12,41 @@ const handleSecurityHeaders: Handle = async ({ event, resolve }) =>
   applySecurityHeaders(await resolve(event));
 
 const handleCsrf: Handle = async ({ event, resolve }) => {
-  if (!event.url.pathname.startsWith('/api/')) return resolve(event);
-
   const { request } = event;
-  const configuredOrigin = process.env.ORIGIN;
-  if (configuredOrigin && request.headers.get('host') !== new URL(configuredOrigin).host) {
-    return apiError(ErrorCode.VALIDATION_FAILED, { retryable: false }, 403);
+  const isApi = isApiRequest(event);
+  const runtime = await getServerRuntime();
+  const host = request.headers.get('host');
+  if (
+    !isAllowedHost(host, {
+      origin: process.env.ORIGIN,
+      allowedHosts: runtime.config.ALLOWED_HOSTS,
+    })
+  ) {
+    createLogger('http').warn(
+      { host: host?.slice(0, 100) },
+      'Refused a request for a host that is not allowed; set ORIGIN or ALLOWED_HOSTS',
+    );
+    return isApi
+      ? apiError(ErrorCode.VALIDATION_FAILED, { retryable: false }, 403)
+      : new Response('Host not allowed. Set ORIGIN or ALLOWED_HOSTS.', { status: 403 });
   }
+  if (!isApi) return resolve(event);
   if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return resolve(event);
 
   const origin = request.headers.get('origin');
-  const runtime = await getServerRuntime();
+  const allowedCorsOrigin = runtime.config.CORS_ALLOW_ORIGIN;
   const hasBody =
     request.body !== null ||
     Number(request.headers.get('content-length')) > 0 ||
     request.headers.has('transfer-encoding');
+  const mediaType = request.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
   if (
     request.headers.get('sec-fetch-site') === 'cross-site' ||
     (origin !== null &&
       origin !== event.url.origin &&
-      origin !== runtime.config.CORS_ALLOW_ORIGIN) ||
-    (hasBody && !request.headers.get('content-type')?.toLowerCase().includes('application/json'))
+      !isSameHostOrigin(origin, host) &&
+      !(allowedCorsOrigin && origin === allowedCorsOrigin)) ||
+    (hasBody && mediaType !== 'application/json')
   ) {
     return apiError(ErrorCode.VALIDATION_FAILED, { retryable: false }, 403);
   }
@@ -40,7 +56,7 @@ const handleCsrf: Handle = async ({ event, resolve }) => {
 
 const handleCors: Handle = async ({ event, resolve }) => {
   // Only apply CORS to API routes
-  if (!event.url.pathname.startsWith('/api/')) {
+  if (!isApiRequest(event)) {
     return resolve(event);
   }
 
@@ -87,13 +103,13 @@ const handleAuth: Handle = async ({ event, resolve }) => {
   const decision = decideAccess(
     config,
     event.request.method,
-    event.url.pathname,
+    routedPathname(event.url.pathname),
     event.request.headers,
     // Forwarded address headers must never establish trust in the identity header.
     config.APP_AUTH_MODE === 'proxy' ? (event.platform?.req?.socket.remoteAddress ?? '') : '',
   );
   if (decision.allowed) return resolve(event);
-  const response = event.url.pathname.startsWith('/api/')
+  const response = isApiRequest(event)
     ? apiError(ErrorCode.UNAUTHORIZED, { operation: 'authenticate', retryable: false }, 401)
     : new Response('Authentication required', { status: 401 });
   response.headers.set(

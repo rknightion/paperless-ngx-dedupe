@@ -66,7 +66,8 @@ See the [access model](security.md#access-model) for the default trust boundary 
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `ORIGIN` | Usually no | - | Set when running behind reverse proxies or non-localhost hostnames to satisfy origin checks |
+| `ORIGIN` | For a public domain | - | The URL users access. Needed for a public hostname unless it is in `ALLOWED_HOSTS` |
+| `ALLOWED_HOSTS` | No | - | Comma-separated extra hostnames to serve. Loopback, IP addresses and private-style names are always allowed. `*` turns the check off and is not recommended |
 | `BODY_SIZE_LIMIT` | No | `512K` | Node adapter request body limit (524,288 bytes). Vite preview does not apply this adapter limit. |
 
 The Node adapter limits request bodies independently of API validation. Large batch status selections in the wizard are sent in groups of 10,000.

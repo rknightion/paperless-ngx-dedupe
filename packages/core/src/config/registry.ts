@@ -338,6 +338,7 @@ const entries: InternalRegistryEntry[] = [
   environmentEntry('AI_OPENAI_BASE_URL', 'string', 'ai', false),
   environmentEntry('AI_OPENAI_API_STYLE', 'string', 'ai', false),
   environmentEntry('AI_OPENAI_TIMEOUT_MS', 'number', 'ai', false),
+  environmentEntry('ALLOWED_HOSTS', 'string', 'advanced', false),
   environmentEntry('APP_AUTH_MODE', 'string', 'advanced', false, 'none'),
   environmentEntry('APP_AUTH_USERNAME', 'string', 'advanced', true),
   environmentEntry('APP_AUTH_PASSWORD', 'string', 'advanced', true),

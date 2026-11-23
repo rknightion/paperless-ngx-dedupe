@@ -1,16 +1,12 @@
 import { getWebhookSyncSettings, requestWebhookSync } from '@paperless-dedupe/core';
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
-import { decideAccess } from '$lib/server/access';
+import { hasValidApiToken } from '$lib/server/access';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ locals, request, url }) => {
+export const POST: RequestHandler = async ({ locals, request }) => {
   const settings = getWebhookSyncSettings(locals.sqlite);
   if (!settings.enabled) return apiError(ErrorCode.NOT_FOUND, { operation: 'webhook_sync' });
-  if (
-    !locals.config.APP_API_TOKEN ||
-    !/^Bearer\s+\S+$/i.test(request.headers.get('authorization') ?? '') ||
-    !decideAccess(locals.config, 'POST', url.pathname, request.headers, '').allowed
-  ) {
+  if (!hasValidApiToken(locals.config, request.headers)) {
     return apiError(ErrorCode.UNAUTHORIZED, { operation: 'webhook_sync' });
   }
   let payload: unknown;

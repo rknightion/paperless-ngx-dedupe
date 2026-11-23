@@ -115,9 +115,13 @@ const MONEY_PATTERNS = [
   // Currency symbol followed by amount: $1,234.56  ₹50,000  €12.99
   new RegExp(`${CURRENCY_SYMBOLS}\\s*[\\d,]+\\.?\\d*`, 'g'),
   // Amount followed by currency code: 1234.56 usd
-  new RegExp(`(?:\\d{1,3}(?:,\\d{3})*|\\d{1,20})\\.\\d{2}\\s*(?:${CURRENCY_CODES})`, 'g'),
+  // The lookbehind stops a retry from every position inside one long digit-and-comma run.
+  new RegExp(
+    `(?<![\\d,])(?:\\d{1,3}(?:,\\d{3})*|\\d{1,20})\\.\\d{2}\\s*(?:${CURRENCY_CODES})`,
+    'g',
+  ),
   // Standalone comma-formatted decimal: 1,234.56 (no symbol)
-  /\b\d{1,3}(?:,\d{3})+\.\d{2}\b/g,
+  /(?<![\d,])\b\d{1,3}(?:,\d{3})+\.\d{2}\b/g,
 ];
 
 // Amounts near financial keywords without currency symbols (capture group).
