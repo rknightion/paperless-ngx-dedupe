@@ -113,25 +113,37 @@
   </div>
 
   {#if items.length === 0}
-    <div class="panel py-10 text-center">
-      <p class="text-ink font-medium">No documents match these filters.</p>
-      <p class="text-muted mt-1 text-sm">Clear or broaden the filters to see more documents.</p>
+    <div class="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+      <p class="text-muted max-w-md text-balance">No documents match these filters.</p>
+      <p class="text-muted max-w-md text-sm text-balance">
+        Clear or broaden the filters to see more documents.
+      </p>
+      <Button variant="outline" href="/documents?library=true">Clear filters</Button>
     </div>
   {:else}
-    <div class="border-soft max-w-full overflow-x-auto rounded-lg border">
-      <table class="w-full min-w-[760px] text-sm" aria-label="Document library">
-        <thead>
-          <tr class="border-soft bg-canvas border-b text-left">
-            <th class="text-muted px-3 py-3 font-medium">Document</th>
-            <th class="text-muted px-3 py-3 font-medium">Classification</th>
-            <th class="text-muted px-3 py-3 font-medium">OCR</th>
-            <th class="text-muted px-3 py-3 font-medium">Duplicate review</th>
-            <th class="text-muted px-3 py-3 font-medium">AI review</th>
-            <th class="text-muted px-3 py-3 font-medium">Added</th>
+    <!-- Below 768px the rows become a list: each cell wraps inside its row. -->
+    <div class="border-border bg-surface max-w-full overflow-x-auto border">
+      <table class="w-full text-sm max-md:block md:min-w-[760px]" aria-label="Document library">
+        <thead class="max-md:hidden">
+          <tr class="border-border-hover bg-surface border-b text-left">
+            <th scope="col" class="label-micro bg-surface sticky top-0 py-1.5 pr-3 pl-6">
+              Document
+            </th>
+            <th scope="col" class="label-micro bg-surface sticky top-0 px-3 py-1.5">
+              Classification
+            </th>
+            <th scope="col" class="label-micro bg-surface sticky top-0 px-3 py-1.5">OCR</th>
+            <th scope="col" class="label-micro bg-surface sticky top-0 px-3 py-1.5">
+              Duplicate review
+            </th>
+            <th scope="col" class="label-micro bg-surface sticky top-0 px-3 py-1.5">AI review</th>
+            <th scope="col" class="label-micro bg-surface sticky top-0 py-1.5 pr-6 pl-3 text-right">
+              Added
+            </th>
           </tr>
         </thead>
-        <tbody>
-          {#each items as item, index (item.id)}
+        <tbody class="max-md:block">
+          {#each items as item (item.id)}
             {@const duplicateHref = duplicatesHref(item)}
             {@const aiHref = aiReviewHref(
               item.id,
@@ -139,74 +151,88 @@
               returnTarget(),
               item.aiFailureType,
             )}
-            <tr class="border-soft border-b {index % 2 === 0 ? 'bg-surface' : 'bg-canvas'}">
-              <td class="max-w-xs px-3 py-3">
-                <a
-                  href="{paperlessUrl}/documents/{item.paperlessId}/details"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open {item.title} in Paperless"
-                  class="text-accent inline-flex max-w-full items-center gap-1 rounded-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-                >
-                  <span class="truncate">{item.title}</span>
-                  <ArrowSquareOutIcon class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                </a>
-                <span class="text-muted mt-1 block text-xs">Paperless #{item.paperlessId}</span>
+            <tr
+              class="border-border hover:bg-canvas-deep border-b max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-1 max-md:px-3 max-md:py-2 md:h-9"
+            >
+              <td class="max-w-sm py-1.5 pr-3 pl-0 max-md:w-full max-md:max-w-none md:pl-6">
+                <div class="flex min-w-0 items-baseline gap-2">
+                  <span class="text-muted shrink-0 font-mono text-sm tabular-nums">
+                    Paperless #{item.paperlessId}
+                  </span>
+                  <a
+                    href="{paperlessUrl}/documents/{item.paperlessId}/details"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open {item.title} in Paperless"
+                    title={item.title}
+                    class="text-ink hover:text-accent inline-flex min-w-0 items-center gap-1 rounded-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+                  >
+                    <span class="truncate">{item.title}</span>
+                    <ArrowSquareOutIcon class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  </a>
+                </div>
               </td>
-              <td class="px-3 py-3">
-                <span class="text-ink block">{item.correspondent ?? 'No correspondent'}</span>
-                <span class="text-muted block text-xs">
+              <td class="px-0 py-1.5 max-md:w-full md:px-3">
+                <span class="text-ink-light block max-md:mr-2 max-md:inline">
+                  {item.correspondent ?? 'No correspondent'}
+                </span>
+                <span class="text-muted block text-xs max-md:inline">
                   {item.documentType ?? 'No document type'}
                 </span>
                 {#if item.tags.length > 0}
-                  <span class="text-muted block max-w-48 truncate text-xs">
+                  <span class="text-muted block max-w-48 truncate text-xs max-md:max-w-full">
                     {item.tags.join(', ')}
                   </span>
                 {/if}
               </td>
-              <td class="px-3 py-3">
-                <span class={item.hasOcr ? 'text-success' : 'text-ember'}>
+              <td class="px-0 py-1.5 md:px-3">
+                <span class="status-word uppercase {item.hasOcr ? 'text-success' : 'text-ember'}">
+                  <span aria-hidden="true">{item.hasOcr ? '■' : '●'}</span>
                   {item.hasOcr ? 'Present' : 'Missing'}
                 </span>
               </td>
-              <td class="px-3 py-3">
+              <td class="px-0 py-1.5 md:px-3 {duplicateHref ? '' : 'max-md:hidden'}">
                 {#if duplicateHref}
                   <a
                     href={duplicateHref}
                     aria-label="Review duplicates for {item.title}"
-                    class="text-accent rounded-sm font-medium underline focus-visible:outline-2 focus-visible:outline-offset-2"
+                    class="text-accent hover:text-accent-hover rounded-sm font-mono text-sm font-semibold tabular-nums underline focus-visible:outline-2 focus-visible:outline-offset-2"
                   >
                     {item.duplicateGroupCount}
                     {item.duplicateGroupCount === 1 ? 'group' : 'groups'}
                   </a>
                   {#if item.duplicateGroupStatus}
-                    <span class="text-muted block text-xs">
+                    <span class="text-muted block font-mono text-xs uppercase max-md:inline">
                       {item.duplicateGroupStatus.replaceAll('_', ' ')}
                     </span>
                   {/if}
                 {:else}
-                  <span class="text-muted">None</span>
+                  <span class="text-muted font-mono text-sm">None</span>
                 {/if}
               </td>
-              <td class="px-3 py-3">
+              <td class="px-0 py-1.5 md:px-3">
                 {#if aiHref}
                   <a
                     href={aiHref}
                     aria-label="Review AI result for {item.title}"
-                    class="text-accent rounded-sm font-medium underline focus-visible:outline-2 focus-visible:outline-offset-2"
+                    class="text-accent hover:text-accent-hover rounded-sm font-mono text-xs uppercase underline focus-visible:outline-2 focus-visible:outline-offset-2"
                   >
                     {item.aiStatus?.replaceAll('_', ' ')}
                   </a>
                 {:else}
-                  <span class="text-muted">
+                  <span class="text-muted font-mono text-xs uppercase">
                     {item.aiStatus ? item.aiStatus.replaceAll('_', ' ') : 'Unprocessed'}
                   </span>
                 {/if}
                 {#if item.aiFreshness}
-                  <span class="text-muted block text-xs">{item.aiFreshness}</span>
+                  <span class="text-muted block font-mono text-xs max-md:inline">
+                    {item.aiFreshness}
+                  </span>
                 {/if}
               </td>
-              <td class="text-muted px-3 py-3">
+              <td
+                class="text-muted px-0 py-1.5 font-mono text-xs tabular-nums max-md:ml-auto md:pr-6 md:pl-3 md:text-right"
+              >
                 {item.addedDate ? new Date(item.addedDate).toLocaleDateString() : 'Unknown'}
               </td>
             </tr>
@@ -228,7 +254,7 @@
       {/if}
     </div>
     {#if nextHref}
-      <Button href={nextHref} onclick={rememberPredecessor}>Next page</Button>
+      <Button variant="outline" href={nextHref} onclick={rememberPredecessor}>Next page</Button>
     {/if}
   </nav>
 </section>

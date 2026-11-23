@@ -128,7 +128,7 @@
 <section class="panel space-y-4" aria-labelledby="document-library-filters">
   <div class="flex flex-wrap items-start justify-between gap-3">
     <div>
-      <h2 id="document-library-filters" class="text-ink text-base font-semibold">
+      <h2 id="document-library-filters" class="text-ink text-lg font-semibold">
         Search the library
       </h2>
       <p class="text-muted mt-1 text-sm">
@@ -152,7 +152,7 @@
             <a
               href={filter.href}
               aria-label="Remove {filter.label} filter"
-              class="bg-accent-light text-accent inline-flex max-w-full items-center gap-1 rounded-full px-3 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+              class="border-border text-ink-light hover:bg-canvas-deep inline-flex max-w-full items-center gap-1 rounded-sm border px-2 py-0.5 font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <span class="truncate">{filter.label}</span>
               <span aria-hidden="true">×</span>
