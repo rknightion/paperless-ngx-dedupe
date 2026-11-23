@@ -543,6 +543,7 @@
         <div class="flex items-center gap-2">
           <!-- Sort controls -->
           <Select
+            ariaLabel="Sort matching groups"
             onchange={handleSortChange}
             value={sortBy}
             options={[
@@ -605,6 +606,7 @@
           {#each groups as group (group.id)}
             <div class="border-soft bg-surface flex items-center gap-3 border px-3 py-2 sm:px-4">
               <Checkbox
+                ariaLabel={`Include ${group.primaryDocumentTitle ?? 'untitled group'}`}
                 checked={!excludedGroupIds.has(group.id)}
                 onchange={() => toggleGroup(group.id)}
               />

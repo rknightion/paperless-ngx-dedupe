@@ -349,6 +349,7 @@ test.describe('Duplicate review shortcuts', () => {
 
   test('n resolves the group and advances with the current filters', async ({ page, request }) => {
     await page.goto(`/duplicates/${seed.groupIds[0]}?returnParams=queue%3Dpending`);
+    await expect(page.getByText('Loading file metadata…')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Not a Duplicate', exact: true })).toBeVisible();
     await page.keyboard.press('n');
     await expect(page).toHaveURL(`/duplicates/${seed.groupIds[1]}?returnParams=queue%3Dpending`);
@@ -364,6 +365,7 @@ test.describe('Duplicate review shortcuts', () => {
     const db = new Database(DB_PATH);
     try {
       await page.goto(`/duplicates/${seed.groupIds[0]}`);
+      await expect(page.getByText('Loading file metadata…')).toBeHidden();
       await expect(
         page.getByRole('button', { name: 'Not a Duplicate', exact: true }),
       ).toBeVisible();
@@ -411,6 +413,7 @@ test.describe('Duplicate review shortcuts', () => {
     request,
   }) => {
     await page.goto(`/duplicates/${seed.groupIds[0]}`);
+    await expect(page.getByText('Loading file metadata…')).toBeHidden();
     await expect(
       page.getByRole('button', { name: 'Keyboard shortcuts (?)', exact: true }),
     ).toBeVisible();
@@ -443,6 +446,7 @@ test.describe('Duplicate review shortcuts', () => {
     const before = (await (await request.get(path)).json()).data;
     const secondary = before.members.filter((member: { isPrimary: boolean }) => !member.isPrimary);
     await page.goto(`/duplicates/${seed.groupIds[1]}`);
+    await expect(page.getByText('Loading file metadata…')).toBeHidden();
     await expect(
       page.getByRole('button', { name: 'Keyboard shortcuts (?)', exact: true }),
     ).toBeVisible();

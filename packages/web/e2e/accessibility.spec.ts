@@ -87,8 +87,14 @@ for (const scheme of ['light', 'dark'] as const) {
 
         if (route === '/duplicates/wizard') {
           await page.getByRole('slider').fill('50');
-          await page.getByRole('button', { name: 'Next', exact: true }).click();
+          const next = page.getByRole('button', { name: 'Next', exact: true });
+          await next.click();
           await expect(page.getByRole('heading', { name: 'Review Matching Groups' })).toBeVisible();
+          await expect(next).toBeEnabled();
+          // The populated panel enables Next asynchronously. Scan its settled colours.
+          await next.evaluate(async (button) => {
+            await Promise.allSettled(button.getAnimations().map((animation) => animation.finished));
+          });
           await checkAxe();
         }
 
