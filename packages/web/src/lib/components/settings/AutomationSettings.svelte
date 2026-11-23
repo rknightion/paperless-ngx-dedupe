@@ -6,7 +6,6 @@
     type getNotificationSettings,
     type AppConfig,
   } from '@paperless-dedupe/core';
-  import CalendarDotsIcon from 'phosphor-svelte/lib/CalendarDotsIcon';
   import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
   import { Button, Checkbox, Select, TextField } from '$lib/components';
   import { onMount, untrack } from 'svelte';
@@ -27,6 +26,10 @@
 
   let { settings }: Props = $props();
   const initialSettings = untrack(() => settings);
+  const statusClasses = {
+    success: "border-success text-success before:content-['■_']",
+    error: "border-ember text-ember before:content-['●_']",
+  } as const;
   const tasks: ScheduleTask[] = ['sync', 'analysis', 'ai_processing'];
   const cadenceOptions = [
     { value: 'manual', label: 'Manual only' },
@@ -232,14 +235,11 @@
 </script>
 
 <section class="panel" id="automation" aria-label="Automation schedules">
-  <div class="flex items-start gap-3">
-    <CalendarDotsIcon class="text-accent mt-0.5 h-5 w-5 shrink-0" />
-    <div>
-      <h2 class="text-ink text-lg font-semibold">Safe automation</h2>
-      <p class="text-muted mt-1 text-sm">
-        Schedule safe local work. Manual runs do not alter these schedules.
-      </p>
-    </div>
+  <div>
+    <h2 class="text-ink text-lg font-semibold">Safe automation</h2>
+    <p class="text-muted mt-1 text-sm">
+      Schedule safe local work. Manual runs do not alter these schedules.
+    </p>
   </div>
 
   <div class="mt-5 grid gap-4 lg:grid-cols-3">
@@ -356,7 +356,9 @@
           <p
             role={statuses[task]?.ok ? 'status' : 'alert'}
             aria-live="polite"
-            class={statuses[task]?.ok ? 'text-success text-sm' : 'text-ember text-sm'}
+            class="border-l-2 py-1 pl-3 text-sm {statuses[task]?.ok
+              ? statusClasses.success
+              : statusClasses.error}"
           >
             {statuses[task]?.message}
           </p>
@@ -428,7 +430,9 @@
       <p
         role={notificationStatus.ok ? 'status' : 'alert'}
         aria-live="polite"
-        class="mt-3 text-sm {notificationStatus.ok ? 'text-success' : 'text-ember'}"
+        class="mt-3 border-l-2 py-1 pl-3 text-sm {notificationStatus.ok
+          ? statusClasses.success
+          : statusClasses.error}"
       >
         {notificationStatus.message}
       </p>

@@ -1,13 +1,20 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto, invalidateAll } from '$app/navigation';
-  import { JobStatusCard, Select } from '$lib/components';
+  import { Button, ConfirmDialog, Select, StatusBadge } from '$lib/components';
   import TrashIcon from 'phosphor-svelte/lib/TrashIcon';
 
   let { data } = $props();
 
   let isClearing = $state(false);
+  let showClearConfirm = $state(false);
   let feedback: { type: 'success' | 'error'; message: string } | null = $state(null);
+
+  // Shape prefix is generated content so the message text stays exactly the message.
+  const feedbackClasses = {
+    success: "border-success text-success before:content-['■_']",
+    error: "border-ember text-ember before:content-['●_']",
+  } as const;
 
   const jobTypeOptions = [
     { value: '', label: 'All Types' },
@@ -70,8 +77,28 @@
     });
   }
 
+  const typeLabels: Record<string, string> = Object.fromEntries(
+    jobTypeOptions.filter((option) => option.value !== '').map((o) => [o.value, o.label]),
+  );
+
+  function formatDuration(startedAt: string | null, completedAt: string | null): string {
+    if (!startedAt) return '-';
+    const start = new Date(startedAt).getTime();
+    const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+    const seconds = Math.max(0, Math.round((end - start) / 1000));
+    if (seconds < 60) return `${seconds}s`;
+    return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  }
+
+  function meterColor(status: string | null, fraction: number): string {
+    if (fraction >= 1) return 'bg-success';
+    if (status === 'running') return 'bg-accent';
+    if (status === 'paused') return 'bg-warn';
+    return 'bg-muted';
+  }
+
   async function clearHistory() {
-    if (!confirm('Clear all completed, failed, and cancelled jobs from history?')) return;
+    showClearConfirm = false;
     isClearing = true;
     feedback = null;
     try {
@@ -92,13 +119,26 @@
   <title>Job History - Paperless NGX Dedupe</title>
 </svelte:head>
 
-<div class="mx-auto max-w-4xl space-y-6">
-  <div>
-    <h1 class="text-ink text-2xl font-bold">Job History</h1>
-    <p class="text-muted mt-1 text-sm">View and manage the history of all background jobs.</p>
-  </div>
+<div class="space-y-6">
+  <header class="space-y-1">
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="text-ink text-xl font-semibold">Job History</h1>
+      <span class="text-muted font-mono text-xs">/jobs</span>
+      <div class="ml-auto">
+        <Button
+          variant="outline"
+          icon={TrashIcon}
+          onclick={() => (showClearConfirm = true)}
+          disabled={isClearing || data.counts.clearable === 0}
+        >
+          {isClearing ? 'Clearing...' : 'Clear History'}
+        </Button>
+      </div>
+    </div>
+    <p class="text-muted text-sm">View and manage the history of all background jobs.</p>
+  </header>
 
-  <!-- Filter Bar -->
+  <!-- Filter row -->
   <div class="panel">
     <div class="flex flex-wrap items-end gap-4">
       <Select
@@ -124,65 +164,122 @@
         value={String(data.filters.pageSize)}
         onchange={(v) => applyFilter('pageSize', v)}
       />
-
-      <div class="ml-auto">
-        <!-- Native button: this is a soft-tinted destructive action and Button deliberately
-             has no semantic-tint variant; destructive would restyle it to a solid fill. -->
-        <button
-          onclick={clearHistory}
-          disabled={isClearing || data.counts.clearable === 0}
-          class="bg-ember/10 text-ember hover:bg-ember/20 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50"
-        >
-          <TrashIcon class="h-4 w-4" />
-          {isClearing ? 'Clearing...' : 'Clear History'}
-        </button>
-      </div>
     </div>
   </div>
 
   {#if feedback}
-    <div
+    <p
       role={feedback.type === 'error' ? 'alert' : 'status'}
       aria-live={feedback.type === 'error' ? 'assertive' : 'polite'}
-      class="rounded-lg border px-4 py-3 text-sm {feedback.type === 'success'
-        ? 'border-success/30 bg-success-light text-success'
-        : 'border-ember/30 bg-ember-light text-ember'}"
+      class="border-l-2 py-1 pl-3 text-sm {feedbackClasses[feedback.type]}"
     >
       {feedback.message}
-    </div>
+    </p>
   {/if}
 
-  <!-- Job List -->
+  <!-- Job list: one status word per row, mono timestamps and durations -->
   {#if data.jobs.length > 0}
-    <div class="space-y-3">
-      {#each data.jobs as j (j.key)}
-        <div class="min-w-0 space-y-1" data-job-key={j.key}>
-          <JobStatusCard
-            type={j.type}
-            status={j.status ?? 'pending'}
-            progress={j.progress ?? 0}
-            startedAt={j.startedAt}
-            completedAt={j.completedAt}
-          />
-          <p class="text-muted px-1 text-xs">{formatDate(j.createdAt)}</p>
-        </div>
-      {/each}
+    <div class="border-border bg-surface border">
+      <table class="w-full border-collapse text-left">
+        <thead>
+          <tr class="border-border-hover border-b">
+            <th scope="col" class="label-micro px-3 py-1.5 font-medium first:pl-6">Job</th>
+            <th
+              scope="col"
+              class="label-micro hidden w-44 px-3 py-1.5 text-right font-medium md:table-cell"
+            >
+              Progress
+            </th>
+            <th
+              scope="col"
+              class="label-micro hidden w-28 px-3 py-1.5 text-right font-medium md:table-cell"
+            >
+              Started
+            </th>
+            <th
+              scope="col"
+              class="label-micro hidden w-24 px-3 py-1.5 text-right font-medium md:table-cell"
+            >
+              Duration
+            </th>
+            <th scope="col" class="label-micro px-3 py-1.5 font-medium">State</th>
+            <th scope="col" class="label-micro px-3 py-1.5 text-right font-medium last:pr-6">
+              Created
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each data.jobs as j (j.key)}
+            {@const fraction = Math.min(1, Math.max(0, j.progress ?? 0))}
+            <tr
+              data-job-key={j.key}
+              class="border-border hover:bg-canvas-deep h-9 border-b last:border-b-0"
+            >
+              <td class="text-ink px-3 py-1 text-sm font-medium first:pl-6">
+                {typeLabels[j.type] ?? j.type}
+              </td>
+              <td class="hidden px-3 py-1 text-right md:table-cell">
+                {#if fraction > 0}
+                  <span class="inline-flex items-center justify-end gap-2">
+                    <span
+                      class="inline-block h-1 w-16 overflow-hidden bg-(--furniture)"
+                      aria-hidden="true"
+                    >
+                      <span
+                        class="block h-full {meterColor(j.status, fraction)}"
+                        style="width: {(fraction * 100).toFixed(1)}%"
+                      ></span>
+                    </span>
+                    <span class="text-ink font-mono text-sm tabular-nums">
+                      {(fraction * 100).toFixed(1)}%
+                    </span>
+                  </span>
+                {:else}
+                  <span class="text-muted font-mono text-sm">0</span>
+                {/if}
+              </td>
+              <td
+                class="text-muted hidden px-3 py-1 text-right font-mono text-xs tabular-nums md:table-cell"
+              >
+                {j.startedAt ? formatDate(j.startedAt) : '-'}
+              </td>
+              <td
+                class="text-ink hidden px-3 py-1 text-right font-mono text-xs tabular-nums md:table-cell"
+              >
+                {formatDuration(j.startedAt, j.completedAt)}
+              </td>
+              <td class="px-3 py-1">
+                <StatusBadge status={j.status ?? 'pending'} />
+              </td>
+              <td class="text-muted px-3 py-1 text-right font-mono text-xs tabular-nums last:pr-6">
+                {formatDate(j.createdAt)}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
     </div>
     {#if nextPageHref}
-      <nav aria-label="Job history pagination" class="flex justify-end pt-2">
-        <a
-          href={nextPageHref}
-          class="border-soft bg-surface text-ink hover:border-accent focus:ring-accent rounded-lg border px-4 py-2 text-sm font-medium transition focus:ring-2 focus:outline-none"
-        >
-          Next page
-        </a>
+      <nav aria-label="Job history pagination" class="flex justify-end">
+        <Button variant="outline" href={nextPageHref}>Next page</Button>
       </nav>
     {/if}
   {:else}
-    <div class="py-16 text-center">
-      <p class="text-muted">
-        No jobs found{data.filters.type || data.filters.status ? ' matching filters' : ''}.
-      </p>
-    </div>
+    <p class="text-muted py-16 text-center text-sm">
+      No jobs found{data.filters.type || data.filters.status ? ' matching filters' : ''}.
+    </p>
   {/if}
 </div>
+
+<ConfirmDialog
+  open={showClearConfirm}
+  title="Clear {data.counts.clearable} finished {data.counts.clearable === 1 ? 'job' : 'jobs'}?"
+  message="Completed, failed and cancelled jobs are removed from the history list."
+  confirmLabel="Clear finished jobs"
+  onconfirm={clearHistory}
+  oncancel={() => (showClearConfirm = false)}
+>
+  <p class="text-muted mt-2 text-sm">
+    Running, queued and paused jobs stay where they are, and nothing changes in Paperless.
+  </p>
+</ConfirmDialog>

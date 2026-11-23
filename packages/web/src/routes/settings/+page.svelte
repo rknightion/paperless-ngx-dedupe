@@ -18,13 +18,7 @@
     trackConfigExported,
     trackConfigImported,
   } from '$lib/faro-events';
-  import ArchiveIcon from 'phosphor-svelte/lib/ArchiveIcon';
-  import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
   import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
-  // Aliased: `InfoIcon` above is the tooltip trigger component.
-  import PhosphorInfoIcon from 'phosphor-svelte/lib/InfoIcon';
-  import LinkIcon from 'phosphor-svelte/lib/LinkIcon';
-  import SlidersHorizontalIcon from 'phosphor-svelte/lib/SlidersHorizontalIcon';
   import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import { parse as parseYaml } from 'yaml';
   import AutomationSettings from '$lib/components/settings/AutomationSettings.svelte';
@@ -65,6 +59,13 @@
     }
     return { valid: true };
   }
+
+  // Status lines: a shape (generated content, so the message text is unchanged), the
+  // semantic colour and a left rule. No tinted box.
+  const statusClasses = {
+    success: "border-success text-success before:content-['■_']",
+    error: "border-ember text-ember before:content-['●_']",
+  } as const;
 
   let { data } = $props();
   type SettingsSection = 'connection' | 'automation' | 'dedup' | 'ai' | 'system';
@@ -182,7 +183,7 @@
         trackConnectionTested(true);
         connectionStatus = {
           type: 'success',
-          message: `Connected! Paperless v${json.data.version} — ${json.data.documentCount} documents`,
+          message: `Connected! Paperless v${json.data.version} - ${json.data.documentCount} documents`,
         };
       } else {
         trackConnectionTested(false);
@@ -263,7 +264,7 @@
         const meta = json.meta;
         let msg = 'Configuration saved';
         if (meta?.recalculatedGroups !== undefined) {
-          msg += ` — ${meta.recalculatedGroups} groups recalculated`;
+          msg += ` - ${meta.recalculatedGroups} groups recalculated`;
         }
         dedupSaveStatus = { type: 'success', message: msg };
         analysisStale = meta?.analysisStale === true;
@@ -297,7 +298,7 @@
   async function saveAiConfig() {
     isSavingAi = true;
     aiSaveStatus = null;
-    // Validate tag alias YAML before saving (always validate — server rejects invalid YAML regardless of toggle)
+    // Validate tag alias YAML before saving (always validate - server rejects invalid YAML regardless of toggle)
     if (aiTagAliasMap.trim()) {
       const validation = validateTagAliasYaml(aiTagAliasMap);
       if (!validation.valid) {
@@ -439,18 +440,19 @@
   <title>Settings - Paperless NGX Dedupe</title>
 </svelte:head>
 
-<div class="space-y-8">
+<div class="space-y-6">
   <header class="space-y-1">
-    <h1 class="text-ink text-2xl font-semibold tracking-tight">Settings</h1>
-    <p class="text-muted mt-1">Configure Paperless-NGX connection and deduplication parameters.</p>
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="text-ink text-xl font-semibold">Settings</h1>
+      <span class="text-muted font-mono text-xs">/settings</span>
+    </div>
+    <p class="text-muted text-sm">
+      Configure Paperless-NGX connection and deduplication parameters.
+    </p>
   </header>
 
   {#if !data.accessProtectionEnabled}
-    <aside
-      role="note"
-      aria-label="Access protection"
-      class="border-soft bg-surface rounded-xl border p-4"
-    >
+    <aside role="note" aria-label="Access protection" class="border-border bg-surface border p-4">
       <h2 class="text-ink text-sm font-semibold">Not protected</h2>
       <p class="text-muted mt-1 text-sm">
         Application access protection is off. Anyone who can reach this app can view and change
@@ -468,9 +470,8 @@
     </aside>
   {/if}
 
-  <!-- Sticky Mini-Nav. Translucent + blurred is deliberate and one of only two
-       places the system allows it: a surface that scrolls under content. -->
-  <div class="bg-canvas/80 sticky top-0 z-10 -mx-4 px-4 py-2 backdrop-blur-sm sm:-mx-6 md:-mx-8">
+  <!-- Sticky section nav on a solid canvas fill. -->
+  <div class="bg-canvas sticky top-0 z-10 -mx-4 px-4 py-2 sm:-mx-6 md:-mx-8">
     <Tabs
       tabs={settingsTabs}
       active={activeSettingsSection}
@@ -481,10 +482,7 @@
 
   <!-- Paperless-NGX Connection -->
   <div class="panel" id="connection" class:hidden={activeSettingsSection !== 'connection'}>
-    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-      <LinkIcon class="text-accent h-5 w-5" />
-      Paperless-NGX Connection
-    </h2>
+    <h2 class="text-ink text-lg font-semibold">Paperless-NGX Connection</h2>
     <p class="text-muted mt-2 text-sm">Connection settings are managed by environment variables.</p>
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <TextField
@@ -514,9 +512,7 @@
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        class="mt-3 rounded-lg px-3 py-2 text-sm {connectionStatus.type === 'success'
-          ? 'bg-success-light text-success'
-          : 'bg-ember-light text-ember'}"
+        class="mt-3 border-l-2 py-1 pl-3 text-sm {statusClasses[connectionStatus.type]}"
       >
         {connectionStatus.message}
       </div>
@@ -530,10 +526,7 @@
 
   <!-- Dedup Parameters -->
   <div class="panel" id="dedup" class:hidden={activeSettingsSection !== 'dedup'}>
-    <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-      <SlidersHorizontalIcon class="text-accent h-5 w-5" />
-      Deduplication Parameters
-    </h2>
+    <h2 class="text-ink text-lg font-semibold">Deduplication Parameters</h2>
 
     <div class="mt-4">
       <div class="mb-5">
@@ -551,7 +544,7 @@
         id="excluded-tag-names"
         bind:value={excludedTagNamesInput}
         rows="3"
-        class="border-soft bg-canvas text-ink mt-2 w-full rounded-lg border px-3 py-2 text-sm"
+        class="border-border-hover bg-surface-raised text-ink mt-2 w-full rounded-sm border px-3 py-2 text-sm"
         aria-describedby="excluded-tag-help"></textarea>
       <p id="excluded-tag-help" class="text-muted mt-1 text-xs">
         One tag name per line. Matching ignores case. These documents stay in Paperless and are
@@ -627,9 +620,9 @@
 
       <!-- Weight Budget Bar -->
       <div class="mt-4">
-        <div class="flex h-3 overflow-hidden rounded-full">
+        <div class="flex h-1.5 overflow-hidden">
           <!-- Two data series, so the first two chart tokens rather than the
-               accent — this is a composition readout, not an action. -->
+               accent - this is a composition readout, not an action. -->
           <div
             class="transition-all duration-200"
             style="width: {weightJaccard}%; background: var(--color-chart-1);"
@@ -815,11 +808,7 @@
       {/if}
     </div>
     {#if dedupSaveStatus}
-      <div
-        class="mt-3 rounded-lg px-3 py-2 text-sm {dedupSaveStatus.type === 'success'
-          ? 'bg-success-light text-success'
-          : 'bg-ember-light text-ember'}"
-      >
+      <div class="mt-3 border-l-2 py-1 pl-3 text-sm {statusClasses[dedupSaveStatus.type]}">
         {dedupSaveStatus.message}
       </div>
     {/if}
@@ -841,10 +830,7 @@
   <!-- AI Processing Settings -->
   {#if data.aiEnabled}
     <div class="panel" id="ai-processing" class:hidden={activeSettingsSection !== 'ai'}>
-      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        <BrainIcon class="text-accent h-5 w-5" />
-        AI Processing
-      </h2>
+      <h2 class="text-ink text-lg font-semibold">AI Processing</h2>
 
       <!-- Model Selection -->
       <div class="mt-4">
@@ -865,7 +851,7 @@
         >
           Reasoning Effort
           <InfoIcon
-            text="Controls how much the model reasons before answering. 'Low' (default) is recommended — fast and cost-effective for classification. Higher levels increase thinking tokens which are billed as output tokens, potentially doubling costs at 'High'. 'None' disables reasoning entirely."
+            text="Controls how much the model reasons before answering. 'Low' (default) is recommended - fast and cost-effective for classification. Higher levels increase thinking tokens which are billed as output tokens, potentially doubling costs at 'High'. 'None' disables reasoning entirely."
             position="bottom"
           />
         </label>
@@ -1012,9 +998,7 @@
         {#if showPrompt}
           <div class="mt-3 space-y-3">
             {#if !isDefaultPrompt}
-              <div
-                class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
-              >
+              <div class="border-warn text-ink flex items-start gap-3 border-l-2 py-1 pl-3 text-sm">
                 <WarningIcon class="text-warn mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p>
@@ -1033,7 +1017,7 @@
             {/if}
             {#if showRevertResetPrompt}
               <div
-                class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+                class="border-success text-ink flex items-start gap-3 border-l-2 py-1 pl-3 text-sm"
               >
                 <CheckIcon class="text-success mt-0.5 h-4 w-4 shrink-0" />
                 <div>
@@ -1069,7 +1053,7 @@
             <textarea
               bind:value={aiPromptTemplate}
               rows="12"
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none"
+              class="border-border-hover bg-surface-raised text-ink w-full rounded-sm border px-3 py-2 font-mono text-xs leading-relaxed"
             ></textarea>
           </div>
         {/if}
@@ -1105,7 +1089,7 @@
               <div class="mt-3 space-y-3">
                 {#if !isDefaultTagAliasMap}
                   <div
-                    class="bg-warn-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+                    class="border-warn text-ink flex items-start gap-3 border-l-2 py-1 pl-3 text-sm"
                   >
                     <WarningIcon class="text-warn mt-0.5 h-4 w-4 shrink-0" />
                     <div>
@@ -1125,7 +1109,7 @@
                 {/if}
                 {#if showRevertResetTagAliases}
                   <div
-                    class="bg-success-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm"
+                    class="border-success text-ink flex items-start gap-3 border-l-2 py-1 pl-3 text-sm"
                   >
                     <CheckIcon class="text-success mt-0.5 h-4 w-4 shrink-0" />
                     <div>
@@ -1164,9 +1148,9 @@
                 <textarea
                   bind:value={aiTagAliasMap}
                   rows="16"
-                  class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 font-mono text-xs leading-relaxed focus:ring-1 focus:outline-none {tagAliasValidationError
+                  class="bg-surface-raised text-ink w-full rounded-sm border px-3 py-2 font-mono text-xs leading-relaxed {tagAliasValidationError
                     ? 'border-ember'
-                    : ''}"></textarea>
+                    : 'border-border-hover'}"></textarea>
                 {#if tagAliasValidationError}
                   <p class="text-ember text-xs">{tagAliasValidationError}</p>
                 {/if}
@@ -1179,7 +1163,7 @@
       <!-- Reset Processing History -->
       <div class="border-soft mt-4 border-t pt-4">
         {#if resetConfirmCount !== null}
-          <div class="bg-ember-light text-ink flex items-start gap-3 rounded-lg px-4 py-3 text-sm">
+          <div class="border-ember text-ink flex items-start gap-3 border-l-2 py-1 pl-3 text-sm">
             <WarningIcon class="text-ember mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p>
@@ -1326,9 +1310,11 @@
               min="0"
               max="100"
               bind:value={aiConfidenceGlobal}
-              class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
+              class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none"
             />
-            <span class="text-ink w-12 text-right text-sm font-medium">{aiConfidenceGlobal}%</span>
+            <span class="text-ink w-12 text-right font-mono text-sm tabular-nums">
+              {aiConfidenceGlobal}%
+            </span>
           </div>
         </div>
 
@@ -1351,9 +1337,11 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceTitle}
-                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none"
                 />
-                <span class="text-ink w-12 text-right text-sm">{aiConfidenceTitle}%</span>
+                <span class="text-ink w-12 text-right font-mono text-sm tabular-nums">
+                  {aiConfidenceTitle}%
+                </span>
               </div>
             </div>
             <div>
@@ -1366,9 +1354,11 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceCorrespondent}
-                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none"
                 />
-                <span class="text-ink w-12 text-right text-sm">{aiConfidenceCorrespondent}%</span>
+                <span class="text-ink w-12 text-right font-mono text-sm tabular-nums">
+                  {aiConfidenceCorrespondent}%
+                </span>
               </div>
             </div>
             <div>
@@ -1381,9 +1371,11 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceDocType}
-                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none"
                 />
-                <span class="text-ink w-12 text-right text-sm">{aiConfidenceDocType}%</span>
+                <span class="text-ink w-12 text-right font-mono text-sm tabular-nums">
+                  {aiConfidenceDocType}%
+                </span>
               </div>
             </div>
             <div>
@@ -1396,9 +1388,11 @@
                   min="0"
                   max="100"
                   bind:value={aiConfidenceTags}
-                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none rounded-lg"
+                  class="bg-soft accent-accent h-2 flex-1 cursor-pointer appearance-none"
                 />
-                <span class="text-ink w-12 text-right text-sm">{aiConfidenceTags}%</span>
+                <span class="text-ink w-12 text-right font-mono text-sm tabular-nums">
+                  {aiConfidenceTags}%
+                </span>
               </div>
             </div>
           </div>
@@ -1416,11 +1410,7 @@
         </Button>
       </div>
       {#if aiSaveStatus}
-        <div
-          class="mt-3 rounded-lg px-3 py-2 text-sm {aiSaveStatus.type === 'success'
-            ? 'bg-success-light text-success'
-            : 'bg-ember-light text-ember'}"
-        >
+        <div class="mt-3 border-l-2 py-1 pl-3 text-sm {statusClasses[aiSaveStatus.type]}">
           {aiSaveStatus.message}
         </div>
       {/if}
@@ -1430,20 +1420,17 @@
   <div class:hidden={activeSettingsSection !== 'system'}>
     <!-- System Information -->
     <div class="panel" id="system">
-      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        <PhosphorInfoIcon class="text-accent h-5 w-5" />
-        System Information
-      </h2>
+      <h2 class="text-ink text-lg font-semibold">System Information</h2>
       <dl class="mt-4 grid gap-3 sm:grid-cols-2">
         <div>
           <dt class="text-muted text-sm">Total Documents</dt>
-          <dd class="text-ink mt-0.5 text-sm font-medium">
+          <dd class="text-ink mt-0.5 font-mono text-sm tabular-nums">
             {system.totalDocuments.toLocaleString()}
           </dd>
         </div>
         <div>
           <dt class="text-muted text-sm">Pending Groups</dt>
-          <dd class="text-ink mt-0.5 text-sm font-medium">
+          <dd class="text-ink mt-0.5 font-mono text-sm tabular-nums">
             {system.duplicateGroups.toLocaleString()}
           </dd>
         </div>
@@ -1461,18 +1448,20 @@
       <dl class="mt-4 grid gap-3 sm:grid-cols-3">
         <div class="panel-inset">
           <dt class="text-muted text-xs">Active leases</dt>
-          <dd class="text-ink mt-1 text-sm font-medium">{data.maintenance.activeLeases.length}</dd>
+          <dd class="text-ink mt-1 font-mono text-sm tabular-nums">
+            {data.maintenance.activeLeases.length}
+          </dd>
         </div>
         <div class="panel-inset">
           <dt class="text-muted text-xs">Terminal jobs</dt>
-          <dd class="text-ink mt-1 text-sm font-medium">
+          <dd class="text-ink mt-1 font-mono text-sm tabular-nums">
             {data.maintenance.terminalJobs.total} ({data.maintenance.terminalJobs
               .olderThanThirtyDays} older than 30 days)
           </dd>
         </div>
         <div class="panel-inset">
           <dt class="text-muted text-xs">Allocated database storage</dt>
-          <dd class="text-ink mt-1 text-sm font-medium">
+          <dd class="text-ink mt-1 font-mono text-sm tabular-nums">
             {(data.maintenance.storage.allocatedBytes / 1024 / 1024).toFixed(1)} MiB
           </dd>
         </div>
@@ -1483,24 +1472,22 @@
 
     <!-- Backup & Restore -->
     <div class="panel" id="backup">
-      <h2 class="text-ink flex items-center gap-2 text-lg font-semibold">
-        <ArchiveIcon class="text-accent h-5 w-5" />
-        Backup & Restore
-      </h2>
+      <h2 class="text-ink text-lg font-semibold">Backup & Restore</h2>
       <div class="mt-4 space-y-4">
         <div>
           <h3 class="text-ink text-sm font-medium">Export Configuration</h3>
           <p class="text-muted mt-1 text-xs">
             Download a backup of all settings and dedup parameters.
           </p>
-          <a
+          <Button
             href="/api/v1/export/config.json"
             download
+            variant="outline"
+            class="mt-2"
             onclick={() => trackConfigExported()}
-            class="border-soft text-ink hover:bg-canvas mt-2 inline-block rounded-lg border px-4 py-2 text-sm font-medium"
           >
             Download Backup
-          </a>
+          </Button>
         </div>
         <div class="border-soft border-t pt-4">
           <h3 class="text-ink text-sm font-medium">Import Configuration</h3>
@@ -1518,7 +1505,7 @@
                 importFile = target.files?.[0] ?? null;
                 importStatus = null;
               }}
-              class="text-ink file:border-soft file:text-ink file:hover:bg-canvas text-sm file:mr-3 file:rounded-lg file:border file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:font-medium"
+              class="text-ink file:border-border-hover file:text-ink file:hover:bg-canvas-deep text-sm file:mr-3 file:rounded-sm file:border file:bg-transparent file:px-3 file:py-1 file:text-sm file:font-medium"
             />
             <Button onclick={handleImport} disabled={!importFile || isImporting}>
               {isImporting ? 'Importing...' : 'Import'}
@@ -1528,11 +1515,7 @@
       </div>
       <DecisionBackup />
       {#if importStatus}
-        <div
-          class="mt-3 rounded-lg px-3 py-2 text-sm {importStatus.type === 'success'
-            ? 'bg-success-light text-success'
-            : 'bg-ember-light text-ember'}"
-        >
+        <div class="mt-3 border-l-2 py-1 pl-3 text-sm {statusClasses[importStatus.type]}">
           {importStatus.message}
         </div>
       {/if}
