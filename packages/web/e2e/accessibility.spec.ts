@@ -27,12 +27,21 @@ function seedAiResults(documentIds: string[]): void {
     const insert = db.prepare(`
       INSERT INTO ai_processing_result (
         id, document_id, paperless_id, provider, model, suggested_title,
-        suggested_correspondent, confidence_json, applied_status, created_at
+        suggested_correspondent, confidence_json, suggested_custom_fields_json, applied_status, created_at
       ) VALUES (?, ?, ?, 'openai', 'fixture', 'Suggested title', ?,
-        '{"title":0.82,"correspondent":0.95}', ?, '2026-01-01T00:00:00.000Z')
+        '{"title":0.82,"correspondent":0.95}', ?, ?, '2026-01-01T00:00:00.000Z')
     `);
-    insert.run('a11y-pending', documentIds[0], 1, null, 'pending_review');
-    insert.run('a11y-applied', documentIds[1], 2, 'long-value'.repeat(100), 'applied');
+    const customFields = JSON.stringify([
+      {
+        fieldId: 1,
+        fieldName: 'Reference',
+        value: 'sample',
+        confidence: 0.62,
+        evidence: 'Fixture',
+      },
+    ]);
+    insert.run('a11y-pending', documentIds[0], 1, null, customFields, 'pending_review');
+    insert.run('a11y-applied', documentIds[1], 2, 'long-value'.repeat(100), null, 'applied');
   } finally {
     db.close();
   }
@@ -88,6 +97,15 @@ for (const scheme of ['light', 'dark'] as const) {
           await page.getByRole('button', { name: /^Show .*Prompt Template$/ }).click();
           await page.getByRole('checkbox', { name: 'Enable Tag Alias Mapping' }).check();
           await page.getByRole('button', { name: /^Show .*Tag Alias Map$/ }).click();
+          await checkAxe();
+        }
+
+        if (route === '/ai-processing/review') {
+          const result = main.getByRole('row').filter({ hasText: 'Test Document 1' });
+          await expect(result).toContainText('62.0%');
+          await expect(result.getByText('lowest: Reference')).toBeVisible();
+          await result.getByRole('button', { name: 'Test Document 1', exact: true }).press('Enter');
+          await expect(main.getByRole('button', { name: 'Close drawer' })).toBeVisible();
           await checkAxe();
         }
 
