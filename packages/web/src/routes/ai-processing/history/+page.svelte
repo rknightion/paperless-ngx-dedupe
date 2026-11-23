@@ -4,6 +4,7 @@
   import { page } from '$app/state';
   import { Button, Select, SearchInput } from '$lib/components';
   import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
+  import { aiStatusWord } from '$lib/components/ai/ai-status';
   import AiApplyAuditCard from '$lib/components/ai/AiApplyAuditCard.svelte';
   import type { AiResultDetail } from '@paperless-dedupe/core';
   import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
@@ -12,8 +13,6 @@
   import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
   import CaretRightIcon from 'phosphor-svelte/lib/CaretRightIcon';
   import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
-  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
-  import ClockCounterClockwiseIcon from 'phosphor-svelte/lib/ClockCounterClockwiseIcon';
   import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
   import XIcon from 'phosphor-svelte/lib/XIcon';
   import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
@@ -21,10 +20,10 @@
   let { data } = $props();
 
   const SORT_OPTIONS = [
-    { value: 'applied_newest', label: 'Newest Applied' },
-    { value: 'applied_oldest', label: 'Oldest Applied' },
-    { value: 'newest', label: 'Newest Created' },
-    { value: 'oldest', label: 'Oldest Created' },
+    { value: 'applied_newest', label: 'Newest applied' },
+    { value: 'applied_oldest', label: 'Oldest applied' },
+    { value: 'newest', label: 'Newest created' },
+    { value: 'oldest', label: 'Oldest created' },
   ];
   const PAGE_SIZE_OPTIONS = [
     { value: '20', label: '20 / page' },
@@ -59,29 +58,6 @@
     { value: 'failed', label: 'Failed', icon: WarningCircleIcon, colorClass: 'text-ember' },
     { value: 'skipped', label: 'Skipped', icon: WarningCircleIcon, colorClass: 'text-warn' },
   ] as const;
-
-  function statusBadgeClass(status: string): string {
-    switch (status) {
-      case 'applied':
-        return 'bg-success-light text-success';
-      case 'partial':
-        return 'bg-accent-light text-accent';
-      case 'rejected':
-        return 'text-muted bg-canvas';
-      case 'reverted':
-        return 'bg-accent-light text-accent';
-      case 'failed':
-        return 'bg-ember-light text-ember';
-      case 'skipped':
-        return 'bg-warn-light text-warn';
-      default:
-        return 'bg-canvas text-muted';
-    }
-  }
-
-  function statusDisplayText(status: string): string {
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  }
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '--';
@@ -237,15 +213,18 @@
   <!-- Filters -->
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
     <!-- Status filter toggles -->
-    <div class="flex flex-wrap items-center gap-1">
+    <div
+      class="border-border bg-surface flex flex-wrap items-center overflow-hidden rounded-sm border"
+    >
       {#each statusFilters as sf (sf.label)}
         {@const isActive = sf.value === data.status || (sf.value === null && !data.status)}
-        <!-- Filter chip: stays inline. Button has no rounded-full pill shape or toggled state. -->
+        <!-- Segmented filter: one bordered group, selected fill on the active segment. -->
         <button
           onclick={() => handleStatusFilter(sf.value)}
-          class="rounded-full px-3 py-1 text-xs font-medium transition-colors {isActive
-            ? 'bg-accent text-on-accent'
-            : 'bg-canvas-alt text-muted hover:bg-canvas'}"
+          aria-pressed={isActive}
+          class="border-border h-[26px] border-l px-3 text-sm transition-colors first:border-l-0 {isActive
+            ? 'bg-selected text-ink font-medium'
+            : 'text-muted hover:bg-canvas-deep'}"
         >
           {sf.label}
         </button>
@@ -273,10 +252,7 @@
   <div class="flex gap-4">
     <div class="min-w-0 flex-1">
       {#if data.results.length === 0}
-        <div class="panel flex flex-col items-center py-16 text-center">
-          <div class="bg-canvas-alt mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-            <ClockCounterClockwiseIcon class="text-muted h-7 w-7" />
-          </div>
+        <div class="flex flex-col items-center py-16 text-center">
           <p class="text-ink text-sm font-medium">No history found</p>
           <p class="text-muted mt-1 text-sm">
             {#if data.status || data.search}
@@ -287,25 +263,29 @@
           </p>
         </div>
       {:else}
-        <div class="panel overflow-hidden">
-          <table class="w-full">
+        <div class="border-border border-y">
+          <table class="w-full border-collapse">
             <thead>
-              <tr class="border-soft border-b text-left">
-                <th class="text-muted p-3 text-xs font-medium tracking-wider uppercase">Title</th>
+              <tr class="text-left">
                 <th
-                  class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase sm:table-cell"
+                  class="label-micro bg-surface border-border-hover sticky top-0 z-10 border-b px-3 py-1.5 pl-6 text-left"
+                >
+                  Title
+                </th>
+                <th
+                  class="label-micro bg-surface border-border-hover sticky top-0 z-10 hidden border-b px-3 py-1.5 text-left sm:table-cell"
                 >
                   Status
                 </th>
                 <th
-                  class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase md:table-cell"
+                  class="label-micro bg-surface border-border-hover sticky top-0 z-10 hidden border-b px-3 py-1.5 text-left md:table-cell"
                 >
                   Suggestion
                 </th>
                 <th
-                  class="text-muted hidden p-3 text-xs font-medium tracking-wider uppercase lg:table-cell"
+                  class="label-micro bg-surface border-border-hover sticky top-0 z-10 hidden border-b px-3 py-1.5 pr-6 text-left lg:table-cell"
                 >
-                  Applied At
+                  Applied at
                 </th>
               </tr>
             </thead>
@@ -313,38 +293,39 @@
               {#each data.results as result (result.id)}
                 {@const isActive = activeResultId === result.id}
                 <tr
-                  class="border-soft hover:bg-canvas cursor-pointer border-b transition-colors last:border-b-0 {isActive
-                    ? 'bg-accent-light/30'
-                    : ''}"
+                  class="border-border cursor-pointer border-b transition-colors {isActive
+                    ? 'bg-selected shadow-[inset_2px_0_0_var(--color-accent)]'
+                    : 'hover:bg-canvas-deep'}"
                   onclick={() => openDetail(result.id)}
                   onkeydown={(e) => e.key === 'Enter' && openDetail(result.id)}
                   tabindex="0"
                   role="button"
                 >
-                  <td class="p-3">
+                  <td class="py-2 pr-3 pl-6">
                     <div class="min-w-0">
-                      <p class="text-ink truncate text-sm font-medium">{result.documentTitle}</p>
-                      <p class="text-muted text-xs sm:hidden">
-                        {statusDisplayText(result.appliedStatus)}
+                      <p class="text-ink truncate text-base font-medium">{result.documentTitle}</p>
+                      <p
+                        class="status-word {aiStatusWord(result.appliedStatus)
+                          .colorClass} sm:hidden"
+                      >
+                        <span aria-hidden="true">{aiStatusWord(result.appliedStatus).shape}</span>
+                        <span class="uppercase">{aiStatusWord(result.appliedStatus).label}</span>
                       </p>
                     </div>
                   </td>
-                  <td class="hidden p-3 sm:table-cell">
+                  <td class="hidden px-3 py-2 sm:table-cell">
                     <div class="space-y-1">
-                      <span
-                        class="rounded-full px-2.5 py-0.5 text-xs font-medium {statusBadgeClass(
-                          result.appliedStatus,
-                        )}"
-                      >
-                        {statusDisplayText(result.appliedStatus)}
+                      <span class="status-word {aiStatusWord(result.appliedStatus).colorClass}">
+                        <span aria-hidden="true">{aiStatusWord(result.appliedStatus).shape}</span>
+                        <span class="uppercase">{aiStatusWord(result.appliedStatus).label}</span>
                       </span>
                       {#if result.appliedStatus === 'failed' && result.errorMessage}
-                        <p class="text-muted line-clamp-2 text-xs">{result.errorMessage}</p>
+                        <p class="text-muted line-clamp-2 text-sm">{result.errorMessage}</p>
                       {/if}
                     </div>
                   </td>
-                  <td class="hidden p-3 md:table-cell">
-                    <div class="text-muted space-y-0.5 text-xs">
+                  <td class="hidden px-3 py-2 md:table-cell">
+                    <div class="text-muted space-y-0.5 text-sm">
                       {#if result.suggestedCorrespondent}
                         <p>Correspondent: {result.suggestedCorrespondent}</p>
                       {/if}
@@ -356,8 +337,8 @@
                       {/if}
                     </div>
                   </td>
-                  <td class="hidden p-3 lg:table-cell">
-                    <span class="text-muted text-xs">{formatDate(result.appliedAt)}</span>
+                  <td class="hidden py-2 pr-6 pl-3 lg:table-cell">
+                    <span class="text-muted font-mono text-xs">{formatDate(result.appliedAt)}</span>
                   </td>
                 </tr>
               {/each}
@@ -370,10 +351,10 @@
           <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
               <p class="text-muted text-sm">
-                Showing <span class="text-ink font-medium">
-                  {data.offset + 1}&ndash;{Math.min(data.offset + data.limit, data.total)}
+                Showing <span class="text-ink font-mono tabular-nums">
+                  {data.offset + 1}-{Math.min(data.offset + data.limit, data.total)}
                 </span>
-                of <span class="text-ink font-medium">{data.total}</span>
+                of <span class="text-ink font-mono tabular-nums">{data.total}</span>
               </p>
               <Select
                 ariaLabel="Results per page"
@@ -392,7 +373,7 @@
                   onclick={() => goToPage(currentPage - 1)}
                   disabled={currentPage <= 1}
                 />
-                <span class="text-ink px-3 text-sm font-medium tabular-nums">
+                <span class="text-ink px-3 font-mono text-sm tabular-nums">
                   {currentPage} / {totalPages}
                 </span>
                 <Button
@@ -413,7 +394,7 @@
     <!-- Detail Drawer -->
     {#if activeResultId}
       <aside
-        class="panel sticky top-24 max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto"
+        class="border-border bg-canvas sticky top-4 max-h-[calc(100vh-8rem)] w-[380px] shrink-0 overflow-y-auto border-l"
       >
         {#if detailLoadState === 'loading'}
           <div class="space-y-4 p-4">
@@ -435,11 +416,9 @@
             </div>
           </div>
         {:else if detailLoadState === 'error'}
-          <div class="flex flex-col items-center justify-center gap-4 p-8">
-            <div class="bg-ember-light flex h-12 w-12 items-center justify-center rounded-full">
-              <WarningCircleIcon class="text-ember h-6 w-6" />
-            </div>
-            <p class="text-ink text-sm font-medium">Failed to load result</p>
+          <div class="flex flex-col items-center justify-center gap-3 p-8">
+            <span class="status-word text-ember"><span aria-hidden="true">●</span> FAIL</span>
+            <p class="text-ink text-sm font-semibold">Failed to load result</p>
             <Button variant="outline" onclick={() => activeResultId && openDetail(activeResultId)}>
               Retry
             </Button>
@@ -454,11 +433,14 @@
                 </h2>
                 <div class="flex flex-wrap items-center gap-2">
                   <span
-                    class="rounded-full px-2.5 py-0.5 text-xs font-medium {statusBadgeClass(
-                      activeResultDetail.appliedStatus,
-                    )}"
+                    class="status-word {aiStatusWord(activeResultDetail.appliedStatus).colorClass}"
                   >
-                    {statusDisplayText(activeResultDetail.appliedStatus)}
+                    <span aria-hidden="true">
+                      {aiStatusWord(activeResultDetail.appliedStatus).shape}
+                    </span>
+                    <span class="uppercase">
+                      {aiStatusWord(activeResultDetail.appliedStatus).label}
+                    </span>
                   </span>
                   <a
                     href="{data.paperlessUrl}/documents/{activeResultDetail.paperlessId}/details"
@@ -484,26 +466,26 @@
 
             <!-- Error Banner -->
             {#if activeResultDetail.appliedStatus === 'failed' && activeResultDetail.errorMessage}
-              <div class="bg-ember-light/30 border-ember/20 space-y-2 rounded-lg border p-4">
+              <div class="border-ember bg-ember-light space-y-2 border p-3">
                 <div class="flex items-start gap-2">
-                  <WarningCircleIcon class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+                  <span class="status-word text-ember mt-0.5">
+                    <span aria-hidden="true">●</span> FAIL
+                  </span>
                   <div class="min-w-0 space-y-1">
-                    <p class="text-ember text-sm font-semibold">
+                    <p class="text-ink text-sm font-semibold">
                       {isExtractionFailure(activeResultDetail)
                         ? 'Extraction Failed'
                         : 'Apply Failed'}
                     </p>
                     {#if activeResultDetail.failureType}
-                      <span
-                        class="bg-ember-light text-ember rounded-full px-2 py-0.5 text-xs font-medium"
-                      >
+                      <span class="border-ember text-ember border px-1.5 font-mono text-xs">
                         {activeResultDetail.failureType}
                       </span>
                     {/if}
                   </div>
                 </div>
                 <pre
-                  class="text-ink bg-canvas rounded p-3 text-xs whitespace-pre-wrap">{activeResultDetail.errorMessage}</pre>
+                  class="text-ink bg-canvas border-border border p-3 font-mono text-xs whitespace-pre-wrap">{activeResultDetail.errorMessage}</pre>
               </div>
             {/if}
 
@@ -537,7 +519,7 @@
             {#if activeResultDetail.evidence}
               <div class="space-y-2">
                 <h3 class="text-ink text-sm font-semibold">Evidence</h3>
-                <blockquote class="border-accent text-muted border-l-2 pl-3 text-sm italic">
+                <blockquote class="border-border-hover text-muted border-l-2 pl-3 text-sm">
                   {activeResultDetail.evidence}
                 </blockquote>
               </div>
@@ -548,38 +530,33 @@
               <h3 class="text-ink text-sm font-semibold">Processing Info</h3>
               <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <dt class="text-muted">Provider</dt>
-                <dd class="text-ink font-medium">{activeResultDetail.provider}</dd>
+                <dd class="text-ink font-mono">{activeResultDetail.provider}</dd>
                 <dt class="text-muted">Model</dt>
-                <dd class="text-ink font-medium">{activeResultDetail.model}</dd>
+                <dd class="text-ink font-mono">{activeResultDetail.model}</dd>
                 <dt class="text-muted">Created At</dt>
-                <dd class="text-ink font-medium">{formatDate(activeResultDetail.createdAt)}</dd>
+                <dd class="text-ink font-mono">{formatDate(activeResultDetail.createdAt)}</dd>
               </dl>
             </div>
           </div>
 
           <!-- Revert Action Footer -->
           {#if (activeResultDetail.appliedStatus === 'applied' || activeResultDetail.appliedStatus === 'partial') && activeResultDetail.preApplyCorrespondentName !== null}
-            <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
-              <!-- Stays inline: an ember-outlined action. Button has no semantic-tint variant and
-                   destructive is a solid fill, so either would restyle this control. -->
-              <button
-                onclick={() => activeResultDetail && handleRevert(activeResultDetail.id)}
-                disabled={readOnly || isReverting}
+            <div class="border-border bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
+              <Button
+                variant="outline"
+                fullWidth
+                icon={ArrowUUpLeftIcon}
+                loading={isReverting}
+                disabled={readOnly}
                 title={readOnly ? 'Paperless is read-only' : undefined}
-                class="border-ember text-ember hover:bg-ember-light flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+                onclick={() => activeResultDetail && handleRevert(activeResultDetail.id)}
               >
-                {#if isReverting}
-                  <CircleNotchIcon class="h-4 w-4 animate-spin" />
-                  Reverting...
-                {:else}
-                  <ArrowUUpLeftIcon class="h-4 w-4" />
-                  Revert Changes
-                {/if}
-              </button>
+                {isReverting ? 'Reverting...' : 'Revert changes'}
+              </Button>
             </div>
           {/if}
           {#if activeResultDetail.appliedStatus === 'failed'}
-            <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
+            <div class="border-border bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
               {#if isExtractionFailure(activeResultDetail)}
                 <Button
                   fullWidth

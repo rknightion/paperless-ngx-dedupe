@@ -41,14 +41,15 @@
 
 <fieldset class="space-y-3" {disabled} aria-describedby="field-selection-help">
   <legend class="text-ink text-sm font-semibold">Choose fields to apply</legend>
-  <p id="field-selection-help" class="text-muted text-xs">
+  <p id="field-selection-help" class="text-muted text-sm">
     Only checked fields are included in the reviewed plan.
   </p>
 
   {#if extractEnabled.title && result.suggestedTitle}
-    <label class="border-soft grid cursor-pointer gap-1 rounded-lg border p-3">
+    <label class="border-border bg-surface grid cursor-pointer gap-1 border p-3">
       <span class="flex items-center gap-2 text-sm font-medium">
         <input
+          class="accent-accent h-3.5 w-3.5"
           type="checkbox"
           checked={selection.title}
           onchange={() => toggle('title')}
@@ -56,15 +57,16 @@
         />
         Title
       </span>
-      <span class="text-muted text-xs">Current: {display(result.currentTitle)}</span>
-      <span class="text-ink text-xs">Suggested: {display(result.suggestedTitle)}</span>
+      <span class="text-muted text-sm">Current: {display(result.currentTitle)}</span>
+      <span class="text-ink text-sm">Suggested: {display(result.suggestedTitle)}</span>
     </label>
   {/if}
 
   {#if extractEnabled.correspondent && result.suggestedCorrespondent}
-    <label class="border-soft grid cursor-pointer gap-1 rounded-lg border p-3">
+    <label class="border-border bg-surface grid cursor-pointer gap-1 border p-3">
       <span class="flex items-center gap-2 text-sm font-medium">
         <input
+          class="accent-accent h-3.5 w-3.5"
           type="checkbox"
           checked={selection.correspondent}
           onchange={() => toggle('correspondent')}
@@ -72,15 +74,16 @@
         />
         Correspondent
       </span>
-      <span class="text-muted text-xs">Current: {display(result.currentCorrespondent)}</span>
-      <span class="text-ink text-xs">Suggested: {display(result.suggestedCorrespondent)}</span>
+      <span class="text-muted text-sm">Current: {display(result.currentCorrespondent)}</span>
+      <span class="text-ink text-sm">Suggested: {display(result.suggestedCorrespondent)}</span>
     </label>
   {/if}
 
   {#if extractEnabled.documentType && result.suggestedDocumentType}
-    <label class="border-soft grid cursor-pointer gap-1 rounded-lg border p-3">
+    <label class="border-border bg-surface grid cursor-pointer gap-1 border p-3">
       <span class="flex items-center gap-2 text-sm font-medium">
         <input
+          class="accent-accent h-3.5 w-3.5"
           type="checkbox"
           checked={selection.documentType}
           onchange={() => toggle('documentType')}
@@ -88,15 +91,16 @@
         />
         Document type
       </span>
-      <span class="text-muted text-xs">Current: {display(result.currentDocumentType)}</span>
-      <span class="text-ink text-xs">Suggested: {display(result.suggestedDocumentType)}</span>
+      <span class="text-muted text-sm">Current: {display(result.currentDocumentType)}</span>
+      <span class="text-ink text-sm">Suggested: {display(result.suggestedDocumentType)}</span>
     </label>
   {/if}
 
   {#if extractEnabled.tags && result.suggestedTags.length > 0}
-    <label class="border-soft grid cursor-pointer gap-1 rounded-lg border p-3">
+    <label class="border-border bg-surface grid cursor-pointer gap-1 border p-3">
       <span class="flex items-center gap-2 text-sm font-medium">
         <input
+          class="accent-accent h-3.5 w-3.5"
           type="checkbox"
           checked={selection.tags}
           onchange={() => toggle('tags')}
@@ -104,16 +108,17 @@
         />
         Tags
       </span>
-      <span class="text-muted text-xs">Current: {display(result.currentTags)}</span>
-      <span class="text-ink text-xs">Suggested: {display(result.suggestedTags)}</span>
+      <span class="text-muted text-sm">Current: {display(result.currentTags)}</span>
+      <span class="text-ink text-sm">Suggested: {display(result.suggestedTags)}</span>
     </label>
   {/if}
 
   {#if extractEnabled.customFields}
     {#each result.suggestedCustomFields as field (field.fieldId)}
-      <label class="border-soft grid cursor-pointer gap-1 rounded-lg border p-3">
+      <label class="border-border bg-surface grid cursor-pointer gap-1 border p-3">
         <span class="flex items-center gap-2 text-sm font-medium">
           <input
+            class="accent-accent h-3.5 w-3.5"
             type="checkbox"
             checked={selection.customFieldIds.includes(field.fieldId)}
             onchange={() => toggleCustomField(field.fieldId)}
@@ -125,14 +130,17 @@
           Current:
           {display(result.currentCustomFields.find((item) => item.field === field.fieldId)?.value)}
         </span>
-        <span class="text-ink text-xs">Suggested: {display(field.value)}</span>
+        <span class="text-ink text-sm">Suggested: {display(field.value)}</span>
       </label>
     {/each}
   {/if}
 
   {#if extractEnabled.processedTag}
-    <label class="border-soft flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm">
+    <label
+      class="border-border bg-surface flex cursor-pointer items-start gap-2 border p-3 text-sm"
+    >
       <input
+        class="accent-accent mt-0.5 h-3.5 w-3.5"
         type="checkbox"
         checked={selection.processedTag}
         onchange={() => toggle('processedTag')}

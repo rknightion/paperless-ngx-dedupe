@@ -29,7 +29,7 @@
   {#if result.appliedAt}
     <div class="flex items-center gap-2 text-sm">
       <span class="text-muted">Applied at:</span>
-      <span class="text-ink font-medium">{formatDate(result.appliedAt)}</span>
+      <span class="text-ink font-mono text-xs">{formatDate(result.appliedAt)}</span>
     </div>
   {/if}
 
@@ -37,7 +37,7 @@
   {#if result.revertedAt}
     <div class="flex items-center gap-2 text-sm">
       <span class="text-muted">Reverted at:</span>
-      <span class="text-ink font-medium">{formatDate(result.revertedAt)}</span>
+      <span class="text-ink font-mono text-xs">{formatDate(result.revertedAt)}</span>
     </div>
   {/if}
 
@@ -47,7 +47,7 @@
       <span class="text-muted">Fields applied:</span>
       <div class="flex flex-wrap gap-1">
         {#each appliedFields as field (field)}
-          <span class="bg-success-light text-success rounded-full px-2 py-0.5 text-xs font-medium">
+          <span class="border-success text-ink border px-1.5 font-mono text-xs">
             {field}
           </span>
         {/each}
@@ -57,13 +57,11 @@
 
   <!-- Before / After diff -->
   {#if hasSnapshot}
-    <div class="border-soft divide-soft divide-y rounded-lg border">
+    <div class="border-border divide-border bg-surface divide-y border">
       <!-- Correspondent -->
       {#if appliedFields.includes('correspondent')}
         <div class="flex items-center gap-3 p-3">
-          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase">
-            Correspondent
-          </span>
+          <span class="label-micro w-28 shrink-0"> Correspondent </span>
           <span class="text-muted text-sm">{result.preApplyCorrespondentName ?? '(none)'}</span>
           <ArrowRightIcon class="text-muted h-3.5 w-3.5 shrink-0" />
           <span class="text-ink text-sm font-medium">
@@ -75,9 +73,7 @@
       <!-- Document Type -->
       {#if appliedFields.includes('documentType')}
         <div class="flex items-center gap-3 p-3">
-          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase">
-            Doc Type
-          </span>
+          <span class="label-micro w-28 shrink-0"> Doc Type </span>
           <span class="text-muted text-sm">{result.preApplyDocumentTypeName ?? '(none)'}</span>
           <ArrowRightIcon class="text-muted h-3.5 w-3.5 shrink-0" />
           <span class="text-ink text-sm font-medium">
@@ -89,12 +85,12 @@
       <!-- Tags -->
       {#if appliedFields.includes('tags')}
         <div class="flex items-center gap-3 p-3">
-          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase">
-            Tags
-          </span>
+          <span class="label-micro w-28 shrink-0"> Tags </span>
           <div class="flex flex-wrap gap-1">
             {#each result.preApplyTagNames ?? [] as tag (tag)}
-              <span class="bg-canvas-alt text-muted rounded-full px-2 py-0.5 text-xs">{tag}</span>
+              <span class="border-border text-muted border px-1.5 font-mono text-xs line-through">
+                {tag}
+              </span>
             {:else}
               <span class="text-muted text-xs">(none)</span>
             {/each}
@@ -102,9 +98,7 @@
           <ArrowRightIcon class="text-muted h-3.5 w-3.5 shrink-0" />
           <div class="flex flex-wrap gap-1">
             {#each result.suggestedTags as tag (tag)}
-              <span
-                class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium"
-              >
+              <span class="border-success text-ink border px-1.5 font-mono text-xs">
                 {tag}
               </span>
             {:else}
@@ -115,8 +109,8 @@
       {/if}
     </div>
   {:else if result.appliedStatus === 'rejected'}
-    <p class="text-muted text-sm italic">No changes were applied (result was rejected).</p>
+    <p class="text-muted text-sm">No changes were applied (result was rejected).</p>
   {:else}
-    <p class="text-muted text-sm italic">No pre-apply snapshot available.</p>
+    <p class="text-muted text-sm">No pre-apply snapshot available.</p>
   {/if}
 </div>

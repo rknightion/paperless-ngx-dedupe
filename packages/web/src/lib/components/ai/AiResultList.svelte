@@ -1,5 +1,4 @@
 <script lang="ts">
-  import SparkleIcon from 'phosphor-svelte/lib/SparkleIcon';
   import AiResultRow from './AiResultRow.svelte';
   import AiResultCard from './AiResultCard.svelte';
   import {
@@ -34,59 +33,49 @@
 </script>
 
 {#if results.length === 0}
-  <div class="panel flex flex-col items-center py-16 text-center">
-    <div class="bg-accent-subtle mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-      <SparkleIcon class="text-accent h-7 w-7" />
-    </div>
-    <p class="text-ink text-base font-medium">No results found</p>
-    <p class="text-muted mx-auto mt-2 max-w-sm text-sm">
-      Try adjusting your filters or process more documents to see results here.
-    </p>
+  <div class="text-muted mx-auto max-w-sm py-16 text-center text-sm">
+    <p class="text-ink font-medium">No results found</p>
+    <p class="mt-1">Try adjusting your filters or process more documents to see results here.</p>
   </div>
 {:else if viewMode === 'table'}
-  <div class="border-soft overflow-x-auto rounded-xl border">
-    <table class="w-full text-left text-sm">
+  <div class="border-border overflow-x-auto border-y">
+    <table class="w-full table-fixed border-collapse text-left text-base">
       <thead>
-        <tr class="border-soft bg-canvas/60 border-b">
-          <th class="w-10 px-4 py-3">
+        <tr>
+          <th
+            class="bg-surface border-border-hover sticky top-0 z-10 w-12 border-b py-1.5 pr-0 pl-6"
+          >
             <input
               type="checkbox"
               checked={allSelected}
               onchange={toggleSelectAll}
               aria-label="Select all visible AI results"
-              class="rounded"
+              class="accent-accent h-3.5 w-3.5"
             />
           </th>
-          <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">Document</th>
           <th
-            class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
+            class="label-micro bg-surface border-border-hover sticky top-0 z-10 w-[22%] border-b px-3 py-1.5 text-left"
           >
-            Suggested Title
+            Document
           </th>
           <th
-            class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
+            class="label-micro bg-surface border-border-hover sticky top-0 z-10 w-[34%] border-b px-3 py-1.5 text-left"
           >
-            Correspondent
+            Suggested title
           </th>
           <th
-            class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
+            class="label-micro bg-surface border-border-hover sticky top-0 z-10 w-[10%] border-b px-3 py-1.5 text-left"
           >
-            Document Type
+            Fields
           </th>
           <th
-            class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
+            class="label-micro bg-surface border-border-hover sticky top-0 z-10 w-[22%] border-b px-3 py-1.5 text-left"
           >
-            Tags
-          </th>
-          <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">
             Confidence
           </th>
           <th
-            class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase sm:table-cell"
+            class="label-micro bg-surface border-border-hover sticky top-0 z-10 w-[12%] border-b px-3 py-1.5 pr-4 text-right"
           >
-            Status
-          </th>
-          <th class="text-muted w-24 px-4 py-3 text-xs font-medium tracking-wide uppercase">
             Actions
           </th>
         </tr>
@@ -107,7 +96,7 @@
     </table>
   </div>
 {:else}
-  <div class="space-y-3">
+  <div class="border-border divide-border divide-y border-y">
     {#each results as result (result.id)}
       <AiResultCard
         {result}

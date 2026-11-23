@@ -124,7 +124,8 @@ with a stand-in instead. Run the repository's privacy sweep, if it has one
 
 ## Before you open it
 
-Prove the final tree as the repository's `AGENTS.md` says and run `pre-pr-review` on the diff.
-Write the body to a file and pass it with `gh pr create --body-file <file>`. After that the review is
-the pull request's: its required checks and any review bots it runs, handled as the `AGENTS.md`
-review findings rule says.
+Prove the final tree as the repository's `AGENTS.md` says. There is no local review step: decide
+whether the pull request needs a hosted review with the table in `pre-pr-review` (most need none)
+and say which row applied in the body. Write the body to a file and pass it with
+`gh pr create --body-file <file>`. After that the review is the pull request's: its required checks
+and any hosted review asked for, handled as the `AGENTS.md` review findings rule says.
