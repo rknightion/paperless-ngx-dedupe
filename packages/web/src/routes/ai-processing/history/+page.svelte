@@ -6,19 +6,17 @@
   import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
   import AiApplyAuditCard from '$lib/components/ai/AiApplyAuditCard.svelte';
   import type { AiResultDetail } from '@paperless-dedupe/core';
-  import {
-    ChevronLeft,
-    ChevronRight,
-    CircleCheck,
-    CircleX,
-    Undo2,
-    AlertCircle,
-    ExternalLink,
-    Loader2,
-    RefreshCw,
-    X,
-    History,
-  } from 'lucide-svelte';
+  import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
+  import ArrowUUpLeftIcon from 'phosphor-svelte/lib/ArrowUUpLeftIcon';
+  import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
+  import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
+  import CaretRightIcon from 'phosphor-svelte/lib/CaretRightIcon';
+  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
+  import ClockCounterClockwiseIcon from 'phosphor-svelte/lib/ClockCounterClockwiseIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
+  import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
 
   let { data } = $props();
 
@@ -54,12 +52,12 @@
 
   const statusFilters = [
     { value: null, label: 'All' },
-    { value: 'applied', label: 'Applied', icon: CircleCheck, colorClass: 'text-success' },
-    { value: 'partial', label: 'Partial', icon: AlertCircle, colorClass: 'text-accent' },
-    { value: 'rejected', label: 'Rejected', icon: CircleX, colorClass: 'text-muted' },
-    { value: 'reverted', label: 'Reverted', icon: Undo2, colorClass: 'text-accent' },
-    { value: 'failed', label: 'Failed', icon: AlertCircle, colorClass: 'text-ember' },
-    { value: 'skipped', label: 'Skipped', icon: AlertCircle, colorClass: 'text-warn' },
+    { value: 'applied', label: 'Applied', icon: CheckCircleIcon, colorClass: 'text-success' },
+    { value: 'partial', label: 'Partial', icon: WarningCircleIcon, colorClass: 'text-accent' },
+    { value: 'rejected', label: 'Rejected', icon: XCircleIcon, colorClass: 'text-muted' },
+    { value: 'reverted', label: 'Reverted', icon: ArrowUUpLeftIcon, colorClass: 'text-accent' },
+    { value: 'failed', label: 'Failed', icon: WarningCircleIcon, colorClass: 'text-ember' },
+    { value: 'skipped', label: 'Skipped', icon: WarningCircleIcon, colorClass: 'text-warn' },
   ] as const;
 
   function statusBadgeClass(status: string): string {
@@ -277,7 +275,7 @@
       {#if data.results.length === 0}
         <div class="panel flex flex-col items-center py-16 text-center">
           <div class="bg-canvas-alt mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-            <History class="text-muted h-7 w-7" />
+            <ClockCounterClockwiseIcon class="text-muted h-7 w-7" />
           </div>
           <p class="text-ink text-sm font-medium">No history found</p>
           <p class="text-muted mt-1 text-sm">
@@ -389,7 +387,7 @@
                 <Button
                   variant="outline"
                   size="sm"
-                  icon={ChevronLeft}
+                  icon={CaretLeftIcon}
                   ariaLabel="Previous page"
                   onclick={() => goToPage(currentPage - 1)}
                   disabled={currentPage <= 1}
@@ -400,7 +398,7 @@
                 <Button
                   variant="outline"
                   size="sm"
-                  icon={ChevronRight}
+                  icon={CaretRightIcon}
                   ariaLabel="Next page"
                   onclick={() => goToPage(currentPage + 1)}
                   disabled={currentPage >= totalPages}
@@ -424,7 +422,7 @@
               <Button
                 variant="ghost"
                 size="sm"
-                icon={X}
+                icon={XIcon}
                 ariaLabel="Close"
                 title="Close"
                 onclick={closeDetail}
@@ -439,7 +437,7 @@
         {:else if detailLoadState === 'error'}
           <div class="flex flex-col items-center justify-center gap-4 p-8">
             <div class="bg-ember-light flex h-12 w-12 items-center justify-center rounded-full">
-              <AlertCircle class="text-ember h-6 w-6" />
+              <WarningCircleIcon class="text-ember h-6 w-6" />
             </div>
             <p class="text-ink text-sm font-medium">Failed to load result</p>
             <Button variant="outline" onclick={() => activeResultId && openDetail(activeResultId)}>
@@ -469,14 +467,14 @@
                     class="text-accent hover:text-accent-hover flex items-center gap-1 text-xs font-medium"
                   >
                     View in Paperless
-                    <ExternalLink class="h-3 w-3" />
+                    <ArrowSquareOutIcon class="h-3 w-3" />
                   </a>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                icon={X}
+                icon={XIcon}
                 ariaLabel="Close"
                 title="Close"
                 class="shrink-0"
@@ -488,7 +486,7 @@
             {#if activeResultDetail.appliedStatus === 'failed' && activeResultDetail.errorMessage}
               <div class="bg-ember-light/30 border-ember/20 space-y-2 rounded-lg border p-4">
                 <div class="flex items-start gap-2">
-                  <AlertCircle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+                  <WarningCircleIcon class="text-ember mt-0.5 h-4 w-4 shrink-0" />
                   <div class="min-w-0 space-y-1">
                     <p class="text-ember text-sm font-semibold">
                       {isExtractionFailure(activeResultDetail)
@@ -571,10 +569,10 @@
                 class="border-ember text-ember hover:bg-ember-light flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {#if isReverting}
-                  <Loader2 class="h-4 w-4 animate-spin" />
+                  <CircleNotchIcon class="h-4 w-4 animate-spin" />
                   Reverting...
                 {:else}
-                  <Undo2 class="h-4 w-4" />
+                  <ArrowUUpLeftIcon class="h-4 w-4" />
                   Revert Changes
                 {/if}
               </button>
@@ -585,7 +583,7 @@
               {#if isExtractionFailure(activeResultDetail)}
                 <Button
                   fullWidth
-                  icon={RefreshCw}
+                  icon={ArrowsClockwiseIcon}
                   loading={isRetryingExtraction}
                   onclick={() => activeResultDetail && handleRetryExtraction(activeResultDetail.id)}
                 >
@@ -594,7 +592,7 @@
               {:else}
                 <Button
                   fullWidth
-                  icon={RefreshCw}
+                  icon={ArrowsClockwiseIcon}
                   loading={isRetryingApply}
                   disabled={readOnly}
                   title={readOnly ? 'Paperless is read-only' : undefined}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Sparkles } from 'lucide-svelte';
+  import SparkleIcon from 'phosphor-svelte/lib/SparkleIcon';
   import AiResultRow from './AiResultRow.svelte';
   import AiResultCard from './AiResultCard.svelte';
   import {
@@ -36,7 +36,7 @@
 {#if results.length === 0}
   <div class="panel flex flex-col items-center py-16 text-center">
     <div class="bg-accent-subtle mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-      <Sparkles class="text-accent h-7 w-7" />
+      <SparkleIcon class="text-accent h-7 w-7" />
     </div>
     <p class="text-ink text-base font-medium">No results found</p>
     <p class="text-muted mx-auto mt-2 max-w-sm text-sm">

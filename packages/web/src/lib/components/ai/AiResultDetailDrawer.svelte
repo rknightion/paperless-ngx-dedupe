@@ -1,7 +1,12 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { Button } from '$lib/components';
-  import { X, ExternalLink, Loader2, AlertCircle, RefreshCw, Check } from 'lucide-svelte';
+  import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
+  import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
+  import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
+  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
   import {
     fieldSelections,
     initializeFieldSelection,
@@ -256,7 +261,7 @@
         <Button
           variant="ghost"
           size="sm"
-          icon={X}
+          icon={XIcon}
           ariaLabel="Close"
           title="Close"
           onclick={onclose}
@@ -273,10 +278,10 @@
     <!-- Error state -->
     <div class="flex flex-col items-center justify-center gap-4 p-8">
       <div class="bg-ember-light flex h-12 w-12 items-center justify-center rounded-full">
-        <AlertCircle class="text-ember h-6 w-6" />
+        <WarningCircleIcon class="text-ember h-6 w-6" />
       </div>
       <p class="text-ink text-sm font-medium">Failed to load result</p>
-      <Button variant="outline" icon={RefreshCw} onclick={() => detailLoader.reload()}>
+      <Button variant="outline" icon={ArrowsClockwiseIcon} onclick={() => detailLoader.reload()}>
         Retry
       </Button>
     </div>
@@ -304,14 +309,14 @@
               class="text-accent hover:text-accent-hover flex items-center gap-1 text-xs font-medium"
             >
               View in Paperless
-              <ExternalLink class="h-3 w-3" />
+              <ArrowSquareOutIcon class="h-3 w-3" />
             </a>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          icon={X}
+          icon={XIcon}
           ariaLabel="Close"
           title="Close"
           class="shrink-0"
@@ -329,7 +334,7 @@
       {#if detail.appliedStatus === 'skipped' && detail.errorMessage}
         <div class="bg-warn-light/30 border-warn/20 space-y-2 rounded-lg border p-4">
           <div class="flex items-start gap-2">
-            <AlertCircle class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+            <WarningCircleIcon class="text-warn mt-0.5 h-4 w-4 shrink-0" />
             <div class="min-w-0 space-y-1">
               <p class="text-warn text-sm font-semibold">No OCR Text</p>
               <p class="text-muted text-xs">
@@ -344,7 +349,7 @@
       {#if detail.appliedStatus === 'failed'}
         <div class="bg-ember-light/30 border-ember/20 space-y-2 rounded-lg border p-4">
           <div class="flex items-start gap-2">
-            <AlertCircle class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+            <WarningCircleIcon class="text-ember mt-0.5 h-4 w-4 shrink-0" />
             <div class="min-w-0 space-y-1">
               <p class="text-ember text-sm font-semibold">
                 {isExtractionFailure() ? 'Extraction Failed' : 'Apply Failed'}
@@ -417,7 +422,7 @@
     {#if isReviewable}
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
         <Button
-          icon={Check}
+          icon={CheckIcon}
           class="flex-1"
           loading={isApplying}
           disabled={readOnly || checkedCount === 0}
@@ -436,9 +441,9 @@
           class="border-ember text-ember hover:bg-ember-light flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
         >
           {#if isRejecting}
-            <Loader2 class="h-4 w-4 animate-spin" />
+            <CircleNotchIcon class="h-4 w-4 animate-spin" />
           {:else}
-            <X class="h-4 w-4" />
+            <XIcon class="h-4 w-4" />
             Reject
           {/if}
         </button>
@@ -463,7 +468,7 @@
       <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
         {#if isExtractionFailure()}
           <Button
-            icon={RefreshCw}
+            icon={ArrowsClockwiseIcon}
             class="flex-1"
             loading={isReprocessing}
             onclick={handleReprocess}
@@ -472,7 +477,7 @@
           </Button>
         {:else}
           <Button
-            icon={RefreshCw}
+            icon={ArrowsClockwiseIcon}
             class="flex-1"
             loading={isRetrying}
             disabled={readOnly}

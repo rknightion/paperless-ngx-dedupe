@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
   import { ConfidenceBadge, RichTooltip, ConfidenceTooltipContent } from '$lib/components';
-  import { ExternalLink, Eye, FileText } from 'lucide-svelte';
+  import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
+  import EyeIcon from 'phosphor-svelte/lib/EyeIcon';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
 
   interface GroupSummary {
     id: string;
@@ -87,10 +89,10 @@
       class="text-muted hover:text-accent shrink-0"
       title="Open full detail"
     >
-      <ExternalLink class="h-4 w-4" />
+      <ArrowSquareOutIcon class="h-4 w-4" />
     </a>
     <button onclick={onpreview} class="text-muted hover:text-accent shrink-0" title="Quick preview">
-      <Eye class="h-4 w-4" />
+      <EyeIcon class="h-4 w-4" />
     </button>
     <RichTooltip position="left">
       <ConfidenceBadge score={group.confidenceScore} />
@@ -132,7 +134,7 @@
             class="text-muted hover:text-accent ml-auto"
             title="Open in Paperless-NGX"
           >
-            <ExternalLink class="h-3.5 w-3.5" />
+            <ArrowSquareOutIcon class="h-3.5 w-3.5" />
           </a>
         </div>
         {#if primaryMember.thumbnailUrl && !thumbErrorPrimary}
@@ -146,7 +148,7 @@
           <div
             class="border-soft bg-canvas text-muted flex h-[350px] w-full items-center justify-center rounded-lg border"
           >
-            <FileText class="h-8 w-8" />
+            <FileTextIcon class="h-8 w-8" />
           </div>
         {/if}
         <dl class="mt-2 space-y-1">
@@ -177,7 +179,7 @@
             class="text-muted hover:text-accent ml-auto"
             title="Open in Paperless-NGX"
           >
-            <ExternalLink class="h-3.5 w-3.5" />
+            <ArrowSquareOutIcon class="h-3.5 w-3.5" />
           </a>
         </div>
         {#if firstSecondary.thumbnailUrl && !thumbErrorSecondary}
@@ -191,7 +193,7 @@
           <div
             class="border-soft bg-canvas text-muted flex h-[350px] w-full items-center justify-center rounded-lg border"
           >
-            <FileText class="h-8 w-8" />
+            <FileTextIcon class="h-8 w-8" />
           </div>
         {/if}
         <dl class="mt-2 space-y-1">

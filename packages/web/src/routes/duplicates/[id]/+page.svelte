@@ -18,7 +18,10 @@
   import { ConfirmDialog, Button, Spinner } from '$lib/components';
   import { trackGroupViewed, trackMemberAction } from '$lib/faro-events';
   import { safeDocumentReturnTarget } from '$lib/utils/safe-return';
-  import { ArrowLeft, ExternalLink, Trash2, UserMinus } from 'lucide-svelte';
+  import ArrowLeftIcon from 'phosphor-svelte/lib/ArrowLeftIcon';
+  import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
+  import TrashIcon from 'phosphor-svelte/lib/TrashIcon';
+  import UserMinusIcon from 'phosphor-svelte/lib/UserMinusIcon';
 
   let { data } = $props();
   const readOnly = $derived(data.readOnly === true);
@@ -222,7 +225,7 @@
       href={returnUrl}
       class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm"
     >
-      <ArrowLeft class="h-4 w-4" />
+      <ArrowLeftIcon class="h-4 w-4" />
       {documentReturnUrl ? 'Back to Documents' : 'Back to Duplicates'}
     </a>
     {#if data.nextGroupId}<Button
@@ -386,7 +389,7 @@
                       class="text-accent hover:text-accent-hover"
                       title="Open in Paperless-NGX"
                     >
-                      <ExternalLink class="h-4 w-4" />
+                      <ArrowSquareOutIcon class="h-4 w-4" />
                     </a>
                   </div>
                 </td>
@@ -477,7 +480,7 @@
             <Button
               variant="secondary"
               size="sm"
-              icon={UserMinus}
+              icon={UserMinusIcon}
               disabled={isMemberAction}
               onclick={() => (showRemoveFromGroup = true)}
             >
@@ -486,7 +489,7 @@
             <Button
               variant="destructive"
               size="sm"
-              icon={Trash2}
+              icon={TrashIcon}
               disabled={readOnly || isMemberAction}
               title={readOnly ? 'Paperless is read-only' : undefined}
               onclick={() => (showDeleteFromPaperless = true)}

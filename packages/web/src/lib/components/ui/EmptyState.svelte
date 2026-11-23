@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { FileText, type Icon as LucideIcon } from 'lucide-svelte';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
+  import { type IconComponent } from './icon-types';
 
   interface Props {
-    icon?: typeof LucideIcon;
+    icon?: IconComponent;
     title: string;
     /** Say what happened and what to do next, in one breath. */
     description?: string;
@@ -13,7 +14,7 @@
   }
 
   let {
-    icon: Glyph = FileText,
+    icon: Glyph = FileTextIcon,
     title,
     description,
     action,

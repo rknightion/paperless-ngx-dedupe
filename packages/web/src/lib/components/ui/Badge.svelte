@@ -8,7 +8,7 @@
      * state is always a tinted pill, the accent is always a solid fill or a
      * link. A solid-filled badge collapses that distinction.
      */
-    tone?: 'neutral' | 'accent' | 'success' | 'warn' | 'ember' | 'product';
+    tone?: 'neutral' | 'accent' | 'success' | 'warn' | 'ember';
     size?: 'sm' | 'md';
     class?: string;
     children: Snippet;
@@ -22,7 +22,6 @@
     success: 'bg-success-light text-success',
     warn: 'bg-warn-light text-warn',
     ember: 'bg-ember-light text-ember',
-    product: 'bg-accent-product-light text-accent-product',
   } as const;
 
   const SIZES = { sm: 'px-2 py-0.5 text-xs', md: 'px-2.5 py-1 text-xs' } as const;

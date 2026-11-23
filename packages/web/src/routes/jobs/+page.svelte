@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { goto, invalidateAll } from '$app/navigation';
   import { JobStatusCard, Select } from '$lib/components';
-  import { Trash2 } from 'lucide-svelte';
+  import TrashIcon from 'phosphor-svelte/lib/TrashIcon';
 
   let { data } = $props();
 
@@ -133,7 +133,7 @@
           disabled={isClearing || data.counts.clearable === 0}
           class="bg-ember/10 text-ember hover:bg-ember/20 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50"
         >
-          <Trash2 class="h-4 w-4" />
+          <TrashIcon class="h-4 w-4" />
           {isClearing ? 'Clearing...' : 'Clear History'}
         </button>
       </div>

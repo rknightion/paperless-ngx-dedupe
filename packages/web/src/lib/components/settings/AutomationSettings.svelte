@@ -6,7 +6,8 @@
     type getNotificationSettings,
     type AppConfig,
   } from '@paperless-dedupe/core';
-  import { CalendarClock, Play } from 'lucide-svelte';
+  import CalendarDotsIcon from 'phosphor-svelte/lib/CalendarDotsIcon';
+  import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
   import { Button, Checkbox, Select, TextField } from '$lib/components';
   import { onMount, untrack } from 'svelte';
 
@@ -232,7 +233,7 @@
 
 <section class="panel" id="automation" aria-label="Automation schedules">
   <div class="flex items-start gap-3">
-    <CalendarClock class="text-accent mt-0.5 h-5 w-5 shrink-0" />
+    <CalendarDotsIcon class="text-accent mt-0.5 h-5 w-5 shrink-0" />
     <div>
       <h2 class="text-ink text-lg font-semibold">Safe automation</h2>
       <p class="text-muted mt-1 text-sm">
@@ -344,7 +345,7 @@
           </Button>
           <Button
             variant="outline"
-            icon={Play}
+            icon={PlayIcon}
             onclick={() => runNow(task)}
             disabled={busy !== null}
           >

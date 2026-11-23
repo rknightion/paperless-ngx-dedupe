@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { ChevronDown, ChevronUp, FolderOpen } from 'lucide-svelte';
+  import CaretDownIcon from 'phosphor-svelte/lib/CaretDownIcon';
+  import CaretUpIcon from 'phosphor-svelte/lib/CaretUpIcon';
+  import FolderOpenIcon from 'phosphor-svelte/lib/FolderOpenIcon';
   import { SvelteSet } from 'svelte/reactivity';
 
   interface GroupItem {
@@ -30,7 +32,7 @@
 {#if groups.length === 0}
   <div class="panel flex flex-col items-center py-16 text-center">
     <div class="bg-accent-subtle mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-      <FolderOpen class="text-accent h-7 w-7" />
+      <FolderOpenIcon class="text-accent h-7 w-7" />
     </div>
     <p class="text-ink text-base font-medium">No groups found</p>
     <p class="text-muted mx-auto mt-2 max-w-sm text-sm">
@@ -53,9 +55,9 @@
         >
           <span class="text-muted shrink-0">
             {#if expandedKeys.has(group.key)}
-              <ChevronUp class="h-4 w-4" />
+              <CaretUpIcon class="h-4 w-4" />
             {:else}
-              <ChevronDown class="h-4 w-4" />
+              <CaretDownIcon class="h-4 w-4" />
             {/if}
           </span>
           <span class="text-ink min-w-0 flex-1 truncate text-sm font-medium">

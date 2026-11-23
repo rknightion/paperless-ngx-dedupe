@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Check, Minus } from 'lucide-svelte';
+  import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
+  import MinusIcon from 'phosphor-svelte/lib/MinusIcon';
 
   interface Props {
     checked?: boolean;
@@ -55,9 +56,9 @@
       class="text-on-accent pointer-events-none absolute inset-0 flex items-center justify-center"
     >
       {#if indeterminate}
-        <Minus size={12} aria-hidden="true" />
+        <MinusIcon size={12} aria-hidden="true" />
       {:else if checked}
-        <Check size={12} aria-hidden="true" />
+        <CheckIcon size={12} aria-hidden="true" />
       {/if}
     </span>
   </span>

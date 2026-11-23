@@ -46,7 +46,7 @@ The tracker working model is `~/repos/agent-docs/docs/github-tracker.md` (mainta
   not tidy it.
 - The confidence trio (`ui/ConfidenceBadge.svelte`, `duplicates/ConfidenceBreakdown.svelte`,
   `duplicates/ConfidenceTooltipContent.svelte`) must change thresholds together.
-- `lucide-svelte` ships legacy class components: type icon props as `typeof SomeIcon`, not `Component`.
+- Icons come from `phosphor-svelte`, regular weight, per the map in `design/ui-v2/spec/implementation-spec.md`.
 - `/api/v1/*` and the page loader call the same core query; a `.server.ts` load that re-implements it
   drifts.
 - CI is load-sensitive: give timing-dependent tests realistic timeouts, never tighter ones.

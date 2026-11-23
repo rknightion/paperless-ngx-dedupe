@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
-  import { FileText, Loader2 } from 'lucide-svelte';
+  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
   import { Button, Checkbox, SearchInput } from '$lib/components';
 
   interface DocumentSummary {
@@ -172,12 +173,12 @@
     <div class="flex-1 overflow-auto">
       {#if loading}
         <div class="flex items-center justify-center py-16">
-          <Loader2 class="text-muted h-6 w-6 animate-spin" />
+          <CircleNotchIcon class="text-muted h-6 w-6 animate-spin" />
         </div>
       {:else if documents.length === 0}
         <div class="flex flex-col items-center py-16 text-center">
           <div class="bg-accent-subtle mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-            <FileText class="text-accent h-7 w-7" />
+            <FileTextIcon class="text-accent h-7 w-7" />
           </div>
           <p class="text-ink text-base font-medium">No documents found</p>
           <p class="text-muted mt-2 text-sm">Try adjusting your search query.</p>

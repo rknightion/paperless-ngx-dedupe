@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from '$app/env';
   import { page } from '$app/state';
-  import { ExternalLink } from 'lucide-svelte';
+  import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
   import { Button, Select } from '$lib/components';
   import { aiReviewHref } from './document-library-links';
 
@@ -149,7 +149,7 @@
                   class="text-accent inline-flex max-w-full items-center gap-1 rounded-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                   <span class="truncate">{item.title}</span>
-                  <ExternalLink class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <ArrowSquareOutIcon class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 </a>
                 <span class="text-muted mt-1 block text-xs">Paperless #{item.paperlessId}</span>
               </td>

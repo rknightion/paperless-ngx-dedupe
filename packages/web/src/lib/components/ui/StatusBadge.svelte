@@ -9,8 +9,8 @@
    * Always a tinted pill, never a solid fill — that treatment is what tells
    * state apart from the accent, which is also green.
    *
-   * `paused` uses the shared per-product violet rather than a raw palette
-   * colour; neutral states use the canvas-deep tint. Static class strings so
+   * `paused` is a state you need to come back to, so it takes the warn pair;
+   * neutral states use the canvas-deep tint. Static class strings so
    * Tailwind sees every variant.
    */
   const statusClasses: Record<string, string> = {
@@ -18,7 +18,7 @@
     running: 'bg-accent-light text-accent',
     completed: 'bg-success-light text-success',
     failed: 'bg-ember-light text-ember',
-    paused: 'bg-accent-product-light text-accent-product',
+    paused: 'bg-warn-light text-warn',
     cancelled: 'bg-canvas-deep text-ink-faint',
     false_positive: 'bg-canvas-deep text-ink-faint',
     ignored: 'bg-accent-light text-accent',

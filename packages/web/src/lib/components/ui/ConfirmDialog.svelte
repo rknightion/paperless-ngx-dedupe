@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertTriangle } from 'lucide-svelte';
+  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import { type Snippet } from 'svelte';
 
   interface Props {
@@ -67,7 +67,7 @@
         <div
           class="bg-ember-light flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
         >
-          <AlertTriangle class="text-ember h-5 w-5" />
+          <WarningIcon class="text-ember h-5 w-5" />
         </div>
       {/if}
       <div>

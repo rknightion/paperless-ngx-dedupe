@@ -30,21 +30,35 @@
 
   let nodeMap = $derived(new Map(data.graph.nodes.map((n) => [n.id, n])));
 
-  // Edge colour is state, so it reads from the semantic tokens: resolved,
-  // because ECharts paints to a canvas and cannot take a var() reference.
+  // Edge status is carried by colour and line style together, so it never
+  // rests on colour alone. Colours are resolved because ECharts paints to a
+  // canvas and cannot take a var() reference. Dash patterns are 5 3 (dashed)
+  // and 1.5 3 (dotted), repeated in the legend below.
+
   const edgeColors = $derived({
     deleted: readToken('--color-success'),
-    ignored: readToken('--color-accent'),
+    ignored: readToken('--color-muted'),
     falsePositive: readToken('--color-muted'),
-    pending: readToken('--color-accent-product'),
+    pending: readToken('--color-chart-1'),
   });
 
-  function edgeColor(e: GraphEdge): string {
-    if (e.status === 'deleted') return edgeColors.deleted;
-    if (e.status === 'ignored') return edgeColors.ignored;
-    if (e.status === 'false_positive') return edgeColors.falsePositive;
-    return edgeColors.pending;
+  function edgeStyle(e: GraphEdge): { color: string; type: number[] | 'solid' } {
+    if (e.status === 'deleted') return { color: edgeColors.deleted, type: 'solid' };
+    if (e.status === 'ignored') return { color: edgeColors.ignored, type: [1.5, 3] };
+    if (e.status === 'false_positive') {
+      return { color: edgeColors.falsePositive, type: [5, 3] };
+    }
+    return { color: edgeColors.pending, type: 'solid' };
   }
+
+  // Legend rows, in the same order as the status filter. Markup takes var()
+  // references directly and follows the theme; keep in step with edgeStyle().
+  const EDGE_LEGEND: { label: string; token: string; dash?: string }[] = [
+    { label: 'Pending (solid line)', token: '--color-chart-1' },
+    { label: 'Deleted (solid line, green)', token: '--color-success' },
+    { label: 'False Positive (dashed line, grey)', token: '--color-muted', dash: '5 3' },
+    { label: 'Ignored (dotted line, grey)', token: '--color-muted', dash: '1.5 3' },
+  ];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let chartOption: any = $derived({
@@ -92,7 +106,7 @@
           target: e.target,
           lineStyle: {
             width: Math.max(1, e.confidenceScore * 5),
-            color: edgeColor(e),
+            ...edgeStyle(e),
             opacity: 0.7,
           },
           meta: e,
@@ -239,32 +253,23 @@
         <h3 class="text-ink mb-2 text-sm font-semibold">Legend</h3>
         <div class="flex flex-wrap gap-6 text-xs">
           <div class="space-y-1">
-            <p class="text-muted font-medium">Edge Colors</p>
-            <!-- Markup, so these take var() references directly and follow the
-                 theme. They must stay in step with edgeColor() above, which
-                 resolves the same tokens for the canvas. -->
-            <div class="flex items-center gap-1.5">
-              <span
-                class="inline-block h-0.5 w-4 rounded"
-                style="background: var(--color-accent-product)"
-              ></span>
-              <span class="text-ink">Pending</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="inline-block h-0.5 w-4 rounded" style="background: var(--color-muted)"
-              ></span>
-              <span class="text-ink">False Positive</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="inline-block h-0.5 w-4 rounded" style="background: var(--color-accent)"
-              ></span>
-              <span class="text-ink">Ignored</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="inline-block h-0.5 w-4 rounded" style="background: var(--color-success)"
-              ></span>
-              <span class="text-ink">Deleted</span>
-            </div>
+            <p class="text-muted font-medium">Edge status (colour and line style)</p>
+            {#each EDGE_LEGEND as row (row.label)}
+              <div class="flex items-center gap-1.5">
+                <svg width="24" height="4" viewBox="0 0 24 4" aria-hidden="true" class="shrink-0">
+                  <line
+                    x1="0"
+                    y1="2"
+                    x2="24"
+                    y2="2"
+                    style="stroke: var({row.token})"
+                    stroke-width="2"
+                    stroke-dasharray={row.dash}
+                  />
+                </svg>
+                <span class="text-ink">{row.label}</span>
+              </div>
+            {/each}
           </div>
           <div class="space-y-1">
             <p class="text-muted font-medium">Node Size</p>
@@ -272,7 +277,7 @@
           </div>
           <div class="space-y-1">
             <p class="text-muted font-medium">Node Color</p>
-            <p class="text-ink">Grouped by correspondent</p>
+            <p class="text-ink">Grouped by correspondent, colours repeat after six</p>
           </div>
           <div class="space-y-1">
             <p class="text-muted font-medium">Edge Width</p>

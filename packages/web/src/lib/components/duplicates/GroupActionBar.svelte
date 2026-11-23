@@ -8,7 +8,10 @@
   import { goto } from '$app/navigation';
   import { Button, Checkbox, ConfirmDialog, RecycleBinPrompt } from '$lib/components';
   import { connectJobSSE } from '$lib/sse';
-  import { XCircle, CheckCircle, Trash2, RotateCcw } from 'lucide-svelte';
+  import ArrowCounterClockwiseIcon from 'phosphor-svelte/lib/ArrowCounterClockwiseIcon';
+  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+  import TrashIcon from 'phosphor-svelte/lib/TrashIcon';
+  import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
   import { type FrozenDuplicateGroup } from '@paperless-dedupe/core';
   import MetadataMergePreview from './MetadataMergePreview.svelte';
 
@@ -151,20 +154,20 @@
   {#if status === 'pending'}
     <Button
       variant="outline"
-      icon={XCircle}
+      icon={XCircleIcon}
       onclick={() => setStatus('false_positive')}
       disabled={isUpdating}
     >
       Not a Duplicate
     </Button>
 
-    <Button icon={CheckCircle} onclick={() => setStatus('ignored')} disabled={isUpdating}>
+    <Button icon={CheckCircleIcon} onclick={() => setStatus('ignored')} disabled={isUpdating}>
       Keep All
     </Button>
 
     <Button
       variant="destructive"
-      icon={Trash2}
+      icon={TrashIcon}
       onclick={() => {
         void previewMerge(false);
         showDeleteConfirm = true;
@@ -181,7 +184,7 @@
   {:else}
     <Button
       variant="outline"
-      icon={RotateCcw}
+      icon={ArrowCounterClockwiseIcon}
       onclick={() => setStatus('pending')}
       disabled={isUpdating}
     >

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { DuplicateGroupMember, PaperlessFileMetadata } from '@paperless-dedupe/core';
-  import { ExternalLink } from 'lucide-svelte';
+  import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
 
   interface Props {
     primary: DuplicateGroupMember;
@@ -125,7 +125,7 @@
         class="text-accent hover:text-accent-hover text-sm"
         title="Open in Paperless-NGX"
       >
-        <ExternalLink class="h-4 w-4" />
+        <ArrowSquareOutIcon class="h-4 w-4" />
       </a>
     </div>
     <dl class="space-y-2">
@@ -158,7 +158,7 @@
         class="text-accent hover:text-accent-hover text-sm"
         title="Open in Paperless-NGX"
       >
-        <ExternalLink class="h-4 w-4" />
+        <ArrowSquareOutIcon class="h-4 w-4" />
       </a>
     </div>
     <dl class="space-y-2">

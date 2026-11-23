@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { Icon as LucideIcon } from 'lucide-svelte';
+  import { type IconComponent } from './icon-types';
 
   interface Props {
     title: string;
     /** One line saying what the page is for. Sentence case. */
     description?: string;
     /** Identifies the page, so it sits in an accent tile. */
-    icon?: typeof LucideIcon;
+    icon?: IconComponent;
     /** Usually one or two Buttons. */
     actions?: Snippet;
     class?: string;

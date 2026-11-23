@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { Search, Shuffle } from 'lucide-svelte';
+  import MagnifyingGlassIcon from 'phosphor-svelte/lib/MagnifyingGlassIcon';
+  import ShuffleIcon from 'phosphor-svelte/lib/ShuffleIcon';
 
   interface Props {
     search: string | undefined;
@@ -80,7 +81,7 @@
 
 <div class="flex flex-wrap items-center gap-2">
   <div class="relative">
-    <Search
+    <MagnifyingGlassIcon
       class="text-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
     />
     <input
@@ -106,7 +107,7 @@
       class="border-soft text-muted hover:text-ink hover:bg-canvas flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm transition-colors"
       title="Re-shuffle"
     >
-      <Shuffle class="h-3.5 w-3.5" />
+      <ShuffleIcon class="h-3.5 w-3.5" />
     </button>
   {/if}
 

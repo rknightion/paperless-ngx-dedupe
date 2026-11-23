@@ -1,7 +1,10 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { ConfidenceBadge } from '$lib/components';
-  import { Check, X, FileText, AlertCircle } from 'lucide-svelte';
+  import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
+  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
+  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
   import type { AiResultSummary } from './AiReviewStore.svelte';
 
   const readOnly = $derived(page.data.readOnly === true);
@@ -79,7 +82,7 @@
         />
       {:else}
         <div class="bg-canvas flex h-8 w-8 shrink-0 items-center justify-center rounded">
-          <FileText class="text-muted h-4 w-4" />
+          <FileTextIcon class="text-muted h-4 w-4" />
         </div>
       {/if}
       <span class="text-ink max-w-52 truncate font-medium">
@@ -172,19 +175,19 @@
           <span
             class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
           >
-            <AlertCircle class="h-3 w-3" /> No OCR Text
+            <WarningCircleIcon class="h-3 w-3" /> No OCR Text
           </span>
         {:else if result.failureType === 'no_suggestions'}
           <span
             class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
           >
-            <AlertCircle class="h-3 w-3" /> No Suggestions
+            <WarningCircleIcon class="h-3 w-3" /> No Suggestions
           </span>
         {:else}
           <span
             class="bg-ember-light text-ember inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
           >
-            <AlertCircle class="h-3 w-3" /> Failed
+            <WarningCircleIcon class="h-3 w-3" /> Failed
           </span>
         {/if}
         <p class="text-muted line-clamp-2 text-xs">{result.errorMessage}</p>
@@ -215,7 +218,7 @@
           aria-label="Apply suggestions"
           title={readOnly ? 'Paperless is read-only' : 'Apply suggestions'}
         >
-          <Check class="h-4 w-4" />
+          <CheckIcon class="h-4 w-4" />
         </button>
         <button
           onclick={(e) => {
@@ -225,7 +228,7 @@
           class="text-muted hover:text-ink hover:bg-canvas rounded-lg p-1.5 transition-colors"
           title="Reject suggestions"
         >
-          <X class="h-4 w-4" />
+          <XIcon class="h-4 w-4" />
         </button>
       </div>
     {:else}

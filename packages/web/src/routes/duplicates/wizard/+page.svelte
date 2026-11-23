@@ -31,17 +31,15 @@
     trackWizardExecuted,
     startTimer,
   } from '$lib/faro-events';
-  import {
-    XCircle,
-    Eye,
-    Trash2,
-    CheckCircle,
-    ExternalLink,
-    List,
-    LayoutGrid,
-    ArrowDown,
-    ArrowUp,
-  } from 'lucide-svelte';
+  import ArrowDownIcon from 'phosphor-svelte/lib/ArrowDownIcon';
+  import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
+  import ArrowUpIcon from 'phosphor-svelte/lib/ArrowUpIcon';
+  import CheckCircleIcon from 'phosphor-svelte/lib/CheckCircleIcon';
+  import EyeIcon from 'phosphor-svelte/lib/EyeIcon';
+  import GridFourIcon from 'phosphor-svelte/lib/GridFourIcon';
+  import ListIcon from 'phosphor-svelte/lib/ListIcon';
+  import TrashIcon from 'phosphor-svelte/lib/TrashIcon';
+  import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
   import type { EChartsOption } from 'echarts';
 
   let { data } = $props();
@@ -555,7 +553,7 @@
           <Button
             variant="outline"
             size="sm"
-            icon={sortOrder === 'desc' ? ArrowDown : ArrowUp}
+            icon={sortOrder === 'desc' ? ArrowDownIcon : ArrowUpIcon}
             onclick={toggleSortOrder}
             title="Toggle sort order"
           />
@@ -570,7 +568,7 @@
                 : 'text-muted hover:text-ink'}"
               title="Condensed view"
             >
-              <List class="h-4 w-4" />
+              <ListIcon class="h-4 w-4" />
             </button>
             <button
               onclick={() => {
@@ -582,7 +580,7 @@
                 : 'text-muted hover:text-ink'}"
               title="Expanded view"
             >
-              <LayoutGrid class="h-4 w-4" />
+              <GridFourIcon class="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -619,7 +617,7 @@
                 class="text-muted hover:text-accent shrink-0"
                 title="Open full detail"
               >
-                <ExternalLink class="h-4 w-4" />
+                <ArrowSquareOutIcon class="h-4 w-4" />
               </a>
               <!-- Native: a bare icon-only control, with no border, fill or padding, inside a row.
                    Button has no icon-only variant to express it. -->
@@ -628,7 +626,7 @@
                 class="text-muted hover:text-accent shrink-0"
                 title="Quick preview"
               >
-                <Eye class="h-4 w-4" />
+                <EyeIcon class="h-4 w-4" />
               </button>
               <RichTooltip position="left">
                 <ConfidenceBadge score={group.confidenceScore} />
@@ -702,7 +700,7 @@
             : 'border-soft hover:border-accent'}"
         >
           <div class="flex items-center gap-3">
-            <XCircle class="text-muted h-5 w-5 shrink-0" />
+            <XCircleIcon class="text-muted h-5 w-5 shrink-0" />
             <input
               type="radio"
               name="action"
@@ -725,7 +723,7 @@
             : 'border-soft hover:border-accent'}"
         >
           <div class="flex items-center gap-3">
-            <Eye class="text-muted h-5 w-5 shrink-0" />
+            <EyeIcon class="text-muted h-5 w-5 shrink-0" />
             <input
               type="radio"
               name="action"
@@ -754,7 +752,7 @@
             <div
               class="bg-ember-light flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
             >
-              <Trash2 class="text-ember h-5 w-5 shrink-0" />
+              <TrashIcon class="text-ember h-5 w-5 shrink-0" />
             </div>
             <input
               type="radio"
@@ -866,7 +864,7 @@
       {#if executionResult?.success}
         <div class="flex flex-col items-center text-center">
           <div class="bg-success-light flex h-16 w-16 items-center justify-center rounded-full">
-            <CheckCircle class="text-success h-8 w-8" />
+            <CheckCircleIcon class="text-success h-8 w-8" />
           </div>
           <h2 class="text-success mt-4 text-xl font-semibold">Operation Complete</h2>
           <div
@@ -882,7 +880,7 @@
       {:else}
         <div class="flex flex-col items-center text-center">
           <div class="bg-ember-light flex h-16 w-16 items-center justify-center rounded-full">
-            <XCircle class="text-ember h-8 w-8" />
+            <XCircleIcon class="text-ember h-8 w-8" />
           </div>
           <h2 class="text-ember mt-4 text-xl font-semibold">Operation Failed</h2>
           <div

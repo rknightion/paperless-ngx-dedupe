@@ -3,7 +3,10 @@
   import DocumentLibraryFilters from '$lib/components/documents/DocumentLibraryFilters.svelte';
   import DocumentLibraryTable from '$lib/components/documents/DocumentLibraryTable.svelte';
   import DocumentQualitySummary from '$lib/components/documents/DocumentQualitySummary.svelte';
-  import { FileStack, Clock, Type, Copy } from 'lucide-svelte';
+  import ClockIcon from 'phosphor-svelte/lib/ClockIcon';
+  import CopyIcon from 'phosphor-svelte/lib/CopyIcon';
+  import FilesIcon from 'phosphor-svelte/lib/FilesIcon';
+  import TextAaIcon from 'phosphor-svelte/lib/TextAaIcon';
   import type { EChartsOption } from 'echarts';
   import { readToken } from '$lib/theme/tokens';
 
@@ -164,7 +167,7 @@
   <!-- Summary Cards -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <StatCard label="Total Documents" value={data.stats.totalDocuments.toLocaleString()}>
-      {#snippet icon()}<FileStack class="h-5 w-5" />{/snippet}
+      {#snippet icon()}<FilesIcon class="h-5 w-5" />{/snippet}
     </StatCard>
     <div class="panel">
       <p class="text-muted text-sm">OCR Coverage</p>
@@ -183,10 +186,10 @@
       trendLabel="{data.stats.processingStatus.pending} pending"
       trend={data.stats.processingStatus.pending > 0 ? 'neutral' : 'up'}
     >
-      {#snippet icon()}<Clock class="h-5 w-5" />{/snippet}
+      {#snippet icon()}<ClockIcon class="h-5 w-5" />{/snippet}
     </StatCard>
     <StatCard label="Avg Word Count" value={data.stats.averageWordCount.toLocaleString()}>
-      {#snippet icon()}<Type class="h-5 w-5" />{/snippet}
+      {#snippet icon()}<TextAaIcon class="h-5 w-5" />{/snippet}
     </StatCard>
     <StatCard
       label="Duplicate Involvement"
@@ -195,7 +198,7 @@
         .totalDocuments} documents"
       trend={data.stats.duplicateInvolvement.percentage > 0 ? 'neutral' : 'up'}
     >
-      {#snippet icon()}<Copy class="h-5 w-5" />{/snippet}
+      {#snippet icon()}<CopyIcon class="h-5 w-5" />{/snippet}
     </StatCard>
   </div>
 

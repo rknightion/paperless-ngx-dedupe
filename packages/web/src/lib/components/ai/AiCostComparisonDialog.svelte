@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X } from 'lucide-svelte';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
   import type { ModelCostEstimate } from '@paperless-dedupe/core';
 
   interface Props {
@@ -77,7 +77,7 @@
         onclick={onclose}
         class="text-muted hover:text-ink -mt-1 -mr-1 rounded-lg p-1.5 transition-colors"
       >
-        <X class="h-5 w-5" />
+        <XIcon class="h-5 w-5" />
       </button>
     </div>
 
