@@ -78,10 +78,11 @@ which overrides this block for loop work; nothing here depends on it.
 
 ## Package boundary
 
-pnpm workspace, Node >=24.0.0 (declared in `engines`). Do not build or test on older Node.
+pnpm workspace, Node 24.22.1+ on the 24 line or 26.12.1+ (declared in `engines`). Do not build or
+test on older Node.
 
-Both Docker stages pin a Node release with eMudhra distrust (24.22.1 or newer on the 24 line)
-and install the distribution ca-certificates package. Verify the built runtime package and both
+Both Docker stages pin a Node release with eMudhra distrust (24.22.1 or newer on the 24 line,
+26.12.1 or newer on 26) and install the distribution ca-certificates package. Verify the built runtime package and both
 compromised-chain probes; the Node bundled trust store and operating-system store are separate.
 
 - `packages/core` owns all business logic and must stay importable without SvelteKit or browser
