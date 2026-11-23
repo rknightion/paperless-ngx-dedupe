@@ -5,56 +5,60 @@
   import InfoIcon from 'phosphor-svelte/lib/InfoIcon';
   import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import XCircleIcon from 'phosphor-svelte/lib/XCircleIcon';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
+
+  // Never more than two at once: the newest two win.
+  const visible = $derived(getToasts().slice(-2));
+
+  function accent(type: string): string {
+    if (type === 'success') return 'border-l-success';
+    if (type === 'error') return 'border-l-ember';
+    if (type === 'warning') return 'border-l-warn';
+    return 'border-l-accent';
+  }
+
+  function tone(type: string): string {
+    if (type === 'success') return 'text-success';
+    if (type === 'error') return 'text-ember';
+    if (type === 'warning') return 'text-warn';
+    return 'text-accent';
+  }
 </script>
 
-{#if getToasts().length > 0}
+{#if visible.length > 0}
   <div class="fixed right-4 bottom-4 z-50 flex flex-col gap-2">
-    {#each getToasts() as toast (toast.id)}
+    {#each visible as toast (toast.id)}
       <div
-        transition:fly={{ x: 300, duration: 300 }}
-        class="flex max-w-md min-w-80 items-start gap-3 rounded-lg border px-4 py-3 shadow-lg
-          {toast.type === 'success'
-          ? 'bg-success-light border-success/20 text-success'
-          : toast.type === 'error'
-            ? 'bg-ember-light border-ember/20 text-ember'
-            : toast.type === 'warning'
-              ? 'bg-warn-light border-warn/20 text-warn'
-              : 'bg-surface border-soft text-ink'}"
+        transition:fly={{ x: 12, duration: 160 }}
+        class="bg-surface-raised border-border-hover text-ink flex max-w-md min-w-80 items-start gap-3 rounded-md border border-l-2 px-4 py-3 shadow-lg {accent(
+          toast.type,
+        )}"
       >
-        <!-- Icon -->
-        {#if toast.type === 'success'}
-          <CheckCircleIcon class="mt-0.5 h-5 w-5 shrink-0" />
-        {:else if toast.type === 'error'}
-          <XCircleIcon class="mt-0.5 h-5 w-5 shrink-0" />
-        {:else if toast.type === 'warning'}
-          <WarningIcon class="mt-0.5 h-5 w-5 shrink-0" />
-        {:else}
-          <InfoIcon class="mt-0.5 h-5 w-5 shrink-0" />
-        {/if}
+        <span class="mt-0.5 shrink-0 {tone(toast.type)}">
+          {#if toast.type === 'success'}
+            <CheckCircleIcon class="h-4 w-4" />
+          {:else if toast.type === 'error'}
+            <XCircleIcon class="h-4 w-4" />
+          {:else if toast.type === 'warning'}
+            <WarningIcon class="h-4 w-4" />
+          {:else}
+            <InfoIcon class="h-4 w-4" />
+          {/if}
+        </span>
 
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium">{toast.message}</p>
           {#if toast.detail}
-            <p class="mt-0.5 text-xs opacity-75">{toast.detail}</p>
+            <p class="text-muted mt-0.5 text-sm">{toast.detail}</p>
           {/if}
         </div>
 
         <button
           onclick={() => dismissToast(toast.id)}
-          class="shrink-0 opacity-50 hover:opacity-100"
+          class="text-muted hover:text-ink shrink-0"
           aria-label="Dismiss notification"
         >
-          <svg
-            class="h-4 w-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M18 6 6 18M6 6l12 12" />
-          </svg>
+          <XIcon class="h-4 w-4" />
         </button>
       </div>
     {/each}

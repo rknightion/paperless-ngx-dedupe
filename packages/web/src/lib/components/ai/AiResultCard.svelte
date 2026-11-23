@@ -2,10 +2,9 @@
   import { page } from '$app/state';
   import { Button, Checkbox, ConfidenceBadge } from '$lib/components';
   import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
-  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
-  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
   import XIcon from 'phosphor-svelte/lib/XIcon';
   import type { AiResultSummary } from './AiReviewStore.svelte';
+  import { aiStatusWord, proposedFieldCodes, weakestConfidence } from './ai-status';
 
   const readOnly = $derived(page.data.readOnly === true);
 
@@ -21,42 +20,16 @@
 
   let { result, isSelected, isActive, onselect, onclick, onapply, onreject }: Props = $props();
 
-  function statusBadgeClass(status: string): string {
-    switch (status) {
-      case 'pending_review':
-        return 'bg-warn-light text-warn';
-      case 'applied':
-        return 'bg-success-light text-success';
-      case 'partial':
-        return 'bg-accent-light text-accent';
-      case 'rejected':
-        return 'text-muted bg-canvas';
-      case 'failed':
-        return 'bg-ember-light text-ember';
-      default:
-        return 'bg-canvas text-muted';
-    }
-  }
-
-  function statusDisplayText(status: string): string {
-    switch (status) {
-      case 'pending_review':
-        return 'Pending Review';
-      case 'failed':
-        return 'Failed';
-      default:
-        return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-  }
-
-  let thumbSrc = $derived(result.thumbnailUrl);
-  let thumbError = $state(false);
+  const status = $derived(aiStatusWord(result.appliedStatus));
+  const fieldCodes = $derived(proposedFieldCodes(result));
+  const weakest = $derived(weakestConfidence(result));
+  const highlighted = $derived(isSelected || isActive);
 </script>
 
 <div
-  class="panel relative cursor-pointer transition-colors {isActive
-    ? 'border-l-accent bg-accent-subtle/40 border-l-2'
-    : 'hover:bg-accent-subtle/40'}"
+  class="relative cursor-pointer px-4 py-3 transition-colors {highlighted
+    ? 'bg-selected shadow-[inset_2px_0_0_var(--color-accent)]'
+    : 'hover:bg-canvas-deep'}"
   {onclick}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -67,8 +40,7 @@
   role="button"
   tabindex="0"
 >
-  <!-- Checkbox top-right -->
-  <!-- The wrapper keeps a click on the checkbox from also opening the card. -->
+  <!-- The wrapper keeps a click on the checkbox from also opening the row. -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="absolute top-3 right-3" onclick={(e) => e.stopPropagation()}>
     <Checkbox
@@ -78,149 +50,96 @@
     />
   </div>
 
-  <!-- Top section: thumbnail + title/status/confidence -->
-  <div class="flex items-start gap-3 p-4 pr-10">
-    {#if thumbSrc && !thumbError}
-      <img
-        src={thumbSrc}
-        alt=""
-        class="h-12 w-12 shrink-0 rounded object-cover"
-        onerror={() => (thumbError = true)}
-      />
-    {:else}
-      <div class="bg-canvas flex h-12 w-12 shrink-0 items-center justify-center rounded">
-        <FileTextIcon class="text-muted h-5 w-5" />
+  <div class="min-w-0 pr-10">
+    <p class="text-ink truncate font-medium">{result.documentTitle}</p>
+    <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span class="status-word {status.colorClass}">
+        <span aria-hidden="true">{status.shape}</span>
+        <span class="uppercase">{status.label}</span>
+      </span>
+      {#if weakest}
+        <ConfidenceBadge score={weakest.score} />
+        <span class="text-muted text-sm">lowest: {weakest.field}</span>
+      {/if}
+      {#if fieldCodes.length > 0}
+        <span class="text-ink-light font-mono text-xs tracking-wider">{fieldCodes.join(' ')}</span>
+      {/if}
+    </div>
+    {#if result.errorMessage}
+      <p class="text-muted mt-1 line-clamp-2 text-sm">{result.errorMessage}</p>
+    {/if}
+  </div>
+
+  <div class="mt-2 space-y-1 text-sm">
+    {#if result.suggestedTitle}
+      <div class="truncate">
+        <span class="label-micro mr-2">Title</span>
+        {#if result.currentTitle && result.currentTitle !== result.suggestedTitle}
+          <span class="text-muted line-through">{result.currentTitle}</span>
+          <span class="text-muted font-mono" aria-hidden="true">&rarr;</span>
+        {/if}
+        <span class="text-ink font-medium">{result.suggestedTitle}</span>
       </div>
     {/if}
-    <div class="min-w-0 flex-1">
-      <p class="text-ink truncate font-medium">{result.documentTitle}</p>
-      <div class="mt-1 flex flex-wrap items-center gap-2">
-        <span
-          class="rounded-full px-2.5 py-0.5 text-xs font-medium {statusBadgeClass(
-            result.appliedStatus,
-          )}"
-        >
-          {statusDisplayText(result.appliedStatus)}
-        </span>
-        {#if result.confidence}
-          <div class="flex items-center gap-1.5">
-            <ConfidenceBadge score={result.confidence.title} />
-            <ConfidenceBadge score={result.confidence.correspondent} />
-            <ConfidenceBadge score={result.confidence.documentType} />
-            <ConfidenceBadge score={result.confidence.tags} />
-          </div>
-        {:else if result.errorMessage}
-          <div class="space-y-1">
-            {#if result.failureType === 'no_content'}
-              <span
-                class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              >
-                <WarningCircleIcon class="h-3 w-3" /> No OCR Text
-              </span>
-            {:else if result.failureType === 'no_suggestions'}
-              <span
-                class="bg-warn-light text-warn inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              >
-                <WarningCircleIcon class="h-3 w-3" /> No Suggestions
-              </span>
-            {:else}
-              <span
-                class="bg-ember-light text-ember inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              >
-                <WarningCircleIcon class="h-3 w-3" /> Failed
-              </span>
-            {/if}
-            <p class="text-muted line-clamp-2 text-xs">{result.errorMessage}</p>
-          </div>
+    {#if result.suggestedCorrespondent}
+      <div class="truncate">
+        <span class="label-micro mr-2">Correspondent</span>
+        {#if result.currentCorrespondent && result.currentCorrespondent !== result.suggestedCorrespondent}
+          <span class="text-muted line-through">{result.currentCorrespondent}</span>
+          <span class="text-muted font-mono" aria-hidden="true">&rarr;</span>
         {/if}
+        <span class="text-ink font-medium">{result.suggestedCorrespondent}</span>
       </div>
-    </div>
+    {/if}
+    {#if result.suggestedDocumentType}
+      <div class="truncate">
+        <span class="label-micro mr-2">Type</span>
+        {#if result.currentDocumentType && result.currentDocumentType !== result.suggestedDocumentType}
+          <span class="text-muted line-through">{result.currentDocumentType}</span>
+          <span class="text-muted font-mono" aria-hidden="true">&rarr;</span>
+        {/if}
+        <span class="text-ink font-medium">{result.suggestedDocumentType}</span>
+      </div>
+    {/if}
+    {#if result.suggestedTags.length > 0}
+      <div class="flex flex-wrap items-center gap-1.5">
+        <span class="label-micro mr-1">Tags</span>
+        {#each result.suggestedTags as tag (tag)}
+          <span class="border-border text-ink bg-canvas border px-1.5 font-mono text-xs">
+            {tag}
+          </span>
+        {/each}
+      </div>
+    {/if}
+    {#if result.suggestedCustomFields.length > 0}
+      <div class="flex flex-wrap items-center gap-1.5">
+        <span class="label-micro mr-1">Custom</span>
+        {#each result.suggestedCustomFields as field (field.fieldId)}
+          <span class="border-border text-ink bg-canvas border px-1.5 font-mono text-xs">
+            {field.fieldName ?? `Field #${field.fieldId}`}: {Array.isArray(field.value)
+              ? field.value.join(', ')
+              : String(field.value)}
+          </span>
+        {/each}
+      </div>
+    {/if}
   </div>
 
-  <!-- Middle: correspondent + document type -->
-  <div class="border-soft flex flex-wrap gap-x-4 gap-y-1 border-t px-4 py-2.5 text-sm">
-    <div class="min-w-0">
-      <span class="text-muted text-xs font-medium uppercase">Title</span>
-      {#if result.suggestedTitle}
-        <div class="flex items-center gap-1.5">
-          {#if result.currentTitle && result.currentTitle !== result.suggestedTitle}
-            <span class="text-muted truncate text-xs line-through">{result.currentTitle}</span>
-            <span class="text-muted text-xs">&rarr;</span>
-          {/if}
-          <span class="text-ink truncate">{result.suggestedTitle}</span>
-        </div>
-      {:else}
-        <p class="text-soft">&mdash;</p>
-      {/if}
-    </div>
-    <div class="min-w-0">
-      <span class="text-muted text-xs font-medium uppercase">Correspondent</span>
-      {#if result.suggestedCorrespondent}
-        <div class="flex items-center gap-1.5">
-          {#if result.currentCorrespondent && result.currentCorrespondent !== result.suggestedCorrespondent}
-            <span class="text-muted text-xs line-through">{result.currentCorrespondent}</span>
-            <span class="text-muted text-xs">&rarr;</span>
-          {/if}
-          <span class="text-ink">{result.suggestedCorrespondent}</span>
-        </div>
-      {:else}
-        <p class="text-soft">&mdash;</p>
-      {/if}
-    </div>
-    <div class="min-w-0">
-      <span class="text-muted text-xs font-medium uppercase">Document Type</span>
-      {#if result.suggestedDocumentType}
-        <div class="flex items-center gap-1.5">
-          {#if result.currentDocumentType && result.currentDocumentType !== result.suggestedDocumentType}
-            <span class="text-muted text-xs line-through">{result.currentDocumentType}</span>
-            <span class="text-muted text-xs">&rarr;</span>
-          {/if}
-          <span class="text-ink">{result.suggestedDocumentType}</span>
-        </div>
-      {:else}
-        <p class="text-soft">&mdash;</p>
-      {/if}
-    </div>
-  </div>
-
-  <!-- Tags -->
-  {#if result.suggestedTags.length > 0}
-    <div class="border-soft flex flex-wrap gap-1 border-t px-4 py-2.5">
-      {#each result.suggestedTags as tag (tag)}
-        <span class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium">
-          {tag}
-        </span>
-      {/each}
-    </div>
-  {/if}
-
-  {#if result.suggestedCustomFields.length > 0}
-    <div class="border-soft flex flex-wrap gap-1 border-t px-4 py-2.5">
-      {#each result.suggestedCustomFields as field (field.fieldId)}
-        <span class="bg-success-light text-success rounded-full px-2 py-0.5 text-xs font-medium">
-          {field.fieldName ?? `Field #${field.fieldId}`}: {Array.isArray(field.value)
-            ? field.value.join(', ')
-            : String(field.value)}
-        </span>
-      {/each}
-    </div>
-  {/if}
-
-  <!-- Bottom: actions -->
   {#if result.appliedStatus === 'pending_review' && !result.errorMessage}
-    <div class="border-soft flex items-center gap-2 border-t px-4 py-2.5">
-      <!-- Apply stays inline: it is a success-tinted control and Button has no tint variant. -->
-      <button
+    <div class="mt-3 flex items-center gap-2">
+      <Button
+        size="sm"
+        variant="secondary"
+        icon={CheckIcon}
+        disabled={readOnly}
+        title={readOnly ? 'Paperless is read-only' : undefined}
         onclick={(e) => {
           e.stopPropagation();
           onapply();
         }}
-        disabled={readOnly}
-        title={readOnly ? 'Paperless is read-only' : undefined}
-        class="bg-success-light text-success hover:bg-success/15 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
       >
-        <CheckIcon class="h-3.5 w-3.5" /> Apply
-      </button>
+        Apply
+      </Button>
       <Button
         variant="ghost"
         size="sm"

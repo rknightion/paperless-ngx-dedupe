@@ -1,7 +1,6 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
   import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
-  import FileTextIcon from 'phosphor-svelte/lib/FileTextIcon';
   import { Button, Checkbox, SearchInput } from '$lib/components';
 
   interface DocumentSummary {
@@ -127,24 +126,22 @@
   onclick={(e) => {
     if (e.target === dialog) oncancel();
   }}
-  class="border-soft bg-surface m-auto w-full max-w-3xl rounded-xl border p-0 shadow-lg backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-200"
+  class="border-border-hover bg-surface-raised backdrop:bg-ink/50 m-auto w-full max-w-3xl rounded-md border p-0 shadow-lg backdrop:transition-opacity backdrop:duration-200"
   aria-labelledby="doc-picker-title"
 >
   <div class="flex max-h-[80vh] flex-col">
     <!-- Header -->
-    <div class="border-soft flex items-center justify-between border-b px-6 py-4">
+    <div class="border-border flex items-center justify-between border-b px-6 py-4">
       <h2 id="doc-picker-title" class="text-ink text-lg font-semibold">
-        Select Documents to Process
+        Select documents to process
       </h2>
       {#if selectedIds.size > 0}
-        <span class="bg-accent-subtle text-accent rounded-full px-2.5 py-0.5 text-xs font-medium">
-          {selectedIds.size} selected
-        </span>
+        <span class="text-muted font-mono text-xs tabular-nums">{selectedIds.size} selected</span>
       {/if}
     </div>
 
     <!-- Search bar -->
-    <div class="border-soft border-b px-6 py-3">
+    <div class="border-border border-b px-6 py-3">
       <div class="flex items-center gap-2">
         <SearchInput
           bind:value={searchQuery}
@@ -153,14 +150,14 @@
           onkeydown={handleSearchKeydown}
           class="flex-1"
         />
-        <Button onclick={handleSearchClick}>Search</Button>
+        <Button variant="secondary" onclick={handleSearchClick}>Search</Button>
       </div>
     </div>
 
     <!-- Select all banner -->
     {#if allOnPageSelected && total > LIMIT}
       <div
-        class="bg-accent-subtle border-soft flex items-center justify-center gap-2 border-b px-6 py-2 text-sm"
+        class="bg-canvas border-border flex items-center justify-center gap-2 border-b px-6 py-2 text-sm"
       >
         <span class="text-ink">All {documents.length} documents on this page are selected.</span>
         <span class="text-muted">
@@ -173,20 +170,17 @@
     <div class="flex-1 overflow-auto">
       {#if loading}
         <div class="flex items-center justify-center py-16">
-          <CircleNotchIcon class="text-muted h-6 w-6 animate-spin" />
+          <CircleNotchIcon class="text-muted h-4 w-4 animate-spin" />
         </div>
       {:else if documents.length === 0}
         <div class="flex flex-col items-center py-16 text-center">
-          <div class="bg-accent-subtle mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-            <FileTextIcon class="text-accent h-7 w-7" />
-          </div>
-          <p class="text-ink text-base font-medium">No documents found</p>
-          <p class="text-muted mt-2 text-sm">Try adjusting your search query.</p>
+          <p class="text-ink text-sm font-medium">No documents found</p>
+          <p class="text-muted mt-1 text-sm">Try adjusting your search query.</p>
         </div>
       {:else}
         <table class="w-full text-left text-sm">
           <thead>
-            <tr class="border-soft bg-canvas/60 border-b">
+            <tr class="border-border-hover border-b">
               <th class="w-10 px-4 py-3">
                 <Checkbox
                   checked={allOnPageSelected}
@@ -194,31 +188,17 @@
                   onchange={toggleAllOnPage}
                 />
               </th>
-              <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">
-                Title
-              </th>
-              <th
-                class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-              >
-                Correspondent
-              </th>
-              <th
-                class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-              >
-                Document Type
-              </th>
-              <th
-                class="text-muted hidden px-4 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
-              >
-                Tags
-              </th>
+              <th class="label-micro px-4 py-1.5"> Title </th>
+              <th class="label-micro hidden px-4 py-1.5 md:table-cell"> Correspondent </th>
+              <th class="label-micro hidden px-4 py-1.5 md:table-cell"> Document type </th>
+              <th class="label-micro hidden px-4 py-1.5 lg:table-cell"> Tags </th>
             </tr>
           </thead>
           <tbody>
             {#each documents as doc (doc.id)}
               <tr
-                class="border-soft hover:bg-canvas/40 cursor-pointer border-b transition-colors"
-                class:bg-accent-subtle={selectedIds.has(doc.id)}
+                class="border-border hover:bg-canvas-deep cursor-pointer border-b transition-colors"
+                class:bg-selected={selectedIds.has(doc.id)}
                 onclick={() => toggleDocument(doc.id)}
               >
                 <td class="px-4 py-3">
@@ -234,11 +214,11 @@
                 </td>
                 <td class="text-ink max-w-[200px] truncate px-4 py-3 font-medium">{doc.title}</td>
                 <td class="text-muted hidden px-4 py-3 md:table-cell">
-                  {doc.correspondent ?? '—'}
+                  {doc.correspondent ?? '-'}
                 </td>
-                <td class="text-muted hidden px-4 py-3 md:table-cell">{doc.documentType ?? '—'}</td>
+                <td class="text-muted hidden px-4 py-3 md:table-cell">{doc.documentType ?? '-'}</td>
                 <td class="text-muted hidden max-w-[180px] truncate px-4 py-3 lg:table-cell">
-                  {doc.tags.length > 0 ? doc.tags.join(', ') : '—'}
+                  {doc.tags.length > 0 ? doc.tags.join(', ') : '-'}
                 </td>
               </tr>
             {/each}
@@ -249,9 +229,9 @@
 
     <!-- Pagination -->
     {#if totalPages > 1}
-      <div class="border-soft flex items-center justify-between border-t px-6 py-3">
+      <div class="border-border flex items-center justify-between border-t px-6 py-3">
         <span class="text-muted text-sm">
-          Showing {offset + 1}–{Math.min(offset + LIMIT, total)} of {total}
+          Showing {offset + 1}-{Math.min(offset + LIMIT, total)} of {total}
         </span>
         <div class="flex items-center gap-1">
           <Button
@@ -262,7 +242,9 @@
           >
             Prev
           </Button>
-          <span class="text-muted px-2 text-sm">Page {currentPage} of {totalPages}</span>
+          <span class="text-muted px-2 font-mono text-sm tabular-nums">
+            Page {currentPage} of {totalPages}
+          </span>
           <Button
             variant="outline"
             size="sm"
@@ -276,7 +258,7 @@
     {/if}
 
     <!-- Footer -->
-    <div class="border-soft flex items-center justify-between border-t px-6 py-4">
+    <div class="border-border flex items-center justify-between border-t px-6 py-4">
       <span class="text-muted text-sm">
         {#if selectedIds.size > 0}
           {selectedIds.size} document{selectedIds.size === 1 ? '' : 's'} selected
@@ -287,7 +269,7 @@
       <div class="flex items-center gap-3">
         <Button variant="outline" onclick={oncancel}>Cancel</Button>
         <Button onclick={handleSubmit} disabled={selectedIds.size === 0}>
-          Process {selectedIds.size} Document{selectedIds.size === 1 ? '' : 's'}
+          Process {selectedIds.size} document{selectedIds.size === 1 ? '' : 's'}
         </Button>
       </div>
     </div>
