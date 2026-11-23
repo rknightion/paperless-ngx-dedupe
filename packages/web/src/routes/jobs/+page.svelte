@@ -130,9 +130,15 @@
           icon={TrashIcon}
           onclick={() => (showClearConfirm = true)}
           disabled={isClearing || data.counts.clearable === 0}
+          describedBy={data.counts.clearable === 0 ? 'clear-history-reason' : undefined}
         >
           {isClearing ? 'Clearing...' : 'Clear History'}
         </Button>
+        {#if data.counts.clearable === 0}
+          <p id="clear-history-reason" class="text-muted mt-1 text-xs">
+            No finished jobs to clear.
+          </p>
+        {/if}
       </div>
     </div>
     <p class="text-muted text-sm">View and manage the history of all background jobs.</p>
@@ -181,7 +187,7 @@
   {#if data.jobs.length > 0}
     <div class="border-border bg-surface border">
       <table class="w-full border-collapse text-left">
-        <thead>
+        <thead class="bg-surface sticky top-0 z-10">
           <tr class="border-border-hover border-b">
             <th scope="col" class="label-micro px-3 py-1.5 font-medium first:pl-6">Job</th>
             <th

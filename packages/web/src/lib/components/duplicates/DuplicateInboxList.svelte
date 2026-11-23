@@ -202,10 +202,10 @@
 </section>
 
 {#if total > 0}
-  <div class="border-soft bg-surface overflow-x-auto border">
+  <div class="border-soft bg-surface border">
     <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b-border-hover bg-surface sticky top-0 border-b text-left">
+      <thead class="bg-surface sticky top-0 z-10">
+        <tr class="border-b-border-hover border-b text-left">
           <th class="py-1.5 pr-3 pl-4">
             <input
               type="checkbox"
@@ -229,9 +229,7 @@
           <tr
             class="border-soft border-b last:border-b-0 {selected
               ? 'bg-selected'
-              : 'hover:bg-canvas-deep'} {group.status === 'deleted' && !runByGroup.has(group.id)
-              ? 'opacity-60'
-              : ''}"
+              : 'hover:bg-canvas-deep'}"
           >
             <td
               class="h-9 py-1.5 pr-3 pl-4 {selected
@@ -246,7 +244,7 @@
                 aria-label="Select {group.primaryDocumentTitle ?? 'untitled group'}"
               />
             </td>
-            <td class="text-ink max-w-xs truncate px-3 py-1.5">
+            <td class="text-ink w-full max-w-0 truncate px-3 py-1.5">
               <a
                 href={detailHref(group.id)}
                 class="text-accent hover:text-accent-hover rounded-sm font-medium underline-offset-2 hover:underline"
