@@ -12,7 +12,7 @@ Changes from the source: none.
 
 The general skills next to this one come from upstream unchanged. They were written for other
 projects, so some advice does not fit here: these projects are released, have users, run on
-`just`, and land through pull requests with an acceptance evidence table. This skill holds the
+`just`, and land through pull requests that carry an evidence line. This skill holds the
 differences. Rules in the repository's `AGENTS.md` still come first.
 
 ## write-tests
@@ -28,8 +28,8 @@ differences. Rules in the repository's `AGENTS.md` still come first.
   never the only proof of the behaviour.
 - `just test` runs the suite and `just check` is the full gate. Run `just check` once on the final
   tree.
-- Record each proof that closes an acceptance criterion as a row of the pull request's acceptance
-  evidence table, with the test path in backticks (format in `commit-and-pr`).
+- Record the proof that closes an issue in the pull request's `Evidence:` line: the command and
+  its result (format in `commit-and-pr`).
 
 ### Red-first restore
 

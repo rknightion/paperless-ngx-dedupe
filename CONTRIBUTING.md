@@ -62,12 +62,12 @@ an issue, pull request, test or doc.
     change. A maintainer adds the acceptance evidence and closes the issue.
   - `Task: none, <reason>` when there is no issue.
 - Do not write a closing keyword (`Closes #N`, `Fixes #N` and the like) anywhere in the body, prose
-  included. Closing an issue is a maintainer's step, and it needs an acceptance evidence table the
-  repository's check reads.
+  included. Closing an issue is a maintainer's step, and it needs evidence the repository's check
+  reads.
 - Maintainers, and the owner's coding agents, write `Closes #N` for each issue the pull request
-  completes, with the "Acceptance evidence" table: one row for each acceptance criterion of that
-  issue, its text copied word for word, an evidence class (`code`, `live` or `browser`) and the
-  proof, with any repository path in backticks. The `commit-and-pr` skill has the format. A pull
+  completes, with one line of its own that starts `Evidence:` and names a command and its result
+  (`Evidence: just check exit 0 on the head`). The longer "Acceptance evidence" table is still
+  accepted in its place. The `commit-and-pr` skill has both formats. A pull
   request that changes `.github/workflows/` or `.github/actions/` never carries a closing keyword:
   it says `Task: none, <reason>` (a `Refs #N` beside it is fine) and the issue is closed by hand
   after the merge.
