@@ -118,6 +118,37 @@ it('accepts keyless AI only with an absolute HTTP or HTTPS base URL', () => {
   }
 });
 
+it('accepts a gateway token only with a Cloudflare OpenAI gateway route', () => {
+  const gateway = 'https://gateway.ai.cloudflare.com/v1/test-account/test-gateway/openai';
+  for (const baseURL of [gateway, 'https://ai.example.test/openai/v1']) {
+    expect(
+      parseConfig({
+        ...baseEnv,
+        AI_ENABLED: 'true',
+        AI_OPENAI_BASE_URL: baseURL,
+        AI_OPENAI_GATEWAY_TOKEN: 'gateway-token',
+      }),
+    ).toMatchObject({ AI_OPENAI_GATEWAY_TOKEN: 'gateway-token' });
+  }
+  for (const baseURL of [
+    undefined,
+    'http://localhost:11434/v1',
+    'http://ai.example.test/openai/v1',
+    'https://ai.example.test/anthropic/v1',
+  ]) {
+    expect(() =>
+      parseConfig({
+        ...baseEnv,
+        AI_OPENAI_BASE_URL: baseURL,
+        AI_OPENAI_GATEWAY_TOKEN: 'gateway-token',
+      }),
+    ).toThrow(/AI_OPENAI_GATEWAY_TOKEN/);
+  }
+  expect(
+    getConfigMetadata().find((entry) => entry.key === 'AI_OPENAI_GATEWAY_TOKEN'),
+  ).toMatchObject({ source: 'environment', sensitive: true, readOnly: true });
+});
+
 it('describes the AI base URL as an environment-owned non-sensitive setting', () => {
   expect(getConfigMetadata().find((entry) => entry.key === 'AI_OPENAI_BASE_URL')).toMatchObject({
     source: 'environment',

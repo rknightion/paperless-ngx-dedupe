@@ -89,7 +89,7 @@
 
   // AI Settings
   const initialAiConfig = untrack(() => data.aiConfig);
-  let aiModel = $state(initialAiConfig?.model ?? 'gpt-5-mini');
+  let aiModel = $state(initialAiConfig?.model ?? 'gpt-6-luna');
   let aiAddProcessedTag = $state(initialAiConfig?.addProcessedTag ?? false);
   let aiProcessedTagName = $state(initialAiConfig?.processedTagName ?? 'ai-processed');
   let aiProtectedTagsEnabled = $state(initialAiConfig?.protectedTagsEnabled ?? false);

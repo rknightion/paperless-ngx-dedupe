@@ -123,7 +123,7 @@ describe('single AI result reprocessing revisions', () => {
       ]);
       expect(db.select().from(aiProcessingResult).get()).toMatchObject({
         id: 'result-1',
-        model: 'gpt-5.4-mini',
+        model: DEFAULT_AI_CONFIG.model,
         suggestedTitle: 'New suggestion',
         appliedStatus: 'pending_review',
       });
@@ -196,7 +196,7 @@ describe('single AI result reprocessing revisions', () => {
     ]);
     expect(db.select().from(aiProcessingResult).get()).toMatchObject({
       id: 'result-1',
-      model: 'gpt-5.4-mini',
+      model: DEFAULT_AI_CONFIG.model,
       appliedStatus: 'failed',
       errorMessage: '[timeout] Request timed out',
       failureType: 'timeout',

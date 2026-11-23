@@ -68,6 +68,8 @@ function billingMonth(now: Date): string {
 /** Resolve only tokenizer families whose mapping is explicitly supported by this application. */
 export function resolveOpenAiTokenizerModel(model: string): 'gpt-5' {
   if (/^gpt-5(?:\.4)?(?:-(?:mini|nano))?$/.test(model)) return 'gpt-5';
+  // The GPT-6 family shares the o200k encoding that the gpt-5 mapping selects.
+  if (/^gpt-6(?:\.\d+)?-(?:luna|terra|sol|astra)$/.test(model)) return 'gpt-5';
   throw new UnsupportedAiModelEncodingError(model);
 }
 
@@ -79,7 +81,7 @@ export async function countAiPromptTokens(
   request: AiExtractionRequest,
   model: string,
   flexProcessing: boolean,
-  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL'> = {},
+  options: Pick<OpenAiProviderOptions, 'apiStyle' | 'baseURL' | 'gatewayToken'> = {},
 ): Promise<number> {
   let tokenizerModel: 'gpt-5';
   try {

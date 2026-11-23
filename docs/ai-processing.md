@@ -15,11 +15,23 @@ AI processing is disabled by default. Configure its environment before starting 
 | --- | --- | --- | --- |
 | `AI_ENABLED` | No | `false` | Master switch for all AI features |
 | `AI_OPENAI_API_KEY` | Without a base URL | - | API key for the configured AI server |
-| `AI_OPENAI_BASE_URL` | No | - | Absolute http or https base URL for an OpenAI-compatible server |
+| `AI_OPENAI_BASE_URL` | No | - | Absolute http or https base URL for an OpenAI-compatible server or Cloudflare AI Gateway |
+| `AI_OPENAI_GATEWAY_TOKEN` | No | - | Cloudflare AI Gateway token; requires an https gateway base URL |
 | `AI_OPENAI_API_STYLE` | No | `responses` | Request API: `responses` or `chat` |
 | `AI_OPENAI_TIMEOUT_MS` | No | `900000` with Flex, otherwise `60000` | Per-attempt request timeout in milliseconds; raise it for a slow or cold local model |
 
 The API key is required when `AI_ENABLED=true` unless `AI_OPENAI_BASE_URL` is set.
+
+### Route OpenAI through Cloudflare AI Gateway
+
+Set `AI_OPENAI_BASE_URL` to the gateway's OpenAI route and `AI_OPENAI_GATEWAY_TOKEN` to its token:
+`https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/openai`, or `https://<custom-domain>/openai/v1`
+for a gateway on a custom domain. Leave `AI_OPENAI_API_KEY` unset to use the provider key stored in
+the gateway, or set it to forward your own.
+
+A gateway route behaves like OpenAI's API, including Flex and model pricing. Requests ask the gateway
+not to log or cache their payloads, because they contain document text, and redirects are refused so
+the token cannot reach another host.
 
 ### Use a local or self-hosted model
 
@@ -38,8 +50,8 @@ is sent explicitly instead of omitted, so servers such as Ollama turn thinking o
 reported prompt, completion and cached token usage is retained even for rejected output. Model names are entered manually, and extraction quality depends on the model.
 Failures remain isolated to each document. Scheduled processing uses cached prices or the custom prices described below.
 
-A custom base URL always disables Flex Processing and uses the standard 60-second per-attempt
-timeout. Interactive requests keep their existing retry cap. Leaving both variables unset keeps
+A custom base URL other than a Cloudflare AI Gateway route disables Flex Processing and uses the
+standard 60-second per-attempt timeout. Interactive requests keep their existing retry cap. Leaving both variables unset keeps
 the default OpenAI endpoint, authentication requirement and request behavior.
 
 ## Configuration
@@ -49,7 +61,7 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | Setting | Default | Range | Description |
 | --- | --- | --- | --- |
 | `provider` | `openai` | `openai` | LLM provider to use |
-| `model` | `gpt-5.4-mini` | see below | Model identifier |
+| `model` | `gpt-6-luna` | see below | Model identifier |
 | `customInputPricePerMTok` | `0` | finite number, 0 or greater | USD per million input tokens when no cached model price exists |
 | `customOutputPricePerMTok` | `0` | finite number, 0 or greater | USD per million output tokens when no cached model price exists |
 | `promptTemplate` | built-in | string | Prompt template with placeholders |
@@ -67,7 +79,7 @@ After enabling, configure processing behavior in **Settings > AI Processing** or
 | `extractDocumentType` | `true` | boolean | Include document-type recommendations in results |
 | `extractTags` | `true` | boolean | Include tag recommendations in results |
 | `extractCustomFields` | `false` | boolean | Recommend values for existing Paperless custom fields |
-| `flexProcessing` | `true` | boolean | Use OpenAI Flex Processing for ~50% lower costs |
+| `flexProcessing` | `true` | boolean | Use OpenAI Flex Processing for ~50% lower costs on models that offer it |
 | `reasoningEffort` | `low` | `none`, `low`, `medium`, `high` | Reasoning effort level |
 | `maxRetries` | `10` | 0--20 | Batch runs cap SDK retries at 2 and also re-queue rate-limited and unavailable-provider requests for up to 3 passes. Single-result reprocess caps the configured retry count at 2. |
 | `confidenceThresholdGlobal` | `0` | 0--1 | Minimum confidence for all fields (floor) |
@@ -88,6 +100,10 @@ suggestions to Paperless automatically.
 
 | Model ID | Name |
 | --- | --- |
+| `gpt-6-luna` | GPT-6 Luna |
+| `gpt-6.1-terra` | GPT-6.1 Terra |
+| `gpt-6.2-sol` | GPT-6.2 Sol |
+| `gpt-6.2-astra` | GPT-6.2 Astra |
 | `gpt-5.4` | GPT-5.4 |
 | `gpt-5.4-mini` | GPT-5.4 Mini |
 | `gpt-5.4-nano` | GPT-5.4 Nano |
@@ -295,7 +311,8 @@ Key details:
 - Structured output via `zodTextFormat`
 - Handles refusal detection and incomplete response detection
 - Reports cached token counts when available
-- When `flexProcessing` is enabled and no custom base URL is set, requests are submitted to OpenAI's Flex Processing tier for ~50% lower costs (with relaxed latency SLA)
+- When `flexProcessing` is enabled and calls reach OpenAI directly or through a Cloudflare AI Gateway route, models that offer Flex use that tier for ~50% lower costs (with relaxed latency SLA). OpenAI is retiring Flex, and GPT-6.2 models run on the standard tier
+- A reasoning effort of `none` becomes `low` on models that reject it, such as GPT-6.2 Sol and Astra
 
 ## Prompt Customization
 

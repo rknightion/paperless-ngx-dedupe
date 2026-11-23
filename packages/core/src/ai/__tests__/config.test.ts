@@ -18,7 +18,7 @@ describe('getAiConfig', () => {
   it('returns defaults for a fresh database', () => {
     const config = getAiConfig(db);
     expect(config.provider).toBe('openai');
-    expect(config.model).toBe('gpt-5.4-mini');
+    expect(config.model).toBe('gpt-6-luna');
     expect(config.maxContentLength).toBe(8000);
     expect(config.batchSize).toBe(100);
     expect(config).not.toHaveProperty('autoProcess');
@@ -133,7 +133,7 @@ describe('setAiConfig', () => {
     const result = setAiConfig(db, { provider: 'openai', batchSize: 50 });
     expect(result.provider).toBe('openai');
     expect(result.batchSize).toBe(50);
-    expect(result.model).toBe('gpt-5.4-mini'); // default preserved
+    expect(result.model).toBe('gpt-6-luna'); // default preserved
   });
 
   it('preserves string fields that look numeric', () => {

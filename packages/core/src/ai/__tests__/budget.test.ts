@@ -160,6 +160,8 @@ describe('scheduled AI budget reservations', () => {
     const wireTokens = encoding.encode(JSON.stringify(params)).length;
 
     expect(resolveOpenAiTokenizerModel('gpt-5.4-mini')).toBe('gpt-5');
+    expect(resolveOpenAiTokenizerModel('gpt-6-luna')).toBe('gpt-5');
+    expect(resolveOpenAiTokenizerModel('gpt-6.2-sol')).toBe('gpt-5');
     expect(params.input).toEqual([
       { role: 'developer', content: 'System instructions' },
       { role: 'user', content: 'Document body' },

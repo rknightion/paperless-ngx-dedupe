@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAiProvider, createInteractiveAiProvider } from '../providers/factory.js';
 import { OpenAiProvider, buildOpenAiRequestParams } from '../providers/openai.js';
@@ -281,5 +281,127 @@ describe('custom endpoint request parameters', () => {
     expect(await timeoutOf({ timeoutMs: 45_000 })).toBe(45_000);
     expect(await timeoutOf({ baseURL: local })).toBe(60_000);
     expect(await timeoutOf({})).toBe(900_000);
+  });
+});
+
+describe('Cloudflare AI Gateway route', () => {
+  const gateway = 'https://gateway.ai.cloudflare.com/v1/test-account/test-gateway/openai';
+  const request = { systemPrompt: 'Classify', userPrompt: 'Synthetic content' };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  function stubFetch() {
+    const text = JSON.stringify({
+      title: 'Synthetic',
+      correspondent: null,
+      documentType: null,
+      tags: [],
+      customFields: [],
+      confidence: { title: 0.9, correspondent: 0, documentType: 0, tags: 0 },
+      evidence: 'Synthetic evidence',
+    });
+    const fetchMock = vi.fn(
+      async (_input: Parameters<typeof fetch>[0], _init?: Parameters<typeof fetch>[1]) =>
+        new Response(
+          JSON.stringify({
+            id: 'response-test',
+            object: 'response',
+            status: 'completed',
+            model: 'gpt-6-luna',
+            service_tier: 'flex',
+            output: [
+              {
+                id: 'message-test',
+                type: 'message',
+                role: 'assistant',
+                status: 'completed',
+                content: [{ type: 'output_text', text, annotations: [] }],
+              },
+            ],
+            usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  async function send(apiKey: string | undefined, baseURL: string, gatewayToken?: string) {
+    const fetchMock = stubFetch();
+    const provider = await OpenAiProvider.create(apiKey, 'gpt-6-luna', {
+      maxRetries: 0,
+      baseURL,
+      gatewayToken,
+    });
+    await provider.extract(request);
+    const [input, init] = fetchMock.mock.calls[0];
+    return {
+      url: String(input),
+      headers: new Headers(init?.headers),
+      redirect: init?.redirect,
+      body: JSON.parse(String(init?.body)),
+    };
+  }
+
+  it('authenticates to the gateway, uses its stored key and keeps text out of its logs', async () => {
+    const sent = await send(undefined, gateway, 'gateway-token');
+    expect(sent.url).toBe(gateway + '/responses');
+    expect(sent.headers.get('cf-aig-authorization')).toBe('Bearer gateway-token');
+    expect(sent.headers.has('authorization')).toBe(false);
+    expect(sent.headers.get('cf-aig-collect-log-payload')).toBe('false');
+    expect(sent.headers.get('cf-aig-skip-cache')).toBe('true');
+    expect(sent.redirect).toBe('error');
+    expect(sent.body.service_tier).toBe('flex');
+  });
+
+  it('forwards a configured provider key through the gateway', async () => {
+    const sent = await send('provider-key', gateway, 'gateway-token');
+    expect(sent.headers.get('authorization')).toBe('Bearer provider-key');
+    expect(sent.headers.get('cf-aig-authorization')).toBe('Bearer gateway-token');
+  });
+
+  it('recognises a custom-domain gateway from its token', async () => {
+    const sent = await send(undefined, 'https://ai.example.test/openai/v1', 'gateway-token');
+    expect(sent.url).toBe('https://ai.example.test/openai/v1/responses');
+    expect(sent.headers.get('cf-aig-authorization')).toBe('Bearer gateway-token');
+    expect(sent.headers.has('authorization')).toBe(false);
+    expect(sent.headers.get('cf-aig-collect-log-payload')).toBe('false');
+    expect(sent.redirect).toBe('error');
+    expect(sent.body.service_tier).toBe('flex');
+  });
+
+  it.each([
+    'http://localhost:11434/v1',
+    'https://ai.example.test/v1',
+    'http://ai.example.test/openai/v1',
+    'http://gateway.ai.cloudflare.com/v1/account/gateway/openai',
+    'https://gateway.ai.cloudflare.com/v1/account/gateway/anthropic',
+  ])('never sends the gateway token to %s', async (baseURL) => {
+    const sent = await send('provider-key', baseURL, 'gateway-token');
+    expect(sent.headers.has('cf-aig-authorization')).toBe(false);
+    expect(sent.body).not.toHaveProperty('service_tier');
+  });
+
+  it.each([
+    ['gpt-6-luna', 'none', 'flex'],
+    ['gpt-6.1-terra', 'none', 'flex'],
+    ['gpt-6-astra', 'low', 'flex'],
+    ['gpt-6.1-sol', 'low', 'flex'],
+    ['gpt-6-sol', 'none', 'default'],
+    ['gpt-6.2-sol', 'low', 'default'],
+    ['gpt-6.2-astra', 'low', 'default'],
+    ['gpt-5.4-mini', undefined, 'flex'],
+  ])('requests only what %s accepts when reasoning is off', async (model, effort, tier) => {
+    for (const options of [{}, { baseURL: gateway }]) {
+      const params = await buildOpenAiRequestParams(
+        { ...request, reasoningEffort: 'none' },
+        model,
+        true,
+        options,
+      );
+      expect(params.reasoning?.effort).toBe(effort);
+      expect(params.service_tier).toBe(tier);
+    }
   });
 });

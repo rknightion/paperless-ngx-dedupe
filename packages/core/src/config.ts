@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isCloudflareOpenAiGateway } from './ai/providers/openai-capabilities.js';
 import { isIP } from 'node:net';
 
 function validProxyCidrs(value: string | undefined): boolean {
@@ -60,6 +61,7 @@ const configSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     AI_OPENAI_API_KEY: z.string().optional(),
+    AI_OPENAI_GATEWAY_TOKEN: z.string().optional(),
     AI_OPENAI_API_STYLE: z.enum(['responses', 'chat']).default('responses'),
     AI_OPENAI_BASE_URL: z
       .url({
@@ -104,6 +106,16 @@ const configSchema = z
     error: 'When AI_ENABLED=true, AI_OPENAI_API_KEY or AI_OPENAI_BASE_URL is required',
     path: ['AI_ENABLED'],
   })
+  .refine(
+    (data) =>
+      !data.AI_OPENAI_GATEWAY_TOKEN ||
+      isCloudflareOpenAiGateway(data.AI_OPENAI_BASE_URL, data.AI_OPENAI_GATEWAY_TOKEN),
+    {
+      error:
+        'AI_OPENAI_GATEWAY_TOKEN requires AI_OPENAI_BASE_URL to be an https Cloudflare AI Gateway OpenAI route',
+      path: ['AI_OPENAI_GATEWAY_TOKEN'],
+    },
+  )
   .refine(
     (data) => data.APP_AUTH_MODE !== 'basic' || (data.APP_AUTH_USERNAME && data.APP_AUTH_PASSWORD),
     {
