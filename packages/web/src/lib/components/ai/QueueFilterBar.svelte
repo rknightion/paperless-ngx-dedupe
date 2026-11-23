@@ -93,7 +93,12 @@
     />
   </div>
 
-  <select bind:value={localSort} onchange={handleSelectChange} class={selectClass}>
+  <select
+    aria-label="Sort documents"
+    bind:value={localSort}
+    onchange={handleSelectChange}
+    class={selectClass}
+  >
     <option value="">Newest</option>
     <option value="oldest">Oldest</option>
     <option value="title_asc">Title A→Z</option>
@@ -112,7 +117,12 @@
   {/if}
 
   {#if correspondents.length > 0}
-    <select bind:value={localCorrespondent} onchange={handleSelectChange} class={selectClass}>
+    <select
+      aria-label="Correspondent"
+      bind:value={localCorrespondent}
+      onchange={handleSelectChange}
+      class={selectClass}
+    >
       <option value="">All correspondents</option>
       {#each correspondents as c (c)}
         <option value={c}>{c}</option>
@@ -121,7 +131,12 @@
   {/if}
 
   {#if documentTypes.length > 0}
-    <select bind:value={localDocumentType} onchange={handleSelectChange} class={selectClass}>
+    <select
+      aria-label="Document type"
+      bind:value={localDocumentType}
+      onchange={handleSelectChange}
+      class={selectClass}
+    >
       <option value="">All types</option>
       {#each documentTypes as dt (dt)}
         <option value={dt}>{dt}</option>
