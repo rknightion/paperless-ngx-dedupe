@@ -378,7 +378,9 @@
                 <td class="hidden px-3 py-0 lg:table-cell">
                   <div class="flex flex-wrap gap-1">
                     {#each doc.tags as tag (tag)}
-                      <span class="border-border text-ink-light min-w-0 border px-1.5 font-mono text-xs">
+                      <span
+                        class="border-border text-ink-light min-w-0 border px-1.5 font-mono text-xs"
+                      >
                         {tag}
                       </span>
                     {:else}

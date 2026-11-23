@@ -303,7 +303,9 @@
                 >
                   <td class="py-2 pr-3 pl-6">
                     <div class="min-w-0">
-                      <p class="text-ink line-clamp-2 text-base font-medium">{result.documentTitle}</p>
+                      <p class="text-ink line-clamp-2 text-base font-medium">
+                        {result.documentTitle}
+                      </p>
                       <p
                         class="status-word {aiStatusWord(result.appliedStatus)
                           .colorClass} sm:hidden"
