@@ -18,7 +18,7 @@
     group: GroupSummary;
     excluded: boolean;
     paperlessUrl: string;
-    members: DuplicateGroupMember[] | null;
+    members: (DuplicateGroupMember & { thumbnailUrl?: string })[] | null;
     ontoggle: () => void;
     onpreview: () => void;
   }
@@ -34,10 +34,6 @@
 
   let thumbErrorPrimary = $state(false);
   let thumbErrorSecondary = $state(false);
-
-  function thumbUrl(paperlessId: number): string {
-    return `/api/v1/paperless/documents/${paperlessId}/thumb`;
-  }
 
   function differs(a: unknown, b: unknown): boolean {
     if (a === null && b === null) return false;
@@ -139,9 +135,9 @@
             <ExternalLink class="h-3.5 w-3.5" />
           </a>
         </div>
-        {#if primaryMember.paperlessId && !thumbErrorPrimary}
+        {#if primaryMember.thumbnailUrl && !thumbErrorPrimary}
           <img
-            src={thumbUrl(primaryMember.paperlessId)}
+            src={primaryMember.thumbnailUrl}
             alt="Primary: {primaryMember.title}"
             class="border-soft h-[350px] w-full rounded-lg border object-contain"
             onerror={() => (thumbErrorPrimary = true)}
@@ -184,9 +180,9 @@
             <ExternalLink class="h-3.5 w-3.5" />
           </a>
         </div>
-        {#if firstSecondary.paperlessId && !thumbErrorSecondary}
+        {#if firstSecondary.thumbnailUrl && !thumbErrorSecondary}
           <img
-            src={thumbUrl(firstSecondary.paperlessId)}
+            src={firstSecondary.thumbnailUrl}
             alt="Secondary: {firstSecondary.title}"
             class="border-soft h-[350px] w-full rounded-lg border object-contain"
             onerror={() => (thumbErrorSecondary = true)}

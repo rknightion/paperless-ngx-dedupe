@@ -2,19 +2,15 @@
   import { FileText } from 'lucide-svelte';
 
   interface Props {
-    paperlessId: number;
+    src?: string;
     mode?: 'thumb' | 'preview';
   }
 
-  let { paperlessId, mode = 'thumb' }: Props = $props();
+  let { src, mode = 'thumb' }: Props = $props();
 
   let loadState = $state<'loading' | 'loaded' | 'error'>('loading');
 
-  const src = $derived(
-    mode === 'thumb'
-      ? `/api/v1/paperless/documents/${paperlessId}/thumb`
-      : `/api/v1/paperless/documents/${paperlessId}/preview`,
-  );
+  const unavailable = $derived(!src || loadState === 'error');
 
   // Reset load state when src changes
   $effect(() => {
@@ -25,10 +21,10 @@
 
 {#if mode === 'thumb'}
   <div class="relative aspect-[3/4] w-full">
-    {#if loadState === 'loading'}
+    {#if !unavailable && loadState === 'loading'}
       <div class="bg-canvas-deep absolute inset-0 animate-pulse rounded-lg"></div>
     {/if}
-    {#if loadState !== 'error'}
+    {#if !unavailable}
       <img
         {src}
         alt="Document thumbnail"
@@ -47,10 +43,10 @@
   </div>
 {:else}
   <div class="relative h-[400px] w-full">
-    {#if loadState === 'loading'}
+    {#if !unavailable && loadState === 'loading'}
       <div class="bg-canvas-deep absolute inset-0 animate-pulse rounded-lg"></div>
     {/if}
-    {#if loadState !== 'error'}
+    {#if !unavailable}
       <iframe
         {src}
         title="Document preview"

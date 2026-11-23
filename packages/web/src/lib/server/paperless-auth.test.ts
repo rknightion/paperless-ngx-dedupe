@@ -118,31 +118,3 @@ describe('Paperless media authorization', () => {
     expect(requirePaperlessAuthorization(request, basicConfig)).toBeNull();
   });
 });
-
-describe('same-origin document images', () => {
-  const config = { PAPERLESS_API_TOKEN: 'synthetic-token' } as App.Locals['config'];
-  const media = { paperlessId: 7, assetKind: 'thumb' as const };
-  const url = 'http://app.example.test/api/v1/paperless/documents/7/thumb';
-  const statusFor = (headers: Record<string, string>, target = url) =>
-    requirePaperlessAuthorization(new Request(target, { headers }), config, media)?.status;
-
-  it('serves them to pages on the same origin', () => {
-    expect(statusFor({ 'sec-fetch-site': 'same-origin' })).toBeUndefined();
-  });
-
-  it.each([
-    ['another site', { 'sec-fetch-site': 'cross-site' }],
-    ['a sibling subdomain', { 'sec-fetch-site': 'same-site' }],
-    ['a direct navigation', { 'sec-fetch-site': 'none' }],
-    ['a client without fetch metadata', {}],
-  ])('still needs a signed link from %s', (_name, headers) => {
-    expect(statusFor(headers)).toBe(401);
-    const signed = 'http://app.example.test' + createPaperlessMediaUrl(7, 'thumb');
-    expect(statusFor(headers, signed)).toBeUndefined();
-  });
-
-  it('does not extend to routes without a media grant', () => {
-    const request = new Request(url, { headers: { 'sec-fetch-site': 'same-origin' } });
-    expect(requirePaperlessAuthorization(request, config)?.status).toBe(401);
-  });
-});

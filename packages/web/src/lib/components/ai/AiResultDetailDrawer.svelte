@@ -64,13 +64,13 @@
   let isReprocessing = $state(false);
 
   const activeId = $derived(resultId);
-  let detail = $state<AiInboxResultDetail | null>(null);
+  let detail = $state<(AiInboxResultDetail & { previewUrl?: string }) | null>(null);
   let loadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const selection = $derived(activeId ? (fieldSelections.get(activeId) ?? null) : null);
 
   const detailLoader = createAiDetailLoader<AiInboxResultDetail>(
     async (id) => {
-      const response = await fetch(`/api/v1/ai/results/${id}?mode=inbox`);
+      const response = await fetch(`/api/v1/ai/results/${id}?mode=inbox&includeMedia=true`);
       if (!response.ok) throw new Error('Failed to load result');
       const body = await response.json();
       return body.data;
@@ -359,7 +359,7 @@
       {/if}
 
       <!-- Document Preview -->
-      <AiDocumentPreview paperlessId={detail.paperlessId} mode="preview" />
+      <AiDocumentPreview src={detail.previewUrl} mode="preview" />
 
       <!-- Suggestions -->
       {#if selection}

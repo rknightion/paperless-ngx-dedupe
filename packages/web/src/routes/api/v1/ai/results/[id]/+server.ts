@@ -1,4 +1,5 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
+import { createPaperlessMediaUrl, withThumbnailUrl } from '$lib/server/paperless-auth';
 import { getAiInboxResult, getAiResult } from '@paperless-dedupe/core';
 import type { RequestHandler } from './$types';
 
@@ -10,5 +11,9 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
   if (!result) {
     return apiError(ErrorCode.NOT_FOUND, 'AI result not found');
   }
-  return apiSuccess(result);
+  if (url.searchParams.get('includeMedia') !== 'true') return apiSuccess(result);
+  return apiSuccess({
+    ...withThumbnailUrl(result),
+    previewUrl: createPaperlessMediaUrl(result.paperlessId, 'preview'),
+  });
 };

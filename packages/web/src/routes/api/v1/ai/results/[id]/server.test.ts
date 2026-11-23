@@ -43,4 +43,16 @@ describe('AI result detail modes', () => {
     });
     expect(mocks.getAiResult).not.toHaveBeenCalled();
   });
+
+  it('adds signed media links only when media is requested', async () => {
+    mocks.getAiInboxResult.mockReturnValue({ id: 'result-1', paperlessId: 7 });
+    const response = await GET({
+      params: { id: 'result-1' },
+      url: new URL('http://localhost/api/v1/ai/results/result-1?mode=inbox&includeMedia=true'),
+      locals: { db: {} },
+    } as never);
+    const { data } = await response.json();
+    expect(data.thumbnailUrl).toMatch(/\/documents\/7\/thumb\?access=\d+\.[\w-]+$/);
+    expect(data.previewUrl).toMatch(/\/documents\/7\/preview\?access=\d+\.[\w-]+$/);
+  });
 });

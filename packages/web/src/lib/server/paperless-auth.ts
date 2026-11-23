@@ -76,14 +76,6 @@ function hasValidMediaAccess(
   );
 }
 
-/**
- * Browsers set this header themselves, so another site's page cannot claim it. Lists render images
- * from a bare document id, and the application's access check has already run by this point.
- */
-function isSameOriginBrowserRequest(request: Request): boolean {
-  return request.headers.get('sec-fetch-site') === 'same-origin';
-}
-
 export function buildPaperlessAuthHeaders(config: App.Locals['config']): Record<string, string> {
   const authorization = getPaperlessAuthorization(config);
   if (!authorization) {
@@ -101,6 +93,13 @@ export function createPaperlessMediaUrl(
   const expiresAt = now + MEDIA_ACCESS_TTL_MS;
   const signature = signMediaAccess(paperlessId, assetKind, expiresAt);
   return `/api/v1/paperless/documents/${paperlessId}/${assetKind}?access=${expiresAt}.${signature}`;
+}
+
+/** Adds a signed thumbnail link to a row the application is already showing. */
+export function withThumbnailUrl<T extends { paperlessId: number }>(
+  item: T,
+): T & { thumbnailUrl: string } {
+  return { ...item, thumbnailUrl: createPaperlessMediaUrl(item.paperlessId, 'thumb') };
 }
 
 export function requirePaperlessAuthorization(
@@ -122,10 +121,7 @@ export function requirePaperlessAuthorization(
     return null;
   }
 
-  if (
-    mediaAuthorization &&
-    (isSameOriginBrowserRequest(request) || hasValidMediaAccess(request, mediaAuthorization))
-  ) {
+  if (mediaAuthorization && hasValidMediaAccess(request, mediaAuthorization)) {
     return null;
   }
 

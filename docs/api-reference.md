@@ -517,6 +517,8 @@ Returns aggregate document analytics.
 
 ### GET /api/v1/duplicates
 
+Add `includeMedia=true` to include `primaryThumbnailUrl`, a signed link valid for one hour.
+
 Lists duplicate groups.
 
 Query params:
@@ -569,6 +571,8 @@ returns `404 NOT_FOUND`. Creation and deletion use the duplicate-operation lease
 allows the pair to be considered by a later analysis; it does not run analysis itself.
 
 ### GET /api/v1/duplicates/:id
+
+Add `includeMedia=true` to include a signed `thumbnailUrl` on each member, valid for one hour.
 
 Returns group details. Each member includes the nullable file facts `originalFileName`,
 `archiveSerialNumber`, `pageCount`, and `mimeType`, including in light responses. These are
@@ -793,6 +797,8 @@ Invalid scope/body input returns `400 VALIDATION_FAILED`; disabled AI returns
 
 ### GET /api/v1/ai/results
 
+Add `includeMedia=true` to include a signed `thumbnailUrl` on each item, valid for one hour.
+
 Lists AI processing results.
 
 Query params:
@@ -824,6 +830,8 @@ Query params:
 ```
 
 ### GET /api/v1/ai/results/:id
+
+Add `includeMedia=true` to include signed `thumbnailUrl` and `previewUrl`, valid for one hour.
 
 Returns full details for a single result, including token counts and processing time.
 

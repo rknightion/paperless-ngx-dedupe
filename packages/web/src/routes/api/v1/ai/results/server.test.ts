@@ -91,4 +91,16 @@ describe('AI results inbox API', () => {
       },
     );
   });
+
+  it('adds signed thumbnail links only when media is requested', async () => {
+    mocks.getAiResults.mockReturnValue({ items: [{ id: 'legacy', paperlessId: 7 }], total: 1 });
+    const response = await GET({
+      url: new URL('http://localhost/api/v1/ai/results?includeMedia=true'),
+      locals: { db: {} },
+    } as never);
+    const { data } = await response.json();
+    expect(data[0].thumbnailUrl).toMatch(
+      /^\/api\/v1\/paperless\/documents\/7\/thumb\?access=\d+\.[\w-]+$/,
+    );
+  });
 });

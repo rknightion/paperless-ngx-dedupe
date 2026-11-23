@@ -1,4 +1,5 @@
 import { apiSuccess, apiError, ErrorCode } from '$lib/server/api';
+import { createPaperlessMediaUrl } from '$lib/server/paperless-auth';
 import {
   getDuplicateGroups,
   listDuplicateInbox,
@@ -63,7 +64,17 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   }
 
   const result = getDuplicateGroups(locals.db, filtersResult.data, paginationResult.data);
-  return apiSuccess(result.items, {
+  const items =
+    url.searchParams.get('includeMedia') === 'true'
+      ? result.items.map((group) => ({
+          ...group,
+          primaryThumbnailUrl:
+            group.primaryPaperlessId === null
+              ? null
+              : createPaperlessMediaUrl(group.primaryPaperlessId, 'thumb'),
+        }))
+      : result.items;
+  return apiSuccess(items, {
     total: result.total,
     totalMemberCount: result.totalMemberCount,
     limit: result.limit,
