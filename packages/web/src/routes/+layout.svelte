@@ -62,20 +62,21 @@
   async function openDrawer(): Promise<void> {
     sidebarOpen = true;
     await tick();
-    closeButton?.focus();
+    if (contentInert) closeButton?.focus();
   }
 
-  function closeDrawer(restoreFocus = true): void {
-    if (!sidebarOpen) return;
+  async function closeDrawer(): Promise<void> {
     sidebarOpen = false;
-    if (restoreFocus) menuButton?.focus();
+    // The opener is inert until Svelte updates the background after closing.
+    await tick();
+    if (!sidebarOpen && narrow) menuButton?.focus();
   }
 
   function onWindowKeydown(event: KeyboardEvent): void {
     if (!sidebarOpen || !narrow) return;
     if (event.key === 'Escape') {
       event.preventDefault();
-      closeDrawer();
+      void closeDrawer();
       return;
     }
     if (event.key !== 'Tab' || !drawer) return;
@@ -143,13 +144,16 @@
         class="bg-inverse/60 fixed inset-0 z-30 md:hidden"
         tabindex="-1"
         aria-hidden="true"
-        onclick={() => closeDrawer()}
+        onclick={() => void closeDrawer()}
       ></button>
     {/if}
 
-    <aside
+    <div
       bind:this={drawer}
       id="app-sidebar"
+      role={contentInert ? 'dialog' : 'complementary'}
+      aria-modal={contentInert || undefined}
+      aria-label={contentInert ? 'Navigation' : undefined}
       inert={drawerInert}
       class="border-sidebar-border bg-sidebar text-sidebar-ink fixed top-0 left-0 z-40 flex h-full w-60 flex-col border-r transition-transform duration-200 ease-out md:static md:z-auto md:w-50 md:shrink-0 md:translate-x-0 md:shadow-none {sidebarOpen
         ? 'translate-x-0 shadow-lg'
@@ -184,7 +188,7 @@
           bind:this={closeButton}
           type="button"
           class="text-muted hover:text-ink ml-auto flex h-7 w-7 shrink-0 items-center justify-center md:hidden"
-          onclick={() => closeDrawer()}
+          onclick={() => void closeDrawer()}
           aria-label="Close navigation"
         >
           <XIcon size={16} />
@@ -211,7 +215,7 @@
       <div class="border-sidebar-border flex flex-col gap-2 border-t px-4 py-2.5">
         <ThemeToggle />
       </div>
-    </aside>
+    </div>
 
     <div class="contents" inert={contentInert}>
       <div class="flex min-w-0 flex-1 flex-col">
