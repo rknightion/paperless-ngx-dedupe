@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto, invalidateAll } from '$app/navigation';
-  import { JobStatusCard } from '$lib/components';
+  import { JobStatusCard, Select } from '$lib/components';
   import { Trash2 } from 'lucide-svelte';
 
   let { data } = $props();
@@ -29,6 +29,8 @@
     { value: 'failed', label: 'Failed' },
     { value: 'cancelled', label: 'Cancelled' },
   ];
+
+  const pageSizeOptions = ['10', '25', '50', '100'].map((size) => ({ value: size, label: size }));
 
   function applyFilter(key: string, value: string) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -99,52 +101,33 @@
   <!-- Filter Bar -->
   <div class="panel">
     <div class="flex flex-wrap items-end gap-4">
-      <div>
-        <label for="type-filter" class="text-ink block text-sm font-medium">Type</label>
-        <select
-          id="type-filter"
-          onchange={(e) => applyFilter('type', (e.target as HTMLSelectElement).value)}
-          value={data.filters.type ?? ''}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        >
-          {#each jobTypeOptions as opt (opt.value)}
-            <option value={opt.value}>{opt.label}</option>
-          {/each}
-        </select>
-      </div>
+      <Select
+        id="type-filter"
+        label="Type"
+        options={jobTypeOptions}
+        value={data.filters.type ?? ''}
+        onchange={(v) => applyFilter('type', v)}
+      />
 
-      <div>
-        <label for="status-filter" class="text-ink block text-sm font-medium">Status</label>
-        <select
-          id="status-filter"
-          onchange={(e) => applyFilter('status', (e.target as HTMLSelectElement).value)}
-          value={data.filters.status ?? ''}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        >
-          {#each jobStatusOptions as opt (opt.value)}
-            <option value={opt.value}>{opt.label}</option>
-          {/each}
-        </select>
-      </div>
+      <Select
+        id="status-filter"
+        label="Status"
+        options={jobStatusOptions}
+        value={data.filters.status ?? ''}
+        onchange={(v) => applyFilter('status', v)}
+      />
 
-      <div>
-        <label for="page-size-filter" class="text-ink block text-sm font-medium">
-          Jobs per page
-        </label>
-        <select
-          id="page-size-filter"
-          onchange={(e) => applyFilter('pageSize', (e.target as HTMLSelectElement).value)}
-          value={String(data.filters.pageSize)}
-          class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent mt-1 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-        >
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
-      </div>
+      <Select
+        id="page-size-filter"
+        label="Jobs per page"
+        options={pageSizeOptions}
+        value={String(data.filters.pageSize)}
+        onchange={(v) => applyFilter('pageSize', v)}
+      />
 
       <div class="ml-auto">
+        <!-- Native button: this is a soft-tinted destructive action and Button deliberately
+             has no semantic-tint variant; destructive would restyle it to a solid fill. -->
         <button
           onclick={clearHistory}
           disabled={isClearing || data.counts.clearable === 0}

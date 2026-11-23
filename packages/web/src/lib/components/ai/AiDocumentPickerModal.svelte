@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
-  import { Search, FileText, Loader2 } from 'lucide-svelte';
+  import { FileText, Loader2 } from 'lucide-svelte';
+  import { Button, Checkbox, SearchInput } from '$lib/components';
 
   interface DocumentSummary {
     id: string;
@@ -144,24 +145,14 @@
     <!-- Search bar -->
     <div class="border-soft border-b px-6 py-3">
       <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <Search
-            class="text-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
-          />
-          <input
-            type="text"
-            bind:value={searchQuery}
-            placeholder="Search by document title..."
-            onkeydown={handleSearchKeydown}
-            class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent w-full rounded-lg border py-2 pr-3 pl-8 text-sm focus:ring-1 focus:outline-none"
-          />
-        </div>
-        <button
-          onclick={handleSearchClick}
-          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
-        >
-          Search
-        </button>
+        <SearchInput
+          bind:value={searchQuery}
+          placeholder="Search by document title..."
+          ariaLabel="Search by document title"
+          onkeydown={handleSearchKeydown}
+          class="flex-1"
+        />
+        <Button onclick={handleSearchClick}>Search</Button>
       </div>
     </div>
 
@@ -196,11 +187,10 @@
           <thead>
             <tr class="border-soft bg-canvas/60 border-b">
               <th class="w-10 px-4 py-3">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={allOnPageSelected}
+                  ariaLabel="Select all documents on this page"
                   onchange={toggleAllOnPage}
-                  class="rounded"
                 />
               </th>
               <th class="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase">
@@ -231,13 +221,15 @@
                 onclick={() => toggleDocument(doc.id)}
               >
                 <td class="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(doc.id)}
-                    onchange={() => toggleDocument(doc.id)}
-                    onclick={(e) => e.stopPropagation()}
-                    class="rounded"
-                  />
+                  <!-- The wrapper keeps a click on the checkbox from also toggling the row. -->
+                  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+                  <span class="inline-flex" onclick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(doc.id)}
+                      ariaLabel={`Select ${doc.title}`}
+                      onchange={() => toggleDocument(doc.id)}
+                    />
+                  </span>
                 </td>
                 <td class="text-ink max-w-[200px] truncate px-4 py-3 font-medium">{doc.title}</td>
                 <td class="text-muted hidden px-4 py-3 md:table-cell">
@@ -261,21 +253,23 @@
           Showing {offset + 1}–{Math.min(offset + LIMIT, total)} of {total}
         </span>
         <div class="flex items-center gap-1">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onclick={() => goToPage(currentPage - 1)}
             disabled={currentPage <= 1}
-            class="border-soft text-muted hover:text-ink disabled:text-muted/50 rounded-lg border px-3 py-1.5 text-sm disabled:cursor-not-allowed"
           >
             Prev
-          </button>
+          </Button>
           <span class="text-muted px-2 text-sm">Page {currentPage} of {totalPages}</span>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onclick={() => goToPage(currentPage + 1)}
             disabled={currentPage >= totalPages}
-            class="border-soft text-muted hover:text-ink disabled:text-muted/50 rounded-lg border px-3 py-1.5 text-sm disabled:cursor-not-allowed"
           >
             Next
-          </button>
+          </Button>
         </div>
       </div>
     {/if}
@@ -290,19 +284,10 @@
         {/if}
       </span>
       <div class="flex items-center gap-3">
-        <button
-          onclick={oncancel}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          onclick={handleSubmit}
-          disabled={selectedIds.size === 0}
-          class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
-        >
+        <Button variant="outline" onclick={oncancel}>Cancel</Button>
+        <Button onclick={handleSubmit} disabled={selectedIds.size === 0}>
           Process {selectedIds.size} Document{selectedIds.size === 1 ? '' : 's'}
-        </button>
+        </Button>
       </div>
     </div>
   </div>

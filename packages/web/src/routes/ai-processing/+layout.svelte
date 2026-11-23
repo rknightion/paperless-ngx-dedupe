@@ -2,7 +2,7 @@
   import { untrack, setContext } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
-  import { ProgressBar, ConfirmDialog, Tabs } from '$lib/components';
+  import { Button, ProgressBar, ConfirmDialog, Tabs } from '$lib/components';
   import AiToastContainer from '$lib/components/ai/AiToastContainer.svelte';
   import AiDocumentPickerModal from '$lib/components/ai/AiDocumentPickerModal.svelte';
   import { addToast, resetStore } from '$lib/components/ai/AiReviewStore.svelte';
@@ -288,34 +288,25 @@
       <p class="text-muted text-sm">Extract and apply document metadata using AI.</p>
     </div>
     <div class="relative flex gap-2">
-      <button
-        onclick={handleProcessNew}
-        disabled={isProcessing}
-        class="bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
-      >
-        {#if isProcessing}
-          <Loader2 class="h-4 w-4 animate-spin" />
-          Processing...
-        {:else}
-          <Play class="h-4 w-4" />
-          {isResumable ? 'Resume' : 'Process New'}
-        {/if}
-      </button>
+      <Button onclick={handleProcessNew} loading={isProcessing} icon={Play}>
+        {isProcessing ? 'Processing...' : isResumable ? 'Resume' : 'Process New'}
+      </Button>
       <div class="relative">
-        <button
-          aria-label="Choose AI processing scope"
+        <Button
+          variant="outline"
+          icon={ChevronDown}
+          ariaLabel="Choose AI processing scope"
           onclick={() => (showProcessMenu = !showProcessMenu)}
           disabled={isProcessing}
-          class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-        >
-          <ChevronDown class="h-4 w-4" />
-        </button>
+        />
         {#if showProcessMenu}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="border-soft bg-surface absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border shadow-lg"
             onmouseleave={() => (showProcessMenu = false)}
           >
+            <!-- Menu items below stay inline: Button is a centred, rounded control and cannot
+                 express a full-bleed, left-aligned row inside a popover menu. -->
             <button
               onclick={handleProcessNew}
               class="hover:bg-canvas text-ink flex w-full items-center gap-2 px-4 py-2.5 text-sm"
@@ -478,13 +469,7 @@
           <Loader2 class="text-accent h-4 w-4 animate-spin" />
           <span class="text-ink">Processing documents...</span>
         </div>
-        <button
-          onclick={cancelCurrentJob}
-          class="border-soft text-muted hover:text-ink hover:bg-canvas flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-        >
-          <Pause class="h-4 w-4" />
-          Pause
-        </button>
+        <Button variant="outline" size="sm" icon={Pause} onclick={cancelCurrentJob}>Pause</Button>
       </div>
       <div class="mt-3">
         <ProgressBar progress={jobProgress} phaseProgress={jobPhaseProgress} message={jobMessage} />
@@ -502,13 +487,15 @@
         <p class="text-ink text-sm font-medium">Processing failed</p>
         <p class="text-ink-light mt-0.5 text-sm break-words">{jobError}</p>
       </div>
-      <button
-        onclick={() => (jobError = null)}
-        class="text-muted hover:text-ink -mt-0.5 shrink-0 rounded-lg p-1 transition-colors"
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={X}
+        ariaLabel="Dismiss"
         title="Dismiss"
-      >
-        <X class="h-4 w-4" />
-      </button>
+        class="-mt-0.5 shrink-0"
+        onclick={() => (jobError = null)}
+      />
     </div>
   {/if}
 
@@ -525,13 +512,15 @@
           Click "{isResumable ? 'Resume' : 'Process New'}" to continue from where you left off.
         </p>
       </div>
-      <button
-        onclick={() => (showResumeHint = false)}
-        class="text-muted hover:text-ink -mt-0.5 shrink-0 rounded-lg p-1 transition-colors"
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={X}
+        ariaLabel="Dismiss"
         title="Dismiss"
-      >
-        <X class="h-4 w-4" />
-      </button>
+        class="-mt-0.5 shrink-0"
+        onclick={() => (showResumeHint = false)}
+      />
     </div>
   {/if}
 

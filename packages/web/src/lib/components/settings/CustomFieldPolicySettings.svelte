@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { Button, Checkbox, TextField } from '$lib/components';
   import {
     createCustomFieldSelections,
     isCustomFieldSelectionDisabled,
@@ -88,12 +89,7 @@
 
 <div class="w-full">
   <label class="text-muted flex items-center gap-2 text-sm">
-    <input
-      type="checkbox"
-      bind:checked={enabled}
-      disabled={loading || (selectedCount === 0 && !enabled)}
-      class="rounded"
-    />
+    <Checkbox bind:checked={enabled} disabled={loading || (selectedCount === 0 && !enabled)} />
     Custom Fields
   </label>
   <p class="text-muted mt-1 text-xs">
@@ -122,12 +118,11 @@
         {#if field}
           <div class="border-soft border-b pb-3 last:border-0 last:pb-0">
             <label class="text-ink flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={selection.selected}
                 onchange={() => toggle(selection.fieldId)}
                 disabled={isCustomFieldSelectionDisabled(selection, selectedCount)}
-                class="mt-0.5 rounded"
+                class="mt-0.5"
               />
               <span>
                 <span class="font-medium">{field.name}</span>
@@ -135,20 +130,18 @@
               </span>
             </label>
             {#if selection.selected}
-              <label
-                class="text-muted mt-2 block text-xs"
-                for={`custom-field-guidance-${field.id}`}
-              >
-                Optional extraction guidance
-              </label>
-              <input
+              <TextField
                 id={`custom-field-guidance-${field.id}`}
-                type="text"
+                label="Optional extraction guidance"
                 value={selection.guidance}
-                oninput={(event) => updateGuidance(selection.fieldId, event.currentTarget.value)}
-                maxlength="500"
+                oninput={(event) =>
+                  updateGuidance(
+                    selection.fieldId,
+                    (event.currentTarget as HTMLInputElement).value,
+                  )}
+                maxlength={500}
                 placeholder="For example: use the final amount due"
-                class="border-soft bg-surface text-ink focus:border-accent mt-1 w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none"
+                class="mt-2"
               />
             {/if}
           </div>
@@ -157,22 +150,12 @@
     </div>
 
     <div class="mt-3 flex items-center gap-3">
-      <button
-        type="button"
-        onclick={savePolicy}
-        disabled={saving}
-        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-      >
+      <Button size="sm" onclick={savePolicy} disabled={saving}>
         {saving ? 'Saving…' : `Save selected fields (${selectedCount}/50)`}
-      </button>
-      <button
-        type="button"
-        onclick={loadPolicy}
-        disabled={saving}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1.5 text-sm"
-      >
+      </Button>
+      <Button variant="outline" size="sm" onclick={loadPolicy} disabled={saving}>
         Refresh from Paperless
-      </button>
+      </Button>
     </div>
   {/if}
 

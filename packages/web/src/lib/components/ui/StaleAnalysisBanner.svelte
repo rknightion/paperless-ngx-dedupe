@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AlertTriangle } from 'lucide-svelte';
+  import Button from './Button.svelte';
 
   interface Props {
     onrunAnalysis?: () => void;
@@ -16,6 +17,8 @@
     <span>
       Analysis settings have changed since the last run. Results may be incomplete.
       {#if showRunButton && onrunAnalysis}
+        <!-- Inline text link inside a sentence: Button has no link variant and always
+             renders as a padded block, so this stays a native button. -->
         <button
           onclick={onrunAnalysis}
           class="text-accent hover:text-accent-hover ml-1 font-medium underline underline-offset-2"
@@ -36,12 +39,7 @@
           rebuild is recommended to ensure accurate results.
         </p>
         {#if showRunButton && onrunAnalysis}
-          <button
-            onclick={onrunAnalysis}
-            class="bg-accent hover:bg-accent-hover text-on-accent mt-3 rounded-lg px-4 py-2 text-sm font-medium"
-          >
-            Run Full Analysis
-          </button>
+          <Button class="mt-3" onclick={onrunAnalysis}>Run Full Analysis</Button>
         {/if}
       </div>
     </div>

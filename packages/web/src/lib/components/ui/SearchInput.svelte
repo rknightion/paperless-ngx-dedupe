@@ -11,6 +11,7 @@
     disabled?: boolean;
     class?: string;
     onchange?: (value: string) => void;
+    onkeydown?: (e: KeyboardEvent) => void;
   }
 
   let {
@@ -22,6 +23,7 @@
     disabled = false,
     class: className = '',
     onchange,
+    onkeydown,
   }: Props = $props();
 
   function clear() {
@@ -40,6 +42,7 @@
   </span>
 
   <input
+    {onkeydown}
     {id}
     {name}
     type="search"

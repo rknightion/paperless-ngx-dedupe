@@ -1,6 +1,7 @@
 <script lang="ts">
   import { afterNavigate, goto } from '$app/navigation';
   import { page } from '$app/state';
+  import { Button, Select, TextField } from '$lib/components';
   import {
     removeLibraryFilterHref,
     scalarSubmitInsightKeys,
@@ -135,19 +136,8 @@
       </p>
     </div>
     <div class="flex flex-wrap gap-2">
-      <a
-        href={exportHref}
-        download
-        class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        Export filtered CSV
-      </a>
-      <a
-        href="/documents?library=true"
-        class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        Clear filters
-      </a>
+      <Button variant="outline" href={exportHref} download>Export filtered CSV</Button>
+      <Button variant="outline" href="/documents?library=true">Clear filters</Button>
     </div>
   </div>
 
@@ -175,136 +165,109 @@
 
   <form class="space-y-4" onsubmit={applyFilters}>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <label class="text-ink text-sm font-medium lg:col-span-2">
-        Search title or OCR
-        <input
-          name="text"
-          value={query.text ?? ''}
-          maxlength="200"
-          placeholder="Invoice number, title or OCR phrase"
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        />
-      </label>
+      <TextField
+        label="Search title or OCR"
+        name="text"
+        value={query.text ?? ''}
+        maxlength={200}
+        placeholder="Invoice number, title or OCR phrase"
+        class="lg:col-span-2"
+      />
 
-      <label class="text-ink text-sm font-medium">
-        OCR content
-        <select
-          name="missingOcr"
-          value={query.missingOcr === true ? 'true' : query.missingOcr === false ? 'false' : ''}
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        >
-          <option value="">Any coverage</option>
-          <option value="false">Present</option>
-          <option value="true">Missing</option>
-        </select>
-      </label>
+      <Select
+        name="missingOcr"
+        label="OCR content"
+        value={query.missingOcr === true ? 'true' : query.missingOcr === false ? 'false' : ''}
+        options={[
+          { value: '', label: 'Any coverage' },
+          { value: 'false', label: 'Present' },
+          { value: 'true', label: 'Missing' },
+        ]}
+      />
 
-      <label class="text-ink text-sm font-medium">
-        Correspondent
-        <input
-          name="correspondent"
-          value={query.correspondent ?? ''}
-          maxlength="200"
-          placeholder="Exact correspondent"
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        />
-      </label>
+      <TextField
+        label="Correspondent"
+        name="correspondent"
+        value={query.correspondent ?? ''}
+        maxlength={200}
+        placeholder="Exact correspondent"
+      />
 
-      <label class="text-ink text-sm font-medium">
-        Document type
-        <input
-          name="documentType"
-          value={query.documentType ?? ''}
-          maxlength="200"
-          placeholder="Exact document type"
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        />
-      </label>
+      <TextField
+        label="Document type"
+        name="documentType"
+        value={query.documentType ?? ''}
+        maxlength={200}
+        placeholder="Exact document type"
+      />
 
-      <label class="text-ink text-sm font-medium">
-        Tag
-        <input
-          name="tag"
-          value={query.tag ?? ''}
-          maxlength="200"
-          placeholder="Exact tag"
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        />
-      </label>
+      <TextField
+        label="Tag"
+        name="tag"
+        value={query.tag ?? ''}
+        maxlength={200}
+        placeholder="Exact tag"
+      />
 
-      <label class="text-ink text-sm font-medium">
-        Duplicate involvement
-        <select
-          name="duplicate"
-          value={query.duplicate}
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        >
-          <option value="any">Any</option>
-          <option value="involved">In a duplicate group</option>
-          <option value="not-involved">Not in a duplicate group</option>
-        </select>
-      </label>
+      <Select
+        name="duplicate"
+        label="Duplicate involvement"
+        value={query.duplicate}
+        options={[
+          { value: 'any', label: 'Any' },
+          { value: 'involved', label: 'In a duplicate group' },
+          { value: 'not-involved', label: 'Not in a duplicate group' },
+        ]}
+      />
 
-      <label class="text-ink text-sm font-medium">
-        AI review status
-        <select
-          name="aiStatus"
-          value={query.aiStatus ?? ''}
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        >
-          <option value="">Any status</option>
-          <option value="unprocessed">Unprocessed</option>
-          <option value="pending_review">Pending review</option>
-          <option value="applied">Applied</option>
-          <option value="partial">Partially applied</option>
-          <option value="reverted">Reverted</option>
-          <option value="rejected">Rejected</option>
-          <option value="failed">Failed</option>
-          <option value="skipped">Skipped</option>
-        </select>
-      </label>
+      <Select
+        name="aiStatus"
+        label="AI review status"
+        value={query.aiStatus ?? ''}
+        options={[
+          { value: '', label: 'Any status' },
+          { value: 'unprocessed', label: 'Unprocessed' },
+          { value: 'pending_review', label: 'Pending review' },
+          { value: 'applied', label: 'Applied' },
+          { value: 'partial', label: 'Partially applied' },
+          { value: 'reverted', label: 'Reverted' },
+          { value: 'rejected', label: 'Rejected' },
+          { value: 'failed', label: 'Failed' },
+          { value: 'skipped', label: 'Skipped' },
+        ]}
+      />
 
-      <label class="text-ink text-sm font-medium">
-        AI freshness
-        <select
-          name="freshness"
-          value={query.freshness ?? ''}
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        >
-          <option value="">Any freshness</option>
-          <option value="fresh">Fresh</option>
-          <option value="stale">Stale</option>
-        </select>
-      </label>
+      <Select
+        name="freshness"
+        label="AI freshness"
+        value={query.freshness ?? ''}
+        options={[
+          { value: '', label: 'Any freshness' },
+          { value: 'fresh', label: 'Fresh' },
+          { value: 'stale', label: 'Stale' },
+        ]}
+      />
 
-      <label class="text-ink text-sm font-medium">
-        Custom field ID
-        <input
-          name="customFieldId"
-          type="number"
-          min="1"
-          step="1"
-          value={query.customFieldId ?? ''}
-          placeholder="Field ID"
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2"
-        />
-      </label>
+      <TextField
+        name="customFieldId"
+        label="Custom field ID"
+        type="number"
+        min="1"
+        step="1"
+        value={query.customFieldId ?? ''}
+        placeholder="Field ID"
+      />
 
-      <label class="text-ink text-sm font-medium sm:col-span-2">
-        Custom field value
-        <input
-          name="customFieldValue"
-          value={customFieldValue}
-          maxlength="2000"
-          placeholder="&quot;text&quot;, 42, true, null or [1,2]"
-          aria-label="Custom field value"
-          aria-describedby="custom-field-value-help"
-          class="border-soft bg-surface mt-1 w-full rounded-lg border px-3 py-2 font-mono"
-        />
-        <span id="custom-field-value-help" class="text-muted mt-1 block text-xs">
-          Canonical JSON. A value requires a custom field ID.
-        </span>
-      </label>
+      <TextField
+        label="Custom field value"
+        name="customFieldValue"
+        value={customFieldValue}
+        maxlength={2000}
+        placeholder="&quot;text&quot;, 42, true, null or [1,2]"
+        hint="Canonical JSON. A value requires a custom field ID."
+        mono
+        class="sm:col-span-2"
+      />
     </div>
 
     <div class="flex justify-end">
@@ -317,13 +280,7 @@
           Loading document library…
         </span>
       {/if}
-      <button
-        type="submit"
-        disabled={submitting}
-        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        Apply library filters
-      </button>
+      <Button type="submit" disabled={submitting}>Apply library filters</Button>
     </div>
   </form>
 </section>

@@ -2,7 +2,7 @@
   import { invalidateAll, goto } from '$app/navigation';
   import { page } from '$app/state';
   import { browser } from '$app/env';
-  import { ProgressBar } from '$lib/components';
+  import { Button, Checkbox, ProgressBar, Select, TextField } from '$lib/components';
   import AiResultList from '$lib/components/ai/AiResultList.svelte';
   import AiBulkActionBar from '$lib/components/ai/AiBulkActionBar.svelte';
   import AiResultDetailDrawer from '$lib/components/ai/AiResultDetailDrawer.svelte';
@@ -30,6 +30,24 @@
   import type { AiFailureCategory } from '@paperless-dedupe/core';
 
   let { data } = $props();
+
+  const PAGE_SIZE_OPTIONS = [
+    { value: '20', label: '20 / page' },
+    { value: '50', label: '50 / page' },
+    { value: '100', label: '100 / page' },
+  ];
+  const FILTER_PAGE_SIZE_OPTIONS = [
+    { value: '20', label: '20' },
+    { value: '50', label: '50' },
+    { value: '100', label: '100' },
+  ];
+  const FAILURE_CATEGORY_OPTIONS = [
+    { value: '', label: 'All categories' },
+    { value: 'temporary', label: 'Temporary service issue' },
+    { value: 'no_content', label: 'No OCR content' },
+    { value: 'extraction', label: 'Extraction could not be completed' },
+    { value: 'configuration', label: 'Configuration needs attention' },
+  ];
   const readOnly = $derived(data.readOnly === true);
 
   // ── Bulk Apply State ──
@@ -315,10 +333,10 @@
     goto(`/ai-processing/review?${params.toString()}`);
   }
 
-  function changePageSize(e: Event) {
+  function changePageSize(value: string) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams(page.url.searchParams.toString());
-    params.set('limit', (e.target as HTMLSelectElement).value);
+    params.set('limit', value);
     params.delete('cursor');
     goto(`/ai-processing/review?${params.toString()}`);
   }
@@ -390,6 +408,7 @@
 {/if}
 
 <form method="GET" class="panel mb-4 flex flex-wrap items-end gap-3">
+  <!-- Hidden inputs carry GET state through the filter form; they have no visible control. -->
   <input type="hidden" name="queue" value={data.queue} />
   {#if data.documentId}
     <input type="hidden" name="documentId" value={data.documentId} />
@@ -397,54 +416,36 @@
   {#if data.returnTo}
     <input type="hidden" name="returnTo" value={data.returnTo} />
   {/if}
-  <label class="grid gap-1 text-sm">
-    <span class="text-muted text-xs font-medium">Search documents</span>
-    <input
-      bind:this={searchInputRef}
-      name="search"
-      value={data.search ?? ''}
-      class="border-soft bg-surface text-ink rounded-lg border px-3 py-2"
-    />
-  </label>
-  <label class="grid gap-1 text-sm">
-    <span class="text-muted text-xs font-medium">Page size</span>
-    <select
-      name="limit"
-      value={data.limit}
-      class="border-soft bg-surface text-ink rounded-lg border px-3 py-2"
-    >
-      <option value="20">20</option>
-      <option value="50">50</option>
-      <option value="100">100</option>
-    </select>
-  </label>
+  <TextField
+    bind:ref={searchInputRef}
+    label="Search documents"
+    name="search"
+    value={data.search ?? ''}
+  />
+  <Select
+    name="limit"
+    label="Page size"
+    value={String(data.limit)}
+    options={FILTER_PAGE_SIZE_OPTIONS}
+  />
   {#if data.queue === 'review'}
-    <label class="flex items-center gap-2 pb-2 text-sm">
-      <input type="checkbox" name="changedOnly" value="true" checked={data.changedOnly} />
-      Changed fields only
-    </label>
+    <Checkbox
+      name="changedOnly"
+      value="true"
+      label="Changed fields only"
+      checked={data.changedOnly === true}
+      class="pb-2"
+    />
   {/if}
   {#if data.queue === 'failures'}
-    <label class="grid gap-1 text-sm">
-      <span class="text-muted text-xs font-medium">Failure category</span>
-      <select
-        name="failureCategory"
-        value={data.failureCategory ?? ''}
-        class="border-soft bg-surface text-ink rounded-lg border px-3 py-2"
-      >
-        <option value="">All categories</option>
-        <option value="temporary">Temporary service issue</option>
-        <option value="no_content">No OCR content</option>
-        <option value="extraction">Extraction could not be completed</option>
-        <option value="configuration">Configuration needs attention</option>
-      </select>
-    </label>
+    <Select
+      name="failureCategory"
+      label="Failure category"
+      value={data.failureCategory ?? ''}
+      options={FAILURE_CATEGORY_OPTIONS}
+    />
   {/if}
-  <button
-    class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-4 py-2 text-sm font-medium"
-  >
-    Apply filters
-  </button>
+  <Button type="submit">Apply filters</Button>
 </form>
 
 <!-- Bulk Action Bar -->
@@ -458,44 +459,26 @@
     <fieldset class="panel mt-3 flex flex-wrap items-end gap-4">
       <legend class="text-ink px-1 text-sm font-semibold">Fields for selected documents</legend>
       {#if data.extractEnabled.title}
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={batchSelection.title} />
-          Title
-        </label>
+        <Checkbox bind:checked={batchSelection.title} label="Title" />
       {/if}
       {#if data.extractEnabled.correspondent}
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={batchSelection.correspondent} />
-          Correspondent
-        </label>
+        <Checkbox bind:checked={batchSelection.correspondent} label="Correspondent" />
       {/if}
       {#if data.extractEnabled.documentType}
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={batchSelection.documentType} />
-          Document type
-        </label>
+        <Checkbox bind:checked={batchSelection.documentType} label="Document type" />
       {/if}
       {#if data.extractEnabled.tags}
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={batchSelection.tags} />
-          Tags
-        </label>
+        <Checkbox bind:checked={batchSelection.tags} label="Tags" />
       {/if}
       {#if data.extractEnabled.processedTag}
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={batchSelection.processedTag} />
-          Processed tag
-        </label>
+        <Checkbox bind:checked={batchSelection.processedTag} label="Processed tag" />
       {/if}
       {#if data.extractEnabled.customFields}
-        <label class="grid gap-1 text-sm">
-          <span class="text-muted text-xs">Custom field IDs (comma-separated)</span>
-          <input
-            bind:value={batchCustomFieldIds}
-            inputmode="numeric"
-            class="border-soft bg-surface text-ink rounded-lg border px-3 py-2"
-          />
-        </label>
+        <TextField
+          label="Custom field IDs (comma-separated)"
+          bind:value={batchCustomFieldIds}
+          inputmode="numeric"
+        />
       {/if}
     </fieldset>
   {/if}
@@ -544,35 +527,31 @@
             Showing <span class="text-ink font-medium">{results.length}</span>
             of <span class="text-ink font-medium">{data.total}</span>
           </p>
-          <select
-            aria-label="Results per page"
-            value={data.limit}
+          <Select
+            ariaLabel="Results per page"
+            value={String(data.limit)}
+            options={PAGE_SIZE_OPTIONS}
             onchange={changePageSize}
-            class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1 text-sm focus:ring-1 focus:outline-none"
-          >
-            <option value="20">20 / page</option>
-            <option value="50">50 / page</option>
-            <option value="100">100 / page</option>
-          </select>
+          />
         </div>
         {#if data.previousCursor || data.nextCursor}
           <div class="flex items-center gap-1">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
+              icon={ChevronLeft}
+              ariaLabel="Previous AI results"
               onclick={() => goToCursor(data.previousCursor)}
               disabled={!data.previousCursor}
-              aria-label="Previous AI results"
-              class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-            >
-              <ChevronLeft class="h-4 w-4" />
-            </button>
-            <button
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              icon={ChevronRight}
+              ariaLabel="Next AI results"
               onclick={() => goToCursor(data.nextCursor)}
               disabled={!data.nextCursor}
-              aria-label="Next AI results"
-              class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-            >
-              <ChevronRight class="h-4 w-4" />
-            </button>
+            />
           </div>
         {/if}
       </div>

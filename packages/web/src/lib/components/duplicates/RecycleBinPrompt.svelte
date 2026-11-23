@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { ConfirmDialog } from '$lib/components';
+  import { Button, ConfirmDialog } from '$lib/components';
   import UndoDeletion, { type UndoDeletionRun } from './UndoDeletion.svelte';
 
   const readOnly = $derived(page.data.readOnly === true);
@@ -88,14 +88,15 @@
         Recycle bin emptied successfully.
       </div>
     {:else}
-      <button
+      <Button
+        variant="destructive"
+        class="mt-3"
         onclick={() => (showEmptyConfirm = true)}
         disabled={readOnly || isEmptying}
         title={readOnly ? 'Paperless is read-only' : undefined}
-        class="bg-ember text-on-accent mt-3 rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
       >
         {isEmptying ? 'Emptying...' : 'Empty Recycle Bin'}
-      </button>
+      </Button>
     {/if}
 
     {#if emptyResult && !emptyResult.success}
@@ -111,12 +112,7 @@
 
   {#if onclose}
     <div class="mt-4 flex justify-end">
-      <button
-        onclick={onclose}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
-      >
-        Close
-      </button>
+      <Button variant="outline" onclick={onclose}>Close</Button>
     </div>
   {/if}
 </div>

@@ -3,6 +3,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
   import { SvelteSet } from 'svelte/reactivity';
+  import { Button, Select } from '$lib/components';
   import type { AiStats, UnprocessedDocument, DetailedCostEstimate } from '@paperless-dedupe/core';
   import {
     FileText,
@@ -23,6 +24,12 @@
   import QueueFilterBar from '$lib/components/ai/QueueFilterBar.svelte';
 
   let { data } = $props();
+
+  const PAGE_SIZE_OPTIONS = [
+    { value: '20', label: '20 / page' },
+    { value: '50', label: '50 / page' },
+    { value: '100', label: '100 / page' },
+  ];
 
   interface AiLayoutContext {
     readonly isProcessing: boolean;
@@ -75,10 +82,10 @@
     goto(`/ai-processing/queue?${params.toString()}`);
   }
 
-  function changePageSize(e: Event) {
+  function changePageSize(value: string) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams(page.url.searchParams.toString());
-    params.set('limit', (e.target as HTMLSelectElement).value);
+    params.set('limit', value);
     params.set('offset', '0');
     goto(`/ai-processing/queue?${params.toString()}`);
   }
@@ -203,24 +210,19 @@
       </div>
       <div class="flex gap-2">
         {#if selectedDocIds.size > 0}
-          <button
-            onclick={handleProcessSelected}
-            disabled={layoutCtx.isProcessing}
-            class="bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
-          >
-            <Play class="h-4 w-4" />
+          <Button icon={Play} onclick={handleProcessSelected} disabled={layoutCtx.isProcessing}>
             Process {selectedDocIds.size} Selected
-          </button>
+          </Button>
         {/if}
         {#if data.unprocessed.total > 0}
-          <button
+          <Button
+            variant="outline"
+            icon={Play}
             onclick={handleProcessAllUnprocessed}
             disabled={layoutCtx.isProcessing}
-            class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
           >
-            <Play class="h-4 w-4" />
             Process All Unprocessed
-          </button>
+          </Button>
         {/if}
       </div>
     </div>
@@ -274,13 +276,15 @@
             </p>
           </div>
         </div>
-        <button
+        <Button
+          variant="outline"
+          size="sm"
+          icon={BarChart3}
+          class="shrink-0"
           onclick={() => (showCostComparison = true)}
-          class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
         >
-          <BarChart3 class="h-3.5 w-3.5" />
           Compare Models
-        </button>
+        </Button>
       </div>
     {:else if costError}
       <div class="border-soft bg-surface flex items-center gap-3 rounded-lg border px-4 py-3">
@@ -310,6 +314,8 @@
           <thead>
             <tr class="border-soft border-b text-left">
               <th class="p-3">
+                <!-- Table selection toggles (header and rows) stay inline: they are bare
+                     icon-state toggles inside table cells, not Button-shaped actions. -->
                 <button
                   onclick={toggleSelectAll}
                   class="text-muted hover:text-ink transition-colors"
@@ -349,6 +355,7 @@
                   : ''}"
               >
                 <td class="p-3">
+                  <!-- Row selection toggle: inline for the same reason as the header toggle above. -->
                   <button
                     onclick={() => toggleDoc(doc.id)}
                     class="text-muted hover:text-ink transition-colors"
@@ -398,35 +405,34 @@
               </span>
               of <span class="text-ink font-medium">{data.unprocessed.total}</span>
             </p>
-            <select
-              value={data.limit}
+            <Select
+              ariaLabel="Results per page"
+              value={String(data.limit)}
+              options={PAGE_SIZE_OPTIONS}
               onchange={changePageSize}
-              class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1 text-sm focus:ring-1 focus:outline-none"
-            >
-              <option value="20">20 / page</option>
-              <option value="50">50 / page</option>
-              <option value="100">100 / page</option>
-            </select>
+            />
           </div>
           {#if totalPages > 1}
             <div class="flex items-center gap-1">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
+                icon={ChevronLeft}
+                ariaLabel="Previous page"
                 onclick={() => goToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
-                class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-              >
-                <ChevronLeft class="h-4 w-4" />
-              </button>
+              />
               <span class="text-ink px-3 text-sm font-medium tabular-nums">
                 {currentPage} / {totalPages}
               </span>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
+                icon={ChevronRight}
+                ariaLabel="Next page"
                 onclick={() => goToPage(currentPage + 1)}
                 disabled={currentPage >= totalPages}
-                class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-              >
-                <ChevronRight class="h-4 w-4" />
-              </button>
+              />
             </div>
           {/if}
         </div>
@@ -448,14 +454,14 @@
           </p>
         </div>
         {#if data.failed.total > 0}
-          <button
+          <Button
+            variant="outline"
+            icon={RefreshCw}
             onclick={handleRetryAllFailed}
             disabled={layoutCtx.isProcessing}
-            class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
           >
-            <RefreshCw class="h-4 w-4" />
             Retry All Failed
-          </button>
+          </Button>
         {/if}
       </div>
 
@@ -485,23 +491,27 @@
               </div>
             </div>
             {#if result.failureType === 'no_suggestions'}
-              <button
+              <Button
+                variant="outline"
+                size="sm"
+                icon={CircleX}
+                class="shrink-0"
                 onclick={() => handleDismissOne(result.id)}
                 disabled={layoutCtx.isProcessing}
-                class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                <CircleX class="h-3.5 w-3.5" />
                 Dismiss
-              </button>
+              </Button>
             {:else}
-              <button
+              <Button
+                variant="outline"
+                size="sm"
+                icon={RefreshCw}
+                class="shrink-0"
                 onclick={() => handleRetryOne(result.documentId)}
                 disabled={layoutCtx.isProcessing}
-                class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                <RefreshCw class="h-3.5 w-3.5" />
                 Retry
-              </button>
+              </Button>
             {/if}
           </div>
         {/each}
@@ -537,14 +547,16 @@
                 </p>
               </div>
             </div>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
+              icon={CircleX}
+              class="shrink-0"
               onclick={() => handleDismissOne(result.id)}
               disabled={layoutCtx.isProcessing}
-              class="border-soft text-ink hover:bg-canvas flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              <CircleX class="h-3.5 w-3.5" />
               Dismiss
-            </button>
+            </Button>
           </div>
         {/each}
       </div>

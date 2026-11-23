@@ -2,11 +2,11 @@
   import { untrack } from 'svelte';
   import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
+  import { Button, Select, SearchInput } from '$lib/components';
   import { addToast } from '$lib/components/ai/AiReviewStore.svelte';
   import AiApplyAuditCard from '$lib/components/ai/AiApplyAuditCard.svelte';
   import type { AiResultDetail } from '@paperless-dedupe/core';
   import {
-    Search,
     ChevronLeft,
     ChevronRight,
     CircleCheck,
@@ -21,6 +21,18 @@
   } from 'lucide-svelte';
 
   let { data } = $props();
+
+  const SORT_OPTIONS = [
+    { value: 'applied_newest', label: 'Newest Applied' },
+    { value: 'applied_oldest', label: 'Oldest Applied' },
+    { value: 'newest', label: 'Newest Created' },
+    { value: 'oldest', label: 'Oldest Created' },
+  ];
+  const PAGE_SIZE_OPTIONS = [
+    { value: '20', label: '20 / page' },
+    { value: '50', label: '50 / page' },
+    { value: '100', label: '100 / page' },
+  ];
   const readOnly = $derived(data.readOnly === true);
 
   const initialSearch = untrack(() => data.search);
@@ -118,10 +130,10 @@
     goto(`/ai-processing/history?${params.toString()}`);
   }
 
-  function changePageSize(e: Event) {
+  function changePageSize(value: string) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const params = new URLSearchParams(page.url.searchParams.toString());
-    params.set('limit', (e.target as HTMLSelectElement).value);
+    params.set('limit', value);
     params.set('offset', '0');
     goto(`/ai-processing/history?${params.toString()}`);
   }
@@ -230,6 +242,7 @@
     <div class="flex flex-wrap items-center gap-1">
       {#each statusFilters as sf (sf.label)}
         {@const isActive = sf.value === data.status || (sf.value === null && !data.status)}
+        <!-- Filter chip: stays inline. Button has no rounded-full pill shape or toggled state. -->
         <button
           onclick={() => handleStatusFilter(sf.value)}
           class="rounded-full px-3 py-1 text-xs font-medium transition-colors {isActive
@@ -242,30 +255,20 @@
     </div>
 
     <!-- Search -->
-    <div class="relative">
-      <Search
-        class="text-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
-      />
-      <input
-        type="text"
-        bind:value={localSearch}
-        placeholder="Search history..."
-        onkeydown={handleSearchKeydown}
-        class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent rounded-lg border py-2 pr-3 pl-8 text-sm focus:ring-1 focus:outline-none"
-      />
-    </div>
+    <SearchInput
+      bind:value={localSearch}
+      placeholder="Search history..."
+      ariaLabel="Search history"
+      onkeydown={handleSearchKeydown}
+    />
 
     <!-- Sort -->
-    <select
+    <Select
+      ariaLabel="Sort history"
       value={data.sort}
-      onchange={(e) => applyFilters({ sort: (e.target as HTMLSelectElement).value })}
-      class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-    >
-      <option value="applied_newest">Newest Applied</option>
-      <option value="applied_oldest">Oldest Applied</option>
-      <option value="newest">Newest Created</option>
-      <option value="oldest">Oldest Created</option>
-    </select>
+      options={SORT_OPTIONS}
+      onchange={(value) => applyFilters({ sort: value })}
+    />
   </div>
 
   <!-- Results List -->
@@ -374,35 +377,34 @@
                 </span>
                 of <span class="text-ink font-medium">{data.total}</span>
               </p>
-              <select
-                value={data.limit}
+              <Select
+                ariaLabel="Results per page"
+                value={String(data.limit)}
+                options={PAGE_SIZE_OPTIONS}
                 onchange={changePageSize}
-                class="border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-2 py-1 text-sm focus:ring-1 focus:outline-none"
-              >
-                <option value="20">20 / page</option>
-                <option value="50">50 / page</option>
-                <option value="100">100 / page</option>
-              </select>
+              />
             </div>
             {#if totalPages > 1}
               <div class="flex items-center gap-1">
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={ChevronLeft}
+                  ariaLabel="Previous page"
                   onclick={() => goToPage(currentPage - 1)}
                   disabled={currentPage <= 1}
-                  class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-                >
-                  <ChevronLeft class="h-4 w-4" />
-                </button>
+                />
                 <span class="text-ink px-3 text-sm font-medium tabular-nums">
                   {currentPage} / {totalPages}
                 </span>
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={ChevronRight}
+                  ariaLabel="Next page"
                   onclick={() => goToPage(currentPage + 1)}
                   disabled={currentPage >= totalPages}
-                  class="border-soft text-muted hover:text-ink rounded-lg border p-1.5 transition-colors disabled:opacity-30"
-                >
-                  <ChevronRight class="h-4 w-4" />
-                </button>
+                />
               </div>
             {/if}
           </div>
@@ -419,13 +421,14 @@
           <div class="space-y-4 p-4">
             <div class="flex items-center justify-between">
               <div class="bg-canvas-deep h-6 w-48 animate-pulse rounded"></div>
-              <button
-                onclick={closeDetail}
-                class="text-muted hover:text-ink rounded-lg p-1.5 transition-colors"
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={X}
+                ariaLabel="Close"
                 title="Close"
-              >
-                <X class="h-4 w-4" />
-              </button>
+                onclick={closeDetail}
+              />
             </div>
             <div class="bg-canvas-deep h-[200px] animate-pulse rounded-lg"></div>
             <div class="space-y-3">
@@ -439,12 +442,9 @@
               <AlertCircle class="text-ember h-6 w-6" />
             </div>
             <p class="text-ink text-sm font-medium">Failed to load result</p>
-            <button
-              onclick={() => activeResultId && openDetail(activeResultId)}
-              class="border-soft text-ink hover:bg-canvas flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
-            >
+            <Button variant="outline" onclick={() => activeResultId && openDetail(activeResultId)}>
               Retry
-            </button>
+            </Button>
           </div>
         {:else if activeResultDetail}
           <div class="space-y-5 p-4">
@@ -473,13 +473,15 @@
                   </a>
                 </div>
               </div>
-              <button
-                onclick={closeDetail}
-                class="text-muted hover:text-ink shrink-0 rounded-lg p-1.5 transition-colors"
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={X}
+                ariaLabel="Close"
                 title="Close"
-              >
-                <X class="h-4 w-4" />
-              </button>
+                class="shrink-0"
+                onclick={closeDetail}
+              />
             </div>
 
             <!-- Error Banner -->
@@ -560,6 +562,8 @@
           <!-- Revert Action Footer -->
           {#if (activeResultDetail.appliedStatus === 'applied' || activeResultDetail.appliedStatus === 'partial') && activeResultDetail.preApplyCorrespondentName !== null}
             <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
+              <!-- Stays inline: an ember-outlined action. Button has no semantic-tint variant and
+                   destructive is a solid fill, so either would restyle this control. -->
               <button
                 onclick={() => activeResultDetail && handleRevert(activeResultDetail.id)}
                 disabled={readOnly || isReverting}
@@ -579,34 +583,25 @@
           {#if activeResultDetail.appliedStatus === 'failed'}
             <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
               {#if isExtractionFailure(activeResultDetail)}
-                <button
+                <Button
+                  fullWidth
+                  icon={RefreshCw}
+                  loading={isRetryingExtraction}
                   onclick={() => activeResultDetail && handleRetryExtraction(activeResultDetail.id)}
-                  disabled={isRetryingExtraction}
-                  class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
                 >
-                  {#if isRetryingExtraction}
-                    <Loader2 class="h-4 w-4 animate-spin" />
-                    Retrying Extraction...
-                  {:else}
-                    <RefreshCw class="h-4 w-4" />
-                    Retry Extraction
-                  {/if}
-                </button>
+                  {isRetryingExtraction ? 'Retrying Extraction...' : 'Retry Extraction'}
+                </Button>
               {:else}
-                <button
-                  onclick={() => activeResultDetail && handleRetryApply(activeResultDetail.id)}
-                  disabled={readOnly || isRetryingApply}
+                <Button
+                  fullWidth
+                  icon={RefreshCw}
+                  loading={isRetryingApply}
+                  disabled={readOnly}
                   title={readOnly ? 'Paperless is read-only' : undefined}
-                  class="bg-accent hover:bg-accent-hover text-on-accent flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+                  onclick={() => activeResultDetail && handleRetryApply(activeResultDetail.id)}
                 >
-                  {#if isRetryingApply}
-                    <Loader2 class="h-4 w-4 animate-spin" />
-                    Retrying...
-                  {:else}
-                    <RefreshCw class="h-4 w-4" />
-                    Retry Apply
-                  {/if}
-                </button>
+                  {isRetryingApply ? 'Retrying...' : 'Retry Apply'}
+                </Button>
               {/if}
             </div>
           {/if}

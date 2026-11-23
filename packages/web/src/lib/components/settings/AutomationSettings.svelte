@@ -7,6 +7,7 @@
     type AppConfig,
   } from '@paperless-dedupe/core';
   import { CalendarClock, Play } from 'lucide-svelte';
+  import { Button, Checkbox, Select, TextField } from '$lib/components';
   import { onMount, untrack } from 'svelte';
 
   interface Props {
@@ -26,6 +27,25 @@
   let { settings }: Props = $props();
   const initialSettings = untrack(() => settings);
   const tasks: ScheduleTask[] = ['sync', 'analysis', 'ai_processing'];
+  const cadenceOptions = [
+    { value: 'manual', label: 'Manual only' },
+    { value: 'interval', label: 'Interval' },
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+  ];
+  const intervalOptions = ['2', '4', '6', '12'].map((hours) => ({
+    value: hours,
+    label: `${hours} hours`,
+  }));
+  const weekdayOptions = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ].map((label, index) => ({ value: String(index), label }));
   const labels: Record<ScheduleTask, string> = {
     sync: 'Sync',
     analysis: 'Analysis',
@@ -235,132 +255,101 @@
           {/if}
         </p>
 
-        <label class="text-ink flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={schedules[task].enabled} />
-          Enable {labels[task].toLowerCase()} scheduling
-        </label>
+        <Checkbox
+          bind:checked={schedules[task].enabled}
+          label="Enable {labels[task].toLowerCase()} scheduling"
+        />
 
-        <label class="text-ink block text-sm" for={`${task}-cadence`}>
-          {labels[task]} cadence
-        </label>
-        <select
+        <Select
           id={`${task}-cadence`}
-          bind:value={schedules[task].cadenceKind}
-          class="border-soft bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm"
-        >
-          <option value="manual">Manual only</option>
-          <option value="interval">Interval</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-        </select>
+          label="{labels[task]} cadence"
+          options={cadenceOptions}
+          bind:value={
+            () => schedules[task].cadenceKind,
+            (value) => (schedules[task].cadenceKind = value as EditableSchedule['cadenceKind'])
+          }
+        />
 
         {#if schedules[task].cadenceKind === 'interval'}
-          <label class="text-ink block text-sm" for={`${task}-interval`}>Interval hours</label>
-          <select
+          <Select
             id={`${task}-interval`}
-            bind:value={schedules[task].intervalHours}
-            class="border-soft bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm"
-          >
-            <option value={2}>2 hours</option>
-            <option value={4}>4 hours</option>
-            <option value={6}>6 hours</option>
-            <option value={12}>12 hours</option>
-          </select>
+            label="Interval hours"
+            options={intervalOptions}
+            bind:value={
+              () => String(schedules[task].intervalHours),
+              (value) => (schedules[task].intervalHours = Number(value) as 2 | 4 | 6 | 12)
+            }
+          />
         {:else if schedules[task].cadenceKind === 'daily' || schedules[task].cadenceKind === 'weekly'}
           {#if schedules[task].cadenceKind === 'weekly'}
-            <label class="text-ink block text-sm" for={`${task}-weekday`}>Weekday</label>
-            <select
+            <Select
               id={`${task}-weekday`}
-              bind:value={schedules[task].weekday}
-              class="border-soft bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm"
-            >
-              <option value={0}>Sunday</option>
-              <option value={1}>Monday</option>
-              <option value={2}>Tuesday</option>
-              <option value={3}>Wednesday</option>
-              <option value={4}>Thursday</option>
-              <option value={5}>Friday</option>
-              <option value={6}>Saturday</option>
-            </select>
+              label="Weekday"
+              options={weekdayOptions}
+              bind:value={
+                () => String(schedules[task].weekday),
+                (value) => (schedules[task].weekday = Number(value) as EditableSchedule['weekday'])
+              }
+            />
           {/if}
           <div class="grid grid-cols-2 gap-3">
-            <label class="text-ink text-sm" for={`${task}-hour`}>
-              Hour
-              <input
-                id={`${task}-hour`}
-                type="number"
-                min="0"
-                max="23"
-                bind:value={schedules[task].hour}
-                class="border-soft bg-surface text-ink mt-1 w-full rounded-lg border px-3 py-2"
-              />
-            </label>
-            <label class="text-ink text-sm" for={`${task}-minute`}>
-              Minute
-              <input
-                id={`${task}-minute`}
-                type="number"
-                min="0"
-                max="59"
-                bind:value={schedules[task].minute}
-                class="border-soft bg-surface text-ink mt-1 w-full rounded-lg border px-3 py-2"
-              />
-            </label>
+            <TextField
+              id={`${task}-hour`}
+              label="Hour"
+              type="number"
+              min={0}
+              max={23}
+              bind:value={schedules[task].hour}
+            />
+            <TextField
+              id={`${task}-minute`}
+              label="Minute"
+              type="number"
+              min={0}
+              max={59}
+              bind:value={schedules[task].minute}
+            />
           </div>
         {/if}
 
-        <label class="text-ink block text-sm" for={`${task}-timezone`}>
-          {labels[task]} timezone
-        </label>
-        <input
+        <TextField
           id={`${task}-timezone`}
+          label={`${labels[task]} timezone`}
           bind:value={schedules[task].timezone}
           autocomplete="off"
-          class="border-soft bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm"
         />
 
         {#if task === 'ai_processing'}
-          <label class="text-ink block text-sm" for="ai-monthly-budget">
-            AI monthly budget (USD)
-          </label>
-          <input
+          <TextField
             id="ai-monthly-budget"
+            label="AI monthly budget (USD)"
             type="number"
-            min="0"
-            step="0.01"
+            min={0}
+            step={0.01}
             bind:value={monthlyBudgetUsd}
-            class="border-soft bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm"
           />
-          <label class="text-ink block text-sm" for="ai-document-cap">
-            Maximum documents per run
-          </label>
-          <input
+          <TextField
             id="ai-document-cap"
+            label="Maximum documents per run"
             type="number"
-            min="1"
-            max="10000"
+            min={1}
+            max={10000}
             bind:value={maxDocumentsPerRun}
-            class="border-soft bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm"
           />
         {/if}
 
         <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onclick={() => save(task)}
-            disabled={busy !== null}
-            class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
-          >
+          <Button onclick={() => save(task)} disabled={busy !== null}>
             Save {labels[task]} schedule
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="outline"
+            icon={Play}
             onclick={() => runNow(task)}
             disabled={busy !== null}
-            class="border-soft text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50"
           >
-            <Play class="h-4 w-4" /> Run now
-          </button>
+            Run now
+          </Button>
         </div>
         {#if statuses[task]}
           <p
@@ -397,44 +386,40 @@
       }}
     >
       <fieldset disabled={notificationBusy !== null} class="space-y-4">
-        <label class="text-ink flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={notifications.events.onNewDuplicates} />
-          Notify when new duplicates are found
-        </label>
-        <label class="text-ink block text-sm" for="notification-minimum">Minimum new groups</label>
-        <input
-          id="notification-minimum"
-          type="number"
-          min="1"
-          max="10000"
-          step="1"
-          required
-          bind:value={notifications.events.minNewGroups}
-          class="border-soft bg-surface text-ink w-full max-w-40 rounded-lg border px-3 py-2 text-sm"
+        <Checkbox
+          bind:checked={notifications.events.onNewDuplicates}
+          label="Notify when new duplicates are found"
         />
-        <label class="text-ink flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={notifications.events.onJobFailure} />
-          Notify when a job fails
-        </label>
-        <label class="text-ink flex items-center gap-2 text-sm">
-          <input type="checkbox" bind:checked={notifications.events.scheduledRunsOnly} />
-          Scheduled runs only
-        </label>
+        <TextField
+          id="notification-minimum"
+          label="Minimum new groups"
+          type="number"
+          min={1}
+          max={10000}
+          step={1}
+          required
+          class="max-w-40"
+          bind:value={notifications.events.minNewGroups}
+        />
+        <Checkbox
+          bind:checked={notifications.events.onJobFailure}
+          label="Notify when a job fails"
+        />
+        <Checkbox
+          bind:checked={notifications.events.scheduledRunsOnly}
+          label="Scheduled runs only"
+        />
         <div class="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
-          >
+          <Button type="submit">
             {notificationBusy === 'save' ? 'Saving…' : 'Save notification preferences'}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="outline"
             disabled={!notifications.configured}
             onclick={sendTestNotification}
-            class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50"
           >
             {notificationBusy === 'test' ? 'Sending…' : 'Send test'}
-          </button>
+          </Button>
         </div>
       </fieldset>
     </form>
@@ -449,13 +434,7 @@
     {/if}
   {:else if notificationLoadError}
     <p role="alert" class="text-ember mt-3 text-sm">Unable to load notification preferences.</p>
-    <button
-      type="button"
-      onclick={loadNotifications}
-      class="border-soft text-ink mt-2 rounded-lg border px-3 py-2 text-sm"
-    >
-      Retry
-    </button>
+    <Button variant="outline" class="mt-2" onclick={loadNotifications}>Retry</Button>
   {:else}
     <p role="status" class="text-muted mt-3 text-sm">Loading notification preferences…</p>
   {/if}
