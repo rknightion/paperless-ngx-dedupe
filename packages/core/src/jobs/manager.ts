@@ -563,6 +563,32 @@ export function failJob(db: AppDatabase, id: string, error: string, executionTok
   }
 }
 
+/** Acknowledges an exhausted job without running it, so it stops counting as a dead letter. */
+export function dismissDeadLetterJob(db: AppDatabase, id: string): boolean {
+  const sqlite = sqliteFor(db);
+  sqlite.exec('BEGIN IMMEDIATE');
+  try {
+    const dismissed = sqlite
+      .prepare(
+        `UPDATE dispatch_intent
+         SET status = 'cancelled', next_attempt_at = NULL, updated_at = ?
+         WHERE job_id = ? AND status = 'dead_letter'`,
+      )
+      .run(new Date().toISOString(), id);
+    // Without a terminal reason the failed job becomes ordinary, clearable history.
+    if (dismissed.changes > 0) {
+      sqlite
+        .prepare("UPDATE job SET terminal_reason = NULL WHERE id = ? AND status = 'failed'")
+        .run(id);
+    }
+    sqlite.exec('COMMIT');
+    return dismissed.changes > 0;
+  } catch (error) {
+    sqlite.exec('ROLLBACK');
+    throw error;
+  }
+}
+
 /** Requeues an exhausted job only after an explicit manual retry request. */
 export function retryDeadLetterJob(db: AppDatabase, id: string): boolean {
   const sqlite = sqliteFor(db);
@@ -570,6 +596,10 @@ export function retryDeadLetterJob(db: AppDatabase, id: string): boolean {
     .prepare('SELECT type, status, terminal_reason AS terminalReason FROM job WHERE id = ?')
     .get(id) as { type: JobType; status: string | null; terminalReason: string | null } | undefined;
   if (!existing || existing.status !== 'failed' || !existing.terminalReason) return false;
+  const intent = sqlite.prepare('SELECT status FROM dispatch_intent WHERE job_id = ?').get(id) as
+    { status: string } | undefined;
+  // A dismissed job has no intent left to dispatch, so requeueing it would strand it as pending.
+  if (intent && intent.status !== 'dead_letter') return false;
 
   const nowIso = new Date().toISOString();
   sqlite.exec('BEGIN IMMEDIATE');

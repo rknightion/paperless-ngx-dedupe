@@ -329,6 +329,19 @@ Resumes a paused job. No body or query parameters are required.
 Returns `data: { jobId: string, status: "running" }`.
 Returns `404 NOT_FOUND` for a missing job or `409 CONFLICT` when it cannot be resumed.
 
+### POST /api/v1/jobs/:jobId/retry
+
+Requeues a failed job in the dead-letter state. No body or query parameters are required.
+Returns `202` with `data: { jobId: string, status: "pending" }`. Returns `404 NOT_FOUND` for a
+missing job, `409 CONFLICT` when it cannot be retried, `READ_ONLY` for a job that writes to
+Paperless-NGX while read-only mode is on, and `400 BAD_REQUEST` for an AI job while AI is disabled.
+
+### POST /api/v1/jobs/:jobId/dismiss
+
+Acknowledges a dead-letter job without running it, so it stops counting as a dead letter. The
+failed job stays in history until job history is cleared. Returns `data: { jobId: string, dismissed: true }`, `404 NOT_FOUND`
+for a missing job, or `409 CONFLICT` when the job is not a dead letter.
+
 ## Configuration
 
 ### GET /api/v1/config
