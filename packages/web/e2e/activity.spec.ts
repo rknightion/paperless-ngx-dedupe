@@ -30,7 +30,7 @@ test.describe('Global activity', () => {
 
     await page.getByRole('button', { name: 'Sync Now' }).click();
 
-    await page.locator('aside').getByRole('link', { name: 'Documents' }).click();
+    await page.getByRole('complementary').getByRole('link', { name: 'Documents' }).click();
 
     await expect(page.getByTestId(`activity-job-${jobId}`)).toBeVisible();
   });

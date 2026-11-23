@@ -78,7 +78,7 @@ test.describe('Dashboard', () => {
   test('sidebar navigation links are present', async ({ page }) => {
     await page.goto('/');
 
-    const sidebar = page.locator('aside');
+    const sidebar = page.getByRole('complementary');
     await expect(sidebar.getByRole('link', { name: 'Paperless NGX Dedupe' })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Dashboard' })).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Documents' })).toBeVisible();
@@ -90,19 +90,19 @@ test.describe('Dashboard', () => {
     await page.goto('/');
 
     // Navigate to Documents
-    await page.locator('aside').getByRole('link', { name: 'Documents' }).click();
+    await page.getByRole('complementary').getByRole('link', { name: 'Documents' }).click();
     await expect(page).toHaveURL(/\/documents/);
 
     // Navigate to Duplicates
-    await page.locator('aside').getByRole('link', { name: 'Duplicates' }).click();
+    await page.getByRole('complementary').getByRole('link', { name: 'Duplicates' }).click();
     await expect(page).toHaveURL(/\/duplicates/);
 
     // Navigate to Settings
-    await page.locator('aside').getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('complementary').getByRole('link', { name: 'Settings' }).click();
     await expect(page).toHaveURL(/\/settings/);
 
     // Navigate back to Dashboard
-    await page.locator('aside').getByRole('link', { name: 'Dashboard' }).click();
+    await page.getByRole('complementary').getByRole('link', { name: 'Dashboard' }).click();
     await expect(page).toHaveURL('/');
   });
 
