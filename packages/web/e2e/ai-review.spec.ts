@@ -182,7 +182,9 @@ test.describe('unified AI review inbox', () => {
   test('Space selects an AI result from a narrow review card', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/ai-processing/review');
-    const result = page.getByRole('checkbox', { name: 'Select Test Document 1' });
+    const result = page
+      .locator('main [role="button"]')
+      .getByRole('checkbox', { name: 'Select Test Document 1', exact: true });
     await result.focus();
     await page.keyboard.press('Space');
     await expect(result).toBeChecked();
