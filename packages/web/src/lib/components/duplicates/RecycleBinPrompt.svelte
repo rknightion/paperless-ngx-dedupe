@@ -62,8 +62,8 @@
   });
 </script>
 
-<div class="border-soft mt-4 rounded-lg border px-4 py-4">
-  <h3 class="text-ink text-base font-semibold">Paperless-NGX Recycle Bin</h3>
+<div class="border-soft mt-4 border px-4 py-4">
+  <h3 class="text-ink text-lg font-semibold">Paperless-NGX Recycle Bin</h3>
   <p class="text-muted mt-1 text-sm">
     Deleted documents are in the Paperless-NGX recycle bin. You can restore them from Paperless-NGX
     until the bin is emptied.
@@ -75,7 +75,7 @@
     <p class="text-muted mt-3 text-sm">Loading recycle bin status...</p>
   {:else if trashCount !== null && trashCount > 0}
     <p class="text-ink mt-3 text-sm">
-      <span class="font-semibold">{trashCount}</span>
+      <span class="font-mono font-semibold tabular-nums">{trashCount}</span>
       document{trashCount === 1 ? '' : 's'} currently in the recycle bin.
     </p>
     <p class="text-muted mt-1 text-sm">
@@ -84,7 +84,7 @@
     </p>
 
     {#if emptyResult?.success}
-      <div class="bg-success-light text-success mt-3 rounded-lg px-3 py-2 text-sm">
+      <div class="border-success bg-success-light text-success mt-3 border px-3 py-2 text-sm">
         Recycle bin emptied successfully.
       </div>
     {:else}
@@ -100,7 +100,7 @@
     {/if}
 
     {#if emptyResult && !emptyResult.success}
-      <div class="bg-ember-light text-ember mt-2 rounded-lg px-3 py-2 text-sm">
+      <div class="border-ember bg-ember-light text-ember mt-2 border px-3 py-2 text-sm">
         {emptyResult.error}
       </div>
     {/if}
@@ -112,7 +112,7 @@
 
   {#if onclose}
     <div class="mt-4 flex justify-end">
-      <Button variant="outline" onclick={onclose}>Close</Button>
+      <Button variant="secondary" onclick={onclose}>Close</Button>
     </div>
   {/if}
 </div>

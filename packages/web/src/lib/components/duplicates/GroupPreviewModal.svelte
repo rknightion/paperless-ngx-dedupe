@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { DuplicateGroupMember } from '@paperless-dedupe/core';
-  import { DocumentCompare, ConfidenceBadge } from '$lib/components';
+  import { DocumentCompare, ConfidenceBadge, Spinner } from '$lib/components';
 
   interface Props {
     open: boolean;
@@ -71,7 +71,7 @@
   onclick={(e) => {
     if (e.target === dialog) onclose();
   }}
-  class="border-soft bg-surface m-auto max-h-[85vh] max-w-5xl overflow-y-auto rounded-xl border p-0 shadow-lg backdrop:bg-black/40"
+  class="border-border-hover bg-surface-raised rounded-overlay backdrop:bg-inverse/55 m-auto max-h-[85vh] max-w-5xl overflow-y-auto border p-0 shadow-lg"
   aria-labelledby="preview-modal-title"
 >
   <div class="p-6">
@@ -97,28 +97,28 @@
 
     {#if loadState === 'loading'}
       <div class="py-12 text-center">
-        <span
-          class="border-accent inline-block h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-        ></span>
+        <Spinner label={null} class="text-accent" />
         <p class="text-muted mt-2 text-sm">Loading members...</p>
       </div>
     {:else if loadState === 'error'}
-      <div class="bg-ember-light text-ember rounded-lg px-4 py-3 text-sm">{errorMessage}</div>
+      <div class="border-ember bg-ember-light text-ember border px-4 py-3 text-sm">
+        {errorMessage}
+      </div>
     {:else if loadState === 'loaded' && primaryMember && selectedSecondary}
       <!-- Secondary member selector -->
       {#if secondaryMembers.length > 1}
         <div class="mb-4">
           {#if secondaryMembers.length <= 4}
-            <div class="flex flex-wrap gap-1">
+            <div class="border-border flex w-fit max-w-full flex-wrap border">
               {#each secondaryMembers as sec, i (sec.documentId)}
                 <button
                   onclick={() => {
                     selectedSecondaryIndex = i;
                   }}
-                  class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {selectedSecondaryIndex ===
+                  class="border-border h-[26px] border-r px-3 text-sm last:border-r-0 {selectedSecondaryIndex ===
                   i
-                    ? 'bg-accent text-on-accent'
-                    : 'border-soft text-muted hover:bg-canvas border'}"
+                    ? 'bg-selected text-ink font-medium'
+                    : 'text-muted hover:bg-canvas-deep'}"
                 >
                   {(sec.title ?? 'Untitled').length > 25
                     ? (sec.title ?? 'Untitled').slice(0, 25) + '...'
@@ -132,7 +132,7 @@
               onchange={(e) => {
                 selectedSecondaryIndex = Number((e.target as HTMLSelectElement).value);
               }}
-              class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm"
+              class="border-border bg-surface-raised text-ink h-7 max-w-full rounded-sm border px-2 text-sm"
             >
               {#each secondaryMembers as sec, i (sec.documentId)}
                 <option value={i}>{sec.title ?? 'Untitled'}</option>

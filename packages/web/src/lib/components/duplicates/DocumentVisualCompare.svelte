@@ -37,14 +37,15 @@
   <div class="panel min-w-0">
     <div class="mb-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <h4 class="text-ink text-sm font-semibold">Primary Document</h4>
-        <span class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium">
-          Primary
+        <h4 class="text-ink text-lg font-semibold">Primary Document</h4>
+        <span class="status-word text-ink uppercase">
+          <span aria-hidden="true">&#9632;</span>
+          <span>Primary</span>
         </span>
       </div>
       <button
         onclick={() => (showPdfPrimary = !showPdfPrimary)}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1 text-xs font-medium"
+        class="border-border-hover text-ink-light hover:bg-canvas-deep h-[26px] rounded-sm border px-2.5 text-xs font-medium"
       >
         {showPdfPrimary ? 'Show Thumbnail' : 'View PDF'}
       </button>
@@ -54,11 +55,11 @@
       <iframe
         src={primaryMedia.previewUrl}
         title="PDF preview: {primary.title}"
-        class="border-soft h-[600px] w-full rounded-lg border"
+        class="border-soft h-[600px] w-full border"
       ></iframe>
     {:else if thumbErrorPrimary}
       <div
-        class="border-soft bg-canvas text-muted flex h-48 items-center justify-center rounded-lg border text-sm"
+        class="border-soft bg-canvas text-muted flex h-48 items-center justify-center border text-sm"
       >
         Thumbnail unavailable
       </div>
@@ -66,7 +67,7 @@
       <img
         src={primaryMedia.thumbnailUrl}
         alt="Thumbnail: {primary.title}"
-        class="border-soft max-h-[600px] w-full rounded-lg border object-contain"
+        class="border-soft max-h-[600px] w-full border object-contain"
         onerror={() => (thumbErrorPrimary = true)}
       />
     {/if}
@@ -78,9 +79,11 @@
   <div class="panel min-w-0">
     <div class="mb-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <h4 class="text-ink text-sm font-semibold">Compared Document</h4>
+        <h4 class="text-ink text-lg font-semibold">Compared Document</h4>
         {#if secondaryCount > 1}
-          <span class="text-muted text-xs">{secondaryIndex + 1}/{secondaryCount}</span>
+          <span class="text-muted font-mono text-xs tabular-nums">
+            {secondaryIndex + 1}/{secondaryCount}
+          </span>
         {/if}
       </div>
       <div class="flex items-center gap-1">
@@ -88,7 +91,7 @@
           <button
             onclick={() => onnavigate(secondaryIndex - 1)}
             disabled={!hasPrev}
-            class="border-soft text-ink hover:bg-canvas rounded-lg border p-1 text-xs font-medium disabled:opacity-30"
+            class="border-border-hover text-ink-light hover:bg-canvas-deep disabled:text-disabled disabled:border-border inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm border disabled:cursor-not-allowed"
             title="Previous document"
           >
             <CaretLeftIcon class="h-4 w-4" />
@@ -96,7 +99,7 @@
           <button
             onclick={() => onnavigate(secondaryIndex + 1)}
             disabled={!hasNext}
-            class="border-soft text-ink hover:bg-canvas rounded-lg border p-1 text-xs font-medium disabled:opacity-30"
+            class="border-border-hover text-ink-light hover:bg-canvas-deep disabled:text-disabled disabled:border-border inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm border disabled:cursor-not-allowed"
             title="Next document"
           >
             <CaretRightIcon class="h-4 w-4" />
@@ -104,7 +107,7 @@
         {/if}
         <button
           onclick={() => (showPdfSecondary = !showPdfSecondary)}
-          class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-1 text-xs font-medium"
+          class="border-border-hover text-ink-light hover:bg-canvas-deep h-[26px] rounded-sm border px-2.5 text-xs font-medium"
         >
           {showPdfSecondary ? 'Show Thumbnail' : 'View PDF'}
         </button>
@@ -115,11 +118,11 @@
       <iframe
         src={secondaryMedia.previewUrl}
         title="PDF preview: {secondary.title}"
-        class="border-soft h-[600px] w-full rounded-lg border"
+        class="border-soft h-[600px] w-full border"
       ></iframe>
     {:else if thumbErrorSecondary}
       <div
-        class="border-soft bg-canvas text-muted flex h-48 items-center justify-center rounded-lg border text-sm"
+        class="border-soft bg-canvas text-muted flex h-48 items-center justify-center border text-sm"
       >
         Thumbnail unavailable
       </div>
@@ -127,7 +130,7 @@
       <img
         src={secondaryMedia.thumbnailUrl}
         alt="Thumbnail: {secondary.title}"
-        class="border-soft max-h-[600px] w-full rounded-lg border object-contain"
+        class="border-soft max-h-[600px] w-full border object-contain"
         onerror={() => (thumbErrorSecondary = true)}
       />
     {/if}

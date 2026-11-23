@@ -1,5 +1,6 @@
 <script lang="ts">
   import { type CompletedDeletionRun } from '@paperless-dedupe/core';
+  import ConfidenceLegend from './ConfidenceLegend.svelte';
   import UndoDeletion from './UndoDeletion.svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { browser } from '$app/env';
@@ -193,7 +194,7 @@
 
 <section
   aria-label="Keyboard shortcuts"
-  class="border-soft text-muted flex flex-wrap gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-xs"
+  class="border-soft text-muted flex flex-wrap items-center gap-x-4 gap-y-1 border px-3 py-2 text-xs"
 >
   <span class="text-ink font-medium">Keyboard shortcuts</span>
   <span><kbd>←</kbd> Previous page</span>
@@ -201,11 +202,11 @@
 </section>
 
 {#if total > 0}
-  <div class="border-soft overflow-x-auto rounded-lg border">
+  <div class="border-soft bg-surface overflow-x-auto border">
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-soft bg-canvas border-b text-left">
-          <th class="px-3 py-3">
+        <tr class="border-b-border-hover bg-surface sticky top-0 border-b text-left">
+          <th class="py-1.5 pr-3 pl-4">
             <input
               type="checkbox"
               checked={allSelected}
@@ -213,42 +214,47 @@
               aria-label="Select all groups on this page"
             />
           </th>
-          <th class="text-muted px-3 py-3 font-medium">Primary Doc Title</th>
-          <th class="text-muted hidden px-3 py-3 font-medium md:table-cell">Members</th>
-          <th class="text-muted px-3 py-3 font-medium">Confidence</th>
-          <th class="text-muted hidden px-3 py-3 font-medium sm:table-cell">Status</th>
-          <th class="text-muted hidden px-3 py-3 font-medium lg:table-cell">Updated</th>
-          {#if hasUndo}<th class="text-muted px-3 py-3 font-medium">Restore</th>{/if}
+          <th class="label-micro px-3 py-1.5">Primary Doc Title</th>
+          <th class="label-micro hidden px-3 py-1.5 md:table-cell">Members</th>
+          <th class="label-micro px-3 py-1.5">Confidence</th>
+          <th class="label-micro hidden px-3 py-1.5 sm:table-cell">Status</th>
+          <th class="label-micro hidden px-3 py-1.5 lg:table-cell">Updated</th>
+          {#if hasUndo}<th class="label-micro px-3 py-1.5">Restore</th>{/if}
         </tr>
       </thead>
       <tbody>
-        {#each groups as group, index (group.id)}
+        {#each groups as group (group.id)}
           {@const run = runByGroup.get(group.id)}
+          {@const selected = selectedIds.has(group.id)}
           <tr
-            class="border-soft hover:bg-accent-subtle border-b {index % 2 === 0
-              ? 'bg-surface'
-              : 'bg-canvas'} {group.status === 'deleted' && !runByGroup.has(group.id)
+            class="border-soft border-b last:border-b-0 {selected
+              ? 'bg-selected'
+              : 'hover:bg-canvas-deep'} {group.status === 'deleted' && !runByGroup.has(group.id)
               ? 'opacity-60'
               : ''}"
           >
-            <td class="px-3 py-3">
+            <td
+              class="h-9 py-1.5 pr-3 pl-4 {selected
+                ? 'shadow-[inset_2px_0_0_var(--color-accent)]'
+                : ''}"
+            >
               <input
                 type="checkbox"
-                checked={selectedIds.has(group.id)}
+                checked={selected}
                 onchange={() => toggle(group.id)}
                 onclick={(event) => event.stopPropagation()}
                 aria-label="Select {group.primaryDocumentTitle ?? 'untitled group'}"
               />
             </td>
-            <td class="text-ink max-w-xs truncate px-3 py-3">
+            <td class="text-ink max-w-xs truncate px-3 py-1.5">
               <a
                 href={detailHref(group.id)}
-                class="text-accent hover:text-accent-hover rounded-sm font-medium underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="text-accent hover:text-accent-hover rounded-sm font-medium underline-offset-2 hover:underline"
               >
                 {group.primaryDocumentTitle ?? 'Untitled'}
               </a>
             </td>
-            <td class="hidden px-3 py-3 md:table-cell">
+            <td class="hidden px-3 py-1.5 md:table-cell">
               {#if group.status === 'deleted'}
                 <span class="text-muted">—</span>
               {:else}
@@ -257,14 +263,14 @@
                     event.stopPropagation();
                     onpreview(group);
                   }}
-                  class="text-accent font-medium underline decoration-dotted"
+                  class="text-accent font-mono tabular-nums underline decoration-dotted"
                   title="Preview members"
                 >
                   {group.memberCount}
                 </button>
               {/if}
             </td>
-            <td class="px-3 py-3">
+            <td class="px-3 py-1.5">
               <RichTooltip position="left">
                 <ConfidenceBadge score={group.confidenceScore} />
                 {#snippet content()}
@@ -276,11 +282,11 @@
                 {/snippet}
               </RichTooltip>
             </td>
-            <td class="hidden px-3 py-3 sm:table-cell"><StatusBadge status={group.status} /></td>
-            <td class="text-muted hidden px-3 py-3 text-xs lg:table-cell">
+            <td class="hidden px-3 py-1.5 sm:table-cell"><StatusBadge status={group.status} /></td>
+            <td class="text-muted hidden px-3 py-1.5 font-mono text-xs lg:table-cell">
               {new Date(group.updatedAt).toLocaleDateString()}
             </td>
-            {#if hasUndo}<td class="px-3 py-3">
+            {#if hasUndo}<td class="px-3 py-1.5">
                 {#if group.status === 'deleted' && run}
                   <UndoDeletion
                     run={{
@@ -297,8 +303,12 @@
     </table>
   </div>
 
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <ConfidenceLegend />
+  </div>
+
   <nav class="flex flex-wrap items-center justify-between gap-4" aria-label="Duplicate pages">
-    <span class="text-muted text-sm">
+    <span class="text-muted font-mono text-xs tabular-nums">
       {#if paginationMode === 'legacy'}
         Showing {offset + 1}-{Math.min(offset + groups.length, total)} of {total}
       {:else}
@@ -310,7 +320,7 @@
         <a
           href={previousHref}
           data-sveltekit-reload
-          class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm"
+          class="border-border-hover text-ink-light hover:bg-canvas-deep inline-flex h-7 items-center rounded-sm border px-2.5 text-sm font-medium"
         >
           Previous
         </a>
@@ -318,14 +328,14 @@
         <a
           href={cursorPreviousHref}
           data-sveltekit-reload
-          class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm"
+          class="border-border-hover text-ink-light hover:bg-canvas-deep inline-flex h-7 items-center rounded-sm border px-2.5 text-sm font-medium"
         >
           Previous
         </a>
       {:else}
         <button
           disabled
-          class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm opacity-50"
+          class="border-border text-disabled inline-flex h-7 cursor-not-allowed items-center rounded-sm border px-2.5 text-sm font-medium"
         >
           Previous
         </button>
@@ -335,14 +345,14 @@
           href={nextHref}
           data-sveltekit-reload
           onclick={() => rememberCursorPredecessor(nextHref)}
-          class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm"
+          class="border-border-hover text-ink-light hover:bg-canvas-deep inline-flex h-7 items-center rounded-sm border px-2.5 text-sm font-medium"
         >
           Next
         </a>
       {:else}
         <button
           disabled
-          class="border-soft text-ink rounded-lg border px-3 py-1.5 text-sm opacity-50"
+          class="border-border text-disabled inline-flex h-7 cursor-not-allowed items-center rounded-sm border px-2.5 text-sm font-medium"
         >
           Next
         </button>
@@ -352,7 +362,7 @@
         id="duplicate-page-size"
         onchange={changePageSize}
         value={String(limit)}
-        class="border-soft bg-surface text-ink rounded-lg border px-2 py-1.5 text-sm"
+        class="border-border bg-surface-raised text-ink h-7 rounded-sm border px-2 font-mono text-sm"
       >
         <option value="10">10</option>
         <option value="25">25</option>

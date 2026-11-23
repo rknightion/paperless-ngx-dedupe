@@ -113,9 +113,10 @@
   <div class="panel">
     <div class="mb-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <h4 class="text-ink text-sm font-semibold">Primary Document</h4>
-        <span class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium">
-          Primary
+        <h4 class="text-ink text-lg font-semibold">Primary Document</h4>
+        <span class="status-word text-ink uppercase">
+          <span aria-hidden="true">&#9632;</span>
+          <span>Primary</span>
         </span>
       </div>
       <a
@@ -130,8 +131,15 @@
     </div>
     <dl class="space-y-2">
       {#each fields as field (field.label)}
-        <div class="border-soft flex justify-between border-b py-1.5 text-sm last:border-0">
-          <dt class="text-muted">{field.label}</dt>
+        <div
+          class="border-soft flex justify-between gap-3 border-b py-1.5 text-sm last:border-0 {field.isDifferent
+            ? 'border-l-warn -mx-2 border-l-2 px-2'
+            : ''}"
+        >
+          <dt class={field.isDifferent ? 'text-ink' : 'text-muted'}>
+            {#if field.isDifferent}<span class="text-warn font-mono">&ne;</span>{/if}
+            {field.label}
+          </dt>
           <dd class="text-ink max-w-[60%] min-w-0 text-right font-medium [overflow-wrap:anywhere]">
             {field.primaryValue}
           </dd>
@@ -141,7 +149,9 @@
     {#if primary.tags.length > 0}
       <div class="mt-3 flex flex-wrap gap-1.5">
         {#each primary.tags as tag (tag)}
-          <span class="bg-canvas text-muted rounded-full px-2 py-0.5 text-xs">{tag}</span>
+          <span class="border-border text-ink-light border px-1.5 py-0.5 font-mono text-xs">
+            {tag}
+          </span>
         {/each}
       </div>
     {/if}
@@ -150,7 +160,7 @@
   <!-- Secondary -->
   <div class="panel">
     <div class="mb-3 flex items-center justify-between">
-      <h4 class="text-ink text-sm font-semibold">Compared Document</h4>
+      <h4 class="text-ink text-lg font-semibold">Compared Document</h4>
       <a
         href="{paperlessUrl}/documents/{secondary.paperlessId}/details"
         target="_blank"
@@ -164,11 +174,14 @@
     <dl class="space-y-2">
       {#each fields as field (field.label)}
         <div
-          class="border-soft flex justify-between border-b py-1.5 text-sm last:border-0 {field.isDifferent
-            ? 'bg-warn-light border-warn -mx-2 rounded-md border-l-2 px-2'
+          class="border-soft flex justify-between gap-3 border-b py-1.5 text-sm last:border-0 {field.isDifferent
+            ? 'border-l-warn -mx-2 border-l-2 px-2'
             : ''}"
         >
-          <dt class={field.isDifferent ? 'text-ink' : 'text-muted'}>{field.label}</dt>
+          <dt class={field.isDifferent ? 'text-ink' : 'text-muted'}>
+            {#if field.isDifferent}<span class="text-warn font-mono">&ne;</span>{/if}
+            {field.label}
+          </dt>
           <dd class="text-ink max-w-[60%] min-w-0 text-right font-medium [overflow-wrap:anywhere]">
             {field.secondaryValue}
           </dd>
@@ -179,11 +192,11 @@
       <div class="mt-3 flex flex-wrap gap-1.5">
         {#each secondary.tags as tag (tag)}
           <span
-            class="bg-canvas text-muted rounded-full px-2 py-0.5 text-xs {!primary.tags.includes(
+            class="text-ink-light border px-1.5 py-0.5 font-mono text-xs {!primary.tags.includes(
               tag,
             )
-              ? 'ring-warn/40 ring-1'
-              : ''}"
+              ? 'border-warn'
+              : 'border-border'}"
           >
             {tag}
           </span>

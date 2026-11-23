@@ -174,13 +174,13 @@
   <!-- Page Header -->
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
-      <h1 class="text-ink text-2xl font-semibold tracking-tight">Similarity Graph</h1>
+      <h1 class="text-ink text-xl font-semibold">Similarity Graph</h1>
     </div>
-    <Button variant="outline" href="/duplicates">Back to List</Button>
+    <Button variant="secondary" href="/duplicates">Back to List</Button>
   </div>
 
   <!-- Info Bar -->
-  <div class="text-muted text-sm">
+  <div class="text-muted font-mono text-xs tabular-nums">
     Showing {data.graph.groupsIncluded} of {data.graph.totalGroupsMatched} groups ({data.graph.nodes
       .length} documents, {data.graph.edges.length} connections)
   </div>
@@ -233,11 +233,9 @@
   </div>
 
   <!-- Graph + Detail Panel -->
-  <div class="flex gap-4">
+  <div class="flex flex-col gap-4 lg:flex-row">
     <!-- Graph -->
-    <div
-      class="border-soft bg-canvas-deep relative min-w-0 flex-1 overflow-hidden rounded-xl border"
-    >
+    <div class="border-soft bg-canvas-deep relative min-w-0 flex-1 overflow-hidden border">
       {#if data.graph.nodes.length > 0}
         <EChart option={chartOption} height="560px" onChartReady={handleChartReady} />
       {:else}
@@ -248,9 +246,9 @@
 
       <!-- Legend (overlay inside graph) -->
       <div
-        class="border-soft bg-surface/90 absolute bottom-4 left-4 rounded-lg border px-4 py-3 backdrop-blur-sm"
+        class="border-soft bg-surface border-t px-4 py-3 lg:absolute lg:bottom-3 lg:left-3 lg:border"
       >
-        <h3 class="text-ink mb-2 text-sm font-semibold">Legend</h3>
+        <h3 class="label-micro mb-2">Legend</h3>
         <div class="flex flex-wrap gap-6 text-xs">
           <div class="space-y-1">
             <p class="text-muted font-medium">Edge status (colour and line style)</p>
@@ -289,10 +287,10 @@
 
     <!-- Detail Panel -->
     {#if selectedNode || selectedEdge}
-      <div class="panel w-80 shrink-0 space-y-4 transition-opacity duration-200">
+      <div class="panel w-full shrink-0 space-y-4 lg:w-80">
         {#if selectedNode}
           <div>
-            <h3 class="text-ink text-sm font-semibold">Document Details</h3>
+            <h3 class="text-ink text-lg font-semibold">Document Details</h3>
             <dl class="mt-2 space-y-2 text-sm">
               <div>
                 <dt class="text-muted">Title</dt>
@@ -300,7 +298,7 @@
               </div>
               <div>
                 <dt class="text-muted">Paperless ID</dt>
-                <dd class="text-ink">{selectedNode.paperlessId}</dd>
+                <dd class="text-ink font-mono tabular-nums">{selectedNode.paperlessId}</dd>
               </div>
               <div>
                 <dt class="text-muted">Correspondent</dt>
@@ -312,7 +310,7 @@
               </div>
               <div>
                 <dt class="text-muted">Appears in Groups</dt>
-                <dd class="text-ink">{selectedNode.groupCount}</dd>
+                <dd class="text-ink font-mono tabular-nums">{selectedNode.groupCount}</dd>
               </div>
             </dl>
           </div>
@@ -320,11 +318,11 @@
 
         {#if selectedEdge}
           <div>
-            <h3 class="text-ink text-sm font-semibold">Connection Details</h3>
+            <h3 class="text-ink text-lg font-semibold">Connection Details</h3>
             <dl class="mt-2 space-y-2 text-sm">
               <div>
                 <dt class="text-muted">Confidence</dt>
-                <dd class="text-ink">
+                <dd class="text-ink font-mono tabular-nums">
                   {(selectedEdge.confidenceScore * 100).toFixed(1)}%
                 </dd>
               </div>

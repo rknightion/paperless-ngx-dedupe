@@ -29,14 +29,14 @@
       {alt}
       width={dimensions.width}
       height={dimensions.height}
-      class="border-soft rounded border object-cover"
+      class="border-soft rounded-sm border object-cover"
       style="width: {dimensions.width}px; height: {dimensions.height}px;"
       loading="lazy"
       onerror={() => (hasError = true)}
     />
   {:else}
     <div
-      class="border-soft bg-canvas text-muted flex items-center justify-center rounded border"
+      class="border-soft bg-canvas text-muted flex items-center justify-center rounded-sm border"
       style="width: {dimensions.width}px; height: {dimensions.height}px;"
     >
       <FileTextIcon class="h-4 w-4" />
@@ -52,11 +52,8 @@
       <img
         {src}
         alt="{alt} (enlarged)"
-        class="border-soft bg-surface h-auto w-[500px] max-w-none rounded-lg border shadow-lg"
+        class="border-border-hover bg-surface-raised rounded-overlay h-auto w-[500px] max-w-none border shadow-lg"
       />
-      <div
-        class="bg-sidebar absolute top-full left-1/2 -mt-1 h-2 w-2 -translate-x-1/2 rotate-45"
-      ></div>
     </div>
   {/if}
 </span>

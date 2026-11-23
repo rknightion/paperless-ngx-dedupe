@@ -87,13 +87,17 @@
   onclose={() => (helpOpen = false)}
   oncancel={() => (helpOpen = false)}
   aria-labelledby={titleId}
-  class="border-soft bg-surface m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
+  class="border-border-hover bg-surface-raised rounded-overlay backdrop:bg-inverse/55 m-auto max-w-md border p-6 shadow-lg"
 >
   <h2 id={titleId} class="text-ink text-lg font-semibold">Keyboard shortcuts</h2>
   <dl class="mt-4 space-y-3">
     {#each shortcuts as [key, description] (key)}
       <div class="grid grid-cols-[3rem_1fr] gap-3">
-        <dt><kbd class="border-soft text-ink rounded border px-2 py-1 text-sm">{key}</kbd></dt>
+        <dt>
+          <kbd class="border-border bg-canvas text-ink rounded-sm border px-2 py-0.5 text-xs">
+            {key}
+          </kbd>
+        </dt>
         <dd class="text-muted text-sm">{description}</dd>
       </div>
     {/each}

@@ -16,6 +16,7 @@
     MatchExplanation,
   } from '$lib/components';
   import { ConfirmDialog, Button, Spinner } from '$lib/components';
+  import ConfidenceLegend from '$lib/components/duplicates/ConfidenceLegend.svelte';
   import { trackGroupViewed, trackMemberAction } from '$lib/faro-events';
   import { safeDocumentReturnTarget } from '$lib/utils/safe-return';
   import ArrowLeftIcon from 'phosphor-svelte/lib/ArrowLeftIcon';
@@ -223,7 +224,7 @@
   <div class="flex flex-wrap items-center gap-3">
     <a
       href={returnUrl}
-      class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm"
+      class="text-accent hover:text-accent-hover inline-flex items-center gap-1.5 text-sm font-medium"
     >
       <ArrowLeftIcon class="h-4 w-4" />
       {documentReturnUrl ? 'Back to Documents' : 'Back to Duplicates'}
@@ -254,17 +255,20 @@
   <!-- Group header -->
   <div>
     <div class="flex flex-wrap items-center gap-3">
-      <h1 class="text-ink text-2xl font-semibold tracking-tight">
+      <h1 class="text-ink text-xl font-semibold">
         {primaryMember?.title || data.group.archivedPrimaryTitle || 'Untitled Group'}
       </h1>
       <ConfidenceBadge score={data.group.confidenceScore} />
       <StatusBadge status={groupStatus} />
     </div>
-    <p class="text-muted mt-1 text-sm">
+    <p class="text-muted mt-1 font-mono text-xs">
       Algorithm v{data.group.algorithmVersion}
       &middot; Created {new Date(data.group.createdAt).toLocaleDateString()}
-      &middot; <span class="font-mono">{data.group.id.slice(0, 8)}&hellip;</span>
+      &middot; <span>{data.group.id.slice(0, 8)}&hellip;</span>
     </p>
+    <div class="mt-2">
+      <ConfidenceLegend />
+    </div>
   </div>
 
   <DuplicateKeyboardHandler
@@ -297,7 +301,7 @@
 
   <!-- Confidence section divider -->
   <div class="flex items-center gap-4">
-    <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Confidence</span>
+    <span class="label-micro">Confidence</span>
     <div class="divider flex-1"></div>
   </div>
 
@@ -313,11 +317,11 @@
   {#if isDeleted}
     <!-- Archived group info -->
     <div class="flex items-center gap-4">
-      <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Archive</span>
+      <span class="label-micro">Archive</span>
       <div class="divider flex-1"></div>
     </div>
 
-    <div class="border-soft bg-canvas rounded-lg border p-4">
+    <div class="border-soft bg-canvas border p-4">
       <p class="text-muted text-sm">
         This group was resolved{#if data.group.deletedAt}
           on {new Date(data.group.deletedAt).toLocaleDateString()}{/if}.
@@ -330,47 +334,44 @@
   {:else}
     <!-- Members section divider -->
     <div class="flex items-center gap-4">
-      <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Members</span>
+      <span class="label-micro">Members</span>
       <div class="divider flex-1"></div>
     </div>
 
     <!-- Members table -->
     <div class="panel">
-      <div class="mb-4 flex items-center gap-3">
-        <h3 class="text-ink text-base font-semibold">Members</h3>
-        <span class="bg-canvas text-muted rounded-full px-2.5 py-0.5 text-xs font-semibold">
-          {data.group.members.length}
-        </span>
+      <div class="mb-3 flex items-baseline gap-3">
+        <h3 class="text-ink text-lg font-semibold">Members</h3>
+        <span class="text-muted font-mono text-xs tabular-nums">{data.group.members.length}</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-soft text-muted border-b text-left text-xs">
-              <th class="pr-4 pb-2 font-medium">Title</th>
-              <th class="hidden pr-4 pb-2 font-medium sm:table-cell">Correspondent</th>
-              <th class="pr-4 pb-2 font-medium">Role</th>
-              <th class="pb-2 font-medium">Actions</th>
+            <tr class="border-b-border-hover border-b text-left">
+              <th class="label-micro py-1.5 pr-4">Title</th>
+              <th class="label-micro hidden py-1.5 pr-4 sm:table-cell">Correspondent</th>
+              <th class="label-micro py-1.5 pr-4">Role</th>
+              <th class="label-micro py-1.5">Actions</th>
             </tr>
           </thead>
           <tbody>
             {#each data.group.members as member (member.documentId)}
               <tr class="border-soft border-b last:border-0">
-                <td class="text-ink py-2.5 pr-4 font-medium">{member.title}</td>
-                <td class="text-muted hidden py-2.5 pr-4 sm:table-cell">
+                <td class="text-ink h-9 py-1.5 pr-4 font-medium">{member.title}</td>
+                <td class="text-muted hidden py-1.5 pr-4 sm:table-cell">
                   {member.correspondent ?? '-'}
                 </td>
-                <td class="py-2.5 pr-4">
+                <td class="py-1.5 pr-4">
                   {#if member.isPrimary}
-                    <span
-                      class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium"
-                    >
-                      Primary
+                    <span class="status-word text-ink uppercase">
+                      <span aria-hidden="true">&#9632;</span>
+                      <span>Primary</span>
                     </span>
                   {:else}
                     <span class="text-muted">-</span>
                   {/if}
                 </td>
-                <td class="py-2.5">
+                <td class="py-1.5">
                   <div class="flex items-center gap-2">
                     {#if !member.isPrimary}
                       <Button
@@ -405,15 +406,15 @@
       <div class="space-y-4">
         <!-- Comparison section divider -->
         <div class="flex items-center gap-4">
-          <span class="text-ink-light text-xs font-medium tracking-wider uppercase">
-            Comparison
-          </span>
+          <span class="label-micro">Comparison</span>
           <div class="divider flex-1"></div>
         </div>
 
-        <h3 class="text-ink text-base font-semibold">Document Comparison</h3>
+        <h3 class="text-ink text-lg font-semibold">Document Comparison</h3>
         {#if fileFacts?.identicalOriginals}
-          <span class="bg-canvas text-ink inline-flex rounded-full px-3 py-1 text-sm">
+          <span
+            class="border-border text-ink-light inline-flex w-fit border px-2 py-0.5 font-mono text-xs"
+          >
             Byte-identical originals
           </span>
         {/if}
@@ -430,16 +431,16 @@
 
         {#if secondaryMembers.length > 1}
           {#if secondaryMembers.length <= 4}
-            <div class="flex gap-1">
+            <div class="border-border flex w-fit max-w-full flex-wrap border">
               {#each secondaryMembers as sec, i (sec.documentId)}
                 <button
                   onclick={() => {
                     selectedSecondaryIndex = i;
                   }}
-                  class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {selectedSecondaryIndex ===
+                  class="border-border h-[26px] border-r px-3 text-sm last:border-r-0 {selectedSecondaryIndex ===
                   i
-                    ? 'bg-accent text-on-accent'
-                    : 'border-soft text-muted hover:bg-canvas border'}"
+                    ? 'bg-selected text-ink font-medium'
+                    : 'text-muted hover:bg-canvas-deep'}"
                 >
                   {sec.title.length > 30 ? sec.title.slice(0, 30) + '...' : sec.title}
                 </button>
@@ -451,7 +452,7 @@
               onchange={(e) => {
                 selectedSecondaryIndex = Number((e.target as HTMLSelectElement).value);
               }}
-              class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm"
+              class="border-border bg-surface-raised text-ink h-7 max-w-full rounded-sm border px-2 text-sm"
             >
               {#each secondaryMembers as sec, i (sec.documentId)}
                 <option value={i}>{sec.title}</option>
@@ -527,7 +528,7 @@
           />
         {/key}
 
-        <h3 class="text-ink text-base font-semibold">Visual Comparison</h3>
+        <h3 class="text-ink text-lg font-semibold">Visual Comparison</h3>
         {#key `${primaryMember.documentId}-${selectedSecondary.documentId}`}
           <DocumentVisualCompare
             primary={primaryMember}

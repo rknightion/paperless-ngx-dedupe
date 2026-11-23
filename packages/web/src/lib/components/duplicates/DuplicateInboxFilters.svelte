@@ -57,19 +57,19 @@
   }
 </script>
 
-<section class="panel space-y-4" aria-label="Duplicate inbox filters">
+<section class="panel space-y-3" aria-label="Duplicate inbox filters">
   {#if paginationMode === 'inbox'}
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h2 class="text-ink text-sm font-semibold">Review inbox</h2>
-        <p class="text-muted text-xs">
+        <h2 class="text-ink text-lg font-semibold">Review inbox</h2>
+        <p class="text-muted text-sm">
           Queue and correspondent filters apply to the review dataset.
         </p>
       </div>
       <a
         href={modeSwitchHref('legacy')}
         data-sveltekit-reload
-        class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium"
+        class="border-border-hover text-ink-light hover:bg-canvas-deep inline-flex h-7 items-center rounded-sm border px-2.5 text-sm font-medium"
       >
         Use legacy list
       </a>
@@ -82,7 +82,7 @@
           value={queue}
           oninput={(event) =>
             navigate({ queue: (event.target as HTMLSelectElement).value }, 'inbox')}
-          class="border-soft bg-surface text-ink mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          class="border-border bg-surface-raised text-ink mt-1 h-7 w-full rounded-sm border px-2 text-sm"
         >
           <option value="pending">Pending</option>
           <option value="high-confidence">High confidence</option>
@@ -104,7 +104,7 @@
           id="correspondent-filter"
           bind:value={correspondent}
           placeholder="Any correspondent"
-          class="border-soft bg-surface text-ink mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          class="border-border bg-surface-raised text-ink mt-1 h-7 w-full rounded-sm border px-2 text-sm"
         />
       </form>
       {@render ConfidenceInput('min-confidence', 'Min confidence', 'minConfidence')}
@@ -113,15 +113,15 @@
   {:else}
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h2 class="text-ink text-sm font-semibold">Legacy list</h2>
-        <p class="text-muted text-xs">
+        <h2 class="text-ink text-lg font-semibold">Legacy list</h2>
+        <p class="text-muted text-sm">
           Status and sort controls apply to the complete legacy list.
         </p>
       </div>
       <a
         href={modeSwitchHref('inbox')}
         data-sveltekit-reload
-        class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium"
+        class="border-border-hover text-ink-light hover:bg-canvas-deep inline-flex h-7 items-center rounded-sm border px-2.5 text-sm font-medium"
       >
         Use review inbox
       </a>
@@ -136,7 +136,7 @@
             const value = (event.target as HTMLSelectElement).value;
             navigate({ status: value === 'all' ? '' : value }, 'legacy');
           }}
-          class="border-soft bg-surface text-ink mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          class="border-border bg-surface-raised text-ink mt-1 h-7 w-full rounded-sm border px-2 text-sm"
         >
           <option value="all">All</option>
           <option value="pending">Pending</option>
@@ -154,7 +154,7 @@
             value={page.url.searchParams.get('sortBy') ?? 'confidence'}
             onchange={(event) =>
               navigate({ sortBy: (event.target as HTMLSelectElement).value }, 'legacy')}
-            class="border-soft bg-surface text-ink min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm"
+            class="border-border bg-surface-raised text-ink h-7 min-w-0 flex-1 rounded-sm border px-2 text-sm"
           >
             <option value="confidence">Confidence</option>
             <option value="created_at">Created</option>
@@ -166,7 +166,7 @@
             type="button"
             onclick={() => navigate({ sortOrder: sortOrder === 'desc' ? 'asc' : 'desc' }, 'legacy')}
             aria-label="Toggle sort order"
-            class="border-soft text-ink rounded-lg border px-2"
+            class="border-border text-ink-light hover:bg-canvas-deep inline-flex h-7 items-center rounded-sm border px-2"
           >
             {#if sortOrder === 'desc'}<ArrowDownIcon class="h-4 w-4" />{:else}<ArrowUpIcon
                 class="h-4 w-4"
@@ -174,7 +174,7 @@
           </button>
         </div>
       </div>
-      <label class="text-ink flex items-center gap-2 self-end py-2 text-sm">
+      <label class="text-ink flex h-7 items-center gap-2 self-end text-sm">
         <input
           type="checkbox"
           checked={page.url.searchParams.get('includeDeleted') === 'true'}
@@ -204,7 +204,7 @@
         const value = (event.target as HTMLInputElement).value;
         navigate({ [keyName]: value ? String(Number(value) / 100) : '' }, paginationMode);
       }}
-      class="border-soft bg-surface text-ink mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+      class="border-border bg-surface-raised text-ink mt-1 h-7 w-full rounded-sm border px-2 text-sm"
     />
   </div>
 {/snippet}

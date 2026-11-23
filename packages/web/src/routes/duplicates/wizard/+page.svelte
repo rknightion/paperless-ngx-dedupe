@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SvelteMap } from 'svelte/reactivity';
   import { createDeletionPreview } from '$lib/duplicate-deletion-preview';
+  import ConfidenceLegend from '$lib/components/duplicates/ConfidenceLegend.svelte';
   import KeeperSelection from '$lib/components/duplicates/KeeperSelection.svelte';
   import {
     deletionRunFromCompletion,
@@ -435,7 +436,7 @@
 <div class="space-y-6">
   <!-- Breadcrumb -->
   <nav class="text-muted text-sm">
-    <a href="/duplicates" class="hover:text-accent">Duplicates</a>
+    <a href="/duplicates" class="text-accent hover:text-accent-hover">Duplicates</a>
     <span class="mx-1">/</span>
     <span class="text-ink">Bulk Operations Wizard</span>
   </nav>
@@ -447,18 +448,16 @@
       {@const isCompleted = step > stepNum}
       {@const isCurrent = step === stepNum}
       {#if i > 0}
-        <div
-          class="h-px flex-1 transition-all duration-500 {isCompleted ? 'bg-success' : 'bg-soft'}"
-        ></div>
+        <div class="h-px flex-1 {isCompleted ? 'bg-success' : 'bg-border'}"></div>
       {/if}
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2" aria-current={isCurrent ? 'step' : undefined}>
         <div
-          class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold
+          class="flex h-6 w-6 items-center justify-center rounded-sm font-mono text-xs font-semibold tabular-nums
             {isCurrent
-            ? 'bg-accent shadow-accent/25 text-on-accent shadow-md'
+            ? 'bg-accent text-on-accent'
             : isCompleted
               ? 'bg-success text-on-accent'
-              : 'bg-soft text-muted'}"
+              : 'border-border text-muted border'}"
         >
           {#if isCompleted}
             &#10003;
@@ -467,10 +466,10 @@
           {/if}
         </div>
         <span
-          class="hidden text-sm font-medium sm:inline {isCurrent
-            ? 'text-accent'
+          class="hidden text-sm sm:inline {isCurrent
+            ? 'text-ink font-semibold'
             : isCompleted
-              ? 'text-success'
+              ? 'text-ink-light font-medium'
               : 'text-muted'}"
         >
           {label}
@@ -483,7 +482,7 @@
   <div class="panel">
     <!-- Step 1: Filter -->
     {#if step === 1}
-      <h2 class="text-ink text-xl font-semibold">Set Confidence Threshold</h2>
+      <h2 class="text-ink text-lg font-semibold">Set Confidence Threshold</h2>
 
       <div class="mt-6 space-y-6">
         <div>
@@ -491,7 +490,7 @@
             <label for="threshold-range" class="text-ink text-sm font-medium">
               Minimum Confidence
             </label>
-            <span class="text-accent text-lg font-semibold">{threshold}%</span>
+            <span class="text-ink font-mono text-lg font-semibold tabular-nums">{threshold}%</span>
           </div>
           <!-- Native: a range slider, which none of the form primitives cover. -->
           <input
@@ -504,7 +503,7 @@
             bind:value={threshold}
             class="accent-accent mt-2 w-full"
           />
-          <div class="text-muted mt-1 flex justify-between text-xs">
+          <div class="text-muted mt-1 flex justify-between font-mono text-xs">
             <span>50%</span>
             <span>100%</span>
           </div>
@@ -526,7 +525,8 @@
           {#if isLoadingCount}
             Loading matching groups...
           {:else if matchCount !== null}
-            <span class="text-ink font-semibold">{matchCount}</span> pending groups match this threshold
+            <span class="text-ink font-mono font-semibold tabular-nums">{matchCount}</span> pending groups
+            match this threshold
           {/if}
         </div>
       </div>
@@ -538,7 +538,7 @@
       <!-- Step 2: Review Groups -->
     {:else if step === 2}
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-ink text-xl font-semibold">Review Matching Groups</h2>
+        <h2 class="text-ink text-lg font-semibold">Review Matching Groups</h2>
         <div class="flex items-center gap-2">
           <!-- Sort controls -->
           <Select
@@ -557,37 +557,43 @@
             onclick={toggleSortOrder}
             title="Toggle sort order"
           />
-          <!-- View mode toggle. The two buttons are segments of one control: the active segment is a
-               filled accent pill and the inactive one bare muted text inside a p-0.5 frame, which
-               no Button variant expresses, so they stay native. -->
-          <div class="border-soft flex items-center gap-1 rounded-lg border p-0.5">
+          <!-- View mode toggle. The two buttons are segments of one bordered control with a
+               hairline divider and a selected fill, which no Button variant expresses, so they
+               stay native. -->
+          <div class="border-border flex h-[26px] items-stretch border">
             <button
               onclick={() => (viewMode = 'condensed')}
-              class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'condensed'
-                ? 'bg-accent text-on-accent'
-                : 'text-muted hover:text-ink'}"
+              class="border-border inline-flex items-center border-r px-2 {viewMode === 'condensed'
+                ? 'bg-selected text-ink'
+                : 'text-muted hover:bg-canvas-deep'}"
               title="Condensed view"
             >
-              <ListIcon class="h-4 w-4" />
+              <ListIcon class="h-3.5 w-3.5" />
             </button>
             <button
               onclick={() => {
                 viewMode = 'expanded';
                 fetchMembersForExpandedView();
               }}
-              class="rounded-md px-2.5 py-1.5 transition-colors {viewMode === 'expanded'
-                ? 'bg-accent text-on-accent'
-                : 'text-muted hover:text-ink'}"
+              class="inline-flex items-center px-2 {viewMode === 'expanded'
+                ? 'bg-selected text-ink'
+                : 'text-muted hover:bg-canvas-deep'}"
               title="Expanded view"
             >
-              <GridFourIcon class="h-4 w-4" />
+              <GridFourIcon class="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </div>
 
-      <div class="text-muted mt-4 text-sm">
-        Selected: <span class="text-ink font-semibold">{selectedCount}</span> of {groupsTotal}
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <div class="text-muted text-sm">
+          Selected: <span class="text-ink font-mono font-semibold tabular-nums">
+            {selectedCount}
+          </span>
+          of <span class="font-mono tabular-nums">{groupsTotal}</span>
+        </div>
+        <ConfidenceLegend />
       </div>
 
       {#if isLoadingGroups}
@@ -596,9 +602,7 @@
         <!-- Condensed view -->
         <div class="mt-4 space-y-2">
           {#each groups as group (group.id)}
-            <div
-              class="border-soft flex items-center gap-3 rounded-lg border px-3 py-2 sm:px-4 sm:py-3"
-            >
+            <div class="border-soft bg-surface flex items-center gap-3 border px-3 py-2 sm:px-4">
               <Checkbox
                 checked={!excludedGroupIds.has(group.id)}
                 onchange={() => toggleGroup(group.id)}
@@ -638,7 +642,7 @@
                   />
                 {/snippet}
               </RichTooltip>
-              <span class="text-muted text-xs">
+              <span class="text-muted font-mono text-xs tabular-nums">
                 <span class="hidden sm:inline">{group.memberCount} </span>docs
               </span>
             </div>
@@ -662,7 +666,7 @@
 
       {#if groupsTotal > 10}
         <div class="mt-4 flex items-center justify-between">
-          <span class="text-muted text-sm">
+          <span class="text-muted font-mono text-xs tabular-nums">
             Showing {groupsOffset + 1}-{Math.min(groupsOffset + 10, groupsTotal)} of {groupsTotal}
           </span>
           <div class="flex gap-2">
@@ -688,16 +692,16 @@
 
       <!-- Step 3: Select Action -->
     {:else if step === 3}
-      <h2 class="text-ink text-xl font-semibold">Choose Action</h2>
+      <h2 class="text-ink text-lg font-semibold">Choose Action</h2>
 
       <!-- The three action cards stay native buttons: each is a whole-card selector that wraps a
            radio and a description, markup Button cannot express. The radios are display only. -->
       <div class="mt-6 space-y-3">
         <button
           onclick={() => (selectedAction = 'false_positive')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'false_positive'
-            ? 'border-accent bg-accent-light'
-            : 'border-soft hover:border-accent'}"
+          class="w-full border px-4 py-3 text-left {selectedAction === 'false_positive'
+            ? 'border-accent bg-selected shadow-[inset_2px_0_0_var(--color-accent)]'
+            : 'border-soft hover:border-border-hover hover:bg-canvas-deep'}"
         >
           <div class="flex items-center gap-3">
             <XCircleIcon class="text-muted h-5 w-5 shrink-0" />
@@ -718,9 +722,9 @@
 
         <button
           onclick={() => (selectedAction = 'ignored')}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left {selectedAction === 'ignored'
-            ? 'border-accent bg-accent-light'
-            : 'border-soft hover:border-accent'}"
+          class="w-full border px-4 py-3 text-left {selectedAction === 'ignored'
+            ? 'border-accent bg-selected shadow-[inset_2px_0_0_var(--color-accent)]'
+            : 'border-soft hover:border-border-hover hover:bg-canvas-deep'}"
         >
           <div class="flex items-center gap-3">
             <EyeIcon class="text-muted h-5 w-5 shrink-0" />
@@ -743,17 +747,13 @@
           onclick={() => (selectedAction = 'delete')}
           disabled={readOnly}
           title={readOnly ? 'Paperless is read-only' : undefined}
-          class="w-full rounded-lg border-2 px-4 py-4 text-left disabled:opacity-50 {selectedAction ===
+          class="disabled:border-border disabled:text-disabled w-full border px-4 py-3 text-left disabled:cursor-not-allowed {selectedAction ===
           'delete'
             ? 'border-ember bg-ember-light'
-            : 'border-soft hover:border-ember'}"
+            : 'border-soft hover:border-ember hover:bg-canvas-deep'}"
         >
           <div class="flex items-center gap-3">
-            <div
-              class="bg-ember-light flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-            >
-              <TrashIcon class="text-ember h-5 w-5 shrink-0" />
-            </div>
+            <TrashIcon class="text-ember h-5 w-5 shrink-0" />
             <input
               type="radio"
               name="action"
@@ -779,10 +779,10 @@
 
       <!-- Step 4: Confirm -->
     {:else if step === 4}
-      <h2 class="text-ink text-xl font-semibold">Confirm Action</h2>
+      <h2 class="text-ink text-lg font-semibold">Confirm Action</h2>
 
       <div class="mt-6 space-y-4">
-        <div class="border-soft bg-canvas rounded-lg border px-4 py-3">
+        <div class="border-soft bg-canvas border px-4 py-3">
           <dl class="space-y-2 text-sm">
             <div class="flex justify-between">
               <dt class="text-muted">Action</dt>
@@ -796,7 +796,7 @@
             </div>
             <div class="flex justify-between">
               <dt class="text-muted">Affected groups</dt>
-              <dd class="text-ink font-medium">{selectedCount}</dd>
+              <dd class="text-ink font-mono font-medium tabular-nums">{selectedCount}</dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-muted">Estimated documents</dt>
@@ -812,13 +812,13 @@
             </div>
             <div class="flex justify-between">
               <dt class="text-muted">Confidence threshold</dt>
-              <dd class="text-ink font-medium">{threshold}%+</dd>
+              <dd class="text-ink font-mono font-medium tabular-nums">{threshold}%+</dd>
             </div>
           </dl>
         </div>
 
         {#if selectedAction === 'delete'}
-          <div class="border-ember bg-ember-light text-ember rounded-lg border-2 px-4 py-3 text-sm">
+          <div class="border-ember bg-ember-light text-ember border px-4 py-3 text-sm">
             Non-primary documents from each group will be moved to the Paperless-NGX recycle bin.
             You can restore them or empty the recycle bin after the operation completes.
           </div>
@@ -853,7 +853,7 @@
 
       <!-- Step 5: Execute -->
     {:else if step === 5}
-      <h2 class="text-ink text-xl font-semibold">Executing...</h2>
+      <h2 class="text-ink text-lg font-semibold">Executing...</h2>
 
       <div class="mt-6">
         <ProgressBar progress={executionProgress} message={executionMessage} />
@@ -863,14 +863,11 @@
     {:else if step === 6}
       {#if executionResult?.success}
         <div class="flex flex-col items-center text-center">
-          <div class="bg-success-light flex h-16 w-16 items-center justify-center rounded-full">
-            <CheckCircleIcon class="text-success h-8 w-8" />
-          </div>
-          <h2 class="text-success mt-4 text-xl font-semibold">Operation Complete</h2>
-          <div
-            class="border-success bg-success-light text-success mt-4 rounded-lg border px-4 py-4 text-sm"
-          >
-            <span class="font-semibold">{executionResult.processed}</span> groups processed successfully.
+          <CheckCircleIcon class="text-success h-6 w-6" />
+          <h2 class="text-success mt-2 text-lg font-semibold">Operation Complete</h2>
+          <div class="border-success bg-success-light text-success mt-4 border px-4 py-3 text-sm">
+            <span class="font-mono font-semibold tabular-nums">{executionResult.processed}</span> groups
+            processed successfully.
           </div>
         </div>
 
@@ -879,13 +876,9 @@
         {/if}
       {:else}
         <div class="flex flex-col items-center text-center">
-          <div class="bg-ember-light flex h-16 w-16 items-center justify-center rounded-full">
-            <XCircleIcon class="text-ember h-8 w-8" />
-          </div>
-          <h2 class="text-ember mt-4 text-xl font-semibold">Operation Failed</h2>
-          <div
-            class="border-ember bg-ember-light text-ember mt-4 rounded-lg border px-4 py-4 text-sm"
-          >
+          <XCircleIcon class="text-ember h-6 w-6" />
+          <h2 class="text-ember mt-2 text-lg font-semibold">Operation Failed</h2>
+          <div class="border-ember bg-ember-light text-ember mt-4 border px-4 py-3 text-sm">
             {#each executionResult?.errors ?? ['Unknown error'] as error, i (i)}
               <p>{error}</p>
             {/each}

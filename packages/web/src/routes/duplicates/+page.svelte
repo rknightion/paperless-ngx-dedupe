@@ -122,20 +122,15 @@
   <title>Duplicates - Paperless NGX Dedupe</title>
 </svelte:head>
 
-<div class="space-y-5">
+<div class="space-y-4">
   <header class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-    <div class="flex items-center gap-3">
-      <h1 class="text-ink text-2xl font-semibold tracking-tight">Duplicate Groups</h1>
-      <span class="bg-accent-light text-accent rounded-full px-2.5 py-0.5 text-xs font-semibold">
-        {data.total}
-      </span>
+    <div class="flex items-baseline gap-3">
+      <h1 class="text-ink text-xl font-semibold">Duplicate Groups</h1>
+      <span class="text-muted font-mono text-sm tabular-nums">{data.total}</span>
     </div>
     <div class="grid grid-cols-2 gap-2 sm:flex">
-      <Button variant="secondary" href="/duplicates/graph" icon={GraphIcon} fullWidth>
-        Similarity Graph
-      </Button>
       <Button
-        variant="secondary"
+        variant="ghost"
         href="/api/v1/export/duplicates.csv?{page.url.searchParams.toString()}"
         icon={DownloadSimpleIcon}
         fullWidth
@@ -143,13 +138,12 @@
       >
         Export CSV
       </Button>
-      <!-- One primary action per view: this is the committing one. -->
-      <Button href="/duplicates/wizard" icon={MagicWandIcon} fullWidth>
-        Bulk Operations Wizard
+      <Button variant="secondary" href="/duplicates/graph" icon={GraphIcon} fullWidth>
+        Similarity Graph
       </Button>
       {#if data.deletedGroupCount > 0}
         <Button
-          variant="secondary"
+          variant="ghost"
           icon={TrashIcon}
           fullWidth
           disabled={isSubmitting}
@@ -159,6 +153,10 @@
           Purge {data.deletedGroupCount} Deleted
         </Button>
       {/if}
+      <!-- One primary action per view region: the wizard is the committing one. -->
+      <Button href="/duplicates/wizard" icon={MagicWandIcon} fullWidth>
+        Bulk Operations Wizard
+      </Button>
     </div>
   </header>
 
@@ -170,9 +168,9 @@
   {#if actionFeedback}
     <div
       role={actionFeedback.type === 'error' ? 'alert' : 'status'}
-      class="rounded-lg px-3 py-2 text-sm {actionFeedback.type === 'success'
-        ? 'bg-success-light text-success'
-        : 'bg-ember-light text-ember'}"
+      class="border px-3 py-2 text-sm {actionFeedback.type === 'success'
+        ? 'border-success bg-success-light text-success'
+        : 'border-ember bg-ember-light text-ember'}"
     >
       {actionFeedback.message}
     </div>
@@ -183,12 +181,26 @@
     queue={data.query?.queue ?? 'pending'}
   />
 
+  <DuplicateInboxList
+    groups={data.groups}
+    deletionRuns={data.deletionRuns}
+    total={data.total}
+    limit={data.limit}
+    offset={data.offset}
+    paginationMode={data.paginationMode}
+    nextCursor={data.nextCursor}
+    {selectedIds}
+    onselectionchange={(ids) => (selectedIds = ids)}
+    onpreview={(group) => (previewGroup = group)}
+  />
+
   {#if selectedIds.size > 0}
+    <!-- Pinned to the bottom edge of the content region, on the inverse surface. -->
     <section
-      class="border-accent bg-accent-light sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
+      class="bg-inverse text-on-inverse sticky bottom-0 z-20 flex flex-wrap items-center gap-3 px-4 py-2.5"
       aria-label="Bulk actions"
     >
-      <span class="text-ink text-sm font-medium">{selectedIds.size} selected</span>
+      <span class="font-mono text-sm tabular-nums">{selectedIds.size} selected</span>
       <Button
         variant="secondary"
         size="sm"
@@ -197,7 +209,12 @@
       >
         Not Duplicates
       </Button>
-      <Button size="sm" disabled={isSubmitting} onclick={() => batchStatus('ignored')}>
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={isSubmitting}
+        onclick={() => batchStatus('ignored')}
+      >
         Keep All
       </Button>
       <Button
@@ -212,30 +229,17 @@
       <button
         type="button"
         onclick={() => (selectedIds = new Set())}
-        class="text-muted text-sm underline"
+        class="text-on-inverse hover:text-on-inverse/80 text-sm underline"
       >
         Clear selection
       </button>
       {#if deleteProgress}
-        <span class="text-muted text-sm" role="status">
+        <span class="font-mono text-xs tabular-nums" role="status">
           {deleteProgress.message || `${Math.round(deleteProgress.progress * 100)}%`}
         </span>
       {/if}
     </section>
   {/if}
-
-  <DuplicateInboxList
-    groups={data.groups}
-    deletionRuns={data.deletionRuns}
-    total={data.total}
-    limit={data.limit}
-    offset={data.offset}
-    paginationMode={data.paginationMode}
-    nextCursor={data.nextCursor}
-    {selectedIds}
-    onselectionchange={(ids) => (selectedIds = ids)}
-    onpreview={(group) => (previewGroup = group)}
-  />
 </div>
 
 <BulkDeletePreview
@@ -259,7 +263,7 @@
   <dialog
     open
     aria-labelledby="delete-complete-title"
-    class="border-soft bg-surface fixed inset-0 z-50 m-auto max-w-md rounded-xl border p-6 shadow-lg backdrop:bg-black/40"
+    class="border-border-hover bg-surface-raised rounded-overlay backdrop:bg-inverse/55 fixed inset-0 z-50 m-auto max-w-md border p-6 shadow-lg"
   >
     <h2 id="delete-complete-title" class="text-ink text-lg font-semibold">Delete complete</h2>
     <RecycleBinPrompt {deletionRun} onclose={() => (showRecycleBinPrompt = false)} />
