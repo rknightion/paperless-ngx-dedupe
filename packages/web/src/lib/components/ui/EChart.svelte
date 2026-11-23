@@ -23,7 +23,7 @@
   const THEME_NAME = 'm7kni';
 
   function build(echarts: typeof EChartsNS) {
-    if (!container) return;
+    if (!container?.isConnected) return;
 
     // Registered from the live tokens rather than literals, so the palette
     // follows the light/dark swap. ECharts bakes theme values in at init(),
@@ -76,9 +76,8 @@
   });
 
   $effect(() => {
-    if (chart) {
-      chart.setOption(option);
-    }
+    const currentOption = option;
+    chart?.setOption(currentOption);
   });
 </script>
 

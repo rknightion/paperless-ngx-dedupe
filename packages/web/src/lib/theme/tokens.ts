@@ -1,4 +1,5 @@
 import { browser } from '$app/env';
+import { theme } from './ThemeStore.svelte';
 
 /**
  * Resolved design-system token values, for the places that cannot use a
@@ -21,8 +22,8 @@ const FALLBACKS: Record<string, string> = {
   '--color-chart-5': 'oklch(0.57 0.1 65)',
   '--color-chart-6': 'oklch(0.6 0.095 161)',
   '--color-accent': '#1d6a8a',
-  '--color-success': '#2d784c',
-  '--color-warn': '#8f6410',
+  '--color-success': '#2b7148',
+  '--color-warn': '#865d0f',
   '--color-ember': '#a83a2e',
   '--color-ink': 'oklch(0.24 0.012 227)',
   '--color-ink-light': 'oklch(0.37 0.015 227)',
@@ -33,12 +34,17 @@ const FALLBACKS: Record<string, string> = {
   '--color-surface-raised': 'oklch(1 0 0)',
   '--color-canvas': 'oklch(0.962 0.007 227)',
   '--color-canvas-deep': 'oklch(0.945 0.009 227)',
+  '--font-sans': "'Hanken Grotesk', system-ui, sans-serif",
   '--font-mono': "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
 };
 
-/** Read one token off <html>. Returns the light-scope fallback off the browser. */
+/**
+ * Read one token off <html>. Reactive callers track the resolved scheme, since
+ * a computed CSS property does not itself invalidate chart options.
+ */
 export function readToken(name: string): string {
   if (!browser) return FALLBACKS[name] ?? '';
+  void theme.resolved;
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return value || (FALLBACKS[name] ?? '');
 }
