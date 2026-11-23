@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 
 import type { ModelPricing } from './costs.js';
 import { buildOpenAiRequestParams, type OpenAiProviderOptions } from './providers/openai.js';
+import { usesOpenAiApi } from './providers/openai-capabilities.js';
 import type { AiExtractionRequest } from './providers/types.js';
 
 export class AiBudgetPolicyError extends Error {}
@@ -87,7 +88,12 @@ export async function countAiPromptTokens(
   try {
     tokenizerModel = resolveOpenAiTokenizerModel(model);
   } catch (error) {
-    if (!(error instanceof UnsupportedAiModelEncodingError) || !options.baseURL) throw error;
+    if (
+      !(error instanceof UnsupportedAiModelEncodingError) ||
+      usesOpenAiApi(options.baseURL, options.gatewayToken)
+    ) {
+      throw error;
+    }
     const params = await buildOpenAiRequestParams(request, model, flexProcessing, options);
     // Custom servers do not expose a tokenizer contract. Reserve one token per UTF-8 byte
     // plus framing; reconciliation retains at least the reported charge if usage exceeds it.

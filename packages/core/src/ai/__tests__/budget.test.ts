@@ -755,3 +755,11 @@ it('counts chat schema, roles, and bounds in the actual request representation',
       OPENAI_RESPONSES_FRAMING_ALLOWANCE_TOKENS,
   );
 });
+
+it('keeps the tokenizer guard for an unrecognised model on a gateway route', async () => {
+  await expect(
+    countAiPromptTokens({ systemPrompt: 'System', userPrompt: 'Body' }, 'custom-model', false, {
+      baseURL: 'https://gateway.ai.cloudflare.com/v1/test-account/test-gateway/openai',
+    }),
+  ).rejects.toThrow(UnsupportedAiModelEncodingError);
+});
