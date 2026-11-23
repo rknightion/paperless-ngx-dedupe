@@ -176,10 +176,10 @@
     {#if analysisParts}
       <p class="text-muted mt-1 text-xs">
         {analysisParts.text}{#if analysisParts.skipped > 0}{#if analysisParts.text},
-          {/if}{#if analysisParts.skipReasons}<RichTooltip position="bottom"
-              ><span class="cursor-help border-b border-dotted border-current"
-                >{analysisParts.skipped.toLocaleString()} skipped</span
-              >{#snippet content()}<p class="font-semibold">Skip reasons</p>
+          {/if}{#if analysisParts.skipReasons}<RichTooltip position="bottom">
+              <span class="cursor-help border-b border-dotted border-current">
+                {analysisParts.skipped.toLocaleString()} skipped
+              </span>{#snippet content()}<p class="font-semibold">Skip reasons</p>
                 {#if analysisParts.skipReasons?.excludedByTag && analysisParts.skipReasons.excludedByTag > 0}<p
                     class="mt-1"
                   >
@@ -199,8 +199,8 @@
                     class="mt-1"
                   >
                     Processing failed: {analysisParts.skipReasons.shinglesFailed.toLocaleString()}
-                  </p>{/if}{/snippet}</RichTooltip
-            >{:else}{analysisParts.skipped.toLocaleString()} skipped{/if}{/if}{analysisParts.totalSuffix}{#if analysisParts.groupsSuffix},
+                  </p>{/if}{/snippet}
+            </RichTooltip>{:else}{analysisParts.skipped.toLocaleString()} skipped{/if}{/if}{analysisParts.totalSuffix}{#if analysisParts.groupsSuffix},
           {analysisParts.groupsSuffix}{/if}
       </p>
       {#if analysisParts.pairsSuppressed > 0}

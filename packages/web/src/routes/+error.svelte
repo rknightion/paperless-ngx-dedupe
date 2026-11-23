@@ -78,8 +78,10 @@
       class="fill-accent"
       font-size="36"
       font-weight="600"
-      font-family="system-ui, sans-serif">?</text
+      font-family="system-ui, sans-serif"
     >
+      ?
+    </text>
   </svg>
 
   <p class="text-accent font-mono text-6xl font-semibold tracking-tighter">{status}</p>

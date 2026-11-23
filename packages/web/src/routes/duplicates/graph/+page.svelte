@@ -209,9 +209,9 @@
   <div class="panel">
     <div class="flex flex-wrap items-end gap-4">
       <div>
-        <label for="graph-min-confidence" class="text-ink block text-sm font-medium"
-          >Min Confidence</label
-        >
+        <label for="graph-min-confidence" class="text-ink block text-sm font-medium">
+          Min Confidence
+        </label>
         <input
           id="graph-min-confidence"
           type="number"

@@ -225,9 +225,13 @@
       <ArrowLeft class="h-4 w-4" />
       {documentReturnUrl ? 'Back to Documents' : 'Back to Duplicates'}
     </a>
-    {#if data.nextGroupId}<Button variant="secondary" size="sm" onclick={() => void goToNextGroup()}
-        >Skip</Button
-      >{/if}
+    {#if data.nextGroupId}<Button
+        variant="secondary"
+        size="sm"
+        onclick={() => void goToNextGroup()}
+      >
+        Skip
+      </Button>{/if}
   </div>
   <label class="text-ink flex items-center gap-2 text-sm">
     <input
@@ -349,9 +353,9 @@
             {#each data.group.members as member (member.documentId)}
               <tr class="border-soft border-b last:border-0">
                 <td class="text-ink py-2.5 pr-4 font-medium">{member.title}</td>
-                <td class="text-muted hidden py-2.5 pr-4 sm:table-cell"
-                  >{member.correspondent ?? '-'}</td
-                >
+                <td class="text-muted hidden py-2.5 pr-4 sm:table-cell">
+                  {member.correspondent ?? '-'}
+                </td>
                 <td class="py-2.5 pr-4">
                   {#if member.isPrimary}
                     <span
@@ -398,23 +402,24 @@
       <div class="space-y-4">
         <!-- Comparison section divider -->
         <div class="flex items-center gap-4">
-          <span class="text-ink-light text-xs font-medium tracking-wider uppercase">Comparison</span
-          >
+          <span class="text-ink-light text-xs font-medium tracking-wider uppercase">
+            Comparison
+          </span>
           <div class="divider flex-1"></div>
         </div>
 
         <h3 class="text-ink text-base font-semibold">Document Comparison</h3>
         {#if fileFacts?.identicalOriginals}
-          <span class="bg-canvas text-ink inline-flex rounded-full px-3 py-1 text-sm"
-            >Byte-identical originals</span
-          >
+          <span class="bg-canvas text-ink inline-flex rounded-full px-3 py-1 text-sm">
+            Byte-identical originals
+          </span>
         {/if}
         {#if fileError}
           <p role="status" class="text-muted text-sm">
             File metadata is unavailable.
-            <button class="text-accent underline" onclick={() => fileRequest++}
-              >Retry file metadata</button
-            >
+            <button class="text-accent underline" onclick={() => fileRequest++}>
+              Retry file metadata
+            </button>
           </p>
         {:else if !fileFacts}
           <p role="status" class="text-muted text-sm">Loading file metadata…</p>
@@ -463,11 +468,11 @@
         {#if groupStatus !== 'deleted'}
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-muted text-xs">
-              Actions for <strong class="text-ink"
-                >{selectedSecondary.title.length > 40
+              Actions for <strong class="text-ink">
+                {selectedSecondary.title.length > 40
                   ? selectedSecondary.title.slice(0, 40) + '...'
-                  : selectedSecondary.title}</strong
-              >:
+                  : selectedSecondary.title}
+              </strong>:
             </span>
             <Button
               variant="secondary"

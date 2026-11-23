@@ -190,9 +190,9 @@
                 <p class="text-ink text-sm font-medium">{jobLabel(job.type)}</p>
                 <p class="text-muted mt-1 text-xs">{job.message || 'Waiting for an update'}</p>
               </div>
-              <span class="text-muted shrink-0 text-xs capitalize"
-                >{job.connection === 'degraded' ? 'Updates delayed' : job.status}</span
-              >
+              <span class="text-muted shrink-0 text-xs capitalize">
+                {job.connection === 'degraded' ? 'Updates delayed' : job.status}
+              </span>
             </div>
             <div class="bg-canvas-deep mt-3 h-2 overflow-hidden rounded-full" aria-hidden="true">
               <div

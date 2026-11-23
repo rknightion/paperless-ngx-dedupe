@@ -359,22 +359,28 @@
     aria-current={data.queue === 'review' ? 'page' : undefined}
     class="border-b-2 px-4 py-2 text-sm font-medium {data.queue === 'review'
       ? 'border-accent text-accent'
-      : 'text-muted border-transparent'}">Review suggestions</a
+      : 'text-muted border-transparent'}"
   >
+    Review suggestions
+  </a>
   <a
     href="/ai-processing/review?queue=failures&limit={data.limit}"
     aria-current={data.queue === 'failures' ? 'page' : undefined}
     class="border-b-2 px-4 py-2 text-sm font-medium {data.queue === 'failures'
       ? 'border-accent text-accent'
-      : 'text-muted border-transparent'}">Extraction failures</a
+      : 'text-muted border-transparent'}"
   >
+    Extraction failures
+  </a>
   <a
     href="/ai-processing/review?queue=history&limit={data.limit}"
     aria-current={data.queue === 'history' ? 'page' : undefined}
     class="border-b-2 px-4 py-2 text-sm font-medium {data.queue === 'history'
       ? 'border-accent text-accent'
-      : 'text-muted border-transparent'}">Apply audit</a
+      : 'text-muted border-transparent'}"
   >
+    Apply audit
+  </a>
 </nav>
 
 {#if data.returnTo}

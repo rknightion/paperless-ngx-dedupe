@@ -70,8 +70,10 @@
       type="button"
       class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
       disabled={busy}
-      onclick={() => load()}>Refresh</button
+      onclick={() => load()}
     >
+      Refresh
+    </button>
   </div>
   <p class="text-muted text-sm">
     These pairs were marked not duplicates. Removing a decision lets a later analysis reconsider the
@@ -101,8 +103,10 @@
           class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
           disabled={busy}
           aria-label={`Remove decision between ${item.documents[0].paperlessId} and ${item.documents[1].paperlessId}`}
-          onclick={() => remove(item.id)}>Remove</button
+          onclick={() => remove(item.id)}
         >
+          Remove
+        </button>
       </li>
     {/each}
   </ul>
@@ -111,7 +115,9 @@
       type="button"
       class="border-soft bg-surface text-ink rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
       disabled={busy}
-      onclick={() => load(true)}>Load more</button
+      onclick={() => load(true)}
     >
+      Load more
+    </button>
   {/if}
 </section>

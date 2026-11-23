@@ -79,9 +79,9 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-<Button variant="secondary" size="sm" onclick={() => (helpOpen = true)}
-  >Keyboard shortcuts (?)</Button
->
+<Button variant="secondary" size="sm" onclick={() => (helpOpen = true)}>
+  Keyboard shortcuts (?)
+</Button>
 <dialog
   bind:this={dialog}
   onclose={() => (helpOpen = false)}

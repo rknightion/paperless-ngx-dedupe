@@ -25,15 +25,15 @@
       <p class="text-muted mt-1 text-sm">The checks that matter before you work through results.</p>
     </div>
     {#if paperlessConnected}
-      <span class="bg-success-light text-success rounded-full px-2.5 py-1 text-xs font-medium"
-        >Paperless connected{readiness.paperless.apiVersion
+      <span class="bg-success-light text-success rounded-full px-2.5 py-1 text-xs font-medium">
+        Paperless connected{readiness.paperless.apiVersion
           ? ` · API ${readiness.paperless.apiVersion}`
-          : ''}</span
-      >
+          : ''}
+      </span>
     {:else}
-      <span class="bg-warn-light text-warn rounded-full px-2.5 py-1 text-xs font-medium"
-        >Paperless unavailable</span
-      >
+      <span class="bg-warn-light text-warn rounded-full px-2.5 py-1 text-xs font-medium">
+        Paperless unavailable
+      </span>
     {/if}
   </div>
 

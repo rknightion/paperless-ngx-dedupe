@@ -193,25 +193,25 @@
                     {#if preflight.newEntitiesCreated.correspondents.length > 0}
                       <div class="mb-1">
                         <span class="text-ink text-xs font-medium">Correspondents:</span>
-                        <span class="text-muted text-xs"
-                          >{preflight.newEntitiesCreated.correspondents.join(', ')}</span
-                        >
+                        <span class="text-muted text-xs">
+                          {preflight.newEntitiesCreated.correspondents.join(', ')}
+                        </span>
                       </div>
                     {/if}
                     {#if preflight.newEntitiesCreated.documentTypes.length > 0}
                       <div class="mb-1">
                         <span class="text-ink text-xs font-medium">Document types:</span>
-                        <span class="text-muted text-xs"
-                          >{preflight.newEntitiesCreated.documentTypes.join(', ')}</span
-                        >
+                        <span class="text-muted text-xs">
+                          {preflight.newEntitiesCreated.documentTypes.join(', ')}
+                        </span>
                       </div>
                     {/if}
                     {#if preflight.newEntitiesCreated.tags.length > 0}
                       <div>
                         <span class="text-ink text-xs font-medium">Tags:</span>
-                        <span class="text-muted text-xs"
-                          >{preflight.newEntitiesCreated.tags.join(', ')}</span
-                        >
+                        <span class="text-muted text-xs">
+                          {preflight.newEntitiesCreated.tags.join(', ')}
+                        </span>
                       </div>
                     {/if}
                   </li>

@@ -156,13 +156,13 @@
               </td>
               <td class="px-3 py-3">
                 <span class="text-ink block">{item.correspondent ?? 'No correspondent'}</span>
-                <span class="text-muted block text-xs"
-                  >{item.documentType ?? 'No document type'}</span
-                >
+                <span class="text-muted block text-xs">
+                  {item.documentType ?? 'No document type'}
+                </span>
                 {#if item.tags.length > 0}
-                  <span class="text-muted block max-w-48 truncate text-xs"
-                    >{item.tags.join(', ')}</span
-                  >
+                  <span class="text-muted block max-w-48 truncate text-xs">
+                    {item.tags.join(', ')}
+                  </span>
                 {/if}
               </td>
               <td class="px-3 py-3">

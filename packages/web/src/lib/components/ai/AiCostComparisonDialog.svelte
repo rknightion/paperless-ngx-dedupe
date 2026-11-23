@@ -95,8 +95,9 @@
                   <tr class="border-soft border-b">
                     <th class="text-muted px-4 py-2.5 text-left text-xs font-medium">Model</th>
                     <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">Best Case</th>
-                    <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">Worst Case</th
-                    >
+                    <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">
+                      Worst Case
+                    </th>
                     <th class="text-muted px-4 py-2.5 text-right text-xs font-medium">
                       Cache Savings
                     </th>
@@ -115,32 +116,35 @@
                         {#if isCurrent}
                           <span
                             class="bg-accent/10 text-accent ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                            >current</span
                           >
+                            current
+                          </span>
                         {/if}
                       </td>
                       <td class="px-4 py-3 text-right">
-                        <span class="text-ink text-sm font-medium tabular-nums"
-                          >{formatCost(model.bestCase.totalCostUsd)}</span
-                        >
-                        <span class="text-muted block text-xs tabular-nums"
-                          >{formatPerDoc(model.bestCase.perDocumentCostUsd)}</span
-                        >
+                        <span class="text-ink text-sm font-medium tabular-nums">
+                          {formatCost(model.bestCase.totalCostUsd)}
+                        </span>
+                        <span class="text-muted block text-xs tabular-nums">
+                          {formatPerDoc(model.bestCase.perDocumentCostUsd)}
+                        </span>
                       </td>
                       <td class="px-4 py-3 text-right">
-                        <span class="text-ink text-sm font-medium tabular-nums"
-                          >{formatCost(model.worstCase.totalCostUsd)}</span
-                        >
-                        <span class="text-muted block text-xs tabular-nums"
-                          >{formatPerDoc(model.worstCase.perDocumentCostUsd)}</span
-                        >
+                        <span class="text-ink text-sm font-medium tabular-nums">
+                          {formatCost(model.worstCase.totalCostUsd)}
+                        </span>
+                        <span class="text-muted block text-xs tabular-nums">
+                          {formatPerDoc(model.worstCase.perDocumentCostUsd)}
+                        </span>
                       </td>
                       <td class="px-4 py-3 text-right">
                         <span
                           class="text-sm tabular-nums {cacheSavings(model) !== '--'
                             ? 'text-success font-medium'
-                            : 'text-muted'}">{cacheSavings(model)}</span
+                            : 'text-muted'}"
                         >
+                          {cacheSavings(model)}
+                        </span>
                       </td>
                     </tr>
                   {/each}

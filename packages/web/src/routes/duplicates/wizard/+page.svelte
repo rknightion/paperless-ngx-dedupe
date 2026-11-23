@@ -486,9 +486,9 @@
       <div class="mt-6 space-y-6">
         <div>
           <div class="flex items-center justify-between">
-            <label for="threshold-range" class="text-ink text-sm font-medium"
-              >Minimum Confidence</label
-            >
+            <label for="threshold-range" class="text-ink text-sm font-medium">
+              Minimum Confidence
+            </label>
             <span class="text-accent text-lg font-semibold">{threshold}%</span>
           </div>
           <input
@@ -643,9 +643,9 @@
                   />
                 {/snippet}
               </RichTooltip>
-              <span class="text-muted text-xs"
-                ><span class="hidden sm:inline">{group.memberCount} </span>docs</span
-              >
+              <span class="text-muted text-xs">
+                <span class="hidden sm:inline">{group.memberCount} </span>docs
+              </span>
             </div>
           {/each}
         </div>
@@ -854,9 +854,9 @@
         <div class="space-y-3">
           <label class="flex items-start gap-3">
             <input type="checkbox" bind:checked={confirmChecks.understand} class="mt-0.5 rounded" />
-            <span class="text-ink text-sm"
-              >I understand this action affects {selectedCount} groups</span
-            >
+            <span class="text-ink text-sm">
+              I understand this action affects {selectedCount} groups
+            </span>
           </label>
 
           {#if selectedAction === 'delete'}
@@ -866,9 +866,9 @@
                 bind:checked={confirmChecks.irreversible}
                 class="mt-0.5 rounded"
               />
-              <span class="text-ink text-sm"
-                >I understand deleted documents will be moved to the Paperless-NGX recycle bin</span
-              >
+              <span class="text-ink text-sm">
+                I understand deleted documents will be moved to the Paperless-NGX recycle bin
+              </span>
             </label>
           {/if}
         </div>

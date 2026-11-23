@@ -331,9 +331,9 @@
             bind:value={monthlyBudgetUsd}
             class="border-soft bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm"
           />
-          <label class="text-ink block text-sm" for="ai-document-cap"
-            >Maximum documents per run</label
-          >
+          <label class="text-ink block text-sm" for="ai-document-cap">
+            Maximum documents per run
+          </label>
           <input
             id="ai-document-cap"
             type="number"
@@ -432,8 +432,9 @@
             disabled={!notifications.configured}
             onclick={sendTestNotification}
             class="border-soft text-ink rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50"
-            >{notificationBusy === 'test' ? 'Sending…' : 'Send test'}</button
           >
+            {notificationBusy === 'test' ? 'Sending…' : 'Send test'}
+          </button>
         </div>
       </fieldset>
     </form>
@@ -451,8 +452,10 @@
     <button
       type="button"
       onclick={loadNotifications}
-      class="border-soft text-ink mt-2 rounded-lg border px-3 py-2 text-sm">Retry</button
+      class="border-soft text-ink mt-2 rounded-lg border px-3 py-2 text-sm"
     >
+      Retry
+    </button>
   {:else}
     <p role="status" class="text-muted mt-3 text-sm">Loading notification preferences…</p>
   {/if}

@@ -71,17 +71,18 @@
     Preview a rule for pending groups at this confidence threshold. This only changes local keepers;
     it never deletes or changes Paperless documents.
   </p>
-  <label class="text-ink flex items-center gap-2 text-sm"
-    ><input type="checkbox" bind:checked={includeManual} disabled={busy} />Include manually selected
-    keepers</label
-  >
+  <label class="text-ink flex items-center gap-2 text-sm">
+    <input type="checkbox" bind:checked={includeManual} disabled={busy} />Include manually selected
+    keepers
+  </label>
   <button
     type="button"
     disabled={busy}
     onclick={() => run(false)}
     class="border-soft text-ink hover:bg-canvas rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
-    >Preview keeper changes</button
   >
+    Preview keeper changes
+  </button>
   {#if current}
     <p class="text-ink text-sm">
       Would change the keeper in {current.groupsChanging} of {current.groupsEvaluated} groups
@@ -102,8 +103,9 @@
       disabled={busy || current.groupsChanging === 0}
       onclick={() => run(true)}
       class="bg-accent text-on-accent hover:bg-accent-hover rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
-      >Apply keeper changes</button
     >
+      Apply keeper changes
+    </button>
   {/if}
   {#if error}<p role="alert" class="text-ember text-sm">{error}</p>{/if}
   {#if notice}<p role="status" class="text-success text-sm">{notice}</p>{/if}

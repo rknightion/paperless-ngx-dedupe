@@ -114,9 +114,9 @@
     <div class="mb-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <h4 class="text-ink text-sm font-semibold">Primary Document</h4>
-        <span class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium"
-          >Primary</span
-        >
+        <span class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium">
+          Primary
+        </span>
       </div>
       <a
         href="{paperlessUrl}/documents/{primary.paperlessId}/details"
@@ -183,8 +183,10 @@
               tag,
             )
               ? 'ring-warn/40 ring-1'
-              : ''}">{tag}</span
+              : ''}"
           >
+            {tag}
+          </span>
         {/each}
       </div>
     {/if}

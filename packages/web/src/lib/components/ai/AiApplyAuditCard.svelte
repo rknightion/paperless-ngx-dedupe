@@ -47,9 +47,9 @@
       <span class="text-muted">Fields applied:</span>
       <div class="flex flex-wrap gap-1">
         {#each appliedFields as field (field)}
-          <span class="bg-success-light text-success rounded-full px-2 py-0.5 text-xs font-medium"
-            >{field}</span
-          >
+          <span class="bg-success-light text-success rounded-full px-2 py-0.5 text-xs font-medium">
+            {field}
+          </span>
         {/each}
       </div>
     </div>
@@ -61,37 +61,37 @@
       <!-- Correspondent -->
       {#if appliedFields.includes('correspondent')}
         <div class="flex items-center gap-3 p-3">
-          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase"
-            >Correspondent</span
-          >
+          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase">
+            Correspondent
+          </span>
           <span class="text-muted text-sm">{result.preApplyCorrespondentName ?? '(none)'}</span>
           <ArrowRight class="text-muted h-3.5 w-3.5 shrink-0" />
-          <span class="text-ink text-sm font-medium"
-            >{result.suggestedCorrespondent ?? '(none)'}</span
-          >
+          <span class="text-ink text-sm font-medium">
+            {result.suggestedCorrespondent ?? '(none)'}
+          </span>
         </div>
       {/if}
 
       <!-- Document Type -->
       {#if appliedFields.includes('documentType')}
         <div class="flex items-center gap-3 p-3">
-          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase"
-            >Doc Type</span
-          >
+          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase">
+            Doc Type
+          </span>
           <span class="text-muted text-sm">{result.preApplyDocumentTypeName ?? '(none)'}</span>
           <ArrowRight class="text-muted h-3.5 w-3.5 shrink-0" />
-          <span class="text-ink text-sm font-medium"
-            >{result.suggestedDocumentType ?? '(none)'}</span
-          >
+          <span class="text-ink text-sm font-medium">
+            {result.suggestedDocumentType ?? '(none)'}
+          </span>
         </div>
       {/if}
 
       <!-- Tags -->
       {#if appliedFields.includes('tags')}
         <div class="flex items-center gap-3 p-3">
-          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase"
-            >Tags</span
-          >
+          <span class="text-muted w-28 shrink-0 text-xs font-medium tracking-wider uppercase">
+            Tags
+          </span>
           <div class="flex flex-wrap gap-1">
             {#each result.preApplyTagNames ?? [] as tag (tag)}
               <span class="bg-canvas-alt text-muted rounded-full px-2 py-0.5 text-xs">{tag}</span>
@@ -102,9 +102,11 @@
           <ArrowRight class="text-muted h-3.5 w-3.5 shrink-0" />
           <div class="flex flex-wrap gap-1">
             {#each result.suggestedTags as tag (tag)}
-              <span class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium"
-                >{tag}</span
+              <span
+                class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium"
               >
+                {tag}
+              </span>
             {:else}
               <span class="text-muted text-xs">(none)</span>
             {/each}
