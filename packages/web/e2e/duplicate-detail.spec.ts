@@ -57,7 +57,7 @@ test.describe('Duplicate Detail Page', () => {
     await page.goto(`/duplicates/${groupId}`);
 
     // Members heading
-    await expect(page.locator('h3', { hasText: 'Members' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Members', exact: true })).toBeVisible();
 
     // Members table should have headers
     const membersTable = page.locator('table').first();
@@ -198,6 +198,16 @@ test.describe('Duplicate Detail Page', () => {
     await expect(explanation.getByRole('heading', { name: 'Key differences' })).toBeVisible();
     await expect(explanation.getByText('lhr → jfk')).toBeVisible();
     await expect(explanation.getByText('jfk → lhr')).toBeVisible();
+
+    const primary = page.getByRole('article', { name: 'Primary Document' });
+    const compared = page.getByRole('article', { name: 'Compared Document' });
+    await expect(primary).toBeVisible();
+    await expect(compared).toBeVisible();
+    const primaryBox = await primary.boundingBox();
+    const comparedBox = await compared.boundingBox();
+    expect(comparedBox!.y).toBeGreaterThanOrEqual(primaryBox!.y + primaryBox!.height);
+    expect(comparedBox!.x + comparedBox!.width).toBeLessThanOrEqual(390);
+    expect(primaryBox!.x).toBeGreaterThanOrEqual(0);
   });
 
   test('404 for non-existent group', async ({ page }) => {

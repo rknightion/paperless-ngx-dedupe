@@ -55,7 +55,7 @@
   let actionBar: HTMLDivElement | undefined = $state();
   function activateGroupAction(label: string) {
     const button = [...(actionBar?.querySelectorAll('button') ?? [])].find(
-      (button) => button.textContent?.trim() === label,
+      (button) => (button.getAttribute('aria-label') ?? button.textContent?.trim()) === label,
     );
     if (button && !button.disabled) button.click();
   }
@@ -219,7 +219,32 @@
   >
 </svelte:head>
 
-<div class="space-y-6">
+<div
+  data-comparison-review
+  class="comparison-review flex flex-col gap-3 md:gap-6 md:[reading-flow:flex-visual]"
+>
+  <header class="space-y-3 md:space-y-6">
+    {@render groupHeading()}
+  </header>
+
+  <div class="comparison-content space-y-4 md:order-1 md:space-y-6">
+    {@render reviewContent()}
+  </div>
+
+  <!-- Action bar -->
+  <div bind:this={actionBar}>
+    <GroupActionBar
+      groupId={data.group.id}
+      status={data.group.status}
+      memberCount={data.group.members.length}
+      onaction={() => void handleGroupAction()}
+      {returnParams}
+      {returnUrl}
+    />
+  </div>
+</div>
+
+{#snippet groupHeading()}
   <!-- Breadcrumb -->
   <div class="flex flex-wrap items-center gap-3">
     <a
@@ -232,30 +257,18 @@
     {#if data.nextGroupId}<Button
         variant="secondary"
         size="sm"
+        class="max-md:h-8"
         onclick={() => void goToNextGroup()}
       >
         Skip
       </Button>{/if}
   </div>
-  <label class="text-ink flex items-center gap-2 text-sm">
-    <input
-      type="checkbox"
-      checked={autoAdvance}
-      onchange={(event) => setAutoAdvance(event.currentTarget.checked)}
-    />
-    Go to next group after an action
-  </label>
-  {#if !data.nextGroupId && data.group.status !== 'pending'}
-    <p class="text-muted text-sm">
-      <span>Queue empty</span> ·
-      <a class="text-accent underline" href={returnUrl}>Return to queue</a>
-    </p>
-  {/if}
-
   <!-- Group header -->
   <div>
-    <div class="flex flex-wrap items-center gap-3">
-      <h1 class="text-ink text-xl font-semibold">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <h1
+        class="text-ink w-full text-lg font-semibold [overflow-wrap:anywhere] max-md:line-clamp-2 md:w-auto md:text-xl"
+      >
         {primaryMember?.title || data.group.archivedPrimaryTitle || 'Untitled Group'}
       </h1>
       <ConfidenceBadge score={data.group.confidenceScore} />
@@ -270,6 +283,32 @@
       <ConfidenceLegend />
     </div>
   </div>
+  <!-- Confidence breakdown -->
+  <ConfidenceBreakdown
+    overallScore={data.group.confidenceScore}
+    jaccardSimilarity={data.group.jaccardSimilarity}
+    fuzzyTextRatio={data.group.fuzzyTextRatio}
+    discriminativeScore={data.group.discriminativeScore}
+    weights={data.weights}
+    showLegend={false}
+  />
+{/snippet}
+
+{#snippet reviewContent()}
+  <label class="text-ink flex items-center gap-2 text-sm">
+    <input
+      type="checkbox"
+      checked={autoAdvance}
+      onchange={(event) => setAutoAdvance(event.currentTarget.checked)}
+    />
+    Go to next group after an action
+  </label>
+  {#if !data.nextGroupId && data.group.status !== 'pending'}
+    <p class="text-muted text-sm">
+      <span>Queue empty</span> ·
+      <a class="text-accent underline" href={returnUrl}>Return to queue</a>
+    </p>
+  {/if}
 
   <DuplicateKeyboardHandler
     shortcutState={{
@@ -287,78 +326,33 @@
     }}
     onskip={() => void goToNextGroup()}
   />
-  <!-- Action bar -->
-  <div bind:this={actionBar}>
-    <GroupActionBar
-      groupId={data.group.id}
-      status={data.group.status}
-      memberCount={data.group.members.length}
-      onaction={() => void handleGroupAction()}
-      {returnParams}
-      {returnUrl}
-    />
-  </div>
 
-  <!-- Confidence section divider -->
-  <div class="flex items-center gap-4">
-    <span class="label-micro">Confidence</span>
-    <div class="divider flex-1"></div>
-  </div>
-
-  <!-- Confidence breakdown -->
-  <ConfidenceBreakdown
-    overallScore={data.group.confidenceScore}
-    jaccardSimilarity={data.group.jaccardSimilarity}
-    fuzzyTextRatio={data.group.fuzzyTextRatio}
-    discriminativeScore={data.group.discriminativeScore}
-    weights={data.weights}
-  />
-
-  {#if isDeleted}
-    <!-- Archived group info -->
-    <div class="flex items-center gap-4">
-      <span class="label-micro">Archive</span>
-      <div class="divider flex-1"></div>
-    </div>
-
-    <div class="border-soft bg-canvas border p-4">
-      <p class="text-muted text-sm">
-        This group was resolved{#if data.group.deletedAt}
-          on {new Date(data.group.deletedAt).toLocaleDateString()}{/if}.
-        {#if data.group.archivedMemberCount}
-          {data.group.archivedMemberCount} documents were originally in this group.
-        {/if}
-        Member details are no longer available.
-      </p>
-    </div>
-  {:else}
-    <!-- Members section divider -->
-    <div class="flex items-center gap-4">
-      <span class="label-micro">Members</span>
-      <div class="divider flex-1"></div>
-    </div>
-
+  {#snippet groupMembers()}
     <!-- Members table -->
     <div class="panel">
       <div class="mb-3 flex items-baseline gap-3">
-        <h3 class="text-ink text-lg font-semibold">Members</h3>
+        <h2 class="text-ink text-lg font-semibold">Members</h2>
         <span class="text-muted font-mono text-xs tabular-nums">{data.group.members.length}</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b-border-hover border-b text-left">
-              <th class="label-micro py-1.5 pr-4">Title</th>
-              <th class="label-micro hidden py-1.5 pr-4 sm:table-cell">Correspondent</th>
-              <th class="label-micro py-1.5 pr-4">Role</th>
-              <th class="label-micro py-1.5">Actions</th>
+              <th scope="col" class="label-micro py-1.5 pr-4">Title</th>
+              <th scope="col" class="label-micro hidden py-1.5 pr-4 sm:table-cell">
+                Correspondent
+              </th>
+              <th scope="col" class="label-micro py-1.5 pr-4">Role</th>
+              <th scope="col" class="label-micro py-1.5">Actions</th>
             </tr>
           </thead>
           <tbody>
             {#each data.group.members as member (member.documentId)}
               <tr class="border-soft border-b last:border-0">
-                <td class="text-ink h-9 py-1.5 pr-4 font-medium">{member.title}</td>
-                <td class="text-muted hidden py-1.5 pr-4 sm:table-cell">
+                <td class="text-ink h-9 py-1.5 pr-4 font-medium [overflow-wrap:anywhere]">
+                  {member.title}
+                </td>
+                <td class="text-muted hidden py-1.5 pr-4 [overflow-wrap:anywhere] sm:table-cell">
                   {member.correspondent ?? '-'}
                 </td>
                 <td class="py-1.5 pr-4">
@@ -372,11 +366,12 @@
                   {/if}
                 </td>
                 <td class="py-1.5">
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                     {#if !member.isPrimary}
                       <Button
                         variant="secondary"
                         size="sm"
+                        class="max-md:h-8"
                         loading={isSettingPrimary}
                         onclick={() => setPrimary(member.documentId)}
                       >
@@ -400,17 +395,30 @@
         </table>
       </div>
     </div>
+  {/snippet}
 
+  {#if isDeleted}
+    <!-- Archived group info -->
+    <div class="flex items-center gap-4">
+      <span class="label-micro">Archive</span>
+      <div class="divider flex-1"></div>
+    </div>
+
+    <div class="border-soft bg-canvas border p-4">
+      <p class="text-muted text-sm">
+        This group was resolved{#if data.group.deletedAt}
+          on {new Date(data.group.deletedAt).toLocaleDateString()}{/if}.
+        {#if data.group.archivedMemberCount}
+          {data.group.archivedMemberCount} documents were originally in this group.
+        {/if}
+        Member details are no longer available.
+      </p>
+    </div>
+  {:else}
     <!-- Document comparison -->
     {#if selectedSecondary}
       <div class="space-y-4">
-        <!-- Comparison section divider -->
-        <div class="flex items-center gap-4">
-          <span class="label-micro">Comparison</span>
-          <div class="divider flex-1"></div>
-        </div>
-
-        <h3 class="text-ink text-lg font-semibold">Document Comparison</h3>
+        <h2 class="text-ink text-lg font-semibold">Document Comparison</h2>
         {#if fileFacts?.identicalOriginals}
           <span
             class="border-border text-ink-light inline-flex w-fit border px-2 py-0.5 font-mono text-xs"
@@ -437,7 +445,9 @@
                   onclick={() => {
                     selectedSecondaryIndex = i;
                   }}
-                  class="border-border h-[26px] border-r px-3 text-sm last:border-r-0 {selectedSecondaryIndex ===
+                  aria-pressed={selectedSecondaryIndex === i}
+                  title={sec.title}
+                  class="border-border h-[26px] max-w-full truncate border-r px-3 text-sm last:border-r-0 max-md:h-8 {selectedSecondaryIndex ===
                   i
                     ? 'bg-selected text-ink font-medium'
                     : 'text-muted hover:bg-canvas-deep'}"
@@ -448,11 +458,12 @@
             </div>
           {:else}
             <select
+              aria-label="Comparison document"
               value={selectedSecondaryIndex}
               onchange={(e) => {
                 selectedSecondaryIndex = Number((e.target as HTMLSelectElement).value);
               }}
-              class="border-border bg-surface-raised text-ink h-7 max-w-full rounded-sm border px-2 text-sm"
+              class="border-border bg-surface-raised text-ink h-7 max-w-full rounded-sm border px-2 text-sm max-md:h-8"
             >
               {#each secondaryMembers as sec, i (sec.documentId)}
                 <option value={i}>{sec.title}</option>
@@ -460,6 +471,18 @@
             </select>
           {/if}
         {/if}
+
+        <DocumentCompare
+          primary={primaryMember}
+          secondary={selectedSecondary}
+          paperlessUrl={data.paperlessUrl}
+          primaryFile={fileFacts?.members.find(
+            (member) => member.documentId === primaryMember.documentId,
+          )}
+          secondaryFile={fileFacts?.members.find(
+            (member) => member.documentId === selectedSecondary.documentId,
+          )}
+        />
 
         <MatchExplanation
           explanation={data.group.matchExplanation}
@@ -481,6 +504,7 @@
             <Button
               variant="secondary"
               size="sm"
+              class="max-md:h-8"
               icon={UserMinusIcon}
               disabled={isMemberAction}
               onclick={() => (showRemoveFromGroup = true)}
@@ -490,6 +514,7 @@
             <Button
               variant="destructive"
               size="sm"
+              class="max-md:h-8"
               icon={TrashIcon}
               disabled={readOnly || isMemberAction}
               title={readOnly ? 'Paperless is read-only' : undefined}
@@ -505,18 +530,6 @@
             {/if}
           </div>
         {/if}
-
-        <DocumentCompare
-          primary={primaryMember}
-          secondary={selectedSecondary}
-          paperlessUrl={data.paperlessUrl}
-          primaryFile={fileFacts?.members.find(
-            (member) => member.documentId === primaryMember.documentId,
-          )}
-          secondaryFile={fileFacts?.members.find(
-            (member) => member.documentId === selectedSecondary.documentId,
-          )}
-        />
 
         {#key `${primaryMember.documentId}-${selectedSecondary.documentId}`}
           <TextDiff
@@ -544,8 +557,9 @@
         {/key}
       </div>
     {/if}
+    {@render groupMembers()}
   {/if}
-</div>
+{/snippet}
 
 <ConfirmDialog
   open={showRemoveFromGroup}
@@ -567,3 +581,31 @@
   onconfirm={handleDeleteFromPaperless}
   oncancel={() => (showDeleteFromPaperless = false)}
 />
+
+<style>
+  /* On short screens the whole page can scroll, so the pinned regions cannot crowd out review. */
+  @media (width < 48rem) and (height >= 36rem) {
+    :global(main:has(> [data-comparison-review])) {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    :global(main:has(> [data-comparison-review]) > [role='note']) {
+      flex-shrink: 0;
+    }
+
+    .comparison-review {
+      min-height: 0;
+      flex: 1;
+    }
+
+    .comparison-content {
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      /* Room for focus outlines inside the clipped scroll region. */
+      padding: 4px;
+    }
+  }
+</style>
