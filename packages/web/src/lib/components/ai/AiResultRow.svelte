@@ -47,9 +47,20 @@
       class="accent-accent h-3.5 w-3.5"
     />
   </td>
-  <td class="max-w-0 truncate px-3 py-0">
-    <span class="text-muted font-mono text-sm tabular-nums">#{result.paperlessId}</span>
-    <span class="text-ink ml-1.5 font-medium">{result.documentTitle}</span>
+  <td class="max-w-0 px-3 py-0">
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-muted shrink-0 font-mono text-sm tabular-nums">#{result.paperlessId}</span>
+      <button
+        type="button"
+        class="text-ink hover:text-accent min-w-0 truncate text-left font-medium hover:underline"
+        onclick={(event) => {
+          event.stopPropagation();
+          onclick();
+        }}
+      >
+        {result.documentTitle}
+      </button>
+    </div>
   </td>
   <td class="max-w-0 truncate px-3 py-0 text-sm">
     {#if result.suggestedTitle}
