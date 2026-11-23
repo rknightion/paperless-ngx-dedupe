@@ -149,6 +149,20 @@ Only server-thread metrics are exposed; worker sync, analysis and AI processing 
 
 Returns summary cards and top correspondents.
 
+### GET /api/v1/dashboard/first-run-checklist
+
+Returns whether the first-run checklist has been dismissed.
+
+```json
+{ "data": { "dismissed": false } }
+```
+
+### PUT /api/v1/dashboard/first-run-checklist
+
+Stores the dismissal with the app config. The body is `{ "dismissed": true }` or
+`{ "dismissed": false }`, and any other field returns `400 VALIDATION_FAILED`. A dismissed
+checklist still returns if a setup step regresses.
+
 ## Sync and Analysis
 
 ### POST /api/v1/sync
