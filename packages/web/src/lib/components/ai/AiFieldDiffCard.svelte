@@ -64,7 +64,7 @@
   });
 </script>
 
-<div class="border-soft space-y-2 rounded-lg border p-3" class:opacity-50={fieldDisabledByConfig}>
+<div class="border-border bg-surface space-y-2 border p-3" class:opacity-50={fieldDisabledByConfig}>
   <!-- Header row -->
   <div class="flex items-center gap-2">
     <input
@@ -72,15 +72,13 @@
       checked={fieldDisabledByConfig ? false : checked}
       disabled={disabled || fieldDisabledByConfig}
       onchange={(e) => oncheck((e.target as HTMLInputElement).checked)}
-      class="rounded"
+      class="accent-accent h-3.5 w-3.5"
     />
-    <span class="text-ink flex-1 text-sm font-bold">{fieldLabel}</span>
+    <span class="text-ink flex-1 text-sm font-semibold">{fieldLabel}</span>
     {#if fieldDisabledByConfig}
-      <span
-        class="bg-canvas text-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-      >
-        <ProhibitIcon class="h-3 w-3" />
-        Disabled
+      <span class="status-word text-muted inline-flex items-center gap-1">
+        <ProhibitIcon size={13} />
+        DISABLED
       </span>
     {:else if confidence !== null}
       <ConfidenceBadge score={confidence} />
@@ -94,49 +92,39 @@
       <div class="flex flex-wrap gap-1.5">
         {#each currentArr as tag (tag)}
           {#if suggestedSet.has(tag)}
-            <span class="bg-accent-light text-accent rounded-full px-2 py-0.5 text-xs font-medium">
-              {tag}
-            </span>
+            <span class="border-border text-ink border px-1.5 font-mono text-xs">{tag}</span>
           {:else}
-            <span
-              class="bg-canvas text-muted rounded-full px-2 py-0.5 text-xs font-medium line-through opacity-50"
-            >
+            <span class="border-border text-muted border px-1.5 font-mono text-xs line-through">
               {tag}
             </span>
           {/if}
         {/each}
         {#each suggestedArr as tag (tag)}
           {#if !currentSet.has(tag)}
-            <span
-              class="bg-accent-light text-accent ring-success/50 rounded-full px-2 py-0.5 text-xs font-medium ring-2"
-            >
-              {tag}
-            </span>
+            <span class="border-success text-ink border px-1.5 font-mono text-xs">+ {tag}</span>
           {/if}
         {/each}
         {#if currentArr.length === 0 && suggestedArr.length === 0}
-          <span class="text-muted text-sm italic">No tags</span>
+          <span class="text-muted text-sm">No tags</span>
         {/if}
       </div>
     {:else}
       <!-- String field -->
       {#if suggestedValue === null && currentValue === null}
-        <span class="text-muted text-sm italic">No suggestion</span>
+        <span class="text-muted text-sm">No suggestion</span>
       {:else if suggestedValue === currentValue}
         <span class="text-muted text-sm">{currentValue ?? 'None'}</span>
-        <span class="bg-canvas text-muted ml-2 rounded-full px-2 py-0.5 text-xs font-medium">
-          No change
-        </span>
+        <span class="status-word text-muted ml-2">NO CHANGE</span>
       {:else}
         <div class="flex flex-wrap items-center gap-2 text-sm">
           {#if currentValue}
             <span class="text-muted line-through">{currentValue}</span>
-            <span class="text-muted">&rarr;</span>
+            <span class="text-muted font-mono" aria-hidden="true">&rarr;</span>
           {/if}
           {#if suggestedValue}
-            <span class="text-accent font-medium">{suggestedValue}</span>
+            <span class="text-ink font-medium">{suggestedValue}</span>
           {:else}
-            <span class="text-muted italic">No suggestion</span>
+            <span class="text-muted">No suggestion</span>
           {/if}
         </div>
       {/if}
@@ -148,23 +136,23 @@
     <div class="flex flex-wrap gap-3 pl-6">
       {#each warnings() as warning (warning)}
         {#if warning === 'low_confidence'}
-          <span class="text-warn flex items-center gap-1 text-xs">
-            <WarningIcon class="h-3 w-3" />
+          <span class="text-warn flex items-center gap-1 text-sm">
+            <WarningIcon size={13} />
             Low confidence
           </span>
         {:else if warning === 'will_create'}
-          <span class="text-accent flex items-center gap-1 text-xs">
-            <PlusIcon class="h-3 w-3" />
+          <span class="text-success flex items-center gap-1 text-sm">
+            <PlusIcon size={13} />
             Will create new
           </span>
         {:else if warning === 'will_clear'}
-          <span class="text-ember flex items-center gap-1 text-xs">
-            <MinusIcon class="h-3 w-3" />
+          <span class="text-ember flex items-center gap-1 text-sm">
+            <MinusIcon size={13} />
             Will clear existing
           </span>
         {:else if warning === 'no_change'}
-          <span class="text-muted flex items-center gap-1 text-xs">
-            <EqualsIcon class="h-3 w-3" />
+          <span class="text-muted flex items-center gap-1 text-sm">
+            <EqualsIcon size={13} />
             No change
           </span>
         {/if}

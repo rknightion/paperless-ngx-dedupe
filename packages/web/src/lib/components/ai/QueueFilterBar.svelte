@@ -76,20 +76,20 @@
   }
 
   const selectClass =
-    'border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none';
+    'border-border bg-surface-raised text-ink placeholder:text-muted h-7 rounded-sm border px-2 text-sm';
 </script>
 
-<div class="flex flex-wrap items-center gap-2">
+<div class="border-border flex flex-wrap items-center gap-2 border-y py-2">
   <div class="relative">
     <MagnifyingGlassIcon
-      class="text-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
+      class="text-muted pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2"
     />
     <input
       type="text"
       bind:value={localSearch}
       placeholder="Search documents..."
       onkeydown={handleSearchKeydown}
-      class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent rounded-lg border py-2 pr-3 pl-8 text-sm focus:ring-1 focus:outline-none"
+      class="border-border bg-surface-raised text-ink placeholder:text-muted h-7 rounded-sm border px-2 pl-7 text-sm"
     />
   </div>
 
@@ -104,7 +104,7 @@
   {#if localSort === 'random'}
     <button
       onclick={handleReshuffle}
-      class="border-soft text-muted hover:text-ink hover:bg-canvas flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm transition-colors"
+      class="border-border text-muted hover:text-ink hover:bg-canvas-deep flex h-7 items-center gap-1.5 rounded-sm border px-2 text-sm transition-colors"
       title="Re-shuffle"
     >
       <ShuffleIcon class="h-3.5 w-3.5" />
@@ -134,6 +134,6 @@
     bind:value={localTag}
     placeholder="Filter by tag..."
     onkeydown={handleSearchKeydown}
-    class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent w-36 rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+    class="border-border bg-surface-raised text-ink placeholder:text-muted h-7 w-36 rounded-sm border px-2 text-sm"
   />
 </div>

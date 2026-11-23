@@ -4,8 +4,6 @@
   import ArrowSquareOutIcon from 'phosphor-svelte/lib/ArrowSquareOutIcon';
   import ArrowsClockwiseIcon from 'phosphor-svelte/lib/ArrowsClockwiseIcon';
   import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
-  import CircleNotchIcon from 'phosphor-svelte/lib/CircleNotchIcon';
-  import WarningCircleIcon from 'phosphor-svelte/lib/WarningCircleIcon';
   import XIcon from 'phosphor-svelte/lib/XIcon';
   import {
     fieldSelections,
@@ -16,6 +14,7 @@
   import AiFieldSelection from './AiFieldSelection.svelte';
   import AiApplyAuditCard from './AiApplyAuditCard.svelte';
   import AiDocumentPreview from './AiDocumentPreview.svelte';
+  import { aiStatusWord } from './ai-status';
   import type {
     AiFieldSelection as AiFieldSelectionValue,
     AiInboxResultDetail,
@@ -123,37 +122,7 @@
       (detail?.appliedStatus === 'failed' && detail.failureType === 'review_conflict'),
   );
 
-  function statusBadgeClass(status: string): string {
-    switch (status) {
-      case 'pending_review':
-        return 'bg-warn-light text-warn';
-      case 'applied':
-        return 'bg-success-light text-success';
-      case 'partial':
-        return 'bg-accent-light text-accent';
-      case 'rejected':
-        return 'text-muted bg-canvas';
-      case 'failed':
-        return 'bg-ember-light text-ember';
-      case 'skipped':
-        return 'bg-warn-light text-warn';
-      default:
-        return 'bg-canvas text-muted';
-    }
-  }
-
-  function statusDisplayText(status: string): string {
-    switch (status) {
-      case 'pending_review':
-        return 'Pending Review';
-      case 'failed':
-        return 'Failed';
-      case 'skipped':
-        return 'Skipped';
-      default:
-        return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-  }
+  const statusWord = $derived(detail ? aiStatusWord(detail.appliedStatus) : null);
 
   async function handleApply(): Promise<void> {
     if (!activeId || !selection || checkedCount === 0) return;
@@ -230,23 +199,25 @@
       <!-- Stays inline: a full-screen backdrop hit target, not a Button-shaped control. -->
       <button
         type="button"
-        class="absolute inset-0 bg-black/40"
+        class="bg-ink/50 absolute inset-0"
         aria-label="Close drawer"
         onclick={onclose}
       ></button>
       <div
-        class="bg-surface absolute inset-x-0 bottom-0 h-[85dvh] overflow-y-auto rounded-t-2xl shadow-xl"
+        class="bg-surface-raised absolute inset-x-0 bottom-0 h-[85dvh] overflow-y-auto rounded-t-md shadow-lg"
       >
         <!-- Drag handle -->
-        <div class="bg-surface sticky top-0 z-10 flex justify-center pt-3 pb-2">
-          <div class="bg-soft h-1 w-10 rounded-full"></div>
+        <div class="bg-surface-raised sticky top-0 z-10 flex justify-center pt-3 pb-2">
+          <div class="bg-border-hover h-1 w-10"></div>
         </div>
         {@render drawerContent()}
       </div>
     </div>
   {:else}
     <!-- Desktop aside -->
-    <aside class="panel sticky top-24 max-h-[calc(100vh-12rem)] w-[480px] shrink-0 overflow-y-auto">
+    <aside
+      class="border-border bg-canvas sticky top-4 max-h-[calc(100vh-8rem)] w-[380px] shrink-0 overflow-y-auto border-l"
+    >
       {@render drawerContent()}
     </aside>
   {/if}
@@ -276,11 +247,9 @@
     </div>
   {:else if loadState === 'error'}
     <!-- Error state -->
-    <div class="flex flex-col items-center justify-center gap-4 p-8">
-      <div class="bg-ember-light flex h-12 w-12 items-center justify-center rounded-full">
-        <WarningCircleIcon class="text-ember h-6 w-6" />
-      </div>
-      <p class="text-ink text-sm font-medium">Failed to load result</p>
+    <div class="flex flex-col items-center justify-center gap-3 p-8">
+      <span class="status-word text-ember"><span aria-hidden="true">●</span> FAIL</span>
+      <p class="text-ink text-sm font-semibold">Failed to load result</p>
       <Button variant="outline" icon={ArrowsClockwiseIcon} onclick={() => detailLoader.reload()}>
         Retry
       </Button>
@@ -295,13 +264,12 @@
             {detail.documentTitle}
           </h2>
           <div class="flex flex-wrap items-center gap-2">
-            <span
-              class="rounded-full px-2.5 py-0.5 text-xs font-medium {statusBadgeClass(
-                detail.appliedStatus,
-              )}"
-            >
-              {statusDisplayText(detail.appliedStatus)}
-            </span>
+            {#if statusWord}
+              <span class="status-word {statusWord.colorClass}">
+                <span aria-hidden="true">{statusWord.shape}</span>
+                <span class="uppercase">{statusWord.label}</span>
+              </span>
+            {/if}
             <a
               href="{paperlessUrl}/documents/{detail.paperlessId}/details"
               target="_blank"
@@ -325,19 +293,19 @@
       </div>
 
       {#if detail.truncation?.truncated}
-        <p class="bg-warn-light/30 text-muted rounded-lg px-3 py-2 text-xs" role="status">
+        <p class="border-border text-muted border px-3 py-2 text-sm" role="status">
           Some values were shortened for safe review.
         </p>
       {/if}
 
       <!-- Skipped Banner -->
       {#if detail.appliedStatus === 'skipped' && detail.errorMessage}
-        <div class="bg-warn-light/30 border-warn/20 space-y-2 rounded-lg border p-4">
+        <div class="border-warn bg-warn-light border p-3">
           <div class="flex items-start gap-2">
-            <WarningCircleIcon class="text-warn mt-0.5 h-4 w-4 shrink-0" />
+            <span class="status-word text-warn mt-0.5"><span aria-hidden="true">◆</span> WARN</span>
             <div class="min-w-0 space-y-1">
-              <p class="text-warn text-sm font-semibold">No OCR Text</p>
-              <p class="text-muted text-xs">
+              <p class="text-ink text-sm font-semibold">No OCR Text</p>
+              <p class="text-ink-light text-sm">
                 This document has no text content. Run OCR in Paperless-NGX, then re-sync and retry.
               </p>
             </div>
@@ -347,14 +315,16 @@
 
       <!-- Error Banner -->
       {#if detail.appliedStatus === 'failed'}
-        <div class="bg-ember-light/30 border-ember/20 space-y-2 rounded-lg border p-4">
+        <div class="border-ember bg-ember-light border p-3">
           <div class="flex items-start gap-2">
-            <WarningCircleIcon class="text-ember mt-0.5 h-4 w-4 shrink-0" />
+            <span class="status-word text-ember mt-0.5">
+              <span aria-hidden="true">●</span> FAIL
+            </span>
             <div class="min-w-0 space-y-1">
-              <p class="text-ember text-sm font-semibold">
+              <p class="text-ink text-sm font-semibold">
                 {isExtractionFailure() ? 'Extraction Failed' : 'Apply Failed'}
               </p>
-              <p class="text-muted text-xs">
+              <p class="text-ink-light text-sm">
                 {isExtractionFailure()
                   ? 'The extraction did not complete. Retry when the underlying issue is resolved.'
                   : 'The reviewed apply conflicted with newer document data. Review the current values again.'}
@@ -382,7 +352,7 @@
       {#if detail.evidence}
         <div class="space-y-2">
           <h3 class="text-ink text-sm font-semibold">Evidence</h3>
-          <blockquote class="border-accent text-muted border-l-2 pl-3 text-sm italic">
+          <blockquote class="border-border-hover text-muted border-l-2 pl-3 text-sm">
             {detail.evidence.length > 500 ? `${detail.evidence.slice(0, 497)}...` : detail.evidence}
           </blockquote>
         </div>
@@ -397,30 +367,30 @@
         <h3 class="text-ink text-sm font-semibold">Processing Info</h3>
         <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <dt class="text-muted">Provider</dt>
-          <dd class="text-ink font-medium">{detail.provider}</dd>
+          <dd class="text-ink font-mono">{detail.provider}</dd>
           <dt class="text-muted">Model</dt>
-          <dd class="text-ink font-medium">{detail.model}</dd>
+          <dd class="text-ink font-mono">{detail.model}</dd>
           <dt class="text-muted">Prompt Tokens</dt>
-          <dd class="text-ink font-medium tabular-nums">
+          <dd class="text-ink font-mono tabular-nums">
             {detail.promptTokens?.toLocaleString() ?? '--'}
           </dd>
           <dt class="text-muted">Completion Tokens</dt>
-          <dd class="text-ink font-medium tabular-nums">
+          <dd class="text-ink font-mono tabular-nums">
             {detail.completionTokens?.toLocaleString() ?? '--'}
           </dd>
           <dt class="text-muted">Processing Time</dt>
-          <dd class="text-ink font-medium tabular-nums">
+          <dd class="text-ink font-mono tabular-nums">
             {formatDuration(detail.processingTimeMs)}
           </dd>
           <dt class="text-muted">Created At</dt>
-          <dd class="text-ink font-medium">{formatDate(detail.createdAt)}</dd>
+          <dd class="text-ink font-mono">{formatDate(detail.createdAt)}</dd>
         </dl>
       </div>
     </div>
 
     <!-- Action Footer -->
     {#if isReviewable}
-      <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
+      <div class="border-border bg-surface sticky bottom-0 flex gap-2 border-t px-4 py-3">
         <Button
           icon={CheckIcon}
           class="flex-1"
@@ -433,39 +403,29 @@
             ? 'Applying...'
             : `Apply ${checkedCount} field${checkedCount !== 1 ? 's' : ''}`}
         </Button>
-        <!-- Reject and Revert below stay inline: ember-outlined controls, and Button has no
-             semantic-tint variant (destructive is a solid fill). -->
-        <button
-          onclick={handleReject}
-          disabled={isRejecting}
-          class="border-ember text-ember hover:bg-ember-light flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-        >
-          {#if isRejecting}
-            <CircleNotchIcon class="h-4 w-4 animate-spin" />
-          {:else}
-            <XIcon class="h-4 w-4" />
-            Reject
-          {/if}
-        </button>
+        <!-- Apply is the one primary action here; Reject is neutral. -->
+        <Button variant="outline" icon={XIcon} disabled={isRejecting} onclick={handleReject}>
+          Reject
+        </Button>
       </div>
     {/if}
 
     {#if (detail.appliedStatus === 'applied' || detail.appliedStatus === 'partial') && onrevert}
-      <div class="border-soft bg-surface sticky bottom-0 flex border-t px-4 py-3">
-        <!-- Stays inline: ember-outlined, see the note on Reject above. -->
-        <button
-          onclick={handleRevert}
+      <div class="border-border bg-surface sticky bottom-0 flex border-t px-4 py-3">
+        <Button
+          variant="outline"
+          class="flex-1"
           disabled={readOnly || isApplying || checkedCount === 0}
           title={readOnly ? 'Paperless is read-only' : undefined}
-          class="border-ember text-ember hover:bg-ember-light flex flex-1 items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50"
+          onclick={handleRevert}
         >
           Revert selected audited fields
-        </button>
+        </Button>
       </div>
     {/if}
 
     {#if detail.appliedStatus === 'failed' && detail.failureType !== 'review_conflict'}
-      <div class="border-soft bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
+      <div class="border-border bg-surface sticky bottom-0 flex gap-3 border-t px-4 py-3">
         {#if isExtractionFailure()}
           <Button
             icon={ArrowsClockwiseIcon}

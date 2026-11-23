@@ -31,7 +31,12 @@ or coding agent working in this repository. `CONTRIBUTING.md` has the longer ver
 - No personal data, credentials or real identifiers (names, email addresses, hostnames, addresses,
   account ids) in code, commits, issues or pull requests. When the repository has
   `.github/privacy/sweep`, run `python3 .github/privacy/sweep --staged` before you commit.
-- Do not touch the project board, issue fields or tracker tooling. A maintainer does that.
+- Work is tracked in GitHub issues and labels only; there is no project board. The queue is the
+  open issues labelled `ready`, and the other working labels are `blocked`, `needs-owner`, `p1`,
+  `p2` and `p3`. Maintainers and the owner's agents create, label, comment on and close issues
+  with `gh` (`just tracker`, where the repository has it, is a thin wrapper over `gh`), and every
+  close carries a comment or pull request with the evidence. An outside contributor does not label
+  or close issues.
 
 ### Skills
 
@@ -60,7 +65,8 @@ Read each skill below, where present in `.agents/skills/`, before the moment it 
 with `repo-conventions`:
 
 - `commit-and-pr` before you commit, open a pull request or write its title and body.
-- `pre-pr-review` before you open or update a pull request, or when asked to review one.
+- `pre-pr-review` when asked to review a pull request, and when you decide whether a pull request
+  you are opening needs a review. Most need none, and there is no local review to run first.
 - `diagnosing-bugs` before you change code to fix a bug or a failing test.
 - `write-tests` before you add or change tests.
 - `audit-tests` before you judge whether a test suite proves what it claims.
@@ -72,8 +78,9 @@ with `repo-conventions`:
 - `github-actions-security-review` before you change a workflow or an action.
 - `eli5` when asked to explain a change in plain language.
 
-Repository facts are in the rest of this file. A maintainer's agent loop also reads `LOOP.md`,
-which overrides this block for loop work; nothing here depends on it.
+Repository facts are in the rest of this file. A maintainer's agent run (long work over several
+tasks, each landing as its own pull request) also reads `LOOP.md`, which overrides this block for
+that work; nothing here depends on it.
 <!-- END vended: rknightion/.github -->
 
 ## Package boundary
@@ -105,6 +112,9 @@ in `packages/core/src/coverage-thresholds.ts`; run `just coverage` to check them
 - `just audit-prod` gates: CI fails on a critical advisory in a production dependency.
 - CI's unit-tests job adds coverage and JUnit reporter arguments for artifact upload. Those belong
   in the workflow, not in `just test`.
+- CI's `pr-metadata` job packs the `backlog/` freeze and privacy sweep. zizmor keeps its own job because
+  the shared workflow's zizmor step pins a version its action rejects. `ac-evidence` stays separate
+  because the tracker recognises it by name.
 - No recipe is marked `[confirm]`. Never bypass one added later with `--yes` or `JUST_YES=1`.
 
 ## Conventions

@@ -83,8 +83,8 @@ test.describe('Job history', () => {
     await page.goto('/jobs?status=pending&pageSize=10');
     const clear = page.getByRole('button', { name: 'Clear History' });
     await expect(clear).toBeEnabled();
-    page.once('dialog', (dialog) => dialog.accept());
     await clear.click();
+    await page.getByRole('button', { name: 'Clear finished jobs', exact: true }).click();
 
     await expect(page.getByRole('status')).toContainText(/Cleared \d+ jobs/);
   });

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { Button } from '$lib/components';
   import { type getWebhookSyncSettings } from '@paperless-dedupe/core';
 
   let {
@@ -7,6 +8,10 @@
   }: {
     settings: ReturnType<typeof getWebhookSyncSettings> & { apiTokenConfigured: boolean };
   } = $props();
+  const statusClasses = {
+    success: "border-success text-success before:content-['■_']",
+    error: "border-ember text-ember before:content-['●_']",
+  } as const;
   const initial = untrack(() => settings);
   let enabled = $state(initial.enabled);
   let quietSeconds = $state<number | undefined>(initial.quietSeconds);
@@ -67,12 +72,13 @@
   >
     <fieldset disabled={busy} class="space-y-4">
       <label class="text-ink flex items-center gap-2 text-sm">
-        <input type="checkbox" bind:checked={enabled} />
+        <input type="checkbox" bind:checked={enabled} class="accent-accent" />
         Sync when Paperless sends a webhook
       </label>
       <label class="text-ink block text-sm" for="webhook-quiet-seconds">
         Quiet period (seconds)
       </label>
+      <!-- Native input: TextField does not take this label wiring; same field metrics. -->
       <input
         id="webhook-quiet-seconds"
         type="number"
@@ -81,19 +87,18 @@
         step="1"
         required
         bind:value={quietSeconds}
-        class="border-soft bg-surface text-ink w-full max-w-40 rounded-lg border px-3 py-2 text-sm"
+        class="border-border-hover bg-surface-raised text-ink w-full max-w-40 rounded-sm border px-3 py-1.5 font-mono text-sm tabular-nums"
       />
-      <button
-        type="submit"
-        class="bg-accent hover:bg-accent-hover text-on-accent rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
-      >
+      <Button type="submit">
         {busy ? 'Saving...' : 'Save webhook preferences'}
-      </button>
+      </Button>
     </fieldset>
     {#if status}
       <p
         role={status.ok ? 'status' : 'alert'}
-        class={status.ok ? 'text-success text-sm' : 'text-ember text-sm'}
+        class="border-l-2 py-1 pl-3 text-sm {status.ok
+          ? statusClasses.success
+          : statusClasses.error}"
       >
         {status.message}
       </p>

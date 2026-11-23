@@ -64,17 +64,17 @@
   }
 
   const inputClass =
-    'border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none';
+    'border-border bg-surface-raised text-ink placeholder:text-muted h-7 rounded-sm border px-2 text-sm';
   const selectClass =
-    'border-soft bg-surface text-ink focus:border-accent focus:ring-accent rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none';
+    'border-border bg-surface-raised text-ink placeholder:text-muted h-7 rounded-sm border px-2 text-sm';
 </script>
 
-<div class="space-y-3">
+<div class="space-y-2">
   <!-- Primary row -->
   <div class="flex flex-wrap items-center gap-2">
     <select bind:value={localStatus} onchange={handleSelectChange} class={selectClass}>
       <option value="">All statuses</option>
-      <option value="pending_review">Pending Review</option>
+      <option value="pending_review">Pending review</option>
       <option value="applied">Applied</option>
       <option value="partial">Partial</option>
       <option value="rejected">Rejected</option>
@@ -84,35 +84,35 @@
 
     <div class="relative">
       <MagnifyingGlassIcon
-        class="text-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
+        class="text-muted pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2"
       />
       <input
         type="text"
         bind:value={localSearch}
         placeholder="Search documents..."
         onkeydown={handleSearchKeydown}
-        class="border-soft bg-surface text-ink placeholder:text-muted focus:border-accent focus:ring-accent rounded-lg border py-2 pr-3 pl-8 text-sm focus:ring-1 focus:outline-none"
+        class="border-border bg-surface-raised text-ink placeholder:text-muted h-7 rounded-sm border px-2 pl-7 text-sm"
       />
     </div>
 
     <select bind:value={localSort} onchange={handleSelectChange} class={selectClass}>
       <option value="">Newest</option>
       <option value="oldest">Oldest</option>
-      <option value="confidence_asc">Lowest Confidence</option>
-      <option value="confidence_desc">Highest Confidence</option>
+      <option value="confidence_asc">Lowest confidence</option>
+      <option value="confidence_desc">Highest confidence</option>
     </select>
 
     <select bind:value={localGroupBy} onchange={handleSelectChange} class={selectClass}>
       <option value="">No grouping</option>
-      <option value="suggestedCorrespondent">By Correspondent</option>
-      <option value="suggestedDocumentType">By Document Type</option>
-      <option value="confidenceBand">By Confidence</option>
-      <option value="failureType">By Failure Type</option>
+      <option value="suggestedCorrespondent">By correspondent</option>
+      <option value="suggestedDocumentType">By document type</option>
+      <option value="confidenceBand">By confidence</option>
+      <option value="failureType">By failure type</option>
     </select>
 
     <button
       onclick={() => (showAdvanced = !showAdvanced)}
-      class="border-soft text-muted hover:text-ink hover:bg-canvas flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+      class="border-border text-muted hover:text-ink hover:bg-canvas-deep flex h-7 items-center gap-1.5 rounded-sm border px-2.5 text-sm font-medium transition-colors"
     >
       <SlidersHorizontalIcon class="h-3.5 w-3.5" />
       More filters
@@ -126,13 +126,13 @@
 
   <!-- Advanced filters -->
   {#if showAdvanced}
-    <div class="border-soft bg-canvas/60 flex flex-wrap items-center gap-3 rounded-lg border p-3">
+    <div class="border-border flex flex-wrap items-center gap-3 border-y py-2">
       <label class="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           bind:checked={localChangedOnly}
           onchange={handleSelectChange}
-          class="rounded"
+          class="accent-accent h-3.5 w-3.5"
         />
         <span class="text-ink">Changed only</span>
       </label>
@@ -142,7 +142,7 @@
           type="checkbox"
           bind:checked={localFailed}
           onchange={handleSelectChange}
-          class="rounded"
+          class="accent-accent h-3.5 w-3.5"
         />
         <span class="text-ink">Failed only</span>
       </label>
