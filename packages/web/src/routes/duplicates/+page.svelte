@@ -176,6 +176,24 @@
     </div>
   {/if}
 
+  {#if data.paginationMode === 'inbox'}
+    {@const counts = data.queueCounts}
+    {@const stats = [
+      ['Pending groups', counts.pending],
+      ['High confidence groups', counts.highConfidence],
+      ['Ambiguous groups', counts.ambiguous],
+      ['Deleted groups', counts.deleted],
+    ]}
+    <dl class="border-border bg-surface grid grid-cols-2 border-t border-l lg:grid-cols-4">
+      {#each stats as [label, count] (label)}
+        <div class="border-border border-r border-b px-3 py-3 md:px-6">
+          <dt class="label-micro">{label}</dt>
+          <dd class="text-ink text-2xl font-semibold tabular-nums">{count.toLocaleString()}</dd>
+        </div>
+      {/each}
+    </dl>
+  {/if}
+
   <DuplicateInboxFilters
     paginationMode={data.paginationMode}
     queue={data.query?.queue ?? 'pending'}
