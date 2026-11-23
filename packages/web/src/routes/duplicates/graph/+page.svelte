@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { Button, EChart, Select, TextField } from '$lib/components';
+  import { Button, ConfidenceBadge, EChart, Select, TextField } from '$lib/components';
   import type { ECharts } from 'echarts';
   import type { GraphNode, GraphEdge } from '@paperless-dedupe/core';
   import { chartPalette, readToken } from '$lib/theme/tokens';
@@ -18,22 +18,21 @@
   // colour separates neighbours in the graph, it is not a legend key.
   const correspondentPalette = $derived(chartPalette());
 
-  let correspondentColors = $derived(() => {
+  const correspondentColors = $derived.by(() => {
     const palette = correspondentPalette;
-    const colors: Record<string, string> = {};
-    const correspondents = [...new Set(data.graph.nodes.map((n) => n.correspondent ?? 'Unknown'))];
-    correspondents.forEach((c, i) => {
-      colors[c] = palette[i % palette.length];
-    });
-    return colors;
+    const correspondents = [
+      ...new Set(data.graph.nodes.map((node) => node.correspondent ?? 'Unknown')),
+    ];
+    return new Map(
+      correspondents.map((correspondent, i) => [correspondent, palette[i % palette.length]]),
+    );
   });
 
   let nodeMap = $derived(new Map(data.graph.nodes.map((n) => [n.id, n])));
 
   // Edge status is carried by colour and line style together, so it never
-  // rests on colour alone. Colours are resolved because ECharts paints to a
-  // canvas and cannot take a var() reference. Dash patterns are 5 3 (dashed)
-  // and 1.5 3 (dotted), repeated in the legend below.
+  // rests on colour alone. ECharts takes resolved colours. The dashed (5 3)
+  // and dotted (1.5 3) patterns are also shown in the legend below.
 
   const edgeColors = $derived({
     deleted: readToken('--color-success'),
@@ -85,6 +84,8 @@
         label: {
           show: true,
           position: 'right',
+          color: readToken('--color-ink-light'),
+          fontFamily: readToken('--font-sans'),
           fontSize: 11,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           formatter: (params: any) => {
@@ -97,7 +98,7 @@
           name: n.id,
           symbolSize: Math.max(16, Math.min(40, 12 + n.groupCount * 8)),
           itemStyle: {
-            color: correspondentColors()[n.correspondent ?? 'Unknown'] ?? edgeColors.falsePositive,
+            color: correspondentColors.get(n.correspondent ?? 'Unknown'),
           },
           meta: n,
         })),
@@ -107,7 +108,7 @@
           lineStyle: {
             width: Math.max(1, e.confidenceScore * 5),
             ...edgeStyle(e),
-            opacity: 0.7,
+            opacity: 0.85,
           },
           meta: e,
         })),
@@ -248,7 +249,7 @@
       <div
         class="border-soft bg-surface border-t px-4 py-3 lg:absolute lg:bottom-3 lg:left-3 lg:border"
       >
-        <h3 class="label-micro mb-2">Legend</h3>
+        <h2 class="label-micro mb-2">Legend</h2>
         <div class="flex flex-wrap gap-6 text-xs">
           <div class="space-y-1">
             <p class="text-muted font-medium">Edge status (colour and line style)</p>
@@ -290,7 +291,7 @@
       <div class="panel w-full shrink-0 space-y-4 lg:w-80">
         {#if selectedNode}
           <div>
-            <h3 class="text-ink text-lg font-semibold">Document Details</h3>
+            <h2 class="text-ink text-lg font-semibold">Document Details</h2>
             <dl class="mt-2 space-y-2 text-sm">
               <div>
                 <dt class="text-muted">Title</dt>
@@ -318,13 +319,11 @@
 
         {#if selectedEdge}
           <div>
-            <h3 class="text-ink text-lg font-semibold">Connection Details</h3>
+            <h2 class="text-ink text-lg font-semibold">Connection Details</h2>
             <dl class="mt-2 space-y-2 text-sm">
               <div>
                 <dt class="text-muted">Confidence</dt>
-                <dd class="text-ink font-mono tabular-nums">
-                  {(selectedEdge.confidenceScore * 100).toFixed(1)}%
-                </dd>
+                <dd><ConfidenceBadge score={selectedEdge.confidenceScore} /></dd>
               </div>
               <div>
                 <dt class="text-muted">Documents</dt>
