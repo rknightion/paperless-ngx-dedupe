@@ -1,41 +1,69 @@
 <script lang="ts">
-  import WarningIcon from 'phosphor-svelte/lib/WarningIcon';
   import { type Snippet } from 'svelte';
 
   interface Props {
     open: boolean;
+    /** A question naming the target, with its count where there is one. */
     title: string;
+    /** What will happen. */
     message: string;
+    /** What will not happen. Optional second paragraph. */
+    detail?: string;
     confirmLabel?: string;
     variant?: 'accent' | 'ember';
     onconfirm: () => void;
     oncancel: () => void;
     children?: Snippet;
     confirmDisabled?: boolean;
+    /** Why the confirm button is disabled, wired to it with aria-describedby. */
+    confirmDisabledReason?: string;
+    /**
+     * When set, a mono input must match this literal (usually the count)
+     * before the confirm button enables. For irreversible actions only.
+     */
+    requireTyped?: string;
   }
 
   let {
     open,
     title,
     message,
+    detail,
     confirmLabel = 'Confirm',
     variant = 'ember',
     onconfirm,
     oncancel,
     children,
     confirmDisabled = false,
+    confirmDisabledReason,
+    requireTyped,
   }: Props = $props();
 
   const dialogId = $props.id();
   let dialog: HTMLDialogElement | undefined = $state();
+  let cancelButton: HTMLButtonElement | undefined = $state();
+  let typed = $state('');
+
+  const typedMismatch = $derived(requireTyped !== undefined && typed.trim() !== requireTyped);
+  const disabled = $derived(confirmDisabled || typedMismatch);
+  const reason = $derived(
+    confirmDisabledReason ??
+      (typedMismatch ? `Type ${requireTyped} above to enable this button.` : undefined),
+  );
 
   $effect(() => {
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
+      // Focus opens on Cancel, never on the destructive button.
+      cancelButton?.focus();
     } else if (!open && dialog.open) {
       dialog.close();
     }
+  });
+
+  $effect(() => {
+    if (!open) typed = '';
   });
 
   function handleKeydown(e: KeyboardEvent) {
@@ -47,7 +75,7 @@
 
   const confirmClasses = {
     accent: 'bg-accent text-on-accent hover:bg-accent-hover',
-    ember: 'bg-ember text-on-accent hover:opacity-90',
+    ember: 'bg-ember text-on-accent hover:brightness-92',
   } as const;
 </script>
 
@@ -57,36 +85,50 @@
   onclick={(e) => {
     if (e.target === dialog) oncancel();
   }}
-  class="border-soft bg-surface m-auto max-w-md rounded-xl border p-0 shadow-lg backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-200"
+  class="border-border-hover bg-surface-raised text-ink rounded-overlay backdrop:bg-inverse/55 m-auto w-[calc(100%-2rem)] max-w-[560px] border p-0 shadow-lg open:animate-[scale-in_var(--duration-base)_var(--ease-standard)]"
   aria-labelledby={`${dialogId}-title`}
-  aria-describedby={`${dialogId}-message`}
+  aria-describedby={detail ? `${dialogId}-message ${dialogId}-detail` : `${dialogId}-message`}
 >
   <div class="p-6">
-    <div class="flex items-start gap-3">
-      {#if variant === 'ember'}
-        <div
-          class="bg-ember-light flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-        >
-          <WarningIcon class="text-ember h-5 w-5" />
-        </div>
-      {/if}
-      <div>
-        <h2 id={`${dialogId}-title`} class="text-ink text-lg font-semibold">{title}</h2>
-        <p id={`${dialogId}-message`} class="text-muted mt-2 text-sm">{message}</p>
-      </div>
-    </div>
+    <h2 id={`${dialogId}-title`} class="text-ink text-lg font-semibold">{title}</h2>
+    <p id={`${dialogId}-message`} class="text-ink-light mt-2 text-base">{message}</p>
+    {#if detail}
+      <p id={`${dialogId}-detail`} class="text-muted mt-2 text-base">{detail}</p>
+    {/if}
     {@render children?.()}
+    {#if requireTyped !== undefined}
+      <div class="mt-4 flex flex-col gap-1.5">
+        <label for={`${dialogId}-typed`} class="text-ink text-sm font-medium">
+          Type <span class="font-mono">{requireTyped}</span> to confirm
+        </label>
+        <input
+          id={`${dialogId}-typed`}
+          type="text"
+          bind:value={typed}
+          autocomplete="off"
+          spellcheck="false"
+          class="border-border bg-surface-raised text-ink h-7 w-full rounded-md border px-2 font-mono text-sm tabular-nums"
+        />
+      </div>
+    {/if}
+    {#if disabled && reason}
+      <p id={`${dialogId}-reason`} class="text-muted mt-3 text-sm">{reason}</p>
+    {/if}
     <div class="mt-6 flex justify-end gap-3">
       <button
+        bind:this={cancelButton}
+        type="button"
         onclick={oncancel}
-        class="border-soft text-ink hover:bg-canvas rounded-lg border px-4 py-2 text-sm font-medium"
+        class="border-border bg-surface text-ink hover:bg-canvas-deep h-7 cursor-pointer rounded-md border px-3 text-sm font-medium"
       >
         Cancel
       </button>
       <button
+        type="button"
         onclick={onconfirm}
-        disabled={confirmDisabled}
-        class="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 {confirmClasses[
+        {disabled}
+        aria-describedby={disabled && reason ? `${dialogId}-reason` : undefined}
+        class="disabled:border-border disabled:text-disabled h-7 cursor-pointer rounded-md border border-transparent px-3 text-sm font-medium disabled:cursor-not-allowed disabled:bg-transparent {confirmClasses[
           variant
         ]}"
       >

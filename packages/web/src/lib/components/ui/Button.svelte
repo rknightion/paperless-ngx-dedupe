@@ -5,15 +5,15 @@
 
   interface Props {
     /**
-     * primary = the one committing action on screen. secondary/outline for
-     * alternates, ghost for toolbar actions, destructive for deletes.
+     * primary = the one committing action in a view region. secondary/outline
+     * for alternates, ghost for toolbar actions, destructive for deletes.
      *
-     * There is deliberately no semantic-tint variant: state is a tinted pill,
+     * There is deliberately no semantic-tint variant: state is a status word,
      * the accent is a solid fill. Giving a button a success or warn tint
      * collapses that distinction.
      */
     variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline';
-    /** sm in table rows and toolbars, md default, lg for stacked columns. */
+    /** sm (26px) in table rows and toolbars, md (28px) default, lg (32px) for narrow layouts. */
     size?: 'sm' | 'md' | 'lg';
     icon?: IconComponent;
     iconRight?: IconComponent;
@@ -56,21 +56,24 @@
   // text-on-accent rather than text-white: the dark scope brightens the accent
   // and ember, and white on either drops below AA there.
   const VARIANTS = {
-    primary: 'bg-accent text-on-accent hover:bg-accent-hover shadow-sm',
-    secondary:
-      'bg-surface text-ink border-border hover:bg-canvas hover:border-border-hover border shadow-sm',
+    primary: 'bg-accent text-on-accent hover:bg-accent-hover border border-transparent',
+    secondary: 'bg-surface text-ink border-border hover:bg-canvas-deep border',
     ghost: 'text-ink hover:bg-canvas-deep border border-transparent',
-    destructive: 'bg-ember text-on-accent border border-transparent shadow-sm hover:brightness-92',
-    outline: 'text-ink border-border hover:bg-canvas hover:border-border-hover border',
+    destructive: 'bg-ember text-on-accent border border-transparent hover:brightness-92',
+    outline: 'text-ink border-border hover:bg-canvas-deep border',
   } as const;
+
+  // Disabled is its own treatment, not a faded variant: disabled text, a
+  // hairline, no fill. Loading keeps the variant look and shows the spinner.
+  const DISABLED = 'bg-transparent text-disabled border-border border';
 
   const SIZES = {
-    sm: 'text-xs px-2.5 py-1.5 rounded-lg gap-1.5',
-    md: 'text-sm px-4 py-2 rounded-lg gap-2',
-    lg: 'text-sm px-6 py-2.5 rounded-xl gap-2',
+    sm: 'h-[26px] text-sm px-2 rounded-md gap-1.5',
+    md: 'h-7 text-sm px-3 rounded-md gap-1.5',
+    lg: 'h-8 text-sm px-4 rounded-md gap-2',
   } as const;
 
-  const ICON_SIZE = { sm: 14, md: 16, lg: 18 } as const;
+  const ICON_SIZE = { sm: 13, md: 14, lg: 16 } as const;
 
   const inactive = $derived(disabled || loading);
 
@@ -78,9 +81,9 @@
     [
       fullWidth ? 'flex w-full' : 'inline-flex',
       'items-center justify-center font-medium whitespace-nowrap transition-colors',
-      VARIANTS[variant],
+      disabled ? DISABLED : VARIANTS[variant],
       SIZES[size],
-      inactive ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+      inactive ? 'cursor-not-allowed' : 'cursor-pointer',
       className,
     ].join(' '),
   );

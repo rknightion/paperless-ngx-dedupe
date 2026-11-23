@@ -34,35 +34,38 @@
 </script>
 
 <span class="inline-flex items-center gap-2 {className}">
-  <span class="relative inline-flex">
-    <!-- The native input stays in the DOM and keeps focus, keyboard and form
+  <!-- Narrow layouts: the 16px box sits inside a 44px target. -->
+  <span class="inline-flex max-md:p-3.5">
+    <span class="relative inline-flex">
+      <!-- The native input stays in the DOM and keeps focus, keyboard and form
          semantics; the visible box is drawn on top of it. -->
-    <input
-      id={fieldId}
-      type="checkbox"
-      {name}
-      {value}
-      {disabled}
-      bind:checked
-      {indeterminate}
-      onchange={() => onchange?.(checked)}
-      aria-label={label ? undefined : ariaLabel}
-      class="peer h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-50 {checked ||
-      indeterminate
-        ? 'bg-accent border-accent'
-        : 'bg-surface border-border hover:border-border-hover'}"
-    />
-    <span
-      class="text-on-accent pointer-events-none absolute inset-0 flex items-center justify-center"
-    >
-      {#if indeterminate}
-        <MinusIcon size={12} aria-hidden="true" />
-      {:else if checked}
-        <CheckIcon size={12} aria-hidden="true" />
-      {/if}
+      <input
+        id={fieldId}
+        type="checkbox"
+        {name}
+        {value}
+        {disabled}
+        bind:checked
+        {indeterminate}
+        onchange={() => onchange?.(checked)}
+        aria-label={label ? undefined : ariaLabel}
+        class="peer h-3.5 w-3.5 shrink-0 cursor-pointer appearance-none rounded-sm border transition-colors disabled:cursor-not-allowed disabled:opacity-50 max-md:h-4 max-md:w-4 {checked ||
+        indeterminate
+          ? 'bg-accent border-accent'
+          : 'bg-surface-raised border-border-hover'}"
+      />
+      <span
+        class="text-on-accent pointer-events-none absolute inset-0 flex items-center justify-center"
+      >
+        {#if indeterminate}
+          <MinusIcon size={10} weight="bold" aria-hidden="true" />
+        {:else if checked}
+          <CheckIcon size={10} weight="bold" aria-hidden="true" />
+        {/if}
+      </span>
     </span>
   </span>
   {#if label}
-    <label for={fieldId} class="text-ink cursor-pointer text-sm">{label}</label>
+    <label for={fieldId} class="text-ink cursor-pointer text-base">{label}</label>
   {/if}
 </span>

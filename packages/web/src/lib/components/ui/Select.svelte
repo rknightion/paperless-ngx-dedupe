@@ -16,6 +16,8 @@
     /** Accessible name when there is no visible label. */
     ariaLabel?: string;
     disabled?: boolean;
+    /** Machine values (page sizes, counts) set mono; labels stay sans. */
+    mono?: boolean;
     id?: string;
     name?: string;
     class?: string;
@@ -30,6 +32,7 @@
     error,
     ariaLabel,
     disabled = false,
+    mono = false,
     id,
     name,
     class: className = '',
@@ -38,7 +41,11 @@
 
   const uid = $props.id();
   const fieldId = $derived(id ?? uid);
-  const describedBy = $derived(error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined);
+  const describedBy = $derived(
+    [error ? `${fieldId}-error` : null, hint ? `${fieldId}-hint` : null]
+      .filter(Boolean)
+      .join(' ') || undefined,
+  );
 </script>
 
 <div class="flex flex-col gap-1.5 {className}">
@@ -56,9 +63,9 @@
       aria-label={label ? undefined : ariaLabel}
       aria-invalid={error ? 'true' : undefined}
       aria-describedby={describedBy}
-      class="bg-surface text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-lg border py-2 pr-9 pl-3 text-sm transition-colors outline-none focus:ring-1 disabled:opacity-50 {error
-        ? 'border-ember'
-        : 'border-border'}"
+      class="bg-surface-raised text-ink disabled:text-disabled h-7 w-full appearance-none rounded-md border pr-8 pl-2 text-base disabled:cursor-not-allowed disabled:bg-transparent {mono
+        ? 'font-mono tabular-nums'
+        : ''} {error ? 'border-ember' : 'border-border'}"
     >
       {#each options as option (option.value)}
         <option value={option.value} disabled={option.disabled}>{option.label}</option>
@@ -66,14 +73,15 @@
     </select>
     <!-- appearance-none strips the native arrow, so it is redrawn here in the
          system's own chevron rather than left to the platform. -->
-    <span class="text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
-      <CaretDownIcon size={16} aria-hidden="true" />
+    <span class="text-muted pointer-events-none absolute top-1/2 right-2 -translate-y-1/2">
+      <CaretDownIcon size={14} aria-hidden="true" />
     </span>
   </div>
 
   {#if error}
-    <p id="{fieldId}-error" class="text-ember text-xs">{error}</p>
-  {:else if hint}
-    <p id="{fieldId}-hint" class="text-muted text-xs">{hint}</p>
+    <p id="{fieldId}-error" class="text-ember text-sm before:mr-1 before:content-['●']">{error}</p>
+  {/if}
+  {#if hint}
+    <p id="{fieldId}-hint" class="text-muted text-sm">{hint}</p>
   {/if}
 </div>

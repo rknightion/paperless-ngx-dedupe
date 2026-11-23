@@ -63,19 +63,35 @@
   // counter would not.
   const uid = $props.id();
   const fieldId = $derived(id ?? uid);
-  const describedBy = $derived(error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined);
+  // Both the helper and the error are wired to the field.
+  const describedBy = $derived(
+    [hint ? `${fieldId}-hint` : null, error ? `${fieldId}-error` : null]
+      .filter(Boolean)
+      .join(' ') || undefined,
+  );
 </script>
 
 <div class="flex flex-col gap-1.5 {className}">
   {#if label}
-    <label for={fieldId} class="text-ink text-sm font-medium">
-      {label}
-      {#if required}<span class="text-ember" aria-hidden="true">*</span>{/if}
-    </label>
+    <div class="flex items-center gap-2">
+      <label for={fieldId} class="text-ink text-sm font-medium">
+        {label}
+        {#if required}<span class="text-ember" aria-hidden="true">*</span>{/if}
+      </label>
+      <!-- Outside the label, so it never joins the field's accessible name. -->
+      {#if readonly}
+        <span
+          class="border-border text-muted rounded-sm border px-1.5 font-mono text-xs tracking-wide"
+        >
+          READ ONLY
+        </span>
+      {/if}
+    </div>
   {/if}
 
-  <!-- width:100% alongside its own padding — this relies on the global
-       box-sizing: border-box in the base layer. -->
+  <!-- width:100% alongside its own padding: this relies on the global
+       box-sizing: border-box in the base layer. Focus is the global 2px accent
+       outline; the border does not change colour. -->
   <input
     bind:this={ref}
     id={fieldId}
@@ -98,16 +114,19 @@
     aria-label={ariaLabel}
     aria-invalid={error ? 'true' : undefined}
     aria-describedby={describedBy}
-    class="bg-surface text-ink w-full rounded-lg border px-3 py-2 text-sm transition-colors outline-none disabled:opacity-50 {mono
-      ? 'font-mono'
-      : ''} {error
-      ? 'border-ember focus:border-ember'
-      : 'border-border focus:border-accent focus:ring-accent focus:ring-1'}"
+    class="placeholder:text-disabled disabled:text-disabled h-7 w-full rounded-md border px-2 text-base disabled:cursor-not-allowed disabled:bg-transparent {readonly
+      ? 'bg-canvas text-ink-light'
+      : 'bg-surface-raised text-ink'} {mono ? 'font-mono tabular-nums' : ''} {error
+      ? 'border-ember'
+      : 'border-border'}"
   />
 
+  {#if hint}
+    <p id="{fieldId}-hint" class="text-muted text-sm">{hint}</p>
+  {/if}
   {#if error}
-    <p id="{fieldId}-error" class="text-ember text-xs">{error}</p>
-  {:else if hint}
-    <p id="{fieldId}-hint" class="text-muted text-xs">{hint}</p>
+    <p id="{fieldId}-error" class="text-ember text-sm before:mr-1 before:content-['●']">
+      {error}
+    </p>
   {/if}
 </div>

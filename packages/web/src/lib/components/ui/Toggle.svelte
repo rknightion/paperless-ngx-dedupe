@@ -40,19 +40,19 @@
     aria-describedby={describedBy}
     {disabled}
     onclick={toggle}
-    class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 {checked
+    class="relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 {checked
       ? 'bg-accent'
-      : 'bg-soft'}"
+      : 'bg-track'}"
   >
-    <!-- The knob stays white in both themes: it sits on the accent or on the
-         hairline grey, and reads on either. -->
+    <!-- A 28x16 track with a round thumb. The thumb takes the on-accent ink on
+         the accent and the faint ink on the track, so it reads in both themes. -->
     <span
-      class="inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform {checked
-        ? 'translate-x-6'
-        : 'translate-x-1'}"
+      class="inline-block h-3 w-3 rounded-full transition-transform {checked
+        ? 'bg-on-accent translate-x-3.5'
+        : 'bg-ink-faint translate-x-0.5'}"
     ></span>
   </button>
   {#if label}
-    <span class="text-ink text-sm">{label}</span>
+    <span class="text-ink text-base">{label}</span>
   {/if}
 </span>
