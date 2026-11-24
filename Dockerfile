@@ -1,5 +1,5 @@
 # Rebuild the installed esbuild versions with a patched Go standard library.
-FROM golang:1.27.4-trixie@sha256:0f82c58710c405cc012da2fbd2b04bde9ced20392a89f66062822d711d7d6b4b AS esbuild
+FROM golang:1.27.4-trixie@sha256:430985542100b871e108ccc00e8dcc5eef08ca14ee5825e98ebf563d8ffec4ee AS esbuild
 ENV CGO_ENABLED=0
 RUN GOBIN=/out/0.18.20 go install github.com/evanw/esbuild/cmd/esbuild@v0.18.20 && \
     GOBIN=/out/0.25.12 go install github.com/evanw/esbuild/cmd/esbuild@v0.25.12
