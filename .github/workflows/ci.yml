@@ -5,9 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    # `edited` re-runs CI when the pull request body changes, so the acceptance evidence check reads
-    # the new table. The pull request checks run on every one of these types, never skipped by `if:`.
-    types: [opened, edited, reopened, synchronize, ready_for_review]
+    # The acceptance-evidence check reads the pull request body, so it runs in pr-metadata.yml;
+    # a body edit does not re-run this workflow.
+    types: [opened, reopened, synchronize, ready_for_review]
   workflow_call:
 
 permissions:
@@ -290,21 +290,9 @@ jobs:
           path: packages/web/build/**/*.map
           retention-days: 90
 
-  # A pull request that closes an issue shows evidence for each of its acceptance criteria. Checks
-  # only pull requests with a closing keyword (enforce-all-prs: false), because this repository takes
-  # outside and bot pull requests. The reusable fails on any event but pull_request, so it runs on
-  # pull requests only. Check run: `ac-evidence / Acceptance evidence`.
-  ac-evidence:
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      issues: read
-      pull-requests: read
-    uses: rknightion/.github/.github/workflows/ac-evidence.yml@7ed87713176ccae972b0143071b0196ff370d804 # v1.32.3
-
   # One job for the pull request checks that need no build: the backlog/ freeze and the privacy
-  # sweep. actionlint and zizmor have their own jobs, and ac-evidence stays separate because the
-  # tracker recognises that check by name. Check run: `pr-metadata / PR metadata`.
+  # sweep. actionlint and zizmor have their own jobs, and ac-evidence runs in pr-metadata.yml because it
+  # reads the pull request body. Check run: `pr-metadata / PR metadata`.
   pr-metadata:
     if: github.event_name == 'pull_request'
     permissions:
@@ -335,7 +323,7 @@ jobs:
     name: ci-success
     runs-on: ubuntu-26.04
     if: always()
-    needs: [quality, unit-tests, e2e-tests, docker-build-verify, ac-evidence, pr-metadata, zizmor]
+    needs: [quality, unit-tests, e2e-tests, docker-build-verify, pr-metadata, zizmor]
     steps:
       - name: Fail if any required job did not pass
         env:
@@ -357,11 +345,10 @@ jobs:
       - name: Fail if a pull request check did not run
         if: ${{ github.event_name == 'pull_request' }}
         env:
-          AC_EVIDENCE: ${{ needs.ac-evidence.result }}
           PR_METADATA: ${{ needs.pr-metadata.result }}
         run: |
-          if [[ "$AC_EVIDENCE" != "success" || "$PR_METADATA" != "success" ]]; then
-            echo "ac-evidence: ${AC_EVIDENCE}, pr-metadata: ${PR_METADATA}; both must pass on a pull request"
+          if [[ "$PR_METADATA" != "success" ]]; then
+            echo "pr-metadata: ${PR_METADATA}; must pass on a pull request"
             exit 1
           fi
       - name: All required jobs passed
