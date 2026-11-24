@@ -300,7 +300,7 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
-    uses: rknightion/.github/.github/workflows/ac-evidence.yml@9030a1b7d1d6652c0447b4a8e4181923105a0371 # v1.31.11
+    uses: rknightion/.github/.github/workflows/ac-evidence.yml@55296cba29f55339f74b048e186011e866ea6275 # v1.32.0
 
   # One job for the pull request checks that need no build: the backlog/ freeze and the privacy
   # sweep. actionlint and zizmor have their own jobs, and ac-evidence stays separate because the
@@ -311,7 +311,7 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
-    uses: rknightion/.github/.github/workflows/pr-metadata.yml@9030a1b7d1d6652c0447b4a8e4181923105a0371 # v1.31.11
+    uses: rknightion/.github/.github/workflows/pr-metadata.yml@55296cba29f55339f74b048e186011e866ea6275 # v1.32.0
     with:
       runs-on: ubuntu-26.04
       harden: true
@@ -327,7 +327,7 @@ jobs:
       contents: read
       security-events: write
       actions: read
-    uses: rknightion/.github/.github/workflows/zizmor.yml@9030a1b7d1d6652c0447b4a8e4181923105a0371 # v1.31.11
+    uses: rknightion/.github/.github/workflows/zizmor.yml@55296cba29f55339f74b048e186011e866ea6275 # v1.32.0
     with:
       enforce: true
 
