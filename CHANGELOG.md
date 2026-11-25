@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.2.1](https://github.com/rknightion/paperless-ngx-dedupe/compare/v1.2.0...v1.2.1) (2026-11-25)
+
+
+### Miscellaneous
+
+* **deps:** update dependency @sveltejs/vite-plugin-svelte to v7.3.2 ([#1035](https://github.com/rknightion/paperless-ngx-dedupe/issues/1035)) ([ed47e55](https://github.com/rknightion/paperless-ngx-dedupe/commit/ed47e556a0993edac563cc274ab6d82908c774aa))
+* **deps:** update dependency openai to v7.63.0 ([#1037](https://github.com/rknightion/paperless-ngx-dedupe/issues/1037)) ([b5247be](https://github.com/rknightion/paperless-ngx-dedupe/commit/b5247be4e054a8d889de63b25f5f339575d70930))
+* **deps:** update faro-web-sdk monorepo to v2.15.0 ([#1033](https://github.com/rknightion/paperless-ngx-dedupe/issues/1033)) ([b4d37d7](https://github.com/rknightion/paperless-ngx-dedupe/commit/b4d37d76f2824186bdbd3ae8241aeda8f63b48e6))
+* **deps:** update golang:1.27.4-trixie docker digest to 0f82c58 ([#1031](https://github.com/rknightion/paperless-ngx-dedupe/issues/1031)) ([20969d1](https://github.com/rknightion/paperless-ngx-dedupe/commit/20969d18262d87a2e8701e8e2a64f6ba6c4cccc1))
+* **deps:** update golang:1.27.4-trixie docker digest to 4309855 ([#1036](https://github.com/rknightion/paperless-ngx-dedupe/issues/1036)) ([2248625](https://github.com/rknightion/paperless-ngx-dedupe/commit/2248625de3f0c35378581b06a087b8bcc42500fe))
+* **deps:** update golang:1.27.4-trixie docker digest to c393c00 ([#1028](https://github.com/rknightion/paperless-ngx-dedupe/issues/1028)) ([bff5426](https://github.com/rknightion/paperless-ngx-dedupe/commit/bff5426d170407fb98f7f1367f55e90c687f266b))
+* **deps:** update linters & formatters to v8.74.0 ([#1034](https://github.com/rknightion/paperless-ngx-dedupe/issues/1034)) ([42cdb74](https://github.com/rknightion/paperless-ngx-dedupe/commit/42cdb7454e189eeb078f9476261b7a8cb8a6dda4))
+* **deps:** update node.js to 615a278 ([#1027](https://github.com/rknightion/paperless-ngx-dedupe/issues/1027)) ([5120594](https://github.com/rknightion/paperless-ngx-dedupe/commit/5120594c6be26f14f7e2e771c7d267e8670f8309))
+* **deps:** update node.js to abe7e5a ([#1030](https://github.com/rknightion/paperless-ngx-dedupe/issues/1030)) ([99d8626](https://github.com/rknightion/paperless-ngx-dedupe/commit/99d862608fe28ff54384ae0f2af108f1ee09d335))
+* **deps:** update rknightion/.github action to v1.31.11 ([#1023](https://github.com/rknightion/paperless-ngx-dedupe/issues/1023)) ([2e47379](https://github.com/rknightion/paperless-ngx-dedupe/commit/2e47379dfad0ba1443adeaf13c909905ce61db7f))
+* **deps:** update rknightion/.github action to v1.32.0 ([#1025](https://github.com/rknightion/paperless-ngx-dedupe/issues/1025)) ([714d351](https://github.com/rknightion/paperless-ngx-dedupe/commit/714d35151ccd49541c2468a7c81b06d2696d1277))
+* **deps:** update rknightion/.github action to v1.32.1 ([#1026](https://github.com/rknightion/paperless-ngx-dedupe/issues/1026)) ([089f46a](https://github.com/rknightion/paperless-ngx-dedupe/commit/089f46a8b5629d5f05c72deaecef5e32cd448be0))
+* **deps:** update rknightion/.github action to v1.32.2 ([#1029](https://github.com/rknightion/paperless-ngx-dedupe/issues/1029)) ([b1021f1](https://github.com/rknightion/paperless-ngx-dedupe/commit/b1021f125dc98aad31f159c2c3089d67c3211b81))
+* **deps:** update rknightion/.github action to v1.32.3 ([#1032](https://github.com/rknightion/paperless-ngx-dedupe/issues/1032)) ([2f20dd0](https://github.com/rknightion/paperless-ngx-dedupe/commit/2f20dd006e4e86c742a136a3793dc753d1ec160d))
+* **deps:** update rknightion/.github action to v1.32.4 ([#1039](https://github.com/rknightion/paperless-ngx-dedupe/issues/1039)) ([7a0455d](https://github.com/rknightion/paperless-ngx-dedupe/commit/7a0455d3ffcab21d76b96214172486883609ca58))
+* **deps:** update rknightion/.github action to v1.32.5 ([#1040](https://github.com/rknightion/paperless-ngx-dedupe/issues/1040)) ([ef7d587](https://github.com/rknightion/paperless-ngx-dedupe/commit/ef7d5877722687371ce34e353b8db4a3d523609f))
+* remove Bugbot config ([#1044](https://github.com/rknightion/paperless-ngx-dedupe/issues/1044)) ([882f203](https://github.com/rknightion/paperless-ngx-dedupe/commit/882f2035ff9b15632b9c2e455844d9d63491d699))
+* remove the .cursor folder ([#1045](https://github.com/rknightion/paperless-ngx-dedupe/issues/1045)) ([98f3f08](https://github.com/rknightion/paperless-ngx-dedupe/commit/98f3f089c1dc49058472f657a27e6f2a42e46027))
+
 ## [1.2.0](https://github.com/rknightion/paperless-ngx-dedupe/compare/v1.1.0...v1.2.0) (2026-11-23)
 
 
