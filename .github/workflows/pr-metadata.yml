@@ -27,7 +27,7 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
-    uses: rknightion/.github/.github/workflows/ac-evidence.yml@7ed87713176ccae972b0143071b0196ff370d804 # v1.32.3
+    uses: rknightion/.github/.github/workflows/ac-evidence.yml@0bb3cc94c03a011b4ba8c86d9716898211de2d2b # v1.32.4
 
   # The check a ruleset requires. A skipped or cancelled dependency fails it.
   pr-metadata-success:
