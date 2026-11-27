@@ -299,7 +299,7 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
-    uses: rknightion/.github/.github/workflows/pr-metadata.yml@20533b678728ec119e52401c1e48b31f3c8b83c4 # v1.32.5
+    uses: rknightion/.github/.github/workflows/pr-metadata.yml@a6e7f83c8fd233841120fc14c0412124a445c306 # v1.35.0
     with:
       runs-on: ubuntu-26.04
       harden: true
@@ -315,7 +315,7 @@ jobs:
       contents: read
       security-events: write
       actions: read
-    uses: rknightion/.github/.github/workflows/zizmor.yml@20533b678728ec119e52401c1e48b31f3c8b83c4 # v1.32.5
+    uses: rknightion/.github/.github/workflows/zizmor.yml@a6e7f83c8fd233841120fc14c0412124a445c306 # v1.35.0
     with:
       enforce: true
 
